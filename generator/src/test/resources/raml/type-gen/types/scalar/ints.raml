@@ -1,0 +1,39 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      int8:
+        type: integer
+        format: int8
+      int16:
+        type: integer
+        format: int16
+      int32:
+        type: integer
+        format: int32
+      int64:
+        type: integer
+        format: int64
+      int:
+        type: integer
+        format: int
+      long:
+        type: integer
+        format: long
+      none:
+        type: integer
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

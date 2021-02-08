@@ -1,0 +1,53 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    Test:
+      type: object
+      properties:
+        minList:
+          type: array
+          items:
+            type: string
+          uniqueItems: false
+          minItems: 5
+        maxList:
+          type: array
+          items:
+            type: string
+          uniqueItems: false
+          maxItems: 10
+        minSet:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          minItems: 15
+        maxSet:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          maxItems: 20
+      required: [minList, maxList, minSet, maxSet]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

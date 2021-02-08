@@ -1,0 +1,36 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    NullableString:
+      type: string
+      nullable: true
+
+    Test:
+      type: object
+      properties:
+        fromNilUnion: { $ref: '#/components/schemas/NullableString' }
+        notRequired:
+          type: string
+      required: [ fromNilUnion ]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

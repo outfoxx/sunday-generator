@@ -1,0 +1,42 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  UnspecifiedStrings:
+    type: array
+    items: string
+
+  NonUniqueStrings:
+    type: array
+    uniqueItems: false
+    items: string
+
+  UniqueStrings:
+    type: array
+    uniqueItems: true
+    items: string
+
+  Test:
+    type: object
+    properties:
+      implicit:
+        type: array
+        items: string
+      unspecified:
+        type: UnspecifiedStrings
+      nonUnique:
+        type: NonUniqueStrings
+      unique:
+        type: UniqueStrings
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

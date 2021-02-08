@@ -1,0 +1,49 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    Test:
+      type: object
+      properties:
+        int8:
+          type: integer
+          format: int8
+        int16:
+          type: integer
+          format: int16
+        int32:
+          type: integer
+          format: int32
+        int64:
+          type: integer
+          format: int64
+        int:
+          type: integer
+          format: int
+        long:
+          type: integer
+          format: long
+        none:
+          type: integer
+      required: [int8, int16, int32, int64, int, long, none]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

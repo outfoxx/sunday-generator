@@ -1,0 +1,40 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+baseUri: http://example.com/api/v1
+mediaType:
+- application/json
+
+(sunday.problemBaseUri): http://errors.example.com/docs/
+(sunday.problemTypes):
+  invalid_id:
+    status: 400
+    title: Invalid Id
+    detail: The id contains one or more invalid characters.
+    custom:
+      offending_id: string
+  test_not_found:
+    status: 404
+    title: Account Not Found
+    detail: The requested account does not exist or you do not have permission to access it.
+  create_failed:
+    status: 500
+    title: Create Failed
+    detail: Object creation failed.
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+
+/tests:
+  get:
+    displayName: fetchTest
+    (sunday.problems): [invalid_id, test_not_found]
+    responses:
+      200:
+        body: Test

@@ -1,0 +1,32 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      className:
+        type: string
+        (sunday.kotlinImplementation):
+          code: 'return %T::class.qualifiedName + %S + "%L"'
+          parameters:
+          - type: Type
+            value: java.time.LocalDateTime
+          - type: String
+            value: '-value-'
+          - type: Literal
+            value: '-literal'
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

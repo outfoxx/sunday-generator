@@ -1,0 +1,57 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+x-sunday-javaModelPackage: io.test.lib
+
+components:
+  schemas:
+
+    Base:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+
+    Child1:
+      allOf:
+      - $ref: '#/components/schemas/Base'
+      - properties:
+          childValue1:
+            type: string
+        required: [childValue1]
+
+    Child2:
+      allOf:
+      - $ref: './lib-unions-uncommon-objects.yaml#/components/schemas/Base'
+      - properties:
+          childValue2:
+            type: string
+        required: [childValue2]
+
+    Test:
+      type: object
+      properties:
+        value:
+          anyOf:
+          - { $ref: '#/components/schemas/Child1' }
+          - { $ref: '#/components/schemas/Child2' }
+      required: [value]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

@@ -1,0 +1,200 @@
+#%RAML 1.0 Library
+
+types:
+
+  ResponseProblemTypes:
+    type: object
+    properties:
+      /^[a-z0-9_]+$/: ResponseProblemType
+
+  ResponseProblemType:
+    type: object
+    properties:
+      status:
+        type: integer
+        minimum: 100
+        maximum: 599
+      title:
+        type: string
+      detail:
+        type: string
+      custom?: object
+    additionalProperties: false
+
+  ResponseProblemCodes:
+    type: array
+    items: ResponseProblemCode
+
+  ResponseProblemCode:
+    type: string
+    pattern: '^[a-z0-9_]+$'
+
+  TypeImplementation:
+    type: object
+    properties:
+      code: string
+      parameters:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+              default: Literal
+              enum:
+                - Type
+                - Literal
+                - String
+            value:
+              type: string
+
+annotationTypes:
+
+  group:
+    type: string
+    allowedTargets: [Method]
+
+  javaPackage:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  javaPackage:client:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  javaPackage:server:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  javaModelPackage:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  javaModelPackage:client:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  javaModelPackage:server:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  kotlinType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  kotlinType:client:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  kotlinType:server:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  kotlinImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  kotlinImplementation:client:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  kotlinImplementation:server:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  javaType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  javaType:client:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  javaType:server:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  javaImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  javaImplementation:client:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  javaImplementation:server:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  swiftType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  swiftType:client:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  swiftType:server:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  swiftImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  swiftImplementation:client:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  swiftImplementation:server:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  typeScriptType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  typeScriptType:client:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  typeScriptType:server:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  typeScriptImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  typeScriptImplementation:client:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  typeScriptImplementation:server:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  nested:
+    type: object
+    properties:
+      enclosedIn: string
+      name: string
+    allowedTargets: [TypeDeclaration]
+
+  externalDiscriminator:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  externallyDiscriminated:
+    type: boolean
+    allowedTargets: [TypeDeclaration]
+
+  patchable:
+    type: boolean
+    allowedTargets: [TypeDeclaration]
+
+  asynchronous:
+    type: boolean
+    allowedTargets: [Method]
+  reactive:
+    type: boolean
+    allowedTargets: [Method]
+
+  sse:
+    type: boolean
+    allowedTargets: [Method]
+  sse-sink:
+    type: boolean
+    allowedTargets: [Method]
+
+  problemBaseUri:
+    type: string
+    allowedTargets: [API, Overlay]
+  problemBaseUriParams:
+    type: object
+    allowedTargets: [API, Overlay]
+  problemTypes:
+    type: ResponseProblemTypes
+    allowedTargets: [API, Extension, Library, Overlay]
+  problems:
+    type: ResponseProblemCodes
+    allowedTargets: [Method]

@@ -1,0 +1,18 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+/tests/{obj}/{str}:
+  uriParameters:
+    obj: object
+    str: string
+  /{int}/{def}:
+    uriParameters:
+      int: integer
+    get:
+      displayName: fetchTest
+      responses:
+        200:
+          body:
+            type: object

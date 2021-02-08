@@ -1,0 +1,28 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.problemTypes):
+  invalid_id:
+    status: 400
+    title: Invalid Id
+    detail: The id contains one or more invalid characters.
+    custom:
+      offending_id: string
+  account_not_found:
+    status: 404
+    title: Account Not Found
+    detail: The requested account does not exist or you do not have permission to access it.
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    (sunday.problems): [invalid_id]
+    responses:
+      200:
+        body:
+          type: string

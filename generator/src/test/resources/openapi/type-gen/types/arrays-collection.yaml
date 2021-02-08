@@ -1,0 +1,56 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    UnspecifiedStrings:
+      type: array
+      items:
+        type: string
+
+    NonUniqueStrings:
+      type: array
+      uniqueItems: false
+      items:
+        type: string
+
+    UniqueStrings:
+      type: array
+      uniqueItems: true
+      items:
+        type: string
+
+    Test:
+      type: object
+      properties:
+        implicit:
+          type: array
+          items:
+            type: string
+        unspecified:
+          $ref: '#/components/schemas/UnspecifiedStrings'
+        nonUnique:
+          $ref: '#/components/schemas/NonUniqueStrings'
+        unique:
+          $ref: '#/components/schemas/UniqueStrings'
+      required: [implicit, unspecified, nonUnique, unique]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

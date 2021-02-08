@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      dateOnly:
+        type: date-only
+      timeOnly:
+        type: time-only
+      dateTimeOnly:
+        type: datetime-only
+      dateTime:
+        type: datetime
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

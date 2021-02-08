@@ -1,0 +1,34 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    TestEnum:
+      type: string
+      enum: [none, some, all]
+
+    Test:
+      type: object
+      properties:
+        enum: { $ref: '#/components/schemas/TestEnum' }
+      required: [enum]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

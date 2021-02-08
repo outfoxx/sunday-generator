@@ -1,0 +1,44 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    Test:
+      type: object
+      properties:
+        dateOnly:
+          type: string
+          format: date
+        timeOnly:
+          type: string
+          format: time
+        dateTime:
+          type: string
+          format: date-time
+        dateTimeOnly:
+          type: string
+          format: date-time-only
+        dateTimeOnly2:
+          type: string
+          format: datetime-only
+      required: [dateOnly, timeOnly, dateTime, dateTimeOnly, dateTimeOnly2]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }

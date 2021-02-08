@@ -1,0 +1,21 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+/tests/{type}:
+  uriParameters:
+    type:
+      enum: [all,limited]
+  get:
+    displayName: fetchTest
+    queryParameters:
+      type:
+        enum: [all,limited]
+    headers:
+      type:
+        enum: [all,limited]
+    responses:
+      200:
+        body:
+          type: object

@@ -1,0 +1,28 @@
+#%RAML 1.0
+title: Test API
+uses:
+  lib: lib-obj-inherits.raml
+mediaType:
+- application/json
+
+types:
+
+  Test2:
+    type: lib.Test
+    properties:
+      value2: string
+
+  Test3:
+    type: Test2
+    properties:
+      value3: string
+
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test3

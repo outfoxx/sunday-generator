@@ -1,0 +1,37 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Type:
+    type: string
+    enum: [Child1, Child2]
+
+  Parent:
+    type: object
+    discriminator: type
+    properties:
+      type: Type
+
+  Child1:
+    type: Parent
+    discriminatorValue: Child1
+    properties:
+      value?: string
+
+  Child2:
+    type: Parent
+    discriminatorValue: Child2
+    properties:
+      value?: string
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Parent

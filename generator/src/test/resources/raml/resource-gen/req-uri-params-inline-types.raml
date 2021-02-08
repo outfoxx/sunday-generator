@@ -1,0 +1,17 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+/tests/{category}/{type}:
+  uriParameters:
+    category:
+      enum: [politics,science]
+    type:
+      enum: [all,limited]
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: object

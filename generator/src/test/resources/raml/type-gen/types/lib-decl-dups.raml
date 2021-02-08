@@ -1,0 +1,12 @@
+#%RAML 1.0 Library
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.javaModelPackage:client): io.test.client
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string

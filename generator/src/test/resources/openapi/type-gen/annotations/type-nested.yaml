@@ -1,0 +1,64 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    Group:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+
+    GroupMember1:
+      x-sunday-nested:
+        enclosedIn: '#/components/schemas/Group'
+        name: Member1
+      allOf:
+      - $ref: '#/components/schemas/Group'
+      - properties:
+          memberValue1:
+            type: string
+        required: [memberValue1]
+
+    SubGroupMember:
+      x-sunday-nested:
+        enclosedIn: '#/components/schemas/GroupMember1'
+        name: Sub
+      allOf:
+      - $ref: '#/components/schemas/GroupMember1'
+      - properties:
+          subMemberValue:
+            type: string
+        required: [subMemberValue]
+
+    GroupMember2:
+      x-sunday-nested:
+        enclosedIn: '#/components/schemas/Group'
+        name: Member2
+      allOf:
+      - $ref: '#/components/schemas/Group'
+      - properties:
+          memberValue2:
+            type: string
+        required: [memberValue2]
+
+
+paths:
+  /test:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      responses:
+        "200":
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubGroupMember' }

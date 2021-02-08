@@ -1,0 +1,86 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+
+paths:
+  /test/{id}:
+    get:
+      summary: Get Test Object
+      operationId: getTest
+      parameters:
+      - in: path
+        name: id
+      x-sunday-problems: [
+        { $ref: '#/components/x-sunday-problems/invalid_id' },
+        { $ref: '#/components/x-sunday-problems/account_not_found' }
+      ]
+      responses:
+        200:
+          description: Current test object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }
+        400:
+          description: Error with request data
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                discriminator:
+                  propertyName: type
+                  mapping:
+                    invalid_id: '#/components/schemas/InvalidIdProblem'
+                    account_not_found: '#/components/schemas/Problem'
+
+components:
+
+  x-sunday-problems:
+
+    invalid_id:
+      title: Invalid Id
+      status: 400
+      detail: One or more characters in the id is disallowed.
+      custom:
+        offendingId: string
+
+    account_not_found:
+      title: Account Not Found
+      status: 404
+      detail: Requested account could not found or you are not authorized to access it.
+
+
+  schemas:
+
+    Test:
+      type: object
+
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+
+    InvalidIdProblem:
+      x-sunday-super: '#/components/schemas/Problem'
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          offending_id:
+            type: string

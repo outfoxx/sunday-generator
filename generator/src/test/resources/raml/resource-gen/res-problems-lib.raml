@@ -1,0 +1,33 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+  lib: lib-res-problems-lib.raml
+mediaType:
+- application/json
+
+(sunday.problemTypes):
+  test_not_found:
+    status: 404
+    title: Account Not Found
+    detail: The requested account does not exist or you do not have permission to access it.
+  create_failed:
+    status: 500
+    title: Create Failed
+    detail: Object creation failed.
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+
+/tests:
+  get:
+    displayName: fetchTest
+    (sunday.problems): [invalid_id, test_not_found]
+    responses:
+      200:
+        body: Test

@@ -1,0 +1,47 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Group:
+    type: object
+    properties:
+      value: string
+
+  GroupMember1:
+    type: Group
+    (sunday.nested):
+      enclosedIn: Group
+      name: Member1
+    properties:
+      memberValue1: string
+
+  SubGroupMember:
+    type: GroupMember1
+    (sunday.nested):
+      enclosedIn: GroupMember1
+      name: Sub
+    properties:
+      subMemberValue: string
+
+  GroupMember2:
+    type: Group
+    (sunday.nested):
+      enclosedIn: Group
+      name: Member2
+    properties:
+      memberValue2: string
+
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: SubGroupMember

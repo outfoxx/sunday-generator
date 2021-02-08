@@ -1,0 +1,23 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  description: Test API
+  version: 1.0.0
+servers:
+- url: 'https://example.com/api/'
+
+
+components:
+  schemas:
+
+    Group:
+      type: object
+      x-sunday-nested:
+        enclosedIn: './lib-type-nested-1.yaml#/components/schemas/Root'
+      properties:
+        value:
+          type: string
+      required: [value]
+
+
+paths: {}

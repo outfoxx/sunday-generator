@@ -1,0 +1,87 @@
+#%RAML 1.0
+title: Test API
+baseUri: http://{env}.example.com/api
+baseUriParameters:
+  env:
+    type: string
+    enum: [dev, stg, prd]
+protocols: HTTPS
+mediaType: application/json
+
+(myann): annotation value
+
+resourceTypes:
+  collection: !include test-res.raml
+  test:
+    get:
+      displayName: listItems
+      responses:
+        '200':
+          body: Tester
+
+types:
+
+  BaseArray:
+    type: array
+    items: any
+    facets:
+      extra: boolean
+
+  BaseArray2:
+    type: BaseArray
+    extra: true
+    items: integer
+
+  Tester:
+    type: (string | integer)
+    description:
+      (myann): annotated scalar
+      value: String or integer value
+    examples:
+      string_example:
+        value: "test"
+      integer_example:
+        value: 10
+
+  Tester2:
+    type: Tester
+    description:
+
+  ShortString:
+    type: string
+    minLength: 5
+
+  Strings:
+    type: array
+    items: string
+
+  Test:
+    type: object
+    properties:
+      value: ShortString
+      value1:
+        type: ShortString
+        description: test
+        minLength: 10
+      value2:
+        type: Strings
+
+
+
+/test:
+  type:
+    collection:
+      (lib.test): 123
+  get:
+    displayName: list
+
+/test/{id}:
+  get:
+    displayName: fetch
+    body:
+      type: Test
+
+
+annotationTypes:
+  myann:
+    type: string

@@ -1,0 +1,22 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      fromNilUnion: (string | nil)
+      notRequired:
+        required: false
+        type: string
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body: Test
