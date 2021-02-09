@@ -6,9 +6,7 @@ plugins {
 }
 
 val amfClientVersion: String by project
-val cliktVersion: String by project
 
-val javaPoetVersion: String by project
 val kotlinPoetVersion: String by project
 val typeScriptPoetVersion: String by project
 val swiftPoetVersion: String by project
@@ -35,13 +33,11 @@ repositories {
 
 dependencies {
 
-  implementation("com.github.amlorg:amf-client_2.12:$amfClientVersion")
+  api("com.github.amlorg:amf-client_2.12:$amfClientVersion")
 
-  implementation("com.squareup:javapoet:$javaPoetVersion")
-  implementation("com.squareup:kotlinpoet:$kotlinPoetVersion")
-  implementation("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
-  implementation("io.outfoxx:swiftpoet:$swiftPoetVersion")
-  implementation("org.openapi4j:openapi-parser:1.0.4")
+  api("com.squareup:kotlinpoet:$kotlinPoetVersion")
+  api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
+  api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
   implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
   implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion")
@@ -49,8 +45,6 @@ dependencies {
   implementation("org.zalando:problem:$zalandoProblemVersion")
   implementation("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-
-  implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
 
   //
   // TESTING
