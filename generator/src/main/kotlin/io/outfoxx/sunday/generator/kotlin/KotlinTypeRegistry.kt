@@ -50,8 +50,8 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
 import io.outfoxx.sunday.generator.APIAnnotationName.JavaModelPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinImpl
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinType
@@ -60,7 +60,6 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.aggregateInheritanceNode
 import io.outfoxx.sunday.generator.aggregateInheritanceSuper
 import io.outfoxx.sunday.generator.and
@@ -141,8 +140,6 @@ import javax.validation.constraints.Min
 import javax.validation.constraints.Pattern
 import javax.validation.constraints.Size
 import kotlin.math.min
-
-typealias KotlinResolutionContext = TypeRegistry.ResolutionContext<ClassName>
 
 class KotlinTypeRegistry(
   val defaultModelPackageName: String,
