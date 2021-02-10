@@ -5,6 +5,8 @@ plugins {
   jacoco
 }
 
+val slf4jVersion: String by project
+
 val amfClientVersion: String by project
 
 val kotlinPoetVersion: String by project
@@ -20,6 +22,7 @@ val zalandoProblemVersion: String by project
 val junitVersion: String by project
 val hamcrestVersion: String by project
 val kotlinCompileTestingVersion: String by project
+val dockerJavaVersion: String by project
 
 configurations.compileClasspath {
   resolutionStrategy {
@@ -46,6 +49,8 @@ dependencies {
   implementation("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
+  implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
+
   //
   // TESTING
   //
@@ -56,6 +61,8 @@ dependencies {
 
   testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
 
+  testImplementation("com.github.docker-java:docker-java-core:$dockerJavaVersion")
+  testImplementation("com.github.docker-java:docker-java-transport-httpclient5:$dockerJavaVersion")
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 
 }
