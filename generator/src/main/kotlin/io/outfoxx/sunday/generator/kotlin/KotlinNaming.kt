@@ -24,3 +24,5 @@ val Parameter.kotlinIdentifierName: String get() = parameterName!!.toLowerCamelC
 
 val Operation.kotlinTypeName: String? get() = (operationId ?: name)?.toUpperCamelCase()
 val Operation.kotlinIdentifierName: String? get() = (operationId ?: name)?.toLowerCamelCase()
+
+val String.kotlinIdentifierName: String get() = toLowerCamelCase()

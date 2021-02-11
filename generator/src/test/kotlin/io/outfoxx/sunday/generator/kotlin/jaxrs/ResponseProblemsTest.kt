@@ -45,10 +45,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {
@@ -90,10 +90,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {
@@ -135,10 +135,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {
@@ -180,10 +180,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {
@@ -225,10 +225,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {
@@ -270,10 +270,10 @@ class ResponseProblemsTest {
     assertEquals(
       """
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
+          public val offendingId: kotlin.String,
           instance: java.net.URI? = null,
           cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
+        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
         
           public companion object {

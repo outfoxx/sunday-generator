@@ -113,7 +113,6 @@ import io.outfoxx.sunday.generator.range
 import io.outfoxx.sunday.generator.resolve
 import io.outfoxx.sunday.generator.resolveRef
 import io.outfoxx.sunday.generator.scalarValue
-import io.outfoxx.sunday.generator.toLowerCamelCase
 import io.outfoxx.sunday.generator.toUpperCamelCase
 import io.outfoxx.sunday.generator.uniqueItems
 import io.outfoxx.sunday.generator.values
@@ -249,7 +248,7 @@ class KotlinTypeRegistry(
               // Add all custom properties to constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
                 addParameter(
-                  customPropertyName.toLowerCamelCase(),
+                  customPropertyName.kotlinIdentifierName,
                   resolveTypeReference(
                     customPropertyTypeNameStr,
                     KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
@@ -284,9 +283,23 @@ class KotlinTypeRegistry(
         .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
         .addSuperclassConstructorParameter("instance")
         .addSuperclassConstructorParameter("cause")
-        .addSuperclassConstructorParameter("mapOf(%L)", problemTypeDefinition.custom.map {
-          CodeBlock.of("%S to %L", it.key, it.key.toLowerCamelCase())
-        }.joinToCode(", "))
+        .apply {
+          problemTypeDefinition.custom.map { (customPropertyName, customPropertyTypeNameStr) ->
+            addProperty(
+              PropertySpec
+                .builder(
+                  customPropertyName.kotlinIdentifierName,
+                  resolveTypeReference(
+                    customPropertyTypeNameStr,
+                    KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
+                  ),
+                  KModifier.PUBLIC
+                )
+                .initializer(customPropertyName.kotlinIdentifierName)
+                .build()
+            )
+          }
+        }
         .addFunction(
           FunSpec.builder("getCause")
             .returns(Exceptional::class.asTypeName().copy(nullable = true))
