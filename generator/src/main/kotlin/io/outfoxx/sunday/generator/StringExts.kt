@@ -32,9 +32,9 @@ fun String.toUpperCamelCase(): String = split('-', '_', '.').joinToString("") { 
 
 fun String.toLowerCamelCase(): String = toUpperCamelCase().decapitalize()
 
-val camelRegex = "(?<=[a-zA-Z])[A-Z]".toRegex()
+val camelRegex = """(?<=[a-zA-Z])[A-Z]""".toRegex()
 
-// String extensions
-fun String.camelCaseToKebabCase(): String {
-  return camelRegex.replace(this) { "-${it.value}" }.toLowerCase()
-}
+fun String.camelCaseToKebabCase() =
+  camelRegex.replace(this) { "-${it.value}" }
+    .toLowerCase()
+    .replace("a-p-i", "api")

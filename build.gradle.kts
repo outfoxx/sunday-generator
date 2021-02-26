@@ -1,4 +1,8 @@
 
+plugins {
+  kotlin("jvm") apply false
+}
+
 val releaseVersion: String by project
 
 subprojects {
@@ -10,6 +14,10 @@ subprojects {
   version = releaseVersion
 
   repositories {
+    mavenLocal()
+    maven {
+      setUrl("https://oss.sonatype.org/content/repositories/snapshots/")
+    }
     maven {
       setUrl("https://repository-master.mulesoft.org/nexus/content/repositories/releases")
     }

@@ -1,5 +1,6 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -8,11 +9,13 @@ import io.outfoxx.sunday.generator.kotlin.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin/JAXRS] [RAML] Response Async Test")
 class ResponseAsyncTest {
 
   @Test
@@ -34,20 +37,33 @@ class ResponseAsyncTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.container.AsyncResponse
+        import javax.ws.rs.container.Suspended
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests")
-          public fun fetchTest(@javax.ws.rs.container.Suspended asyncResponse: javax.ws.rs.container.AsyncResponse): kotlin.Unit
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@Suspended asyncResponse: AsyncResponse): Unit
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

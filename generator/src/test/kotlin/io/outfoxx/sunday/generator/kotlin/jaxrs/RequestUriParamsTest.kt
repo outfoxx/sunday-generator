@@ -1,5 +1,6 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -9,11 +10,13 @@ import io.outfoxx.sunday.generator.kotlin.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin/JAXRS] [RAML] Request Uri Params Test")
 class RequestUriParamsTest {
 
   @Test
@@ -35,25 +38,41 @@ class RequestUriParamsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests/{obj}/{str}/{int}/{def}")
+          @GET
+          @Path(value = "/tests/{obj}/{str-req}/{int}/{def}")
           public fun fetchTest(
-            @javax.ws.rs.PathParam(value = "def") def: kotlin.String,
-            @javax.ws.rs.PathParam(value = "obj") obj: io.test.Test,
-            @javax.ws.rs.PathParam(value = "str") str: kotlin.String,
-            @javax.ws.rs.PathParam(value = "int") @javax.ws.rs.DefaultValue(value = "5") int: kotlin.Int
-          ): javax.ws.rs.core.Response
+            @PathParam(value = "def") def: String,
+            @PathParam(value = "obj") obj: Test,
+            @PathParam(value = "str-req") strReq: String,
+            @PathParam(value = "int") @DefaultValue(value = "5") int: Int
+          ): Response
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -76,25 +95,42 @@ class RequestUriParamsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import io.test.Test
+        import javax.validation.Valid
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests/{obj}/{str}/{int}/{def}")
+          @GET
+          @Path(value = "/tests/{obj}/{str-req}/{int}/{def}")
           public fun fetchTest(
-            @javax.ws.rs.PathParam(value = "def") def: kotlin.String,
-            @javax.ws.rs.PathParam(value = "obj") @javax.validation.Valid obj: io.test.Test,
-            @javax.ws.rs.PathParam(value = "str") str: kotlin.String,
-            @javax.ws.rs.PathParam(value = "int") @javax.ws.rs.DefaultValue(value = "5") int: kotlin.Int
-          ): javax.ws.rs.core.Response
+            @PathParam(value = "def") def: String,
+            @PathParam(value = "obj") @Valid obj: Test,
+            @PathParam(value = "str-req") strReq: String,
+            @PathParam(value = "int") @DefaultValue(value = "5") int: Int
+          ): Response
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -117,25 +153,41 @@ class RequestUriParamsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Any
+        import kotlin.Int
+        import kotlin.String
+        import kotlin.collections.Map
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests/{obj}/{str}/{int}/{def}")
+          @GET
+          @Path(value = "/tests/{obj}/{str}/{int}/{def}")
           public fun fetchTest(
-            @javax.ws.rs.PathParam(value = "obj") obj: kotlin.collections.Map<kotlin.String, kotlin.Any>,
-            @javax.ws.rs.PathParam(value = "str") str: kotlin.String,
-            @javax.ws.rs.PathParam(value = "def") def: kotlin.String,
-            @javax.ws.rs.PathParam(value = "int") int: kotlin.Int
-          ): javax.ws.rs.core.Response
+            @PathParam(value = "obj") obj: Map<String, Any>,
+            @PathParam(value = "str") str: String,
+            @PathParam(value = "def") def: String,
+            @PathParam(value = "int") int: Int
+          ): Response
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -158,25 +210,40 @@ class RequestUriParamsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests/{obj}/{str}/{int}/{def}")
+          @GET
+          @Path(value = "/tests/{obj}/{str}/{int}/{def}")
           public fun fetchTest(
-            @javax.ws.rs.PathParam(value = "def") def: kotlin.String,
-            @javax.ws.rs.PathParam(value = "obj") obj: io.test.Test?,
-            @javax.ws.rs.PathParam(value = "str") str: kotlin.String?,
-            @javax.ws.rs.PathParam(value = "int") int: kotlin.Int?
-          ): javax.ws.rs.core.Response
+            @PathParam(value = "def") def: String,
+            @PathParam(value = "obj") obj: Test?,
+            @PathParam(value = "str") str: String?,
+            @PathParam(value = "int") int: Int?
+          ): Response
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -199,16 +266,26 @@ class RequestUriParamsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests/{category}/{type}")
-          public fun fetchTest(@javax.ws.rs.PathParam(value = "category") category: io.test.service.API.FetchTestCategoryUriParam, @javax.ws.rs.PathParam(value = "type") type: io.test.service.API.FetchTestTypeUriParam): javax.ws.rs.core.Response
+          @GET
+          @Path(value = "/tests/{category}/{type}")
+          public fun fetchTest(@PathParam(value = "category") category: FetchTestCategoryUriParam,
+              @PathParam(value = "type") type: FetchTestTypeUriParam): Response
 
           public enum class FetchTestCategoryUriParam {
             Politics,
@@ -222,7 +299,10 @@ class RequestUriParamsTest {
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

@@ -21,7 +21,7 @@ import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
-import io.outfoxx.sunday.generator.APIAnnotationName.JavaPkg
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
@@ -83,7 +83,7 @@ abstract class KotlinGenerator(
     endPointGroups.map { (groupName, endPoints) ->
 
       val servicePackageName =
-        api.findStringAnnotation(JavaPkg, generationMode)
+        api.findStringAnnotation(KotlinPkg, generationMode)
           ?: defaultServicePackageName
 
       val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
@@ -336,7 +336,11 @@ abstract class KotlinGenerator(
 
       var uriParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
 
-      uriParameterTypeName = uriParameterTypeName.copy(nullable = parameter.required != true)
+      if (parameter.required != true) {
+        uriParameterTypeName = uriParameterTypeName.copy(nullable = true)
+      } else if (parameter.schema?.defaultValue != null) {
+        uriParameterTypeName = uriParameterTypeName.copy(nullable = false)
+      }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -380,9 +384,9 @@ abstract class KotlinGenerator(
 
       var queryParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
 
-      queryParameterTypeName = queryParameterTypeName.copy(nullable = parameter.required != true)
-
-      if (parameter.schema?.defaultValue != null) {
+      if (parameter.required != true) {
+        queryParameterTypeName = queryParameterTypeName.copy(nullable = true)
+      } else if (parameter.schema?.defaultValue != null) {
         queryParameterTypeName = queryParameterTypeName.copy(nullable = false)
       }
 
@@ -427,9 +431,9 @@ abstract class KotlinGenerator(
 
       var headerParameterTypeName = typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
 
-      headerParameterTypeName = headerParameterTypeName.copy(nullable = header.required != true)
-
-      if (header.schema?.defaultValue != null) {
+      if (header.required != true) {
+        headerParameterTypeName = headerParameterTypeName.copy(nullable = true)
+      } else if (header.schema?.defaultValue != null) {
         headerParameterTypeName = headerParameterTypeName.copy(nullable = false)
       }
 

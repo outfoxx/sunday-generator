@@ -1,5 +1,6 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -8,12 +9,14 @@ import io.outfoxx.sunday.generator.kotlin.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.util.concurrent.CompletionStage
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin/JAXRS] [RAML] Response Reactive Test")
 class ResponseReactiveTest {
 
   @Test
@@ -35,20 +38,32 @@ class ResponseReactiveTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import java.util.concurrent.CompletionStage
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests")
-          public fun fetchTest(): java.util.concurrent.CompletionStage<javax.ws.rs.core.Response>
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): CompletionStage<Response>
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -71,20 +86,32 @@ class ResponseReactiveTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test.service
+
+        import io.test.Test
+        import java.util.concurrent.CompletionStage
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests")
-          public fun fetchTest(): java.util.concurrent.CompletionStage<io.test.Test>
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): CompletionStage<Test>
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

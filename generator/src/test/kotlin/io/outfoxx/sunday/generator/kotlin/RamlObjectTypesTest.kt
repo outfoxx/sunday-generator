@@ -1,18 +1,21 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Object Types Test")
 class RamlObjectTypesTest {
 
   @Test
@@ -27,12 +30,21 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.Map
+
         public interface Test {
-          public val map: kotlin.collections.Map<kotlin.String, kotlin.Any>
+          public val map: Map<String, Any>
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -48,14 +60,21 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+
         public interface Test {
-          public val fromNilUnion: kotlin.String?
+          public val fromNilUnion: String?
         
-          public val notRequired: kotlin.String?
+          public val notRequired: String?
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -70,24 +89,32 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        public class Test(
-          public val fromNilUnion: kotlin.String?,
-          public val notRequired: kotlin.String?
-        ) {
-          public fun copy(fromNilUnion: kotlin.String?, notRequired: kotlin.String?) = io.test.Test(fromNilUnion ?: this.fromNilUnion, notRequired ?: this.notRequired)
+        package io.test
 
-          public override fun hashCode(): kotlin.Int {
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
+        public class Test(
+          public val fromNilUnion: String?,
+          public val notRequired: String?
+        ) {
+          public fun copy(fromNilUnion: String? = null, notRequired: String? = null) = Test(fromNilUnion ?:
+              this.fromNilUnion, notRequired ?: this.notRequired)
+
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + (fromNilUnion?.hashCode() ?: 0)
             result = 31 * result + (notRequired?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (fromNilUnion != other.fromNilUnion) return false
             if (notRequired != other.notRequired) return false
@@ -102,7 +129,10 @@ class RamlObjectTypesTest {
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -159,32 +189,53 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+
         public interface Test {
-          public val value: kotlin.String
+          public val value: String
         }
         
       """.trimIndent(),
-      testSpec.toString()
+      buildString {
+        FileSpec.get("io.test", testSpec)
+          .writeTo(this)
+      }
     )
 
     assertEquals(
       """
-        public interface Test2 : io.test.Test {
-          public val value2: kotlin.String
+        package io.test
+
+        import kotlin.String
+
+        public interface Test2 : Test {
+          public val value2: String
         }
         
       """.trimIndent(),
-      test2Spec.toString()
+      buildString {
+        FileSpec.get("io.test", test2Spec)
+          .writeTo(this)
+      }
     )
 
     assertEquals(
       """
-        public interface Test3 : io.test.Test2 {
-          public val value3: kotlin.String
+        package io.test
+
+        import kotlin.String
+
+        public interface Test3 : Test2 {
+          public val value3: String
         }
         
       """.trimIndent(),
-      test3Spec.toString()
+      buildString {
+        FileSpec.get("io.test", test3Spec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -209,20 +260,27 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public open class Test(
-          public val value: kotlin.String
+          public val value: String
         ) {
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + value.hashCode()
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (value != other.value) return false
 
@@ -233,26 +291,36 @@ class RamlObjectTypesTest {
         }
         
       """.trimIndent(),
-      testSpec.toString()
+      buildString {
+        FileSpec.get("io.test", testSpec)
+          .writeTo(this)
+      }
     )
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public open class Test2(
-          value: kotlin.String,
-          public val value2: kotlin.String
-        ) : io.test.Test(value) {
-          public override fun hashCode(): kotlin.Int {
+          value: String,
+          public val value2: String
+        ) : Test(value) {
+          public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + value2.hashCode()
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test2
+            other as Test2
 
             if (!super.equals(other)) return false
             if (value2 != other.value2) return false
@@ -267,33 +335,43 @@ class RamlObjectTypesTest {
         }
         
       """.trimIndent(),
-      test2Spec.toString()
+      buildString {
+        FileSpec.get("io.test", test2Spec)
+          .writeTo(this)
+      }
     )
 
     assertEquals(
       """
-        public class Test3(
-          value: kotlin.String,
-          value2: kotlin.String,
-          public val value3: kotlin.String
-        ) : io.test.Test2(value, value2) {
-          public fun copy(
-            value: kotlin.String?,
-            value2: kotlin.String?,
-            value3: kotlin.String?
-          ) = io.test.Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
+        package io.test
 
-          public override fun hashCode(): kotlin.Int {
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
+        public class Test3(
+          value: String,
+          value2: String,
+          public val value3: String
+        ) : Test2(value, value2) {
+          public fun copy(
+            value: String? = null,
+            value2: String? = null,
+            value3: String? = null
+          ) = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
+
+          public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + value3.hashCode()
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test3
+            other as Test3
 
             if (!super.equals(other)) return false
             if (value3 != other.value3) return false
@@ -309,7 +387,10 @@ class RamlObjectTypesTest {
         }
 
       """.trimIndent(),
-      test3Spec.toString()
+      buildString {
+        FileSpec.get("io.test", test3Spec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -324,14 +405,21 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+
         public interface Test {
-          public val someValue: kotlin.String
+          public val someValue: String
         
-          public val anotherValue: kotlin.String
+          public val anotherValue: String
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -346,26 +434,35 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonProperty
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public class Test(
-          @com.fasterxml.jackson.`annotation`.JsonProperty(value = "some-value")
-          public val someValue: kotlin.String,
-          @com.fasterxml.jackson.`annotation`.JsonProperty(value = "another_value")
-          public val anotherValue: kotlin.String
+          @JsonProperty(value = "some-value")
+          public val someValue: String,
+          @JsonProperty(value = "another_value")
+          public val anotherValue: String
         ) {
-          public fun copy(someValue: kotlin.String?, anotherValue: kotlin.String?) = io.test.Test(someValue ?: this.someValue, anotherValue ?: this.anotherValue)
+          public fun copy(someValue: String? = null, anotherValue: String? = null) = Test(someValue ?:
+              this.someValue, anotherValue ?: this.anotherValue)
         
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + someValue.hashCode()
             result = 31 * result + anotherValue.hashCode()
             return result
           }
         
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
         
-            other as io.test.Test
+            other as Test
         
             if (someValue != other.someValue) return false
             if (anotherValue != other.anotherValue) return false
@@ -380,7 +477,10 @@ class RamlObjectTypesTest {
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

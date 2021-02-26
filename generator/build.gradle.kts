@@ -14,6 +14,7 @@ val typeScriptPoetVersion: String by project
 val swiftPoetVersion: String by project
 val jacksonVersion: String by project
 
+val guavaVersion: String by project
 val retrofitVersion: String by project
 val jaxrsVersion: String by project
 val validationVersion: String by project
@@ -42,11 +43,13 @@ dependencies {
   api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
+  implementation("com.google.guava:guava:$guavaVersion")
   implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
   implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion")
   implementation("javax.validation:validation-api:$validationVersion")
   implementation("org.zalando:problem:$zalandoProblemVersion")
   implementation("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
+  implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
   implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")

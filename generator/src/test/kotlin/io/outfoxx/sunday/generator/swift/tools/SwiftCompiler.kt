@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.swift
+package io.outfoxx.sunday.generator.swift.tools
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback

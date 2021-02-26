@@ -3,6 +3,7 @@ package io.outfoxx.sunday.generator.kotlin
 import com.squareup.kotlinpoet.ClassName
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.test.extensions.ResourceExtension
@@ -29,18 +30,18 @@ class OasTypeAnnotationsTest {
 
   @ParameterizedTest(name = "{0} in {1} mode")
   @CsvSource(
-    "javaModelPackage,              Server,   +io.explicit.test",
-    "javaModelPackage,              Client,   +io.explicit.test",
-    "javaModelPackage:server,       Server,   +io.explicit.test.server",
-    "javaModelPackage:server,       Client,   +io.explicit.test",
-    "javaModelPackage:client,       Server,   +io.explicit.test",
-    "javaModelPackage:client,       Client,   +io.explicit.test.client",
-    "javaPackage,                   Server,   +io.explicit.test",
-    "javaPackage,                   Client,   +io.explicit.test",
-    "javaPackage:server,            Server,   +io.explicit.test.server",
-    "javaPackage:server,            Client,   +io.explicit.test",
-    "javaPackage:client,            Server,   +io.explicit.test",
-    "javaPackage:client,            Client,   +io.explicit.test.client",
+    "kotlinModelPackage,            Server,   +io.explicit.test",
+    "kotlinModelPackage,            Client,   +io.explicit.test",
+    "kotlinModelPackage:server,     Server,   +io.explicit.test.server",
+    "kotlinModelPackage:server,     Client,   +io.explicit.test",
+    "kotlinModelPackage:client,     Server,   +io.explicit.test",
+    "kotlinModelPackage:client,     Client,   +io.explicit.test.client",
+    "kotlinPackage,                 Server,   +io.explicit.test",
+    "kotlinPackage,                 Client,   +io.explicit.test",
+    "kotlinPackage:server,          Server,   +io.explicit.test.server",
+    "kotlinPackage:server,          Client,   +io.explicit.test",
+    "kotlinPackage:client,          Server,   +io.explicit.test",
+    "kotlinPackage:client,          Client,   +io.explicit.test.client",
     "kotlinType,                    Server,   ~java.time.LocalDateTime",
     "kotlinType,                    Client,   ~java.time.LocalDateTime",
     "kotlinType:server,             Server,   ~java.time.Instant",

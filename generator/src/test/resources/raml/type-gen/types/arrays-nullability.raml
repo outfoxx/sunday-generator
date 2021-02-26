@@ -11,7 +11,7 @@ types:
 
   NullableStrings:
     type: array
-    items: (string | nil)
+    items: string?
 
   Test:
     type: object
@@ -21,11 +21,11 @@ types:
         items: string
       arrayOfNullableStrings:
         type: array
-        items: (string | nil)
+        items: string?
       nullableArrayOfStrings:
-        type: (Strings | nil)
+        type: Strings?
       nullableArrayOfNullableStrings:
-        type: (NullableStrings | nil)
+        type: NullableStrings?
       declaredArrayOfStrings:
         type: Strings
       declaredArrayOfNullableStrings:

@@ -6,11 +6,13 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPubl
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Generated Annotations Test")
 class RamlGeneratedAnnotationsTest {
 
   @Test

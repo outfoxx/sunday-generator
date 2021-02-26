@@ -6,7 +6,7 @@ info:
 servers:
 - url: 'https://example.com/api/'
 
-x-sunday-javaModelPackage: io.test.lib
+x-sunday-kotlinModelPackage: io.test.lib
 
 components:
   schemas:

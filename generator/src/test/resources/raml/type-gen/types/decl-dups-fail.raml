@@ -1,12 +1,18 @@
 #%RAML 1.0
 title: Test API
 uses:
+  lib: lib-decl-dups-fail.raml
   sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
 mediaType:
 - application/json
 
-(sunday.javaPackage): io.explicit.test
-(sunday.javaPackage:client): io.explicit.test.client
+types:
+
+  Test:
+    type: lib.Test
+    properties:
+      value2: string
+
 
 /tests/{id}:
 
@@ -15,6 +21,4 @@ mediaType:
     responses:
       200:
         body:
-          type: object
-          properties:
-            value: string
+          type: Test

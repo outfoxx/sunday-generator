@@ -1,5 +1,6 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -8,11 +9,13 @@ import io.outfoxx.sunday.generator.kotlin.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin/JAXRS] [RAML] Request Methods Test")
 class RequestMethodsTest {
 
   @Test
@@ -34,48 +37,68 @@ class RequestMethodsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
+        package io.test
+
+        import com.fasterxml.jackson.databind.node.ObjectNode
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DELETE
+        import javax.ws.rs.GET
+        import javax.ws.rs.HEAD
+        import javax.ws.rs.OPTIONS
+        import javax.ws.rs.PATCH
+        import javax.ws.rs.POST
+        import javax.ws.rs.PUT
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Context
+        import javax.ws.rs.core.Response
+        import javax.ws.rs.core.UriInfo
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
         public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests")
-          public fun fetchTest(): javax.ws.rs.core.Response
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Response
         
-          @javax.ws.rs.PUT
-          @javax.ws.rs.Path(value = "/tests")
-          public fun putTest(body: io.test.Test): javax.ws.rs.core.Response
+          @PUT
+          @Path(value = "/tests")
+          public fun putTest(body: Test): Response
         
-          @javax.ws.rs.POST
-          @javax.ws.rs.Path(value = "/tests")
-          public fun postTest(body: io.test.Test, @javax.ws.rs.core.Context uriInfo: javax.ws.rs.core.UriInfo): javax.ws.rs.core.Response
+          @POST
+          @Path(value = "/tests")
+          public fun postTest(body: Test, @Context uriInfo: UriInfo): Response
         
-          @javax.ws.rs.PATCH
-          @javax.ws.rs.Path(value = "/tests")
-          public fun patchTest(body: io.test.Test): javax.ws.rs.core.Response
+          @PATCH
+          @Path(value = "/tests")
+          public fun patchTest(body: Test): Response
         
-          @javax.ws.rs.DELETE
-          @javax.ws.rs.Path(value = "/tests")
-          public fun deleteTest(): javax.ws.rs.core.Response
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): Response
         
-          @javax.ws.rs.HEAD
-          @javax.ws.rs.Path(value = "/tests")
-          public fun headTest(): javax.ws.rs.core.Response
+          @HEAD
+          @Path(value = "/tests")
+          public fun headTest(): Response
         
-          @javax.ws.rs.OPTIONS
-          @javax.ws.rs.Path(value = "/tests")
-          public fun optionsTest(): javax.ws.rs.core.Response
+          @OPTIONS
+          @Path(value = "/tests")
+          public fun optionsTest(): Response
         
-          @javax.ws.rs.PATCH
-          @javax.ws.rs.Path(value = "/tests2")
-          public fun patchableTest(body: com.fasterxml.jackson.databind.node.ObjectNode): javax.ws.rs.core.Response
+          @PATCH
+          @Path(value = "/tests2")
+          public fun patchableTest(body: ObjectNode): Response
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -98,48 +121,66 @@ class RequestMethodsTest {
         )
       }
 
-    val type = findType("io.test.service.API", builtTypes)
+    val typeSpec = findType("io.test.service.API", builtTypes)
 
     assertEquals(
       """
-        @javax.ws.rs.Produces(value = ["application/json"])
-        @javax.ws.rs.Consumes(value = ["application/json"])
-        public interface API {
-          @javax.ws.rs.GET
-          @javax.ws.rs.Path(value = "/tests")
-          public fun fetchTest(): io.test.Test
-        
-          @javax.ws.rs.PUT
-          @javax.ws.rs.Path(value = "/tests")
-          public fun putTest(body: io.test.Test): io.test.Test
-        
-          @javax.ws.rs.POST
-          @javax.ws.rs.Path(value = "/tests")
-          public fun postTest(body: io.test.Test): io.test.Test
-        
-          @javax.ws.rs.PATCH
-          @javax.ws.rs.Path(value = "/tests")
-          public fun patchTest(body: io.test.Test): io.test.Test
-        
-          @javax.ws.rs.DELETE
-          @javax.ws.rs.Path(value = "/tests")
-          public fun deleteTest(): kotlin.Unit
+        package io.test
 
-          @javax.ws.rs.HEAD
-          @javax.ws.rs.Path(value = "/tests")
-          public fun headTest(): kotlin.Unit
+        import com.fasterxml.jackson.databind.node.ObjectNode
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DELETE
+        import javax.ws.rs.GET
+        import javax.ws.rs.HEAD
+        import javax.ws.rs.OPTIONS
+        import javax.ws.rs.PATCH
+        import javax.ws.rs.POST
+        import javax.ws.rs.PUT
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Test
         
-          @javax.ws.rs.OPTIONS
-          @javax.ws.rs.Path(value = "/tests")
-          public fun optionsTest(): kotlin.Unit
+          @PUT
+          @Path(value = "/tests")
+          public fun putTest(body: Test): Test
         
-          @javax.ws.rs.PATCH
-          @javax.ws.rs.Path(value = "/tests2")
-          public fun patchableTest(body: com.fasterxml.jackson.databind.node.ObjectNode): io.test.Test
+          @POST
+          @Path(value = "/tests")
+          public fun postTest(body: Test): Test
+        
+          @PATCH
+          @Path(value = "/tests")
+          public fun patchTest(body: Test): Test
+        
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): Unit
+
+          @HEAD
+          @Path(value = "/tests")
+          public fun headTest(): Unit
+        
+          @OPTIONS
+          @Path(value = "/tests")
+          public fun optionsTest(): Unit
+        
+          @PATCH
+          @Path(value = "/tests2")
+          public fun patchableTest(body: ObjectNode): Test
         }
 
       """.trimIndent(),
-      type.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

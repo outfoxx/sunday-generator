@@ -6,8 +6,8 @@ info:
 servers:
 - url: 'https://example.com/api/'
 
-x-sunday-javaPackage: io.explicit.test
-x-sunday-javaPackage-client: io.explicit.test.client
+x-sunday-kotlinPackage: io.explicit.test
+x-sunday-kotlinPackage-client: io.explicit.test.client
 
 paths:
   /test:

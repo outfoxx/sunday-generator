@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator
 
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 

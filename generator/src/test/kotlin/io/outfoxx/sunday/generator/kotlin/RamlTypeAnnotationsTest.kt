@@ -1,6 +1,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
@@ -9,6 +10,7 @@ import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -18,6 +20,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
 
   companion object {
@@ -27,18 +30,18 @@ class RamlTypeAnnotationsTest {
 
   @ParameterizedTest(name = "{0} in {1} mode")
   @CsvSource(
-    "javaModelPackage,              Server,   +io.explicit.test",
-    "javaModelPackage,              Client,   +io.explicit.test",
-    "javaModelPackage:server,       Server,   +io.explicit.test.server",
-    "javaModelPackage:server,       Client,   +io.explicit.test",
-    "javaModelPackage:client,       Server,   +io.explicit.test",
-    "javaModelPackage:client,       Client,   +io.explicit.test.client",
-    "javaPackage,                   Server,   +io.explicit.test",
-    "javaPackage,                   Client,   +io.explicit.test",
-    "javaPackage:server,            Server,   +io.explicit.test.server",
-    "javaPackage:server,            Client,   +io.explicit.test",
-    "javaPackage:client,            Server,   +io.explicit.test",
-    "javaPackage:client,            Client,   +io.explicit.test.client",
+    "kotlinModelPackage,            Server,   +io.explicit.test",
+    "kotlinModelPackage,            Client,   +io.explicit.test",
+    "kotlinModelPackage:server,     Server,   +io.explicit.test.server",
+    "kotlinModelPackage:server,     Client,   +io.explicit.test",
+    "kotlinModelPackage:client,     Server,   +io.explicit.test",
+    "kotlinModelPackage:client,     Client,   +io.explicit.test.client",
+    "kotlinPackage,                 Server,   +io.explicit.test",
+    "kotlinPackage,                 Client,   +io.explicit.test",
+    "kotlinPackage:server,          Server,   +io.explicit.test.server",
+    "kotlinPackage:server,          Client,   +io.explicit.test",
+    "kotlinPackage:client,          Server,   +io.explicit.test",
+    "kotlinPackage:client,          Client,   +io.explicit.test.client",
     "kotlinType,                    Server,   ~java.time.LocalDateTime",
     "kotlinType,                    Client,   ~java.time.LocalDateTime",
     "kotlinType:server,             Server,   ~java.time.Instant",
@@ -88,24 +91,31 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+
         public interface Group {
-          public val value: kotlin.String
+          public val value: String
 
-          public interface Member1 : io.test.Group {
-            public val memberValue1: kotlin.String
+          public interface Member1 : Group {
+            public val memberValue1: String
 
-            public interface Sub : io.test.Group.Member1 {
-              public val subMemberValue: kotlin.String
+            public interface Sub : Member1 {
+              public val subMemberValue: String
             }
           }
         
-          public interface Member2 : io.test.Group {
-            public val memberValue2: kotlin.String
+          public interface Member2 : Group {
+            public val memberValue2: String
           }
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
 
   }
@@ -121,20 +131,27 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+
         public interface Root {
-          public val value: kotlin.String
+          public val value: String
 
           public interface Group {
-            public val value: kotlin.String
+            public val value: String
   
             public interface Member {
-              public val memberValue: kotlin.String
+              public val memberValue: String
             }
           }
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
 
   }
@@ -150,18 +167,27 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        public class Test {
-          @get:com.fasterxml.jackson.`annotation`.JsonIgnore
-          public val className: kotlin.String
-            get() = java.time.LocalDateTime::class.qualifiedName + "-value-" + "-literal"
+        package io.test
 
-          public fun copy() = io.test.Test()
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
+        import java.time.LocalDateTime
+        import kotlin.String
+
+        public class Test {
+          @get:JsonIgnore
+          public val className: String
+            get() = LocalDateTime::class.qualifiedName + "-value-" + "-literal"
+
+          public fun copy() = Test()
         
           public override fun toString() = ${'"'}""Test()""${'"'}
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
 
   }
@@ -180,15 +206,23 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        @com.fasterxml.jackson.`annotation`.JsonSubTypes(value = [
-          com.fasterxml.jackson.`annotation`.JsonSubTypes.Type(name = "Child1", value = io.test.Child1::class),
-          com.fasterxml.jackson.`annotation`.JsonSubTypes.Type(name = "child2", value = io.test.Child2::class)
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
+        import com.fasterxml.jackson.`annotation`.JsonSubTypes
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.String
+
+        @JsonSubTypes(value = [
+          JsonSubTypes.Type(name = "Child1", value = Child1::class),
+          JsonSubTypes.Type(name = "child2", value = Child2::class)
         ])
         public abstract class Parent {
-          @get:com.fasterxml.jackson.`annotation`.JsonIgnore
-          public abstract val type: kotlin.String
+          @get:JsonIgnore
+          public abstract val type: String
         
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -199,7 +233,10 @@ class RamlTypeAnnotationsTest {
         }
         
       """.trimIndent(),
-      parenTypeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", parenTypeSpec)
+          .writeTo(this)
+      }
     )
 
     val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
@@ -207,25 +244,32 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public class Child1(
-          public val value: kotlin.String?
-        ) : io.test.Parent() {
-          public override val type: kotlin.String
+          public val value: String?
+        ) : Parent() {
+          public override val type: String
             get() = "Child1"
 
-          public fun copy(value: kotlin.String?) = io.test.Child1(value ?: this.value)
+          public fun copy(value: String? = null) = Child1(value ?: this.value)
 
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Child1
+            other as Child1
 
             if (!super.equals(other)) return false
             if (value != other.value) return false
@@ -237,7 +281,10 @@ class RamlTypeAnnotationsTest {
         }
         
       """.trimIndent(),
-      child1TypeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", child1TypeSpec)
+          .writeTo(this)
+      }
     )
 
     val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
@@ -245,25 +292,32 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public class Child2(
-          public val value: kotlin.String?
-        ) : io.test.Parent() {
-          public override val type: kotlin.String
+          public val value: String?
+        ) : Parent() {
+          public override val type: String
             get() = "child2"
 
-          public fun copy(value: kotlin.String?) = io.test.Child2(value ?: this.value)
+          public fun copy(value: String? = null) = Child2(value ?: this.value)
         
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
         
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
         
-            other as io.test.Child2
+            other as Child2
         
             if (!super.equals(other)) return false
             if (value != other.value) return false
@@ -275,7 +329,10 @@ class RamlTypeAnnotationsTest {
         }
         
       """.trimIndent(),
-      child2TypeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", child2TypeSpec)
+          .writeTo(this)
+      }
     )
 
     val testTypeSpec = builtTypes[ClassName.bestGuess("io.test.Test")]
@@ -283,29 +340,38 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public class Test(
-          @com.fasterxml.jackson.`annotation`.JsonTypeInfo(
-            use = com.fasterxml.jackson.`annotation`.JsonTypeInfo.Id.NAME,
-            include = com.fasterxml.jackson.`annotation`.JsonTypeInfo.As.EXTERNAL_PROPERTY,
+          @JsonTypeInfo(
+            use = JsonTypeInfo.Id.NAME,
+            include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
             property = "parentType"
           )
-          public val parent: io.test.Parent,
-          public val parentType: kotlin.String
+          public val parent: Parent,
+          public val parentType: String
         ) {
-          public fun copy(parent: io.test.Parent?, parentType: kotlin.String?) = io.test.Test(parent ?: this.parent, parentType ?: this.parentType)
+          public fun copy(parent: Parent? = null, parentType: String? = null) = Test(parent ?: this.parent,
+              parentType ?: this.parentType)
         
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
         
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
         
-            other as io.test.Test
+            other as Test
         
             if (parent != other.parent) return false
             if (parentType != other.parentType) return false
@@ -320,7 +386,10 @@ class RamlTypeAnnotationsTest {
         }
         
       """.trimIndent(),
-      testTypeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", testTypeSpec)
+          .writeTo(this)
+      }
     )
 
   }
@@ -351,18 +420,27 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        package io.test
+
+        import com.fasterxml.jackson.databind.node.ObjectNode
+        import java.util.Optional
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
         public class Test(
-          public val string: kotlin.String,
-          public val int: kotlin.Int,
-          public val bool: kotlin.Boolean
+          public val string: String,
+          public val int: Int,
+          public val bool: Boolean
         ) {
           public fun copy(
-            string: kotlin.String?,
-            int: kotlin.Int?,
-            bool: kotlin.Boolean?
-          ) = io.test.Test(string ?: this.string, int ?: this.int, bool ?: this.bool)
+            string: String? = null,
+            int: Int? = null,
+            bool: Boolean? = null
+          ) = Test(string ?: this.string, int ?: this.int, bool ?: this.bool)
 
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + string.hashCode()
             result = 31 * result + int.hashCode()
@@ -370,11 +448,11 @@ class RamlTypeAnnotationsTest {
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (string != other.string) return false
             if (int != other.int) return false
@@ -389,21 +467,24 @@ class RamlTypeAnnotationsTest {
           | bool='${'$'}bool')
           ""${'"'}.trimMargin()
 
-          public fun patch(source: com.fasterxml.jackson.databind.node.ObjectNode): io.test.Test.Patch = io.test.Test.Patch(
+          public fun patch(source: ObjectNode): Patch = Patch(
             if (source.has("string")) Optional.ofNullable(string) else null,
             if (source.has("int")) Optional.ofNullable(int) else null,
             if (source.has("bool")) Optional.ofNullable(bool) else null
           )
 
           public data class Patch(
-            public val string: java.util.Optional<kotlin.String>?,
-            public val int: java.util.Optional<kotlin.Int>?,
-            public val bool: java.util.Optional<kotlin.Boolean>?
+            public val string: Optional<String>?,
+            public val int: Optional<Int>?,
+            public val bool: Optional<Boolean>?
           )
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
 
   }

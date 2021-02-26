@@ -5,8 +5,15 @@ uses:
 mediaType:
 - application/json
 
-(sunday.javaPackage): io.explicit.test
-(sunday.javaPackage:server): io.explicit.test.server
+(sunday.typeScriptModule): explicit/client
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value:
+        type: string
 
 /tests/{id}:
 
@@ -15,6 +22,4 @@ mediaType:
     responses:
       200:
         body:
-          type: object
-          properties:
-            value: string
+          type: Test

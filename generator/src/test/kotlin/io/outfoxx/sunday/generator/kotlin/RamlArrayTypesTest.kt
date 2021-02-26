@@ -1,15 +1,18 @@
 package io.outfoxx.sunday.generator.kotlin
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Array Types Test")
 class RamlArrayTypesTest {
 
   @Test
@@ -23,22 +26,30 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+        import kotlin.collections.List
+
         public interface Test {
-          public val arrayOfStrings: kotlin.collections.List<kotlin.String>
+          public val arrayOfStrings: List<String>
 
-          public val arrayOfNullableStrings: kotlin.collections.List<kotlin.String?>
+          public val arrayOfNullableStrings: List<String?>
 
-          public val nullableArrayOfStrings: kotlin.collections.List<kotlin.String>?
+          public val nullableArrayOfStrings: List<String>?
 
-          public val nullableArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>?
+          public val nullableArrayOfNullableStrings: List<String?>?
         
-          public val declaredArrayOfStrings: kotlin.collections.List<kotlin.String>
+          public val declaredArrayOfStrings: List<String>
         
-          public val declaredArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>
+          public val declaredArrayOfNullableStrings: List<String?>
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -53,18 +64,27 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Set
+
         public interface Test {
-          public val implicit: kotlin.collections.List<kotlin.String>
+          public val implicit: List<String>
         
-          public val unspecified: kotlin.collections.List<kotlin.String>
+          public val unspecified: List<String>
         
-          public val nonUnique: kotlin.collections.List<kotlin.String>
+          public val nonUnique: List<String>
         
-          public val unique: kotlin.collections.Set<kotlin.String>
+          public val unique: Set<String>
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -79,24 +99,36 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+        import kotlin.collections.List
+
         public class Test(
-          public val arrayOfStrings: kotlin.collections.List<kotlin.String>,
-          public val arrayOfNullableStrings: kotlin.collections.List<kotlin.String?>,
-          public val nullableArrayOfStrings: kotlin.collections.List<kotlin.String>?,
-          public val nullableArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>?,
-          public val declaredArrayOfStrings: kotlin.collections.List<kotlin.String>,
-          public val declaredArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>
+          public val arrayOfStrings: List<String>,
+          public val arrayOfNullableStrings: List<String?>,
+          public val nullableArrayOfStrings: List<String>?,
+          public val nullableArrayOfNullableStrings: List<String?>?,
+          public val declaredArrayOfStrings: List<String>,
+          public val declaredArrayOfNullableStrings: List<String?>
         ) {
           public fun copy(
-            arrayOfStrings: kotlin.collections.List<kotlin.String>?,
-            arrayOfNullableStrings: kotlin.collections.List<kotlin.String?>?,
-            nullableArrayOfStrings: kotlin.collections.List<kotlin.String>?,
-            nullableArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>?,
-            declaredArrayOfStrings: kotlin.collections.List<kotlin.String>?,
-            declaredArrayOfNullableStrings: kotlin.collections.List<kotlin.String?>?
-          ) = io.test.Test(arrayOfStrings ?: this.arrayOfStrings, arrayOfNullableStrings ?: this.arrayOfNullableStrings, nullableArrayOfStrings ?: this.nullableArrayOfStrings, nullableArrayOfNullableStrings ?: this.nullableArrayOfNullableStrings, declaredArrayOfStrings ?: this.declaredArrayOfStrings, declaredArrayOfNullableStrings ?: this.declaredArrayOfNullableStrings)
+            arrayOfStrings: List<String>? = null,
+            arrayOfNullableStrings: List<String?>? = null,
+            nullableArrayOfStrings: List<String>? = null,
+            nullableArrayOfNullableStrings: List<String?>? = null,
+            declaredArrayOfStrings: List<String>? = null,
+            declaredArrayOfNullableStrings: List<String?>? = null
+          ) = Test(arrayOfStrings ?: this.arrayOfStrings, arrayOfNullableStrings ?:
+              this.arrayOfNullableStrings, nullableArrayOfStrings ?: this.nullableArrayOfStrings,
+              nullableArrayOfNullableStrings ?: this.nullableArrayOfNullableStrings, declaredArrayOfStrings
+              ?: this.declaredArrayOfStrings, declaredArrayOfNullableStrings ?:
+              this.declaredArrayOfNullableStrings)
 
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + arrayOfStrings.hashCode()
             result = 31 * result + arrayOfNullableStrings.hashCode()
@@ -107,11 +139,11 @@ class RamlArrayTypesTest {
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (arrayOfStrings != other.arrayOfStrings) return false
             if (arrayOfNullableStrings != other.arrayOfNullableStrings) return false
@@ -134,7 +166,10 @@ class RamlArrayTypesTest {
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -149,20 +184,30 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Set
+
         public class Test(
-          public val implicit: kotlin.collections.List<kotlin.String>,
-          public val unspecified: kotlin.collections.List<kotlin.String>,
-          public val nonUnique: kotlin.collections.List<kotlin.String>,
-          public val unique: kotlin.collections.Set<kotlin.String>
+          public val implicit: List<String>,
+          public val unspecified: List<String>,
+          public val nonUnique: List<String>,
+          public val unique: Set<String>
         ) {
           public fun copy(
-            implicit: kotlin.collections.List<kotlin.String>?,
-            unspecified: kotlin.collections.List<kotlin.String>?,
-            nonUnique: kotlin.collections.List<kotlin.String>?,
-            unique: kotlin.collections.Set<kotlin.String>?
-          ) = io.test.Test(implicit ?: this.implicit, unspecified ?: this.unspecified, nonUnique ?: this.nonUnique, unique ?: this.unique)
+            implicit: List<String>? = null,
+            unspecified: List<String>? = null,
+            nonUnique: List<String>? = null,
+            unique: Set<String>? = null
+          ) = Test(implicit ?: this.implicit, unspecified ?: this.unspecified, nonUnique ?: this.nonUnique,
+              unique ?: this.unique)
 
-          public override fun hashCode(): kotlin.Int {
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + implicit.hashCode()
             result = 31 * result + unspecified.hashCode()
@@ -171,11 +216,11 @@ class RamlArrayTypesTest {
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (implicit != other.implicit) return false
             if (unspecified != other.unspecified) return false
@@ -194,7 +239,10 @@ class RamlArrayTypesTest {
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -209,24 +257,32 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        public class Test(
-          public val binary: kotlin.ByteArray,
-          public val nullableBinary: kotlin.ByteArray?
-        ) {
-          public fun copy(binary: kotlin.ByteArray?, nullableBinary: kotlin.ByteArray?) = io.test.Test(binary ?: this.binary, nullableBinary ?: this.nullableBinary)
+        package io.test
 
-          public override fun hashCode(): kotlin.Int {
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.ByteArray
+        import kotlin.Int
+
+        public class Test(
+          public val binary: ByteArray,
+          public val nullableBinary: ByteArray?
+        ) {
+          public fun copy(binary: ByteArray? = null, nullableBinary: ByteArray? = null) = Test(binary ?:
+              this.binary, nullableBinary ?: this.nullableBinary)
+
+          public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + binary.contentHashCode()
             result = 31 * result + (nullableBinary?.contentHashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: kotlin.Any?): kotlin.Boolean {
+          public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as io.test.Test
+            other as Test
 
             if (!binary.contentEquals(other.binary)) return false
             if (nullableBinary != null) {
@@ -245,7 +301,10 @@ class RamlArrayTypesTest {
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 

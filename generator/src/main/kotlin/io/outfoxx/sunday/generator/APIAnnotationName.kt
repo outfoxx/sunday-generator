@@ -4,20 +4,20 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
 
   ServiceGroup("group", false),
 
-  JavaPkg("javaPackage", true),
-  JavaModelPkg("javaModelPackage", true),
+  KotlinPkg("kotlinPackage", true),
+  KotlinModelPkg("kotlinModelPackage", true),
 
   KotlinType("kotlinType", true),
   KotlinImpl("kotlinImplementation", true),
 
-  JavaType("javaType", true),
-  JavaImpl("javaImplementation", true),
-
-  SwiftType("swiftType", true),
-  SwiftImpl("swiftImplementation", true),
+  TypeScriptModule("typeScriptModule", false),
+  TypeScriptModelModule("typeScriptModelModule", false),
 
   TypeScriptType("typeScriptType", true),
   TypeScriptImpl("typeScriptImplementation", true),
+
+  SwiftType("swiftType", true),
+  SwiftImpl("swiftImplementation", true),
 
   Nested("nested", false),
 
@@ -26,15 +26,22 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
 
   Patchable("patchable", false),
 
-  Asynchronous("asynchronous", false),
-  Reactive("reactive", false),
-
-  SSE("sse", false),
+  RequestOnly("requestOnly", false),
+  ResponseOnly("responseOnly", false),
 
   ProblemBaseUri("problemBaseUri", false),
   ProblemBaseUriParams("problemUriParams", false),
   ProblemTypes("problemTypes", false),
   Problems("problems", false),
+
+  // Sunday
+  EventSource("eventSource", false),
+  EventStream("eventStream", false),
+
+  // JAX-RS
+  Asynchronous("asynchronous", false),
+  Reactive("reactive", false),
+  SSE("sse", false),
 
   ;
 

@@ -2,6 +2,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.test.extensions.ResourceExtension

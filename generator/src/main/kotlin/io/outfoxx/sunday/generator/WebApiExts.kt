@@ -191,21 +191,21 @@ val DomainElement.extendsNode: List<DomainElement> get() = this.extendsNode()
 ///
 val CustomizableElement.customDomainProperties: List<DomainExtension> get() = this.customDomainProperties()
 
-fun CustomizableElement.hasAnnotation(name: APIAnnotationName, generationMode: GenerationMode) =
+fun CustomizableElement.hasAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   customDomainProperties.any { name.matches(it.definedBy.name, generationMode) } ||
     customDomainProperties.any { name.matches(it.definedBy.name, null) }
 
-fun CustomizableElement.findAnnotation(name: APIAnnotationName, generationMode: GenerationMode) =
+fun CustomizableElement.findAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   customDomainProperties.find { name.matches(it.definedBy.name, generationMode) }?.extension
     ?: customDomainProperties.find { name.matches(it.definedBy.name, null) }?.extension
 
-fun CustomizableElement.findStringAnnotation(name: APIAnnotationName, generationMode: GenerationMode) =
+fun CustomizableElement.findStringAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   findAnnotation(name, generationMode)?.stringValue
 
-fun CustomizableElement.findBoolAnnotation(name: APIAnnotationName, generationMode: GenerationMode) =
+fun CustomizableElement.findBoolAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   findAnnotation(name, generationMode)?.rawScalarValue?.toBoolean()
 
-fun CustomizableElement.findIntAnnotation(name: APIAnnotationName, generationMode: GenerationMode) =
+fun CustomizableElement.findIntAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   findAnnotation(name, generationMode)?.rawScalarValue?.toInt()
 
 
@@ -488,7 +488,7 @@ val PropertyShape.range: Shape get() = this.range()
 val PropertyShape.minCount: Int? get() = this.minCount().value
 val PropertyShape.maxCount: Int? get() = this.maxCount().value
 val PropertyShape.patternName: String? get() = this.patternName().value
-
+val PropertyShape.optional: Boolean get() = (this.minCount ?: 0) == 0
 
 ///
 val DataNode.anyValue: Any? get() =

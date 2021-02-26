@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.typescript
+package io.outfoxx.sunday.generator.typescript.tools
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback
@@ -14,10 +14,25 @@ import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
 import java.io.Closeable
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
-class TypeScriptCompiler : Closeable {
+class TypeScriptCompiler(private val workDir: Path) : Closeable {
+
+  val srcDir = workDir.resolve("src")
+
+  init {
+    val pkgDir = Paths.get(TypeScriptCompiler::class.java.getResource("/typescript/compile").toURI())
+    Files.walk(pkgDir).forEach { source ->
+      val target = workDir.resolve(pkgDir.relativize(source))
+      if (Files.isRegularFile(source)) {
+        Files.copy(source, target)
+      } else if (!Files.exists(target)) {
+        Files.createDirectory(target)
+      }
+    }
+  }
 
   private val dockerConfig: DockerClientConfig =
     DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -33,15 +48,15 @@ class TypeScriptCompiler : Closeable {
 
   private val dockerClient: DockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
-  fun compile(files: List<File>): Int {
+  fun compile(): Int {
 
     val container =
       dockerClient.createContainerCmd("outfoxx/typescript:4")
-        .withCmd("tsc", *files.map { "$it" }.toTypedArray())
+        .withCmd("tsc", "--project", "tsconfig.json")
         .withWorkingDir("/work")
         .withHostConfig(
           HostConfig.newHostConfig()
-            .withBinds(Bind.parse("${Paths.get("").toAbsolutePath()}:/work"))
+            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
         )
         .exec()
 

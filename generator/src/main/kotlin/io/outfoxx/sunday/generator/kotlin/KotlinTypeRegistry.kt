@@ -52,8 +52,8 @@ import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
-import io.outfoxx.sunday.generator.APIAnnotationName.JavaModelPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinImpl
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinModelPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinType
 import io.outfoxx.sunday.generator.APIAnnotationName.Nested
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
@@ -145,6 +145,8 @@ class KotlinTypeRegistry(
   val generationMode: GenerationMode,
   private val options: Set<Option>
 ) {
+
+  data class Id(val value: String)
 
   enum class Option {
     ImplementModel,
@@ -248,11 +250,24 @@ class KotlinTypeRegistry(
               // Add all custom properties to constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
                 addParameter(
-                  customPropertyName.kotlinIdentifierName,
-                  resolveTypeReference(
-                    customPropertyTypeNameStr,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
-                  )
+                  ParameterSpec
+                    .builder(
+                      customPropertyName.kotlinIdentifierName,
+                      resolveTypeReference(
+                        customPropertyTypeNameStr,
+                        KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
+                      )
+                    )
+                    .apply {
+                      if (customPropertyName.kotlinIdentifierName != customPropertyName) {
+                        addAnnotation(
+                          AnnotationSpec.builder(JsonProperty::class)
+                            .addMember("value = %S", customPropertyName)
+                            .build()
+                        )
+                      }
+                    }
+                    .build()
                 )
               }
             }
@@ -372,10 +387,10 @@ class KotlinTypeRegistry(
       return ClassName.bestGuess(kotlinTypeAnn)
     }
 
-    return processTypeName(shape, context)
+    return processShape(shape, context)
   }
 
-  private fun processTypeName(shape: Shape, context: KotlinResolutionContext): TypeName =
+  private fun processShape(shape: Shape, context: KotlinResolutionContext): TypeName =
     when (shape) {
       is ScalarShape -> processScalarShape(shape, context)
       is ArrayShape -> processArrayShape(shape, context)
@@ -501,7 +516,7 @@ class KotlinTypeRegistry(
     // Check for an existing class built or being built
     val existingBuilder = typeBuilders[className]
     if (existingBuilder != null) {
-      if (existingBuilder.tags[KotlinTypeRegistry::class] != shape.id) {
+      if (existingBuilder.tags[Id::class] != Id(shape.id)) {
         error("Multiple classes defined with name '$className'")
       } else {
         return className
@@ -516,7 +531,7 @@ class KotlinTypeRegistry(
           TypeSpec.interfaceBuilder(name)
       }
 
-    typeBuilder.tags[KotlinTypeRegistry::class] = shape.id
+    typeBuilder.tag(Id::class, Id(shape.id))
 
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context)
@@ -835,6 +850,7 @@ class KotlinTypeRegistry(
 
               copyBuilder.addParameter(
                 ParameterSpec.builder(copyProperty.kotlinIdentifierName, propertyTypeName.copy(nullable = true))
+                  .defaultValue("null")
                   .build()
               )
 
@@ -1294,8 +1310,8 @@ class KotlinTypeRegistry(
     packageNameOf(context.unit.findDeclaringUnit(shape))
 
   private fun packageNameOf(unit: BaseUnit?): String =
-    (unit as? CustomizableElement)?.findStringAnnotation(JavaModelPkg, generationMode)
-      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(JavaModelPkg, generationMode)
+    (unit as? CustomizableElement)?.findStringAnnotation(KotlinModelPkg, generationMode)
+      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(KotlinModelPkg, generationMode)
       ?: defaultModelPackageName
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.anyOf else listOf(it) }

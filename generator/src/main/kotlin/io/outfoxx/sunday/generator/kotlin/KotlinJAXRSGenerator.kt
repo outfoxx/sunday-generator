@@ -174,7 +174,7 @@ class KotlinJAXRSGenerator(
     // Add @PathParam to URI parameters
     parameterBuilder.addAnnotation(
       AnnotationSpec.builder(PathParam::class)
-        .addMember("value = %S", parameter.kotlinIdentifierName)
+        .addMember("value = %S", parameter.name())
         .build()
     )
 

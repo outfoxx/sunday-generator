@@ -6,8 +6,8 @@ info:
 servers:
 - url: 'https://example.com/api/'
 
-x-sunday-javaModelPackage: io.explicit.test
-x-sunday-javaModelPackage-client: io.explicit.test.client
+x-sunday-kotlinModelPackage: io.explicit.test
+x-sunday-kotlinModelPackage-client: io.explicit.test.client
 
 components:
   schemas:

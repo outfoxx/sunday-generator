@@ -1,6 +1,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri

@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator.typescript.tools
 
 import amf.MessageStyles
 import amf.ProfileNames
@@ -9,20 +9,15 @@ import amf.client.model.domain.ObjectNode
 import amf.client.parse.Oas30YamlParser
 import amf.client.parse.Raml10Parser
 import com.damnhandy.uri.template.UriTemplate
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.TypeSpec
-import com.tschuchort.compiletesting.KotlinCompilation
-import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.LocalResourceLoader
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.api
 import io.outfoxx.sunday.generator.cookieParameters
-import io.outfoxx.sunday.generator.encodes
 import io.outfoxx.sunday.generator.endPoints
 import io.outfoxx.sunday.generator.findAnnotation
-import io.outfoxx.sunday.generator.findStringAnnotation
 import io.outfoxx.sunday.generator.headers
 import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.operationId
@@ -36,9 +31,15 @@ import io.outfoxx.sunday.generator.schema
 import io.outfoxx.sunday.generator.servers
 import io.outfoxx.sunday.generator.stringValue
 import io.outfoxx.sunday.generator.toUpperCamelCase
+import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
+import io.outfoxx.sunday.generator.typescript.TypeScriptResolutionContext
+import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.uriParameters
 import io.outfoxx.sunday.generator.url
-import org.junit.jupiter.api.Assertions.assertEquals
+import io.outfoxx.typescriptpoet.AnyTypeSpec
+import io.outfoxx.typescriptpoet.ModuleSpec
+import io.outfoxx.typescriptpoet.TypeName
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.fail
 import java.net.URI
 import kotlin.system.exitProcess
@@ -48,7 +49,6 @@ fun parseAndValidate(uri: URI, schemaMode: SchemaMode = SchemaMode.RAML10): Docu
   val parentUri = uri.resolve(".")
 
   AMF.init().get()
-
 
   val (document, validation) =
     when (schemaMode) {
@@ -84,18 +84,23 @@ fun parseAndValidate(uri: URI, schemaMode: SchemaMode = SchemaMode.RAML10): Docu
   return document
 }
 
-fun findType(name: String, types: Map<ClassName, TypeSpec>): TypeSpec =
-  types[ClassName.bestGuess(name)] ?: fail("Type '$name' not defined")
+fun findTypeMod(name: String, types: Map<TypeName.Standard, ModuleSpec>): ModuleSpec =
+  types[TypeName.standard(name)] ?: fail("Type '$name' not defined")
 
-fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: SchemaMode = SchemaMode.RAML10): Map<ClassName, TypeSpec> {
+fun findNestedType(typeModSpec: ModuleSpec, vararg names: String): AnyTypeSpec? =
+  typeModSpec.members.filterIsInstance<ModuleSpec>().firstOrNull { it.name == names.first() }
+    ?.let { findNestedType(it, *names.dropLast(1).toTypedArray()) }
+    ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull() { it.name == names.first() }
+
+fun generateTypes(
+  uri: URI,
+  typeRegistry: TypeScriptTypeRegistry,
+  schemaMode: SchemaMode = SchemaMode.RAML10
+): Map<TypeName.Standard, ModuleSpec> {
 
   val document = parseAndValidate(uri, schemaMode)
 
-  val apiPackageName =
-    document.encodes.findStringAnnotation(APIAnnotationName.JavaPkg, typeRegistry.generationMode)
-      ?: typeRegistry.defaultModelPackageName
-
-  val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
+  val apiTypeName = TypeName.standard("API")
 
   document.api.endPoints.forEach { endPoint ->
 
@@ -106,32 +111,32 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: Schema
       operation.requests.forEach { request ->
 
         request.uriParameters.forEach { param ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}UriParams"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}UriParams"))
           typeRegistry.resolveTypeName(param.schema!!, context)
         }
 
         request.queryParameters.forEach { param ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}QueryParams"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}QueryParams"))
           typeRegistry.resolveTypeName(param.schema!!, context)
         }
 
         request.cookieParameters.forEach { param ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}CookieParams"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}CookieParams"))
           typeRegistry.resolveTypeName(param.schema!!, context)
         }
 
         request.headers.forEach { header ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}RequestHeaderParams"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}RequestHeaderParams"))
           typeRegistry.resolveTypeName(header.schema!!, context)
         }
 
         request.payloads.forEach { payload ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}Payload"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}Payload"))
           typeRegistry.resolveTypeName(payload.schema!!, context)
         }
         val queryString = request.queryString
         if (queryString != null) {
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}QueryStringParams"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}QueryStringParams"))
           typeRegistry.resolveTypeName(queryString, context)
         }
 
@@ -141,12 +146,12 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: Schema
 
         response.headers.forEach { header ->
           val context =
-            KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}ResponseHeaderParams"))
+            TypeScriptResolutionContext(document, apiTypeName.nested("${opName}ResponseHeaderParams"))
           typeRegistry.resolveTypeName(header.schema!!, context)
         }
 
         response.payloads.forEach { payload ->
-          val context = KotlinResolutionContext(document, apiTypeName.nestedClass("${opName}ResponsePayload"))
+          val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}ResponsePayload"))
           typeRegistry.resolveTypeName(payload.schema!!, context)
         }
 
@@ -159,11 +164,11 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: Schema
   val baseUri = document.api.servers.firstOrNull()?.url ?: "http://example.com/"
   val problemBaseUri =
     UriTemplate.buildFromTemplate(baseUri)
-      .template(document.api.findAnnotation(ProblemBaseUri, typeRegistry.generationMode)?.stringValue ?: "")
+      .template(document.api.findAnnotation(ProblemBaseUri, null)?.stringValue ?: "")
       .build()
       .expand()
 
-  val problemTypesAnn = document.api.findAnnotation(ProblemTypes, typeRegistry.generationMode) as? ObjectNode
+  val problemTypesAnn = document.api.findAnnotation(ProblemTypes, null) as? ObjectNode
   problemTypesAnn?.properties()?.forEach { (problemCode, problemDef) ->
     val problemType = ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document)
     typeRegistry.defineProblemType(problemCode, problemType)
@@ -171,17 +176,17 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: Schema
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertEquals(compileTypes(builtTypes).exitCode, KotlinCompilation.ExitCode.OK)
+  assertTrue(compileTypes(builtTypes))
 
   return builtTypes
 }
 
 fun generate(
   uri: URI,
-  typeRegistry: KotlinTypeRegistry,
+  typeRegistry: TypeScriptTypeRegistry,
   schemaMode: SchemaMode = SchemaMode.RAML10,
-  generatorFactory: (Document) -> KotlinGenerator
-): Map<ClassName, TypeSpec> {
+  generatorFactory: (Document) -> TypeScriptGenerator
+): Map<TypeName.Standard, ModuleSpec> {
 
   val document = parseAndValidate(uri, schemaMode)
 
@@ -191,7 +196,7 @@ fun generate(
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertEquals(compileTypes(builtTypes).exitCode, KotlinCompilation.ExitCode.OK)
+  assertTrue(compileTypes(builtTypes))
 
   return builtTypes
 }
