@@ -5,8 +5,8 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
-import io.outfoxx.sunday.generator.kotlin.findType
-import io.outfoxx.sunday.generator.kotlin.generate
+import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals

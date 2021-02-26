@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator.kotlin.tools
 
 import amf.MessageStyles
 import amf.ProfileNames
@@ -6,7 +6,6 @@ import amf.client.AMF
 import amf.client.environment.Environment
 import amf.client.model.document.Document
 import amf.client.model.domain.ObjectNode
-import amf.client.parse.Oas30YamlParser
 import amf.client.parse.Raml10Parser
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
@@ -17,7 +16,6 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.LocalResourceLoader
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.api
 import io.outfoxx.sunday.generator.cookieParameters
 import io.outfoxx.sunday.generator.encodes
@@ -25,6 +23,9 @@ import io.outfoxx.sunday.generator.endPoints
 import io.outfoxx.sunday.generator.findAnnotation
 import io.outfoxx.sunday.generator.findStringAnnotation
 import io.outfoxx.sunday.generator.headers
+import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinResolutionContext
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.operationId
 import io.outfoxx.sunday.generator.operations
@@ -44,27 +45,15 @@ import org.junit.jupiter.api.fail
 import java.net.URI
 import kotlin.system.exitProcess
 
-fun parseAndValidate(uri: URI, schemaMode: SchemaMode = SchemaMode.RAML10): Document {
+fun parseAndValidate(uri: URI): Document {
 
   val parentUri = uri.resolve(".")
 
   AMF.init().get()
 
-
-  val (document, validation) =
-    when (schemaMode) {
-      SchemaMode.RAML10 -> {
-        val environment = Environment().addClientLoader(LocalResourceLoader)
-        val document = Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
-        val validation = AMF.validate(document.cloneUnit(), ProfileNames.RAML10(), MessageStyles.RAML()).get()
-        document to validation
-      }
-      SchemaMode.OpenAPI3 -> {
-        val document = Oas30YamlParser().parseFileAsync(uri.toString()).get() as Document
-        val validation = AMF.validate(document.cloneUnit(), ProfileNames.OAS30(), MessageStyles.OAS()).get()
-        document to validation
-      }
-    }
+  val environment = Environment().addClientLoader(LocalResourceLoader)
+  val document = Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
+  val validation = AMF.validate(document.cloneUnit(), ProfileNames.RAML10(), MessageStyles.RAML()).get()
 
   if (!validation.conforms()) {
 
@@ -88,9 +77,9 @@ fun parseAndValidate(uri: URI, schemaMode: SchemaMode = SchemaMode.RAML10): Docu
 fun findType(name: String, types: Map<ClassName, TypeSpec>): TypeSpec =
   types[ClassName.bestGuess(name)] ?: fail("Type '$name' not defined")
 
-fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: SchemaMode = SchemaMode.RAML10): Map<ClassName, TypeSpec> {
+fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, TypeSpec> {
 
-  val document = parseAndValidate(uri, schemaMode)
+  val document = parseAndValidate(uri)
 
   val apiPackageName =
     document.encodes.findStringAnnotation(APIAnnotationName.KotlinPkg, typeRegistry.generationMode)
@@ -180,11 +169,10 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry, schemaMode: Schema
 fun generate(
   uri: URI,
   typeRegistry: KotlinTypeRegistry,
-  schemaMode: SchemaMode = SchemaMode.RAML10,
   generatorFactory: (Document) -> KotlinGenerator
 ): Map<ClassName, TypeSpec> {
 
-  val document = parseAndValidate(uri, schemaMode)
+  val document = parseAndValidate(uri)
 
   val generator = generatorFactory(document)
 

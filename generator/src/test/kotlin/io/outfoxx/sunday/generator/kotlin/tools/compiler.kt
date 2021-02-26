@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator.kotlin.tools
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec

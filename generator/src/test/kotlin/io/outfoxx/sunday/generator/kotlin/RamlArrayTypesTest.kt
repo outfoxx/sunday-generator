@@ -3,6 +3,8 @@ package io.outfoxx.sunday.generator.kotlin
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
+import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals

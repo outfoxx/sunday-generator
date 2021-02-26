@@ -6,14 +6,12 @@ import amf.client.AMF
 import amf.client.environment.Environment
 import amf.client.model.document.Document
 import amf.client.model.domain.ObjectNode
-import amf.client.parse.Oas30YamlParser
 import amf.client.parse.Raml10Parser
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.LocalResourceLoader
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.SchemaMode
 import io.outfoxx.sunday.generator.api
 import io.outfoxx.sunday.generator.cookieParameters
 import io.outfoxx.sunday.generator.endPoints
@@ -44,26 +42,15 @@ import org.junit.jupiter.api.fail
 import java.net.URI
 import kotlin.system.exitProcess
 
-fun parseAndValidate(uri: URI, schemaMode: SchemaMode = SchemaMode.RAML10): Document {
+fun parseAndValidate(uri: URI): Document {
 
   val parentUri = uri.resolve(".")
 
   AMF.init().get()
 
-  val (document, validation) =
-    when (schemaMode) {
-      SchemaMode.RAML10 -> {
-        val environment = Environment().addClientLoader(LocalResourceLoader)
-        val document = Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
-        val validation = AMF.validate(document.cloneUnit(), ProfileNames.RAML10(), MessageStyles.RAML()).get()
-        document to validation
-      }
-      SchemaMode.OpenAPI3 -> {
-        val document = Oas30YamlParser().parseFileAsync(uri.toString()).get() as Document
-        val validation = AMF.validate(document.cloneUnit(), ProfileNames.OAS30(), MessageStyles.OAS()).get()
-        document to validation
-      }
-    }
+  val environment = Environment().addClientLoader(LocalResourceLoader)
+  val document = Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
+  val validation = AMF.validate(document.cloneUnit(), ProfileNames.RAML10(), MessageStyles.RAML()).get()
 
   if (!validation.conforms()) {
 
@@ -90,15 +77,11 @@ fun findTypeMod(name: String, types: Map<TypeName.Standard, ModuleSpec>): Module
 fun findNestedType(typeModSpec: ModuleSpec, vararg names: String): AnyTypeSpec? =
   typeModSpec.members.filterIsInstance<ModuleSpec>().firstOrNull { it.name == names.first() }
     ?.let { findNestedType(it, *names.dropLast(1).toTypedArray()) }
-    ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull() { it.name == names.first() }
+    ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull { it.name == names.first() }
 
-fun generateTypes(
-  uri: URI,
-  typeRegistry: TypeScriptTypeRegistry,
-  schemaMode: SchemaMode = SchemaMode.RAML10
-): Map<TypeName.Standard, ModuleSpec> {
+fun generateTypes(uri: URI, typeRegistry: TypeScriptTypeRegistry): Map<TypeName.Standard, ModuleSpec> {
 
-  val document = parseAndValidate(uri, schemaMode)
+  val document = parseAndValidate(uri)
 
   val apiTypeName = TypeName.standard("API")
 
@@ -184,11 +167,10 @@ fun generateTypes(
 fun generate(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
-  schemaMode: SchemaMode = SchemaMode.RAML10,
   generatorFactory: (Document) -> TypeScriptGenerator
 ): Map<TypeName.Standard, ModuleSpec> {
 
-  val document = parseAndValidate(uri, schemaMode)
+  val document = parseAndValidate(uri)
 
   val generator = generatorFactory(document)
 
