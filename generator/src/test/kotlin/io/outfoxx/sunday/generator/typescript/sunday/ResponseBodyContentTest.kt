@@ -45,9 +45,9 @@ class ResponseBodyContentTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -57,7 +57,7 @@ class ResponseBodyContentTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -102,9 +102,9 @@ class ResponseBodyContentTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [];
+          static defaultAcceptTypes: Array<MediaType> = [];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -159,9 +159,9 @@ class ResponseBodyContentTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -171,7 +171,7 @@ class ResponseBodyContentTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -241,9 +241,9 @@ class ResponseBodyContentTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }

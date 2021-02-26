@@ -45,9 +45,9 @@ class RequestHeaderParamsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -57,7 +57,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes,
+                  acceptTypes: API.defaultAcceptTypes,
                   headers: {
                     obj,
                     'str-req': strReq,
@@ -108,9 +108,9 @@ class RequestHeaderParamsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -121,7 +121,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes,
+                  acceptTypes: API.defaultAcceptTypes,
                   headers: {
                     obj,
                     str,
@@ -171,9 +171,9 @@ class RequestHeaderParamsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -184,7 +184,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes,
+                  acceptTypes: API.defaultAcceptTypes,
                   headers: {
                     category,
                     type

@@ -107,7 +107,7 @@ class TypeScriptSundayGenerator(
             "defaultContentTypes",
             TypeName.parameterizedType(ARRAY, MEDIA_TYPE),
             false,
-            Modifier.PUBLIC
+            Modifier.PUBLIC, Modifier.STATIC
           )
           .initializer("%L", mediaTypesArray(contentTypes))
           .build()
@@ -124,7 +124,7 @@ class TypeScriptSundayGenerator(
             "defaultAcceptTypes",
             TypeName.parameterizedType(ARRAY, MEDIA_TYPE),
             false,
-            Modifier.PUBLIC
+            Modifier.PUBLIC, Modifier.STATIC
           )
           .initializer("%L", mediaTypesArray(acceptTypes))
           .build()
@@ -362,7 +362,7 @@ class TypeScriptSundayGenerator(
               mediaTypesArray(requestBodyContentType!!)
 
             requestBodyParameter != null ->
-              CodeBlock.of("this.defaultContentTypes")
+              CodeBlock.of("%N.defaultContentTypes", typeBuilder.build().name)
 
             else -> CodeBlock.of("nil")
           }
@@ -375,7 +375,7 @@ class TypeScriptSundayGenerator(
           if (resultContentTypes != defaultMediaTypes) {
             mediaTypesArray(resultContentTypes!!)
           } else {
-            CodeBlock.of("this.defaultAcceptTypes")
+            CodeBlock.of("%N.defaultAcceptTypes", typeBuilder.build().name)
           }
         paramBlocks.add(CodeBlock.of("acceptTypes: %L", acceptTypes))
       }

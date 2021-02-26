@@ -45,9 +45,9 @@ class RequestMethodsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -57,7 +57,7 @@ class RequestMethodsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -70,8 +70,8 @@ class RequestMethodsTest {
                   pathTemplate: '/tests',
                   body: body,
                   bodyType: putTestBodyType,
-                  contentTypes: this.defaultContentTypes,
-                  acceptTypes: this.defaultAcceptTypes
+                  contentTypes: API.defaultContentTypes,
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 putTestReturnType
             );
@@ -84,8 +84,8 @@ class RequestMethodsTest {
                   pathTemplate: '/tests',
                   body: body,
                   bodyType: postTestBodyType,
-                  contentTypes: this.defaultContentTypes,
-                  acceptTypes: this.defaultAcceptTypes
+                  contentTypes: API.defaultContentTypes,
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 postTestReturnType
             );
@@ -98,8 +98,8 @@ class RequestMethodsTest {
                   pathTemplate: '/tests',
                   body: body,
                   bodyType: patchTestBodyType,
-                  contentTypes: this.defaultContentTypes,
-                  acceptTypes: this.defaultAcceptTypes
+                  contentTypes: API.defaultContentTypes,
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 patchTestReturnType
             );
@@ -137,7 +137,7 @@ class RequestMethodsTest {
                 {
                   method: 'PATCH',
                   pathTemplate: '/tests2',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 patchableTestReturnType
             );

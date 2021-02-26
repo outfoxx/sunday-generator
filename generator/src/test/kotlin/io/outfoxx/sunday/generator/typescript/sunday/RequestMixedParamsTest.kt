@@ -45,9 +45,9 @@ class RequestMixedParamsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -64,7 +64,7 @@ class RequestMixedParamsTest {
                   queryParameters: {
                     page
                   },
-                  acceptTypes: this.defaultAcceptTypes,
+                  acceptTypes: API.defaultAcceptTypes,
                   headers: {
                     'x-type': xType
                   }
@@ -131,9 +131,9 @@ class RequestMixedParamsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -150,7 +150,7 @@ class RequestMixedParamsTest {
                   queryParameters: {
                     type: type_
                   },
-                  acceptTypes: this.defaultAcceptTypes,
+                  acceptTypes: API.defaultAcceptTypes,
                   headers: {
                     type: type__
                   }

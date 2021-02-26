@@ -43,9 +43,9 @@ class ResponseEventsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -55,7 +55,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 }
             );
           }
@@ -99,9 +99,9 @@ class ResponseEventsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -115,7 +115,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 eventTypes
             );
@@ -161,9 +161,9 @@ class ResponseEventsTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -177,7 +177,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 eventTypes
             );

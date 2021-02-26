@@ -45,9 +45,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -59,8 +59,8 @@ class RequestBodyParamTest {
                   pathTemplate: '/tests',
                   body: body,
                   bodyType: fetchTestBodyType,
-                  contentTypes: this.defaultContentTypes,
-                  acceptTypes: this.defaultAcceptTypes
+                  contentTypes: API.defaultContentTypes,
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -107,9 +107,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -121,8 +121,8 @@ class RequestBodyParamTest {
                   pathTemplate: '/tests',
                   body: body,
                   bodyType: fetchTestBodyType,
-                  contentTypes: this.defaultContentTypes,
-                  acceptTypes: this.defaultAcceptTypes
+                  contentTypes: API.defaultContentTypes,
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -168,9 +168,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          defaultContentTypes: Array<MediaType> = [];
+          static defaultContentTypes: Array<MediaType> = [];
 
-          defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
           constructor(public requestFactory: RequestFactory) {
           }
@@ -183,7 +183,7 @@ class RequestBodyParamTest {
                   body: body,
                   bodyType: fetchTestBodyType,
                   contentTypes: [MediaType.OctetStream],
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: API.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
