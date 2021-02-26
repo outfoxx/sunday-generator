@@ -286,6 +286,7 @@ class TypeScriptSundayGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<String, TypeName>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder
   ): FunctionSpec {
@@ -328,21 +329,26 @@ class TypeScriptSundayGenerator(
       return parametersBlock.build()
     }
 
-    fun specGen(builder: CodeBlock.Builder) {
-      val paramBlocks = mutableListOf<CodeBlock>()
-      paramBlocks.add(CodeBlock.of("method: %S", operation.method.toUpperCase()))
-      paramBlocks.add(CodeBlock.of("pathTemplate: %S", endPoint.path))
+    fun specGen(): CodeBlock {
+      val builder = CodeBlock.builder()
+      builder.add("{%>\n")
+      builder.add("method: %S", operation.method.toUpperCase())
+      builder.add(",\n")
+      builder.add("pathTemplate: %S", endPoint.path)
 
       if (uriParameters.isNotEmpty()) {
-        paramBlocks.add(parametersGen("pathParameters", uriParameters))
+        builder.add(",\n")
+        builder.add(parametersGen("pathParameters", uriParameters))
       }
 
       if (queryParameters.isNotEmpty()) {
-        paramBlocks.add(parametersGen("queryParameters", queryParameters))
+        builder.add(",\n")
+        builder.add(parametersGen("queryParameters", queryParameters))
       }
 
       if (requestBodyParameter != null) {
-        paramBlocks.add(CodeBlock.of("body: %L", requestBodyParameter))
+        builder.add(",\n")
+        builder.add(CodeBlock.of("body: %L", requestBodyParameter))
         if (requestBodyType != null) {
 
           val requestBodyTypeContext = TypeScriptResolutionContext(document, null, null)
@@ -352,7 +358,8 @@ class TypeScriptSundayGenerator(
 
             val bodyTypePropName = "${generatedFunctionName}BodyType"
             typeProperties[bodyTypePropName] = requestBodyTypeName.typeInitializer()
-            paramBlocks.add(CodeBlock.of("bodyType: %L", bodyTypePropName))
+            builder.add(",\n")
+            builder.add("bodyType: %L", bodyTypePropName)
           }
         }
 
@@ -367,7 +374,8 @@ class TypeScriptSundayGenerator(
             else -> CodeBlock.of("nil")
           }
 
-        paramBlocks.add(CodeBlock.of("contentTypes: %L", contentTypesVal))
+        builder.add(",\n")
+        builder.add("contentTypes: %L", contentTypesVal)
       }
 
       if (resultContentTypes != null && originalReturnType != VOID) {
@@ -377,13 +385,30 @@ class TypeScriptSundayGenerator(
           } else {
             CodeBlock.of("%N.defaultAcceptTypes", typeBuilder.build().name)
           }
-        paramBlocks.add(CodeBlock.of("acceptTypes: %L", acceptTypes))
+        builder.add(",\n")
+        builder.add("acceptTypes: %L", acceptTypes)
+      }
+
+      if (problemTypes.isNotEmpty()) {
+        builder.add(",\n")
+        builder.add("problemTypes: %>{\n")
+        problemTypes.entries.forEachIndexed { idx, (code, typeName) ->
+          builder.add("%S: %T", code, typeName)
+          if (idx < problemTypes.size - 1) {
+            builder.add(",\n")
+          }
+        }
+        builder.add("%<\n}")
       }
 
       if (headerParameters.isNotEmpty()) {
-        paramBlocks.add(parametersGen("headers", headerParameters))
+        builder.add(",\n")
+        builder.add(parametersGen("headers", headerParameters))
       }
-      builder.add("{\n%>%L%<\n}", paramBlocks.joinToCode(",\n"))
+
+      builder.add("%<\n}")
+
+      return builder.build()
     }
 
     val builder = CodeBlock.builder()
@@ -411,13 +436,14 @@ class TypeScriptSundayGenerator(
           )
 
           builder.add("%[return this.requestFactory.events<%T>(\n", originalReturnType)
-          specGen(builder)
-          builder.add(",\neventTypes%]\n);\n")
+          builder.add(specGen())
+          builder.add(",\n")
+          builder.add("eventTypes%]\n);\n")
         }
 
         else -> {
           builder.add("%[return this.requestFactory.events(\n", originalReturnType)
-          specGen(builder)
+          builder.add(specGen())
           builder.add("%]\n);\n")
         }
       }
@@ -431,7 +457,7 @@ class TypeScriptSundayGenerator(
 
       builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
 
-      specGen(builder)
+      builder.add(specGen())
 
       if (!requestOnly && !responseOnly && originalReturnType != null && originalReturnType != VOID) {
 

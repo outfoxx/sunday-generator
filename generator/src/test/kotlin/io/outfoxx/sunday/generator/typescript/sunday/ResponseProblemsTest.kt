@@ -21,6 +21,71 @@ import java.net.URI
 class ResponseProblemsTest {
 
   @Test
+  fun `test problem types references in API`(
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        TypeScriptSundayGenerator(
+          document,
+          typeRegistry,
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {InvalidIdProblem} from './invalid-id-problem';
+        import {Test} from './test';
+        import {TestNotFoundProblem} from './test-not-found-problem';
+        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          static defaultContentTypes: Array<MediaType> = [];
+
+          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
+
+          constructor(public requestFactory: RequestFactory) {
+          }
+
+          fetchTest(): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: API.defaultAcceptTypes,
+                  problemTypes: {
+                    'invalid_id': InvalidIdProblem,
+                    'test_not_found': TestNotFoundProblem
+                  }
+                },
+                fetchTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+
+  }
+
+  @Test
   fun `test problem type generation`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
@@ -47,7 +112,7 @@ class ResponseProblemsTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
@@ -98,7 +163,7 @@ class ResponseProblemsTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://api.example.com/api/invalid_id';
 
@@ -149,7 +214,7 @@ class ResponseProblemsTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://errors.example.com/docs/invalid_id';
 
@@ -200,7 +265,7 @@ class ResponseProblemsTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://example.com/api/errors/invalid_id';
 
@@ -251,7 +316,7 @@ class ResponseProblemsTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://example.com/invalid_id';
 

@@ -208,6 +208,9 @@ fun CustomizableElement.findBoolAnnotation(name: APIAnnotationName, generationMo
 fun CustomizableElement.findIntAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
   findAnnotation(name, generationMode)?.rawScalarValue?.toInt()
 
+fun CustomizableElement.findArrayAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
+  findAnnotation(name, generationMode)?.let { it as ArrayNode }?.members()
+
 
 ///
 val DomainExtension.name: String get() = this.name().value()

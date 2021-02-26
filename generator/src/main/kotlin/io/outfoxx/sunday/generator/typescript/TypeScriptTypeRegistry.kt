@@ -197,6 +197,8 @@ class TypeScriptTypeRegistry(
 
   fun addServiceType(typeName: TypeName.Standard, serviceType: ClassSpec.Builder) {
 
+    serviceType.addModifiers(Modifier.EXPORT)
+
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (options.contains(AddGenerationHeader)) {
@@ -217,49 +219,52 @@ class TypeScriptTypeRegistry(
     val problemTypeNameStr = "${problemCode.typeScriptTypeName}Problem"
     val problemTypeName = TypeName.namedImport(problemTypeNameStr, "!${problemTypeNameStr.camelCaseToKebabCase()}")
 
-    val problemTypeBuilder =
-      ClassSpec.builder(problemTypeName)
-        .superClass(PROBLEM)
-        .addProperty(
-          PropertySpec.builder("TYPE", STRING)
-            .addModifiers(Modifier.STATIC)
-            .initializer("%S", problemTypeDefinition.type)
-            .build()
-        )
-        .constructor(
-          FunctionSpec.constructorBuilder()
-            .apply {
-              // Add all custom properties to constructor
-              problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
-                addParameter(
-                  ParameterSpec
-                    .builder(
-                      customPropertyName.kotlinIdentifierName,
-                      resolveTypeReference(
-                        customPropertyTypeNameStr,
-                        TypeScriptResolutionContext(problemTypeDefinition.definedIn, null, null)
-                      )
-                    )
-                    .apply {
-                      if (options.contains(JacksonDecorators) && customPropertyName != customPropertyName.kotlinIdentifierName) {
-                        addDecorator(
-                          DecoratorSpec.builder(JSON_PROPERTY)
-                            .addParameter(null, "{value: %S}", customPropertyName)
-                            .build()
+    typeBuilders.computeIfAbsent(problemTypeName) {
+
+      val problemTypeBuilder =
+        ClassSpec.builder(problemTypeName)
+          .addModifiers(Modifier.EXPORT)
+          .superClass(PROBLEM)
+          .addProperty(
+            PropertySpec.builder("TYPE", STRING)
+              .addModifiers(Modifier.STATIC)
+              .initializer("%S", problemTypeDefinition.type)
+              .build()
+          )
+          .constructor(
+            FunctionSpec.constructorBuilder()
+              .apply {
+                // Add all custom properties to constructor
+                problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+                  addParameter(
+                    ParameterSpec
+                      .builder(
+                        customPropertyName.kotlinIdentifierName,
+                        resolveTypeReference(
+                          customPropertyTypeNameStr,
+                          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null, null)
                         )
+                      )
+                      .apply {
+                        if (options.contains(JacksonDecorators) && customPropertyName != customPropertyName.kotlinIdentifierName) {
+                          addDecorator(
+                            DecoratorSpec.builder(JSON_PROPERTY)
+                              .addParameter(null, "{value: %S}", customPropertyName)
+                              .build()
+                          )
+                        }
                       }
-                    }
-                    .build()
-                )
+                      .build()
+                  )
+                }
               }
-            }
-            .addParameter(
-              ParameterSpec.builder("instance", STRING.nullable)
-                .defaultValue("null")
-                .build()
-            )
-            .addCode(
-              """
+              .addParameter(
+                ParameterSpec.builder("instance", STRING.nullable)
+                  .defaultValue("null")
+                  .build()
+              )
+              .addCode(
+                """
               |super(
               |  %T.TYPE,
               |  %S,
@@ -269,23 +274,24 @@ class TypeScriptTypeRegistry(
               |);
               |
               """.trimMargin(),
-              problemTypeName,
-              problemTypeDefinition.title,
-              problemTypeDefinition.status,
-              problemTypeDefinition.detail,
-            )
+                problemTypeName,
+                problemTypeDefinition.title,
+                problemTypeDefinition.status,
+                problemTypeDefinition.detail,
+              )
+              .build()
+          )
+
+      if (options.contains(JacksonDecorators)) {
+        problemTypeBuilder.addDecorator(
+          DecoratorSpec.builder(JSON_TYPE_NAME)
+            .addParameter(null, "{value: %T.TYPE}", problemTypeName)
             .build()
         )
+      }
 
-    if (options.contains(JacksonDecorators)) {
-      problemTypeBuilder.addDecorator(
-        DecoratorSpec.builder(JSON_TYPE_NAME)
-          .addParameter(null, "{value: %T.TYPE}", problemTypeName)
-          .build()
-      )
+      problemTypeBuilder
     }
-
-    typeBuilders[problemTypeName] = problemTypeBuilder
 
     return problemTypeName
   }

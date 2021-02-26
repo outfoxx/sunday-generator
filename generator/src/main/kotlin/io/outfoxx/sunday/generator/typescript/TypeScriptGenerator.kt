@@ -3,14 +3,12 @@ package io.outfoxx.sunday.generator.typescript
 import amf.client.model.document.BaseUnit
 import amf.client.model.document.Document
 import amf.client.model.document.EncodesModel
-import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.CustomizableElement
 import amf.client.model.domain.EndPoint
 import amf.client.model.domain.ObjectNode
 import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
-import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
@@ -30,6 +28,7 @@ import io.outfoxx.sunday.generator.encodes
 import io.outfoxx.sunday.generator.endPoints
 import io.outfoxx.sunday.generator.failures
 import io.outfoxx.sunday.generator.findAnnotation
+import io.outfoxx.sunday.generator.findArrayAnnotation
 import io.outfoxx.sunday.generator.findStringAnnotation
 import io.outfoxx.sunday.generator.headers
 import io.outfoxx.sunday.generator.method
@@ -43,14 +42,13 @@ import io.outfoxx.sunday.generator.request
 import io.outfoxx.sunday.generator.requests
 import io.outfoxx.sunday.generator.required
 import io.outfoxx.sunday.generator.root
+import io.outfoxx.sunday.generator.scalarValue
 import io.outfoxx.sunday.generator.schema
 import io.outfoxx.sunday.generator.servers
 import io.outfoxx.sunday.generator.statusCode
 import io.outfoxx.sunday.generator.stringValue
 import io.outfoxx.sunday.generator.successes
 import io.outfoxx.sunday.generator.url
-import io.outfoxx.sunday.generator.value
-import io.outfoxx.sunday.generator.values
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.FunctionSpec
@@ -165,6 +163,7 @@ abstract class TypeScriptGenerator(
   abstract fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<String, TypeName>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder
   ): FunctionSpec
@@ -295,19 +294,26 @@ abstract class TypeScriptGenerator(
 
         }
 
-        val problemsAnn = operation.findAnnotation(Problems, null) as? ArrayNode
-        if (problemsAnn != null) {
+        val responseProblemTypes =
+          operation.findArrayAnnotation(Problems, null)?.let { problems ->
 
-          val referencedProblemCodes = problemsAnn.values<ScalarNode>().mapNotNull { it.value }
+            val referencedProblemCodes = problems.mapNotNull { it.stringValue }
+            val referencedProblemTypes =
+              referencedProblemCodes
+                .map { problemCode ->
+                  val problemType = problemTypes[problemCode] ?: error("Unknown problem code referenced: $problemCode")
+                  problemCode to problemType
+                }
+                .toMap()
 
+            referencedProblemTypes
+              .mapValues { (problemCode, problemTypeDefinition) ->
+                typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+              }
+          } ?: emptyMap()
 
-          problemTypes.filter { referencedProblemCodes.contains(it.key) }
-            .forEach { (problemCode, problemTypeDefinition) ->
-              typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
-            }
-        }
-
-        val functionSpec = processResourceMethodEnd(endPoint, operation, typeBuilder, functionBuilder)
+        val functionSpec =
+          processResourceMethodEnd(endPoint, operation, responseProblemTypes, typeBuilder, functionBuilder)
 
         typeBuilder.addFunction(functionSpec)
       }
