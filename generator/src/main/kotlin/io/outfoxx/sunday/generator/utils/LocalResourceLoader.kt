@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator
+package io.outfoxx.sunday.generator.utils
 
 import amf.client.remote.Content
 import amf.client.resource.ClientResourceLoader

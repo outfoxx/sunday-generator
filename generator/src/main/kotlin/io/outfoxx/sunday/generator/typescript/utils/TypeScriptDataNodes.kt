@@ -6,8 +6,8 @@ import amf.client.model.domain.ObjectNode
 import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
 import amf.core.model.DataType
-import io.outfoxx.sunday.generator.value
-import io.outfoxx.sunday.generator.values
+import io.outfoxx.sunday.generator.utils.value
+import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.TypeName
 

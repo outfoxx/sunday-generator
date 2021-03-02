@@ -5,12 +5,12 @@ import amf.client.model.domain.Parameter
 import amf.client.model.domain.PropertyShape
 import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
-import io.outfoxx.sunday.generator.name
-import io.outfoxx.sunday.generator.operationId
-import io.outfoxx.sunday.generator.parameterName
-import io.outfoxx.sunday.generator.stringValue
-import io.outfoxx.sunday.generator.toLowerCamelCase
-import io.outfoxx.sunday.generator.toUpperCamelCase
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.operationId
+import io.outfoxx.sunday.generator.utils.parameterName
+import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.toLowerCamelCase
+import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
 val Shape.typeScriptTypeName: String get() = name!!.toUpperCamelCase()
 

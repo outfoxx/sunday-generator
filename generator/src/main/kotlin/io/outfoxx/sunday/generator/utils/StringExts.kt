@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator
+package io.outfoxx.sunday.generator.utils
 
 fun String.toLowercaseInitialWordOrAbbreviation(): String {
   val builder = StringBuilder()

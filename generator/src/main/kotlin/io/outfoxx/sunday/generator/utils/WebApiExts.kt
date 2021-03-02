@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package io.outfoxx.sunday.generator
+package io.outfoxx.sunday.generator.utils
 
 import amf.client.model.Annotable
 import amf.client.model.Annotations
@@ -62,6 +62,8 @@ import amf.core.annotations.Aliases
 import amf.core.model.DataType
 import amf.core.remote.Vendor
 import amf.plugins.document.webapi.annotations.ExternalJsonSchemaShape
+import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.GenerationMode
 import org.apache.http.client.utils.URIBuilder
 import scala.collection.JavaConverters
 import java.net.URI

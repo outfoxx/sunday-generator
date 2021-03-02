@@ -1,6 +1,8 @@
 package io.outfoxx.sunday.generator
 
 import amf.client.model.domain.WebApi
+import io.outfoxx.sunday.generator.utils.accepts
+import io.outfoxx.sunday.generator.utils.contentType
 import java.nio.file.Path
 
 /**

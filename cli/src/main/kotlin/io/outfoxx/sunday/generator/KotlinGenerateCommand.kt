@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 abstract class KotlinGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
 

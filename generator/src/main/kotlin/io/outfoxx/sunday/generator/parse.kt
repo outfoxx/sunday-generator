@@ -6,6 +6,7 @@ import amf.client.AMF
 import amf.client.environment.Environment
 import amf.client.model.document.Document
 import amf.client.parse.Raml10Parser
+import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import java.net.URI
 import kotlin.system.exitProcess
 
