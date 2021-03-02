@@ -52,6 +52,11 @@ import io.outfoxx.sunday.generator.servers
 import io.outfoxx.sunday.generator.statusCode
 import io.outfoxx.sunday.generator.stringValue
 import io.outfoxx.sunday.generator.successes
+import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
+import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.url
 import io.outfoxx.sunday.generator.variables
 import io.outfoxx.sunday.generator.version
