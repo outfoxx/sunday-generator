@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ARRAY
 import com.squareup.kotlinpoet.BOOLEAN_ARRAY

@@ -34,7 +34,7 @@ import io.outfoxx.sunday.generator.findAnnotation
 import io.outfoxx.sunday.generator.findArrayAnnotation
 import io.outfoxx.sunday.generator.findStringAnnotation
 import io.outfoxx.sunday.generator.headers
-import io.outfoxx.sunday.generator.kotlin.kotlinTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.method
 import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.objectValue

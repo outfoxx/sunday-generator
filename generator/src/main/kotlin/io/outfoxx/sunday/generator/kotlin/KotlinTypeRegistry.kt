@@ -96,6 +96,10 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementMod
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.isArray
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.makesNullable
 import io.outfoxx.sunday.generator.maxItems
 import io.outfoxx.sunday.generator.maxLength

@@ -1,4 +1,4 @@
-package io.outfoxx.sunday.generator.kotlin
+package io.outfoxx.sunday.generator.kotlin.utils
 
 import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
@@ -8,7 +8,6 @@ import amf.client.model.domain.Shape
 import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.operationId
 import io.outfoxx.sunday.generator.parameterName
-import io.outfoxx.sunday.generator.scalarValue
 import io.outfoxx.sunday.generator.stringValue
 import io.outfoxx.sunday.generator.toLowerCamelCase
 import io.outfoxx.sunday.generator.toUpperCamelCase

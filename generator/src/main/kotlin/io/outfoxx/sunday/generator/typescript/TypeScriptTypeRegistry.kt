@@ -59,7 +59,7 @@ import io.outfoxx.sunday.generator.inheritsViaAggregation
 import io.outfoxx.sunday.generator.inheritsViaInherits
 import io.outfoxx.sunday.generator.isOrWasLink
 import io.outfoxx.sunday.generator.items
-import io.outfoxx.sunday.generator.kotlin.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.makesNullable
 import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.nullableType
