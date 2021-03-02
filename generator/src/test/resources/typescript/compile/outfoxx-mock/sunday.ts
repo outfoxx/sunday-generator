@@ -27,6 +27,9 @@ export class Problem {
   }
 }
 
+export class URLTemplate {
+  constructor(url: string, params: object) {}
+}
 
 export enum MediaType {
   Text,

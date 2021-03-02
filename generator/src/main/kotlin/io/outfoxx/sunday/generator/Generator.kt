@@ -12,8 +12,6 @@ abstract class Generator(
   defaultMediaTypes: List<String>
 ) {
 
-  abstract fun generateServiceTypes()
-
   val defaultMediaTypes: List<String>
 
   init {
@@ -35,5 +33,9 @@ abstract class Generator(
 
     this.defaultMediaTypes = sorted.toList()
   }
+
+  abstract fun generateFiles(outputDirectory: Path)
+
+  abstract fun generateServiceTypes()
 
 }

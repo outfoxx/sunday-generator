@@ -351,7 +351,7 @@ class TypeScriptSundayGenerator(
         builder.add(CodeBlock.of("body: %L", requestBodyParameter))
         if (requestBodyType != null) {
 
-          val requestBodyTypeContext = TypeScriptResolutionContext(document, null, null)
+          val requestBodyTypeContext = TypeScriptResolutionContext(document, null)
 
           val requestBodyTypeName = typeRegistry.resolveTypeName(requestBodyType!!, requestBodyTypeContext)
           if (requestBodyTypeName != VOID) {

@@ -4,12 +4,15 @@ import amf.client.model.document.BaseUnit
 import amf.client.model.document.Document
 import amf.client.model.document.EncodesModel
 import amf.client.model.domain.CustomizableElement
+import amf.client.model.domain.DataNode
 import amf.client.model.domain.EndPoint
 import amf.client.model.domain.ObjectNode
 import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
+import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
+import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
@@ -31,7 +34,9 @@ import io.outfoxx.sunday.generator.findAnnotation
 import io.outfoxx.sunday.generator.findArrayAnnotation
 import io.outfoxx.sunday.generator.findStringAnnotation
 import io.outfoxx.sunday.generator.headers
+import io.outfoxx.sunday.generator.kotlin.kotlinTypeName
 import io.outfoxx.sunday.generator.method
+import io.outfoxx.sunday.generator.name
 import io.outfoxx.sunday.generator.objectValue
 import io.outfoxx.sunday.generator.operations
 import io.outfoxx.sunday.generator.parameters
@@ -42,23 +47,28 @@ import io.outfoxx.sunday.generator.request
 import io.outfoxx.sunday.generator.requests
 import io.outfoxx.sunday.generator.required
 import io.outfoxx.sunday.generator.root
-import io.outfoxx.sunday.generator.scalarValue
 import io.outfoxx.sunday.generator.schema
 import io.outfoxx.sunday.generator.servers
 import io.outfoxx.sunday.generator.statusCode
 import io.outfoxx.sunday.generator.stringValue
 import io.outfoxx.sunday.generator.successes
 import io.outfoxx.sunday.generator.url
+import io.outfoxx.sunday.generator.variables
+import io.outfoxx.sunday.generator.version
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
+import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.FunctionSpec
 import io.outfoxx.typescriptpoet.Modifier
+import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.NameAllocator
 import io.outfoxx.typescriptpoet.ParameterSpec
+import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import java.net.URI
 import java.net.URISyntaxException
+import java.nio.file.Path
 import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
@@ -67,9 +77,40 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
 abstract class TypeScriptGenerator(
   val document: Document,
   val typeRegistry: TypeScriptTypeRegistry,
-  val defaultProblemBaseUri: String,
+  private val defaultProblemBaseUri: String,
   defaultMediaTypes: List<String>,
 ) : Generator(document.api, defaultMediaTypes) {
+
+  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
+
+  override fun generateFiles(outputDirectory: Path) {
+
+    generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+
+    builtTypes.forEach { (typeName, moduleSpec) ->
+
+      val imported = typeName.base as SymbolSpec.Imported
+      val modulePath = imported.source.replaceFirst("!", "")
+
+      FileSpec.get(moduleSpec, modulePath)
+        .writeTo(outputDirectory)
+    }
+
+    generateIndex(builtTypes)
+  }
+
+  private fun generateIndex(types: Map<TypeName.Standard, ModuleSpec>): FileSpec {
+
+    val indexBuilder = FileSpec.builder("index")
+
+    types.keys.forEach { name ->
+      indexBuilder.addCode(CodeBlock.of("export * from './%L';", name.base.value.removePrefix("!")))
+    }
+
+    return indexBuilder.build()
+  }
 
   override fun generateServiceTypes() {
 
@@ -77,7 +118,7 @@ abstract class TypeScriptGenerator(
 
     endPointGroups.map { (groupName, endPoints) ->
 
-      val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
+      val serviceSimpleName = "${groupName?.kotlinTypeName ?: ""}API"
 
       val modulePath = modulePathOf(document)?.let { "!$it/" } ?: "!"
 
@@ -97,6 +138,42 @@ abstract class TypeScriptGenerator(
       ClassSpec.builder(serviceTypeName)
         .addModifiers(Modifier.EXPORT)
         .tag(CodeBlock.Builder::class, CodeBlock.builder())
+
+    // Add baseUrl function
+    getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
+
+      serviceTypeBuilder.addFunction(
+        FunctionSpec.builder("baseURL")
+          .addModifiers(Modifier.STATIC)
+          .returns(URL_TEMPLATE)
+          .apply {
+            baseURLParameters.forEach { param ->
+              addParameter(param.name, param.typeName, optional = param.defaultValue != null)
+            }
+          }
+          .addCode("return new URLTemplate(%>\n")
+          .addCode("%S,\n{", baseURL)
+          .apply {
+            baseURLParameters.forEachIndexed { idx, param ->
+
+              val defaultValue = param.defaultValue
+              if (defaultValue != null) {
+                addCode("%L: %L ?? ", param.name, param.name)
+                addCode(defaultValue.typeScriptConstant(param.typeName, param.shape))
+              } else {
+                addCode("%L", param.name)
+              }
+
+              if (idx < baseURLParameters.size - 1) {
+                addCode(", ")
+              }
+            }
+          }
+          .addCode("}%<\n);\n")
+          .build()
+      )
+
+    }
 
     serviceTypeBuilder = processServiceBegin(endPoints, serviceTypeBuilder)
 
@@ -212,15 +289,8 @@ abstract class TypeScriptGenerator(
 
           request.payloads.firstOrNull()?.schema?.let { payloadSchema ->
 
-            val requestBodyParameterTypeNameContext =
-              TypeScriptResolutionContext(
-                document,
-                typeName.nested("${operation.typeScriptTypeName}RequestBody"),
-                null
-              )
-
             val requestBodyParameterTypeName =
-              typeRegistry.resolveTypeName(payloadSchema, requestBodyParameterTypeNameContext)
+              resolveTypeName(payloadSchema, typeName.nested("${operation.typeScriptTypeName}RequestBody"))
 
             val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -250,14 +320,8 @@ abstract class TypeScriptGenerator(
           val responseBodyType = response.payloads.firstOrNull()?.schema
           if (response.statusCode != NO_CONTENT.statusCode.toString() && responseBodyType != null) {
 
-            val responseBodyTypeNameContext =
-              TypeScriptResolutionContext(
-                document,
-                typeName.nested("${operation.typeScriptTypeName}ResponseBody"),
-                null
-              )
-
-            val responseBodyTypeName = typeRegistry.resolveTypeName(responseBodyType, responseBodyTypeNameContext)
+            val responseBodyTypeName =
+              resolveTypeName(responseBodyType, typeName.nested("${operation.typeScriptTypeName}ResponseBody"))
 
             val processedResponseBodyTypeName =
               processReturnType(
@@ -278,6 +342,7 @@ abstract class TypeScriptGenerator(
 
             val processedResponseBodyTypeName =
               processReturnType(endPoint, operation, response, null, typeBuilder, functionBuilder, VOID)
+
             if (processedResponseBodyTypeName != VOID) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }
@@ -289,7 +354,7 @@ abstract class TypeScriptGenerator(
           val bodyType = response.payloads.firstOrNull()?.schema
           if (bodyType != null) {
 
-            typeRegistry.resolveTypeName(bodyType, TypeScriptResolutionContext(document, null, null))
+            resolveTypeName(bodyType, typeName.nested("${operation.typeScriptTypeName}FailureResponseBody"))
           }
 
         }
@@ -332,22 +397,17 @@ abstract class TypeScriptGenerator(
 
     endPoint.parameters.forEach { parameter ->
 
-      val uriParameterTypeNameContext =
-        TypeScriptResolutionContext(
-          document,
-          typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}UriParam"),
-          null
-        )
+      val uriParameterSuggestedTypeName =
+        typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}UriParam")
 
-      val uriParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
-          .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
-              undefinable
-            } else {
-              this
-            }
+      val uriParameterTypeName = resolveTypeName(parameter.schema!!, uriParameterSuggestedTypeName)
+        .run {
+          if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            undefinable
+          } else {
+            this
           }
+        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -383,21 +443,17 @@ abstract class TypeScriptGenerator(
 
     request.queryParameters.forEach { parameter ->
 
-      val queryParameterTypeNameContext =
-        TypeScriptResolutionContext(
-          document,
-          typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}QueryParam")
-        )
+      val queryParameterSuggestedTypeName =
+        typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}QueryParam")
 
-      val queryParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
-          .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
-              undefinable
-            } else {
-              this
-            }
+      val queryParameterTypeName = resolveTypeName(parameter.schema!!, queryParameterSuggestedTypeName)
+        .run {
+          if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            undefinable
+          } else {
+            this
           }
+        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -431,21 +487,17 @@ abstract class TypeScriptGenerator(
 
     request.headers.forEach { header ->
 
-      val headerParameterTypeNameContext =
-        TypeScriptResolutionContext(
-          document,
-          typeName.nested("${operation.typeScriptTypeName}${header.typeScriptTypeName}HeaderParam")
-        )
+      val headerParameterSuggestedTypeName =
+        typeName.nested("${operation.typeScriptTypeName}${header.typeScriptTypeName}HeaderParam")
 
-      val headerParameterTypeName =
-        typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
-          .run {
-            if (header.schema?.defaultValue != null || header.required == false) {
-              undefinable
-            } else {
-              this
-            }
+      val headerParameterTypeName = resolveTypeName(header.schema!!, headerParameterSuggestedTypeName)
+        .run {
+          if (header.schema?.defaultValue != null || header.required == false) {
+            undefinable
+          } else {
+            this
           }
+        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -466,6 +518,10 @@ abstract class TypeScriptGenerator(
 
       functionBuilder.addParameter(headerParameterSpec)
     }
+  }
+
+  private fun resolveTypeName(shape: Shape, suggestedTypeName: TypeName.Standard): TypeName {
+    return typeRegistry.resolveTypeName(shape, TypeScriptResolutionContext(document, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -512,5 +568,35 @@ abstract class TypeScriptGenerator(
   private fun modulePathOf(unit: BaseUnit?): String? =
     (unit as? CustomizableElement)?.findStringAnnotation(APIAnnotationName.TypeScriptModule, null)
       ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(APIAnnotationName.TypeScriptModule, null)
+
+  private fun getBaseURIInfo(): Pair<String, List<URIParameter>>? {
+
+    val server = document.api.servers.firstOrNull() ?: return null
+
+    val parameters =
+      server.variables
+        .mapIndexed { idx, variable ->
+
+          val name = variable.name ?: "uriParameter$idx"
+
+          val variableTypeName =
+            variable.schema?.let {
+              val suggestedName = variable.name?.typeScriptTypeName ?: "URIParameter$idx"
+              val suggestedModule =
+                variable.name?.typeScriptTypeName?.camelCaseToKebabCase() ?: "!uri-parameter-idx$idx"
+              resolveTypeName(it, TypeName.namedImport(suggestedName, suggestedModule))
+            } ?: TypeName.STRING
+
+          val defaultValue =
+            if (variable.name == "version")
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+            else
+              variable.schema?.defaultValue
+
+          URIParameter(name, variableTypeName, variable.schema, defaultValue)
+        }
+
+    return server.url to parameters
+  }
 
 }

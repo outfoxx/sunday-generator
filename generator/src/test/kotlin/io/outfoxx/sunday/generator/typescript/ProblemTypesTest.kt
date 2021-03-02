@@ -31,7 +31,7 @@ class ProblemTypesTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
@@ -60,7 +60,7 @@ class ProblemTypesTest {
         import {Problem} from '@outfoxx/sunday';
 
 
-        class AccountNotFoundProblem extends Problem {
+        export class AccountNotFoundProblem extends Problem {
 
           static TYPE: string = 'http://example.com/account_not_found';
 
@@ -101,7 +101,7 @@ class ProblemTypesTest {
 
 
         @JsonTypeName({value: InvalidIdProblem.TYPE})
-        class InvalidIdProblem extends Problem {
+        export class InvalidIdProblem extends Problem {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
@@ -135,7 +135,7 @@ class ProblemTypesTest {
 
 
         @JsonTypeName({value: AccountNotFoundProblem.TYPE})
-        class AccountNotFoundProblem extends Problem {
+        export class AccountNotFoundProblem extends Problem {
 
           static TYPE: string = 'http://example.com/account_not_found';
 

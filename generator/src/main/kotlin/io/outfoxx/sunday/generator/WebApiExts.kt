@@ -350,16 +350,6 @@ val Parameter.examples: List<Example> get() = this.examples()
 
 
 ///
-val TemplatedLink.description: String? get() = this.description().value
-val TemplatedLink.template: String? get() = this.template().value
-val TemplatedLink.operationId: String? get() = this.operationId().value
-val TemplatedLink.operationRef: String? get() = this.operationRef().value
-val TemplatedLink.mapping: List<IriTemplateMapping> get() = this.mapping()
-val TemplatedLink.requestBody: String? get() = this.requestBody().value
-val TemplatedLink.server: Server? get() = this.server()
-
-
-///
 val Server.url: String get() = this.url().value()
 val Server.description: String? get() = this.description().value
 val Server.variables: List<Parameter> get() = this.variables()
@@ -431,6 +421,16 @@ val Shape.inheritanceRoot: Shape get() = anyInheritanceSuper?.inheritanceRoot ?:
 ///
 val ShapeExtension.definedBy: PropertyShape get() = this.definedBy()
 val ShapeExtension.extension: DataNode? get() = this.extension()
+
+
+///
+val TemplatedLink.description: String? get() = this.description().value
+val TemplatedLink.template: String? get() = this.template().value
+val TemplatedLink.operationId: String? get() = this.operationId().value
+val TemplatedLink.operationRef: String? get() = this.operationRef().value
+val TemplatedLink.mapping: List<IriTemplateMapping> get() = this.mapping()
+val TemplatedLink.requestBody: String? get() = this.requestBody().value
+val TemplatedLink.server: Server? get() = this.server()
 
 
 ///

@@ -242,7 +242,7 @@ class TypeScriptTypeRegistry(
                         customPropertyName.kotlinIdentifierName,
                         resolveTypeReference(
                           customPropertyTypeNameStr,
-                          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null, null)
+                          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
                         )
                       )
                       .apply {
@@ -312,14 +312,13 @@ class TypeScriptTypeRegistry(
       else -> {
         val (element, unit) = context.unit.resolveRef(name) ?: error("Invalid type reference '$name'")
         element as? Shape ?: error("Invalid type reference '$name'")
-        val resContext = TypeScriptResolutionContext(unit, null, null)
 
-        resolveReferencedTypeName(element, resContext)
+        resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
       }
     }
 
   private fun resolveReferencedTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName =
-    resolveTypeName(shape, context.copy(suggestedTypeName = null, property = null))
+    resolveTypeName(shape, context.copy(suggestedTypeName = null))
 
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
@@ -327,10 +326,7 @@ class TypeScriptTypeRegistry(
     context: TypeScriptResolutionContext
   ): TypeName {
 
-    val propertyContext = context.copy(
-      suggestedTypeName = className.nested(propertyShape.typeScriptTypeName),
-      property = propertyShape
-    )
+    val propertyContext = context.copy(suggestedTypeName = className.nested(propertyShape.typeScriptTypeName))
 
     val baseTypeName = resolveTypeName(propertyShape.range, propertyContext)
     return if (propertyShape.optional) {
@@ -1006,7 +1002,7 @@ class TypeScriptTypeRegistry(
       nestedEnclosingType as? Shape
         ?: error("Nested annotation enclosing type references non-type definition")
 
-      val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null, null)
+      val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null)
 
       val nestedEnclosingTypeName =
         resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as TypeName.Standard
