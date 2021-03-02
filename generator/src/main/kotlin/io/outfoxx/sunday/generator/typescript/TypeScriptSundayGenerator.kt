@@ -95,38 +95,14 @@ class TypeScriptSundayGenerator(
           .initializer("requestFactory")
           .build()
       )
-      .addProperty(
-        PropertySpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .initializer("defaultContentTypes")
-          .build()
-      )
-      .addProperty(
-        PropertySpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .initializer("defaultAcceptTypes")
-          .build()
-      )
 
     consBuilder = FunctionSpec.constructorBuilder()
       .addParameter("requestFactory", REQUEST_FACTORY)
-      .addParameter(
-        ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .defaultValue("%L.defaultContentTypes", typeBuilder.build().name)
-          .build()
-      )
-      .addParameter(
-        ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .defaultValue("%L.defaultAcceptTypes", typeBuilder.build().name)
-          .build()
-      )
 
     return typeBuilder
   }
 
   override fun processServiceEnd(typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
-
-    consBuilder?.let {
-      typeBuilder.constructor(it.build())
-    }
 
     // Add default content types (in priority order)
     //
@@ -135,13 +111,8 @@ class TypeScriptSundayGenerator(
     typeBuilder
       .addProperty(
         PropertySpec
-          .builder(
-            "defaultContentTypes",
-            TypeName.parameterizedType(ARRAY, MEDIA_TYPE),
-            false,
-            Modifier.PUBLIC, Modifier.STATIC
-          )
-          .initializer("%L", mediaTypesArray(contentTypes))
+          .builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .initializer("defaultContentTypes")
           .build()
       )
 
@@ -152,15 +123,26 @@ class TypeScriptSundayGenerator(
     typeBuilder
       .addProperty(
         PropertySpec
-          .builder(
-            "defaultAcceptTypes",
-            TypeName.parameterizedType(ARRAY, MEDIA_TYPE),
-            false,
-            Modifier.PUBLIC, Modifier.STATIC
-          )
-          .initializer("%L", mediaTypesArray(acceptTypes))
+          .builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .initializer("defaultAcceptTypes")
           .build()
       )
+
+    consBuilder
+      ?.addParameter(
+        ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .defaultValue("%L", mediaTypesArray(contentTypes))
+          .build()
+      )
+      ?.addParameter(
+        ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .defaultValue("%L", mediaTypesArray(acceptTypes))
+          .build()
+      )
+
+    consBuilder?.let {
+      typeBuilder.constructor(it.build())
+    }
 
     return super.processServiceEnd(typeBuilder)
   }

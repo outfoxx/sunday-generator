@@ -45,13 +45,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
-
-          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
-
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
-              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
+              public defaultContentTypes: Array<MediaType> = [MediaType.JSON],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
           fetchTest(body: Test): Observable<Test> {
@@ -109,13 +105,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
-
-          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
-
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
-              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
+              public defaultContentTypes: Array<MediaType> = [MediaType.JSON],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
           fetchTest(body: Test | null): Observable<Test> {
@@ -172,13 +164,9 @@ class RequestBodyParamTest {
 
         export class API {
 
-          static defaultContentTypes: Array<MediaType> = [];
-
-          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
-
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
-              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
+              public defaultContentTypes: Array<MediaType> = [],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
           fetchTest(body: BodyInit): Observable<object> {

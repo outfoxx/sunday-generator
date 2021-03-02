@@ -45,13 +45,9 @@ class RequestMethodsTest {
 
         export class API {
 
-          static defaultContentTypes: Array<MediaType> = [MediaType.JSON];
-
-          static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
-
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
-              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
+              public defaultContentTypes: Array<MediaType> = [MediaType.JSON],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
           fetchTest(): Observable<Test> {
