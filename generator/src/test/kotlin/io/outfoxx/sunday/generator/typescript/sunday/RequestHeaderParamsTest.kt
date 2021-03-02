@@ -49,7 +49,9 @@ class RequestHeaderParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(obj: Test, strReq: string, int: number | undefined = undefined): Observable<Test> {
@@ -57,7 +59,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes,
+                  acceptTypes: this.defaultAcceptTypes,
                   headers: {
                     obj,
                     'str-req': strReq,
@@ -112,7 +114,9 @@ class RequestHeaderParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(obj: Test | undefined = undefined, str: string | undefined = undefined,
@@ -121,7 +125,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes,
+                  acceptTypes: this.defaultAcceptTypes,
                   headers: {
                     obj,
                     str,
@@ -175,7 +179,9 @@ class RequestHeaderParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(category: API.FetchTestCategoryHeaderParam,
@@ -184,7 +190,7 @@ class RequestHeaderParamsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes,
+                  acceptTypes: this.defaultAcceptTypes,
                   headers: {
                     category,
                     type

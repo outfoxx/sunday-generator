@@ -49,7 +49,9 @@ class RequestQueryParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(obj: Test, strReq: string, int: number | undefined = undefined): Observable<Test> {
@@ -62,7 +64,7 @@ class RequestQueryParamsTest {
                     'str-req': strReq,
                     int: int ?? 5
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -112,7 +114,9 @@ class RequestQueryParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(obj: Test | undefined = undefined, str: string | undefined = undefined,
@@ -126,7 +130,7 @@ class RequestQueryParamsTest {
                     str,
                     int
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -175,7 +179,9 @@ class RequestQueryParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(category: API.FetchTestCategoryQueryParam,
@@ -188,7 +194,7 @@ class RequestQueryParamsTest {
                     category,
                     type
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );

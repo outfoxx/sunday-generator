@@ -49,7 +49,9 @@ class RequestUriParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(def: string, obj: Test, strReq: string,
@@ -64,7 +66,7 @@ class RequestUriParamsTest {
                     'str-req': strReq,
                     int: int ?? 5
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -113,7 +115,9 @@ class RequestUriParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(obj: object, str: string, def: string, int: number): Observable<object> {
@@ -127,7 +131,7 @@ class RequestUriParamsTest {
                     def,
                     int
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -177,7 +181,9 @@ class RequestUriParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(def: string, obj: Test | undefined = undefined, str: string | undefined = undefined,
@@ -192,7 +198,7 @@ class RequestUriParamsTest {
                     str,
                     int
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -241,7 +247,9 @@ class RequestUriParamsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(category: API.FetchTestCategoryUriParam,
@@ -254,7 +262,7 @@ class RequestUriParamsTest {
                     category,
                     type
                   },
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );

@@ -47,7 +47,9 @@ class ResponseEventsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchEvents(): EventSource {
@@ -55,7 +57,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 }
             );
           }
@@ -103,7 +105,9 @@ class ResponseEventsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchEvents(): Observable<Test1 | Test2> {
@@ -115,7 +119,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 eventTypes
             );
@@ -165,7 +169,9 @@ class ResponseEventsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchEvents(): Observable<Base> {
@@ -177,7 +183,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 eventTypes
             );

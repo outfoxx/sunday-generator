@@ -49,7 +49,9 @@ class ResponseBodyContentTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(): Observable<Test> {
@@ -57,7 +59,7 @@ class ResponseBodyContentTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -106,7 +108,9 @@ class ResponseBodyContentTest {
 
           static defaultAcceptTypes: Array<MediaType> = [];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(): Observable<ArrayBuffer> {
@@ -163,7 +167,9 @@ class ResponseBodyContentTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(): Observable<API.FetchTestResponseBody> {
@@ -171,7 +177,7 @@ class ResponseBodyContentTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );
@@ -245,7 +251,9 @@ class ResponseBodyContentTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(): Observable<void> {

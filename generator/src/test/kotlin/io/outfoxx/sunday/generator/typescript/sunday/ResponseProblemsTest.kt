@@ -54,7 +54,9 @@ class ResponseProblemsTest {
 
           static defaultAcceptTypes: Array<MediaType> = [MediaType.JSON];
 
-          constructor(public requestFactory: RequestFactory) {
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = API.defaultContentTypes,
+              public defaultAcceptTypes: Array<MediaType> = API.defaultAcceptTypes) {
           }
 
           fetchTest(): Observable<Test> {
@@ -62,7 +64,7 @@ class ResponseProblemsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: API.defaultAcceptTypes,
+                  acceptTypes: this.defaultAcceptTypes,
                   problemTypes: {
                     'invalid_id': InvalidIdProblem,
                     'test_not_found': TestNotFoundProblem

@@ -83,9 +83,29 @@ class TypeScriptSundayGenerator(
           .initializer("requestFactory")
           .build()
       )
+      .addProperty(
+        PropertySpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .initializer("defaultContentTypes")
+          .build()
+      )
+      .addProperty(
+        PropertySpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .initializer("defaultAcceptTypes")
+          .build()
+      )
 
     consBuilder = FunctionSpec.constructorBuilder()
       .addParameter("requestFactory", REQUEST_FACTORY)
+      .addParameter(
+        ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .defaultValue("%L.defaultContentTypes", typeBuilder.build().name)
+          .build()
+      )
+      .addParameter(
+        ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+          .defaultValue("%L.defaultAcceptTypes", typeBuilder.build().name)
+          .build()
+      )
 
     return typeBuilder
   }
@@ -369,7 +389,7 @@ class TypeScriptSundayGenerator(
               mediaTypesArray(requestBodyContentType!!)
 
             requestBodyParameter != null ->
-              CodeBlock.of("%N.defaultContentTypes", typeBuilder.build().name)
+              CodeBlock.of("this.defaultContentTypes")
 
             else -> CodeBlock.of("nil")
           }
@@ -383,7 +403,7 @@ class TypeScriptSundayGenerator(
           if (resultContentTypes != defaultMediaTypes) {
             mediaTypesArray(resultContentTypes!!)
           } else {
-            CodeBlock.of("%N.defaultAcceptTypes", typeBuilder.build().name)
+            CodeBlock.of("this.defaultAcceptTypes")
           }
         builder.add(",\n")
         builder.add("acceptTypes: %L", acceptTypes)
