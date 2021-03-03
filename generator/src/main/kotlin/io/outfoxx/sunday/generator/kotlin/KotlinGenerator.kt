@@ -42,6 +42,7 @@ import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.method
 import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operations
@@ -182,6 +183,7 @@ abstract class KotlinGenerator(
   abstract fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<String, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec
@@ -312,19 +314,26 @@ abstract class KotlinGenerator(
 
         }
 
-        val problemsAnn = operation.findAnnotation(Problems, generationMode) as? ArrayNode
-        if (problemsAnn != null) {
+        val responseProblemTypes =
+          operation.findArrayAnnotation(Problems, null)?.let { problems ->
 
-          val referencedProblemCodes = problemsAnn.values<ScalarNode>().mapNotNull { it.value }
+            val referencedProblemCodes = problems.mapNotNull { it.stringValue }
+            val referencedProblemTypes =
+              referencedProblemCodes
+                .map { problemCode ->
+                  val problemType = problemTypes[problemCode] ?: error("Unknown problem code referenced: $problemCode")
+                  problemCode to problemType
+                }
+                .toMap()
 
+            referencedProblemTypes
+              .mapValues { (problemCode, problemTypeDefinition) ->
+                typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+              }
+          } ?: emptyMap()
 
-          problemTypes.filter { referencedProblemCodes.contains(it.key) }
-            .forEach { (problemCode, problemTypeDefinition) ->
-              typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
-            }
-        }
-
-        val functionSpec = processResourceMethodEnd(endPoint, operation, typeBuilder, functionBuilder)
+        val functionSpec =
+          processResourceMethodEnd(endPoint, operation, responseProblemTypes, typeBuilder, functionBuilder)
 
         typeBuilder.addFunction(functionSpec)
       }

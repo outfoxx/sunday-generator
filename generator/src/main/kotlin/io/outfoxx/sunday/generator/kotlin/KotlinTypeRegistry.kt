@@ -147,7 +147,7 @@ import kotlin.math.min
 class KotlinTypeRegistry(
   val defaultModelPackageName: String,
   val generationMode: GenerationMode,
-  private val options: Set<Option>
+  val options: Set<Option>
 ) {
 
   data class Id(val value: String)

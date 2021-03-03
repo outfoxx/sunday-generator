@@ -6,6 +6,7 @@ import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.Shape
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
@@ -22,6 +23,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
@@ -72,6 +74,7 @@ class KotlinJAXRSGenerator(
   defaultMediaTypes,
 ) {
 
+  private val referencedProblemTypes = mutableMapOf<String, TypeName>()
   private val reactiveResponseType = reactiveResponseType?.let { ClassName.bestGuess(it) }
 
   override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
@@ -90,6 +93,27 @@ class KotlinJAXRSGenerator(
     }
 
     return typeBuilder
+  }
+
+  override fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+
+    if (typeRegistry.options.contains(JacksonAnnotations)) {
+      typeBuilder.addType(
+        TypeSpec.companionObjectBuilder()
+          .addFunction(
+            FunSpec.builder("registerProblems")
+              .addParameter("mapper", ObjectMapper::class)
+              .addCode(
+                "mapper.registerSubtypes(⇥\n${referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" }}⇤\n)",
+                *referencedProblemTypes.values.toTypedArray()
+              )
+              .build()
+          )
+          .build()
+      )
+    }
+
+    return super.processServiceEnd(typeBuilder)
   }
 
   override fun processReturnType(
@@ -297,9 +321,12 @@ class KotlinJAXRSGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<String, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec {
+
+    referencedProblemTypes.putAll(problemTypes)
 
     if (generationMode == Server) {
       // Add async response parameter to asynchronous methods

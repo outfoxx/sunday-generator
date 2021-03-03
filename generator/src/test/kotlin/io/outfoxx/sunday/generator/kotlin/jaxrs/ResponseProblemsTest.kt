@@ -5,6 +5,7 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
@@ -20,6 +21,126 @@ import java.net.URI
 @ExtendWith(ResourceExtension::class)
 @DisplayName("[Kotlin/JAXRS] [RAML] Response Problems Test")
 class ResponseProblemsTest {
+
+  @Test
+  fun `test API problem registration in server mode`(
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          null,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.ObjectMapper
+        import io.test.InvalidIdProblem
+        import io.test.TestNotFoundProblem
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Response
+        
+          public companion object {
+            public fun registerProblems(mapper: ObjectMapper): Unit {
+              mapper.registerSubtypes(
+                InvalidIdProblem::class.java,
+                TestNotFoundProblem::class.java
+              )
+            }
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test API problem registration in client mode`(
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf(JacksonAnnotations))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          null,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.ObjectMapper
+        import io.test.InvalidIdProblem
+        import io.test.Test
+        import io.test.TestNotFoundProblem
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Test
+        
+          public companion object {
+            public fun registerProblems(mapper: ObjectMapper): Unit {
+              mapper.registerSubtypes(
+                InvalidIdProblem::class.java,
+                TestNotFoundProblem::class.java
+              )
+            }
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 
   @Test
   fun `test problem type generation in server mode`(
