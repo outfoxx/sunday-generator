@@ -53,6 +53,8 @@ class ResponseProblemsTest {
           constructor(public requestFactory: RequestFactory,
               public defaultContentTypes: Array<MediaType> = [],
               public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+            requestFactory.registerProblem(InvalidIdProblem);
+            requestFactory.registerProblem(TestNotFoundProblem);
           }
 
           fetchTest(): Observable<Test> {
@@ -60,11 +62,7 @@ class ResponseProblemsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes,
-                  problemTypes: {
-                    'invalid_id': InvalidIdProblem,
-                    'test_not_found': TestNotFoundProblem
-                  }
+                  acceptTypes: this.defaultAcceptTypes
                 },
                 fetchTestReturnType
             );

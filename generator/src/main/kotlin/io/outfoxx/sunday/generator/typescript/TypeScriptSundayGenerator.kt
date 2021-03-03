@@ -13,6 +13,18 @@ import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
+import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
+import io.outfoxx.sunday.generator.typescript.utils.EVENT_TYPES
+import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
+import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.typescript.utils.isOptional
+import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -30,18 +42,6 @@ import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.schema
-import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
-import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
-import io.outfoxx.sunday.generator.typescript.utils.EVENT_TYPES
-import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
-import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
-import io.outfoxx.sunday.generator.typescript.utils.isOptional
-import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
-import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
@@ -83,6 +83,7 @@ class TypeScriptSundayGenerator(
 
   private var referencedContentTypes = mutableSetOf<String>()
   private var referencedAcceptTypes = mutableSetOf<String>()
+  private var referencedProblemTypes = mutableMapOf<String, TypeName>()
 
   override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
 
@@ -128,20 +129,25 @@ class TypeScriptSundayGenerator(
           .build()
       )
 
-    consBuilder
-      ?.addParameter(
-        ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .defaultValue("%L", mediaTypesArray(contentTypes))
-          .build()
-      )
-      ?.addParameter(
-        ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .defaultValue("%L", mediaTypesArray(acceptTypes))
-          .build()
-      )
+    consBuilder?.let { consBuilder ->
 
-    consBuilder?.let {
-      typeBuilder.constructor(it.build())
+      consBuilder
+        .addParameter(
+          ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+            .defaultValue("%L", mediaTypesArray(contentTypes))
+            .build()
+        )
+        .addParameter(
+          ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
+            .defaultValue("%L", mediaTypesArray(acceptTypes))
+            .build()
+        )
+
+      referencedProblemTypes.forEach { (_, typeName) ->
+        consBuilder.addStatement("requestFactory.registerProblem(%T)", typeName)
+      }
+
+      typeBuilder.constructor(consBuilder.build())
     }
 
     return super.processServiceEnd(typeBuilder)
@@ -305,6 +311,8 @@ class TypeScriptSundayGenerator(
     functionBuilder: FunctionSpec.Builder
   ): FunctionSpec {
 
+    referencedProblemTypes.putAll(problemTypes)
+
     val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
     val generatedFunctionName = functionBuilder.build().name
@@ -401,18 +409,6 @@ class TypeScriptSundayGenerator(
           }
         builder.add(",\n")
         builder.add("acceptTypes: %L", acceptTypes)
-      }
-
-      if (problemTypes.isNotEmpty()) {
-        builder.add(",\n")
-        builder.add("problemTypes: %>{\n")
-        problemTypes.entries.forEachIndexed { idx, (code, typeName) ->
-          builder.add("%S: %T", code, typeName)
-          if (idx < problemTypes.size - 1) {
-            builder.add(",\n")
-          }
-        }
-        builder.add("%<\n}")
       }
 
       if (headerParameters.isNotEmpty()) {

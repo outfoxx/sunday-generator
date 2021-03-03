@@ -1,14 +1,11 @@
 import {Observable} from './rxjs';
 
-export interface EventTypes<E> {}
-
-export interface RequestFactory {
-  result<T>(params: any, resultType?: any): Observable<T>;
-  events(params: any): EventSource;
-  events<E>(params: any, eventTypes: EventTypes<E>): Observable<E>;
+export declare type ClassType<T> = (new () => T) | (new (...args: any[]) => T) | ((...args: any[]) => T) | ((...args: any[]) => ((cls: any) => T));
+export interface ClassList<T> extends Array<any> {
+    [index: number]: T | ClassList<T>;
+    0: T;
 }
-
-export interface AnyType {}
+export type AnyType = ClassList<ClassType<any>>;
 
 export class OffsetDateTime {}
 export class LocalDateTime {}
@@ -42,4 +39,13 @@ export enum MediaType {
   X509CACert,
   WWWFormURLEncoded,
   ProblemJSON,
+}
+
+export interface EventTypes<E> {}
+
+export interface RequestFactory {
+  registerProblem(problemType: ClassType<Problem>): void;
+  result<T>(params: any, resultType?: any): Observable<T>;
+  events(params: any): EventSource;
+  events<E>(params: any, eventTypes: EventTypes<E>): Observable<E>;
 }
