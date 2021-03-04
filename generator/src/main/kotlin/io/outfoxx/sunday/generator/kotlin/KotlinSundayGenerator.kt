@@ -48,6 +48,7 @@ import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.http.Method
 import kotlinx.coroutines.flow.Flow
+import java.net.URI
 
 class KotlinSundayGenerator(
   document: Document,
@@ -82,7 +83,7 @@ class KotlinSundayGenerator(
 
   private var referencedContentTypes = mutableSetOf<String>()
   private var referencedAcceptTypes = mutableSetOf<String>()
-  private var referencedProblemTypes = mutableMapOf<String, TypeName>()
+  private var referencedProblemTypes = mutableMapOf<URI, TypeName>()
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
@@ -183,8 +184,8 @@ class KotlinSundayGenerator(
             .build()
         )
 
-      referencedProblemTypes.forEach { (_, typeName) ->
-        consBuilder.addStatement("requestFactory.registerProblem(%T::class)", typeName)
+      referencedProblemTypes.forEach { (typeId, typeName) ->
+        consBuilder.addStatement("requestFactory.registerProblem(%S, %T::class)", typeId, typeName)
       }
 
       typeBuilder.primaryConstructor(consBuilder.build())
@@ -360,7 +361,7 @@ class KotlinSundayGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
-    problemTypes: Map<String, TypeName>,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec {

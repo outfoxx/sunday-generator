@@ -37,6 +37,7 @@ import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
+import java.net.URI
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.DefaultValue
@@ -75,7 +76,7 @@ class KotlinJAXRSGenerator(
   defaultMediaTypes,
 ) {
 
-  private val referencedProblemTypes = mutableMapOf<String, TypeName>()
+  private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveResponseType = reactiveResponseType?.let { ClassName.bestGuess(it) }
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
@@ -327,7 +328,7 @@ class KotlinJAXRSGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
-    problemTypes: Map<String, TypeName>,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec {

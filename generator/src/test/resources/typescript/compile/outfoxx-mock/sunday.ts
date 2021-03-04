@@ -44,7 +44,7 @@ export enum MediaType {
 export interface EventTypes<E> {}
 
 export interface RequestFactory {
-  registerProblem(problemType: ClassType<Problem>): void;
+  registerProblem(typeId: string, problemType: ClassType<Problem>): void;
   result<T>(params: any, resultType?: any): Observable<T>;
   events(params: any): EventSource;
   events<E>(params: any, eventTypes: EventTypes<E>): Observable<E>;

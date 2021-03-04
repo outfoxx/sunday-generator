@@ -186,7 +186,7 @@ abstract class KotlinGenerator(
   abstract fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
-    problemTypes: Map<String, TypeName>,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec
@@ -228,10 +228,6 @@ abstract class KotlinGenerator(
         var functionBuilder =
           FunSpec.builder(operationName)
             .returns(Unit::class)
-
-        if (typeBuilder.build().kind == TypeSpec.Kind.INTERFACE) {
-          typeBuilder.addModifiers(KModifier.ABSTRACT)
-        }
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())
 
@@ -345,9 +341,10 @@ abstract class KotlinGenerator(
                 .toMap()
 
             referencedProblemTypes
-              .mapValues { (problemCode, problemTypeDefinition) ->
-                typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+              .map { (problemCode, problemTypeDefinition) ->
+                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
               }
+              .toMap()
           } ?: emptyMap()
 
         val functionSpec =

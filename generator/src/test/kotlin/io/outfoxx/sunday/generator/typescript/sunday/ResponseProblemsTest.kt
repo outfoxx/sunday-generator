@@ -53,8 +53,8 @@ class ResponseProblemsTest {
           constructor(public requestFactory: RequestFactory,
               public defaultContentTypes: Array<MediaType> = [],
               public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
-            requestFactory.registerProblem(InvalidIdProblem);
-            requestFactory.registerProblem(TestNotFoundProblem);
+            requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblem);
+            requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
           }
 
           fetchTest(): Observable<Test> {

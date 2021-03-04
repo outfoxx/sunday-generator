@@ -53,6 +53,7 @@ import io.outfoxx.typescriptpoet.PropertySpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
+import java.net.URI
 
 /**
  * Generator for TypeScript/Sunday interfaces
@@ -82,7 +83,7 @@ class TypeScriptSundayGenerator(
 
   private var referencedContentTypes = mutableSetOf<String>()
   private var referencedAcceptTypes = mutableSetOf<String>()
-  private var referencedProblemTypes = mutableMapOf<String, TypeName>()
+  private var referencedProblemTypes = mutableMapOf<URI, TypeName>()
 
   override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
 
@@ -142,8 +143,8 @@ class TypeScriptSundayGenerator(
             .build()
         )
 
-      referencedProblemTypes.forEach { (_, typeName) ->
-        consBuilder.addStatement("requestFactory.registerProblem(%T)", typeName)
+      referencedProblemTypes.forEach { (typeId, typeName) ->
+        consBuilder.addStatement("requestFactory.registerProblem(%S, %T)", typeId, typeName)
       }
 
       typeBuilder.constructor(consBuilder.build())
@@ -316,7 +317,7 @@ class TypeScriptSundayGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
-    problemTypes: Map<String, TypeName>,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder
   ): FunctionSpec {
