@@ -3,8 +3,8 @@ package io.outfoxx.sunday.generator.kotlin
 import amf.client.model.document.BaseUnit
 import amf.client.model.document.Document
 import amf.client.model.document.EncodesModel
-import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.CustomizableElement
+import amf.client.model.domain.DataNode
 import amf.client.model.domain.EndPoint
 import amf.client.model.domain.ObjectNode
 import amf.client.model.domain.Operation
@@ -12,6 +12,7 @@ import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
+import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
@@ -22,6 +23,7 @@ import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
@@ -30,6 +32,8 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -38,12 +42,11 @@ import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.endPoints
 import io.outfoxx.sunday.generator.utils.failures
 import io.outfoxx.sunday.generator.utils.findAnnotation
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
-import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operations
 import io.outfoxx.sunday.generator.utils.parameters
@@ -60,8 +63,8 @@ import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.successes
 import io.outfoxx.sunday.generator.utils.url
-import io.outfoxx.sunday.generator.utils.value
-import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.sunday.generator.utils.variables
+import io.outfoxx.sunday.generator.utils.version
 import java.net.URI
 import java.net.URISyntaxException
 import java.nio.file.Path
@@ -77,6 +80,8 @@ abstract class KotlinGenerator(
   val defaultProblemBaseUri: String,
   defaultMediaTypes: List<String>,
 ) : Generator(document.api, defaultMediaTypes) {
+
+  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
 
   protected val generationMode get() = typeRegistry.generationMode
 
@@ -116,16 +121,14 @@ abstract class KotlinGenerator(
 
   open fun generateServiceType(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
-    var serviceTypeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
-
-    serviceTypeBuilder = processServiceBegin(endPoints, serviceTypeBuilder)
+    val serviceTypeBuilder = processServiceBegin(serviceTypeName, endPoints)
 
     generateClientServiceMethods(serviceTypeName, serviceTypeBuilder, endPoints)
 
     return processServiceEnd(serviceTypeBuilder)
   }
 
-  abstract fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: TypeSpec.Builder): TypeSpec.Builder
+  abstract fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder
 
   abstract fun processResourceMethodStart(
     endPoint: EndPoint,
@@ -189,6 +192,19 @@ abstract class KotlinGenerator(
   ): FunSpec
 
   open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+
+    val companion = (typeBuilder.tags[TypeSpec.Builder::class] as TypeSpec.Builder).build()
+    if (
+      companion.superinterfaces.isNotEmpty() ||
+      companion.enumConstants.isNotEmpty() ||
+      companion.propertySpecs.isNotEmpty() ||
+      companion.funSpecs.isNotEmpty() ||
+      companion.typeSpecs.isNotEmpty() ||
+      companion.initializerBlock.isNotEmpty()
+    ) {
+      typeBuilder.addType(companion)
+    }
+
     return typeBuilder
   }
 
@@ -211,7 +227,11 @@ abstract class KotlinGenerator(
 
         var functionBuilder =
           FunSpec.builder(operationName)
-            .addModifiers(KModifier.ABSTRACT)
+            .returns(Unit::class)
+
+        if (typeBuilder.build().kind == TypeSpec.Kind.INTERFACE) {
+          typeBuilder.addModifiers(KModifier.ABSTRACT)
+        }
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())
 
@@ -236,7 +256,6 @@ abstract class KotlinGenerator(
               KotlinResolutionContext(
                 document,
                 typeName.nestedClass("${operation.kotlinTypeName}RequestBody"),
-                null
               )
 
             val requestBodyParameterTypeName =
@@ -246,7 +265,7 @@ abstract class KotlinGenerator(
 
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
-                functionBuilderNameAllocator.newName("body"),
+                functionBuilderNameAllocator.newName("body", payloadSchema),
                 requestBodyParameterTypeName
               )
 
@@ -274,7 +293,6 @@ abstract class KotlinGenerator(
               KotlinResolutionContext(
                 document,
                 typeName.nestedClass("${operation.kotlinTypeName}ResponseBody"),
-                null
               )
 
             val responseBodyTypeName = typeRegistry.resolveTypeName(responseBodyType, responseBodyTypeNameContext)
@@ -309,7 +327,7 @@ abstract class KotlinGenerator(
           val bodyType = response.payloads.firstOrNull()?.schema
           if (bodyType != null) {
 
-            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null, null))
+            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null))
           }
 
         }
@@ -356,7 +374,6 @@ abstract class KotlinGenerator(
         KotlinResolutionContext(
           document,
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}UriParam"),
-          null
         )
 
       var uriParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
@@ -371,7 +388,7 @@ abstract class KotlinGenerator(
 
       val uriParameterBuilder =
         ParameterSpec.builder(
-          functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName),
+          functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
           uriParameterTypeName
         )
 
@@ -418,7 +435,7 @@ abstract class KotlinGenerator(
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
       val uriParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName),
+        functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
         queryParameterTypeName
       )
 
@@ -465,7 +482,7 @@ abstract class KotlinGenerator(
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
       val uriParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(header.kotlinIdentifierName),
+        functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
         headerParameterTypeName
       )
 
@@ -481,6 +498,10 @@ abstract class KotlinGenerator(
 
       functionBuilder.addParameter(uriParameterSpec)
     }
+  }
+
+  fun resolveTypeName(shape: Shape, suggestedTypeName: ClassName?): TypeName {
+    return typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -525,6 +546,34 @@ abstract class KotlinGenerator(
       .flatten()
       .associate { it.key to it.value }
       .toMap()
+  }
+
+  fun getBaseURIInfo(): Pair<String, List<URIParameter>>? {
+
+    val server = document.api.servers.firstOrNull() ?: return null
+
+    val parameters =
+      server.variables
+        .mapIndexed { idx, variable ->
+
+          val name = variable.name ?: "uriParameter$idx"
+
+          val variableTypeName =
+            variable.schema?.let {
+              val suggestedName = variable.name?.kotlinTypeName ?: "URIParameter$idx"
+              resolveTypeName(it, ClassName.bestGuess(suggestedName))
+            } ?: String::class.asTypeName()
+
+          val defaultValue =
+            if (variable.name == "version")
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+            else
+              variable.schema?.defaultValue
+
+          URIParameter(name, variableTypeName, variable.schema, defaultValue)
+        }
+
+    return server.url to parameters
   }
 
 }

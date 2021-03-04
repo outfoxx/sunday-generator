@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
@@ -77,7 +78,10 @@ class KotlinJAXRSGenerator(
   private val referencedProblemTypes = mutableMapOf<String, TypeName>()
   private val reactiveResponseType = reactiveResponseType?.let { ClassName.bestGuess(it) }
 
-  override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+  override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
+
+    val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
+    typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
 
     if (defaultMediaTypes.isNotEmpty()) {
 
@@ -172,6 +176,8 @@ class KotlinJAXRSGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec.Builder {
+
+    functionBuilder.addModifiers(KModifier.ABSTRACT)
 
     // Add @GET, @POST, @PUT, @DELETE to resource method
     val httpMethodAnnClass = httpMethod(operation.method)

@@ -259,7 +259,7 @@ class KotlinTypeRegistry(
                       customPropertyName.kotlinIdentifierName,
                       resolveTypeReference(
                         customPropertyTypeNameStr,
-                        KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
+                        KotlinResolutionContext(problemTypeDefinition.definedIn, null)
                       )
                     )
                     .apply {
@@ -310,7 +310,7 @@ class KotlinTypeRegistry(
                   customPropertyName.kotlinIdentifierName,
                   resolveTypeReference(
                     customPropertyTypeNameStr,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, null, null)
+                    KotlinResolutionContext(problemTypeDefinition.definedIn, null)
                   ),
                   KModifier.PUBLIC
                 )
@@ -356,14 +356,14 @@ class KotlinTypeRegistry(
       else -> {
         val (element, unit) = context.unit.resolveRef(name) ?: error("Invalid type reference '$name'")
         element as? Shape ?: error("Invalid type reference '$name'")
-        val resContext = KotlinResolutionContext(unit, null, null)
+        val resContext = KotlinResolutionContext(unit, null)
 
         resolveReferencedTypeName(element, resContext)
       }
     }
 
   private fun resolveReferencedTypeName(shape: Shape, context: KotlinResolutionContext): TypeName =
-    resolveTypeName(shape, context.copy(suggestedTypeName = null, property = null))
+    resolveTypeName(shape, context.copy(suggestedTypeName = null))
 
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
@@ -373,7 +373,6 @@ class KotlinTypeRegistry(
 
     val propertyContext = context.copy(
       suggestedTypeName = className.nestedClass(propertyShape.kotlinTypeName),
-      property = propertyShape
     )
 
     val typeName = resolveTypeName(propertyShape.range, propertyContext)
@@ -1292,7 +1291,7 @@ class KotlinTypeRegistry(
       nestedEnclosingType as? Shape
         ?: error("Nested annotation enclosing type references non-type definition")
 
-      val nestedEnclosingTypeContext = KotlinResolutionContext(nestedEnclosingTypeUnit, null, null)
+      val nestedEnclosingTypeContext = KotlinResolutionContext(nestedEnclosingTypeUnit, null)
 
       val nestedEnclosingTypeName = resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? ClassName
         ?: error("Nested annotation references non-defining enclosing type")

@@ -15,7 +15,8 @@ val swiftPoetVersion: String by project
 val jacksonVersion: String by project
 
 val guavaVersion: String by project
-val retrofitVersion: String by project
+val sundayKtVersion: String by project
+val kotlinCoroutinesVersion: String by project
 val jaxrsVersion: String by project
 val validationVersion: String by project
 val zalandoProblemVersion: String by project
@@ -44,7 +45,8 @@ dependencies {
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
   implementation("com.google.guava:guava:$guavaVersion")
-  implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
+  implementation("io.outfoxx:sunday:$sundayKtVersion")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
   implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion")
   implementation("javax.validation:validation-api:$validationVersion")
   implementation("org.zalando:problem:$zalandoProblemVersion")

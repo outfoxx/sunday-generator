@@ -16,6 +16,7 @@ fun compileTypes(types: Map<ClassName, TypeSpec>) =
           val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
           SourceFile.kotlin(fileName, it.toString())
         }
+      kotlincArguments = listOf("-jvm-target", "11")
       inheritClassPath = true
       verbose = false
       allWarningsAsErrors = true

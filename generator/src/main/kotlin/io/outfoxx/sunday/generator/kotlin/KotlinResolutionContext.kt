@@ -6,12 +6,11 @@ import com.squareup.kotlinpoet.ClassName
 
 data class KotlinResolutionContext(
   val unit: BaseUnit,
-  val suggestedTypeName: ClassName?,
-  val property: PropertyShape? = null
+  val suggestedTypeName: ClassName?
 ) {
 
-  fun copy(suggestedTypeName: ClassName? = null, property: PropertyShape? = null): KotlinResolutionContext {
-    return KotlinResolutionContext(unit, suggestedTypeName, property)
+  fun copy(suggestedTypeName: ClassName? = null): KotlinResolutionContext {
+    return KotlinResolutionContext(unit, suggestedTypeName)
   }
 
 }
