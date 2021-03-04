@@ -252,6 +252,18 @@ class KotlinSundayGenerator(
     return functionBuilder
   }
 
+  private fun methodParameter(parameterBuilder: ParameterSpec.Builder): ParameterSpec {
+
+    val parameter = parameterBuilder.build()
+
+    val type = parameter.type
+    if (type.isNullable) {
+      parameterBuilder.defaultValue(CodeBlock.of("null"))
+    }
+
+    return parameter
+  }
+
   override fun processResourceMethodUriParameter(
     endPoint: EndPoint,
     operation: Operation,
@@ -261,14 +273,11 @@ class KotlinSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val type = parameterBuilder.build().type
-    if (type.isNullable) {
-      parameterBuilder.defaultValue(CodeBlock.of("null"))
-    }
+    val parameterSpec = methodParameter(parameterBuilder)
 
-    uriParameters.add(parameter to parameterBuilder.build().type)
+    uriParameters.add(parameter to parameterSpec.type)
 
-    return parameterBuilder.build()
+    return parameterSpec
   }
 
   override fun processResourceMethodQueryParameter(
@@ -280,14 +289,11 @@ class KotlinSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val type = parameterBuilder.build().type
-    if (type.isNullable) {
-      parameterBuilder.defaultValue(CodeBlock.of("null"))
-    }
+    val parameterSpec = methodParameter(parameterBuilder)
 
-    queryParameters.add(parameter to parameterBuilder.build().type)
+    queryParameters.add(parameter to parameterSpec.type)
 
-    return parameterBuilder.build()
+    return parameterSpec
   }
 
   override fun processResourceMethodHeaderParameter(
@@ -299,14 +305,11 @@ class KotlinSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val type = parameterBuilder.build().type
-    if (type.isNullable) {
-      parameterBuilder.defaultValue(CodeBlock.of("null"))
-    }
+    val parameterSpec = methodParameter(parameterBuilder)
 
-    headerParameters.add(parameter to parameterBuilder.build().type)
+    headerParameters.add(parameter to parameterSpec.type)
 
-    return parameterBuilder.build()
+    return parameterSpec
   }
 
   override fun processResourceMethodBodyParameter(
