@@ -301,7 +301,7 @@ abstract class TypeScriptGenerator(
 
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
-                functionBuilderNameAllocator.newName("body"),
+                functionBuilderNameAllocator.newName("body", payloadSchema),
                 requestBodyParameterTypeName
               )
 
