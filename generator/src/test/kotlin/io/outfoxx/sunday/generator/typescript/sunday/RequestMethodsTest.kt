@@ -38,6 +38,7 @@ class RequestMethodsTest {
 
     assertEquals(
       """
+        import {PatchableTest} from './patchable-test';
         import {Test} from './test';
         import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
         import {Observable} from 'rxjs';
@@ -130,11 +131,14 @@ class RequestMethodsTest {
             );
           }
 
-          patchableTest(body: object): Observable<Test> {
+          patchableTest(body: PatchableTest.Patch): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'PATCH',
                   pathTemplate: '/tests2',
+                  body: body,
+                  bodyType: patchableTestBodyType,
+                  contentTypes: this.defaultContentTypes,
                   acceptTypes: this.defaultAcceptTypes
                 },
                 patchableTestReturnType
@@ -150,6 +154,7 @@ class RequestMethodsTest {
         const postTestReturnType: AnyType = [Test];
         const patchTestBodyType: AnyType = [Test];
         const patchTestReturnType: AnyType = [Test];
+        const patchableTestBodyType: AnyType = [PatchableTest];
         const patchableTestReturnType: AnyType = [Test];
 
       """.trimIndent(),

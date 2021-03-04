@@ -52,7 +52,6 @@ import io.outfoxx.typescriptpoet.ParameterSpec
 import io.outfoxx.typescriptpoet.PropertySpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
-import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 
 /**
@@ -274,10 +273,21 @@ class TypeScriptSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    if (payloadSchema.resolve.findBoolAnnotation(Patchable, null) == true && operation.method == "patch") {
-      val orig = parameterBuilder.build()
-      return ParameterSpec.builder(orig.name, OBJECT).build()
-    }
+    val actualParameterBuilder =
+      if (payloadSchema.resolve.findBoolAnnotation(Patchable, null) == true && operation.method == "patch") {
+
+        val original = parameterBuilder.build()
+        val originalTypeName = original.type
+        val patchTypeName =
+          if (originalTypeName is TypeName.Standard)
+            originalTypeName.nested("Patch")
+          else
+            TypeName.ANY
+
+        ParameterSpec.builder(original.name, patchTypeName)
+      } else {
+        parameterBuilder
+      }
 
     val request = operation.request ?: operation.requests.first()
 
@@ -291,10 +301,10 @@ class TypeScriptSundayGenerator(
     referencedContentTypes.addAll(requestBodyContentTypes)
 
     requestBodyContentType = requestBodyContentTypes.firstOrNull()
-    requestBodyParameter = parameterBuilder.build().name
+    requestBodyParameter = actualParameterBuilder.build().name
     requestBodyType = payloadSchema
 
-    val parameter = parameterBuilder.build()
+    val parameter = actualParameterBuilder.build()
 
     return if (requestBodyContentType == "application/octet-stream") {
       ParameterSpec.builder(parameter.name, BODY_INIT, false, *parameter.modifiers.toTypedArray()).build()
