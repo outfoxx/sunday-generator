@@ -261,7 +261,7 @@ class KotlinSundayGenerator(
       parameterBuilder.defaultValue(CodeBlock.of("null"))
     }
 
-    return parameter
+    return parameterBuilder.build()
   }
 
   override fun processResourceMethodUriParameter(
