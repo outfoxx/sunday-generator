@@ -68,7 +68,10 @@ class RamlTypeAnnotationsTest {
 
         export class Group implements Group {
 
-          constructor(public value: string) {
+          value: string;
+
+          constructor(value: string) {
+            this.value = value;
           }
 
           toString(): string {
@@ -87,8 +90,11 @@ class RamlTypeAnnotationsTest {
 
           export class Member1 extends Group implements Member1 {
 
-            constructor(value: string, public memberValue1: string) {
+            memberValue1: string;
+
+            constructor(value: string, memberValue1: string) {
               super(value);
+              this.memberValue1 = memberValue1;
             }
 
             toString(): string {
@@ -106,9 +112,12 @@ class RamlTypeAnnotationsTest {
             }
 
             export class Sub extends Member1 implements Sub {
-        
-              constructor(value: string, memberValue1: string, public subMemberValue: string) {
+
+              subMemberValue: string;
+
+              constructor(value: string, memberValue1: string, subMemberValue: string) {
                 super(value, memberValue1);
+                this.subMemberValue = subMemberValue;
               }
         
               copy(src: Partial<Sub>): Sub {
@@ -132,8 +141,11 @@ class RamlTypeAnnotationsTest {
 
           export class Member2 extends Group implements Member2 {
 
-            constructor(value: string, public memberValue2: string) {
+            memberValue2: string;
+
+            constructor(value: string, memberValue2: string) {
               super(value);
+              this.memberValue2 = memberValue2;
             }
 
             copy(src: Partial<Member2>): Member2 {
@@ -177,7 +189,10 @@ class RamlTypeAnnotationsTest {
 
         export class Root implements Root {
 
-          constructor(public value: string) {
+          value: string;
+
+          constructor(value: string) {
+            this.value = value;
           }
 
           copy(src: Partial<Root>): Root {
@@ -200,7 +215,10 @@ class RamlTypeAnnotationsTest {
 
           export class Group implements Group {
 
-            constructor(public value: string) {
+            value: string;
+
+            constructor(value: string) {
+              this.value = value;
             }
 
             copy(src: Partial<Group>): Group {
@@ -223,7 +241,10 @@ class RamlTypeAnnotationsTest {
   
             export class Member implements Member {
   
-              constructor(public memberValue: string) {
+              memberValue: string;
+
+              constructor(memberValue: string) {
+                this.memberValue = memberValue;
               }
   
               copy(src: Partial<Member>): Member {
@@ -307,6 +328,8 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        import {Child1} from './child1';
+        import {Child2} from './child2';
         import {JsonSubTypes} from '@outfoxx/jackson-js';
 
 
@@ -322,7 +345,7 @@ class RamlTypeAnnotationsTest {
             {class: () => eval('Child2'), name: 'child2'}
           ]
         })
-        export class Parent implements Parent {
+        export abstract class Parent implements Parent {
 
           toString(): string {
             return `Parent()`;
@@ -343,6 +366,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         import {Parent} from './parent';
+        import {JsonClassType} from '@outfoxx/jackson-js';
 
 
         export interface Child1 extends Parent {
@@ -352,9 +376,13 @@ class RamlTypeAnnotationsTest {
         }
 
         export class Child1 extends Parent implements Child1 {
+        
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
 
-          constructor(public value: string | undefined) {
+          constructor(value: string | undefined) {
             super();
+            this.value = value;
           }
 
           get type(): string {
@@ -384,6 +412,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         import {Parent} from './parent';
+        import {JsonClassType} from '@outfoxx/jackson-js';
 
 
         export interface Child2 extends Parent {
@@ -393,9 +422,13 @@ class RamlTypeAnnotationsTest {
         }
 
         export class Child2 extends Parent implements Child2 {
+        
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
 
-          constructor(public value: string | undefined) {
+          constructor(value: string | undefined) {
             super();
+            this.value = value;
           }
 
           get type(): string {
@@ -425,7 +458,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         import {Parent} from './parent';
-        import {JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
         export interface Test {
@@ -437,16 +470,21 @@ class RamlTypeAnnotationsTest {
         }
 
         export class Test implements Test {
-
-          constructor(
-              @JsonTypeInfo({
-                use: JsonTypeInfoId.NAME,
-                include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
-                property: 'parentType',
-              })
-              public parent: Parent,
-              public parentType: string
-          ) {
+        
+          @JsonTypeInfo({
+            use: JsonTypeInfoId.NAME,
+            include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
+            property: 'parentType',
+          })
+          @JsonClassType({type: () => [Parent]})
+          parent: Parent;
+        
+          @JsonClassType({type: () => [String]})
+          parentType: string;
+        
+          constructor(parent: Parent, parentType: string) {
+            this.parent = parent;
+            this.parentType = parentType;
           }
 
           copy(src: Partial<Test>): Test {
@@ -507,7 +545,16 @@ class RamlTypeAnnotationsTest {
 
         export class Test implements Test {
 
-          constructor(public string: string, public int: number, public bool: boolean) {
+          string: string;
+
+          int: number;
+
+          bool: boolean;
+
+          constructor(string: string, int: number, bool: boolean) {
+            this.string = string;
+            this.int = int;
+            this.bool = bool;
           }
 
           copy(src: Partial<Test>): Test {

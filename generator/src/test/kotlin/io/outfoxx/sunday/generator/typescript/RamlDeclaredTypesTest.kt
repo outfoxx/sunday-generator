@@ -56,8 +56,11 @@ class RamlDeclaredTypesTest {
         
         export class Test extends Test_ implements Test {
 
-          constructor(value: string, public value2: string) {
+          value2: string;
+
+          constructor(value: string, value2: string) {
             super(value);
+            this.value2 = value2;
           }
 
           copy(src: Partial<Test>): Test {

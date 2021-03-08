@@ -39,8 +39,16 @@ class RamlUnionTypesTest {
 
         export class Test implements Test {
 
-          constructor(public any: number | string, public duplicate: string,
-              public nullable: string | null) {
+          any: number | string;
+
+          duplicate: string;
+
+          nullable: string | null;
+
+          constructor(any: number | string, duplicate: string, nullable: string | null) {
+            this.any = any;
+            this.duplicate = duplicate;
+            this.nullable = nullable;
           }
 
           copy(src: Partial<Test>): Test {
@@ -84,7 +92,10 @@ class RamlUnionTypesTest {
 
         export class Test implements Test {
 
-          constructor(public value: Base) {
+          value: Base;
+
+          constructor(value: Base) {
+            this.value = value;
           }
 
           copy(src: Partial<Test>): Test {
@@ -127,8 +138,11 @@ class RamlUnionTypesTest {
 
         export class Child1 extends Base implements Child1 {
 
-          constructor(value: string, public childValue: string) {
+          childValue: string;
+
+          constructor(value: string, childValue: string) {
             super(value);
+            this.childValue = childValue;
           }
 
           copy(src: Partial<Child1>): Child1 {
@@ -163,10 +177,13 @@ class RamlUnionTypesTest {
 
         export class Child2 extends Base implements Child2 {
 
-          constructor(value: string, public childValue: string) {
-            super(value);
-          }
+          childValue: string;
 
+          constructor(value: string, childValue: string) {
+            super(value);
+            this.childValue = childValue;
+          }
+        
           copy(src: Partial<Child2>): Child2 {
             return new Child2(src.value ?? this.value, src.childValue ?? this.childValue);
           }
@@ -201,7 +218,10 @@ class RamlUnionTypesTest {
 
         export class Test implements Test_ {
 
-          constructor(public value: Child1 | Child2) {
+          value: Child1 | Child2;
+
+          constructor(value: Child1 | Child2) {
+            this.value = value;
           }
 
           copy(src: Partial<Test_>): Test_ {

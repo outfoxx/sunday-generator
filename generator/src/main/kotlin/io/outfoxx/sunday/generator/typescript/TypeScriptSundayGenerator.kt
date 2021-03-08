@@ -217,7 +217,7 @@ class TypeScriptSundayGenerator(
       parameterBuilder.defaultValue(CodeBlock.of("%L", if (type.isUndefinable) TypeName.UNDEFINED else TypeName.NULL))
     }
 
-    return parameter
+    return parameterBuilder.build()
   }
 
   override fun processResourceMethodUriParameter(
@@ -499,7 +499,9 @@ class TypeScriptSundayGenerator(
 
     val typeCodeBuilder = typeBuilder.tags[CodeBlock.Builder::class] as CodeBlock.Builder
     typeProperties.forEach { (propName, propInit) ->
-      typeCodeBuilder.addStatement("const %N: %T = %L", propName, ANY_TYPE, propInit)
+      typeCodeBuilder.add("%[const %N: %T = ", propName, ANY_TYPE)
+      typeCodeBuilder.add(propInit)
+      typeCodeBuilder.add(";\n%]")
     }
 
     return resultMethod

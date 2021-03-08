@@ -27,6 +27,30 @@ import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModelModule
 import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
+import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.utils.DURATION
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_PROPERTY
+import io.outfoxx.sunday.generator.typescript.utils.JSON_SUB_TYPES
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_AS
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_ID
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_NAME
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
+import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
+import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
+import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
+import io.outfoxx.sunday.generator.typescript.utils.nullable
+import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
+import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
 import io.outfoxx.sunday.generator.utils.aggregateInheritanceSuper
 import io.outfoxx.sunday.generator.utils.and
@@ -59,7 +83,6 @@ import io.outfoxx.sunday.generator.utils.inheritsViaAggregation
 import io.outfoxx.sunday.generator.utils.inheritsViaInherits
 import io.outfoxx.sunday.generator.utils.isOrWasLink
 import io.outfoxx.sunday.generator.utils.items
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nullableType
@@ -71,27 +94,6 @@ import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.typescript.utils.DURATION
-import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_PROPERTY
-import io.outfoxx.sunday.generator.typescript.utils.JSON_SUB_TYPES
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_AS
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_ID
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_NAME
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
-import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
-import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
-import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
-import io.outfoxx.sunday.generator.typescript.utils.nullable
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
-import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.uniqueItems
 import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.sunday.generator.utils.xone
@@ -150,7 +152,7 @@ class TypeScriptTypeRegistry(
       }
 
     typeBuilders.entries
-      .groupBy {entry -> entry.key.enclosingTypeName() }
+      .groupBy { entry -> entry.key.enclosingTypeName() }
       .toSortedMap { o1, o2 -> (o2?.base?.value?.length ?: 0) - (o1?.base?.value?.length ?: 0) }
       .values
       .flatMap { list -> list.sortedBy { it.key.base.value } }
@@ -250,56 +252,95 @@ class TypeScriptTypeRegistry(
               .initializer("%S", problemTypeDefinition.type)
               .build()
           )
-          .constructor(
-            FunctionSpec.constructorBuilder()
-              .apply {
-                // Add all custom properties to constructor
-                problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
-                  addParameter(
-                    ParameterSpec
-                      .builder(
-                        customPropertyName.kotlinIdentifierName,
-                        resolveTypeReference(
-                          customPropertyTypeNameStr,
-                          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
-                        )
-                      )
-                      .apply {
-                        if (options.contains(JacksonDecorators) && customPropertyName != customPropertyName.kotlinIdentifierName) {
-                          addDecorator(
-                            DecoratorSpec.builder(JSON_PROPERTY)
-                              .addParameter(null, "{value: %S}", customPropertyName)
-                              .build()
-                          )
-                        }
-                      }
+
+      val problemTypeConsBuilder =
+        FunctionSpec.constructorBuilder()
+          .addCode(
+            """
+            |super(
+            |  %T.TYPE,
+            |  %S,
+            |  %L,
+            |  %S,
+            |  instance
+            |);
+            |
+            """.trimMargin(),
+            problemTypeName,
+            problemTypeDefinition.title,
+            problemTypeDefinition.status,
+            problemTypeDefinition.detail,
+          )
+
+      // Add all custom properties
+      problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+
+        val customPropertyTypeName = resolveTypeReference(
+          customPropertyTypeNameStr,
+          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
+        )
+        val customPropertyClassName =
+          if (typeBuilders[customPropertyTypeName] !is EnumSpec.Builder)
+            customPropertyTypeName
+          else
+            OBJECT
+
+        problemTypeBuilder.addProperty(
+          PropertySpec
+            .builder(customPropertyName.kotlinIdentifierName, customPropertyTypeName)
+            .apply {
+              if (options.contains(JacksonDecorators)) {
+
+                if (customPropertyName != customPropertyName.kotlinIdentifierName) {
+                  addDecorator(
+                    DecoratorSpec.builder(JSON_PROPERTY)
+                      .addParameter(null, "{value: %S}", customPropertyName)
                       .build()
                   )
                 }
+
+                addDecorator(
+                  DecoratorSpec.builder(JSON_CLASS_TYPE)
+                    .addParameter(
+                      null,
+                      CodeBlock.builder()
+                        .add("{type: () => ")
+                        .add(customPropertyClassName.typeInitializer())
+                        .add("}")
+                        .build()
+                    )
+                    .build()
+                )
               }
-              .addParameter(
-                ParameterSpec.builder("instance", STRING.nullable)
-                  .defaultValue("null")
-                  .build()
-              )
-              .addCode(
-                """
-              |super(
-              |  %T.TYPE,
-              |  %S,
-              |  %L,
-              |  %S,
-              |  instance
-              |);
-              |
-              """.trimMargin(),
-                problemTypeName,
-                problemTypeDefinition.title,
-                problemTypeDefinition.status,
-                problemTypeDefinition.detail,
+            }
+            .build()
+        )
+
+        problemTypeConsBuilder
+          .addStatement(
+            "this.%L = %L",
+            customPropertyName.kotlinIdentifierName,
+            customPropertyName.kotlinIdentifierName
+          )
+          .addParameter(
+            ParameterSpec
+              .builder(
+                customPropertyName.kotlinIdentifierName,
+                resolveTypeReference(
+                  customPropertyTypeNameStr,
+                  TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
+                )
               )
               .build()
           )
+
+      }
+
+      problemTypeConsBuilder.addParameter(
+        ParameterSpec.builder("instance", STRING.nullable)
+          .defaultValue("null")
+          .build()
+      )
 
       if (options.contains(JacksonDecorators)) {
         problemTypeBuilder.addDecorator(
@@ -309,7 +350,7 @@ class TypeScriptTypeRegistry(
         )
       }
 
-      problemTypeBuilder
+      problemTypeBuilder.constructor(problemTypeConsBuilder.build())
     }
 
     return problemTypeName
@@ -578,6 +619,10 @@ class TypeScriptTypeRegistry(
             }
 
             classBuilder.addFunction(discriminatorBuilder.build())
+          } else {
+            if (declaredProperties.isEmpty()) {
+              classBuilder.addModifiers(Modifier.ABSTRACT)
+            }
           }
 
         }
@@ -628,6 +673,13 @@ class TypeScriptTypeRegistry(
               *inheritedProperties.map { it.typeScriptIdentifierName }.toTypedArray()
             )
         }
+
+        definedProperties.forEach { propertyShape ->
+          paramConsBuilder.addStatement(
+            "this.%L = %L",
+            propertyShape.kotlinIdentifierName, propertyShape.kotlinIdentifierName
+          )
+        }
       }
 
       // toString builder
@@ -648,6 +700,11 @@ class TypeScriptTypeRegistry(
       declaredProperties.forEach { declaredProperty ->
 
         val declaredPropertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
+        val declaredPropertyClassName =
+          if (typeBuilders[declaredPropertyTypeName] !is EnumSpec.Builder)
+            declaredPropertyTypeName
+          else
+            OBJECT
 
         val implAnn = declaredProperty.range.findAnnotation(TypeScriptImpl, null) as? ObjectNode
         if (implAnn != null) {
@@ -705,13 +762,27 @@ class TypeScriptTypeRegistry(
             }
           }
 
-          declaredPropertyBuilder.initializer(declaredProperty.typeScriptIdentifierName)
+          if (options.contains(JacksonDecorators)) {
+            if (declaredProperty.typeScriptIdentifierName != declaredProperty.name) {
+              declaredPropertyBuilder
+                .addDecorator(
+                  DecoratorSpec.builder(JSON_PROPERTY)
+                    .addParameter(null, "{value: %S}", declaredProperty.name())
+                    .build()
+                )
+            }
 
-          if (declaredProperty.typeScriptIdentifierName != declaredProperty.name && options.contains(JacksonDecorators)) {
             declaredPropertyBuilder
               .addDecorator(
-                DecoratorSpec.builder(JSON_PROPERTY)
-                  .addParameter(null, "{value: %S}", declaredProperty.name())
+                DecoratorSpec.builder(JSON_CLASS_TYPE)
+                  .addParameter(
+                    null,
+                    CodeBlock.builder()
+                      .add("{type: () => ")
+                      .add(declaredPropertyClassName.typeInitializer())
+                      .add("}")
+                      .build()
+                  )
                   .build()
               )
           }
@@ -855,7 +926,7 @@ class TypeScriptTypeRegistry(
     if (options.contains(JacksonDecorators)) {
 
       if (!propertyContainerShape.discriminator.isNullOrBlank()) {
-        addJacksonPolymorphism(propertyContainerShape, inheritingTypes, classBuilder, context)
+        addJacksonPolymorphism(propertyContainerShape, inheritingTypes, className, classBuilder, context)
       }
 
     }
@@ -937,9 +1008,15 @@ class TypeScriptTypeRegistry(
   private fun addJacksonPolymorphism(
     shape: NodeShape,
     inheritingTypes: List<Shape>,
+    className: TypeName.Standard,
     classBuilder: ClassSpec.Builder,
     context: TypeScriptResolutionContext
   ) {
+
+    val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
+    val discriminatorPropertyShape = collectProperties(shape).first { it.name == discriminatorPropertyName }
+    val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorPropertyShape, className, context)
+    val isDiscriminatorEnum = typeBuilders[discriminatorPropertyTypeName] is EnumSpec.Builder
 
     val discriminatorMappings = buildDiscriminatorMappings(shape, context)
 
@@ -947,11 +1024,26 @@ class TypeScriptTypeRegistry(
       .map { inheritingType ->
 
         val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
+        val discriminatorValue =
+          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
-        "{class: () => eval(%S), name: %S}" to listOf(
-          resolveReferencedTypeName(inheritingType, context),
-          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name,
-        )
+        if (isDiscriminatorEnum) {
+          val enumDiscriminatorValue =
+            (typeBuilders[discriminatorPropertyTypeName] as EnumSpec.Builder)
+              .constants.entries
+              .first { it.value?.toString() == "'${discriminatorValue}'" }.key
+
+          "{class: () => eval('%T'), name: %T.%L}" to listOf(
+            resolveReferencedTypeName(inheritingType, context),
+            discriminatorPropertyTypeName,
+            enumDiscriminatorValue,
+          )
+        } else {
+          "{class: () => eval('%T'), name: %S}" to listOf(
+            resolveReferencedTypeName(inheritingType, context),
+            discriminatorValue,
+          )
+        }
       }
 
     if (subTypes.isNotEmpty()) {

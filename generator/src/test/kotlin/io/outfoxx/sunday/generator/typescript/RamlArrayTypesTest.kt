@@ -44,17 +44,35 @@ class RamlArrayTypesTest {
         }
       
         export class Test implements Test {
-      
+
+          arrayOfStrings: Array<string>;
+
+          arrayOfNullableStrings: Array<string | null>;
+
+          nullableArrayOfStrings: Array<string> | null;
+
+          nullableArrayOfNullableStrings: Array<string | null> | null;
+
+          declaredArrayOfStrings: Array<string>;
+
+          declaredArrayOfNullableStrings: Array<string | null>;
+
           constructor(
-              public arrayOfStrings: Array<string>,
-              public arrayOfNullableStrings: Array<string | null>,
-              public nullableArrayOfStrings: Array<string> | null,
-              public nullableArrayOfNullableStrings: Array<string | null> | null,
-              public declaredArrayOfStrings: Array<string>,
-              public declaredArrayOfNullableStrings: Array<string | null>
+              arrayOfStrings: Array<string>,
+              arrayOfNullableStrings: Array<string | null>,
+              nullableArrayOfStrings: Array<string> | null,
+              nullableArrayOfNullableStrings: Array<string | null> | null,
+              declaredArrayOfStrings: Array<string>,
+              declaredArrayOfNullableStrings: Array<string | null>
           ) {
+            this.arrayOfStrings = arrayOfStrings;
+            this.arrayOfNullableStrings = arrayOfNullableStrings;
+            this.nullableArrayOfStrings = nullableArrayOfStrings;
+            this.nullableArrayOfNullableStrings = nullableArrayOfNullableStrings;
+            this.declaredArrayOfStrings = declaredArrayOfStrings;
+            this.declaredArrayOfNullableStrings = declaredArrayOfNullableStrings;
           }
-      
+
           copy(src: Partial<Test>): Test {
             return new Test(src.arrayOfStrings ?? this.arrayOfStrings,
                 src.arrayOfNullableStrings ?? this.arrayOfNullableStrings,
@@ -103,11 +121,23 @@ class RamlArrayTypesTest {
         }
       
         export class Test implements Test {
-      
-          constructor(public implicit: Array<string>, public unspecified: Array<string>,
-              public nonUnique: Array<string>, public unique: Set<string>) {
+
+          implicit: Array<string>;
+
+          unspecified: Array<string>;
+
+          nonUnique: Array<string>;
+
+          unique: Set<string>;
+
+          constructor(implicit: Array<string>, unspecified: Array<string>, nonUnique: Array<string>,
+              unique: Set<string>) {
+            this.implicit = implicit;
+            this.unspecified = unspecified;
+            this.nonUnique = nonUnique;
+            this.unique = unique;
           }
-      
+
           copy(src: Partial<Test>): Test {
             return new Test(src.implicit ?? this.implicit, src.unspecified ?? this.unspecified,
                 src.nonUnique ?? this.nonUnique, src.unique ?? this.unique);
@@ -148,10 +178,16 @@ class RamlArrayTypesTest {
         }
       
         export class Test implements Test {
-      
-          constructor(public binary: ArrayBuffer, public nullableBinary: ArrayBuffer | null) {
+
+          binary: ArrayBuffer;
+
+          nullableBinary: ArrayBuffer | null;
+
+          constructor(binary: ArrayBuffer, nullableBinary: ArrayBuffer | null) {
+            this.binary = binary;
+            this.nullableBinary = nullableBinary;
           }
-      
+
           copy(src: Partial<Test>): Test {
             return new Test(src.binary ?? this.binary, src.nullableBinary ?? this.nullableBinary);
           }

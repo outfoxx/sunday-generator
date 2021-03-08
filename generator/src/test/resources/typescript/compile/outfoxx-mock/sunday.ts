@@ -7,11 +7,33 @@ export interface ClassList<T> extends Array<any> {
 }
 export type AnyType = ClassList<ClassType<any>>;
 
-export class OffsetDateTime {}
-export class LocalDateTime {}
-export class LocalDate {}
-export class LocalTime {}
-export class Duration {}
+export class Instant {
+  private constructor() {}
+}
+export class ZonedDateTime {
+  private constructor() {}
+}
+export class OffsetDateTime {
+  private constructor() {}
+}
+export class OffsetTime {
+  private constructor() {}
+}
+export class LocalDateTime {
+  private constructor() {}
+}
+export class LocalDate {
+  private constructor() {}
+}
+export class LocalTime {
+  private constructor() {}
+}
+export class Duration {
+  private constructor() {}
+}
+export class Period {
+  private constructor() {}
+}
 
 export class Problem {
   constructor(

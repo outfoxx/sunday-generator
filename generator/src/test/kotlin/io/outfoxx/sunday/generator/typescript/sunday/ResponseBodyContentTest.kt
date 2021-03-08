@@ -183,7 +183,10 @@ class ResponseBodyContentTest {
 
           export class FetchTestResponseBody implements FetchTestResponseBody {
 
-            constructor(public value: string) {
+            value: string;
+
+            constructor(value: string) {
+              this.value = value;
             }
 
             copy(src: Partial<FetchTestResponseBody>): FetchTestResponseBody {

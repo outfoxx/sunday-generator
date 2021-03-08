@@ -35,6 +35,8 @@ class ProblemTypesTest {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -43,6 +45,7 @@ class ProblemTypesTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }
@@ -96,7 +99,7 @@ class ProblemTypesTest {
     val invalidIdTypeModSpec = findTypeMod("InvalidIdProblem@!invalid-id-problem", builtTypes)
     assertEquals(
       """
-        import {JsonProperty, JsonTypeName} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonProperty, JsonTypeName} from '@outfoxx/jackson-js';
         import {Problem} from '@outfoxx/sunday';
 
 
@@ -105,10 +108,11 @@ class ProblemTypesTest {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
-          constructor(
-              @JsonProperty({value: 'offending_id'}) offendingId: string,
-              instance: string | null = null
-          ) {
+          @JsonProperty({value: 'offending_id'})
+          @JsonClassType({type: () => [String]})
+          offendingId: string;
+
+          constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
               'Invalid Id',
@@ -116,6 +120,7 @@ class ProblemTypesTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }

@@ -28,6 +28,8 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
+        import {Child1} from './child1';
+        import {Child2} from './child2';
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
         
@@ -48,7 +50,7 @@ class RamlDiscriminatedTypesTest {
             {class: () => eval('Child2'), name: 'child2'}
           ]
         })
-        export class Parent implements Parent {
+        export abstract class Parent implements Parent {
         
           toString(): string {
             return `Parent()`;
@@ -68,6 +70,7 @@ class RamlDiscriminatedTypesTest {
     assertEquals(
       """
         import {Parent} from './parent';
+        import {JsonClassType} from '@outfoxx/jackson-js';
         
         
         export interface Child1 extends Parent {
@@ -80,8 +83,16 @@ class RamlDiscriminatedTypesTest {
         
         export class Child1 extends Parent implements Child1 {
         
-          constructor(public value: string | undefined, public value1: number) {
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+        
+          @JsonClassType({type: () => [Number]})
+          value1: number;
+        
+          constructor(value: string | undefined, value1: number) {
             super();
+            this.value = value;
+            this.value1 = value1;
           }
         
           get type(): string {
@@ -110,6 +121,7 @@ class RamlDiscriminatedTypesTest {
     assertEquals(
       """
         import {Parent} from './parent';
+        import {JsonClassType} from '@outfoxx/jackson-js';
         
         
         export interface Child2 extends Parent {
@@ -122,8 +134,16 @@ class RamlDiscriminatedTypesTest {
         
         export class Child2 extends Parent implements Child2 {
         
-          constructor(public value: string | undefined, public value2: number) {
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+        
+          @JsonClassType({type: () => [Number]})
+          value2: number;
+        
+          constructor(value: string | undefined, value2: number) {
             super();
+            this.value = value;
+            this.value2 = value2;
           }
         
           get type(): string {
@@ -161,6 +181,8 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
+        import {Child1} from './child1';
+        import {Child2} from './child2';
         import {Type} from './type';
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
@@ -178,11 +200,11 @@ class RamlDiscriminatedTypesTest {
         })
         @JsonSubTypes({
           types: [
-            {class: () => eval('Child1'), name: 'Child1'},
-            {class: () => eval('Child2'), name: 'Child2'}
+            {class: () => eval('Child1'), name: Type.Child1},
+            {class: () => eval('Child2'), name: Type.Child2}
           ]
         })
-        export class Parent implements Parent {
+        export abstract class Parent implements Parent {
         
           toString(): string {
             return `Parent()`;
@@ -203,6 +225,7 @@ class RamlDiscriminatedTypesTest {
       """
         import {Parent} from './parent';
         import {Type} from './type';
+        import {JsonClassType} from '@outfoxx/jackson-js';
         
         
         export interface Child1 extends Parent {
@@ -212,11 +235,15 @@ class RamlDiscriminatedTypesTest {
         }
         
         export class Child1 extends Parent implements Child1 {
-        
-          constructor(public value: string | undefined) {
+
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+
+          constructor(value: string | undefined) {
             super();
+            this.value = value;
           }
-        
+
           get type(): Type {
             return Type.Child1;
           }
@@ -244,6 +271,7 @@ class RamlDiscriminatedTypesTest {
       """
         import {Parent} from './parent';
         import {Type} from './type';
+        import {JsonClassType} from '@outfoxx/jackson-js';
         
         
         export interface Child2 extends Parent {
@@ -254,8 +282,12 @@ class RamlDiscriminatedTypesTest {
         
         export class Child2 extends Parent implements Child2 {
         
-          constructor(public value: string | undefined) {
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+        
+          constructor(value: string | undefined) {
             super();
+            this.value = value;
           }
         
           get type(): Type {

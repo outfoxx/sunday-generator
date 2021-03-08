@@ -112,6 +112,8 @@ class ResponseProblemsTest {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -120,6 +122,7 @@ class ResponseProblemsTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }
@@ -163,6 +166,8 @@ class ResponseProblemsTest {
 
           static TYPE: string = 'http://api.example.com/api/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -171,6 +176,7 @@ class ResponseProblemsTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }
@@ -214,6 +220,8 @@ class ResponseProblemsTest {
 
           static TYPE: string = 'http://errors.example.com/docs/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -222,6 +230,7 @@ class ResponseProblemsTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }
@@ -265,6 +274,8 @@ class ResponseProblemsTest {
 
           static TYPE: string = 'http://example.com/api/errors/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -273,6 +284,7 @@ class ResponseProblemsTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }
@@ -316,6 +328,8 @@ class ResponseProblemsTest {
 
           static TYPE: string = 'http://example.com/invalid_id';
 
+          offendingId: string;
+
           constructor(offendingId: string, instance: string | null = null) {
             super(
               InvalidIdProblem.TYPE,
@@ -324,6 +338,7 @@ class ResponseProblemsTest {
               'The id contains one or more invalid characters.',
               instance
             );
+            this.offendingId = offendingId;
           }
 
         }

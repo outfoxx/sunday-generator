@@ -40,7 +40,10 @@ class RamlObjectTypesTest {
         
         export class Test implements Test {
 
-          constructor(public map: object) {
+          map: object;
+
+          constructor(map: object) {
+            this.map = map;
           }
 
           copy(src: Partial<Test>): Test {
@@ -83,7 +86,13 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          constructor(public fromNilUnion: string | null, public notRequired: string | undefined) {
+          fromNilUnion: string | null;
+
+          notRequired: string | undefined;
+
+          constructor(fromNilUnion: string | null, notRequired: string | undefined) {
+            this.fromNilUnion = fromNilUnion;
+            this.notRequired = notRequired;
           }
 
           copy(src: Partial<Test>): Test {
@@ -160,7 +169,10 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          constructor(public value: string) {
+          value: string;
+
+          constructor(value: string) {
+            this.value = value;
           }
 
           toString(): string {
@@ -189,8 +201,11 @@ class RamlObjectTypesTest {
 
         export class Test2 extends Test implements Test2 {
 
-          constructor(value: string, public value2: string) {
+          value2: string;
+
+          constructor(value: string, value2: string) {
             super(value);
+            this.value2 = value2;
           }
 
           toString(): string {
@@ -219,8 +234,11 @@ class RamlObjectTypesTest {
 
         export class Test3 extends Test2 implements Test3 {
 
-          constructor(value: string, value2: string, public value3: string) {
+          value3: string;
+
+          constructor(value: string, value2: string, value3: string) {
             super(value, value2);
+            this.value3 = value3;
           }
 
           copy(src: Partial<Test3>): Test3 {
@@ -263,7 +281,13 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          constructor(public someValue: string, public anotherValue: string) {
+          someValue: string;
+
+          anotherValue: string;
+
+          constructor(someValue: string, anotherValue: string) {
+            this.someValue = someValue;
+            this.anotherValue = anotherValue;
           }
 
           copy(src: Partial<Test>): Test {
@@ -295,7 +319,7 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {JsonProperty} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonProperty} from '@outfoxx/jackson-js';
 
 
         export interface Test {
@@ -308,12 +332,17 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          constructor(
-              @JsonProperty({value: 'some-value'})
-              public someValue: string,
-              @JsonProperty({value: 'another_value'})
-              public anotherValue: string
-          ) {
+          @JsonProperty({value: 'some-value'})
+          @JsonClassType({type: () => [String]})
+          someValue: string;
+
+          @JsonProperty({value: 'another_value'})
+          @JsonClassType({type: () => [String]})
+          anotherValue: string;
+
+          constructor(someValue: string, anotherValue: string) {
+            this.someValue = someValue;
+            this.anotherValue = anotherValue;
           }
 
           copy(src: Partial<Test>): Test {

@@ -1,7 +1,6 @@
 package io.outfoxx.sunday.generator.typescript.utils
 
 import io.outfoxx.typescriptpoet.CodeBlock
-import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.BIGINT
@@ -18,36 +17,50 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.STRING_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SYMBOL
 import io.outfoxx.typescriptpoet.TypeName.Companion.SYMBOL_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.UNDEFINED
+import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 
 fun TypeName.box() = when (this) {
   BOOLEAN -> BOOLEAN_CLASS
   NUMBER -> NUMBER_CLASS
   BIGINT -> BIGINT_CLASS
   STRING -> STRING_CLASS
-  OBJECT -> OBJECT_CLASS
   SYMBOL -> SYMBOL_CLASS
-  ANY -> OBJECT_CLASS
+  ANY, NULL, OBJECT, UNDEFINED, VOID -> OBJECT_CLASS
   else -> this
 }
 
-fun TypeName.typeInitializer(): CodeBlock = CodeBlock.of("[%L]", internalTypeInitializer())
+fun TypeName.typeInitializer(): CodeBlock {
+  val builder = CodeBlock.builder().add("[")
+  internalTypeInitializer(builder)
+  builder.add("]")
+  return builder.build()
+}
 
-fun TypeName.internalTypeInitializer(): CodeBlock =
+fun TypeName.internalTypeInitializer(builder: CodeBlock.Builder) {
   when (this) {
-    is TypeName.Parameterized ->
-      CodeBlock.of(
-        "%T, [%L]",
+    is TypeName.Parameterized -> {
+      builder.add(
+        "%T, [",
         this.rawType,
-        this.typeArgs.map { it.internalTypeInitializer() }.joinToCode()
       )
+      typeArgs.mapIndexed { idx, typeName ->
+        typeName.internalTypeInitializer(builder)
+        if (idx < typeArgs.size - 1) {
+          builder.add(", ")
+        }
+      }
+      builder.add("]")
+    }
 
     is TypeName.Union ->
-      CodeBlock.of("%T", if (isOptionalUnion) nonOptional.box() else OBJECT) // proper unions are not currently supported
+      builder.add(
+        "%T",
+        if (isOptionalUnion) nonOptional.box() else OBJECT
+      ) // proper unions are not currently supported
 
-    else -> CodeBlock.of("%T", this.box())
+    else -> builder.add("%T", this.box())
   }
-
-
+}
 
 val TypeName.isOptional: Boolean
   get() = when (this) {
