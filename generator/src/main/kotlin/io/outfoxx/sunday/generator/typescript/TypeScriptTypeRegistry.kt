@@ -505,7 +505,7 @@ class TypeScriptTypeRegistry(
 
   private fun processNodeShape(shape: NodeShape, context: TypeScriptResolutionContext): TypeName {
 
-    if (shape.properties.isEmpty() && shape.inherits.size == 1) {
+    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingTypes(shape).isEmpty()) {
       return resolveReferencedTypeName(shape.inherits[0], context)
     }
 

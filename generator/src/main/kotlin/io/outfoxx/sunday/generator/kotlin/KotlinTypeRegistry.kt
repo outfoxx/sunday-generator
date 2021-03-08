@@ -491,7 +491,7 @@ class KotlinTypeRegistry(
 
   private fun processNodeShape(type: NodeShape, context: KotlinResolutionContext): TypeName {
 
-    if (type.properties.isEmpty() && type.inherits.size == 1) {
+    if (type.properties.isEmpty() && type.inherits.size == 1 && context.unit.findInheritingTypes(type).isEmpty()) {
       return resolveReferencedTypeName(type.inherits[0], context)
     }
 

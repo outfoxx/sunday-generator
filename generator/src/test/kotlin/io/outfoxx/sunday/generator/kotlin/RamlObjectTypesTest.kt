@@ -186,6 +186,9 @@ class RamlObjectTypesTest {
     val test2Spec = builtTypes[ClassName.bestGuess("io.test.Test2")]
     test2Spec ?: fail("No Test2 class defined")
 
+    val emptySpec = builtTypes[ClassName.bestGuess("io.test.Empty")]
+    emptySpec ?: fail("No Empty class defined")
+
     val test3Spec = builtTypes[ClassName.bestGuess("io.test.Test3")]
     test3Spec ?: fail("No Test3 class defined")
 
@@ -227,9 +230,22 @@ class RamlObjectTypesTest {
       """
         package io.test
 
+        public interface Empty : Test2
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", emptySpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """
+        package io.test
+
         import kotlin.String
 
-        public interface Test3 : Test2 {
+        public interface Test3 : Empty {
           public val value3: String
         }
         
@@ -256,6 +272,9 @@ class RamlObjectTypesTest {
 
     val test2Spec = builtTypes[ClassName.bestGuess("io.test.Test2")]
     test2Spec ?: fail("No Test2 class defined")
+
+    val emptySpec = builtTypes[ClassName.bestGuess("io.test.Empty")]
+    emptySpec ?: fail("No Empty class defined")
 
     val test3Spec = builtTypes[ClassName.bestGuess("io.test.Test3")]
     test3Spec ?: fail("No Test3 class defined")
@@ -349,6 +368,39 @@ class RamlObjectTypesTest {
 
         import kotlin.Any
         import kotlin.Boolean
+        import kotlin.String
+
+        public open class Empty(
+          value: String,
+          value2: String
+        ) : Test2(value, value2) {
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            if (!super.equals(other)) return false
+            return true
+          }
+
+          public override fun toString() = ${'"'}""
+          |Empty(value='${'$'}value',
+          | value2='${'$'}value2')
+          ""${'"'}.trimMargin()
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", emptySpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
@@ -356,7 +408,7 @@ class RamlObjectTypesTest {
           value: String,
           value2: String,
           public val value3: String
-        ) : Test2(value, value2) {
+        ) : Empty(value, value2) {
           public fun copy(
             value: String? = null,
             value2: String? = null,

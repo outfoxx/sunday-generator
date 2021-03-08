@@ -155,6 +155,9 @@ class RamlObjectTypesTest {
     val test2Spec = builtTypes[TypeName.namedImport("Test2", "!test2")]
     test2Spec ?: fail("No Test2 class defined")
 
+    val emptySpec = builtTypes[TypeName.namedImport("Empty", "!empty")]
+    emptySpec ?: fail("No Empty class defined")
+
     val test3Spec = builtTypes[TypeName.namedImport("Test3", "!test3")]
     test3Spec ?: fail("No Test3 class defined")
 
@@ -226,13 +229,40 @@ class RamlObjectTypesTest {
         import {Test2} from './test2';
 
 
-        export interface Test3 extends Test2 {
+        export interface Empty extends Test2 {
+        }
+
+        export class Empty extends Test2 implements Empty {
+
+          constructor(value: string, value2: string) {
+            super(value, value2);
+          }
+
+          toString(): string {
+            return `Empty(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(emptySpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """
+        import {Empty} from './empty';
+
+
+        export interface Test3 extends Empty {
 
           value3: string;
 
         }
 
-        export class Test3 extends Test2 implements Test3 {
+        export class Test3 extends Empty implements Test3 {
 
           value3: string;
 
