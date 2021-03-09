@@ -31,9 +31,11 @@ class RamlEnumTypesTest {
         export enum TestEnum {
           None = 'none',
           Some = 'some',
-          All = 'all'
+          All = 'all',
+          SnakeCase = 'snake_case',
+          KebabCase = 'kebab-case'
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)

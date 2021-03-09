@@ -34,6 +34,8 @@ class RamlEnumTypesTest {
           None,
           Some,
           All,
+          SnakeCase,
+          KebabCase,
         }
         
       """.trimIndent(),
@@ -66,6 +68,10 @@ class RamlEnumTypesTest {
           Some,
           @JsonProperty(value = "all")
           All,
+          @JsonProperty(value = "snake_case")
+          SnakeCase,
+          @JsonProperty(value = "kebab-case")
+          KebabCase,
         }
         
       """.trimIndent(),
