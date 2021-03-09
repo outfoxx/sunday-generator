@@ -129,7 +129,7 @@ class KotlinSundayGenerator(
     }
 
     referencedContentTypes = mutableSetOf()
-    referencedAcceptTypes = mutableSetOf()
+    referencedAcceptTypes = mutableSetOf("application/problem+json")
 
     serviceTypeBuilder
       .addProperty(

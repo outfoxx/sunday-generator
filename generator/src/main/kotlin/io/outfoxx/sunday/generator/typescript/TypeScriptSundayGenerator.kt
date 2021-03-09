@@ -88,7 +88,7 @@ class TypeScriptSundayGenerator(
   override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
 
     referencedContentTypes = mutableSetOf()
-    referencedAcceptTypes = mutableSetOf()
+    referencedAcceptTypes = mutableSetOf("application/problem+json")
 
     typeBuilder
       .addProperty(
