@@ -6,7 +6,10 @@ import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.typescriptpoet.AnyTypeSpec
+import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.FileSpec
+import io.outfoxx.typescriptpoet.InterfaceSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.hasItem
@@ -21,6 +24,21 @@ import java.net.URI
 @ExtendWith(ResourceExtension::class)
 @DisplayName("[TypeScript] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
+
+  @Test
+  fun `test generated types for type annotation`(
+    @ResourceUri("raml/type-gen/annotations/type-ts-type.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val type = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      "FormData",
+      (type.members.firstOrNull() as? InterfaceSpec)?.propertySpecs?.firstOrNull()?.type?.toString()
+    )
+  }
 
   @Test
   fun `test generated module for typeScriptModelModule annotation`(
