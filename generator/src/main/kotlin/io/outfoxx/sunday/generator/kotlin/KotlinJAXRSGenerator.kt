@@ -213,9 +213,6 @@ class KotlinJAXRSGenerator(
           .addKdoc(builtParameter.kdoc)
           .addAnnotations(builtParameter.annotations)
           .addModifiers(builtParameter.modifiers)
-          .apply {
-            builtParameter.defaultValue?.let { defaultValue(it) }
-          }
       newParameter.addAnnotation(
         AnnotationSpec.builder(DefaultValue::class)
           .addMember("value = %S", defaultValue.kotlinConstant(builtParameter.type, parameterShape.schema))

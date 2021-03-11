@@ -17,7 +17,6 @@ import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeName
@@ -32,6 +31,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.allUnits
@@ -376,7 +376,7 @@ abstract class KotlinGenerator(
       val uriParameterTypeName =
         typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
           .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            if (parameter.required == false) {
               copy(nullable = true)
             } else {
               this
@@ -390,6 +390,11 @@ abstract class KotlinGenerator(
           functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
           uriParameterTypeName
         )
+
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        uriParameterBuilder.defaultValue(defaultValue.kotlinConstant(uriParameterTypeName, parameter.schema))
+      }
 
       val uriParameterSpec =
         processResourceMethodUriParameter(
@@ -426,7 +431,7 @@ abstract class KotlinGenerator(
       val queryParameterTypeName =
         typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
           .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            if (parameter.required == false) {
               copy(nullable = true)
             } else {
               this
@@ -435,22 +440,27 @@ abstract class KotlinGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
+      val queryParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
         queryParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        queryParameterBuilder.defaultValue(defaultValue.kotlinConstant(queryParameterTypeName, parameter.schema))
+      }
+
+      val queryParameterSpec =
         processResourceMethodQueryParameter(
           endPoint,
           operation,
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          queryParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(queryParameterSpec)
     }
   }
 
@@ -472,10 +482,10 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam")
         )
 
-      var headerParameterTypeName =
+      val headerParameterTypeName =
         typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
           .run {
-            if (header.schema?.defaultValue != null || header.required == false) {
+            if (header.required == false) {
               copy(nullable = true)
             } else {
               this
@@ -484,22 +494,27 @@ abstract class KotlinGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
+      val headerParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
         headerParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = header.schema?.defaultValue
+      if (defaultValue != null) {
+        headerParameterBuilder.defaultValue(defaultValue.kotlinConstant(headerParameterTypeName, header.schema))
+      }
+
+      val headerParameterSpec =
         processResourceMethodHeaderParameter(
           endPoint,
           operation,
           header,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          headerParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(headerParameterSpec)
     }
   }
 

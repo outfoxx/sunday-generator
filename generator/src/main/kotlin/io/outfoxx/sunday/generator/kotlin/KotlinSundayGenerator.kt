@@ -32,7 +32,6 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
-import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
@@ -100,8 +99,16 @@ class KotlinSundayGenerator(
           .apply {
             baseURLParameters.forEach { param ->
               val paramTypeName =
-                if (param.defaultValue != null) param.typeName.copy(nullable = true) else param.typeName
-              addParameter(param.name, paramTypeName)
+                if (param.defaultValue != null) param.typeName.copy(nullable = false) else param.typeName
+              addParameter(
+                ParameterSpec.builder(param.name, paramTypeName)
+                  .apply {
+                    if (param.defaultValue != null) {
+                      defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
+                    }
+                  }
+                  .build()
+              )
             }
           }
           .addCode("return %T(⇥\n", URITemplate::class)
@@ -109,13 +116,7 @@ class KotlinSundayGenerator(
           .apply {
             baseURLParameters.forEachIndexed { idx, param ->
 
-              val defaultValue = param.defaultValue
-              if (defaultValue != null) {
-                addCode("%S to %L ?: ", param.name, param.name)
-                addCode(defaultValue.kotlinConstant(param.typeName, param.shape))
-              } else {
-                addCode("%L", param.name)
-              }
+              addCode("%S to %L", param.name, param.name)
 
               if (idx < baseURLParameters.size - 1) {
                 addCode(", ")
@@ -470,7 +471,8 @@ class KotlinSundayGenerator(
           val typesParams = types.flatMap {
             val typeOf = MemberName("io.outfoxx.sunday", "typeOf")
             val typeName = resolveTypeName(it, null)
-            val discValue = (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
+            val discValue =
+              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
             listOf(discValue, typeOf, typeName)
           }
 

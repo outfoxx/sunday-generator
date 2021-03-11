@@ -59,7 +59,7 @@ class RequestUriParamsTest {
             def: String,
             obj: Test,
             strReq: String,
-            int: Int? = null
+            int: Int = 5
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{obj}/{str-req}/{int}/{def}",
@@ -67,7 +67,7 @@ class RequestUriParamsTest {
               "def" to def,
               "obj" to obj,
               "str-req" to strReq,
-              "int" to (int ?: 5)
+              "int" to int
             ),
             acceptTypes = this.defaultAcceptTypes
           )
