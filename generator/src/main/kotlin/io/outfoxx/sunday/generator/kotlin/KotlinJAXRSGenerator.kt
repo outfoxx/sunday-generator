@@ -25,7 +25,8 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.utils.defaultValueStr
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
+import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -193,6 +194,39 @@ class KotlinJAXRSGenerator(
     return functionBuilder
   }
 
+  private fun methodParameter(
+    parameterShape: Parameter,
+    parameterBuilder: ParameterSpec.Builder
+  ): ParameterSpec.Builder {
+
+    val builtParameter = parameterBuilder.build()
+
+    typeRegistry.applyUseSiteAnnotations(parameterShape.schema!!, builtParameter.type) {
+      parameterBuilder.addAnnotation(it)
+    }
+
+    // Add @DefaultValue (if provided)
+    val defaultValue = parameterShape.schema?.defaultValue
+    if (defaultValue != null) {
+      val newParameter =
+        ParameterSpec.builder(builtParameter.name, builtParameter.type.copy(nullable = false))
+          .addKdoc(builtParameter.kdoc)
+          .addAnnotations(builtParameter.annotations)
+          .addModifiers(builtParameter.modifiers)
+          .apply {
+            builtParameter.defaultValue?.let { defaultValue(it) }
+          }
+      newParameter.addAnnotation(
+        AnnotationSpec.builder(DefaultValue::class)
+          .addMember("value = %S", defaultValue.kotlinConstant(builtParameter.type, parameterShape.schema))
+          .build()
+      )
+      return newParameter
+    }
+
+    return parameterBuilder
+  }
+
   override fun processResourceMethodUriParameter(
     endPoint: EndPoint,
     operation: Operation,
@@ -209,21 +243,7 @@ class KotlinJAXRSGenerator(
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodQueryParameter(
@@ -242,21 +262,7 @@ class KotlinJAXRSGenerator(
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodHeaderParameter(
@@ -275,21 +281,7 @@ class KotlinJAXRSGenerator(
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodBodyParameter(

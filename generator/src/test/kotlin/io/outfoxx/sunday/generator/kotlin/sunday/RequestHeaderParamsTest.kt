@@ -58,7 +58,7 @@ class RequestHeaderParamsTest {
           public suspend fun fetchTest(
             obj: Test,
             strReq: String,
-            int: Int
+            int: Int? = null
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests",
@@ -66,7 +66,7 @@ class RequestHeaderParamsTest {
             headers = mapOf(
               "obj" to obj,
               "str-req" to strReq,
-              "int" to int
+              "int" to (int ?: 5)
             )
           )
         }

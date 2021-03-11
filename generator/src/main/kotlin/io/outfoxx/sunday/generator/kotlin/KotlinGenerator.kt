@@ -373,13 +373,15 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}UriParam"),
         )
 
-      var uriParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
-
-      if (parameter.required != true) {
-        uriParameterTypeName = uriParameterTypeName.copy(nullable = true)
-      } else if (parameter.schema?.defaultValue != null) {
-        uriParameterTypeName = uriParameterTypeName.copy(nullable = false)
-      }
+      val uriParameterTypeName =
+        typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
+          .run {
+            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -421,13 +423,15 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}QueryParam")
         )
 
-      var queryParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
-
-      if (parameter.required != true) {
-        queryParameterTypeName = queryParameterTypeName.copy(nullable = true)
-      } else if (parameter.schema?.defaultValue != null) {
-        queryParameterTypeName = queryParameterTypeName.copy(nullable = false)
-      }
+      val queryParameterTypeName =
+        typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
+          .run {
+            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -468,13 +472,15 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam")
         )
 
-      var headerParameterTypeName = typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
-
-      if (header.required != true) {
-        headerParameterTypeName = headerParameterTypeName.copy(nullable = true)
-      } else if (header.schema?.defaultValue != null) {
-        headerParameterTypeName = headerParameterTypeName.copy(nullable = false)
-      }
+      var headerParameterTypeName =
+        typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
+          .run {
+            if (header.schema?.defaultValue != null || header.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 

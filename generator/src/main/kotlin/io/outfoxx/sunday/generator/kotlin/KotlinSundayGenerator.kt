@@ -381,7 +381,12 @@ class KotlinSundayGenerator(
         val paramName = functionBuilderNameAllocator[param]
 
         if (paramType.isNullable && (param.schema?.defaultValue != null || param.allowEmptyValue == true)) {
-          parametersBlock.add("%S to %L ?: %L", origName, paramName, param.schema?.defaultValueStr ?: "null")
+          parametersBlock.add(
+            "%S to (%L ?: %L)",
+            origName,
+            paramName,
+            param.schema?.defaultValue?.kotlinConstant(paramType, param.schema) ?: "null"
+          )
         } else {
           parametersBlock.add("%S to %L", origName, paramName)
         }
