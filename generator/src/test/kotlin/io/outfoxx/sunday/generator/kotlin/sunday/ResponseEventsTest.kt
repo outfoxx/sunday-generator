@@ -113,7 +113,7 @@ class ResponseEventsTest {
             acceptTypes = this.defaultAcceptTypes,
             eventTypes = mapOf(
               "Test1" to typeOf<Test1>(), 
-              "Test2" to typeOf<Test2>()
+              "test2" to typeOf<Test2>()
             )
           )
         }

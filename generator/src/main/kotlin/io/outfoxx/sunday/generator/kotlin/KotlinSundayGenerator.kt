@@ -465,7 +465,7 @@ class KotlinSundayGenerator(
           val typesParams = types.flatMap {
             val typeOf = MemberName("io.outfoxx.sunday", "typeOf")
             val typeName = resolveTypeName(it, null)
-            val discValue = it.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
+            val discValue = (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
             listOf(discValue, typeOf, typeName)
           }
 

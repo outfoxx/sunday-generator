@@ -105,7 +105,7 @@ class ResponseEventsTest {
           fetchEvents(): Observable<Test1 | Test2> {
             const eventTypes: EventTypes<Test1 | Test2> = {
               'Test1' : [Test1], 
-              'Test2' : [Test2]
+              'test2' : [Test2]
             };
             return this.requestFactory.events<Test1 | Test2>(
                 {
