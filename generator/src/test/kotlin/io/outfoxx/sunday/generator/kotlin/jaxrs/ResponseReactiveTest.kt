@@ -20,7 +20,7 @@ import java.util.concurrent.CompletionStage
 class ResponseReactiveTest {
 
   @Test
-  fun `test basic sse method generation in server mode`(
+  fun `test basic reactive method generation in server mode`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
@@ -68,7 +68,7 @@ class ResponseReactiveTest {
   }
 
   @Test
-  fun `test basic sse method generation in client mode`(
+  fun `test basic reactive method generation in client mode`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
