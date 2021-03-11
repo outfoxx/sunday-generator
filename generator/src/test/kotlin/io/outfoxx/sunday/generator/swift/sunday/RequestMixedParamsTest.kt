@@ -3,10 +3,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
@@ -15,19 +17,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift/Sunday] [RAML] Request Mixed Params Test")
 class RequestMixedParamsTest {
 
   @Test
   fun `test generation of multiple parameters with inline type definitions`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -115,13 +118,14 @@ class RequestMixedParamsTest {
 
   @Test @Disabled("Blocking issue: https://github.com/aml-org/amf/issues/830")
   fun `test generation of multiple parameters of same name with inline type definitions`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,

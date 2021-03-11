@@ -2,10 +2,12 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,19 +18,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript/Sunday] [RAML] Response Problems Test")
 class ResponseProblemsTest {
 
   @Test
   fun `test problem types references in API`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -83,13 +86,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -137,13 +141,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using base uri`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -191,13 +196,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using absolute problem base uri`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -245,13 +251,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using relative problem base uri`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -299,13 +306,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation locates problems in libraries`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,

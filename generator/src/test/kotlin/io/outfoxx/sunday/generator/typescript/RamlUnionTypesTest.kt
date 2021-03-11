@@ -1,9 +1,11 @@
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -11,18 +13,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Union Types Test")
 class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for general union types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -72,12 +75,13 @@ class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for common object types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -118,12 +122,13 @@ class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for similarly named but uncommon object types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val child1TypeModSpec = findTypeMod("Child1@!test/lib/child1", generateTypes(testUri, typeRegistry))
+    val child1TypeModSpec = findTypeMod("Child1@!test/lib/child1", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -162,7 +167,7 @@ class RamlUnionTypesTest {
       }
     )
 
-    val child2TypeModSpec = findTypeMod("Child2@!test/lib/child2", generateTypes(testUri, typeRegistry))
+    val child2TypeModSpec = findTypeMod("Child2@!test/lib/child2", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -201,7 +206,7 @@ class RamlUnionTypesTest {
       }
     )
 
-    val testTypeModSpec = findTypeMod("Test@!test/lib/test", generateTypes(testUri, typeRegistry))
+    val testTypeModSpec = findTypeMod("Test@!test/lib/test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

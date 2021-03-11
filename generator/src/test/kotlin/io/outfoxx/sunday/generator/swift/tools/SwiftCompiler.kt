@@ -1,28 +1,24 @@
-@file:OptIn(ExperimentalPathApi::class)
+@file:Suppress("DEPRECATION")
+
 package io.outfoxx.sunday.generator.swift.tools
 
 import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.model.Bind
-import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.HostConfig
-import com.github.dockerjava.api.model.StreamType.RAW
-import com.github.dockerjava.api.model.StreamType.STDERR
-import com.github.dockerjava.api.model.StreamType.STDOUT
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
+import com.github.dockerjava.core.command.ExecStartResultCallback
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
-import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.listDirectoryEntries
+import java.util.concurrent.TimeUnit.MINUTES
 
-class SwiftCompiler(private val workDir: Path) : Closeable {
+class SwiftCompiler(private val workDir: Path) : Closeable, ExtensionContext.Store.CloseableResource {
 
   val srcDir: Path = workDir.resolve("src")
 
@@ -52,56 +48,52 @@ class SwiftCompiler(private val workDir: Path) : Closeable {
 
   private val dockerClient: DockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
+  private val container = dockerClient.createContainerCmd("swift:5.3")
+    .withCmd("sleep", "3600")
+    .withHostConfig(
+      HostConfig.newHostConfig()
+        .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
+    )
+    .exec()
+
+  init {
+    dockerClient.startContainerCmd(container.id).exec()
+    println("### Starting Swift Compiler")
+  }
+
   fun compile(): Int {
 
-    val container =
-      dockerClient.createContainerCmd("swift:5.3")
+    val execId =
+      dockerClient.execCreateCmd(container.id)
         .withCmd("swift", "build")
         .withWorkingDir("/work")
-        .withHostConfig(
-          HostConfig.newHostConfig()
-            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
-        )
+        .withAttachStdout(true)
+        .withAttachStderr(true)
         .exec()
+        .id
 
-    try {
+    dockerClient.execStartCmd(execId)
+      .exec(ExecStartResultCallback(System.out, System.err))
+      .awaitCompletion(3, MINUTES)
 
-      dockerClient.startContainerCmd(container.id).exec()
-
-      val statusCode =
-        dockerClient.waitContainerCmd(container.id)
-          .start()
-          .awaitStatusCode()
-
-      if (statusCode != 0) {
-        dockerClient.logContainerCmd(container.id)
-          .withStdOut(true)
-          .withStdErr(true)
-          .exec(
-            object : ResultCallback.Adapter<Frame>() {
-              override fun onNext(frame: Frame?) {
-                val (stream, payload) =
-                  when (frame?.streamType) {
-                    RAW, STDOUT -> System.out to frame.payload
-                    STDERR -> System.err to frame.payload
-                    else -> null
-                  } ?: return
-                stream.write(payload)
-                stream.flush()
-              }
-            }
-          )
-          .awaitCompletion()
-      }
-
-      return statusCode
-
-    } finally {
-      dockerClient.removeContainerCmd(container.id).exec()
-    }
+    return dockerClient.inspectExecCmd(execId)
+      .exec()
+      .exitCodeLong.toInt()
   }
 
   override fun close() {
+    println("### Stopping Swift Compiler")
+
+    try {
+      dockerClient.killContainerCmd(container.id).exec()
+    } catch (x: Throwable) {
+    }
+
+    try {
+      dockerClient.removeContainerCmd(container.id).exec()
+    } catch (x: Throwable) {
+    }
+
     dockerClient.close()
     dockerHttpClient.close()
   }

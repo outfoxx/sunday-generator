@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -12,18 +14,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Array Types Test")
 class RamlArrayTypesTest {
 
   @Test
   fun `test generated nullability of array types and elements`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -155,12 +158,13 @@ class RamlArrayTypesTest {
 
   @Test
   fun `test generated collections`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -246,12 +250,13 @@ class RamlArrayTypesTest {
 
   @Test
   fun `test generated primitive`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

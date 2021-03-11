@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
@@ -13,18 +15,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Union Types Test")
 class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for general union types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -100,12 +103,13 @@ class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for common object types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -156,12 +160,13 @@ class RamlUnionTypesTest {
 
   @Test @Disabled("Swift doesn't allow types with the same name")
   fun `test generated types for similarly named but uncommon object types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

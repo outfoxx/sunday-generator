@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,18 +16,19 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Object Types Test")
 class RamlObjectTypesTest {
 
   @Test
   fun `test generated freeform object`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -77,12 +80,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated nullability of property types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -143,12 +147,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test naming of types defined inline in property`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       "Value",
@@ -158,12 +163,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test naming of types defined inline in resource`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val api = findType("API", generateTypes(testUri, typeRegistry))
+    val api = findType("API", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       "FetchTestResponsePayload",
@@ -173,12 +179,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated classes for object hierarchy`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val testSpec = builtTypes[DeclaredTypeName.typeName(".Test")]
     testSpec ?: fail("No Test class defined")
@@ -400,12 +407,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated class property with kebab or snake case names`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

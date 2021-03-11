@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -12,17 +14,18 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Discriminated Types Test")
 class RamlDiscriminatedTypesTest {
 
   @Test
   fun `test polymorphism added to generated classes of string discriminated types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-    val generatedTypes = generateTypes(testUri, typeRegistry)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val parentTypeModSpec = findTypeMod("Parent@!parent", generatedTypes)
 
@@ -171,11 +174,12 @@ class RamlDiscriminatedTypesTest {
 
   @Test
   fun `test polymorphism added to generated classes of enum discriminated types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-    val generatedTypes = generateTypes(testUri, typeRegistry)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val parentTypeModSpec = findTypeMod("Parent@!parent", generatedTypes)
 

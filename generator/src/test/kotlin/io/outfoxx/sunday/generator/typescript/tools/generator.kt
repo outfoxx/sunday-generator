@@ -10,8 +10,11 @@ import amf.client.parse.Raml10Parser
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
-import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
+import io.outfoxx.sunday.generator.typescript.TypeScriptResolutionContext
+import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.cookieParameters
 import io.outfoxx.sunday.generator.utils.endPoints
@@ -29,9 +32,6 @@ import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.servers
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
-import io.outfoxx.sunday.generator.typescript.TypeScriptResolutionContext
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.utils.uriParameters
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.typescriptpoet.AnyTypeSpec
@@ -79,7 +79,11 @@ fun findNestedType(typeModSpec: ModuleSpec, vararg names: String): AnyTypeSpec? 
     ?.let { findNestedType(it, *names.dropLast(1).toTypedArray()) }
     ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull { it.name == names.first() }
 
-fun generateTypes(uri: URI, typeRegistry: TypeScriptTypeRegistry): Map<TypeName.Standard, ModuleSpec> {
+fun generateTypes(
+  uri: URI,
+  typeRegistry: TypeScriptTypeRegistry,
+  compiler: TypeScriptCompiler
+): Map<TypeName.Standard, ModuleSpec> {
 
   val document = parseAndValidate(uri)
 
@@ -159,7 +163,7 @@ fun generateTypes(uri: URI, typeRegistry: TypeScriptTypeRegistry): Map<TypeName.
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertTrue(compileTypes(builtTypes))
+  assertTrue(compileTypes(compiler, builtTypes))
 
   return builtTypes
 }
@@ -167,6 +171,7 @@ fun generateTypes(uri: URI, typeRegistry: TypeScriptTypeRegistry): Map<TypeName.
 fun generate(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
+  compiler: TypeScriptCompiler,
   generatorFactory: (Document) -> TypeScriptGenerator
 ): Map<TypeName.Standard, ModuleSpec> {
 
@@ -178,7 +183,7 @@ fun generate(
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertTrue(compileTypes(builtTypes))
+  assertTrue(compileTypes(compiler, builtTypes))
 
   return builtTypes
 }

@@ -3,10 +3,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -14,19 +16,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift/Sunday] [RAML] Response Events Test")
 class ResponseEventsTest {
 
   @Test
   fun `test event source method`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -81,13 +84,14 @@ class ResponseEventsTest {
 
   @Test
   fun `test event stream method generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -146,13 +150,14 @@ class ResponseEventsTest {
 
   @Test
   fun `test event stream method generation for common base events`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,

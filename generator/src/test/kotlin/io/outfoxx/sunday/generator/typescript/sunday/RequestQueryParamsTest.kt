@@ -2,10 +2,12 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -13,19 +15,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript/Sunday] [RAML] Request Query Params Test")
 class RequestQueryParamsTest {
 
   @Test
   fun `test basic query parameter generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -80,13 +83,14 @@ class RequestQueryParamsTest {
 
   @Test
   fun `test optional query parameter generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -142,13 +146,14 @@ class RequestQueryParamsTest {
 
   @Test
   fun `test generation of multiple query parameters with inline type definitions`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,

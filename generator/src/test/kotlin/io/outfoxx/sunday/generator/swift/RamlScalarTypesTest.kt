@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -12,18 +14,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Scalar Types Test")
 class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for general scalar types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -120,12 +123,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for integer scalar types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -251,12 +255,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for float scalar types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -331,12 +336,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for date & time scalar types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

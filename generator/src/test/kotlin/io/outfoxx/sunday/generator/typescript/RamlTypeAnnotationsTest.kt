@@ -1,13 +1,13 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.typescriptpoet.AnyTypeSpec
-import io.outfoxx.typescriptpoet.ClassSpec
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.InterfaceSpec
 import io.outfoxx.typescriptpoet.TypeName
@@ -21,18 +21,19 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
 
   @Test
   fun `test generated types for type annotation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-type.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val type = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val type = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       "FormData",
@@ -42,24 +43,26 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test generated module for typeScriptModelModule annotation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-model-module.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val generatedTypes = generateTypes(testUri, typeRegistry)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
 
     assertThat(generatedTypes.keys, hasItem(TypeName.namedImport("Test", "!explicit/test")))
   }
 
   @Test
   fun `test generated module for typeScriptModule annotation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-module.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val generatedTypes = generate(testUri, typeRegistry) {
+    val generatedTypes = generate(testUri, typeRegistry, compiler) {
       TypeScriptSundayGenerator(it, typeRegistry, "http://example.com", emptyList())
     }
 
@@ -68,12 +71,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Group@!group", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Group@!group", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -189,12 +193,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Root@!root", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Root@!root", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -290,12 +295,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class generated TypeScript implementations`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-impl.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -334,12 +340,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for externally discriminated types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val parenTypeSpec = builtTypes[TypeName.namedImport("Parent", "!parent")]
       ?: error("Parent type is not defined")
@@ -526,6 +533,7 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test external discriminator must exist`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
   ) {
 
@@ -533,7 +541,7 @@ class RamlTypeAnnotationsTest {
 
     val exception =
       assertThrows<IllegalStateException> {
-        generateTypes(testUri, typeRegistry)
+        generateTypes(testUri, typeRegistry, compiler)
       }
 
     assertTrue(exception.message?.contains("External discriminator") ?: false)
@@ -541,12 +549,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test patchable class generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

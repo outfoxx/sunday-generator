@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -12,18 +14,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Problem Types Test")
 class ProblemTypesTest {
 
   @Test
   fun `generates problem types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val invalidIdType = findType("InvalidIdProblem", builtTypes)
     assertEquals(

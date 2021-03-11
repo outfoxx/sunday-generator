@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,18 +17,19 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
 
   @Test
   fun `test type annotation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-swift-type.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val type = findType("Test", generateTypes(testUri, typeRegistry))
+    val type = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       "Foundation.URL",
@@ -36,12 +39,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Group", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Group", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -231,12 +235,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Root", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Root", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -358,12 +363,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class generated swift implementations`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-swift-impl.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -402,12 +408,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test class hierarchy generated for externally discriminated types`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val parenTypeSpec = builtTypes[typeName(".Parent")]
       ?: error("Parent type is not defined")
@@ -639,6 +646,7 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test external discriminator must exist`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
   ) {
 
@@ -646,7 +654,7 @@ class RamlTypeAnnotationsTest {
 
     val exception =
       assertThrows<IllegalStateException> {
-        generateTypes(testUri, typeRegistry)
+        generateTypes(testUri, typeRegistry, compiler)
       }
 
     assertTrue(exception.message?.contains("externalDiscriminator") ?: false)
@@ -654,12 +662,13 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test patchable class generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

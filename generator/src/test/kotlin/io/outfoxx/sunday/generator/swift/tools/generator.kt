@@ -10,11 +10,11 @@ import amf.client.parse.Raml10Parser
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
-import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.swift.SwiftGenerator
 import io.outfoxx.sunday.generator.swift.SwiftResolutionContext
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.cookieParameters
 import io.outfoxx.sunday.generator.utils.endPoints
@@ -37,7 +37,7 @@ import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.TypeSpec
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
 import kotlin.system.exitProcess
 
@@ -73,7 +73,11 @@ fun parseAndValidate(uri: URI): Document {
 fun findType(name: String, types: Map<DeclaredTypeName, TypeSpec>): TypeSpec =
   types[DeclaredTypeName.typeName(".$name")] ?: fail("Type '$name' not defined")
 
-fun generateTypes(uri: URI, typeRegistry: SwiftTypeRegistry): Map<DeclaredTypeName, TypeSpec> {
+fun generateTypes(
+  uri: URI,
+  typeRegistry: SwiftTypeRegistry,
+  compiler: SwiftCompiler
+): Map<DeclaredTypeName, TypeSpec> {
 
   val document = parseAndValidate(uri)
 
@@ -155,7 +159,7 @@ fun generateTypes(uri: URI, typeRegistry: SwiftTypeRegistry): Map<DeclaredTypeNa
     typeRegistry.buildTypes()
       .filter { it.key.enclosingTypeName() == null }
 
-  assertTrue(compileTypes(builtTypes))
+  assertTrue(compileTypes(compiler, builtTypes))
 
   return builtTypes
 }
@@ -163,6 +167,7 @@ fun generateTypes(uri: URI, typeRegistry: SwiftTypeRegistry): Map<DeclaredTypeNa
 fun generate(
   uri: URI,
   typeRegistry: SwiftTypeRegistry,
+  compiler: SwiftCompiler,
   generatorFactory: (Document) -> SwiftGenerator
 ): Map<DeclaredTypeName, TypeSpec> {
 
@@ -176,7 +181,7 @@ fun generate(
     typeRegistry.buildTypes()
       .filter { it.key.enclosingTypeName() == null }
 
-  assertTrue(compileTypes(builtTypes))
+  assertTrue(compileTypes(compiler, builtTypes))
 
   return builtTypes
 }

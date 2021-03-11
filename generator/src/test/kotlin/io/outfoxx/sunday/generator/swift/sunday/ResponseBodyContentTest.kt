@@ -3,10 +3,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -14,19 +16,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift/Sunday] [RAML] Response Body Content Test")
 class ResponseBodyContentTest {
 
   @Test
   fun `test basic body parameter generation in client mode`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -82,13 +85,14 @@ class ResponseBodyContentTest {
 
   @Test
   fun `test generation of body parameter with explicit content type in client mode`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -145,13 +149,14 @@ class ResponseBodyContentTest {
 
   @Test
   fun `test generation of body parameter with inline type in client mode`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -242,13 +247,14 @@ class ResponseBodyContentTest {
 
   @Test
   fun `test generation of response body that is no content client mode`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,

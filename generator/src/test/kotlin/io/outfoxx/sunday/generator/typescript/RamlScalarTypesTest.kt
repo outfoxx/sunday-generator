@@ -1,10 +1,12 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -12,18 +14,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Scalar Types Test")
 class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for general scalar types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -89,12 +92,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for general scalar types with jackson decorators`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -167,12 +171,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for integer scalar types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -250,12 +255,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for integer scalar types with jackson decorators`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -342,12 +348,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for float scalar types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -396,12 +403,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for float scalar types with jackson decorators`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -455,12 +463,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for date & time scalar types`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -518,12 +527,13 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for date & time scalar types with jackson decorators`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

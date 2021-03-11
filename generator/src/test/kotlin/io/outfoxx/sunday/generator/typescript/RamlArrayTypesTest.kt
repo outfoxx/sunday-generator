@@ -1,9 +1,11 @@
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -11,18 +13,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Array Types Test")
 class RamlArrayTypesTest {
 
   @Test
   fun `test generated nullability of array types and elements in classes`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -98,12 +101,13 @@ class RamlArrayTypesTest {
 
   @Test
   fun `test generated collection class`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -159,12 +163,13 @@ class RamlArrayTypesTest {
 
   @Test
   fun `test generated primitive class`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

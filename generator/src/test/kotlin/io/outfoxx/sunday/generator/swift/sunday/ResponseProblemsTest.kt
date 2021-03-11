@@ -3,10 +3,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,19 +19,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift/Sunday] [RAML] Response Problems Test")
 class ResponseProblemsTest {
 
   @Test
   fun `test API problem registration`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -87,13 +90,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -163,13 +167,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using base uri`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -239,13 +244,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using absolute problem base uri`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -315,13 +321,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation using relative problem base uri`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -391,13 +398,14 @@ class ResponseProblemsTest {
 
   @Test
   fun `test problem type generation locates problems in libraries`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,

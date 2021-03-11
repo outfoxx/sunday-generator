@@ -1,12 +1,14 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,18 +18,19 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Object Types Test")
 class RamlObjectTypesTest {
 
   @Test
   fun `test generated freeform object`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -66,12 +69,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated nullability of property types in classes`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -115,25 +119,27 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test naming of types defined inline in property`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     findNestedType(typeModSpec, "Test", "Value") ?: fail("Nested type 'Value' not defined")
   }
 
   @Test
   fun `test naming of types defined inline in resource`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { TypeScriptSundayGenerator(it, typeRegistry, "http://example.com", emptyList()) }
+      generate(testUri, typeRegistry, compiler) { TypeScriptSundayGenerator(it, typeRegistry, "http://example.com", emptyList()) }
     val typeModSpec = findTypeMod("API@!api", builtTypes)
 
     findNestedType(typeModSpec, "API", "FetchTestResponsePayload")
@@ -142,12 +148,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated classes for object hierarchy`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
     val testSpec = builtTypes[TypeName.namedImport("Test", "!test")]
     testSpec ?: fail("No Test class defined")
@@ -291,12 +298,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated class property with kebab or snake case names`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """
@@ -340,12 +348,13 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated class property with kebab or snake case names and jackson decorators`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry))
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
       """

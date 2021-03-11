@@ -3,10 +3,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -14,19 +16,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
 @DisplayName("[Swift/Sunday] [RAML] Request Uri Params Test")
 class RequestUriParamsTest {
 
   @Test
   fun `test basic uri parameter generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -92,13 +95,14 @@ class RequestUriParamsTest {
 
   @Test
   fun `test inherited uri parameter generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -165,13 +169,14 @@ class RequestUriParamsTest {
 
   @Test
   fun `test optional uri parameter generation`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,
@@ -237,13 +242,14 @@ class RequestUriParamsTest {
 
   @Test
   fun `test generation of multiple uri parameters with inline type definitions`(
+    compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI
   ) {
 
     val typeRegistry = SwiftTypeRegistry(Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         SwiftSundayGenerator(
           document,
           typeRegistry,

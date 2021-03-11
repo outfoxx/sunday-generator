@@ -2,10 +2,12 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -13,19 +15,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript] [RAML] Request Body Param Test")
 class RequestBodyParamTest {
 
   @Test
   fun `test basic body parameter generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -79,13 +82,14 @@ class RequestBodyParamTest {
 
   @Test
   fun `test optional body parameter generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -139,13 +143,14 @@ class RequestBodyParamTest {
 
   @Test
   fun `test generation of body parameter with explicit content type`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,

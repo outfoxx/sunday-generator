@@ -8,12 +8,8 @@ import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import java.nio.file.Files
 
-fun compileTypes(types: Map<TypeName.Standard, ModuleSpec>): Boolean {
-
-  val workDir = Files.createTempDirectory(null)
+fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, ModuleSpec>): Boolean {
   try {
-    val compiler = TypeScriptCompiler(workDir)
-
     types.forEach { (typeName, moduleSpec) ->
 
       val imported = typeName.base as SymbolSpec.Imported
@@ -26,11 +22,8 @@ fun compileTypes(types: Map<TypeName.Standard, ModuleSpec>): Boolean {
         .writeTo(compiler.srcDir)
     }
 
-    val result = compiler.compile()
-
-    return result == 0
-
+    return compiler.compile() == 0
   } finally {
-    workDir.toFile().deleteRecursively()
+    compiler.srcDir.toFile().deleteRecursively()
   }
 }

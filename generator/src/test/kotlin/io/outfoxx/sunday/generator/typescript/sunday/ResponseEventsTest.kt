@@ -2,10 +2,12 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -13,19 +15,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
 @DisplayName("[TypeScript/Sunday] [RAML] Response Events Test")
 class ResponseEventsTest {
 
   @Test
   fun `test event source method`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -70,13 +73,14 @@ class ResponseEventsTest {
 
   @Test
   fun `test event stream method generation`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
@@ -129,13 +133,14 @@ class ResponseEventsTest {
 
   @Test
   fun `test event stream method generation for common base events`(
+    compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry, compiler) { document ->
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
