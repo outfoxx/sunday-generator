@@ -1399,9 +1399,9 @@ class KotlinTypeRegistry(
     }
 
   private fun buildDiscriminatorMappings(shape: NodeShape, context: KotlinResolutionContext): Map<String, String> =
-    shape.discriminatorMapping?.mapNotNull { mapping ->
+    shape.discriminatorMapping.mapNotNull { mapping ->
       val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
-    }?.toMap() ?: emptyMap()
+    }.toMap()
 
 }

@@ -1223,9 +1223,9 @@ class TypeScriptTypeRegistry(
     }
 
   private fun buildDiscriminatorMappings(shape: NodeShape, context: TypeScriptResolutionContext): Map<String, String> =
-    shape.discriminatorMapping?.mapNotNull { mapping ->
+    shape.discriminatorMapping.mapNotNull { mapping ->
       val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
-    }?.toMap() ?: emptyMap()
+    }.toMap()
 
 }

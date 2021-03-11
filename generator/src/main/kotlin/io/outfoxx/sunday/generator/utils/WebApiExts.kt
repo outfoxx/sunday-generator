@@ -373,7 +373,7 @@ val Shape.customShapePropertyDefinitions: List<PropertyShape> get() = this.custo
 val Shape.or: List<Shape> get() = this.or()
 val Shape.and: List<Shape> get() = this.and()
 val Shape.xone: List<Shape> get() = this.xone()
-val Shape.not: Shape get() = this.not()
+val Shape.not: Shape? get() = this.not()
 val Shape.readOnly: Boolean? get() = this.readOnly().value
 val Shape.writeOnly: Boolean? get() = this.writeOnly().value
 val Shape.deprecated: Boolean? get() = this.deprecated().value
@@ -461,7 +461,7 @@ val NodeShape.maxProperties: Int? get() = this.maxProperties().value
 val NodeShape.closed: Boolean? get() = this.closed().value
 val NodeShape.discriminator: String? get() = this.discriminator().value
 val NodeShape.discriminatorValue: String? get() = this.discriminatorValue().value
-val NodeShape.discriminatorMapping: List<IriTemplateMapping>? get() = this.discriminatorMapping()
+val NodeShape.discriminatorMapping: List<IriTemplateMapping> get() = this.discriminatorMapping()
 val NodeShape.properties: List<PropertyShape> get() = this.properties()
 val NodeShape.additionalPropertiesSchema: Shape? get() = this.additionalPropertiesSchema()
 val NodeShape.dependencies: List<PropertyDependencies> get() = this.dependencies()
@@ -494,6 +494,7 @@ val PropertyShape.minCount: Int? get() = this.minCount().value
 val PropertyShape.maxCount: Int? get() = this.maxCount().value
 val PropertyShape.patternName: String? get() = this.patternName().value
 val PropertyShape.optional: Boolean get() = (this.minCount ?: 0) == 0
+val PropertyShape.required: Boolean get() = (this.minCount ?: 0) > 0
 
 ///
 val DataNode.anyValue: Any? get() =
