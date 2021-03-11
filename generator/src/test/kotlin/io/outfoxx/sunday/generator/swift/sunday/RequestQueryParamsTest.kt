@@ -63,7 +63,7 @@ class RequestQueryParamsTest {
           func fetchTest(
             obj: Test,
             strReq: String,
-            int: Int? = nil
+            int: Int = 5
           ) -> RequestResultPublisher<Test> {
             return self.requestFactory.result(
               method: .get,
@@ -72,7 +72,7 @@ class RequestQueryParamsTest {
               queryParameters: [
                 "obj": obj,
                 "str-req": strReq,
-                "int": int ?? 5
+                "int": int
               ],
               body: nil as Empty?,
               contentTypes: nil,

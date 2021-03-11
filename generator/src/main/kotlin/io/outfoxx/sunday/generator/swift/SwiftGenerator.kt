@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
 import io.outfoxx.sunday.generator.utils.allUnits
@@ -356,7 +357,7 @@ abstract class SwiftGenerator(
       val uriParameterTypeName =
         typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
           .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            if (parameter.required == false) {
               makeOptional()
             } else {
               this
@@ -370,6 +371,11 @@ abstract class SwiftGenerator(
           functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
           uriParameterTypeName
         )
+
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        uriParameterBuilder.defaultValue(defaultValue.swiftConstant(uriParameterTypeName, parameter.schema))
+      }
 
       val uriParameterSpec =
         processResourceMethodUriParameter(
@@ -406,7 +412,7 @@ abstract class SwiftGenerator(
       val queryParameterTypeName =
         typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
           .run {
-            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+            if (parameter.required == false) {
               makeOptional()
             } else {
               this
@@ -415,22 +421,27 @@ abstract class SwiftGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
+      val queryParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
         queryParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        queryParameterBuilder.defaultValue(defaultValue.swiftConstant(queryParameterTypeName, parameter.schema))
+      }
+
+      val queryParameterSpec =
         processResourceMethodQueryParameter(
           endPoint,
           operation,
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          queryParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(queryParameterSpec)
     }
   }
 
@@ -455,7 +466,7 @@ abstract class SwiftGenerator(
       val headerParameterTypeName =
         typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
           .run {
-            if (header.schema?.defaultValue != null || header.required == false) {
+            if (header.required == false) {
               makeOptional()
             } else {
               this
@@ -464,22 +475,27 @@ abstract class SwiftGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
+      val headerParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(header.swiftIdentifierName, header),
         headerParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = header.schema?.defaultValue
+      if (defaultValue != null) {
+        headerParameterBuilder.defaultValue(defaultValue.swiftConstant(headerParameterTypeName, header.schema))
+      }
+
+      val headerParameterSpec =
         processResourceMethodHeaderParameter(
           endPoint,
           operation,
           header,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          headerParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(headerParameterSpec)
     }
   }
 
