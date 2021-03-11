@@ -29,7 +29,6 @@ import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
-import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation

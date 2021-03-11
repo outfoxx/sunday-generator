@@ -3,7 +3,6 @@ package io.outfoxx.sunday.generator
 import amf.client.model.domain.WebApi
 import io.outfoxx.sunday.generator.utils.accepts
 import io.outfoxx.sunday.generator.utils.contentType
-import java.nio.file.Path
 
 /**
  * Common base class for generators and their parameters
@@ -35,8 +34,6 @@ abstract class Generator(
 
     this.defaultMediaTypes = sorted.toList()
   }
-
-  abstract fun generateFiles(outputDirectory: Path)
 
   abstract fun generateServiceTypes()
 

@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SwiftImpl
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY
@@ -98,6 +99,7 @@ import io.outfoxx.swiftpoet.DICTIONARY
 import io.outfoxx.swiftpoet.DOUBLE
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FLOAT
+import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.FunctionSpec
 import io.outfoxx.swiftpoet.INT
 import io.outfoxx.swiftpoet.INT16
@@ -122,13 +124,14 @@ import io.outfoxx.swiftpoet.VOID
 import io.outfoxx.swiftpoet.joinToCode
 import io.outfoxx.swiftpoet.parameterizedBy
 import java.net.URI
+import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import kotlin.math.min
 
 class SwiftTypeRegistry(
   val options: Set<Option>
-) {
+) : TypeRegistry {
 
   data class Id(val value: String)
 
@@ -139,6 +142,17 @@ class SwiftTypeRegistry(
   private val typeBuilders = mutableMapOf<DeclaredTypeName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
   private var referenceTypes = mutableMapOf<TypeName, TypeName>()
+
+  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+
+    val builtTypes = buildTypes()
+
+    builtTypes.entries
+      .filter { it.key.topLevelTypeName() == it.key }
+      .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+      .map { FileSpec.get(it.key.moduleName, it.value) }
+      .forEach { it.writeTo(outputDirectory) }
+  }
 
   fun buildTypes(): Map<DeclaredTypeName, TypeSpec> {
 

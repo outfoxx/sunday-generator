@@ -56,7 +56,6 @@ import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
 import io.outfoxx.swiftpoet.DeclaredTypeName
-import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.FunctionSpec
 import io.outfoxx.swiftpoet.NameAllocator
 import io.outfoxx.swiftpoet.ParameterSpec
@@ -66,7 +65,6 @@ import io.outfoxx.swiftpoet.TypeSpec
 import io.outfoxx.swiftpoet.VOID
 import java.net.URI
 import java.net.URISyntaxException
-import java.nio.file.Path
 import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
@@ -80,18 +78,6 @@ abstract class SwiftGenerator(
 ) : Generator(document.api, defaultMediaTypes) {
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
-
-  override fun generateFiles(outputDirectory: Path) {
-
-    generateServiceTypes()
-
-    val builtTypes = typeRegistry.buildTypes()
-
-    builtTypes.entries
-      .filter { it.key.topLevelTypeName() == it.key }
-      .map { FileSpec.get(it.key.moduleName, it.value) }
-      .forEach { it.writeTo(outputDirectory) }
-  }
 
   override fun generateServiceTypes() {
 

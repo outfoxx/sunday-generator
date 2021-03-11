@@ -22,6 +22,12 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
+import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -34,7 +40,6 @@ import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.method
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.objectValue
@@ -52,28 +57,19 @@ import io.outfoxx.sunday.generator.utils.servers
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.successes
-import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
-import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
-import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.FunctionSpec
 import io.outfoxx.typescriptpoet.Modifier
-import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.NameAllocator
 import io.outfoxx.typescriptpoet.ParameterSpec
-import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import java.net.URI
 import java.net.URISyntaxException
-import java.nio.file.Path
 import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
@@ -87,35 +83,6 @@ abstract class TypeScriptGenerator(
 ) : Generator(document.api, defaultMediaTypes) {
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
-
-  override fun generateFiles(outputDirectory: Path) {
-
-    generateServiceTypes()
-
-    val builtTypes = typeRegistry.buildTypes()
-
-    builtTypes.forEach { (typeName, moduleSpec) ->
-
-      val imported = typeName.base as SymbolSpec.Imported
-      val modulePath = imported.source.replaceFirst("!", "")
-
-      FileSpec.get(moduleSpec, modulePath)
-        .writeTo(outputDirectory)
-    }
-
-    generateIndex(builtTypes)
-  }
-
-  private fun generateIndex(types: Map<TypeName.Standard, ModuleSpec>): FileSpec {
-
-    val indexBuilder = FileSpec.builder("index")
-
-    types.keys.forEach { name ->
-      indexBuilder.addCode(CodeBlock.of("export * from './%L';", name.base.value.removePrefix("!")))
-    }
-
-    return indexBuilder.build()
-  }
 
   override fun generateServiceTypes() {
 

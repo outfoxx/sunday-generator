@@ -15,7 +15,6 @@ import amf.client.model.domain.Shape
 import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
@@ -67,7 +66,6 @@ import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
 import java.net.URI
 import java.net.URISyntaxException
-import java.nio.file.Path
 import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
@@ -84,18 +82,6 @@ abstract class KotlinGenerator(
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
 
   protected val generationMode get() = typeRegistry.generationMode
-
-  override fun generateFiles(outputDirectory: Path) {
-
-    generateServiceTypes()
-
-    val builtTypes = typeRegistry.buildTypes()
-
-    builtTypes.entries
-      .filter { it.key.topLevelClassName() == it.key }
-      .map { FileSpec.get(it.key.packageName, it.value) }
-      .forEach { it.writeTo(outputDirectory) }
-  }
 
   override fun generateServiceTypes() {
 

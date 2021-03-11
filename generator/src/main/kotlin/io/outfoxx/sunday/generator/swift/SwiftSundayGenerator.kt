@@ -11,7 +11,6 @@ import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
-import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL

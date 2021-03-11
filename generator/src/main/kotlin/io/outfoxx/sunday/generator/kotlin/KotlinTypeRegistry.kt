@@ -33,6 +33,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
 import com.squareup.kotlinpoet.FLOAT
+import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
@@ -60,6 +61,16 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.isArray
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
 import io.outfoxx.sunday.generator.utils.aggregateInheritanceSuper
 import io.outfoxx.sunday.generator.utils.and
@@ -91,15 +102,6 @@ import io.outfoxx.sunday.generator.utils.inheritsViaAggregation
 import io.outfoxx.sunday.generator.utils.inheritsViaInherits
 import io.outfoxx.sunday.generator.utils.isOrWasLink
 import io.outfoxx.sunday.generator.utils.items
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import io.outfoxx.sunday.generator.kotlin.utils.isArray
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.maxItems
 import io.outfoxx.sunday.generator.utils.maxLength
@@ -127,6 +129,7 @@ import org.zalando.problem.Status
 import org.zalando.problem.ThrowableProblem
 import java.math.BigDecimal
 import java.net.URI
+import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -148,7 +151,7 @@ class KotlinTypeRegistry(
   val defaultModelPackageName: String,
   val generationMode: GenerationMode,
   val options: Set<Option>
-) {
+) : TypeRegistry {
 
   data class Id(val value: String)
 
@@ -162,6 +165,17 @@ class KotlinTypeRegistry(
 
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
+
+  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+
+    val builtTypes = buildTypes()
+
+    builtTypes.entries
+      .filter { it.key.topLevelClassName() == it.key }
+      .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+      .map { FileSpec.get(it.key.packageName, it.value) }
+      .forEach { it.writeTo(outputDirectory) }
+  }
 
   fun buildTypes(): Map<ClassName, TypeSpec> {
 

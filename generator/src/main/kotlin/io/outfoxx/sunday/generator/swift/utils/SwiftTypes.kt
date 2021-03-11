@@ -3,7 +3,6 @@ package io.outfoxx.sunday.generator.swift.utils
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.ARRAY
 import io.outfoxx.swiftpoet.DICTIONARY
-import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.STRING
 import io.outfoxx.swiftpoet.parameterizedBy

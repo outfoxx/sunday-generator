@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModelModule
 import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
@@ -103,12 +104,14 @@ import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
 import io.outfoxx.typescriptpoet.DecoratorSpec
 import io.outfoxx.typescriptpoet.EnumSpec
+import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.FunctionSpec
 import io.outfoxx.typescriptpoet.InterfaceSpec
 import io.outfoxx.typescriptpoet.Modifier
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.ParameterSpec
 import io.outfoxx.typescriptpoet.PropertySpec
+import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
@@ -122,13 +125,14 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import io.outfoxx.typescriptpoet.tag
 import java.net.URI
+import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.min
 
 class TypeScriptTypeRegistry(
   private val options: Set<Option>
-) {
+) : TypeRegistry {
 
   data class Id(val value: String)
   data class ImplementationClass(val value: ClassSpec.Builder)
@@ -140,6 +144,37 @@ class TypeScriptTypeRegistry(
 
   private val typeBuilders = mutableMapOf<TypeName.Standard, AnyTypeSpecBuilder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
+
+  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+
+    val builtTypes = buildTypes()
+
+    builtTypes
+      .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
+      .map { (typeName, moduleSpec) ->
+
+        val imported = typeName.base as SymbolSpec.Imported
+        val modulePath = imported.source.replaceFirst("!", "")
+
+        FileSpec.get(moduleSpec, modulePath)
+      }
+      .forEach { it.writeTo(outputDirectory) }
+
+
+    listOf(generateIndexFile(builtTypes))
+      .forEach { it.writeTo(outputDirectory) }
+  }
+
+  private fun generateIndexFile(types: Map<TypeName.Standard, ModuleSpec>): FileSpec {
+
+    val indexBuilder = FileSpec.builder("index")
+
+    types.keys.forEach { name ->
+      indexBuilder.addCode(CodeBlock.of("export * from './%L';", name.base.value.removePrefix("!")))
+    }
+
+    return indexBuilder.build()
+  }
 
   fun buildTypes(): Map<TypeName.Standard, ModuleSpec> {
 
