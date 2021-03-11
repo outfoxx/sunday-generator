@@ -232,6 +232,7 @@ class KotlinTypeRegistry(
 
     val problemTypeBuilder =
       TypeSpec.classBuilder(problemTypeName)
+        .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .superclass(AbstractThrowableProblem::class.asTypeName())
         .addType(
           TypeSpec.companionObjectBuilder()
@@ -935,8 +936,10 @@ class KotlinTypeRegistry(
 
       val patchClassName = className.nestedClass("Patch")
 
-      val patchClassBuilder = TypeSpec.classBuilder(patchClassName)
-        .addModifiers(KModifier.DATA)
+      val patchClassBuilder =
+        TypeSpec.classBuilder(patchClassName)
+          .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
+          .addModifiers(KModifier.DATA)
       val patchClassConsBuilder = FunSpec.constructorBuilder()
 
       val patchFields = mutableListOf<CodeBlock>()

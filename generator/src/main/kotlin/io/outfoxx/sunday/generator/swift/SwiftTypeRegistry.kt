@@ -200,6 +200,7 @@ class SwiftTypeRegistry(
 
     val problemTypeBuilder =
       TypeSpec.classBuilder(problemTypeName)
+        .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .addModifiers(PUBLIC)
         .addSuperType(PROBLEM)
         .addProperty(
@@ -545,7 +546,8 @@ class SwiftTypeRegistry(
     var codingKeysType: TypeSpec? = null
 
     val originalInheritedProperties = collectProperties(superShape)
-    val originalInheritedDeclaredProperties = originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
+    val originalInheritedDeclaredProperties =
+      originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var inheritedDeclaredProperties = originalInheritedDeclaredProperties
 
     val originalLocalProperties = propertyContainerShape.properties
@@ -601,9 +603,10 @@ class SwiftTypeRegistry(
             val refTypeName = className.nestedType(ANY_REF_NAME)
             referenceTypes[className] = refTypeName
 
-            val refTypeBuilder = TypeSpec.enumBuilder(refTypeName)
-              .addModifiers(PUBLIC)
-              .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE))
+            val refTypeBuilder =
+              TypeSpec.enumBuilder(refTypeName)
+                .addModifiers(PUBLIC)
+                .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE))
 
             val refValueInitBuilder = FunctionSpec.constructorBuilder()
               .addModifiers(PUBLIC)
@@ -781,7 +784,10 @@ class SwiftTypeRegistry(
         .throws(true)
 
       if (localDeclaredProperties.isNotEmpty()) {
-        decoderInitFunctionBuilder.addStatement("let container = try decoder.container(keyedBy: %T.self)", codingKeysTypeName)
+        decoderInitFunctionBuilder.addStatement(
+          "let container = try decoder.container(keyedBy: %T.self)",
+          codingKeysTypeName
+        )
       }
 
       val encoderFunctionBuilder = FunctionSpec.builder("encode")
@@ -883,8 +889,10 @@ class SwiftTypeRegistry(
             (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
               ?: error("(${ExternalDiscriminator}) property '${externalDiscriminator}' is not valid")
           val externalDiscriminatorPropertyName = externalDiscriminatorProperty.swiftIdentifierName
-          val externalDiscriminatorPropertyTypeName = resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
-          val externalDiscriminatorPropertyEnumCases = typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
+          val externalDiscriminatorPropertyTypeName =
+            resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
+          val externalDiscriminatorPropertyEnumCases =
+            typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
           val propertyTypeDerivedShapes = context.unit.findInheritingTypes(prop.range)
 
           if (externalDiscriminatorProperty.optional && prop.required) {
@@ -1143,6 +1151,7 @@ class SwiftTypeRegistry(
 
       val patchClassBuilder =
         TypeSpec.structBuilder(patchClassName)
+          .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
           .addSuperType(CODABLE)
           .addModifiers(PUBLIC)
 

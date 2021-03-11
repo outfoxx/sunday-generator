@@ -174,8 +174,13 @@ class TypeScriptTypeRegistry(
       .filterKeys { it.isTopLevelTypeName }
       .mapValues { (typeName, typeBuilder) ->
 
-        val rootModuleSpec = ModuleSpec.builder(typeName.simpleName(), ModuleSpec.Kind.MODULE)
-        rootModuleSpec.addType(typeBuilder.build())
+        val rootTypeSpec = typeBuilder.build()
+
+        val rootModuleSpec =
+          ModuleSpec.builder(typeName.simpleName(), ModuleSpec.Kind.MODULE)
+            .addType(rootTypeSpec)
+
+        rootModuleSpec.tags.putAll(rootTypeSpec.tags)
 
         when (typeBuilder) {
           is InterfaceSpec.Builder -> {
@@ -244,6 +249,7 @@ class TypeScriptTypeRegistry(
 
       val problemTypeBuilder =
         ClassSpec.builder(problemTypeName)
+          .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
           .addModifiers(Modifier.EXPORT)
           .superClass(PROBLEM)
           .addProperty(
@@ -543,15 +549,16 @@ class TypeScriptTypeRegistry(
     val ifaceBuilder =
       defineType(className) { name ->
         InterfaceSpec.builder(name.simpleName())
+          .tag(Id::class, Id(shape.id))
           .addModifiers(Modifier.EXPORT)
       } as InterfaceSpec.Builder
 
     val classBuilder =
       ClassSpec.builder(className.simpleName())
+        .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
+        .tag(Id::class, Id(shape.id))
         .addModifiers(Modifier.EXPORT)
         .addMixin(className)
-
-    ifaceBuilder.tag(Id::class, Id(shape.id))
 
     val superClassName =
       if (superShape != null) {
