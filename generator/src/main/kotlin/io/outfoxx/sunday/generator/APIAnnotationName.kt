@@ -52,4 +52,6 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
       test == id || test == "sunday-$id"
     }
 
+  override fun toString() = id
+
 }

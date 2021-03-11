@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalPathApi::class)
 package io.outfoxx.sunday.generator.swift.tools
 
 import com.github.dockerjava.api.DockerClient
@@ -13,11 +14,29 @@ import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
+import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import java.io.Closeable
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.listDirectoryEntries
 
-class SwiftCompiler : Closeable {
+class SwiftCompiler(private val workDir: Path) : Closeable {
+
+  val srcDir: Path = workDir.resolve("src")
+
+  init {
+    val pkgDir = Paths.get(SwiftCompiler::class.java.getResource("/swift/compile").toURI())
+    Files.walk(pkgDir).forEach { source ->
+      val target = workDir.resolve(pkgDir.relativize(source))
+      if (Files.isRegularFile(source)) {
+        Files.copy(source, target)
+      } else if (!Files.exists(target)) {
+        Files.createDirectory(target)
+      }
+    }
+  }
 
   private val dockerConfig: DockerClientConfig =
     DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -33,15 +52,15 @@ class SwiftCompiler : Closeable {
 
   private val dockerClient: DockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
-  fun compile(files: List<File>) {
+  fun compile(): Int {
 
     val container =
       dockerClient.createContainerCmd("swift:5.3")
-        .withCmd("swift", *files.map { "$it" }.toTypedArray())
+        .withCmd("swift", "build")
         .withWorkingDir("/work")
         .withHostConfig(
           HostConfig.newHostConfig()
-            .withBinds(Bind.parse("${Paths.get("").toAbsolutePath()}:/work"))
+            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
         )
         .exec()
 
@@ -74,6 +93,8 @@ class SwiftCompiler : Closeable {
           )
           .awaitCompletion()
       }
+
+      return statusCode
 
     } finally {
       dockerClient.removeContainerCmd(container.id).exec()

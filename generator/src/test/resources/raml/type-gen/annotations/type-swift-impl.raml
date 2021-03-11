@@ -1,0 +1,34 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      className:
+        type: string
+        (sunday.swiftImplementation):
+          code: 'return %T(describing: %T.self) + %S + "%L"'
+          parameters:
+          - type: Type
+            value: Swift.String
+          - type: Type
+            value: Foundation.Data
+          - type: String
+            value: '-value-'
+          - type: Literal
+            value: '-literal'
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

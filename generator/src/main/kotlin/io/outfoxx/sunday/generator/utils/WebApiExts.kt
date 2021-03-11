@@ -93,22 +93,24 @@ val BaseUnit.sourceVendor: Vendor? get() = this.sourceVendor().orElse(null)
 
 fun BaseUnit.findDeclaringUnit(element: DomainElement) = allUnits.first { it.location == element.annotations.location }
 
-fun BaseUnit.findInheritingTypes(type: Shape): List<Shape> =
-  allUnits.filterIsInstance<DeclaresModel>()
+fun BaseUnit.findInheritingTypes(type: Shape): List<Shape> {
+  val resolvedType = type.resolve
+  return allUnits.filterIsInstance<DeclaresModel>()
     .flatMap { unit ->
       unit.declares.filterIsInstance<NodeShape>()
         .filter { declared ->
           declared.inherits.any { inherit ->
-            inherit.id == type.id || (inherit.linkTarget?.id == type.id)
+            inherit.id == resolvedType.id || (inherit.linkTarget?.id == resolvedType.id)
           }
         }
         .plus(
           unit.declares.filterIsInstance<Shape>()
             .filter { declared ->
-              declared.inheritsViaAggregation && declared.aggregateInheritanceSuper.resolve.id == type.id
+              declared.inheritsViaAggregation && declared.aggregateInheritanceSuper.resolve.id == resolvedType.id
             }
         )
     }
+}
 
 private val ELEMENT_REF_REGEX = """(?:([^.]+)\.)?([\w-_.]+)""".toRegex()
 
@@ -389,7 +391,7 @@ val Shape.resolve: Shape
   get() =
     if (this.isLink)
       (this.linkTarget as Shape).resolve
-    else if (this !is NodeShape && this.inherits.size == 1)
+    else if (this.inherits.size == 1 && (this !is NodeShape || this.isReferenceNode))
       this.inherits.first().resolve
     else
       this
@@ -466,6 +468,14 @@ val NodeShape.properties: List<PropertyShape> get() = this.properties()
 val NodeShape.additionalPropertiesSchema: Shape? get() = this.additionalPropertiesSchema()
 val NodeShape.dependencies: List<PropertyDependencies> get() = this.dependencies()
 val NodeShape.propertyNames: Shape? get() = this.propertyNames()
+
+val NodeShape.isReferenceNode: Boolean get() =
+  inherits.size == 1 && dependencies.isEmpty() &&
+    properties.isEmpty() && propertyNames == null &&
+    additionalPropertiesSchema == null && minProperties == null && maxProperties == null &&
+    discriminator == null && discriminatorValue == null && discriminatorMapping.isEmpty() &&
+    or.isEmpty() && and.isEmpty() && xone.isEmpty() && not == null &&
+    ifShape == null && elseShape == null && thenShape == null
 
 
 ///
