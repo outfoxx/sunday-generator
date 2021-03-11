@@ -9,7 +9,6 @@ import amf.client.model.domain.Response
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GenerationMode
@@ -23,8 +22,8 @@ import io.outfoxx.sunday.generator.swift.utils.REQUEST_COMPLETE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_EVENT_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_RESULT_PUBLISHER
-import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
+import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -106,33 +105,34 @@ class SwiftSundayGenerator(
           .returns(URI_TEMPLATE)
           .apply {
             baseURLParameters.forEach { param ->
-              val paramTypeName =
-                if (param.defaultValue != null) param.typeName.makeOptional() else param.typeName
-              addParameter(param.name, paramTypeName)
+              val paramTypeName = if (param.defaultValue != null) param.typeName.makeNonOptional() else param.typeName
+              addParameter(
+                ParameterSpec.builder(param.name, paramTypeName)
+                  .apply {
+                    if (param.defaultValue != null) {
+                      defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape))
+                    }
+                  }
+                  .build()
+              )
             }
           }
           .addCode("return %T(%>\n", URI_TEMPLATE)
-          .addCode("template: %S,\nparameters: [", baseURL)
+          .addCode("template: %S,\nparameters: [%>\n", baseURL)
           .apply {
             if (baseURLParameters.isEmpty()) {
               addCode(":")
             }
             baseURLParameters.forEachIndexed { idx, param ->
 
-              val defaultValue = param.defaultValue
-              if (defaultValue != null) {
-                addCode("%S: %L ?? ", param.name, param.name)
-                addCode(defaultValue.swiftConstant(param.typeName, param.shape))
-              } else {
-                addCode("%L", param.name)
-              }
+              addCode("%S: %L", param.name, param.name)
 
               if (idx < baseURLParameters.size - 1) {
-                addCode(", ")
+                addCode(",\n")
               }
             }
           }
-          .addCode("]%<\n)\n")
+          .addCode("%<\n]%<\n)\n")
           .build()
       )
 
@@ -202,7 +202,7 @@ class SwiftSundayGenerator(
     }
 
     return super.processServiceEnd(typeBuilder)
- }
+  }
 
   override fun processReturnType(
     endPoint: EndPoint,
@@ -498,7 +498,9 @@ class SwiftSundayGenerator(
           val typesTemplate = types.joinToString { "\n%S: %T.self" }
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
-            val discValue = (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? DeclaredTypeName)?.simpleName ?: "$typeName"
+            val discValue =
+              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? DeclaredTypeName)?.simpleName
+              ?: "$typeName"
             listOf(discValue, typeName)
           }
 

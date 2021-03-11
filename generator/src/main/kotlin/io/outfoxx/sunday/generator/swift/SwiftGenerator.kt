@@ -23,7 +23,6 @@ import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
-import io.outfoxx.sunday.generator.typescript.utils.undefinable
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -91,7 +90,7 @@ abstract class SwiftGenerator(
 
     builtTypes.entries
       .filter { it.key.topLevelTypeName() == it.key }
-      .map { FileSpec.get(it.key.moduleName , it.value) }
+      .map { FileSpec.get(it.key.moduleName, it.value) }
       .forEach { it.writeTo(outputDirectory) }
   }
 
@@ -545,7 +544,7 @@ abstract class SwiftGenerator(
           val variableTypeName =
             variable.schema?.let {
               val suggestedName = variable.name?.swiftTypeName ?: "URIParameter$idx"
-              resolveTypeName(it, DeclaredTypeName.typeName(suggestedName))
+              resolveTypeName(it, DeclaredTypeName.typeName(".${suggestedName}"))
             } ?: STRING
 
           val defaultValue =
