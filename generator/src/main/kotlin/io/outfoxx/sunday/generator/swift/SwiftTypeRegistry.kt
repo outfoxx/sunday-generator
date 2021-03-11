@@ -181,7 +181,7 @@ class SwiftTypeRegistry(
       serviceType.addDoc("Generated On: %L\n", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
     }
 
-    serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
+    serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Client)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
       error("Service type '$className' is already defined")
