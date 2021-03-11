@@ -25,7 +25,7 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf(AddGeneratedAnnotation))
+    val typeRegistry = SwiftTypeRegistry(setOf(AddGeneratedAnnotation))
 
     val type = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -39,7 +39,7 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf(AddGeneratedAnnotation))
+    val typeRegistry = SwiftTypeRegistry(setOf(AddGeneratedAnnotation))
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

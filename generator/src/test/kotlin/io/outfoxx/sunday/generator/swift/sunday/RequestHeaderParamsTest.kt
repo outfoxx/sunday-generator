@@ -26,7 +26,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -97,7 +97,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -168,7 +168,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

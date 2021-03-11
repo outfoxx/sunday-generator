@@ -24,7 +24,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -127,7 +127,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -259,7 +259,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -340,7 +340,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 

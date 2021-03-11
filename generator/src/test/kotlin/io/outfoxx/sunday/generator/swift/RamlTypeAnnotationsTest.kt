@@ -27,7 +27,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-swift-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val type = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -43,7 +43,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Group", generateTypes(testUri, typeRegistry, compiler))
 
@@ -239,7 +239,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Root", generateTypes(testUri, typeRegistry, compiler))
 
@@ -367,7 +367,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-swift-impl.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -412,7 +412,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
@@ -650,7 +650,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val exception =
       assertThrows<IllegalStateException> {
@@ -666,7 +666,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 

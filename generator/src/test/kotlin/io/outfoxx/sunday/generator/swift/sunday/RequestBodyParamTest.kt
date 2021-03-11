@@ -26,7 +26,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -89,7 +89,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -152,7 +152,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

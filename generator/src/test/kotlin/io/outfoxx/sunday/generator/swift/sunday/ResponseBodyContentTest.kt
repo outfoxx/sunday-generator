@@ -26,7 +26,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -89,7 +89,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -153,7 +153,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -251,7 +251,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

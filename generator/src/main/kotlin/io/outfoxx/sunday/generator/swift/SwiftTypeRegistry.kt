@@ -22,7 +22,6 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftImpl
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
-import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
@@ -128,7 +127,6 @@ import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import kotlin.math.min
 
 class SwiftTypeRegistry(
-  val generationMode: GenerationMode,
   val options: Set<Option>
 ) {
 
@@ -388,7 +386,7 @@ class SwiftTypeRegistry(
 
   private fun generateTypeName(shape: Shape, context: SwiftResolutionContext): TypeName {
 
-    val swiftTypeAnn = shape.findStringAnnotation(SwiftType, generationMode)
+    val swiftTypeAnn = shape.findStringAnnotation(SwiftType, null)
     if (swiftTypeAnn != null) {
       return DeclaredTypeName.typeName(swiftTypeAnn)
     }
@@ -547,12 +545,12 @@ class SwiftTypeRegistry(
     var codingKeysType: TypeSpec? = null
 
     val originalInheritedProperties = collectProperties(superShape)
-    val originalInheritedDeclaredProperties = originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, generationMode) }
+    val originalInheritedDeclaredProperties = originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var inheritedDeclaredProperties = originalInheritedDeclaredProperties
 
     val originalLocalProperties = propertyContainerShape.properties
     var localProperties = originalLocalProperties
-    val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, generationMode) }
+    val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var localDeclaredProperties = originalLocalDeclaredProperties
 
     val inheritingTypes = context.unit.findInheritingTypes(shape)
@@ -594,7 +592,7 @@ class SwiftTypeRegistry(
               .build()
           )
 
-          if (shape.findBoolAnnotation(ExternallyDiscriminated, generationMode) != true) {
+          if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
 
             /*
             Generate polymorphic encoding/decoding type (replaces type name)
@@ -799,7 +797,7 @@ class SwiftTypeRegistry(
 
       // Unpack all properties without (externalDiscriminator) annotation
 
-      localDeclaredProperties.filterNot { it.range.hasAnnotation(ExternalDiscriminator, generationMode) }.forEach { prop ->
+      localDeclaredProperties.filterNot { it.range.hasAnnotation(ExternalDiscriminator, null) }.forEach { prop ->
         var propertyTypeName = resolvePropertyTypeName(prop, className, context)
         if (propertyTypeName == VOID) {
           return@forEach
@@ -875,12 +873,12 @@ class SwiftTypeRegistry(
 
       // Unpack all properties with (externalDiscriminator) annotation, because we know the discriminator is already unpacked!
 
-      localDeclaredProperties.filter { it.range.hasAnnotation(ExternalDiscriminator, generationMode) }
+      localDeclaredProperties.filter { it.range.hasAnnotation(ExternalDiscriminator, null) }
         .forEach { prop ->
           val propertyTypeName = resolvePropertyTypeName(prop, className, context)
           val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
 
-          val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, generationMode)!!
+          val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, null)!!
           val externalDiscriminatorProperty =
             (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
               ?: error("(${ExternalDiscriminator}) property '${externalDiscriminator}' is not valid")
@@ -1022,7 +1020,7 @@ class SwiftTypeRegistry(
 
         val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
 
-        val implAnn = propertyDeclaration.range.findAnnotation(SwiftImpl, generationMode) as? ObjectNode
+        val implAnn = propertyDeclaration.range.findAnnotation(SwiftImpl, null) as? ObjectNode
         if (implAnn != null) {
 
           val propertyBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
@@ -1139,7 +1137,7 @@ class SwiftTypeRegistry(
 
     codingKeysType?.let { typeBuilder.addType(it) }
 
-    if (shape.findBoolAnnotation(Patchable, generationMode) == true) {
+    if (shape.findBoolAnnotation(Patchable, null) == true) {
 
       val patchClassName = className.nestedType("Patch")
 
@@ -1255,7 +1253,7 @@ class SwiftTypeRegistry(
       }
     }
 
-    val nestedAnn = shape.findAnnotation(Nested, generationMode) as? ObjectNode
+    val nestedAnn = shape.findAnnotation(Nested, null) as? ObjectNode
 
     return if (nestedAnn != null) {
 

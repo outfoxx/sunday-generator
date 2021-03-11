@@ -24,7 +24,7 @@ class RamlEnumTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("TestEnum", generateTypes(testUri, typeRegistry, compiler))
 

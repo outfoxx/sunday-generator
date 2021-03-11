@@ -26,7 +26,7 @@ class BaseUriTest {
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

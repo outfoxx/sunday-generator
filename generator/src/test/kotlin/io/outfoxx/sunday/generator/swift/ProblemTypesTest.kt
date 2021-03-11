@@ -24,7 +24,7 @@ class ProblemTypesTest {
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 

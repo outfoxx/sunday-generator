@@ -26,7 +26,7 @@ class ResponseEventsTest {
     @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -88,7 +88,7 @@ class ResponseEventsTest {
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -154,7 +154,7 @@ class ResponseEventsTest {
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

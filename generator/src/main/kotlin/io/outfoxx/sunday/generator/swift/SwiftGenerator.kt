@@ -81,8 +81,6 @@ abstract class SwiftGenerator(
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
 
-  protected val generationMode get() = typeRegistry.generationMode
-
   override fun generateFiles(outputDirectory: Path) {
 
     generateServiceTypes()
@@ -98,7 +96,7 @@ abstract class SwiftGenerator(
   override fun generateServiceTypes() {
 
     val endPointGroups =
-      api.endPoints.groupBy { it.root.findStringAnnotation(ServiceGroup, generationMode) }
+      api.endPoints.groupBy { it.root.findStringAnnotation(ServiceGroup, null) }
 
     endPointGroups.map { (groupName, endPoints) ->
 
@@ -508,7 +506,7 @@ abstract class SwiftGenerator(
     val problemBaseUriParams =
       document.api.findAnnotation(
         ProblemBaseUriParams,
-        typeRegistry.generationMode
+        null
       )?.objectValue ?: emptyMap()
 
     fun expand(template: String): URI {
@@ -529,7 +527,7 @@ abstract class SwiftGenerator(
     val problemBaseUri =
       document.api.findAnnotation(
         ProblemBaseUri,
-        typeRegistry.generationMode
+        null
       )?.stringValue?.let { baseUri.resolve(expand(it)) } ?: baseUri
 
     val problemDefLocations: Map<BaseUnit, CustomizableElement> =
@@ -538,7 +536,7 @@ abstract class SwiftGenerator(
 
     return problemDefLocations
       .mapNotNull { (unit, element) ->
-        (element.findAnnotation(ProblemTypes, generationMode) as? ObjectNode)
+        (element.findAnnotation(ProblemTypes, null) as? ObjectNode)
           ?.properties()
           ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit) }?.entries
       }

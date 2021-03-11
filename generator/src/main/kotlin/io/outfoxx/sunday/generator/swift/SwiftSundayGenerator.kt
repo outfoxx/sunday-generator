@@ -71,12 +71,6 @@ class SwiftSundayGenerator(
   defaultMediaTypes
 ) {
 
-  init {
-    require(typeRegistry.generationMode == GenerationMode.Client) {
-      "Swift/Sunday requires only supports 'Client' generation mode"
-    }
-  }
-
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var queryParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var headerParameters = mutableListOf<Pair<Parameter, TypeName>>()

@@ -29,7 +29,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -94,7 +94,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -171,7 +171,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -248,7 +248,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -325,7 +325,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -402,7 +402,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

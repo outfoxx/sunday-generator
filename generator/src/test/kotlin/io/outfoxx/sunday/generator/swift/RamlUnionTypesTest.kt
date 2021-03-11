@@ -25,7 +25,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -107,7 +107,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -164,7 +164,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 

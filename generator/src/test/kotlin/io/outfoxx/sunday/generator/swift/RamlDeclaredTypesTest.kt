@@ -24,7 +24,7 @@ class RamlDeclaredTypesTest {
   ) {
 
     // 'Client' mode assigns a specific package, generate in server mode to test collision detection
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val exception =
       assertThrows<IllegalStateException> {

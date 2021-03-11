@@ -24,7 +24,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -162,7 +162,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -254,7 +254,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 

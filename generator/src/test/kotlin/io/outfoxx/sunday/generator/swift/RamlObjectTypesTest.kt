@@ -26,7 +26,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -84,7 +84,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -151,7 +151,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 
@@ -167,7 +167,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val api = findType("API", generateTypes(testUri, typeRegistry, compiler))
 
@@ -183,7 +183,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
@@ -411,7 +411,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(GenerationMode.Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
 

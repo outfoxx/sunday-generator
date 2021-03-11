@@ -26,7 +26,7 @@ class RequestMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->

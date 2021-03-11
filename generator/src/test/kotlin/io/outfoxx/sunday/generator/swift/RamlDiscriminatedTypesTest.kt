@@ -24,7 +24,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
@@ -264,7 +264,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 

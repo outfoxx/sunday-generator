@@ -27,7 +27,7 @@ class RequestMixedParamsTest {
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
@@ -122,7 +122,7 @@ class RequestMixedParamsTest {
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
   ) {
 
-    val typeRegistry = SwiftTypeRegistry(Client, setOf())
+    val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry, compiler) { document ->
