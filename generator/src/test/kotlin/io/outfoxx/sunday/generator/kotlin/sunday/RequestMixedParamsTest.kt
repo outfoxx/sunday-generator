@@ -99,7 +99,7 @@ class RequestMixedParamsTest {
     )
   }
 
-  @Test @Disabled
+  @Test @Disabled("Blocking issue: https://github.com/aml-org/amf/issues/830")
   fun `test generation of multiple parameters of same name with inline type definitions`(
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
   ) {
