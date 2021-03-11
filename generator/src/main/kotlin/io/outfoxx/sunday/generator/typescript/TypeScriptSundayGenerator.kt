@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -345,7 +346,7 @@ class TypeScriptSundayGenerator(
             "%L: %L ?? %L",
             origName.quotedIfNotTypeScriptIdentifier,
             paramName,
-            param.schema?.defaultValueStr ?: "null"
+            param.schema?.defaultValue?.typeScriptConstant(paramType, param.schema) ?: "null"
           )
         } else if (paramName != origName || !origName.isValidTypeScriptIdentifier) {
           parametersBlock.add(
