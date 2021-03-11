@@ -2,9 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   kotlin("jvm")
+  java
   application
   jacoco
   id("com.google.cloud.tools.jib")
+  id("com.github.johnrengelman.shadow")
 }
 
 val cliktVersion: String by project
@@ -68,6 +70,7 @@ tasks {
 application {
   applicationName = "sunday-generator"
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
 
 

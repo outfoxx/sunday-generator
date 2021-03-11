@@ -170,7 +170,10 @@ class TypeScriptTypeRegistry(
     val indexBuilder = FileSpec.builder("index")
 
     types.keys.forEach { name ->
-      indexBuilder.addCode(CodeBlock.of("export * from './%L';", name.base.value.removePrefix("!")))
+      indexBuilder.addCode(CodeBlock.of(
+        "export * from './%L';",
+        name.base.value.removePrefix("!").camelCaseToKebabCase()
+      ))
     }
 
     return indexBuilder.build()
