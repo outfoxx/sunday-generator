@@ -11,16 +11,6 @@ val slf4jVersion: String by project
 val junitVersion: String by project
 val hamcrestVersion: String by project
 
-configurations.compileClasspath {
-  resolutionStrategy {
-    force("org.scala-lang:scala-library:2.12.10")
-  }
-}
-
-repositories {
-  jcenter()
-}
-
 dependencies {
 
   implementation(project(":generator"))

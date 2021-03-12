@@ -40,6 +40,7 @@ subprojects {
       setUrl("https://jitpack.io")
     }
     mavenCentral()
+    jcenter()
   }
 
 

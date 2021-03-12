@@ -30,10 +30,6 @@ configurations.compileClasspath {
   }
 }
 
-repositories {
-  jcenter()
-}
-
 dependencies {
 
   api("com.github.amlorg:amf-client_2.12:$amfClientVersion")
