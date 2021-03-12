@@ -12,8 +12,12 @@ types:
     properties:
       value2: string
 
-  Test3:
+  Empty:
     type: Test2
+    discriminatorValue: none # to ensure Empty is defined
+
+  Test3:
+    type: Empty
     properties:
       value3: string
 

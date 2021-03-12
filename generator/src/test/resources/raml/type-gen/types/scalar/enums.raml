@@ -6,12 +6,12 @@ mediaType:
 types:
 
   TestEnum:
-    enum: [none, some, all]
+    enum: [none, some, all, snake_case, kebab-case]
 
   Test:
     type: object
     properties:
-      enum:
+      enumVal:
         type: TestEnum
 
 /tests/{id}:

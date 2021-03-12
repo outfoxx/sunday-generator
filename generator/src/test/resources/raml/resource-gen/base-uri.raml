@@ -1,0 +1,24 @@
+#%RAML 1.0
+title: Test API
+version: 1
+mediaType:
+- application/json
+
+baseUri: http://{server}.{environment}.example.com/api/{version}
+baseUriParameters:
+  server:
+    type: string
+    default: master
+  environment:
+    type: string
+    enum:
+      - sbx
+      - prd
+    default: sbx
+
+/tests:
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body: string

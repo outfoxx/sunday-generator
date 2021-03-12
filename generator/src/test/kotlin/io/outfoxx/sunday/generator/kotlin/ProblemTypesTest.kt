@@ -1,15 +1,36 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Problem Types Test")
 class ProblemTypesTest {
 
   @Test
@@ -24,42 +45,71 @@ class ProblemTypesTest {
     val invalidIdType = findType("io.test.InvalidIdProblem", builtTypes)
     assertEquals(
       """
+        package io.test.service
+
+        import com.fasterxml.jackson.`annotation`.JsonProperty
+        import java.net.URI
+        import kotlin.String
+        import org.zalando.problem.AbstractThrowableProblem
+        import org.zalando.problem.Exceptional
+        import org.zalando.problem.Status
+        import org.zalando.problem.ThrowableProblem
+
         public class InvalidIdProblem(
-          offendingId: kotlin.String,
-          instance: java.net.URI? = null,
-          cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
-          public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
+          @JsonProperty(value = "offending_id")
+          public val offendingId: String,
+          instance: URI? = null,
+          cause: ThrowableProblem? = null
+        ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
+            "The id contains one or more invalid characters.", instance, cause) {
+          public override fun getCause(): Exceptional? = super.cause
         
           public companion object {
-            public const val TYPE: kotlin.String = "http://example.com/invalid_id"
+            public const val TYPE: String = "http://example.com/invalid_id"
 
-            public val TYPE_URI: java.net.URI = java.net.URI(TYPE)
+            public val TYPE_URI: URI = URI(TYPE)
           }
         }
 
       """.trimIndent(),
-      invalidIdType.toString(),
+      buildString {
+        FileSpec.get("io.test.service", invalidIdType)
+          .writeTo(this)
+      }
     )
 
     val accountNotFound = findType("io.test.AccountNotFoundProblem", builtTypes)
     assertEquals(
       """
+        package io.test.service
+
+        import java.net.URI
+        import kotlin.String
+        import org.zalando.problem.AbstractThrowableProblem
+        import org.zalando.problem.Exceptional
+        import org.zalando.problem.Status
+        import org.zalando.problem.ThrowableProblem
+
         public class AccountNotFoundProblem(
-          instance: java.net.URI? = null,
-          cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Account Not Found", org.zalando.problem.Status.NOT_FOUND, "The requested account does not exist or you do not have permission to access it.", instance, cause, mapOf()) {
-          public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
+          instance: URI? = null,
+          cause: ThrowableProblem? = null
+        ) : AbstractThrowableProblem(TYPE_URI, "Account Not Found", Status.NOT_FOUND,
+            "The requested account does not exist or you do not have permission to access it.", instance,
+            cause) {
+          public override fun getCause(): Exceptional? = super.cause
         
           public companion object {
-            public const val TYPE: kotlin.String = "http://example.com/account_not_found"
+            public const val TYPE: String = "http://example.com/account_not_found"
 
-            public val TYPE_URI: java.net.URI = java.net.URI(TYPE)
+            public val TYPE_URI: URI = URI(TYPE)
           }
         }
 
       """.trimIndent(),
-      accountNotFound.toString(),
+      buildString {
+        FileSpec.get("io.test.service", accountNotFound)
+          .writeTo(this)
+      }
     )
   }
 
@@ -75,45 +125,79 @@ class ProblemTypesTest {
     val invalidIdType = findType("io.test.InvalidIdProblem", builtTypes)
     assertEquals(
       """
-        @com.fasterxml.jackson.`annotation`.JsonTypeName(io.test.InvalidIdProblem.TYPE)
-        public class InvalidIdProblem @com.fasterxml.jackson.`annotation`.JsonCreator constructor(
-          offendingId: kotlin.String,
-          instance: java.net.URI? = null,
-          cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Invalid Id", org.zalando.problem.Status.BAD_REQUEST, "The id contains one or more invalid characters.", instance, cause, mapOf("offending_id" to offendingId)) {
-          public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
+        package io.test.service
+
+        import com.fasterxml.jackson.`annotation`.JsonCreator
+        import com.fasterxml.jackson.`annotation`.JsonProperty
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
+        import io.test.InvalidIdProblem
+        import java.net.URI
+        import kotlin.String
+        import org.zalando.problem.AbstractThrowableProblem
+        import org.zalando.problem.Exceptional
+        import org.zalando.problem.Status
+        import org.zalando.problem.ThrowableProblem
+
+        @JsonTypeName(InvalidIdProblem.TYPE)
+        public class InvalidIdProblem @JsonCreator constructor(
+          @JsonProperty(value = "offending_id")
+          public val offendingId: String,
+          instance: URI? = null,
+          cause: ThrowableProblem? = null
+        ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
+            "The id contains one or more invalid characters.", instance, cause) {
+          public override fun getCause(): Exceptional? = super.cause
         
           public companion object {
-            public const val TYPE: kotlin.String = "http://example.com/invalid_id"
+            public const val TYPE: String = "http://example.com/invalid_id"
 
-            public val TYPE_URI: java.net.URI = java.net.URI(TYPE)
+            public val TYPE_URI: URI = URI(TYPE)
           }
         }
 
       """.trimIndent(),
-      invalidIdType.toString(),
+      buildString {
+        FileSpec.get("io.test.service", invalidIdType)
+          .writeTo(this)
+      }
     )
 
     val accountNotFound = findType("io.test.AccountNotFoundProblem", builtTypes)
     assertEquals(
       """
-        @com.fasterxml.jackson.`annotation`.JsonTypeName(io.test.AccountNotFoundProblem.TYPE)
-        public class AccountNotFoundProblem @com.fasterxml.jackson.`annotation`.JsonCreator constructor(
-          instance: java.net.URI? = null,
-          cause: org.zalando.problem.ThrowableProblem? = null
-        ) : org.zalando.problem.AbstractThrowableProblem(TYPE_URI, "Account Not Found", org.zalando.problem.Status.NOT_FOUND, "The requested account does not exist or you do not have permission to access it.", instance, cause, mapOf()) {
-          public override fun getCause(): org.zalando.problem.Exceptional? = super.cause
+        package io.test.service
+
+        import com.fasterxml.jackson.`annotation`.JsonCreator
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
+        import io.test.AccountNotFoundProblem
+        import java.net.URI
+        import kotlin.String
+        import org.zalando.problem.AbstractThrowableProblem
+        import org.zalando.problem.Exceptional
+        import org.zalando.problem.Status
+        import org.zalando.problem.ThrowableProblem
+
+        @JsonTypeName(AccountNotFoundProblem.TYPE)
+        public class AccountNotFoundProblem @JsonCreator constructor(
+          instance: URI? = null,
+          cause: ThrowableProblem? = null
+        ) : AbstractThrowableProblem(TYPE_URI, "Account Not Found", Status.NOT_FOUND,
+            "The requested account does not exist or you do not have permission to access it.", instance,
+            cause) {
+          public override fun getCause(): Exceptional? = super.cause
         
           public companion object {
-            public const val TYPE: kotlin.String = "http://example.com/account_not_found"
+            public const val TYPE: String = "http://example.com/account_not_found"
 
-            public val TYPE_URI: java.net.URI = java.net.URI(TYPE)
+            public val TYPE_URI: URI = URI(TYPE)
           }
         }
 
       """.trimIndent(),
-      accountNotFound.toString(),
+      buildString {
+        FileSpec.get("io.test.service", accountNotFound)
+          .writeTo(this)
+      }
     )
   }
-
 }

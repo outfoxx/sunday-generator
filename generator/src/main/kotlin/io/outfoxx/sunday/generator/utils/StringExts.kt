@@ -1,0 +1,56 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.outfoxx.sunday.generator.utils
+
+fun String.toLowercaseInitialWordOrAbbreviation(): String {
+  val builder = StringBuilder()
+  var needToLower = true
+  forEach {
+    if (needToLower && it.isLowerCase()) {
+      needToLower = false
+      builder.append(it)
+    } else {
+      builder.append(it.toLowerCase())
+    }
+  }
+  return builder.toString()
+}
+
+fun String.toUppercaseInitialWordOrAbbreviation(): String {
+  val builder = StringBuilder()
+  var needToUpper = true
+  forEach {
+    if (needToUpper && it.isUpperCase()) {
+      needToUpper = false
+      builder.append(it)
+    } else {
+      builder.append(it.toUpperCase())
+    }
+  }
+  return builder.toString()
+}
+
+fun String.toUpperCamelCase(): String = split('-', '_', '.').joinToString("") { it.capitalize() }
+
+fun String.toLowerCamelCase(): String = toUpperCamelCase().decapitalize()
+
+val camelRegex = """(?<=[a-zA-Z])[A-Z]""".toRegex()
+
+fun String.camelCaseToKebabCase() =
+  camelRegex.replace(this) { "-${it.value}" }
+    .toLowerCase()
+    .replace("a-p-i", "api")

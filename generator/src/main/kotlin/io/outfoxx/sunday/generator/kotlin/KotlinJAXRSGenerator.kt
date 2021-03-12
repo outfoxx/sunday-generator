@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
@@ -6,10 +22,12 @@ import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.Shape
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
@@ -22,18 +40,20 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
-import io.outfoxx.sunday.generator.defaultValueStr
-import io.outfoxx.sunday.generator.findBoolAnnotation
-import io.outfoxx.sunday.generator.mediaType
-import io.outfoxx.sunday.generator.method
-import io.outfoxx.sunday.generator.path
-import io.outfoxx.sunday.generator.payloads
-import io.outfoxx.sunday.generator.request
-import io.outfoxx.sunday.generator.requests
-import io.outfoxx.sunday.generator.resolve
-import io.outfoxx.sunday.generator.schema
-import io.outfoxx.sunday.generator.statusCode
-import io.outfoxx.sunday.generator.successes
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.utils.defaultValueStr
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.mediaType
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.resolve
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.statusCode
+import io.outfoxx.sunday.generator.utils.successes
+import java.net.URI
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.DefaultValue
@@ -72,9 +92,13 @@ class KotlinJAXRSGenerator(
   defaultMediaTypes,
 ) {
 
+  private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveResponseType = reactiveResponseType?.let { ClassName.bestGuess(it) }
 
-  override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+  override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
+
+    val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
+    typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
 
     if (defaultMediaTypes.isNotEmpty()) {
 
@@ -90,6 +114,27 @@ class KotlinJAXRSGenerator(
     }
 
     return typeBuilder
+  }
+
+  override fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+
+    if (typeRegistry.options.contains(JacksonAnnotations) && referencedProblemTypes.isNotEmpty()) {
+      typeBuilder.addType(
+        TypeSpec.companionObjectBuilder()
+          .addFunction(
+            FunSpec.builder("registerProblems")
+              .addParameter("mapper", ObjectMapper::class)
+              .addCode(
+                "mapper.registerSubtypes(⇥\n${referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" }}⇤\n)",
+                *referencedProblemTypes.values.toTypedArray()
+              )
+              .build()
+          )
+          .build()
+      )
+    }
+
+    return super.processServiceEnd(typeBuilder)
   }
 
   override fun processReturnType(
@@ -149,6 +194,8 @@ class KotlinJAXRSGenerator(
     functionBuilder: FunSpec.Builder
   ): FunSpec.Builder {
 
+    functionBuilder.addModifiers(KModifier.ABSTRACT)
+
     // Add @GET, @POST, @PUT, @DELETE to resource method
     val httpMethodAnnClass = httpMethod(operation.method)
     functionBuilder.addAnnotation(httpMethodAnnClass)
@@ -160,6 +207,36 @@ class KotlinJAXRSGenerator(
     functionBuilder.addAnnotation(pathAnn)
 
     return functionBuilder
+  }
+
+  private fun methodParameter(
+    parameterShape: Parameter,
+    parameterBuilder: ParameterSpec.Builder
+  ): ParameterSpec.Builder {
+
+    val builtParameter = parameterBuilder.build()
+
+    typeRegistry.applyUseSiteAnnotations(parameterShape.schema!!, builtParameter.type) {
+      parameterBuilder.addAnnotation(it)
+    }
+
+    // Add @DefaultValue (if provided)
+    val defaultValue = parameterShape.schema?.defaultValueStr
+    if (defaultValue != null) {
+      val newParameter =
+        ParameterSpec.builder(builtParameter.name, builtParameter.type.copy(nullable = false))
+          .addKdoc(builtParameter.kdoc)
+          .addAnnotations(builtParameter.annotations)
+          .addModifiers(builtParameter.modifiers)
+      newParameter.addAnnotation(
+        AnnotationSpec.builder(DefaultValue::class)
+          .addMember("value = %S", defaultValue)
+          .build()
+      )
+      return newParameter
+    }
+
+    return parameterBuilder
   }
 
   override fun processResourceMethodUriParameter(
@@ -174,25 +251,11 @@ class KotlinJAXRSGenerator(
     // Add @PathParam to URI parameters
     parameterBuilder.addAnnotation(
       AnnotationSpec.builder(PathParam::class)
-        .addMember("value = %S", parameter.kotlinIdentifierName)
+        .addMember("value = %S", parameter.name())
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodQueryParameter(
@@ -211,21 +274,7 @@ class KotlinJAXRSGenerator(
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodHeaderParameter(
@@ -244,21 +293,7 @@ class KotlinJAXRSGenerator(
         .build()
     )
 
-    typeRegistry.applyUseSiteAnnotations(parameter.schema!!, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
-
-    // Add @DefaultValue (if provided)
-    if (!parameter.schema?.defaultValueStr.isNullOrBlank()) {
-      parameterBuilder.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", parameter.schema?.defaultValueStr!!)
-          .build()
-      )
-    }
-
-    // Finalize
-    return parameterBuilder.build()
+    return methodParameter(parameter, parameterBuilder).build()
   }
 
   override fun processResourceMethodBodyParameter(
@@ -297,9 +332,12 @@ class KotlinJAXRSGenerator(
   override fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec {
+
+    referencedProblemTypes.putAll(problemTypes)
 
     if (generationMode == Server) {
       // Add async response parameter to asynchronous methods
@@ -325,7 +363,6 @@ class KotlinJAXRSGenerator(
             .addAnnotation(Context::class)
             .build()
         )
-
       }
 
       // Add UriInfo parameter to CREATED methods
@@ -353,5 +390,4 @@ class KotlinJAXRSGenerator(
       "PATCH" -> PATCH::class
       else -> throw IllegalStateException("Invalid HTTP method: $methodName")
     }
-
 }

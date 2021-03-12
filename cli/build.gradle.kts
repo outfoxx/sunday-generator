@@ -1,32 +1,22 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm")
   application
-  jacoco
   id("com.google.cloud.tools.jib")
+  id("com.github.johnrengelman.shadow")
 }
 
 val cliktVersion: String by project
+val slf4jVersion: String by project
 
 val junitVersion: String by project
 val hamcrestVersion: String by project
-
-configurations.compileClasspath {
-  resolutionStrategy {
-    force("org.scala-lang:scala-library:2.12.10")
-  }
-}
-
-repositories {
-  jcenter()
-}
 
 dependencies {
 
   implementation(project(":generator"))
 
   implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
+  implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
 
   //
   // TESTING
@@ -40,36 +30,12 @@ dependencies {
 
 }
 
-//kotlin {
-//  explicitApi()
-//}
-
-tasks {
-
-  withType<JavaCompile> {
-    options.compilerArgs.add("-parameters")
-  }
-
-  withType<KotlinCompile> {
-    kotlinOptions {
-      jvmTarget = "11"
-      javaParameters = true
-      freeCompilerArgs = freeCompilerArgs + "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    }
-  }
-
-  test {
-    useJUnitPlatform()
-  }
-
-}
-
 
 application {
   applicationName = "sunday-generator"
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
-
 
 jib {
   to {

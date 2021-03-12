@@ -1,14 +1,35 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Union Types Test")
 class RamlUnionTypesTest {
 
   @Test
@@ -22,16 +43,24 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        public interface Test {
-          public val any: kotlin.Any
+        package io.test
 
-          public val duplicate: kotlin.String
+        import kotlin.Any
+        import kotlin.String
+
+        public interface Test {
+          public val any: Any
+
+          public val duplicate: String
         
-          public val nullable: kotlin.String?
+          public val nullable: String?
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -46,12 +75,17 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
+        package io.test
+
         public interface Test {
-          public val value: io.test.Base
+          public val value: Base
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -66,12 +100,19 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+
         public interface Test {
-          public val value: kotlin.Any
+          public val value: Any
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 }

@@ -1,14 +1,35 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
+@DisplayName("[Kotlin] [RAML] Scalar Types Test")
 class RamlScalarTypesTest {
 
   @Test
@@ -22,20 +43,31 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.ByteArray
+        import kotlin.String
+        import kotlin.Unit
+
         public interface Test {
-          public val bool: kotlin.Boolean
+          public val bool: Boolean
 
-          public val string: kotlin.String
+          public val string: String
 
-          public val `file`: kotlin.ByteArray
+          public val `file`: ByteArray
 
-          public val any: kotlin.Any
+          public val any: Any
 
-          public val nil: kotlin.Unit
+          public val nil: Unit
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -50,24 +82,34 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import kotlin.Byte
+        import kotlin.Int
+        import kotlin.Long
+        import kotlin.Short
+
         public interface Test {
-          public val int8: kotlin.Byte
+          public val int8: Byte
 
-          public val int16: kotlin.Short
+          public val int16: Short
 
-          public val int32: kotlin.Int
+          public val int32: Int
 
-          public val int64: kotlin.Long
+          public val int64: Long
 
-          public val int: kotlin.Int
+          public val int: Int
 
-          public val long: kotlin.Long
+          public val long: Long
         
-          public val none: kotlin.Int
+          public val none: Int
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -82,16 +124,24 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        public interface Test {
-          public val float: kotlin.Float
-
-          public val double: kotlin.Double
+        package io.test
         
-          public val none: kotlin.Double
+        import kotlin.Double
+        import kotlin.Float
+
+        public interface Test {
+          public val float: Float
+
+          public val double: Double
+        
+          public val none: Double
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
 
@@ -106,19 +156,28 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        package io.test
+
+        import java.time.LocalDate
+        import java.time.LocalDateTime
+        import java.time.LocalTime
+        import java.time.OffsetDateTime
+
         public interface Test {
-          public val dateOnly: java.time.LocalDate
+          public val dateOnly: LocalDate
         
-          public val timeOnly: java.time.LocalTime
+          public val timeOnly: LocalTime
         
-          public val dateTimeOnly: java.time.LocalDateTime
+          public val dateTimeOnly: LocalDateTime
         
-          public val dateTime: java.time.OffsetDateTime
+          public val dateTime: OffsetDateTime
         }
         
       """.trimIndent(),
-      typeSpec.toString()
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
     )
   }
-
 }

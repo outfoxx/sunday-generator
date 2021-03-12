@@ -1,0 +1,26 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.kotlinModelPackage): io.explicit.test
+(sunday.kotlinModelPackage:client): io.explicit.test.client
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value:
+        type: string
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

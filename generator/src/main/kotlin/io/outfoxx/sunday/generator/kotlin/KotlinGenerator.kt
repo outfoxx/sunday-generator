@@ -1,10 +1,26 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.BaseUnit
 import amf.client.model.document.Document
 import amf.client.model.document.EncodesModel
-import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.CustomizableElement
+import amf.client.model.domain.DataNode
 import amf.client.model.domain.EndPoint
 import amf.client.model.domain.ObjectNode
 import amf.client.model.domain.Operation
@@ -12,16 +28,18 @@ import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
+import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
-import io.outfoxx.sunday.generator.APIAnnotationName.JavaPkg
+import com.squareup.kotlinpoet.asTypeName
+import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
@@ -29,35 +47,40 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.allUnits
-import io.outfoxx.sunday.generator.api
-import io.outfoxx.sunday.generator.defaultValue
-import io.outfoxx.sunday.generator.description
-import io.outfoxx.sunday.generator.encodes
-import io.outfoxx.sunday.generator.endPoints
-import io.outfoxx.sunday.generator.failures
-import io.outfoxx.sunday.generator.findAnnotation
-import io.outfoxx.sunday.generator.findStringAnnotation
-import io.outfoxx.sunday.generator.headers
-import io.outfoxx.sunday.generator.method
-import io.outfoxx.sunday.generator.objectValue
-import io.outfoxx.sunday.generator.operations
-import io.outfoxx.sunday.generator.parameters
-import io.outfoxx.sunday.generator.path
-import io.outfoxx.sunday.generator.payloads
-import io.outfoxx.sunday.generator.queryParameters
-import io.outfoxx.sunday.generator.request
-import io.outfoxx.sunday.generator.requests
-import io.outfoxx.sunday.generator.required
-import io.outfoxx.sunday.generator.root
-import io.outfoxx.sunday.generator.schema
-import io.outfoxx.sunday.generator.servers
-import io.outfoxx.sunday.generator.statusCode
-import io.outfoxx.sunday.generator.stringValue
-import io.outfoxx.sunday.generator.successes
-import io.outfoxx.sunday.generator.url
-import io.outfoxx.sunday.generator.value
-import io.outfoxx.sunday.generator.values
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.utils.allUnits
+import io.outfoxx.sunday.generator.utils.api
+import io.outfoxx.sunday.generator.utils.defaultValue
+import io.outfoxx.sunday.generator.utils.description
+import io.outfoxx.sunday.generator.utils.encodes
+import io.outfoxx.sunday.generator.utils.endPoints
+import io.outfoxx.sunday.generator.utils.failures
+import io.outfoxx.sunday.generator.utils.findAnnotation
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.headers
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.objectValue
+import io.outfoxx.sunday.generator.utils.operations
+import io.outfoxx.sunday.generator.utils.parameters
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.queryParameters
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.root
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.servers
+import io.outfoxx.sunday.generator.utils.statusCode
+import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.successes
+import io.outfoxx.sunday.generator.utils.url
+import io.outfoxx.sunday.generator.utils.variables
+import io.outfoxx.sunday.generator.utils.version
 import java.net.URI
 import java.net.URISyntaxException
 import javax.ws.rs.core.Response.Status.NO_CONTENT
@@ -73,6 +96,8 @@ abstract class KotlinGenerator(
   defaultMediaTypes: List<String>,
 ) : Generator(document.api, defaultMediaTypes) {
 
+  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
+
   protected val generationMode get() = typeRegistry.generationMode
 
   override fun generateServiceTypes() {
@@ -83,7 +108,7 @@ abstract class KotlinGenerator(
     endPointGroups.map { (groupName, endPoints) ->
 
       val servicePackageName =
-        api.findStringAnnotation(JavaPkg, generationMode)
+        api.findStringAnnotation(KotlinPkg, generationMode)
           ?: defaultServicePackageName
 
       val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
@@ -94,21 +119,18 @@ abstract class KotlinGenerator(
 
       typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
     }
-
   }
 
   open fun generateServiceType(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
-    var serviceTypeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
-
-    serviceTypeBuilder = processServiceBegin(endPoints, serviceTypeBuilder)
+    val serviceTypeBuilder = processServiceBegin(serviceTypeName, endPoints)
 
     generateClientServiceMethods(serviceTypeName, serviceTypeBuilder, endPoints)
 
     return processServiceEnd(serviceTypeBuilder)
   }
 
-  abstract fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: TypeSpec.Builder): TypeSpec.Builder
+  abstract fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder
 
   abstract fun processResourceMethodStart(
     endPoint: EndPoint,
@@ -166,11 +188,25 @@ abstract class KotlinGenerator(
   abstract fun processResourceMethodEnd(
     endPoint: EndPoint,
     operation: Operation,
+    problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec
 
   open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
+
+    val companion = (typeBuilder.tags[TypeSpec.Builder::class] as TypeSpec.Builder).build()
+    if (
+      companion.superinterfaces.isNotEmpty() ||
+      companion.enumConstants.isNotEmpty() ||
+      companion.propertySpecs.isNotEmpty() ||
+      companion.funSpecs.isNotEmpty() ||
+      companion.typeSpecs.isNotEmpty() ||
+      companion.initializerBlock.isNotEmpty()
+    ) {
+      typeBuilder.addType(companion)
+    }
+
     return typeBuilder
   }
 
@@ -193,7 +229,7 @@ abstract class KotlinGenerator(
 
         var functionBuilder =
           FunSpec.builder(operationName)
-            .addModifiers(KModifier.ABSTRACT)
+            .returns(Unit::class)
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())
 
@@ -218,7 +254,6 @@ abstract class KotlinGenerator(
               KotlinResolutionContext(
                 document,
                 typeName.nestedClass("${operation.kotlinTypeName}RequestBody"),
-                null
               )
 
             val requestBodyParameterTypeName =
@@ -228,7 +263,7 @@ abstract class KotlinGenerator(
 
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
-                functionBuilderNameAllocator.newName("body"),
+                functionBuilderNameAllocator.newName("body", payloadSchema),
                 requestBodyParameterTypeName
               )
 
@@ -244,7 +279,6 @@ abstract class KotlinGenerator(
 
             functionBuilder.addParameter(requestBodyParameterSpec)
           }
-
         }
 
         operation.successes.forEach { response ->
@@ -256,7 +290,6 @@ abstract class KotlinGenerator(
               KotlinResolutionContext(
                 document,
                 typeName.nestedClass("${operation.kotlinTypeName}ResponseBody"),
-                null
               )
 
             val responseBodyTypeName = typeRegistry.resolveTypeName(responseBodyType, responseBodyTypeNameContext)
@@ -275,7 +308,6 @@ abstract class KotlinGenerator(
             if (processedResponseBodyTypeName != UNIT) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }
-
           } else {
 
             val processedResponseBodyTypeName =
@@ -291,30 +323,35 @@ abstract class KotlinGenerator(
           val bodyType = response.payloads.firstOrNull()?.schema
           if (bodyType != null) {
 
-            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null, null))
+            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null))
           }
-
         }
 
-        val problemsAnn = operation.findAnnotation(Problems, generationMode) as? ArrayNode
-        if (problemsAnn != null) {
+        val responseProblemTypes =
+          operation.findArrayAnnotation(Problems, null)?.let { problems ->
 
-          val referencedProblemCodes = problemsAnn.values<ScalarNode>().mapNotNull { it.value }
+            val referencedProblemCodes = problems.mapNotNull { it.stringValue }
+            val referencedProblemTypes =
+              referencedProblemCodes
+                .map { problemCode ->
+                  val problemType = problemTypes[problemCode] ?: error("Unknown problem code referenced: $problemCode")
+                  problemCode to problemType
+                }
+                .toMap()
 
+            referencedProblemTypes
+              .map { (problemCode, problemTypeDefinition) ->
+                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+              }
+              .toMap()
+          } ?: emptyMap()
 
-          problemTypes.filter { referencedProblemCodes.contains(it.key) }
-            .forEach { (problemCode, problemTypeDefinition) ->
-              typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
-            }
-        }
-
-        val functionSpec = processResourceMethodEnd(endPoint, operation, typeBuilder, functionBuilder)
+        val functionSpec =
+          processResourceMethodEnd(endPoint, operation, responseProblemTypes, typeBuilder, functionBuilder)
 
         typeBuilder.addFunction(functionSpec)
       }
-
     }
-
   }
 
   private fun generateClientServiceMethodUriParameters(
@@ -331,20 +368,30 @@ abstract class KotlinGenerator(
         KotlinResolutionContext(
           document,
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}UriParam"),
-          null
         )
 
-      var uriParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
-
-      uriParameterTypeName = uriParameterTypeName.copy(nullable = parameter.required != true)
+      val uriParameterTypeName =
+        typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
+          .run {
+            if (parameter.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
       val uriParameterBuilder =
         ParameterSpec.builder(
-          functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName),
+          functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
           uriParameterTypeName
         )
+
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        uriParameterBuilder.defaultValue(defaultValue.kotlinConstant(uriParameterTypeName, parameter.schema))
+      }
 
       val uriParameterSpec =
         processResourceMethodUriParameter(
@@ -378,32 +425,39 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}QueryParam")
         )
 
-      var queryParameterTypeName = typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
-
-      queryParameterTypeName = queryParameterTypeName.copy(nullable = parameter.required != true)
-
-      if (parameter.schema?.defaultValue != null) {
-        queryParameterTypeName = queryParameterTypeName.copy(nullable = false)
-      }
+      val queryParameterTypeName =
+        typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
+          .run {
+            if (parameter.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName),
+      val queryParameterBuilder = ParameterSpec.builder(
+        functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
         queryParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = parameter.schema?.defaultValue
+      if (defaultValue != null) {
+        queryParameterBuilder.defaultValue(defaultValue.kotlinConstant(queryParameterTypeName, parameter.schema))
+      }
+
+      val queryParameterSpec =
         processResourceMethodQueryParameter(
           endPoint,
           operation,
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          queryParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(queryParameterSpec)
     }
   }
 
@@ -425,33 +479,44 @@ abstract class KotlinGenerator(
           typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam")
         )
 
-      var headerParameterTypeName = typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
-
-      headerParameterTypeName = headerParameterTypeName.copy(nullable = header.required != true)
-
-      if (header.schema?.defaultValue != null) {
-        headerParameterTypeName = headerParameterTypeName.copy(nullable = false)
-      }
+      val headerParameterTypeName =
+        typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
+          .run {
+            if (header.required == false) {
+              copy(nullable = true)
+            } else {
+              this
+            }
+          }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(header.kotlinIdentifierName),
+      val headerParameterBuilder = ParameterSpec.builder(
+        functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
         headerParameterTypeName
       )
 
-      val uriParameterSpec =
+      val defaultValue = header.schema?.defaultValue
+      if (defaultValue != null) {
+        headerParameterBuilder.defaultValue(defaultValue.kotlinConstant(headerParameterTypeName, header.schema))
+      }
+
+      val headerParameterSpec =
         processResourceMethodHeaderParameter(
           endPoint,
           operation,
           header,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          headerParameterBuilder
         )
 
-      functionBuilder.addParameter(uriParameterSpec)
+      functionBuilder.addParameter(headerParameterSpec)
     }
+  }
+
+  fun resolveTypeName(shape: Shape, suggestedTypeName: ClassName?): TypeName {
+    return typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -498,4 +563,35 @@ abstract class KotlinGenerator(
       .toMap()
   }
 
+  fun getBaseURIInfo(): Pair<String, List<URIParameter>>? {
+
+    val server = document.api.servers.firstOrNull() ?: return null
+
+    val documentPackageName =
+      document.api.findStringAnnotation(APIAnnotationName.KotlinModelPkg, generationMode)
+        ?: typeRegistry.defaultModelPackageName
+
+    val parameters =
+      server.variables
+        .mapIndexed { idx, variable ->
+
+          val name = variable.name ?: "uriParameter$idx"
+
+          val variableTypeName =
+            variable.schema?.let {
+              val suggestedName = "${variable.name?.kotlinTypeName}URIParameter"
+              resolveTypeName(it, ClassName(documentPackageName, suggestedName))
+            } ?: String::class.asTypeName()
+
+          val defaultValue =
+            if (variable.name == "version")
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+            else
+              variable.schema?.defaultValue
+
+          URIParameter(name, variableTypeName, variable.schema, defaultValue)
+        }
+
+    return server.url to parameters
+  }
 }
