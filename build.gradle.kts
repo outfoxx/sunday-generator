@@ -131,3 +131,23 @@ subprojects {
   }
 
 }
+
+
+//
+// DOCS
+//
+
+tasks {
+  dokkaHtmlMultiModule.configure {
+    val docDir = buildDir.resolve("dokka/$releaseVersion")
+    outputDirectory.set(docDir)
+    doLast {
+      copy {
+        into(docDir)
+        from("generator/src/main/resources") {
+          include("sunday.raml")
+        }
+      }
+    }
+  }
+}

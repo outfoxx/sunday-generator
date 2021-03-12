@@ -20,11 +20,11 @@ jobs:
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk8-build-test
-        arguments: dokkaHtml
+        arguments: dokkaHtmlMultiModule
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0
       with:
         branch: gh-pages
         clean: false
-        folder: build/javadoc
+        folder: build/dokka/
