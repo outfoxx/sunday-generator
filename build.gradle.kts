@@ -32,20 +32,17 @@ subprojects {
 
   repositories {
     mavenLocal()
+    mavenCentral()
     maven {
       setUrl("https://oss.sonatype.org/content/repositories/snapshots/")
     }
+    jcenter()
     maven {
       setUrl("https://repository-master.mulesoft.org/nexus/content/repositories/releases")
     }
     maven {
-      setUrl("https://repository-master.mulesoft.org/nexus/content/repositories/snapshots")
-    }
-    maven {
       setUrl("https://jitpack.io")
     }
-    mavenCentral()
-    jcenter()
   }
 
 
