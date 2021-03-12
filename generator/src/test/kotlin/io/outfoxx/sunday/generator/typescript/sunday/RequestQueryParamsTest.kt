@@ -115,8 +115,13 @@ class RequestQueryParamsTest {
               public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
-          fetchTest(obj: Test | undefined = undefined, str: string | undefined = undefined,
-              int: number | null = null): Observable<Test> {
+          fetchTest(
+              obj: Test | undefined = undefined,
+              str: string | undefined = undefined,
+              int: number | null = null,
+              def1: string | undefined = undefined,
+              def2: number | null | undefined = undefined
+          ): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -124,7 +129,9 @@ class RequestQueryParamsTest {
                   queryParameters: {
                     obj,
                     str,
-                    int
+                    int,
+                    def1: def1 ?? 'test',
+                    def2: def2 ?? 10
                   },
                   acceptTypes: this.defaultAcceptTypes
                 },

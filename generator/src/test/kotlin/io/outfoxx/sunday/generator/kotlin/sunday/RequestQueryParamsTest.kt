@@ -119,14 +119,18 @@ class RequestQueryParamsTest {
           public suspend fun fetchTest(
             obj: Test? = null,
             str: String? = null,
-            int: Int? = null
+            int: Int? = null,
+            def1: String? = "test",
+            def2: Int? = 10
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests",
             queryParameters = mapOf(
               "obj" to obj,
               "str" to str,
-              "int" to int
+              "int" to int,
+              "def1" to def1,
+              "def2" to def2
             ),
             acceptTypes = this.defaultAcceptTypes
           )

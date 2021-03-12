@@ -134,7 +134,9 @@ class RequestHeaderParamsTest {
           func fetchTest(
             obj: Test? = nil,
             str: String? = nil,
-            int: Int? = nil
+            int: Int? = nil,
+            def1: String? = "test",
+            def2: Int? = 10
           ) -> RequestResultPublisher<Test> {
             return self.requestFactory.result(
               method: .get,
@@ -145,9 +147,11 @@ class RequestHeaderParamsTest {
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: [
-                "obj": obj,
-                "str": str,
-                "int": int
+                "obj": obj as Any,
+                "str": str as Any,
+                "int": int as Any,
+                "def1": def1 as Any,
+                "def2": def2 as Any
               ]
             )
           }

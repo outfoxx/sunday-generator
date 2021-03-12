@@ -179,17 +179,25 @@ class RequestUriParamsTest {
               public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
-          fetchTest(def: string, obj: Test | undefined = undefined, str: string | undefined = undefined,
-              int: number | null = null): Observable<Test> {
+          fetchTest(
+              def2: number | null | undefined = undefined,
+              obj: Test | undefined = undefined,
+              str: string | undefined = undefined,
+              def1: string | undefined = undefined,
+              int: number | null = null,
+              def: string
+          ): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
-                  pathTemplate: '/tests/{obj}/{str}/{int}/{def}',
+                  pathTemplate: '/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}',
                   pathParameters: {
-                    def,
+                    def2: def2 ?? 10,
                     obj,
                     str,
-                    int
+                    def1: def1 ?? 'test',
+                    int,
+                    def
                   },
                   acceptTypes: this.defaultAcceptTypes
                 },

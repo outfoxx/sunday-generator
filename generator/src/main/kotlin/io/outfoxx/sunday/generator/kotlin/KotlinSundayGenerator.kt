@@ -258,7 +258,7 @@ class KotlinSundayGenerator(
     val parameter = parameterBuilder.build()
 
     val type = parameter.type
-    if (type.isNullable) {
+    if (type.isNullable && parameterBuilder.build().defaultValue == null) {
       parameterBuilder.defaultValue(CodeBlock.of("null"))
     }
 
@@ -377,20 +377,11 @@ class KotlinSundayGenerator(
     fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
       val parametersBlock = CodeBlock.builder().add("%L = mapOf(⇥\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
-        val (param, paramType) = parameterInfo
+        val (param) = parameterInfo
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
-        if (paramType.isNullable && (param.schema?.defaultValue != null || param.allowEmptyValue == true)) {
-          parametersBlock.add(
-            "%S to (%L ?: %L)",
-            origName,
-            paramName,
-            param.schema?.defaultValue?.kotlinConstant(paramType, param.schema) ?: "null"
-          )
-        } else {
-          parametersBlock.add("%S to %L", origName, paramName)
-        }
+        parametersBlock.add("%S to %L", origName, paramName)
 
         if (idx < parameters.size - 1) {
           parametersBlock.add(",\n")

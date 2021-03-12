@@ -208,19 +208,23 @@ class RequestUriParamsTest {
           }
 
           func fetchTest(
-            def: String,
+            def2: Int? = 10,
             obj: Test? = nil,
             str: String? = nil,
-            int: Int? = nil
+            def1: String? = "test",
+            int: Int? = nil,
+            def: String
           ) -> RequestResultPublisher<Test> {
             return self.requestFactory.result(
               method: .get,
-              pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
+              pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
               pathParameters: [
-                "def": def,
-                "obj": obj,
-                "str": str,
-                "int": int
+                "def2": def2 as Any,
+                "obj": obj as Any,
+                "str": str as Any,
+                "def1": def1 as Any,
+                "int": int as Any,
+                "def": def
               ],
               queryParameters: nil,
               body: nil as Empty?,

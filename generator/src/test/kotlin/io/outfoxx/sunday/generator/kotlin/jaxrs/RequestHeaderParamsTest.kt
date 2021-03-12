@@ -102,6 +102,7 @@ class RequestHeaderParamsTest {
 
         import io.test.Test
         import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
         import javax.ws.rs.GET
         import javax.ws.rs.HeaderParam
         import javax.ws.rs.Path
@@ -118,7 +119,9 @@ class RequestHeaderParamsTest {
           public fun fetchTest(
             @HeaderParam(value = "obj") obj: Test?,
             @HeaderParam(value = "str") str: String?,
-            @HeaderParam(value = "int") int: Int?
+            @HeaderParam(value = "int") int: Int?,
+            @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
+            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int
           ): Response
         }
 
@@ -158,6 +161,7 @@ class RequestHeaderParamsTest {
         import io.test.Test
         import javax.validation.Valid
         import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
         import javax.ws.rs.GET
         import javax.ws.rs.HeaderParam
         import javax.ws.rs.Path
@@ -174,7 +178,9 @@ class RequestHeaderParamsTest {
           public fun fetchTest(
             @HeaderParam(value = "obj") @Valid obj: Test?,
             @HeaderParam(value = "str") str: String?,
-            @HeaderParam(value = "int") int: Int?
+            @HeaderParam(value = "int") int: Int?,
+            @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
+            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int
           ): Response
         }
 

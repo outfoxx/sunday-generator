@@ -19,6 +19,12 @@ types:
       obj?: Test
       str?: string
       int: integer | nil
+      def1?:
+        type: string
+        default: test
+      def2:
+        type: integer | nil
+        default: 10
     responses:
       200:
         body:

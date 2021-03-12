@@ -134,16 +134,20 @@ class RequestQueryParamsTest {
           func fetchTest(
             obj: Test? = nil,
             str: String? = nil,
-            int: Int? = nil
+            int: Int? = nil,
+            def1: String? = "test",
+            def2: Int? = 10
           ) -> RequestResultPublisher<Test> {
             return self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: [
-                "obj": obj,
-                "str": str,
-                "int": int
+                "obj": obj as Any,
+                "str": str as Any,
+                "int": int as Any,
+                "def1": def1 as Any,
+                "def2": def2 as Any
               ],
               body: nil as Empty?,
               contentTypes: nil,

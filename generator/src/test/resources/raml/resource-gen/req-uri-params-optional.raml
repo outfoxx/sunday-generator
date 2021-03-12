@@ -12,11 +12,17 @@ types:
       value2: integer
 
 
-/tests/{obj}/{str}/{int}/{def}:
+/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}:
   uriParameters:
     obj?: Test
     str?: string
     int: integer | nil
+    def1?:
+      type: string
+      default: test
+    def2:
+      type: integer | nil
+      default: 10
   get:
     displayName: fetchTest
     responses:

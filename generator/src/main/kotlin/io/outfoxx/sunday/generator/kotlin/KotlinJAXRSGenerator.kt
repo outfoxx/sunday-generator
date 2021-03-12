@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.defaultValue
+import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -206,7 +207,7 @@ class KotlinJAXRSGenerator(
     }
 
     // Add @DefaultValue (if provided)
-    val defaultValue = parameterShape.schema?.defaultValue
+    val defaultValue = parameterShape.schema?.defaultValueStr
     if (defaultValue != null) {
       val newParameter =
         ParameterSpec.builder(builtParameter.name, builtParameter.type.copy(nullable = false))
@@ -215,7 +216,7 @@ class KotlinJAXRSGenerator(
           .addModifiers(builtParameter.modifiers)
       newParameter.addAnnotation(
         AnnotationSpec.builder(DefaultValue::class)
-          .addMember("value = %S", defaultValue.kotlinConstant(builtParameter.type, parameterShape.schema))
+          .addMember("value = %S", defaultValue)
           .build()
       )
       return newParameter

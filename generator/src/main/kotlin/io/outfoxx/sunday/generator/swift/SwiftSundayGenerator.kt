@@ -269,7 +269,7 @@ class SwiftSundayGenerator(
     val parameter = parameterBuilder.build()
 
     val type = parameter.type
-    if (type.optional) {
+    if (type.optional && parameterBuilder.build().defaultValue == null) {
       parameterBuilder.defaultValue(CodeBlock.of("nil"))
     }
 
@@ -392,15 +392,9 @@ class SwiftSundayGenerator(
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
-        if (paramType.optional && (param.schema?.defaultValue != null || param.allowEmptyValue == true)) {
-          parametersBlock.add(
-            "%S: %L ?? %L",
-            origName,
-            paramName,
-            param.schema?.defaultValue?.swiftConstant(paramType, param.schema) ?: "nil"
-          )
-        } else {
-          parametersBlock.add("%S: %L", origName, paramName)
+        parametersBlock.add("%S: %L", origName, paramName)
+        if (paramType.optional) {
+          parametersBlock.add(" as Any")
         }
 
         if (idx < parameters.size - 1) {

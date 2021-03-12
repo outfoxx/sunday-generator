@@ -183,18 +183,22 @@ class RequestUriParamsTest {
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
         ) {
           public suspend fun fetchTest(
-            def: String,
+            def2: Int? = 10,
             obj: Test? = null,
             str: String? = null,
-            int: Int? = null
+            def1: String? = "test",
+            int: Int? = null,
+            def: String
           ): Test = this.requestFactory.result(
             method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str}/{int}/{def}",
+            pathTemplate = "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
             pathParameters = mapOf(
-              "def" to def,
+              "def2" to def2,
               "obj" to obj,
               "str" to str,
-              "int" to int
+              "def1" to def1,
+              "int" to int,
+              "def" to def
             ),
             acceptTypes = this.defaultAcceptTypes
           )
