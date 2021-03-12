@@ -17,5 +17,6 @@ rootProject.name = "sunday-generator"
 
 include(
   "generator",
-  "cli"
+  "cli",
+  "gradle-plugin"
 )
