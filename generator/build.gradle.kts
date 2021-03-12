@@ -54,11 +54,11 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
-  implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
-
   //
   // TESTING
   //
+
+  testImplementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
   testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")

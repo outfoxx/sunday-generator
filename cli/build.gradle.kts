@@ -10,6 +10,7 @@ plugins {
 }
 
 val cliktVersion: String by project
+val slf4jVersion: String by project
 
 val junitVersion: String by project
 val hamcrestVersion: String by project
@@ -29,6 +30,7 @@ dependencies {
   implementation(project(":generator"))
 
   implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
+  implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
 
   //
   // TESTING
