@@ -59,8 +59,17 @@ class GradlePluginTests {
       }
 
       repositories {
-        mavenLocal()
         mavenCentral()
+        maven {
+          url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+        jcenter()
+        maven {
+          url = "https://repository-master.mulesoft.org/nexus/content/repositories/releases"
+        }
+        maven {
+          url = "https://jitpack.io"
+        }
       }
 
       sundayGenerations {
