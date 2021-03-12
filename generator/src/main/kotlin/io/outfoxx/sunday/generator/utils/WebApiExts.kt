@@ -457,7 +457,8 @@ val NodeShape.additionalPropertiesSchema: Shape? get() = this.additionalProperti
 val NodeShape.dependencies: List<PropertyDependencies> get() = this.dependencies()
 val NodeShape.propertyNames: Shape? get() = this.propertyNames()
 
-val NodeShape.properties: List<PropertyShape> get() = this.properties().filterNot { it.name?.contains("/") ?: false }
+val NodeShape.properties: List<PropertyShape> get() =
+  this.properties().filter { it.patternName == null }
 
 val NodeShape.isReferenceNode: Boolean get() =
   inherits.size == 1 && dependencies.isEmpty() &&
