@@ -227,7 +227,7 @@ class KotlinTypeRegistry(
       )
     }
 
-    serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Client)
+    serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
       error("Service type '$className' is already defined")

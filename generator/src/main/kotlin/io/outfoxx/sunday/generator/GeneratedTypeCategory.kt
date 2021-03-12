@@ -1,6 +1,6 @@
 package io.outfoxx.sunday.generator
 
 enum class GeneratedTypeCategory {
-  Client,
+  Service,
   Model
 }
