@@ -35,8 +35,8 @@ jobs:
         job-id: jdk8-build-test
         arguments: build publish -x test
         properties: |
-          ossrhUsername=${{ secrets.OSSRH_USER }}
-          ossrhPassword=${{ secrets.OSSRH_PASS }}
+          github.user=${GITHUB_ACTOR}
+          github.token=${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0
