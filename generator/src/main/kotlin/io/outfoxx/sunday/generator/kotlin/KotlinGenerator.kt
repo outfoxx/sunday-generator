@@ -22,6 +22,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
+import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
@@ -556,6 +557,10 @@ abstract class KotlinGenerator(
 
     val server = document.api.servers.firstOrNull() ?: return null
 
+    val documentPackageName =
+      document.api.findStringAnnotation(APIAnnotationName.KotlinModelPkg, generationMode)
+        ?: typeRegistry.defaultModelPackageName
+
     val parameters =
       server.variables
         .mapIndexed { idx, variable ->
@@ -564,8 +569,8 @@ abstract class KotlinGenerator(
 
           val variableTypeName =
             variable.schema?.let {
-              val suggestedName = variable.name?.kotlinTypeName ?: "URIParameter$idx"
-              resolveTypeName(it, ClassName.bestGuess(suggestedName))
+              val suggestedName = "${variable.name?.kotlinTypeName}URIParameter"
+              resolveTypeName(it, ClassName(documentPackageName, suggestedName))
             } ?: String::class.asTypeName()
 
           val defaultValue =

@@ -1,5 +1,6 @@
 package io.outfoxx.sunday.generator.kotlin.sunday
 
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
@@ -9,6 +10,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -42,11 +44,11 @@ class BaseUriTest {
       """
         package io.test.service
 
-        import Environment
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.URITemplate
         import io.outfoxx.sunday.http.Method
+        import io.test.EnvironmentURIParameter
         import kotlin.String
         import kotlin.collections.List
 
@@ -64,7 +66,7 @@ class BaseUriTest {
           public companion object {
             public fun baseURL(
               server: String = "master",
-              environment: Environment = Environment.Sbx,
+              environment: EnvironmentURIParameter = EnvironmentURIParameter.Sbx,
               version: String = "1"
             ): URITemplate = URITemplate(
               "http://{server}.{environment}.example.com/api/{version}",
@@ -79,6 +81,9 @@ class BaseUriTest {
           .writeTo(this)
       }
     )
+
+    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.EnvironmentURIParameter")]
+    assertNotNull(envTypeSpec)
 
   }
 

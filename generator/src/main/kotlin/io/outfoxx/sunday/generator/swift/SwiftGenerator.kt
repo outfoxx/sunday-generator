@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
@@ -543,7 +544,7 @@ abstract class SwiftGenerator(
 
           val variableTypeName =
             variable.schema?.let {
-              val suggestedName = variable.name?.swiftTypeName ?: "URIParameter$idx"
+              val suggestedName = "${variable.name?.kotlinTypeName}URIParameter"
               resolveTypeName(it, DeclaredTypeName.typeName(".${suggestedName}"))
             } ?: STRING
 
