@@ -1,8 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm")
-  jacoco
+  `java-library`
 }
 
 val slf4jVersion: String by project
@@ -69,29 +67,5 @@ dependencies {
   testImplementation("com.github.docker-java:docker-java-core:$dockerJavaVersion")
   testImplementation("com.github.docker-java:docker-java-transport-httpclient5:$dockerJavaVersion")
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
-
-}
-
-//kotlin {
-//  explicitApi()
-//}
-
-tasks {
-
-  withType<JavaCompile> {
-    options.compilerArgs.add("-parameters")
-  }
-
-  withType<KotlinCompile> {
-    kotlinOptions {
-      jvmTarget = "11"
-      javaParameters = true
-      freeCompilerArgs = freeCompilerArgs + "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    }
-  }
-
-  test {
-    useJUnitPlatform()
-  }
 
 }

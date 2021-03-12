@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:Suppress("DuplicatedCode")
 
 package io.outfoxx.sunday.generator.swift
@@ -583,7 +599,7 @@ class SwiftTypeRegistry(
 
         discriminatorProperty =
           (originalInheritedProperties + originalLocalProperties).find { it.name == discriminatorPropertyName }
-            ?: error("Discriminator property '${discriminatorPropertyName}' not found")
+          ?: error("Discriminator property '$discriminatorPropertyName' not found")
 
         val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
         val discriminatorPropertyTypeEnumCases =
@@ -730,7 +746,6 @@ class SwiftTypeRegistry(
           } else {
             discriminatorProperty = null
           }
-
         } else {
 
           // Add concrete discriminator for leaf of the discriminated tree
@@ -760,7 +775,6 @@ class SwiftTypeRegistry(
           }
 
           typeBuilder.addProperty(discriminatorBuilder.build())
-
         }
       }
 
@@ -848,25 +862,21 @@ class SwiftTypeRegistry(
           }
 
           decoderPost = "${if (propertyTypeName.optional) "?" else ""}.value"
-
         } else if (refCollection != propertyTypeName) {
 
           propertyTypeName = refCollection
           decoderPost = "${if (propertyTypeName.optional) "?" else ""}.mapValues { $0.value }"
           encoderPre = "${if (propertyTypeName.optional) "?" else ""}.mapValues { ${refElement.name}(value: $0) }"
-
         } else if (propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL) {
 
           propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
           decoderPost = "${if (propertyTypeName.optional) "?" else ""}.mapValues { $0.unwrapped }"
           encoderPre = "${if (propertyTypeName.optional) "?" else ""}.mapValues { try AnyValue.wrapped($0) }"
-
         } else if (propertyTypeName == ARRAY_ANY || propertyTypeName == ARRAY_ANY_OPTIONAL) {
 
           propertyTypeName = ARRAY.parameterizedBy(ANY_VALUE)
           decoderPost = "${if (propertyTypeName.optional) "?" else ""}.map { $0.unwrapped }"
           encoderPre = "${if (propertyTypeName.optional) "?" else ""}.map { try AnyValue.wrapped($0) }"
-
         } else if (propertyTypeName.unwrapOptional() == ANY) {
 
           propertyTypeName = ANY_VALUE
@@ -901,7 +911,7 @@ class SwiftTypeRegistry(
           val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, null)!!
           val externalDiscriminatorProperty =
             (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
-              ?: error("(${ExternalDiscriminator}) property '${externalDiscriminator}' is not valid")
+              ?: error("($ExternalDiscriminator) property '$externalDiscriminator' is not valid")
           val externalDiscriminatorPropertyName = externalDiscriminatorProperty.swiftIdentifierName
           val externalDiscriminatorPropertyTypeName =
             resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
@@ -910,7 +920,7 @@ class SwiftTypeRegistry(
           val propertyTypeDerivedShapes = context.unit.findInheritingTypes(prop.range)
 
           if (externalDiscriminatorProperty.optional && prop.required) {
-            error("(${ExternalDiscriminator}) property is not required but the property it discriminates is")
+            error("($ExternalDiscriminator) property is not required but the property it discriminates is")
           }
 
           val switchOn =
@@ -996,7 +1006,6 @@ class SwiftTypeRegistry(
             decoderInitFunctionBuilder.endControlFlow("if")
             encoderFunctionBuilder.endControlFlow("if")
           }
-
         }
 
       if (!isRoot) {
@@ -1068,7 +1077,6 @@ class SwiftTypeRegistry(
           )
 
           typeBuilder.addProperty(propertyBuilder.build())
-
         } else {
 
           // Add public field
@@ -1126,7 +1134,6 @@ class SwiftTypeRegistry(
 
       typeBuilder.addFunction(decoderInitFunction)
       typeBuilder.addFunction(encoderFunction)
-
 
       // Add fluent builders
       //
@@ -1192,7 +1199,6 @@ class SwiftTypeRegistry(
             OPTIONAL, propertyDecl.swiftIdentifierName
           )
         )
-
       }
 
       patchClassBuilder.addFunction(patchClassConsBuilder.build())
@@ -1299,13 +1305,10 @@ class SwiftTypeRegistry(
         ?: error("Nested annotation is missing name")
 
       nestedEnclosingTypeName.nestedType(nestedName)
-
     } else {
 
       DeclaredTypeName.typeName(".${shape.swiftTypeName}")
-
     }
-
   }
 
   private fun replaceCollectionValueTypesWithReferenceTypes(typeName: TypeName): Pair<TypeName, TypeName> {

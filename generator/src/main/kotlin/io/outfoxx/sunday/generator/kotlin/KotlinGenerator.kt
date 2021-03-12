@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.BaseUnit
@@ -103,7 +119,6 @@ abstract class KotlinGenerator(
 
       typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
     }
-
   }
 
   open fun generateServiceType(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
@@ -264,7 +279,6 @@ abstract class KotlinGenerator(
 
             functionBuilder.addParameter(requestBodyParameterSpec)
           }
-
         }
 
         operation.successes.forEach { response ->
@@ -294,7 +308,6 @@ abstract class KotlinGenerator(
             if (processedResponseBodyTypeName != UNIT) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }
-
           } else {
 
             val processedResponseBodyTypeName =
@@ -312,7 +325,6 @@ abstract class KotlinGenerator(
 
             typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null))
           }
-
         }
 
         val responseProblemTypes =
@@ -339,9 +351,7 @@ abstract class KotlinGenerator(
 
         typeBuilder.addFunction(functionSpec)
       }
-
     }
-
   }
 
   private fun generateClientServiceMethodUriParameters(
@@ -584,5 +594,4 @@ abstract class KotlinGenerator(
 
     return server.url to parameters
   }
-
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:Suppress("DuplicatedCode")
 
 package io.outfoxx.sunday.generator.kotlin
@@ -582,7 +598,7 @@ class KotlinTypeRegistry(
 
           val discriminatorProperty =
             (inheritedProperties + declaredProperties).find { it.name == discriminatorPropertyName }
-              ?: error("Discriminator property '${discriminatorPropertyName}' not found")
+              ?: error("Discriminator property '$discriminatorPropertyName' not found")
 
           val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
 
@@ -610,7 +626,6 @@ class KotlinTypeRegistry(
             }
 
             typeBuilder.addProperty(discriminatorBuilder.build())
-
           } else if (options.contains(ImplementModel)) {
 
             // Add concrete discriminator for leaf of the discriminated tree
@@ -641,11 +656,8 @@ class KotlinTypeRegistry(
             }
 
             typeBuilder.addProperty(discriminatorBuilder.build())
-
           }
-
         }
-
       }
 
       val definedProperties = declaredProperties.filterNot { it.range.hasAnnotation(KotlinImpl, generationMode) }
@@ -717,7 +729,6 @@ class KotlinTypeRegistry(
           if (superShape != null) {
             equalsBuilder.addStatement("if (!super.equals(other)) return false")
           }
-
         } else {
           equalsBuilder = null
         }
@@ -774,7 +785,6 @@ class KotlinTypeRegistry(
                 .addStatement(code, *convertedCodeParams.toTypedArray())
                 .build()
             )
-
           } else {
 
             applyUseSiteAnnotations(declaredProperty, declaredPropertyTypeName) {
@@ -846,11 +856,9 @@ class KotlinTypeRegistry(
                 )
               }
             }
-
           }
 
           typeBuilder.addProperty(declaredPropertyBuilder.build())
-
         }
 
         // Add copy method
@@ -880,7 +888,6 @@ class KotlinTypeRegistry(
             .addCode(")")
 
           typeBuilder.addFunction(copyBuilder.build())
-
         }
 
         // Finish parameter constructor
@@ -941,9 +948,7 @@ class KotlinTypeRegistry(
 
           typeBuilder.addProperty(propertyBuilder.build())
         }
-
       }
-
     }
 
     if (shape.findBoolAnnotation(Patchable, generationMode) == true) {
@@ -979,7 +984,6 @@ class KotlinTypeRegistry(
             propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
           )
         )
-
       }
 
       patchClassBuilder.primaryConstructor(patchClassConsBuilder.build())
@@ -1017,7 +1021,6 @@ class KotlinTypeRegistry(
       if (!propertyContainerShape.discriminator.isNullOrBlank()) {
         addJacksonPolymorphism(propertyContainerShape, inheritingTypes, typeBuilder, context)
       }
-
     }
 
     return className
@@ -1093,9 +1096,7 @@ class KotlinTypeRegistry(
         is PropertyShape -> applyUseSiteValidationAnnotations(use.range, typeName, applicator)
         else -> applyUseSiteValidationAnnotations(use, typeName, applicator)
       }
-
     }
-
   }
 
   private fun applyUseSiteValidationAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit) {
@@ -1129,7 +1130,6 @@ class KotlinTypeRegistry(
                   .build()
               )
             }
-
           }
 
           "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
@@ -1151,7 +1151,6 @@ class KotlinTypeRegistry(
                   .build()
               )
             }
-
           }
 
           "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
@@ -1172,11 +1171,8 @@ class KotlinTypeRegistry(
                   .build()
               )
             }
-
           }
-
         }
-
       }
 
       is ArrayShape -> {
@@ -1196,7 +1192,6 @@ class KotlinTypeRegistry(
         sizeBuilder?.let {
           applicator.invoke(it.build())
         }
-
       }
 
       is NodeShape -> {
@@ -1209,9 +1204,7 @@ class KotlinTypeRegistry(
           )
         }
       }
-
     }
-
   }
 
   private fun addJacksonPolymorphismOverride(
@@ -1226,7 +1219,6 @@ class KotlinTypeRegistry(
         .addMember("property = %S", externalDiscriminatorPropertyName)
         .build()
     )
-
   }
 
   private fun addJacksonPolymorphism(
@@ -1278,9 +1270,7 @@ class KotlinTypeRegistry(
           )
           .build()
       )
-
     }
-
   }
 
   private fun typeNameOf(shape: Shape, context: KotlinResolutionContext): ClassName {
@@ -1317,13 +1307,10 @@ class KotlinTypeRegistry(
         ?: error("Nested annotation is missing name")
 
       nestedEnclosingTypeName.nestedClass(nestedName)
-
     } else {
 
       ClassName.bestGuess("$pkgName.${shape.kotlinTypeName}")
-
     }
-
   }
 
   private fun packageNameOf(shape: Shape, context: KotlinResolutionContext): String =
@@ -1420,5 +1407,4 @@ class KotlinTypeRegistry(
       val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
-
 }

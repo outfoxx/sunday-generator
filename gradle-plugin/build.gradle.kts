@@ -1,6 +1,5 @@
 
 plugins {
-  kotlin("jvm")
   `java-gradle-plugin`
 }
 
@@ -34,25 +33,4 @@ gradlePlugin {
       implementationClass = "io.outfoxx.sunday.generator.gradle.SundayGeneratorPlugin"
     }
   }
-}
-
-tasks {
-
-  withType<JavaCompile> {
-    options.compilerArgs.add("-parameters")
-  }
-
-  withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions {
-      jvmTarget = "11"
-      javaParameters = true
-      freeCompilerArgs = freeCompilerArgs + "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    }
-  }
-
-  test {
-    useJUnitPlatform()
-    environment("ANDROID_HOME", project.projectDir.toPath().resolve("src/test/android/tinysdk"))
-  }
-
 }

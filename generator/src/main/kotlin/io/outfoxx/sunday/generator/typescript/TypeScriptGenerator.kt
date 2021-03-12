@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.typescript
 
 import amf.client.model.document.BaseUnit
@@ -101,7 +117,6 @@ abstract class TypeScriptGenerator(
 
       typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
     }
-
   }
 
   open fun generateServiceType(serviceTypeName: TypeName.Standard, endPoints: List<EndPoint>): ClassSpec.Builder {
@@ -144,7 +159,6 @@ abstract class TypeScriptGenerator(
           .addCode("}%<\n);\n")
           .build()
       )
-
     }
 
     serviceTypeBuilder = processServiceBegin(endPoints, serviceTypeBuilder)
@@ -284,7 +298,6 @@ abstract class TypeScriptGenerator(
 
             functionBuilder.addParameter(requestBodyParameterSpec)
           }
-
         }
 
         operation.successes.forEach { response ->
@@ -309,7 +322,6 @@ abstract class TypeScriptGenerator(
             if (processedResponseBodyTypeName != VOID) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }
-
           } else {
 
             val processedResponseBodyTypeName =
@@ -328,7 +340,6 @@ abstract class TypeScriptGenerator(
 
             resolveTypeName(bodyType, typeName.nested("${operation.typeScriptTypeName}FailureResponseBody"))
           }
-
         }
 
         val responseProblemTypes =
@@ -355,9 +366,7 @@ abstract class TypeScriptGenerator(
 
         typeBuilder.addFunction(functionSpec)
       }
-
     }
-
   }
 
   private fun generateClientServiceMethodUriParameters(
@@ -571,5 +580,4 @@ abstract class TypeScriptGenerator(
 
     return server.url to parameters
   }
-
 }

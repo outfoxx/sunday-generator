@@ -1,10 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm")
-  java
   application
-  jacoco
   id("com.google.cloud.tools.jib")
   id("com.github.johnrengelman.shadow")
 }
@@ -44,37 +40,12 @@ dependencies {
 
 }
 
-//kotlin {
-//  explicitApi()
-//}
-
-tasks {
-
-  withType<JavaCompile> {
-    options.compilerArgs.add("-parameters")
-  }
-
-  withType<KotlinCompile> {
-    kotlinOptions {
-      jvmTarget = "11"
-      javaParameters = true
-      freeCompilerArgs = freeCompilerArgs + "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    }
-  }
-
-  test {
-    useJUnitPlatform()
-  }
-
-}
-
 
 application {
   applicationName = "sunday-generator"
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
   mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
-
 
 jib {
   to {

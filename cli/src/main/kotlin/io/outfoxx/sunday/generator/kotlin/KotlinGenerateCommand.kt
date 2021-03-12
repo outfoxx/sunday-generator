@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
@@ -28,41 +44,41 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
 
   val packageName
     by option(
-      "-pkg",
-      help = "Default package"
-    ).required()
+    "-pkg",
+    help = "Default package"
+  ).required()
 
   val modelPackageName
     by option(
-      "-model-pkg",
-      help = "Default model package, if not specified '-pkg' is used"
-    )
+    "-model-pkg",
+    help = "Default model package, if not specified '-pkg' is used"
+  )
 
   val servicePackageName
     by option(
-      "-service-pkg",
-      help = "Default service package, if not specified '-pkg' is used"
-    )
+    "-service-pkg",
+    help = "Default service package, if not specified '-pkg' is used"
+  )
 
   val problemBaseUri
     by option(
-      "-problem-base",
-      help = "Default problem base URI"
-    ).default("http://example.com/")
+    "-problem-base",
+    help = "Default problem base URI"
+  ).default("http://example.com/")
 
   val enabledOptions
     by option(
-      "-enable",
-      help = "Enable type generation option"
-    ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-      .multiple()
+    "-enable",
+    help = "Enable type generation option"
+  ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
+    .multiple()
 
   val disabledOptions
     by option(
-      "-disable",
-      help = "Disable type generation option"
-    ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-      .multiple()
+    "-disable",
+    help = "Disable type generation option"
+  ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
+    .multiple()
 
   val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
 
@@ -79,5 +95,4 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
   override fun generatorFactory(document: Document) = generatorFactory(document, typeRegistry)
 
   abstract fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry): KotlinGenerator
-
 }

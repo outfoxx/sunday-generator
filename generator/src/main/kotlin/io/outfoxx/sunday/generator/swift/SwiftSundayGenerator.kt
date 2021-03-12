@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.swift
 
 import amf.client.model.document.Document
@@ -23,9 +39,7 @@ import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_RESULT_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
-import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
@@ -38,7 +52,6 @@ import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.resolve
-import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.DATA
@@ -128,7 +141,6 @@ class SwiftSundayGenerator(
           .addCode("%<\n]%<\n)\n")
           .build()
       )
-
     }
 
     referencedContentTypes = mutableSetOf()
@@ -487,7 +499,7 @@ class SwiftSundayGenerator(
             val typeName = resolveTypeName(it, null)
             val discValue =
               (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? DeclaredTypeName)?.simpleName
-              ?: "$typeName"
+                ?: "$typeName"
             listOf(discValue, typeName)
           }
 
@@ -506,7 +518,6 @@ class SwiftSundayGenerator(
           builder.add("%<\n)")
         }
       }
-
     } else {
 
       val requestOnly = operation.findBoolAnnotation(APIAnnotationName.RequestOnly, null) == true
@@ -552,5 +563,4 @@ class SwiftSundayGenerator(
       "application/problem+json" -> CodeBlock.of(".problem")
       else -> CodeBlock.of(".init(valid: %S)", value)
     }
-
 }

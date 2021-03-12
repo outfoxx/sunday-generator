@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
@@ -29,9 +45,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
-import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
@@ -44,7 +58,6 @@ import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.resolve
-import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.http.Method
 import kotlinx.coroutines.flow.Flow
 import java.net.URI
@@ -126,7 +139,6 @@ class KotlinSundayGenerator(
           .addCode(")⇤\n)\n")
           .build()
       )
-
     }
 
     referencedContentTypes = mutableSetOf()
@@ -482,7 +494,6 @@ class KotlinSundayGenerator(
           builder.add("⇤\n)")
         }
       }
-
     } else {
 
       val requestOnly = operation.findBoolAnnotation(APIAnnotationName.RequestOnly, null) == true
@@ -528,5 +539,4 @@ class KotlinSundayGenerator(
       "application/problem+json" -> CodeBlock.of("%T.ProblemJSON", MediaType::class)
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
-
 }
