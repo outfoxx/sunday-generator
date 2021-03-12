@@ -59,8 +59,6 @@ class TypeScriptCompiler(private val workDir: Path) : Closeable {
 
   private val dockerConfig: DockerClientConfig =
     DefaultDockerClientConfig.createDefaultConfigBuilder()
-      .withDockerHost("unix:///var/run/docker.sock")
-      .withDockerTlsVerify(false)
       .build()
 
   private val dockerHttpClient: DockerHttpClient =
