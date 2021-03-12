@@ -464,10 +464,11 @@ val NodeShape.closed: Boolean? get() = this.closed().value
 val NodeShape.discriminator: String? get() = this.discriminator().value
 val NodeShape.discriminatorValue: String? get() = this.discriminatorValue().value
 val NodeShape.discriminatorMapping: List<IriTemplateMapping> get() = this.discriminatorMapping()
-val NodeShape.properties: List<PropertyShape> get() = this.properties()
 val NodeShape.additionalPropertiesSchema: Shape? get() = this.additionalPropertiesSchema()
 val NodeShape.dependencies: List<PropertyDependencies> get() = this.dependencies()
 val NodeShape.propertyNames: Shape? get() = this.propertyNames()
+
+val NodeShape.properties: List<PropertyShape> get() = this.properties().filterNot { it.name?.contains("/") ?: false }
 
 val NodeShape.isReferenceNode: Boolean get() =
   inherits.size == 1 && dependencies.isEmpty() &&
