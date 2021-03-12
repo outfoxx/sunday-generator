@@ -31,7 +31,6 @@ subprojects {
   version = releaseVersion
 
   repositories {
-    mavenLocal()
     mavenCentral()
     maven {
       setUrl("https://oss.sonatype.org/content/repositories/snapshots/")
