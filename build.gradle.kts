@@ -5,9 +5,14 @@ import org.jmailen.gradle.kotlinter.KotlinterExtension
 
 plugins {
   kotlin("jvm") apply false
-  id("org.jetbrains.dokka") apply false
+  id("org.jetbrains.dokka")
   id("net.minecrell.licenser") apply false
   id("org.jmailen.kotlinter") apply false
+}
+
+repositories {
+  mavenCentral()
+  jcenter()
 }
 
 val releaseVersion: String by project
