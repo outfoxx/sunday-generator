@@ -19,6 +19,8 @@
 package io.outfoxx.sunday.generator.swift.tools
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.Bind
 import com.github.dockerjava.api.model.HostConfig
 import com.github.dockerjava.core.DefaultDockerClientConfig
@@ -35,6 +37,12 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit.MINUTES
 
 class SwiftCompiler(private val workDir: Path) : Closeable, ExtensionContext.Store.CloseableResource {
+
+  companion object {
+
+    val imageRepo = "swift"
+    val imageTag = "5.3"
+  }
 
   val srcDir: Path = workDir.resolve("src")
 
@@ -64,23 +72,43 @@ class SwiftCompiler(private val workDir: Path) : Closeable, ExtensionContext.Sto
 
   private val dockerClient: DockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
-  private val container = dockerClient.createContainerCmd("swift:5.3")
-    .withCmd("sleep", "3600")
-    .withHostConfig(
-      HostConfig.newHostConfig()
-        .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
-    )
-    .exec()
+  private val containerId: String
 
   init {
-    dockerClient.startContainerCmd(container.id).exec()
     println("### Starting Swift Compiler")
+
+    val imageExists =
+      try {
+        dockerClient.inspectImageCmd("$imageRepo:$imageTag")
+          .exec()
+        true
+      } catch (x: NotFoundException) {
+        false
+      }
+
+    if (!imageExists) {
+      dockerClient.pullImageCmd(imageRepo)
+        .withTag(imageTag)
+        .exec(PullImageResultCallback())
+        .awaitCompletion(10, MINUTES)
+    }
+
+    containerId =
+      dockerClient.createContainerCmd("$imageRepo:$imageTag")
+        .withCmd("sleep", "3600")
+        .withHostConfig(
+          HostConfig.newHostConfig()
+            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
+        )
+        .exec().id
+
+    dockerClient.startContainerCmd(containerId).exec()
   }
 
   fun compile(): Int {
 
     val execId =
-      dockerClient.execCreateCmd(container.id)
+      dockerClient.execCreateCmd(containerId)
         .withCmd("swift", "build")
         .withWorkingDir("/work")
         .withAttachStdout(true)
@@ -101,12 +129,12 @@ class SwiftCompiler(private val workDir: Path) : Closeable, ExtensionContext.Sto
     println("### Stopping Swift Compiler")
 
     try {
-      dockerClient.killContainerCmd(container.id).exec()
+      dockerClient.killContainerCmd(containerId).exec()
     } catch (x: Throwable) {
     }
 
     try {
-      dockerClient.removeContainerCmd(container.id).exec()
+      dockerClient.removeContainerCmd(containerId).exec()
     } catch (x: Throwable) {
     }
 

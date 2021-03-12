@@ -19,6 +19,8 @@
 package io.outfoxx.sunday.generator.typescript.tools
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.Bind
 import com.github.dockerjava.api.model.HostConfig
 import com.github.dockerjava.core.DefaultDockerClientConfig
@@ -34,6 +36,12 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit.MINUTES
 
 class TypeScriptCompiler(private val workDir: Path) : Closeable {
+
+  companion object {
+
+    val imageRepo = "outfoxx/typescript"
+    val imageTag = "4"
+  }
 
   val srcDir: Path = workDir.resolve("src")
 
@@ -63,24 +71,43 @@ class TypeScriptCompiler(private val workDir: Path) : Closeable {
 
   private val dockerClient: DockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
 
-  private val container =
-    dockerClient.createContainerCmd("outfoxx/typescript:4")
-      .withCmd("sleep", "3600")
-      .withHostConfig(
-        HostConfig.newHostConfig()
-          .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
-      )
-      .exec()
+  private val containerId: String
 
   init {
-    dockerClient.startContainerCmd(container.id).exec()
     println("### Starting TypeScript Compiler")
+
+    val imageExists =
+      try {
+        dockerClient.inspectImageCmd("$imageRepo:$imageTag")
+          .exec()
+        true
+      } catch (x: NotFoundException) {
+        false
+      }
+
+    if (!imageExists) {
+      dockerClient.pullImageCmd(imageRepo)
+        .withTag(imageTag)
+        .exec(PullImageResultCallback())
+        .awaitCompletion(10, MINUTES)
+    }
+
+    containerId =
+      dockerClient.createContainerCmd("$imageRepo:$imageTag")
+        .withCmd("sleep", "3600")
+        .withHostConfig(
+          HostConfig.newHostConfig()
+            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
+        )
+        .exec().id
+
+    dockerClient.startContainerCmd(containerId).exec()
   }
 
   fun compile(): Int {
 
     val execId =
-      dockerClient.execCreateCmd(container.id)
+      dockerClient.execCreateCmd(containerId)
         .withCmd("tsc", "--project", "tsconfig.json")
         .withWorkingDir("/work")
         .withAttachStdout(true)
@@ -101,12 +128,12 @@ class TypeScriptCompiler(private val workDir: Path) : Closeable {
     println("### Stopping TypeScript Compiler")
 
     try {
-      dockerClient.killContainerCmd(container.id).exec()
+      dockerClient.killContainerCmd(containerId).exec()
     } catch (x: Throwable) {
     }
 
     try {
-      dockerClient.removeContainerCmd(container.id).exec()
+      dockerClient.removeContainerCmd(containerId).exec()
     } catch (x: Throwable) {
     }
 
