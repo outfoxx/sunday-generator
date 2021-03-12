@@ -104,7 +104,7 @@ class KotlinJAXRSGenerator(
 
   override fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
 
-    if (typeRegistry.options.contains(JacksonAnnotations)) {
+    if (typeRegistry.options.contains(JacksonAnnotations) && referencedProblemTypes.isNotEmpty()) {
       typeBuilder.addType(
         TypeSpec.companionObjectBuilder()
           .addFunction(

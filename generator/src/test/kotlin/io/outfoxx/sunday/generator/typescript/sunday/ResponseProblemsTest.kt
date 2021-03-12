@@ -23,7 +23,7 @@ import java.net.URI
 class ResponseProblemsTest {
 
   @Test
-  fun `test problem types references in API`(
+  fun `test API problem registration`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
@@ -58,6 +58,64 @@ class ResponseProblemsTest {
               public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
             requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblem);
             requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
+          }
+
+          fetchTest(): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+
+  }
+
+  @Test
+  fun `test API problem registration when no problems`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        TypeScriptSundayGenerator(
+          document,
+          typeRegistry,
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {Test} from './test';
+        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = [],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
           }
 
           fetchTest(): Observable<Test> {

@@ -79,6 +79,56 @@ class ResponseProblemsTest {
   }
 
   @Test
+  fun `test API problem registration when no problems`(
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf(JacksonAnnotations))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinSundayGenerator(
+          document,
+          typeRegistry,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.test.Test
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+        ) {
+          public suspend fun fetchTest(): Test = this.requestFactory.result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes
+          )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test problem type generation`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {

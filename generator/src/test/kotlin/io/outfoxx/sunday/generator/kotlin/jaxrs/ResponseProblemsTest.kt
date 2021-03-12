@@ -23,6 +23,100 @@ import java.net.URI
 class ResponseProblemsTest {
 
   @Test
+  fun `test API problem registration in server mode when no problems referenced`(
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          null,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test API problem registration in client mode when no problems referenced`(
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf(JacksonAnnotations))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          null,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test API problem registration in server mode`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {

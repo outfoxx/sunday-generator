@@ -89,6 +89,69 @@ class ResponseProblemsTest {
   }
 
   @Test
+  fun `test API problem registration when no problems`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        SwiftSundayGenerator(
+          document,
+          typeRegistry,
+          "http://example.com/",
+          listOf("application/json")
+        )
+      }
+
+    val typeSpec = findType("API", builtTypes)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class API {
+
+          public let requestFactory: RequestFactory
+          public let defaultContentTypes: [MediaType]
+          public let defaultAcceptTypes: [MediaType]
+
+          public init(
+            requestFactory: RequestFactory,
+            defaultContentTypes: [MediaType] = [],
+            defaultAcceptTypes: [MediaType] = [.json]
+          ) {
+            self.requestFactory = requestFactory
+            self.defaultContentTypes = defaultContentTypes
+            self.defaultAcceptTypes = defaultAcceptTypes
+          }
+
+          func fetchTest() -> RequestResultPublisher<Test> {
+            return self.requestFactory.result(
+              method: .get,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: nil as Empty?,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test problem type generation`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
