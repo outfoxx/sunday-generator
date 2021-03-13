@@ -20,6 +20,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
+import org.gradle.api.tasks.SourceTask
 
 class SundayGeneratorPlugin : Plugin<Project> {
 
@@ -53,6 +54,12 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       project.convention.findPlugin(JavaPluginConvention::class.java)
         ?.sourceSets?.findByName(MAIN_SOURCE_SET_NAME)?.java?.srcDir(genTask.get().outputDir)
+
+      project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
+        project.tasks.withType(SourceTask::class.java)
+          .matching { it.name == "kotlin" }
+          .configureEach { task -> task.source(genTask.get().outputDir) }
+      }
 
       allTask.dependsOn(genTask)
     }
