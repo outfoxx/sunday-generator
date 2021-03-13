@@ -9,9 +9,9 @@ val kotlinCompileTestingVersion: String by project
 
 dependencies {
 
-  compileOnly(localGroovy())
+  shadow(gradleApi())
 
-  implementation(project(":generator"))
+  implementation(project(path = ":generator", configuration = "shadow"))
 
   //
   // TESTING
@@ -26,11 +26,22 @@ dependencies {
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 }
 
+
 gradlePlugin {
   plugins {
     register("sunday") {
       id = "io.outfoxx.sunday-generator"
       implementationClass = "io.outfoxx.sunday.generator.gradle.SundayGeneratorPlugin"
+    }
+  }
+}
+
+
+tasks {
+  shadowJar {
+    dependencies {
+      exclude(dependency(project.dependencies.gradleApi()))
+      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
     }
   }
 }
