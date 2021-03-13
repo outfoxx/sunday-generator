@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.minecrell.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -8,6 +9,7 @@ plugins {
   id("org.jetbrains.dokka")
   id("net.minecrell.licenser") apply false
   id("org.jmailen.kotlinter") apply false
+  id("com.github.johnrengelman.shadow") apply false
 }
 
 repositories {
@@ -26,6 +28,7 @@ subprojects {
   apply(plugin = "org.jetbrains.dokka")
   apply(plugin = "net.minecrell.licenser")
   apply(plugin = "org.jmailen.kotlinter")
+  apply(plugin = "com.github.johnrengelman.shadow")
 
   group = "io.outfoxx.sunday"
   version = releaseVersion
@@ -112,6 +115,10 @@ subprojects {
   }
 
 
+  //
+  // PUBLISHING
+  //
+
   configure<PublishingExtension> {
     repositories {
       maven {
@@ -121,11 +128,6 @@ subprojects {
           username = project.findProperty("github.user") as String? ?: System.getenv("USERNAME")
           password = project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")
         }
-      }
-    }
-    publications {
-      create<MavenPublication>("gpr") {
-        from(components["java"])
       }
     }
   }

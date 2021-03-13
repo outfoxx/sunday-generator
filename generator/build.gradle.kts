@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
   `java-library`
@@ -64,4 +66,24 @@ dependencies {
   testImplementation("com.github.docker-java:docker-java-transport-httpclient5:$dockerJavaVersion")
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 
+}
+
+
+tasks {
+  withType<ShadowJar> {
+    dependencies {
+      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
+    }
+  }
+}
+
+
+publishing {
+  publications {
+    create<MavenPublication>("gpr") {
+      the<ShadowExtension>().component(this)
+      artifact(tasks.named("sourcesJar"))
+      artifact(tasks.named("javadocJar"))
+    }
+  }
 }

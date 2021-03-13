@@ -1,8 +1,8 @@
+import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
 
 plugins {
   application
   id("com.google.cloud.tools.jib")
-  id("com.github.johnrengelman.shadow")
 }
 
 val cliktVersion: String by project
@@ -13,7 +13,7 @@ val hamcrestVersion: String by project
 
 dependencies {
 
-  implementation(project(":generator"))
+  implementation(project(path = ":generator", configuration = "shadow"))
 
   implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
   implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
@@ -36,6 +36,18 @@ application {
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
   mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
+
+
+publishing {
+  publications {
+    create<MavenPublication>("gpr") {
+      the<ShadowExtension>().component(this)
+      artifact(tasks.named("sourcesJar"))
+      artifact(tasks.named("javadocJar"))
+    }
+  }
+}
+
 
 jib {
   to {
