@@ -22,33 +22,65 @@ import amf.client.AMF
 import amf.client.environment.Environment
 import amf.client.model.document.Document
 import amf.client.parse.Raml10Parser
+import amf.client.validate.ValidationReport
+import amf.core.validation.SeverityLevels
 import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import java.net.URI
-import kotlin.system.exitProcess
+import java.util.concurrent.ExecutionException
 
-fun parseAndValidate(uri: URI): Document {
+data class ProcessResult(
+  val document: Document,
+  val validatedDocument: Document,
+  private val validationReport: ValidationReport
+) {
 
-  val parentUri = uri.resolve(".")
+  enum class Level {
+    Error,
+    Warning,
+    Info
+  }
+
+  data class Entry(
+    val level: Level,
+    val file: String,
+    val line: Int,
+    val message: String
+  )
+
+  val isValid: Boolean
+    get() = validationReport.conforms() && validationReport.results().none { it.level() == SeverityLevels.VIOLATION() }
+
+  val entries: List<Entry>
+    get() = validationReport.results().map {
+      val level =
+        when (it.level()) {
+          SeverityLevels.VIOLATION() -> Level.Error
+          SeverityLevels.WARNING() -> Level.Warning
+          SeverityLevels.INFO() -> Level.Info
+          else -> Level.Error
+        }
+      val file = it.location()?.orElse("unknown")!!
+      val line = it.position().start().line()
+      val message = it.message()
+      Entry(level, file, line, message)
+    }
+}
+
+fun process(uri: URI): ProcessResult {
 
   AMF.init().get()
 
   val environment = Environment().addClientLoader(LocalResourceLoader)
-  val document = Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
-  val validation = AMF.validate(document.cloneUnit(), ProfileNames.RAML10(), MessageStyles.RAML()).get()
 
-  if (!validation.conforms()) {
-
-    validation.results().forEach { result ->
-
-      val locationURI = result.location().orElse(null)?.let { URI(it) }
-      val location = locationURI?.let { parentUri.relativize(it) }?.toASCIIString() ?: "unknown"
-      val line = result.position().start().line()
-
-      System.err.println("$location:$line: ${result.message()}")
+  val document =
+    try {
+      Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
+    } catch (x: ExecutionException) {
+      throw x.cause!!
     }
 
-    exitProcess(1)
-  }
+  val validatedDocument = document.cloneUnit() as Document
+  val validationReport = AMF.validate(validatedDocument, ProfileNames.RAML10(), MessageStyles.RAML()).get()
 
-  return document
+  return ProcessResult(document, validatedDocument, validationReport)
 }

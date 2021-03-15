@@ -20,6 +20,7 @@ package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ProcessResult
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
@@ -27,11 +28,12 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import io.outfoxx.sunday.generator.parseAndValidate
+import io.outfoxx.sunday.generator.process
 import org.gradle.api.DefaultTask
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -163,13 +165,27 @@ open class SundayGenerate
         return
       }
 
-      val document = parseAndValidate(file.toURI())
+      val processed = process(file.toURI())
+
+      processed.entries.forEach {
+        val level =
+          when (it.level) {
+            ProcessResult.Level.Error -> LogLevel.ERROR
+            ProcessResult.Level.Warning -> LogLevel.WARN
+            ProcessResult.Level.Info -> LogLevel.INFO
+          }
+        logger.log(level, "${it.file}:${it.line}: ${it.message}")
+      }
+
+      if (!processed.isValid) {
+        throw InvalidUserDataException("$file is invalid")
+      }
 
       val generator =
         when (framework) {
           TargetFramework.JAXRS ->
             KotlinJAXRSGenerator(
-              document,
+              processed.document,
               typeRegistry,
               KotlinJAXRSGenerator.Options(
                 reactiveResponseType.orNull,
@@ -181,7 +197,7 @@ open class SundayGenerate
 
           TargetFramework.Sunday ->
             KotlinSundayGenerator(
-              document,
+              processed.document,
               typeRegistry,
               KotlinGenerator.Options(
                 servicePkgName,

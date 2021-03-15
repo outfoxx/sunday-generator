@@ -26,6 +26,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
+import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
 
@@ -66,9 +67,18 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
       println("Processing $file")
 
-      val document = parseAndValidate(file.toURI())
+      val processed = process(file.toURI())
 
-      val generator = generatorFactory(document)
+      processed.entries.forEach {
+        val location = listOfNotNull(it.file, it.line).joinToString { ":" }
+        println("${it.level.toString().toLowerCase()}| $location: ${it.message}")
+      }
+
+      if (!processed.isValid) {
+        exitProcess(1)
+      }
+
+      val generator = generatorFactory(processed.document)
 
       generator.generateServiceTypes()
     }
