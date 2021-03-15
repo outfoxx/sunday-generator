@@ -46,9 +46,7 @@ class RequestHeaderParamsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -107,9 +105,7 @@ class RequestHeaderParamsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -172,9 +168,7 @@ class RequestHeaderParamsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 

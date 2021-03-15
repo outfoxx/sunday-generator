@@ -46,9 +46,7 @@ class RequestBodyParamTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -98,9 +96,7 @@ class RequestBodyParamTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -150,9 +146,7 @@ class RequestBodyParamTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 

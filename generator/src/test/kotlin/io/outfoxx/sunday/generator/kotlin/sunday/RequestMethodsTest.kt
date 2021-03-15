@@ -46,9 +46,7 @@ class RequestMethodsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 

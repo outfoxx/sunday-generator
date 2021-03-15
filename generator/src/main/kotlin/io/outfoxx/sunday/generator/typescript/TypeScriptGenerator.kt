@@ -94,9 +94,8 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
 abstract class TypeScriptGenerator(
   val document: Document,
   val typeRegistry: TypeScriptTypeRegistry,
-  private val defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
-) : Generator(document.api, defaultMediaTypes) {
+  override val options: Options,
+) : Generator(document.api, options) {
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
 
@@ -524,7 +523,7 @@ abstract class TypeScriptGenerator(
       }
     }
 
-    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: defaultProblemBaseUri)
+    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
 
     val problemBaseUri =
       document.api.findAnnotation(

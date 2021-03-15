@@ -48,8 +48,7 @@ class RequestHeaderParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -119,8 +118,7 @@ class RequestHeaderParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -194,8 +192,7 @@ class RequestHeaderParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 

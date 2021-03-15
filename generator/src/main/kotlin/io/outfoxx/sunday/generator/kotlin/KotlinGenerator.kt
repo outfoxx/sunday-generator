@@ -91,10 +91,17 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
 abstract class KotlinGenerator(
   val document: Document,
   val typeRegistry: KotlinTypeRegistry,
-  val defaultServicePackageName: String,
-  val defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
-) : Generator(document.api, defaultMediaTypes) {
+  override val options: Options
+) : Generator(document.api, options) {
+
+  open class Options(
+    val defaultServicePackageName: String,
+    defaultProblemBaseUri: String,
+    defaultMediaTypes: List<String>,
+  ) : Generator.Options(
+    defaultProblemBaseUri,
+    defaultMediaTypes
+  )
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
 
@@ -109,7 +116,7 @@ abstract class KotlinGenerator(
 
       val servicePackageName =
         api.findStringAnnotation(KotlinPkg, generationMode)
-          ?: defaultServicePackageName
+          ?: options.defaultServicePackageName
 
       val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
 
@@ -540,7 +547,7 @@ abstract class KotlinGenerator(
       }
     }
 
-    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: defaultProblemBaseUri)
+    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
 
     val problemBaseUri =
       document.api.findAnnotation(

@@ -20,6 +20,7 @@ package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -170,19 +171,23 @@ open class SundayGenerate
             KotlinJAXRSGenerator(
               document,
               typeRegistry,
-              reactiveResponseType.orNull,
-              servicePkgName,
-              problemBaseUri,
-              defaultMediaTypes.get()
+              KotlinJAXRSGenerator.Options(
+                reactiveResponseType.orNull,
+                servicePkgName,
+                problemBaseUri,
+                defaultMediaTypes.get(),
+              )
             )
 
           TargetFramework.Sunday ->
             KotlinSundayGenerator(
               document,
               typeRegistry,
-              servicePkgName,
-              problemBaseUri,
-              defaultMediaTypes.get()
+              KotlinGenerator.Options(
+                servicePkgName,
+                problemBaseUri,
+                defaultMediaTypes.get(),
+              )
             )
         }
 

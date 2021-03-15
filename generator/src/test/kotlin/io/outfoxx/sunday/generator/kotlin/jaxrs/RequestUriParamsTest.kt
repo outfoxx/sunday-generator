@@ -47,10 +47,7 @@ class RequestUriParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -104,10 +101,7 @@ class RequestUriParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -162,10 +156,7 @@ class RequestUriParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -219,10 +210,7 @@ class RequestUriParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -278,10 +266,7 @@ class RequestUriParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 

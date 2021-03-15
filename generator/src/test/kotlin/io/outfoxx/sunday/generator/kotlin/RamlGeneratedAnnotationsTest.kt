@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
+import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
@@ -70,10 +71,7 @@ class RamlGeneratedAnnotationsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions
         )
       }
 
@@ -94,10 +92,7 @@ class RamlGeneratedAnnotationsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 

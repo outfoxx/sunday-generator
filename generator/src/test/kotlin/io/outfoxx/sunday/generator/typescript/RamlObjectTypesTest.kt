@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
@@ -155,7 +156,13 @@ class RamlObjectTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { TypeScriptSundayGenerator(it, typeRegistry, "http://example.com", emptyList()) }
+      generate(testUri, typeRegistry, compiler) {
+        TypeScriptSundayGenerator(
+          it,
+          typeRegistry,
+          typeScriptSundayTestOptions
+        )
+      }
     val typeModSpec = findTypeMod("API@!api", builtTypes)
 
     findNestedType(typeModSpec, "API", "FetchTestResponsePayload")

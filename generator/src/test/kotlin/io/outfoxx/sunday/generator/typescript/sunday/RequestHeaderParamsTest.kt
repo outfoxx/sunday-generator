@@ -48,8 +48,7 @@ class RequestHeaderParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -110,8 +109,7 @@ class RequestHeaderParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -180,8 +178,7 @@ class RequestHeaderParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
