@@ -48,8 +48,7 @@ class RequestUriParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -121,8 +120,7 @@ class RequestUriParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -195,8 +193,7 @@ class RequestUriParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -272,8 +269,7 @@ class RequestUriParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 

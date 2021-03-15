@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
+import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
@@ -79,7 +80,7 @@ class RamlTypeAnnotationsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val generatedTypes = generate(testUri, typeRegistry, compiler) {
-      TypeScriptSundayGenerator(it, typeRegistry, "http://example.com", emptyList())
+      TypeScriptSundayGenerator(it, typeRegistry, typeScriptSundayTestOptions)
     }
 
     assertThat(generatedTypes.keys, hasItem(TypeName.namedImport("API", "!explicit/client/api")))

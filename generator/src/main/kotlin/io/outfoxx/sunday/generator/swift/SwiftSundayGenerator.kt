@@ -74,13 +74,11 @@ import java.net.URI
 class SwiftSundayGenerator(
   document: Document,
   typeRegistry: SwiftTypeRegistry,
-  defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
+  options: Options,
 ) : SwiftGenerator(
   document,
   typeRegistry,
-  defaultProblemBaseUri,
-  defaultMediaTypes
+  options,
 ) {
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()

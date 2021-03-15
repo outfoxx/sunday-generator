@@ -48,8 +48,7 @@ class ResponseEventsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -110,8 +109,7 @@ class ResponseEventsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -176,8 +174,7 @@ class ResponseEventsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 

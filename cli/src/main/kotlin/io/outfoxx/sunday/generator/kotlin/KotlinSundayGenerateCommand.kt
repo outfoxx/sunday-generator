@@ -28,8 +28,10 @@ class KotlinSundayGenerateCommand :
     KotlinSundayGenerator(
       document,
       typeRegistry,
-      servicePackageName ?: packageName,
-      problemBaseUri,
-      mediaTypes.toList()
+      KotlinGenerator.Options(
+        servicePackageName ?: packageName,
+        problemBaseUri,
+        mediaTypes.toList()
+      )
     )
 }

@@ -14,21 +14,12 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.swift
+package io.outfoxx.sunday.generator.kotlin.sunday
 
-import amf.client.model.document.Document
-import io.outfoxx.sunday.generator.Generator
+import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 
-class SwiftSundayGenerateCommand :
-  SwiftGenerateCommand(name = "swift/sunday", help = "Generate Swift client for Sunday framework") {
-
-  override fun generatorFactory(document: Document, typeRegistry: SwiftTypeRegistry) =
-    SwiftSundayGenerator(
-      document,
-      typeRegistry,
-      Generator.Options(
-        problemBaseUri,
-        mediaTypes.toList()
-      )
-    )
-}
+val kotlinSundayTestOptions = KotlinGenerator.Options(
+  "io.test.service",
+  "http://example.com/",
+  listOf("application/json")
+)

@@ -48,8 +48,7 @@ class RequestBodyParamTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -111,8 +110,7 @@ class RequestBodyParamTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -174,8 +172,7 @@ class RequestBodyParamTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 

@@ -80,27 +80,33 @@ import javax.ws.rs.sse.SseEventSource
 class KotlinJAXRSGenerator(
   document: Document,
   typeRegistry: KotlinTypeRegistry,
-  reactiveResponseType: String?,
-  defaultServicePackageName: String,
-  defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
+  override val options: Options
 ) : KotlinGenerator(
   document,
   typeRegistry,
-  defaultServicePackageName,
-  defaultProblemBaseUri,
-  defaultMediaTypes,
+  options
 ) {
 
+  class Options(
+    val reactiveResponseType: String?,
+    defaultServicePackageName: String,
+    defaultProblemBaseUri: String,
+    defaultMediaTypes: List<String>,
+  ) : KotlinGenerator.Options(
+    defaultServicePackageName,
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+  )
+
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
-  private val reactiveResponseType = reactiveResponseType?.let { ClassName.bestGuess(it) }
+  private val reactiveResponseType = options.reactiveResponseType?.let { ClassName.bestGuess(it) }
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
     val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
     typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
 
-    if (defaultMediaTypes.isNotEmpty()) {
+    if (options.defaultMediaTypes.isNotEmpty()) {
 
       val prodAnn = AnnotationSpec.builder(Produces::class)
         .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })

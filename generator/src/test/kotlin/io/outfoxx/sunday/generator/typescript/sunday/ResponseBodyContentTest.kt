@@ -48,8 +48,7 @@ class ResponseBodyContentTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -105,8 +104,7 @@ class ResponseBodyContentTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -161,8 +159,7 @@ class ResponseBodyContentTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -245,8 +242,7 @@ class ResponseBodyContentTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 

@@ -48,8 +48,7 @@ class RequestBodyParamTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -109,8 +108,7 @@ class RequestBodyParamTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -170,8 +168,7 @@ class RequestBodyParamTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 

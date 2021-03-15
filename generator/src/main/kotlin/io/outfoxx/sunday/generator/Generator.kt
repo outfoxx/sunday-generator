@@ -26,8 +26,13 @@ import io.outfoxx.sunday.generator.utils.contentType
 
 abstract class Generator(
   val api: WebApi,
-  defaultMediaTypes: List<String>
+  open val options: Options
 ) {
+
+  open class Options(
+    val defaultProblemBaseUri: String,
+    val defaultMediaTypes: List<String>,
+  )
 
   val defaultMediaTypes: List<String>
 
@@ -39,7 +44,7 @@ abstract class Generator(
     val mediaTypes = api.contentType.filterNotNull() + api.accepts.filterNotNull()
 
     // Add any from command line also referenced in model
-    defaultMediaTypes.forEach { defaultMediaType ->
+    options.defaultMediaTypes.forEach { defaultMediaType ->
       if (mediaTypes.contains(defaultMediaType)) {
         sorted.add(defaultMediaType)
       }

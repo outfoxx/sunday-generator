@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
+import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
@@ -61,8 +62,7 @@ class RamlGeneratedAnnotationsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 

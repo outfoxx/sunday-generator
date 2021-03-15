@@ -47,9 +47,7 @@ class RequestMixedParamsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -127,9 +125,7 @@ class RequestMixedParamsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 

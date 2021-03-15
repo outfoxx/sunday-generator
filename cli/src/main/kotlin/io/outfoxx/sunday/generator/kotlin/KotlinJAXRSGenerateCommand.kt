@@ -43,9 +43,11 @@ class KotlinJAXRSGenerateCommand :
     KotlinJAXRSGenerator(
       document,
       typeRegistry,
-      reactiveResponseType,
-      servicePackageName ?: packageName,
-      problemBaseUri,
-      mediaTypes.toList()
+      KotlinJAXRSGenerator.Options(
+        reactiveResponseType,
+        servicePackageName ?: packageName,
+        problemBaseUri,
+        mediaTypes.toList(),
+      )
     )
 }

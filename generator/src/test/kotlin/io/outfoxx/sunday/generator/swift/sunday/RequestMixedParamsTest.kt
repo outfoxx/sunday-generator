@@ -49,8 +49,7 @@ class RequestMixedParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 
@@ -144,8 +143,7 @@ class RequestMixedParamsTest {
         SwiftSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          swiftSundayTestOptions,
         )
       }
 

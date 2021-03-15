@@ -77,13 +77,11 @@ import java.net.URI
 class TypeScriptSundayGenerator(
   document: Document,
   typeRegistry: TypeScriptTypeRegistry,
-  defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
+  options: Options,
 ) : TypeScriptGenerator(
   document,
   typeRegistry,
-  defaultProblemBaseUri,
-  defaultMediaTypes,
+  options,
 ) {
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()

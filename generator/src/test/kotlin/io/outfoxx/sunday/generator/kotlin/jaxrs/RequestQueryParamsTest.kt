@@ -47,10 +47,7 @@ class RequestQueryParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -103,10 +100,7 @@ class RequestQueryParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -160,10 +154,7 @@ class RequestQueryParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -218,10 +209,7 @@ class RequestQueryParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 

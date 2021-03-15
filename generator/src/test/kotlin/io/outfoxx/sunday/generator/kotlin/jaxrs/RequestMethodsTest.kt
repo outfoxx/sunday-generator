@@ -46,10 +46,7 @@ class RequestMethodsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -130,10 +127,7 @@ class RequestMethodsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 

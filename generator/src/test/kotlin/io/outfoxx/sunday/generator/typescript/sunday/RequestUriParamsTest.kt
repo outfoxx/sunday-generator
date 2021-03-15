@@ -48,8 +48,7 @@ class RequestUriParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -112,8 +111,7 @@ class RequestUriParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -174,8 +172,7 @@ class RequestUriParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 
@@ -246,8 +243,7 @@ class RequestUriParamsTest {
         TypeScriptSundayGenerator(
           document,
           typeRegistry,
-          "http://example.com/",
-          listOf("application/json")
+          typeScriptSundayTestOptions,
         )
       }
 

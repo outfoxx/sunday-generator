@@ -50,9 +50,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -106,9 +104,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -156,9 +152,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -215,9 +209,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -274,9 +266,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -333,9 +323,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 
@@ -392,9 +380,7 @@ class ResponseProblemsTest {
         KotlinSundayGenerator(
           document,
           typeRegistry,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinSundayTestOptions,
         )
       }
 

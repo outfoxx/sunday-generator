@@ -47,10 +47,12 @@ class ResponseReactiveTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          CompletionStage::class.qualifiedName,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          KotlinJAXRSGenerator.Options(
+            CompletionStage::class.qualifiedName,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json")
+          )
         )
       }
 
@@ -95,10 +97,12 @@ class ResponseReactiveTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          CompletionStage::class.qualifiedName,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          KotlinJAXRSGenerator.Options(
+            CompletionStage::class.qualifiedName,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json")
+          )
         )
       }
 

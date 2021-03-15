@@ -47,10 +47,7 @@ class RequestBodyParamTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -95,10 +92,7 @@ class RequestBodyParamTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -144,10 +138,7 @@ class RequestBodyParamTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -192,10 +183,7 @@ class RequestBodyParamTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          null,
-          "io.test.service",
-          "http://example.com/",
-          listOf("application/json")
+          kotlinJAXRSTestOptions,
         )
       }
 

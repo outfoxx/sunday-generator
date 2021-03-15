@@ -65,15 +65,11 @@ import java.net.URI
 class KotlinSundayGenerator(
   document: Document,
   typeRegistry: KotlinTypeRegistry,
-  defaultServicePackageName: String,
-  defaultProblemBaseUri: String,
-  defaultMediaTypes: List<String>,
+  options: Options
 ) : KotlinGenerator(
   document,
   typeRegistry,
-  defaultServicePackageName,
-  defaultProblemBaseUri,
-  defaultMediaTypes
+  options
 ) {
 
   init {
