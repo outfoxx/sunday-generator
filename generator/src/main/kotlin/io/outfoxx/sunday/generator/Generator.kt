@@ -26,7 +26,7 @@ import io.outfoxx.sunday.generator.utils.contentType
 
 abstract class Generator(
   val api: WebApi,
-  open val options: Options
+  options: Options
 ) {
 
   open class Options(
@@ -34,6 +34,7 @@ abstract class Generator(
     val defaultMediaTypes: List<String>,
   )
 
+  open val options: Options = options
   val defaultMediaTypes: List<String>
 
   init {
