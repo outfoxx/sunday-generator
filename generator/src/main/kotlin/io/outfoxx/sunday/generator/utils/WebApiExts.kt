@@ -173,7 +173,7 @@ fun BaseUnit.resolveUsesRef(name: String): Pair<DomainElement, BaseUnit>? {
 
   val decl = declarationUnit.declares
     .filterIsInstance<NamedDomainElement>()
-    .first { it.name == declarationName } as? DomainElement
+    .firstOrNull { it.name == declarationName } as? DomainElement
     ?: return null
 
   return decl to (declarationUnit as BaseUnit)
