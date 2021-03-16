@@ -26,7 +26,9 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
   override fun apply(project: Project) {
 
-    val allTask = project.task("sundayGenerateAll")
+    val allTask = project.task("sundayGenerateAll") {
+      it.group = "code-generation"
+    }
 
     val generationsContainer =
       project.container(SundayGeneration::class.java) { name -> SundayGeneration(name, project.objects, project) }
@@ -35,6 +37,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
     generationsContainer.all { gen ->
 
       val genTask = project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
+        genTask.group = "code-generation"
         genTask.source.set(gen.source)
         genTask.includes.set(gen.includes)
         genTask.framework.set(gen.framework)
