@@ -208,11 +208,10 @@ class TypeScriptTypeRegistry(
           .addModifier(Modifier.EXPORT)
       }
 
+    // Add nested classes to parent modules
     typeBuilders.entries
-      .groupBy { entry -> entry.key.enclosingTypeName() }
-      .toSortedMap { o1, o2 -> (o2?.base?.value?.length ?: 0) - (o1?.base?.value?.length ?: 0) }
-      .values
-      .flatMap { list -> list.sortedBy { it.key.base.value } }
+      .toList()
+      .sortedByDescending { it.key.simpleNames().size }
       .forEach { (typeName, typeBuilder) ->
         // Is this a nested type?
         val enclosingTypeName = typeName.enclosingTypeName() ?: return@forEach

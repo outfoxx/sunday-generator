@@ -99,14 +99,14 @@ class RequestMixedParamsTest {
             )
           }
 
-          public enum FetchTestPageQueryParam : String, CaseIterable, Codable {
+          public enum FetchTestSelectUriParam : String, CaseIterable, Codable {
 
             case all = "all"
             case limited = "limited"
 
           }
 
-          public enum FetchTestSelectUriParam : String, CaseIterable, Codable {
+          public enum FetchTestPageQueryParam : String, CaseIterable, Codable {
 
             case all = "all"
             case limited = "limited"

@@ -93,12 +93,12 @@ class RequestMixedParamsTest {
 
         export namespace API {
 
-          export enum FetchTestPageQueryParam {
+          export enum FetchTestSelectUriParam {
             All = 'all',
             Limited = 'limited'
           }
 
-          export enum FetchTestSelectUriParam {
+          export enum FetchTestPageQueryParam {
             All = 'all',
             Limited = 'limited'
           }
