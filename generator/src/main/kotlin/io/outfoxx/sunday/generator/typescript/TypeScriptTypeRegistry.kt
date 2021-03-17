@@ -24,6 +24,7 @@ import amf.client.model.domain.AnyShape
 import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.ArrayShape
 import amf.client.model.domain.CustomizableElement
+import amf.client.model.domain.DomainElement
 import amf.client.model.domain.FileShape
 import amf.client.model.domain.NilShape
 import amf.client.model.domain.NodeShape
@@ -44,6 +45,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
@@ -288,7 +290,7 @@ class TypeScriptTypeRegistry(
     }
 
     if (typeBuilders.putIfAbsent(typeName, serviceType) != null) {
-      error("Service type '$typeName' is already defined")
+      genError("Service type '$typeName' is already defined")
     }
   }
 
@@ -338,6 +340,7 @@ class TypeScriptTypeRegistry(
 
         val customPropertyTypeName = resolveTypeReference(
           customPropertyTypeNameStr,
+          problemTypeDefinition.source,
           TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
         )
         val customPropertyClassName =
@@ -389,6 +392,7 @@ class TypeScriptTypeRegistry(
                 customPropertyName.kotlinIdentifierName,
                 resolveTypeReference(
                   customPropertyTypeNameStr,
+                  problemTypeDefinition.source,
                   TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
                 )
               )
@@ -416,7 +420,7 @@ class TypeScriptTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(name: String, context: TypeScriptResolutionContext): TypeName =
+  private fun resolveTypeReference(name: String, source: DomainElement, context: TypeScriptResolutionContext): TypeName =
     when (name.toLowerCase()) {
       "boolean" -> BOOLEAN
       "integer" -> NUMBER
@@ -430,8 +434,8 @@ class TypeScriptTypeRegistry(
       "datetime-only" -> LOCAL_DATETIME
       "datetime" -> OFFSET_DATETIME
       else -> {
-        val (element, unit) = context.unit.resolveRef(name) ?: error("Invalid type reference '$name'")
-        element as? Shape ?: error("Invalid type reference '$name'")
+        val (element, unit) = context.unit.resolveRef(name) ?: genError("Invalid type reference '$name'", source)
+        element as? Shape ?: genError("Invalid type reference '$name'", source)
 
         resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
       }
@@ -475,7 +479,7 @@ class TypeScriptTypeRegistry(
       is FileShape -> ARRAY_BUFFER
       is NilShape -> VOID
       is AnyShape -> processAnyShape(shape, context)
-      else -> error("Shape type '${shape::class.simpleName}' is unsupported")
+      else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }
 
   private fun processAnyShape(shape: AnyShape, context: TypeScriptResolutionContext): TypeName =
@@ -519,7 +523,7 @@ class TypeScriptTypeRegistry(
           "int16" -> NUMBER
           "int32", "int" -> NUMBER
           "", null -> NUMBER
-          else -> error("Integer format '${shape.format}' is unsupported")
+          else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
       DataType.Long() -> NUMBER
@@ -538,7 +542,7 @@ class TypeScriptTypeRegistry(
 
       DataType.Binary() -> ARRAY_BUFFER
 
-      else -> error("Scalar data type '${shape.dataType}' is unsupported")
+      else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
   private fun processArrayShape(shape: ArrayShape, context: TypeScriptResolutionContext): TypeName {
@@ -594,7 +598,7 @@ class TypeScriptTypeRegistry(
     val existingBuilder = typeBuilders[className]
     if (existingBuilder != null) {
       if (existingBuilder.tags[Id::class] != Id(shape.id)) {
-        error("Multiple classes defined with name '$className'")
+        genError("Multiple classes defined with name '$className'", shape)
       } else {
         return className
       }
@@ -642,7 +646,7 @@ class TypeScriptTypeRegistry(
 
           val discriminatorProperty =
             (inheritedProperties + declaredProperties).find { it.name == discriminatorPropertyName }
-              ?: error("Discriminator property '$discriminatorPropertyName' not found")
+              ?: genError("Discriminator property '$discriminatorPropertyName' not found", shape)
 
           val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
 
@@ -810,10 +814,10 @@ class TypeScriptTypeRegistry(
           if (externalDiscriminatorPropertyName != null) {
 
             declaredProperty.range as? NodeShape
-              ?: error("Externally discriminated types must be 'object'")
+              ?: genError("Externally discriminated types must be 'object'", declaredProperty)
 
             (inheritedProperties + declaredProperties).find { it.name == externalDiscriminatorPropertyName }
-              ?: error("External discriminator '$externalDiscriminatorPropertyName' not found in object")
+              ?: genError("External discriminator '$externalDiscriminatorPropertyName' not found in object", shape)
 
             if (options.contains(JacksonDecorators)) {
               addJacksonPolymorphismOverride(declaredPropertyBuilder, externalDiscriminatorPropertyName)
@@ -1024,7 +1028,7 @@ class TypeScriptTypeRegistry(
     builder.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, builder) != null) {
-      error("Multiple types with name '$className' defined")
+      genError("Multiple types with name '$className' defined")
     }
 
     return builder
@@ -1152,13 +1156,13 @@ class TypeScriptTypeRegistry(
     return if (nestedAnn != null) {
 
       val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
-        ?: error("Nested annotation is missing parent")
+        ?: genError("Nested annotation is missing parent", nestedAnn)
 
       val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.unit.resolveRef(nestedEnclosedIn)
-        ?: error("Nested annotation references invalid enclosing type")
+        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
       nestedEnclosingType as? Shape
-        ?: error("Nested annotation enclosing type references non-type definition")
+        ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
       val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null)
 
@@ -1166,7 +1170,7 @@ class TypeScriptTypeRegistry(
         resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as TypeName.Standard
 
       val nestedName = nestedAnn.getValue("name")
-        ?: error("Nested annotation is missing name")
+        ?: genError("Nested annotation is missing name", nestedAnn)
 
       nestedEnclosingTypeName.nested(nestedName)
     } else {

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
@@ -664,7 +665,7 @@ class RamlTypeAnnotationsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val exception =
-      assertThrows<IllegalStateException> {
+      assertThrows<GenerationException> {
         generateTypes(testUri, typeRegistry, compiler)
       }
 

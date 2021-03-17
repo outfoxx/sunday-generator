@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
@@ -195,9 +196,7 @@ class TypeScriptSundayGenerator(
 
     if (operation.findStringAnnotation(EventStream, null) == "discriminated") {
       if (body !is UnionShape) {
-        throw IllegalStateException(
-          "Discriminated eventObservable requires a union of event types"
-        )
+        genError("Discriminated eventObservable requires a union of event types", operation)
       }
     }
 

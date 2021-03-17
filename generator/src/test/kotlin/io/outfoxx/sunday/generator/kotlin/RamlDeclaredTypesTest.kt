@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.FileSpec
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
@@ -43,7 +44,7 @@ class RamlDeclaredTypesTest {
     val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
 
     val exception =
-      assertThrows<IllegalStateException> {
+      assertThrows<GenerationException> {
         generateTypes(testUri, typeRegistry)
       }
 

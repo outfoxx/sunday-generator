@@ -19,6 +19,7 @@
 package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProcessResult
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
@@ -172,7 +173,8 @@ open class SundayGenerate
             ProcessResult.Level.Warning -> LogLevel.WARN
             ProcessResult.Level.Info -> LogLevel.INFO
           }
-        logger.log(level, "${it.file}:${it.line}: ${it.message}")
+        val errorFile = File(it.file).relativeToOrSelf(project.rootDir)
+        logger.log(level, "$errorFile:${it.line}: ${it.message}")
       }
 
       if (!processed.isValid) {
@@ -205,7 +207,12 @@ open class SundayGenerate
             )
         }
 
-      generator.generateServiceTypes()
+      try {
+        generator.generateServiceTypes()
+      } catch (x: GenerationException) {
+        logger.error("${x.file}:${x.line}: ${x.message}")
+        throw InvalidUserDataException("$file is invalid")
+      }
     }
 
     typeRegistry.generateFiles(categories, outputDirFile.toPath())

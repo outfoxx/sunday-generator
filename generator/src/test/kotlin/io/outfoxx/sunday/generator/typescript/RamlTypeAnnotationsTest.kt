@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
@@ -553,7 +554,7 @@ class RamlTypeAnnotationsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
     val exception =
-      assertThrows<IllegalStateException> {
+      assertThrows<GenerationException> {
         generateTypes(testUri, typeRegistry, compiler)
       }
 

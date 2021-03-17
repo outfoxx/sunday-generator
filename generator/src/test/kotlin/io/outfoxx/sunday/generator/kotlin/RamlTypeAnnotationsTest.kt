@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
@@ -416,7 +417,7 @@ class RamlTypeAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
 
     val exception =
-      assertThrows<IllegalStateException> {
+      assertThrows<GenerationException> {
         generateTypes(testUri, typeRegistry)
       }
 
