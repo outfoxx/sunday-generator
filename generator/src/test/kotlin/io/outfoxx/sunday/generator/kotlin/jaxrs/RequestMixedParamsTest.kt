@@ -77,12 +77,12 @@ class RequestMixedParamsTest {
             @HeaderParam(value = "x-type") xType: FetchTestXTypeHeaderParam
           ): Response
 
-          public enum class FetchTestPageQueryParam {
+          public enum class FetchTestSelectUriParam {
             All,
             Limited,
           }
 
-          public enum class FetchTestSelectUriParam {
+          public enum class FetchTestPageQueryParam {
             All,
             Limited,
           }

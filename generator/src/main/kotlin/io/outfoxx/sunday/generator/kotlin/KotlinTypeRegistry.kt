@@ -135,7 +135,6 @@ import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.properties
 import io.outfoxx.sunday.generator.utils.range
 import io.outfoxx.sunday.generator.utils.resolve
-import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.sunday.generator.utils.scalarValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -199,10 +198,8 @@ class KotlinTypeRegistry(
 
     // Add nested classes to parents
     typeBuilders.entries
-      .groupBy { entry -> entry.key.enclosingClassName() }
-      .toSortedMap { o1, o2 -> (o2?.canonicalName?.length ?: 0) - (o1?.canonicalName?.length ?: 0) }
-      .values
-      .flatMap { list -> list.sortedBy { it.key.canonicalName } }
+      .toList()
+      .sortedByDescending { it.key.simpleNames.size }
       .forEach { (className, typeBuilder) ->
         // Is this a nested class?
         val enclosingClassName = className.enclosingClassName() ?: return@forEach
