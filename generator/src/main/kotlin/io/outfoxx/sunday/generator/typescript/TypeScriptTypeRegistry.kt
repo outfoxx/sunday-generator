@@ -434,7 +434,7 @@ class TypeScriptTypeRegistry(
       "datetime-only" -> LOCAL_DATETIME
       "datetime" -> OFFSET_DATETIME
       else -> {
-        val (element, unit) = context.unit.resolveRef(name) ?: genError("Invalid type reference '$name'", source)
+        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
         element as? Shape ?: genError("Invalid type reference '$name'", source)
 
         resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
@@ -1158,7 +1158,7 @@ class TypeScriptTypeRegistry(
       val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
         ?: genError("Nested annotation is missing parent", nestedAnn)
 
-      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.unit.resolveRef(nestedEnclosedIn)
+      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
         ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
       nestedEnclosingType as? Shape
@@ -1272,7 +1272,7 @@ class TypeScriptTypeRegistry(
 
   private fun buildDiscriminatorMappings(shape: NodeShape, context: TypeScriptResolutionContext): Map<String, String> =
     shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
+      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
 }

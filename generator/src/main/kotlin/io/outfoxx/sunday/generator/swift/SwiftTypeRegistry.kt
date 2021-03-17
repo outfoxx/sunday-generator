@@ -101,7 +101,6 @@ import io.outfoxx.sunday.generator.utils.properties
 import io.outfoxx.sunday.generator.utils.range
 import io.outfoxx.sunday.generator.utils.required
 import io.outfoxx.sunday.generator.utils.resolve
-import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -390,7 +389,7 @@ class SwiftTypeRegistry(
       "datetime-only" -> DATE
       "datetime" -> DATE
       else -> {
-        val (element, unit) = context.unit.resolveRef(name) ?: genError("Invalid type reference '$name'", source)
+        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
         element as? Shape ?: genError("Invalid type reference '$name'", source)
         val resContext = SwiftResolutionContext(unit, null)
 
@@ -1293,7 +1292,7 @@ class SwiftTypeRegistry(
       val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
         ?: genError("Nested annotation is missing parent", nestedAnn)
 
-      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.unit.resolveRef(nestedEnclosedIn)
+      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
         ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
       nestedEnclosingType as? Shape
@@ -1422,7 +1421,7 @@ class SwiftTypeRegistry(
 
   private fun buildDiscriminatorMappings(shape: NodeShape, context: SwiftResolutionContext): Map<String, String> =
     shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
+      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
 

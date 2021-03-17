@@ -389,7 +389,7 @@ class KotlinTypeRegistry(
       "datetime-only" -> LocalDateTime::class.asTypeName()
       "datetime" -> OffsetDateTime::class.asTypeName()
       else -> {
-        val (element, unit) = context.unit.resolveRef(name) ?: genError("Invalid type reference '$name'", source)
+        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
         element as? Shape ?: genError("Invalid type reference '$name'", source)
         val resContext = KotlinResolutionContext(unit, null)
 
@@ -1296,7 +1296,7 @@ class KotlinTypeRegistry(
       val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
         ?: genError("Nested annotation is missing parent", nestedAnn)
 
-      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.unit.resolveRef(nestedEnclosedIn)
+      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
         ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
       nestedEnclosingType as? Shape
@@ -1408,7 +1408,7 @@ class KotlinTypeRegistry(
 
   private fun buildDiscriminatorMappings(shape: NodeShape, context: KotlinResolutionContext): Map<String, String> =
     shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.unit.resolveRef(mapping.linkExpression().value()) ?: return@mapNotNull null
+      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
 }

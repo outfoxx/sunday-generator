@@ -17,6 +17,9 @@
 package io.outfoxx.sunday.generator.typescript
 
 import amf.client.model.document.BaseUnit
+import amf.client.model.domain.DomainElement
+import io.outfoxx.sunday.generator.utils.findDeclaringUnit
+import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.typescriptpoet.TypeName
 
 data class TypeScriptResolutionContext(
@@ -26,5 +29,10 @@ data class TypeScriptResolutionContext(
 
   fun copy(suggestedTypeName: TypeName.Standard? = null): TypeScriptResolutionContext {
     return TypeScriptResolutionContext(unit, suggestedTypeName)
+  }
+
+  fun resolveRef(name: String, source: DomainElement): Pair<DomainElement, BaseUnit>? {
+    val sourceUnit = unit.findDeclaringUnit(source)
+    return sourceUnit.resolveRef(name)
   }
 }

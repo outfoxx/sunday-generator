@@ -17,6 +17,9 @@
 package io.outfoxx.sunday.generator.swift
 
 import amf.client.model.document.BaseUnit
+import amf.client.model.domain.DomainElement
+import io.outfoxx.sunday.generator.utils.findDeclaringUnit
+import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.swiftpoet.DeclaredTypeName
 
 data class SwiftResolutionContext(
@@ -26,5 +29,10 @@ data class SwiftResolutionContext(
 
   fun copy(suggestedTypeName: DeclaredTypeName? = null): SwiftResolutionContext {
     return SwiftResolutionContext(unit, suggestedTypeName)
+  }
+
+  fun resolveRef(name: String, source: DomainElement): Pair<DomainElement, BaseUnit>? {
+    val sourceUnit = unit.findDeclaringUnit(source)
+    return sourceUnit.resolveRef(name)
   }
 }
