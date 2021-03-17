@@ -310,6 +310,107 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for 'nested' annotation using only library types`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val typeSpec = findTypeMod("Root@!root", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+        
+        export interface Root {
+
+          value: string;
+
+        }
+
+        export class Root implements Root {
+
+          value: string;
+
+          constructor(value: string) {
+            this.value = value;
+          }
+
+          copy(src: Partial<Root>): Root {
+            return new Root(src.value ?? this.value);
+          }
+
+          toString(): string {
+            return `Root(value='${'$'}{this.value}')`;
+          }
+
+        }
+
+        export namespace Root {
+
+          export interface Group {
+
+            value: string;
+
+          }
+
+          export class Group implements Group {
+
+            value: string;
+
+            constructor(value: string) {
+              this.value = value;
+            }
+
+            copy(src: Partial<Group>): Group {
+              return new Group(src.value ?? this.value);
+            }
+
+            toString(): string {
+              return `Root.Group(value='${'$'}{this.value}')`;
+            }
+
+          }
+        
+          export namespace Group {
+
+            export interface Member {
+  
+              memberValue: string;
+  
+            }
+  
+            export class Member implements Member {
+  
+              memberValue: string;
+
+              constructor(memberValue: string) {
+                this.memberValue = memberValue;
+              }
+  
+              copy(src: Partial<Member>): Member {
+                return new Member(src.memberValue ?? this.memberValue);
+              }
+  
+              toString(): string {
+                return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
+              }
+
+            }
+
+          }
+
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test class generated TypeScript implementations`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-ts-impl.raml") testUri: URI

@@ -1,0 +1,22 @@
+#%RAML 1.0 Library
+uses:
+  lib: lib-type-nested-1.raml
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+types:
+
+  Group:
+    type: object
+    (sunday.nested):
+      enclosedIn: lib.Root
+      name: Group
+    properties:
+      value: string
+
+  GroupMember:
+    type: object
+    (sunday.nested):
+      enclosedIn: Group
+      name: Member
+    properties:
+      memberValue: string

@@ -174,6 +174,41 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for 'nested' annotation using only library types`(
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+
+    val typeSpec = findType("io.test.Root", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.String
+
+        public interface Root {
+          public val value: String
+
+          public interface Group {
+            public val value: String
+  
+            public interface Member {
+              public val memberValue: String
+            }
+          }
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test class generated kotlin implementations`(
     @ResourceUri("raml/type-gen/annotations/type-kotlin-impl.raml") testUri: URI
   ) {
