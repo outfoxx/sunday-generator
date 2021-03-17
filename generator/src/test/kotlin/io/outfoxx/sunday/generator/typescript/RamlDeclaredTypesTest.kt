@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
@@ -45,7 +46,7 @@ class RamlDeclaredTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val exception =
-      assertThrows<IllegalStateException> {
+      assertThrows<GenerationException> {
         generateTypes(testUri, typeRegistry, compiler)
       }
 

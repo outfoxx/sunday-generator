@@ -31,9 +31,10 @@ data class ProblemTypeDefinition(
   val detail: String,
   val custom: Map<String, String>,
   val definedIn: BaseUnit,
+  val source: ObjectNode
 ) {
 
-  constructor(code: String, fields: ObjectNode, baseURI: URI, definedIn: BaseUnit) : this(
+  constructor(code: String, fields: ObjectNode, baseURI: URI, definedIn: BaseUnit, source: ObjectNode) : this(
     baseURI.resolve("./$code"),
     fields.get<DataNode>("status")?.rawScalarValue?.toInt()
       ?: error("Problem type '$code' missing status"),
@@ -45,5 +46,6 @@ data class ProblemTypeDefinition(
       ?.map { it.key to (it.value.stringValue ?: "string") }
       ?.toMap() ?: emptyMap(),
     definedIn,
+    source,
   )
 }

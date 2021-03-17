@@ -161,7 +161,7 @@ fun generateTypes(
 
   val problemTypesAnn = document.api.findAnnotation(ProblemTypes, null) as? ObjectNode
   problemTypesAnn?.properties()?.forEach { (problemCode, problemDef) ->
-    val problemType = ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document)
+    val problemType = ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document, problemDef)
     typeRegistry.defineProblemType(problemCode, problemType)
   }
 

@@ -40,6 +40,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
@@ -394,6 +395,6 @@ class KotlinJAXRSGenerator(
       "POST" -> POST::class
       "PUT" -> PUT::class
       "PATCH" -> PATCH::class
-      else -> throw IllegalStateException("Invalid HTTP method: $methodName")
+      else -> genError("Invalid HTTP method: $methodName")
     }
 }

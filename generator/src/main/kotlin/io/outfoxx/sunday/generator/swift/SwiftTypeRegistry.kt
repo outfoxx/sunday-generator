@@ -21,6 +21,7 @@ package io.outfoxx.sunday.generator.swift
 import amf.client.model.domain.AnyShape
 import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.ArrayShape
+import amf.client.model.domain.DomainElement
 import amf.client.model.domain.FileShape
 import amf.client.model.domain.NilShape
 import amf.client.model.domain.NodeShape
@@ -40,6 +41,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY
@@ -214,7 +216,7 @@ class SwiftTypeRegistry(
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
     if (typeBuilders.putIfAbsent(className, serviceType) != null) {
-      error("Service type '$className' is already defined")
+      genError("Service type '$className' is already defined")
     }
   }
 
@@ -250,6 +252,7 @@ class SwiftTypeRegistry(
                       customPropertyName.swiftIdentifierName,
                       resolveTypeReference(
                         customPropertyTypeNameStr,
+                        problemTypeDefinition.source,
                         SwiftResolutionContext(problemTypeDefinition.definedIn, null)
                       )
                     )
@@ -283,6 +286,7 @@ class SwiftTypeRegistry(
                 customPropertyName.swiftIdentifierName,
                 resolveTypeReference(
                   customPropertyTypeNameStr,
+                  problemTypeDefinition.source,
                   SwiftResolutionContext(problemTypeDefinition.definedIn, null)
                 ),
                 PUBLIC
@@ -372,7 +376,7 @@ class SwiftTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(name: String, context: SwiftResolutionContext): TypeName =
+  private fun resolveTypeReference(name: String, source: DomainElement, context: SwiftResolutionContext): TypeName =
     when (name.toLowerCase()) {
       "boolean" -> BOOL
       "integer" -> INT
@@ -386,8 +390,8 @@ class SwiftTypeRegistry(
       "datetime-only" -> DATE
       "datetime" -> DATE
       else -> {
-        val (element, unit) = context.unit.resolveRef(name) ?: error("Invalid type reference '$name'")
-        element as? Shape ?: error("Invalid type reference '$name'")
+        val (element, unit) = context.unit.resolveRef(name) ?: genError("Invalid type reference '$name'", source)
+        element as? Shape ?: genError("Invalid type reference '$name'", source)
         val resContext = SwiftResolutionContext(unit, null)
 
         resolveReferencedTypeName(element, resContext)
@@ -434,7 +438,7 @@ class SwiftTypeRegistry(
       is FileShape -> DATA
       is NilShape -> VOID
       is AnyShape -> processAnyShape(shape, context)
-      else -> error("Shape type '${shape::class.simpleName}' is unsupported")
+      else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }
 
   private fun processAnyShape(shape: AnyShape, context: SwiftResolutionContext): TypeName =
@@ -478,7 +482,7 @@ class SwiftTypeRegistry(
           "int32" -> INT32
           "int64" -> INT64
           "int", "", null -> INT
-          else -> error("Integer format '${type.format}' is unsupported")
+          else -> genError("Integer format '${type.format}' is unsupported", type)
         }
 
       DataType.Long() -> INT64
@@ -497,7 +501,7 @@ class SwiftTypeRegistry(
 
       DataType.Binary() -> DATE
 
-      else -> error("Scalar data type '${type.dataType}' is unsupported")
+      else -> genError("Scalar data type '${type.dataType}' is unsupported", type)
     }
 
   private fun processArrayShape(type: ArrayShape, context: SwiftResolutionContext): TypeName {
@@ -552,7 +556,7 @@ class SwiftTypeRegistry(
     val existingBuilder = typeBuilders[className]
     if (existingBuilder != null) {
       if (existingBuilder.tags[Id::class] != Id(shape.id)) {
-        error("Multiple classes defined with name '$className'")
+        genError("Multiple classes defined with name '$className'", shape)
       } else {
         return className
       }
@@ -599,7 +603,7 @@ class SwiftTypeRegistry(
 
         discriminatorProperty =
           (originalInheritedProperties + originalLocalProperties).find { it.name == discriminatorPropertyName }
-          ?: error("Discriminator property '$discriminatorPropertyName' not found")
+          ?: genError("Discriminator property '$discriminatorPropertyName' not found", shape)
 
         val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
         val discriminatorPropertyTypeEnumCases =
@@ -911,7 +915,7 @@ class SwiftTypeRegistry(
           val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, null)!!
           val externalDiscriminatorProperty =
             (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
-              ?: error("($ExternalDiscriminator) property '$externalDiscriminator' is not valid")
+              ?: genError("($ExternalDiscriminator) property '$externalDiscriminator' is not valid", shape)
           val externalDiscriminatorPropertyName = externalDiscriminatorProperty.swiftIdentifierName
           val externalDiscriminatorPropertyTypeName =
             resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
@@ -920,7 +924,7 @@ class SwiftTypeRegistry(
           val propertyTypeDerivedShapes = context.unit.findInheritingTypes(prop.range)
 
           if (externalDiscriminatorProperty.optional && prop.required) {
-            error("($ExternalDiscriminator) property is not required but the property it discriminates is")
+            genError("($ExternalDiscriminator) property is not required but the property it discriminates is", shape)
           }
 
           val switchOn =
@@ -1258,7 +1262,7 @@ class SwiftTypeRegistry(
     builder.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
 
     if (typeBuilders.putIfAbsent(className, builder) != null) {
-      error("Multiple types declared with name '${className.simpleName}'")
+      genError("Multiple types declared with name '${className.simpleName}'")
     }
 
     if (className.enclosingTypeName() == null) {
@@ -1287,22 +1291,22 @@ class SwiftTypeRegistry(
     return if (nestedAnn != null) {
 
       val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
-        ?: error("Nested annotation is missing parent")
+        ?: genError("Nested annotation is missing parent", nestedAnn)
 
       val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.unit.resolveRef(nestedEnclosedIn)
-        ?: error("Nested annotation references invalid enclosing type")
+        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
       nestedEnclosingType as? Shape
-        ?: error("Nested annotation enclosing type references non-type definition")
+        ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
       val nestedEnclosingTypeContext = SwiftResolutionContext(nestedEnclosingTypeUnit, null)
 
       val nestedEnclosingTypeName =
         resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? DeclaredTypeName
-          ?: error("Nested annotation references non-defining enclosing type")
+          ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
 
       val nestedName = nestedAnn.getValue("name")
-        ?: error("Nested annotation is missing name")
+        ?: genError("Nested annotation is missing name", nestedAnn)
 
       nestedEnclosingTypeName.nestedType(nestedName)
     } else {

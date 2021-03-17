@@ -37,6 +37,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
@@ -312,7 +313,7 @@ abstract class SwiftGenerator(
             val referencedProblemTypes =
               referencedProblemCodes
                 .map { problemCode ->
-                  val problemType = problemTypes[problemCode] ?: error("Unknown problem code referenced: $problemCode")
+                  val problemType = problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
                   problemCode to problemType
                 }
                 .toMap()
@@ -509,7 +510,7 @@ abstract class SwiftGenerator(
       try {
         return URI(UriTemplate.expand(template, problemBaseUriParams))
       } catch (e: URISyntaxException) {
-        throw error(
+        genError(
           """
             Problem URI is not a valid URI; it cannot be a template.
             Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
@@ -532,9 +533,11 @@ abstract class SwiftGenerator(
 
     return problemDefLocations
       .mapNotNull { (unit, element) ->
-        (element.findAnnotation(ProblemTypes, null) as? ObjectNode)
-          ?.properties()
-          ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit) }?.entries
+        val problemAnn = (element.findAnnotation(ProblemTypes, null) as? ObjectNode) ?: return@mapNotNull null
+        problemAnn
+          .properties()
+          ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit, problemAnn) }
+          ?.entries
       }
       .flatten()
       .associate { it.key to it.value }

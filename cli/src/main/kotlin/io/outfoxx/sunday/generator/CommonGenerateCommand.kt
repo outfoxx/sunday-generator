@@ -70,8 +70,8 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
       val processed = process(file.toURI())
 
       processed.entries.forEach {
-        val location = listOfNotNull(it.file, it.line).joinToString { ":" }
-        println("${it.level.toString().toLowerCase()}| $location: ${it.message}")
+        val out = if (it.level == ProcessResult.Level.Error) System.err else System.out
+        out.println("${it.level.toString().toLowerCase()}| ${it.file}:${it.line}: ${it.message}")
       }
 
       if (!processed.isValid) {
@@ -80,7 +80,11 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
       val generator = generatorFactory(processed.document)
 
-      generator.generateServiceTypes()
+      try {
+        generator.generateServiceTypes()
+      } catch (x: GenerationException) {
+        System.err.println("${x.file}:${x.line}: ${x.message}")
+      }
     }
 
     typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())

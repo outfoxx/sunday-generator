@@ -44,6 +44,7 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.discriminatorValue
@@ -231,9 +232,7 @@ class KotlinSundayGenerator(
 
     if (operation.findStringAnnotation(APIAnnotationName.EventStream, null) == "discriminated") {
       if (body !is UnionShape) {
-        throw IllegalStateException(
-          "Discriminated eventObservable requires a union of event types"
-        )
+        genError("Discriminated eventObservable requires a union of event types", operation)
       }
       return Flow::class.asTypeName().parameterizedBy(returnTypeName)
     }
