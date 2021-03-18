@@ -28,7 +28,8 @@ class SwiftSundayGenerateCommand :
       typeRegistry,
       Generator.Options(
         problemBaseUri,
-        mediaTypes.toList()
+        mediaTypes.toList(),
+        serviceSuffix,
       )
     )
 }

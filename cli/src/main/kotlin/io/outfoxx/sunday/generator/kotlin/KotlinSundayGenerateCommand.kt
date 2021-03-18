@@ -31,7 +31,8 @@ class KotlinSundayGenerateCommand :
       KotlinGenerator.Options(
         servicePackageName ?: packageName,
         problemBaseUri,
-        mediaTypes.toList()
+        mediaTypes.toList(),
+        serviceSuffix,
       )
     )
 }

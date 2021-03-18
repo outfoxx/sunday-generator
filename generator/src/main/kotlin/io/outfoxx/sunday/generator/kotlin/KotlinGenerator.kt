@@ -99,9 +99,11 @@ abstract class KotlinGenerator(
     val defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
+    serviceSuffix: String,
   ) : Generator.Options(
     defaultProblemBaseUri,
-    defaultMediaTypes
+    defaultMediaTypes,
+    serviceSuffix,
   )
 
   data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
@@ -119,7 +121,7 @@ abstract class KotlinGenerator(
         api.findStringAnnotation(KotlinPkg, generationMode)
           ?: options.defaultServicePackageName
 
-      val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
+      val serviceSimpleName = "${groupName?.capitalize() ?: ""}${options.serviceSuffix}"
 
       val serviceTypeName = ClassName.bestGuess("$servicePackageName.$serviceSimpleName")
 

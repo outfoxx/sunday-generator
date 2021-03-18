@@ -20,6 +20,7 @@ import amf.client.model.document.Document
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -29,6 +30,12 @@ import com.github.ajalt.clikt.parameters.types.file
 import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
+
+  val serviceSuffix
+    by option(
+    "-service-suffix",
+    help = "Suffix for generated services"
+  ).default("API")
 
   val mediaTypes
     by option(

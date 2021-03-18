@@ -20,5 +20,6 @@ import io.outfoxx.sunday.generator.Generator
 
 val swiftSundayTestOptions = Generator.Options(
   "http://example.com/",
-  listOf("application/json")
+  listOf("application/json"),
+  "API",
 )

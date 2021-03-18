@@ -46,6 +46,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.generateService.set(gen.generateService)
         genTask.pkgName.set(gen.pkgName)
         genTask.servicePkgName.set(gen.servicePkgName)
+        genTask.serviceSuffix.set(gen.serviceSuffix)
         genTask.modelPkgName.set(gen.modelPkgName)
         genTask.disableValidationConstraints.set(gen.disableValidationConstraints)
         genTask.disableJacksonAnnotations.set(gen.disableJacksonAnnotations)

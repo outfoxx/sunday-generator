@@ -32,6 +32,7 @@ abstract class Generator(
   open class Options(
     val defaultProblemBaseUri: String,
     val defaultMediaTypes: List<String>,
+    val serviceSuffix: String
   )
 
   open val options: Options = options
