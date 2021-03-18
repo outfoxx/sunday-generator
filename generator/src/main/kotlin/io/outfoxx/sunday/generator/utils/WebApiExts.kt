@@ -79,7 +79,9 @@ import amf.core.model.DataType
 import amf.core.remote.Vendor
 import amf.plugins.document.webapi.annotations.ExternalJsonSchemaShape
 import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import org.apache.http.client.utils.URIBuilder
 import scala.collection.JavaConverters
 import java.net.URI
@@ -299,6 +301,18 @@ val Operation.successes: List<Response>
 val Operation.failures: List<Response>
   get() =
     this.responses.filter { (400 until 600).contains(it.statusCode.toInt()) }
+
+val Operation.has404Response: Boolean
+  get() =
+    this.responses.any { it.statusCode == "404" }
+
+fun Operation.has404Problem(problemTypes: Map<String, ProblemTypeDefinition>): Boolean =
+  this.findArrayAnnotation(Problems, null)?.mapNotNull { it.stringValue }?.any {
+    problemTypes[it]?.status == 404
+  } ?: false
+
+fun Operation.has404(problemTypes: Map<String, ProblemTypeDefinition>): Boolean =
+  has404Response || has404Problem(problemTypes)
 
 //
 val Message.description: String? get() = this.description().value
