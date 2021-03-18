@@ -1,4 +1,3 @@
-
 plugins {
   `java-gradle-plugin`
 }
@@ -38,7 +37,8 @@ gradlePlugin {
 
 
 tasks {
-  shadowJar {
+  shadowJar.configure {
+    archiveClassifier.set("")
     dependencies {
       exclude(dependency(project.dependencies.gradleApi()))
       exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
