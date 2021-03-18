@@ -43,6 +43,7 @@ class SundayGeneration(
   var generateService: Property<Boolean> = objects.property(Boolean::class.java)
   var pkgName: Property<String> = objects.property(String::class.java)
   var servicePkgName: Property<String> = objects.property(String::class.java)
+  var serviceSuffix: Property<String> = objects.property(String::class.java)
   var modelPkgName: Property<String> = objects.property(String::class.java)
   var disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
   var disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)

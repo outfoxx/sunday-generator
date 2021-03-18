@@ -51,7 +51,8 @@ class ResponseReactiveTest {
             CompletionStage::class.qualifiedName,
             "io.test.service",
             "http://example.com/",
-            listOf("application/json")
+            listOf("application/json"),
+            "API",
           )
         )
       }
@@ -101,7 +102,8 @@ class ResponseReactiveTest {
             CompletionStage::class.qualifiedName,
             "io.test.service",
             "http://example.com/",
-            listOf("application/json")
+            listOf("application/json"),
+            "API",
           )
         )
       }

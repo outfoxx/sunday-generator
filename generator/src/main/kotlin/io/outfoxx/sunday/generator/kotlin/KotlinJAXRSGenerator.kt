@@ -93,10 +93,12 @@ class KotlinJAXRSGenerator(
     defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
+    serviceSuffix: String,
   ) : KotlinGenerator.Options(
     defaultServicePackageName,
     defaultProblemBaseUri,
     defaultMediaTypes,
+    serviceSuffix,
   )
 
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()

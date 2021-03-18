@@ -48,6 +48,7 @@ class KotlinJAXRSGenerateCommand :
         servicePackageName ?: packageName,
         problemBaseUri,
         mediaTypes.toList(),
+        serviceSuffix,
       )
     )
 }

@@ -103,7 +103,7 @@ abstract class SwiftGenerator(
 
     endPointGroups.map { (groupName, endPoints) ->
 
-      val serviceSimpleName = "${groupName?.capitalize() ?: ""}API"
+      val serviceSimpleName = "${groupName?.capitalize() ?: ""}${options.serviceSuffix}"
 
       val serviceTypeName = DeclaredTypeName.typeName(".$serviceSimpleName")
 

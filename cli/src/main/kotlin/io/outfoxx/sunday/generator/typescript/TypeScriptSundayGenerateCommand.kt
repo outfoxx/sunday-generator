@@ -29,6 +29,7 @@ class TypeScriptSundayGenerateCommand :
       Generator.Options(
         problemBaseUri,
         mediaTypes.toList(),
+        serviceSuffix,
       )
     )
 }

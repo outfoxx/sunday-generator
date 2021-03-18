@@ -106,7 +106,7 @@ abstract class TypeScriptGenerator(
 
     endPointGroups.map { (groupName, endPoints) ->
 
-      val serviceSimpleName = "${groupName?.kotlinTypeName ?: ""}API"
+      val serviceSimpleName = "${groupName?.kotlinTypeName ?: ""}${options.serviceSuffix}"
 
       val modulePath = modulePathOf(document)?.let { "!$it/" } ?: "!"
 

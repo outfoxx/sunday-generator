@@ -89,6 +89,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val serviceSuffix: Property<String> = objects.property(String::class.java)
+
+  @Input
+  @Optional
   val problemBaseUri: Property<String> = objects.property(String::class.java)
 
   @Input
@@ -124,6 +128,7 @@ open class SundayGenerate
     val pkgName = this.pkgName.orNull
     val modelPkgName = require(this.modelPkgName.orNull ?: pkgName, "modelPkgName or pkgName required")
     val servicePkgName = require(this.servicePkgName.orNull ?: pkgName, "servicePkgName or pkgName required")
+    val serviceSuffix = this.serviceSuffix.orNull ?: "API"
     val problemBaseUri = this.problemBaseUri.orNull ?: "http://example.com/"
     val outputDir = this.outputDir.getOrElse(defaultOutputDir)
     val outputDirFile = outputDir.asFile
@@ -192,6 +197,7 @@ open class SundayGenerate
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),
+                serviceSuffix
               )
             )
 
@@ -203,6 +209,7 @@ open class SundayGenerate
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),
+                serviceSuffix
               )
             )
         }

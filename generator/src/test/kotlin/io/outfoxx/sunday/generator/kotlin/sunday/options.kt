@@ -21,5 +21,6 @@ import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 val kotlinSundayTestOptions = KotlinGenerator.Options(
   "io.test.service",
   "http://example.com/",
-  listOf("application/json")
+  listOf("application/json"),
+  "API",
 )
