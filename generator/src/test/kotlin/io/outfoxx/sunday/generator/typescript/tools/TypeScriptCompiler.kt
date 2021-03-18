@@ -29,13 +29,14 @@ import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.core.command.ExecStartResultCallback
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
+import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit.MINUTES
 
-class TypeScriptCompiler(private val workDir: Path) : Closeable {
+class TypeScriptCompiler(private val workDir: Path) : Closeable, ExtensionContext.Store.CloseableResource {
 
   companion object {
 
