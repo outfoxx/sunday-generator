@@ -318,4 +318,129 @@ class ResponseBodyContentTest {
       }
     )
   }
+
+  @Test
+  fun `test basic body parameter generation in client mode with 404 response`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-response.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        SwiftSundayGenerator(
+          document,
+          typeRegistry,
+          swiftSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("API", builtTypes)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class API {
+
+          public let requestFactory: RequestFactory
+          public let defaultContentTypes: [MediaType]
+          public let defaultAcceptTypes: [MediaType]
+
+          public init(
+            requestFactory: RequestFactory,
+            defaultContentTypes: [MediaType] = [],
+            defaultAcceptTypes: [MediaType] = [.json]
+          ) {
+            self.requestFactory = requestFactory
+            self.defaultContentTypes = defaultContentTypes
+            self.defaultAcceptTypes = defaultAcceptTypes
+          }
+
+          func fetchTest() -> RequestResultPublisher<Test?> {
+            return self.requestFactory.result(
+              method: .get,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: nil as Empty?,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test basic body parameter generation in client mode with 404 problem`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-problem.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        SwiftSundayGenerator(
+          document,
+          typeRegistry,
+          swiftSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("API", builtTypes)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class API {
+
+          public let requestFactory: RequestFactory
+          public let defaultContentTypes: [MediaType]
+          public let defaultAcceptTypes: [MediaType]
+
+          public init(
+            requestFactory: RequestFactory,
+            defaultContentTypes: [MediaType] = [],
+            defaultAcceptTypes: [MediaType] = [.json]
+          ) {
+            self.requestFactory = requestFactory
+            self.defaultContentTypes = defaultContentTypes
+            self.defaultAcceptTypes = defaultAcceptTypes
+            requestFactory.registerProblem(uri: "http://example.com/test_not_found", type: TestNotFoundProblem.self)
+          }
+
+          func fetchTest() -> RequestResultPublisher<Test?> {
+            return self.requestFactory.result(
+              method: .get,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: nil as Empty?,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }

@@ -44,12 +44,14 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -209,6 +211,7 @@ class KotlinSundayGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
     returnTypeName: TypeName
@@ -237,7 +240,11 @@ class KotlinSundayGenerator(
       return Flow::class.asTypeName().parameterizedBy(returnTypeName)
     }
 
-    return returnTypeName
+    return if (operation.has404(problemTypes)) {
+      returnTypeName.copy(nullable = true)
+    } else {
+      returnTypeName
+    }
   }
 
   override fun processResourceMethodStart(

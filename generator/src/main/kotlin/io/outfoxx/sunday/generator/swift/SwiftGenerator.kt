@@ -172,6 +172,7 @@ abstract class SwiftGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     returnTypeName: TypeName
@@ -279,6 +280,7 @@ abstract class SwiftGenerator(
                 operation,
                 response,
                 responseBodyType,
+                problemTypes,
                 typeBuilder,
                 functionBuilder,
                 responseBodyTypeName
@@ -290,7 +292,7 @@ abstract class SwiftGenerator(
           } else {
 
             val processedResponseBodyTypeName =
-              processReturnType(endPoint, operation, response, null, typeBuilder, functionBuilder, VOID)
+              processReturnType(endPoint, operation, response, null, problemTypes, typeBuilder, functionBuilder, VOID)
             if (processedResponseBodyTypeName != VOID) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }

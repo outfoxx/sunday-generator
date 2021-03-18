@@ -27,6 +27,7 @@ import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
@@ -44,6 +45,7 @@ import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -213,6 +215,7 @@ class SwiftSundayGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     returnTypeName: TypeName
@@ -252,7 +255,14 @@ class SwiftSundayGenerator(
       return REQUEST_COMPLETE_PUBLISHER
     }
 
-    return REQUEST_RESULT_PUBLISHER.parameterizedBy(elementReturnType)
+    val maybeOptionalElementReturnType =
+      if (operation.has404(problemTypes)) {
+        elementReturnType.makeOptional()
+      } else {
+        elementReturnType
+      }
+
+    return REQUEST_RESULT_PUBLISHER.parameterizedBy(maybeOptionalElementReturnType)
   }
 
   override fun processResourceMethodStart(

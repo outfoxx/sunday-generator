@@ -79,7 +79,7 @@ class ResponseProblemsTest {
             requestFactory.registerProblem(uri: "http://example.com/test_not_found", type: TestNotFoundProblem.self)
           }
 
-          func fetchTest() -> RequestResultPublisher<Test> {
+          func fetchTest() -> RequestResultPublisher<Test?> {
             return self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",

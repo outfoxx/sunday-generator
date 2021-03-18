@@ -40,10 +40,12 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
 import io.outfoxx.sunday.generator.utils.path
@@ -151,6 +153,7 @@ class KotlinJAXRSGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
     returnTypeName: TypeName
@@ -190,7 +193,11 @@ class KotlinJAXRSGenerator(
     }
 
     return if (generationMode == Client) {
-      returnTypeName
+      if (operation.has404(problemTypes)) {
+        returnTypeName.copy(nullable = true)
+      } else {
+        returnTypeName
+      }
     } else {
       javax.ws.rs.core.Response::class.asTypeName()
     }

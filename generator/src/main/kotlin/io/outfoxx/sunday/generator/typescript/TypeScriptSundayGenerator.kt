@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
@@ -40,6 +41,7 @@ import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
@@ -49,6 +51,7 @@ import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -173,6 +176,7 @@ class TypeScriptSundayGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     returnTypeName: TypeName
@@ -200,7 +204,14 @@ class TypeScriptSundayGenerator(
       }
     }
 
-    return TypeName.parameterizedType(OBSERVABLE, returnTypeName)
+    val maybeNullableReturnTypeName =
+      if (operation.has404(problemTypes)) {
+        returnTypeName.nullable
+      } else {
+        returnTypeName
+      }
+
+    return TypeName.parameterizedType(OBSERVABLE, maybeNullableReturnTypeName)
   }
 
   override fun processResourceMethodStart(

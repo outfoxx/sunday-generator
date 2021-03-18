@@ -218,6 +218,7 @@ abstract class TypeScriptGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     returnTypeName: TypeName
@@ -314,6 +315,7 @@ abstract class TypeScriptGenerator(
                 operation,
                 response,
                 responseBodyType,
+                problemTypes,
                 typeBuilder,
                 functionBuilder,
                 responseBodyTypeName
@@ -325,7 +327,7 @@ abstract class TypeScriptGenerator(
           } else {
 
             val processedResponseBodyTypeName =
-              processReturnType(endPoint, operation, response, null, typeBuilder, functionBuilder, VOID)
+              processReturnType(endPoint, operation, response, null, problemTypes, typeBuilder, functionBuilder, VOID)
 
             if (processedResponseBodyTypeName != VOID) {
               functionBuilder.returns(processedResponseBodyTypeName)

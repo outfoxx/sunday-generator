@@ -190,9 +190,10 @@ abstract class KotlinGenerator(
     operation: Operation,
     response: Response,
     body: Shape?,
+    problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName
 
   abstract fun processResourceMethodEnd(
@@ -310,9 +311,10 @@ abstract class KotlinGenerator(
                 operation,
                 response,
                 responseBodyType,
+                problemTypes,
                 typeBuilder,
                 functionBuilder,
-                responseBodyTypeName
+                responseBodyTypeName,
               )
 
             if (processedResponseBodyTypeName != UNIT) {
@@ -321,7 +323,7 @@ abstract class KotlinGenerator(
           } else {
 
             val processedResponseBodyTypeName =
-              processReturnType(endPoint, operation, response, null, typeBuilder, functionBuilder, UNIT)
+              processReturnType(endPoint, operation, response, null, problemTypes, typeBuilder, functionBuilder, UNIT)
             if (processedResponseBodyTypeName != UNIT) {
               functionBuilder.returns(processedResponseBodyTypeName)
             }

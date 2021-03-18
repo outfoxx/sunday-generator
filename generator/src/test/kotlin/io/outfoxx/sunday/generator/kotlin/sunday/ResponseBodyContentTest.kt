@@ -228,4 +228,104 @@ class ResponseBodyContentTest {
       }
     )
   }
+
+  @Test
+  fun `test basic body parameter generation in client mode with 404 response`(
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-response.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinSundayGenerator(
+          document,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+        
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.test.Test
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+        ) {
+          public suspend fun fetchTest(): Test? = this.requestFactory.result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes
+          )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test basic body parameter generation in client mode with 404 problem`(
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-problem.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinSundayGenerator(
+          document,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+        
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.test.Test
+        import io.test.TestNotFoundProblem
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+        ) {
+          init {
+            requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
+          }
+          public suspend fun fetchTest(): Test? = this.requestFactory.result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes
+          )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }

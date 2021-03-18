@@ -279,4 +279,118 @@ class ResponseBodyContentTest {
       }
     )
   }
+
+  @Test
+  fun `test basic body parameter generation with 404 response`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-response.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        TypeScriptSundayGenerator(
+          document,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {Test} from './test';
+        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = [],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+          }
+
+          fetchTest(): Observable<Test | null> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test basic body parameter generation with 404 problem`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/res-body-param-not-found-problem.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        TypeScriptSundayGenerator(
+          document,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {Test} from './test';
+        import {TestNotFoundProblem} from './test-not-found-problem';
+        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          constructor(public requestFactory: RequestFactory,
+              public defaultContentTypes: Array<MediaType> = [],
+              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+            requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
+          }
+
+          fetchTest(): Observable<Test | null> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }

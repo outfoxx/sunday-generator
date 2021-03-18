@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+uses:
+  sun: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+(sun.problemTypes):
+  test_not_found:
+    status: 404
+    title: Test Not Found
+    detail: Test wsa not found
+
+/tests:
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body: Test
+    (sun.problems): [test_not_found]
