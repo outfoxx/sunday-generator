@@ -18,8 +18,10 @@ package io.outfoxx.sunday.generator.kotlin
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
@@ -28,6 +30,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -37,6 +41,7 @@ import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.net.URI
+import java.time.Instant
 
 @ExtendWith(ResourceExtension::class)
 @DisplayName("[Kotlin] [RAML] Type Annotations Test")
@@ -536,5 +541,27 @@ class RamlTypeAnnotationsTest {
           .writeTo(this)
       }
     )
+  }
+
+  @Test
+  fun `test types can be generated in one mode and overridden in another`(
+    @ResourceUri("raml/type-gen/annotations/type-kotlin-type-dual.raml") testUri: URI
+  ) {
+    val valueTypeName = ClassName.bestGuess("io.test.Value")
+
+    val serverTypeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val serverTypes = generateTypes(testUri, serverTypeRegistry)
+
+    val serverTypeSpec = findType("io.test.Test", serverTypes)
+
+    val clientTypeRegistry = KotlinTypeRegistry("io.test", Client, setOf())
+    val clientTypes = generateTypes(testUri, clientTypeRegistry)
+    val clientTypeSpec = findType("io.test.Test", clientTypes)
+
+    assertEquals(serverTypeSpec.propertySpecs.getOrNull(0)?.type, Instant::class.asTypeName())
+    assertNull(serverTypes[valueTypeName])
+
+    assertEquals(clientTypeSpec.propertySpecs.getOrNull(0)?.type, ClassName.bestGuess("io.test.Value"))
+    assertNotNull(clientTypes[valueTypeName])
   }
 }
