@@ -42,6 +42,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.squareup.kotlinpoet.ANY
+import com.squareup.kotlinpoet.ARRAY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.BYTE
@@ -372,27 +373,38 @@ class KotlinTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(name: String, source: DomainElement, context: KotlinResolutionContext): TypeName =
-    when (name.toLowerCase()) {
-      "boolean" -> BOOLEAN
-      "integer" -> INT
-      "number" -> DOUBLE
-      "string" -> STRING
-      "object" -> MAP.parameterizedBy(STRING, STRING)
-      "any" -> ANY
-      "file" -> BYTE_ARRAY
-      "time-ony" -> LocalTime::class.asTypeName()
-      "date-ony" -> LocalDate::class.asTypeName()
-      "datetime-only" -> LocalDateTime::class.asTypeName()
-      "datetime" -> OffsetDateTime::class.asTypeName()
-      else -> {
-        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
-        element as? Shape ?: genError("Invalid type reference '$name'", source)
-        val resContext = KotlinResolutionContext(unit, null)
+  private fun resolveTypeReference(nameStr: String, source: DomainElement, context: KotlinResolutionContext): TypeName {
+    val typeNameStr = nameStr.removeSuffix("?")
+    val elementTypeNameStr = typeNameStr.removeSuffix("[]")
+    val elementTypeName =
+      when (elementTypeNameStr.toLowerCase()) {
+        "boolean" -> BOOLEAN
+        "integer" -> INT
+        "number" -> DOUBLE
+        "string" -> STRING
+        "object" -> MAP.parameterizedBy(STRING, STRING)
+        "any" -> ANY
+        "file" -> BYTE_ARRAY
+        "time-ony" -> LocalTime::class.asTypeName()
+        "date-ony" -> LocalDate::class.asTypeName()
+        "datetime-only" -> LocalDateTime::class.asTypeName()
+        "datetime" -> OffsetDateTime::class.asTypeName()
+        else -> {
+          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
+            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
-        resolveReferencedTypeName(element, resContext)
+          resolveReferencedTypeName(element, KotlinResolutionContext(unit, null))
+        }
       }
-    }
+    val typeName =
+      if (typeNameStr.endsWith("[]")) {
+        ARRAY.parameterizedBy(elementTypeName)
+      } else {
+        elementTypeName
+      }
+    return typeName.copy(nullable = nameStr.endsWith("?"))
+  }
 
   private fun resolveReferencedTypeName(shape: Shape, context: KotlinResolutionContext): TypeName =
     resolveTypeName(shape, context.copy(suggestedTypeName = null))

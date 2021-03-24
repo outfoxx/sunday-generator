@@ -110,7 +110,6 @@ import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.properties
 import io.outfoxx.sunday.generator.utils.range
 import io.outfoxx.sunday.generator.utils.resolve
-import io.outfoxx.sunday.generator.utils.resolveRef
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -419,26 +418,45 @@ class TypeScriptTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(name: String, source: DomainElement, context: TypeScriptResolutionContext): TypeName =
-    when (name.toLowerCase()) {
-      "boolean" -> BOOLEAN
-      "integer" -> NUMBER
-      "number" -> NUMBER
-      "string" -> STRING
-      "object" -> TypeName.mapType(STRING, STRING)
-      "any" -> ANY
-      "file" -> ARRAY_BUFFER
-      "time-ony" -> LOCAL_TIME
-      "date-ony" -> LOCAL_DATE
-      "datetime-only" -> LOCAL_DATETIME
-      "datetime" -> OFFSET_DATETIME
-      else -> {
-        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
-        element as? Shape ?: genError("Invalid type reference '$name'", source)
+  private fun resolveTypeReference(
+    nameStr: String,
+    source: DomainElement,
+    context: TypeScriptResolutionContext
+  ): TypeName {
+    val typeNameStr = nameStr.removeSuffix("?")
+    val elementTypeNameStr = typeNameStr.removeSuffix("[]")
+    val elementTypeName =
+      when (elementTypeNameStr.toLowerCase()) {
+        "boolean" -> BOOLEAN
+        "integer" -> NUMBER
+        "number" -> NUMBER
+        "string" -> STRING
+        "object" -> TypeName.mapType(STRING, STRING)
+        "any" -> ANY
+        "file" -> ARRAY_BUFFER
+        "time-ony" -> LOCAL_TIME
+        "date-ony" -> LOCAL_DATE
+        "datetime-only" -> LOCAL_DATETIME
+        "datetime" -> OFFSET_DATETIME
+        else -> {
+          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
+            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
-        resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
+          resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
+        }
       }
-    }
+    val typeName =
+      if (typeNameStr.endsWith("[]")) {
+        TypeName.parameterizedType(ARRAY, elementTypeName)
+      } else {
+        elementTypeName
+      }
+    return if (nameStr.endsWith("?"))
+      typeName.nullable
+    else
+      typeName
+  }
 
   private fun resolveReferencedTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName =
     resolveTypeName(shape, context.copy(suggestedTypeName = null))

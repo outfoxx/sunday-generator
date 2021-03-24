@@ -323,10 +323,20 @@ class SwiftTypeRegistry(
               if (problemTypeDefinition.custom.isNotEmpty()) {
                 addStatement("let container = try decoder.container(keyedBy: %T.self)", problemCodingKeysTypeName)
               }
-              problemTypeDefinition.custom.forEach {
+              problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+                val customPropertyTypeName =
+                  resolveTypeReference(
+                    customPropertyTypeNameStr,
+                    problemTypeDefinition.source,
+                    SwiftResolutionContext(problemTypeDefinition.definedIn, null)
+                  )
                 addStatement(
-                  "self.%N = try container.decode(%T.self, forKey: %T.%N)",
-                  it.key.swiftIdentifierName, STRING, problemCodingKeysTypeName, it.key.swiftIdentifierName
+                  "self.%N = try container.decode%L(%T.self, forKey: %T.%N)",
+                  customPropertyName.swiftIdentifierName,
+                  if (customPropertyTypeName.optional) "IfPresent" else "",
+                  customPropertyTypeName.makeNonOptional(),
+                  problemCodingKeysTypeName,
+                  customPropertyName.swiftIdentifierName
                 )
               }
             }
@@ -373,27 +383,42 @@ class SwiftTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(name: String, source: DomainElement, context: SwiftResolutionContext): TypeName =
-    when (name.toLowerCase()) {
-      "boolean" -> BOOL
-      "integer" -> INT
-      "number" -> DOUBLE
-      "string" -> STRING
-      "object" -> DICTIONARY_STRING_ANY
-      "any" -> ANY
-      "file" -> DATA
-      "time-ony" -> DATE
-      "date-ony" -> DATE
-      "datetime-only" -> DATE
-      "datetime" -> DATE
-      else -> {
-        val (element, unit) = context.resolveRef(name, source) ?: genError("Invalid type reference '$name'", source)
-        element as? Shape ?: genError("Invalid type reference '$name'", source)
-        val resContext = SwiftResolutionContext(unit, null)
+  private fun resolveTypeReference(nameStr: String, source: DomainElement, context: SwiftResolutionContext): TypeName {
+    val typeNameStr = nameStr.removeSuffix("?")
+    val elementTypeNameStr = typeNameStr.removeSuffix("[]")
+    val elementTypeName =
+      when (elementTypeNameStr.toLowerCase()) {
+        "boolean" -> BOOL
+        "integer" -> INT
+        "number" -> DOUBLE
+        "string" -> STRING
+        "object" -> DICTIONARY_STRING_ANY
+        "any" -> ANY
+        "file" -> DATA
+        "time-ony" -> DATE
+        "date-ony" -> DATE
+        "datetime-only" -> DATE
+        "datetime" -> DATE
+        else -> {
+          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
+            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          val resContext = SwiftResolutionContext(unit, null)
 
-        resolveReferencedTypeName(element, resContext)
+          resolveReferencedTypeName(element, resContext)
+        }
       }
-    }
+    val typeName =
+      if (typeNameStr.endsWith("[]")) {
+        ARRAY.parameterizedBy(elementTypeName)
+      } else {
+        elementTypeName
+      }
+    return if (nameStr.endsWith("?"))
+      typeName.makeOptional()
+    else
+      typeName
+  }
 
   private fun resolveReferencedTypeName(shape: Shape, context: SwiftResolutionContext): TypeName =
     resolveTypeName(shape, context.copy(suggestedTypeName = null))
@@ -846,7 +871,7 @@ class SwiftTypeRegistry(
             ""
           }
 
-        var decoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
+        val decoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
         var decoderPost = ""
 
         var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)

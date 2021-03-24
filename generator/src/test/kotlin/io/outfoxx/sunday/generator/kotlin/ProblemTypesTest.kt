@@ -111,6 +111,43 @@ class ProblemTypesTest {
           .writeTo(this)
       }
     )
+
+    val tenantResolver = findType("io.test.TestResolverProblem", builtTypes)
+    assertEquals(
+      """
+        package io.test.service
+
+        import java.net.URI
+        import kotlin.Array
+        import kotlin.String
+        import org.zalando.problem.AbstractThrowableProblem
+        import org.zalando.problem.Exceptional
+        import org.zalando.problem.Status
+        import org.zalando.problem.ThrowableProblem
+
+        public class TestResolverProblem(
+          public val optionalString: String?,
+          public val arrayOfStrings: Array<String>,
+          public val optionalArrayOfStrings: Array<String>?,
+          instance: URI? = null,
+          cause: ThrowableProblem? = null
+        ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
+            "Tests the resolveTypeReference function implementation.", instance, cause) {
+          public override fun getCause(): Exceptional? = super.cause
+        
+          public companion object {
+            public const val TYPE: String = "http://example.com/test_resolver"
+
+            public val TYPE_URI: URI = URI(TYPE)
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", tenantResolver)
+          .writeTo(this)
+      }
+    )
   }
 
   @Test

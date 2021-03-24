@@ -69,10 +69,11 @@ fun TypeName.internalTypeInitializer(builder: CodeBlock.Builder) {
     }
 
     is TypeName.Union ->
-      builder.add(
-        "%T",
-        if (isOptionalUnion) nonOptional.box() else OBJECT
-      ) // proper unions are not currently supported
+      if (isOptionalUnion) {
+        nonOptional.internalTypeInitializer(builder)
+      } else {
+        builder.add("%T", OBJECT) // proper unions are not currently supported
+      }
 
     else -> builder.add("%T", this.box())
   }

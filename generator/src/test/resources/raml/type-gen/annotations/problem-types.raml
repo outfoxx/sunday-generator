@@ -16,12 +16,21 @@ mediaType:
     status: 404
     title: Account Not Found
     detail: The requested account does not exist or you do not have permission to access it.
+  test_resolver:
+    status: 500
+    title: Test Resolve Type Reference
+    detail: Tests the resolveTypeReference function implementation.
+    custom:
+      optionalString: string?
+      arrayOfStrings: string[]
+      optionalArrayOfStrings: string[]?
+
 
 /tests/{id}:
 
   get:
     displayName: fetchTest
-    (sunday.problems): [invalid_id]
+    (sunday.problems): [invalid_id, test_resolver]
     responses:
       200:
         body:
