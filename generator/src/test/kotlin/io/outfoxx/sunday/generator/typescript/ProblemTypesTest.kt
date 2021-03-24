@@ -104,6 +104,45 @@ class ProblemTypesTest {
           .writeTo(this)
       }
     )
+
+    val testResolverModSpec = findTypeMod("TestResolverProblem@!test-resolver-problem", builtTypes)
+    assertEquals(
+      """
+        import {Problem} from '@outfoxx/sunday';
+
+
+        export class TestResolverProblem extends Problem {
+
+          static TYPE: string = 'http://example.com/test_resolver';
+
+          optionalString: string | null;
+
+          arrayOfStrings: Array<string>;
+
+          optionalArrayOfStrings: Array<string> | null;
+
+          constructor(optionalString: string | null, arrayOfStrings: Array<string>,
+              optionalArrayOfStrings: Array<string> | null, instance: string | null = null) {
+            super(
+              TestResolverProblem.TYPE,
+              'Test Resolve Type Reference',
+              500,
+              'Tests the resolveTypeReference function implementation.',
+              instance
+            );
+            this.optionalString = optionalString;
+            this.arrayOfStrings = arrayOfStrings;
+            this.optionalArrayOfStrings = optionalArrayOfStrings;
+          }
+
+        }
+      
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(testResolverModSpec, "test-resolver-problem")
+          .writeTo(this)
+      }
+    )
   }
 
   @Test
