@@ -52,6 +52,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.disableJacksonAnnotations.set(gen.disableJacksonAnnotations)
         genTask.disableModelImplementations.set(gen.disableModelImplementations)
         genTask.reactiveResponseType.set(gen.reactiveResponseType)
+        genTask.explicitSecurityParameters.set(gen.explicitSecurityParameters)
         genTask.defaultMediaTypes.set(gen.defaultMediaTypes)
         genTask.outputDir.set(gen.outputDir)
       }

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.GenerationMode
@@ -39,12 +40,19 @@ class KotlinJAXRSGenerateCommand :
     help = "Generic result type for reactive service methods"
   )
 
+  val explicitSecurityParameters
+    by option(
+    "-explicit-security-parameters",
+    help = "Include security parameters in service methods"
+  ).flag(default = false)
+
   override fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry) =
     KotlinJAXRSGenerator(
       document,
       typeRegistry,
       KotlinJAXRSGenerator.Options(
         reactiveResponseType,
+        explicitSecurityParameters,
         servicePackageName ?: packageName,
         problemBaseUri,
         mediaTypes.toList(),

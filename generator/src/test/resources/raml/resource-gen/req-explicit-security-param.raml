@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+securitySchemes:
+  bearer:
+    type: Pass Through
+    describedBy:
+      headers:
+        Authorization:
+          description: >-
+            JWT token with the correct format
+          type: string
+          pattern: "Bearer [0-9a-zA-Z+/-_=]+"
+
+securedBy: [bearer]
+
+/tests/{id}:
+  uriParameters:
+    id: string
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: string

@@ -113,6 +113,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java)
+
+  @Input
+  @Optional
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
 
   @OutputDirectory
@@ -194,6 +198,7 @@ open class SundayGenerate
               typeRegistry,
               KotlinJAXRSGenerator.Options(
                 reactiveResponseType.orNull,
+                explicitSecurityParameters.orNull ?: false,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),
