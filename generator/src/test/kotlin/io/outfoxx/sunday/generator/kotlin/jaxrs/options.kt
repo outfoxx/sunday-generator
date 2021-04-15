@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 
 val kotlinJAXRSTestOptions = KotlinJAXRSGenerator.Options(
   null,
+  false,
   "io.test.service",
   "http://example.com/",
   listOf("application/json"),

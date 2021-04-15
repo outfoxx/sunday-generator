@@ -21,6 +21,8 @@ import amf.client.model.domain.EndPoint
 import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
+import amf.client.model.domain.SecurityRequirement
+import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Shape
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -43,17 +45,29 @@ import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.has404
+import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.parameterName
+import io.outfoxx.sunday.generator.utils.parent
 import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
 import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.scheme
+import io.outfoxx.sunday.generator.utils.schemes
+import io.outfoxx.sunday.generator.utils.security
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
 import java.net.URI
@@ -92,6 +106,7 @@ class KotlinJAXRSGenerator(
 
   class Options(
     val reactiveResponseType: String?,
+    val explicitSecurityParameters: Boolean,
     defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
@@ -203,12 +218,94 @@ class KotlinJAXRSGenerator(
     }
   }
 
+  private fun resolveSecuritySchemeParameterTypeName(
+    scheme: SecurityScheme,
+    parameter: Parameter,
+    type: String
+  ): TypeName {
+
+    val schemeTypeName = ClassName.bestGuess("${scheme.name.kotlinTypeName}SecurityScheme")
+
+    val parameterTypeNameContext =
+      KotlinResolutionContext(
+        document,
+        schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.capitalize()}Param")
+      )
+
+    return typeRegistry.resolveTypeName(parameter.schema!!, parameterTypeNameContext)
+      .run {
+        if (parameter.required == false) {
+          copy(nullable = true)
+        } else {
+          this
+        }
+      }
+  }
+
+  private fun resolveSecurityRequirements(endPoint: EndPoint, operation: Operation): List<SecurityRequirement> {
+
+    val reqs = mutableListOf<SecurityRequirement>()
+
+    reqs.addAll(document.api.security)
+
+    fun addEndpoint(endPoint: EndPoint) {
+      endPoint.parent?.let(::addEndpoint)
+      reqs.addAll(endPoint.security)
+    }
+
+    addEndpoint(endPoint)
+
+    reqs += operation.security
+
+    return reqs
+  }
+
+  private fun resolveSecuritySchemes(endPoint: EndPoint, operation: Operation): List<SecurityScheme> {
+    val schemes = mutableMapOf<String, SecurityScheme>()
+    resolveSecurityRequirements(endPoint, operation).forEach { securityRequirement ->
+      securityRequirement.schemes.forEach { parametrizedSecurityScheme ->
+        val scheme = parametrizedSecurityScheme.scheme
+        schemes[scheme.name] = scheme
+      }
+    }
+    return schemes.values.toList()
+  }
+
   override fun processResourceMethodStart(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder
   ): FunSpec.Builder {
+
+    if (options.explicitSecurityParameters) {
+      resolveSecuritySchemes(endPoint, operation).forEach { scheme ->
+
+        scheme.headers?.forEach { header ->
+          val headerName = (header.parameterName ?: header.name)!!
+          val headerTypeName = resolveSecuritySchemeParameterTypeName(scheme, header, "header")
+          val headerParamName = "${scheme.name.kotlinIdentifierName}${headerName.kotlinIdentifierName.capitalize()}"
+          val parameterBuilder = methodParameter(header, ParameterSpec.builder(headerParamName, headerTypeName))
+          parameterBuilder.addAnnotation(
+            AnnotationSpec.builder(HeaderParam::class)
+              .addMember("value = %S", headerName)
+              .build()
+          )
+          functionBuilder.addParameter(parameterBuilder.build())
+        }
+
+        scheme.queryParameters?.forEach { queryParameter ->
+          val queryParameterName = (queryParameter.parameterName ?: queryParameter.name)!!
+          val queryParameterTypeName =
+            resolveSecuritySchemeParameterTypeName(scheme, queryParameter, "queryParameter")
+          val queryParameterParamName =
+            "${scheme.name.kotlinIdentifierName}${queryParameterName.kotlinIdentifierName.capitalize()}"
+          val parameterBuilder =
+            methodParameter(queryParameter, ParameterSpec.builder(queryParameterParamName, queryParameterTypeName))
+          functionBuilder.addParameter(parameterBuilder.build())
+        }
+      }
+    }
 
     functionBuilder.addModifiers(KModifier.ABSTRACT)
 

@@ -57,6 +57,7 @@ import amf.client.model.domain.Operation
 import amf.client.model.domain.OperationBindings
 import amf.client.model.domain.Organization
 import amf.client.model.domain.Parameter
+import amf.client.model.domain.ParametrizedSecurityScheme
 import amf.client.model.domain.Payload
 import amf.client.model.domain.PropertyDependencies
 import amf.client.model.domain.PropertyShape
@@ -65,8 +66,10 @@ import amf.client.model.domain.Response
 import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.ScalarShape
 import amf.client.model.domain.SecurityRequirement
+import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Server
 import amf.client.model.domain.ServerBindings
+import amf.client.model.domain.Settings
 import amf.client.model.domain.Shape
 import amf.client.model.domain.ShapeExtension
 import amf.client.model.domain.Tag
@@ -313,6 +316,27 @@ fun Operation.has404Problem(problemTypes: Map<String, ProblemTypeDefinition>): B
 
 fun Operation.has404(problemTypes: Map<String, ProblemTypeDefinition>): Boolean =
   has404Response || has404Problem(problemTypes)
+
+//
+val SecurityRequirement.name: String get() = this.name().value()
+val SecurityRequirement.schemes: List<ParametrizedSecurityScheme> get() = this.schemes()
+
+//
+val ParametrizedSecurityScheme.name: String get() = this.name().value()
+val ParametrizedSecurityScheme.description: String? get() = this.description().value()
+val ParametrizedSecurityScheme.scheme: SecurityScheme get() = this.scheme()
+val ParametrizedSecurityScheme.settings: Settings get() = this.settings()
+
+//
+val SecurityScheme.name: String get() = this.name().value()
+val SecurityScheme.type: String get() = this.type().value()
+val SecurityScheme.displayName: String? get() = this.displayName().value()
+val SecurityScheme.description: String? get() = this.description().value()
+val SecurityScheme.headers: List<Parameter>? get() = this.headers()
+val SecurityScheme.queryParameters: List<Parameter>? get() = this.queryParameters()
+val SecurityScheme.responses: List<Response>? get() = this.responses()
+val SecurityScheme.settings: Settings? get() = this.settings()
+val SecurityScheme.queryString: Shape? get() = this.queryString()
 
 //
 val Message.description: String? get() = this.description().value
