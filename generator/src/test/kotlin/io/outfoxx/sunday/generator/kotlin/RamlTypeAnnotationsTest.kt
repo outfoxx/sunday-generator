@@ -477,6 +477,7 @@ class RamlTypeAnnotationsTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonInclude
         import com.fasterxml.jackson.databind.node.ObjectNode
         import java.util.Optional
         import kotlin.Any
@@ -528,10 +529,11 @@ class RamlTypeAnnotationsTest {
             if (source.has("bool")) Optional.ofNullable(bool) else null
           )
 
+          @JsonInclude(JsonInclude.Include.NON_NULL)
           public data class Patch(
-            public val string: Optional<String>?,
-            public val int: Optional<Int>?,
-            public val bool: Optional<Boolean>?
+            public val string: Optional<String>? = null,
+            public val int: Optional<Int>? = null,
+            public val bool: Optional<Boolean>? = null
           )
         }
         
