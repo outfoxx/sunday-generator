@@ -25,7 +25,6 @@ import amf.client.model.domain.SecurityRequirement
 import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Shape
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
@@ -418,9 +417,13 @@ class KotlinJAXRSGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    if (payloadSchema.resolve.findBoolAnnotation(Patchable, generationMode) == true && operation.method == "patch") {
+    if (
+      payloadSchema.resolve.findBoolAnnotation(Patchable, generationMode) == true &&
+      operation.method.equals("patch", ignoreCase = true)
+    ) {
       val orig = parameterBuilder.build()
-      return ParameterSpec.builder(orig.name, ObjectNode::class.asTypeName()).build()
+      val origTypeName = orig.type as ClassName
+      return ParameterSpec.builder(orig.name, origTypeName.nestedClass("Patch")).build()
     }
 
     typeRegistry.applyUseSiteAnnotations(payloadSchema, parameterBuilder.build().type) {

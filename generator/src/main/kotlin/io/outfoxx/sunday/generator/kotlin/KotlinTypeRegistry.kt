@@ -37,6 +37,7 @@ import amf.client.model.domain.UnionShape
 import amf.core.model.DataType
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -972,6 +973,11 @@ class KotlinTypeRegistry(
         TypeSpec.classBuilder(patchClassName)
           .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
           .addModifiers(KModifier.DATA)
+          .addAnnotation(
+            AnnotationSpec.builder(JsonInclude::class)
+              .addMember("%T.NON_NULL", JsonInclude.Include::class)
+              .build()
+          )
       val patchClassConsBuilder = FunSpec.constructorBuilder()
 
       val patchFields = mutableListOf<CodeBlock>()
@@ -988,6 +994,7 @@ class KotlinTypeRegistry(
         )
         patchClassConsBuilder.addParameter(
           ParameterSpec.builder(propertyDecl.kotlinIdentifierName, optionalPropertyTypeName)
+            .defaultValue("null")
             .build()
         )
 

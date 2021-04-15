@@ -56,7 +56,6 @@ class RequestMethodsTest {
       """
         package io.test
 
-        import com.fasterxml.jackson.databind.node.ObjectNode
         import javax.ws.rs.Consumes
         import javax.ws.rs.DELETE
         import javax.ws.rs.GET
@@ -104,7 +103,7 @@ class RequestMethodsTest {
         
           @PATCH
           @Path(value = "/tests2")
-          public fun patchableTest(body: ObjectNode): Response
+          public fun patchableTest(body: PatchableTest.Patch): Response
         }
 
       """.trimIndent(),
@@ -137,7 +136,6 @@ class RequestMethodsTest {
       """
         package io.test
 
-        import com.fasterxml.jackson.databind.node.ObjectNode
         import javax.ws.rs.Consumes
         import javax.ws.rs.DELETE
         import javax.ws.rs.GET
@@ -183,7 +181,7 @@ class RequestMethodsTest {
         
           @PATCH
           @Path(value = "/tests2")
-          public fun patchableTest(body: ObjectNode): Test
+          public fun patchableTest(body: PatchableTest.Patch): Test
         }
 
       """.trimIndent(),
