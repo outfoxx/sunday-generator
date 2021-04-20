@@ -18,12 +18,14 @@ package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
 import amf.client.model.domain.EndPoint
+import amf.client.model.domain.NodeShape
 import amf.client.model.domain.Operation
 import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.SecurityRequirement
 import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Shape
+import amf.client.model.domain.UnionShape
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
@@ -46,6 +48,7 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
@@ -199,6 +202,13 @@ class KotlinJAXRSGenerator(
     }
 
     if (isSSE) {
+
+      // Ensure SSE "messages" are resolved and therefore defined
+      if (body is UnionShape) {
+        val types = body.anyOf.filterIsInstance<NodeShape>()
+        types.forEach { resolveTypeName(it, null) }
+      }
+
       return if (generationMode == Client) {
         return SseEventSource::class.asTypeName()
       } else {
