@@ -43,7 +43,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.squareup.kotlinpoet.ANY
-import com.squareup.kotlinpoet.ARRAY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.BYTE
@@ -400,7 +399,7 @@ class KotlinTypeRegistry(
       }
     val typeName =
       if (typeNameStr.endsWith("[]")) {
-        ARRAY.parameterizedBy(elementTypeName)
+        LIST.parameterizedBy(elementTypeName)
       } else {
         elementTypeName
       }

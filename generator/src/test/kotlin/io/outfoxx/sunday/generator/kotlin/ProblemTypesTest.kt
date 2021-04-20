@@ -118,8 +118,8 @@ class ProblemTypesTest {
         package io.test.service
 
         import java.net.URI
-        import kotlin.Array
         import kotlin.String
+        import kotlin.collections.List
         import org.zalando.problem.AbstractThrowableProblem
         import org.zalando.problem.Exceptional
         import org.zalando.problem.Status
@@ -127,8 +127,8 @@ class ProblemTypesTest {
 
         public class TestResolverProblem(
           public val optionalString: String?,
-          public val arrayOfStrings: Array<String>,
-          public val optionalArrayOfStrings: Array<String>?,
+          public val arrayOfStrings: List<String>,
+          public val optionalArrayOfStrings: List<String>?,
           instance: URI? = null,
           cause: ThrowableProblem? = null
         ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
