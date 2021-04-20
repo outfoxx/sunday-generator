@@ -42,9 +42,6 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
 
   Patchable("patchable", false),
 
-  RequestOnly("requestOnly", false),
-  ResponseOnly("responseOnly", false),
-
   ProblemBaseUri("problemBaseUri", false),
   ProblemBaseUriParams("problemUriParams", false),
   ProblemTypes("problemTypes", false),
@@ -53,6 +50,9 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   // Sunday
   EventSource("eventSource", false),
   EventStream("eventStream", false),
+
+  RequestOnly("requestOnly", false),
+  ResponseOnly("responseOnly", false),
 
   // JAX-RS
   Asynchronous("asynchronous", false),
