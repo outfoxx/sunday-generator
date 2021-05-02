@@ -31,26 +31,12 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
-@DisplayName("[Kotlin/JAXRS] [RAML] Request Explicit Security Parameters Test")
-class RequestExplicitSecurityParamsTest {
-
-  companion object {
-
-    val kotlinJAXRSTestOptions =
-      KotlinJAXRSGenerator.Options(
-        false,
-        null,
-        true,
-        "io.test.service",
-        "http://example.com/",
-        listOf("application/json"),
-        "API",
-      )
-  }
+@DisplayName("[Kotlin/JAXRS] [RAML] Response Coroutines Test")
+class ResponseCoroutinesTest {
 
   @Test
-  fun `test explicit security parameter generation`(
-    @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI
+  fun `test basic coroutines method generation in server mode`(
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
@@ -60,7 +46,15 @@ class RequestExplicitSecurityParamsTest {
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          kotlinJAXRSTestOptions,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          )
         )
       }
 
@@ -72,20 +66,68 @@ class RequestExplicitSecurityParamsTest {
 
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
         import javax.ws.rs.Path
-        import javax.ws.rs.PathParam
         import javax.ws.rs.Produces
         import javax.ws.rs.core.Response
-        import kotlin.String
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
-          @Path(value = "/tests/{id}")
-          public fun fetchTest(@HeaderParam(value = "Authorization") bearerAuthorization: String,
-              @PathParam(value = "id") id: String): Response
+          @Path(value = "/tests")
+          public suspend fun fetchTest(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test basic coroutines method generation in client mode`(
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          )
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun fetchTest(): Test
         }
 
       """.trimIndent(),

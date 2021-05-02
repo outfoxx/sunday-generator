@@ -109,6 +109,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val coroutines: Property<Boolean> = objects.property(Boolean::class.java)
+
+  @Input
+  @Optional
   val reactiveResponseType: Property<String> = objects.property(String::class.java)
 
   @Input
@@ -197,6 +201,7 @@ open class SundayGenerate
               processed.document,
               typeRegistry,
               KotlinJAXRSGenerator.Options(
+                coroutines.orNull ?: false,
                 reactiveResponseType.orNull,
                 explicitSecurityParameters.orNull ?: false,
                 servicePkgName,

@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 
 val kotlinJAXRSTestOptions = KotlinJAXRSGenerator.Options(
+  false,
   null,
   false,
   "io.test.service",
