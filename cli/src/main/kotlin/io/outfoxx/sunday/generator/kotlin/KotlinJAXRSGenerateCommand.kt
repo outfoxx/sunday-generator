@@ -34,13 +34,19 @@ class KotlinJAXRSGenerateCommand :
   ).enum<GenerationMode> { it.name.camelCaseToKebabCase() }
     .default(GenerationMode.Client)
 
-  val reactiveResponseType
+  private val coroutineServiceMethods
+    by option(
+    "-coroutines",
+    help = "Generate suspendable service methods for coroutine support"
+  ).flag()
+
+  private val reactiveResponseType
     by option(
     "-reactive",
     help = "Generic result type for reactive service methods"
   )
 
-  val explicitSecurityParameters
+  private val explicitSecurityParameters
     by option(
     "-explicit-security-parameters",
     help = "Include security parameters in service methods"
@@ -51,6 +57,7 @@ class KotlinJAXRSGenerateCommand :
       document,
       typeRegistry,
       KotlinJAXRSGenerator.Options(
+        coroutineServiceMethods,
         reactiveResponseType,
         explicitSecurityParameters,
         servicePackageName ?: packageName,

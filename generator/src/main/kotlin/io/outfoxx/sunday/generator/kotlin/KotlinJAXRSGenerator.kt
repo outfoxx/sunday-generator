@@ -107,6 +107,7 @@ class KotlinJAXRSGenerator(
 ) {
 
   class Options(
+    val coroutineServiceMethods: Boolean,
     val reactiveResponseType: String?,
     val explicitSecurityParameters: Boolean,
     defaultServicePackageName: String,
@@ -121,6 +122,7 @@ class KotlinJAXRSGenerator(
   )
 
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
+  private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
   private val reactiveResponseType = options.reactiveResponseType?.let { ClassName.bestGuess(it) }
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
@@ -185,9 +187,13 @@ class KotlinJAXRSGenerator(
       functionBuilder.addAnnotation(prodAnn)
     }
 
+    if (options.coroutineServiceMethods) {
+      functionBuilder.addModifiers(KModifier.SUSPEND)
+    }
+
     val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true
 
-    val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveResponseType != null
+    val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveDefault
     if (reactive && reactiveResponseType != null && !isSSE) {
 
       return if (generationMode == Client) {

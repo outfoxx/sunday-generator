@@ -48,6 +48,7 @@ class SundayGeneration(
   var disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
   var disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
   var disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java)
+  var coroutines: Property<Boolean> = objects.property(Boolean::class.java)
   var reactiveResponseType: Property<String> = objects.property(String::class.java)
   val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java)
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)

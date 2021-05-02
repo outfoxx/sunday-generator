@@ -51,6 +51,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.disableValidationConstraints.set(gen.disableValidationConstraints)
         genTask.disableJacksonAnnotations.set(gen.disableJacksonAnnotations)
         genTask.disableModelImplementations.set(gen.disableModelImplementations)
+        genTask.coroutines.set(gen.coroutines)
         genTask.reactiveResponseType.set(gen.reactiveResponseType)
         genTask.explicitSecurityParameters.set(gen.explicitSecurityParameters)
         genTask.defaultMediaTypes.set(gen.defaultMediaTypes)

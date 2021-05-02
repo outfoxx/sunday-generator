@@ -48,6 +48,7 @@ class ResponseReactiveTest {
           document,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
+            false,
             CompletionStage::class.qualifiedName,
             false,
             "io.test.service",
@@ -100,6 +101,7 @@ class ResponseReactiveTest {
           document,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
+            false,
             CompletionStage::class.qualifiedName,
             false,
             "io.test.service",
