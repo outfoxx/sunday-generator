@@ -25,7 +25,6 @@ import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -101,7 +100,7 @@ class RequestMixedParamsTest {
     )
   }
 
-  @Test @Disabled("Blocking issue: https://github.com/aml-org/amf/issues/830")
+  @Test
   fun `test generation of multiple parameters of same name with inline type definitions`(
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
   ) {
@@ -121,7 +120,7 @@ class RequestMixedParamsTest {
 
     assertEquals(
       """
-        package io.test
+        package io.test.service
 
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
@@ -141,9 +140,9 @@ class RequestMixedParamsTest {
             @PathParam(value = "type") type: FetchTestTypeUriParam,
             @QueryParam(value = "type") type_: FetchTestTypeQueryParam,
             @HeaderParam(value = "type") type__: FetchTestTypeHeaderParam
-          ): esponse
+          ): Response
 
-          public enum class FetchTestTypeHeaderParam {
+          public enum class FetchTestTypeUriParam {
             All,
             Limited,
           }
@@ -153,7 +152,7 @@ class RequestMixedParamsTest {
             Limited,
           }
 
-          public enum class FetchTestTypeUriParam {
+          public enum class FetchTestTypeHeaderParam {
             All,
             Limited,
           }

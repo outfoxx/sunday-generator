@@ -26,7 +26,6 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -120,7 +119,7 @@ class RequestMixedParamsTest {
     )
   }
 
-  @Test @Disabled("Blocking issue: https://github.com/aml-org/amf/issues/830")
+  @Test
   fun `test generation of multiple parameters of same name with inline type definitions`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
@@ -177,12 +176,17 @@ class RequestMixedParamsTest {
 
         export namespace API {
 
+          export enum FetchTestTypeUriParam {
+            All = 'all',
+            Limited = 'limited'
+          }
+
           export enum FetchTestTypeQueryParam {
             All = 'all',
             Limited = 'limited'
           }
 
-          export enum FetchTestTypeUriParam {
+          export enum FetchTestTypeHeaderParam {
             All = 'all',
             Limited = 'limited'
           }
