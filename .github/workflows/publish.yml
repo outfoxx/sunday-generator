@@ -22,6 +22,24 @@ jobs:
         job-id: jdk8-build-test
         arguments: dokkaHtmlMultiModule
 
+    - name: Publish Maven
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: build publish -x test
+        properties: |
+          github.user=${GITHUB_ACTOR}
+          github.token=${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish Docker
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: build jib -x test
+        properties: |
+          github.user=${GITHUB_ACTOR}
+          github.token=${{ secrets.GITHUB_TOKEN }}
+
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0
       with:
