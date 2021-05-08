@@ -88,6 +88,9 @@ publishing {
   }
 }
 
+signing {
+  sign(publishing.publications.named("cli").get())
+}
 
 jib {
   to {

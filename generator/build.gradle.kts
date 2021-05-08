@@ -127,3 +127,7 @@ publishing {
     }
   }
 }
+
+signing {
+  sign(publishing.publications.named("generator").get())
+}

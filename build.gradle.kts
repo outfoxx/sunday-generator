@@ -29,6 +29,7 @@ subprojects {
   apply(plugin = "net.minecrell.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "com.github.johnrengelman.shadow")
+  apply(plugin = "signing")
 
   group = "io.outfoxx.sunday"
   version = releaseVersion
@@ -140,6 +141,17 @@ subprojects {
         }
       }
     }
+  }
+
+  configure<SigningExtension> {
+    val signingKeyId: String? by project
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  }
+
+  tasks.withType<Sign>().configureEach {
+    onlyIf { !isSnapshot }
   }
 
 }
