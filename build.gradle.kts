@@ -1,4 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.minecrell.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -18,6 +17,7 @@ repositories {
 }
 
 val releaseVersion: String by project
+val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
 subprojects {
 
@@ -127,6 +127,16 @@ subprojects {
         credentials {
           username = project.findProperty("github.user") as String? ?: System.getenv("USERNAME")
           password = project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+      }
+      maven {
+        name = "MavenCentral"
+        val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+        val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+        url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
+        credentials {
+          username = project.findProperty("ossrhUsername")?.toString()
+          password = project.findProperty("ossrhPassword")?.toString()
         }
       }
     }

@@ -40,10 +40,50 @@ application {
 
 publishing {
   publications {
-    create<MavenPublication>("gpr") {
+    create<MavenPublication>("cli") {
       the<ShadowExtension>().component(this)
       artifact(tasks.named("sourcesJar"))
       artifact(tasks.named("javadocJar"))
+
+      pom {
+
+        name.set("Sunday Generator - CLI")
+        description.set("Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.")
+        url.set("https://outfoxx.github.io/sunday-generator")
+
+        organization {
+          name.set("Outfox, Inc.")
+          url.set("https://outfoxx.io")
+        }
+
+        issueManagement {
+          system.set("GitHub")
+          url.set("https://github.com/outfoxx/sunday-generator/issues")
+        }
+
+        licenses {
+          license {
+            name.set("Apache License 2.0")
+            url.set("https://raw.githubusercontent.com/outfoxx/sunday-generator/main/LICENSE.txt")
+            distribution.set("repo")
+          }
+        }
+
+        scm {
+          url.set("https://github.com/outfoxx/sunday-generator")
+          connection.set("scm:https://github.com/outfoxx/sunday-generator.git")
+          developerConnection.set("scm:git@github.com:outfoxx/sunday-generator.git")
+        }
+
+        developers {
+          developer {
+            id.set("kdubb")
+            name.set("Kevin Wooten")
+            email.set("kevin@outfoxx.io")
+          }
+        }
+
+      }
     }
   }
 }

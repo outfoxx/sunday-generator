@@ -33,7 +33,7 @@ jobs:
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk8-build-test
-        arguments: build publish -x test
+        arguments: build publishAllPublicationsToGitHubPackagesRepository -x test
         properties: |
           github.user=${GITHUB_ACTOR}
           github.token=${{ secrets.GITHUB_TOKEN }}
