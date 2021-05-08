@@ -174,4 +174,33 @@ tasks {
       }
     }
   }
+
+  register("publishMavenRelease") {
+    dependsOn(
+      ":generator:publishAllPublicationsToMavenCentralRepository",
+      ":cli:publishAllPublicationsToMavenCentralRepository"
+    )
+  }
+
+  register("publishDockerRelease") {
+    System.setProperty("jib.to.image", "outfoxx/sunday-generator:${releaseVersion}")
+    dependsOn(
+      ":cli:jib"
+    )
+  }
+
+  register("publishPluginRelease") {
+    dependsOn(
+      ":gradle-plugin:publishPlugins"
+    )
+  }
+
+  register("publishRelease") {
+    dependsOn(
+      "publishMavenRelease",
+      "publishDockerRelease",
+      "publishPluginRelease"
+    )
+  }
+
 }
