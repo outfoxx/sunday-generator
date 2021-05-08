@@ -7,6 +7,7 @@ pluginManagement {
   val dokkaPluginVersion: String by settings
   val licenserPluginVersion: String by settings
   val kotlinterPluginVersion: String by settings
+  val pluginPublishPluginVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
@@ -15,6 +16,7 @@ pluginManagement {
     id("org.jetbrains.dokka") version dokkaPluginVersion
     id("net.minecrell.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
+    id("com.gradle.plugin-publish") version pluginPublishPluginVersion
   }
 
 }

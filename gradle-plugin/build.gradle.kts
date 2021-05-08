@@ -1,5 +1,6 @@
 plugins {
   `java-gradle-plugin`
+  id("com.gradle.plugin-publish")
 }
 
 val junitVersion: String by project
@@ -25,7 +26,6 @@ dependencies {
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 }
 
-
 gradlePlugin {
   plugins {
     register("sunday") {
@@ -35,6 +35,18 @@ gradlePlugin {
   }
 }
 
+pluginBundle {
+  website = "https://outfoxx.github.io/sunday-generator"
+  vcsUrl = "https://github.com/outfoxx/sunday-generator"
+  tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
+
+  plugins {
+    named("sunday") {
+      displayName = "Sunday Generator - Gradle Plugin"
+      description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
+    }
+  }
+}
 
 tasks {
   shadowJar.configure {
