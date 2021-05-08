@@ -1,0 +1,87 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+version: 1
+documentation:
+  - title: Test API
+    content: An API for testing Sunday
+protocols: [ HTTPS ]
+baseUri: https://{environment}.example.com/api/v{version}
+baseUriParameters:
+  environment:
+    description: Target platform environment (Production or Staging)
+    enum: [ prd, stg ]
+securitySchemes:
+  bearer:
+    description: |
+      Authentication via JWT token passed in the "Authorization" header
+    type: Pass Through
+    describedBy:
+      headers:
+        Authorization:
+          description: |
+            JWT token generated from the "grant/refresh" endpoint
+          type: string
+securedBy: [ bearer ]
+mediaType:
+  [ application/json, application/cbor, application/yaml ]
+
+types:
+
+  uuid: string
+  binary: file
+  certificate: binary
+
+  Device:
+    type: object
+    properties:
+      id:
+        required: true
+        type: uuid
+      accountId:
+        required: true
+        type: uuid
+      aliases:
+        required: true
+        type: array
+        uniqueItems: true
+        items:
+          type: string
+      name:
+        required: true
+        type: string
+      encryptionCertificate:
+        required: false
+        type: certificate
+      signatureCertificate:
+        required: false
+        type: certificate
+      securityFingerprint:
+        required: false
+        type: binary
+      lastConnect:
+        required: false
+        type: datetime
+      lastPush:
+        required: false
+        type: datetime
+      lastOutOfTouch:
+        required: false
+        type: datetime
+      data:
+        required: false
+        type: any
+
+
+/devices:
+  (sunday.group): simple
+  get:
+    displayName: listDevices
+    description: Lists all devices
+    responses:
+      200:
+        description: All devices listed successfully
+        body:
+          type: array
+          items: string

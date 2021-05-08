@@ -41,7 +41,7 @@ class GradlePluginTests {
     buildFile = testProjectDir.resolve("build.gradle")
     buildFile.createNewFile()
 
-    copy("/Messaging.raml", testProjectDir.resolve("src/main/sunday"))
+    copy("/test.raml", testProjectDir.resolve("src/main/sunday"))
   }
 
   @Test
@@ -76,14 +76,14 @@ class GradlePluginTests {
         client { 
           framework.set(Sunday)
           mode.set(Client)
-          modelPkgName.set('io.outfoxx.messaging.client.model')
-          servicePkgName.set('io.outfoxx.messaging.client.api')
+          modelPkgName.set('io.outfoxx.test.client.model')
+          servicePkgName.set('io.outfoxx.test.client.api')
         }
         server {
           framework.set(JAXRS)
           mode.set(Server)
           reactiveResponseType.set("${CompletableFuture::class.java.canonicalName}")
-          pkgName.set('io.outfoxx.messaging.server')
+          pkgName.set('io.outfoxx.test.server')
         }
       }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import io.outfoxx.messaging.client.api.TenantAPI as TenantAPIClient
-import io.outfoxx.messaging.client.api.TenantAPI as TenantAPIServer
+import io.outfoxx.test.client.api.SimpleAPI as SimpleAPIClient
+import io.outfoxx.test.server.SimpleAPI as SimpleAPIServer
 
-class Test(val client: TenantAPIClient, val server: TenantAPIServer)
+class Test(val client: SimpleAPIClient, val server: SimpleAPIServer)
