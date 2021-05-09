@@ -1,0 +1,12 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+io.outfoxx.sunday.generator
+io.outfoxx.sunday.generator.kotlin
+io.outfoxx.sunday.generator.kotlin.utils
+io.outfoxx.sunday.generator.swift
+io.outfoxx.sunday.generator.swift.utils
+io.outfoxx.sunday.generator.typescript
+io.outfoxx.sunday.generator.typescript.utils
+io.outfoxx.sunday.generator.utils
+
