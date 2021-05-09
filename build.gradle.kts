@@ -9,6 +9,7 @@ plugins {
   id("net.minecrell.licenser") apply false
   id("org.jmailen.kotlinter") apply false
   id("com.github.johnrengelman.shadow") apply false
+  id("com.github.breadmoirai.github-release")
 }
 
 repositories {
@@ -175,6 +176,32 @@ tasks {
     }
   }
 
+}
+
+
+//
+// RELEASING
+//
+
+githubRelease {
+  owner("outfoxx")
+  repo("sunday-generator")
+  tagName("rel/v${releaseVersion}")
+  targetCommitish("develop")
+  releaseName("v${releaseVersion}")
+  draft(true)
+  prerelease(isSnapshot)
+  releaseAssets(
+    files("${project.rootDir}/cli/build/libs/cli-${releaseVersion}-all.jar") +
+      files("${project.rootDir}/generator/build/libs/generator-${releaseVersion}-all.jar") +
+      files("${project.rootDir}/gradle-plugin/build/libs/gradle-plugin-${releaseVersion}.jar")
+  )
+  overwrite(true)
+  token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+}
+
+tasks {
+
   register("publishMavenRelease") {
     dependsOn(
       ":generator:publishAllPublicationsToMavenCentralRepository",
@@ -199,7 +226,8 @@ tasks {
     dependsOn(
       "publishMavenRelease",
       "publishDockerRelease",
-      "publishPluginRelease"
+      "publishPluginRelease",
+      "githubRelease"
     )
   }
 
