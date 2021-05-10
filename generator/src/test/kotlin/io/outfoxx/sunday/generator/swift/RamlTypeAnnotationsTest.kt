@@ -864,8 +864,9 @@ class RamlTypeAnnotationsTest {
 
           func patch(source: [String : Any]) -> Patch {
             return Patch(string: source.keys.contains("string") ? Optional.some(string) : nil,
-                  int: source.keys.contains("int") ? Optional.some(int) : nil,
-                  bool: source.keys.contains("bool") ? Optional.some(bool) : nil)}
+                int: source.keys.contains("int") ? Optional.some(int) : nil,
+                bool: source.keys.contains("bool") ? Optional.some(bool) : nil)
+          }
 
           fileprivate enum CodingKeys : String, CodingKey {
 

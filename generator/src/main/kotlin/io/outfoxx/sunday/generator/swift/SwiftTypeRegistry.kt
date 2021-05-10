@@ -1238,9 +1238,9 @@ class SwiftTypeRegistry(
           .returns(patchClassName)
           .addCode(
             CodeBlock.builder()
-              .add("return %T(", patchClassName).indent()
+              .add("return %T(", patchClassName)
               .add(patchFields.joinToCode(",%W"))
-              .unindent().add(")")
+              .add(")\n")
               .build()
           )
           .build()
