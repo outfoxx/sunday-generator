@@ -29,11 +29,11 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   TypeScriptModule("typeScriptModule", false),
   TypeScriptModelModule("typeScriptModelModule", false),
 
-  TypeScriptType("typeScriptType", true),
-  TypeScriptImpl("typeScriptImplementation", true),
+  TypeScriptType("typeScriptType", false),
+  TypeScriptImpl("typeScriptImplementation", false),
 
-  SwiftType("swiftType", true),
-  SwiftImpl("swiftImplementation", true),
+  SwiftType("swiftType", false),
+  SwiftImpl("swiftImplementation", false),
 
   Nested("nested", false),
 
