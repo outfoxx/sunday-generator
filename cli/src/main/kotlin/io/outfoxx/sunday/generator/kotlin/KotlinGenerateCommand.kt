@@ -17,7 +17,6 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.Document
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -59,12 +58,6 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
     "-service-pkg",
     help = "Default service package, if not specified '-pkg' is used"
   )
-
-  val problemBaseUri
-    by option(
-    "-problem-base",
-    help = "Default problem base URI"
-  ).default("http://example.com/")
 
   val enabledOptions
     by option(

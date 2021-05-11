@@ -57,6 +57,12 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
   ).file(mustExist = true, canBeFile = false, canBeDir = true)
     .required()
 
+  val problemBaseUri
+    by option(
+    "-problem-base",
+    help = "Default problem base URI"
+  ).default("http://example.com/")
+
   val files
     by argument(
     help = "RAML source files"

@@ -17,7 +17,6 @@
 package io.outfoxx.sunday.generator.swift
 
 import amf.client.model.document.Document
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
@@ -33,12 +32,6 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
       AddGeneratedAnnotation,
     )
   }
-
-  val problemBaseUri
-    by option(
-    "-problem-base",
-    help = "Default problem base URI"
-  ).default("http://example.com/")
 
   val enabledOptions
     by option(
