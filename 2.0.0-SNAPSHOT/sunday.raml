@@ -97,20 +97,8 @@ annotationTypes:
   swiftType:
     type: string
     allowedTargets: [TypeDeclaration]
-  swiftType:client:
-    type: string
-    allowedTargets: [TypeDeclaration]
-  swiftType:server:
-    type: string
-    allowedTargets: [TypeDeclaration]
 
   swiftImplementation:
-    type: TypeImplementation
-    allowedTargets: [TypeDeclaration]
-  swiftImplementation:client:
-    type: TypeImplementation
-    allowedTargets: [TypeDeclaration]
-  swiftImplementation:server:
     type: TypeImplementation
     allowedTargets: [TypeDeclaration]
 
@@ -178,4 +166,11 @@ annotationTypes:
     allowedTargets: [API, Extension, Library, Overlay]
   problems:
     type: ResponseProblemCodes
+    allowedTargets: [Method]
+
+  requestOnly:
+    type: boolean
+    allowedTargets: [Method]
+  responseOnly:
+    type: boolean
     allowedTargets: [Method]
