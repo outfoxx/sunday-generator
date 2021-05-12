@@ -303,7 +303,7 @@ class SwiftTypeRegistry(
                     ".add(status, named: %S)\n" +
                     ".add(detail, named: %S)\n" +
                     ".add(instance, named: %S)\n" +
-                    problemTypeDefinition.custom.map { ".add(%N, named: %S)" }.joinToString("\n") +
+                    problemTypeDefinition.custom.map { ".add(%N, named: %S)\n" }.joinToString("") +
                     ".build()",
                   DESCRIPTION_BUILDER, SelfTypeName.INSTANCE, "type", "title", "status", "detail", "instance",
                   *problemTypeDefinition.custom

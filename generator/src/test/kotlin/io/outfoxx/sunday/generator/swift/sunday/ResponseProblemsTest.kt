@@ -202,7 +202,8 @@ class ResponseProblemsTest {
                 .add(status, named: "status")
                 .add(detail, named: "detail")
                 .add(instance, named: "instance")
-                .add(offendingId, named: "offendingId").build()
+                .add(offendingId, named: "offendingId")
+                .build()
           }
 
           init(offendingId: String, instance: URL? = nil) {
@@ -278,7 +279,8 @@ class ResponseProblemsTest {
                 .add(status, named: "status")
                 .add(detail, named: "detail")
                 .add(instance, named: "instance")
-                .add(offendingId, named: "offendingId").build()
+                .add(offendingId, named: "offendingId")
+                .build()
           }
 
           init(offendingId: String, instance: URL? = nil) {
@@ -354,7 +356,8 @@ class ResponseProblemsTest {
                 .add(status, named: "status")
                 .add(detail, named: "detail")
                 .add(instance, named: "instance")
-                .add(offendingId, named: "offendingId").build()
+                .add(offendingId, named: "offendingId")
+                .build()
           }
 
           init(offendingId: String, instance: URL? = nil) {
@@ -430,7 +433,8 @@ class ResponseProblemsTest {
                 .add(status, named: "status")
                 .add(detail, named: "detail")
                 .add(instance, named: "instance")
-                .add(offendingId, named: "offendingId").build()
+                .add(offendingId, named: "offendingId")
+                .build()
           }
 
           init(offendingId: String, instance: URL? = nil) {
@@ -506,7 +510,8 @@ class ResponseProblemsTest {
                 .add(status, named: "status")
                 .add(detail, named: "detail")
                 .add(instance, named: "instance")
-                .add(offendingId, named: "offendingId").build()
+                .add(offendingId, named: "offendingId")
+                .build()
           }
 
           init(offendingId: String, instance: URL? = nil) {
