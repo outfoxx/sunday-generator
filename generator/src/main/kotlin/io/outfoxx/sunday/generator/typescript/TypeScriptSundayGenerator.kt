@@ -200,7 +200,7 @@ class TypeScriptSundayGenerator(
 
     if (operation.findStringAnnotation(EventStream, null) == "discriminated") {
       if (body !is UnionShape) {
-        genError("Discriminated eventObservable requires a union of event types", operation)
+        genError("Discriminated ($EventStream) requires a union of event types", operation)
       }
     }
 

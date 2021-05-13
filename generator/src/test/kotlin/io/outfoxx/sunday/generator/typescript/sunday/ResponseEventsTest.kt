@@ -63,7 +63,7 @@ class ResponseEventsTest {
 
           constructor(public requestFactory: RequestFactory,
               public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              public defaultAcceptTypes: Array<MediaType> = []) {
           }
 
           fetchEvents(): EventSource {
@@ -71,7 +71,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: [MediaType.EventStream]
                 }
             );
           }
@@ -117,7 +117,7 @@ class ResponseEventsTest {
 
           constructor(public requestFactory: RequestFactory,
               public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              public defaultAcceptTypes: Array<MediaType> = []) {
           }
 
           fetchEvents(): Observable<Test1 | Test2> {
@@ -129,7 +129,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: [MediaType.EventStream]
                 },
                 eventTypes
             );
@@ -177,7 +177,7 @@ class ResponseEventsTest {
 
           constructor(public requestFactory: RequestFactory,
               public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              public defaultAcceptTypes: Array<MediaType> = []) {
           }
 
           fetchEvents(): Observable<Base> {
@@ -189,7 +189,7 @@ class ResponseEventsTest {
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
+                  acceptTypes: [MediaType.EventStream]
                 },
                 eventTypes
             );

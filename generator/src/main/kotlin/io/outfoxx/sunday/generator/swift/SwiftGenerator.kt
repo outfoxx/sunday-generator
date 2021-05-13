@@ -64,6 +64,7 @@ import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.root
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.servers
@@ -279,7 +280,7 @@ abstract class SwiftGenerator(
                 endPoint,
                 operation,
                 response,
-                responseBodyType,
+                responseBodyType.resolve,
                 problemTypes,
                 typeBuilder,
                 functionBuilder,

@@ -65,12 +65,12 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf()
         ) {
           public suspend fun fetchEvents(): EventSource = this.requestFactory.eventSource(
             method = Method.Get,
             pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
+            acceptTypes = listOf(MediaType.EventStream)
           )
         }
 
@@ -117,12 +117,12 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf()
         ) {
           public suspend fun fetchEvents(): Flow<Any> = this.requestFactory.eventStream(
             method = Method.Get,
             pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes,
+            acceptTypes = listOf(MediaType.EventStream),
             eventTypes = mapOf(
               "Test1" to typeOf<Test1>(), 
               "test2" to typeOf<Test2>()
@@ -173,12 +173,12 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf()
         ) {
           public suspend fun fetchEvents(): Flow<Base> = this.requestFactory.eventStream(
             method = Method.Get,
             pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes,
+            acceptTypes = listOf(MediaType.EventStream),
             eventTypes = mapOf(
               "Test1" to typeOf<Test1>(), 
               "Test2" to typeOf<Test2>()

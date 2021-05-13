@@ -28,4 +28,6 @@ types:
     (sunday.eventStream): discriminated
     responses:
       200:
-        body: Test1 | Test2
+        body:
+          text/event-stream:
+            type: Test1 | Test2

@@ -67,7 +67,7 @@ class ResponseEventsTest {
           public init(
             requestFactory: RequestFactory,
             defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
+            defaultAcceptTypes: [MediaType] = []
           ) {
             self.requestFactory = requestFactory
             self.defaultContentTypes = defaultContentTypes
@@ -82,7 +82,7 @@ class ResponseEventsTest {
               queryParameters: nil,
               body: nil as Empty?,
               contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
+              acceptTypes: [.eventStream],
               headers: nil
             )}
 
@@ -128,7 +128,7 @@ class ResponseEventsTest {
           public init(
             requestFactory: RequestFactory,
             defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
+            defaultAcceptTypes: [MediaType] = []
           ) {
             self.requestFactory = requestFactory
             self.defaultContentTypes = defaultContentTypes
@@ -143,7 +143,7 @@ class ResponseEventsTest {
               queryParameters: nil,
               body: nil as Empty?,
               contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
+              acceptTypes: [.eventStream],
               headers: nil,
               eventTypes: [
                 "Test1": Test1.self, 
@@ -193,7 +193,7 @@ class ResponseEventsTest {
           public init(
             requestFactory: RequestFactory,
             defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
+            defaultAcceptTypes: [MediaType] = []
           ) {
             self.requestFactory = requestFactory
             self.defaultContentTypes = defaultContentTypes
@@ -208,7 +208,7 @@ class ResponseEventsTest {
               queryParameters: nil,
               body: nil as Empty?,
               contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
+              acceptTypes: [.eventStream],
               headers: nil,
               eventTypes: [
                 "Test1": Test1.self, 

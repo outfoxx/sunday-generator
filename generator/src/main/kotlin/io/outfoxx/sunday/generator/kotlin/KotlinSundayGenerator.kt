@@ -235,7 +235,7 @@ class KotlinSundayGenerator(
 
     if (operation.findStringAnnotation(APIAnnotationName.EventStream, null) == "discriminated") {
       if (body !is UnionShape) {
-        genError("Discriminated eventObservable requires a union of event types", operation)
+        genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
       }
       return Flow::class.asTypeName().parameterizedBy(returnTypeName)
     }
