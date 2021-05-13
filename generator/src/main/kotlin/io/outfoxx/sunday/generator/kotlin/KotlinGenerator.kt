@@ -283,7 +283,7 @@ abstract class KotlinGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema,
+                payloadSchema.resolve,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder

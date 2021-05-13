@@ -252,7 +252,7 @@ abstract class SwiftGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema,
+                payloadSchema.resolve,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder

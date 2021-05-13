@@ -292,7 +292,7 @@ abstract class TypeScriptGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema,
+                payloadSchema.resolve,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder
