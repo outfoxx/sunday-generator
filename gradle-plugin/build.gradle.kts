@@ -36,7 +36,7 @@ gradlePlugin {
 }
 
 pluginBundle {
-  website = "https://outfoxx.github.io/sunday-generator"
+  website = "https://outfoxx.github.io/sunday"
   vcsUrl = "https://github.com/outfoxx/sunday-generator"
   tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
 
