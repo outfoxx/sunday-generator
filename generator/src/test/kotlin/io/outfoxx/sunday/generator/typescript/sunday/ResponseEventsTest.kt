@@ -67,7 +67,7 @@ class ResponseEventsTest {
           }
 
           fetchEvents(): EventSource {
-            return this.requestFactory.events(
+            return this.requestFactory.eventSource(
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
@@ -125,7 +125,7 @@ class ResponseEventsTest {
               'Test1' : [Test1], 
               'test2' : [Test2]
             };
-            return this.requestFactory.events<Test1 | Test2>(
+            return this.requestFactory.eventStream<Test1 | Test2>(
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
@@ -185,7 +185,7 @@ class ResponseEventsTest {
               'Test1' : [Test1], 
               'Test2' : [Test2]
             };
-            return this.requestFactory.events<Base>(
+            return this.requestFactory.eventStream<Base>(
                 {
                   method: 'GET',
                   pathTemplate: '/tests',
