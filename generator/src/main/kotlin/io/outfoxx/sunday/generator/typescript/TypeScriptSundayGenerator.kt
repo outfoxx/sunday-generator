@@ -483,14 +483,14 @@ class TypeScriptSundayGenerator(
             *typesParams.toTypedArray()
           )
 
-          builder.add("%[return this.requestFactory.events<%T>(\n", originalReturnType)
+          builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
           builder.add(specGen())
           builder.add(",\n")
           builder.add("eventTypes%]\n);\n")
         }
 
         else -> {
-          builder.add("%[return this.requestFactory.events(\n", originalReturnType)
+          builder.add("%[return this.requestFactory.eventSource(\n", originalReturnType)
           builder.add(specGen())
           builder.add("%]\n);\n")
         }

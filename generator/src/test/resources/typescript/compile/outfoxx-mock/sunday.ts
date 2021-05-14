@@ -65,9 +65,48 @@ export enum MediaType {
 
 export interface EventTypes<E> {}
 
+export type RequestSpec<B> = any;
+
 export interface RequestFactory {
-  registerProblem(typeId: string, problemType: ClassType<Problem>): void;
-  result<T>(params: any, resultType?: any): Observable<T>;
-  events(params: any): EventSource;
-  events<E>(params: any, eventTypes: EventTypes<E>): Observable<E>;
+  readonly baseUrl: URLTemplate;
+
+  registerProblem(
+    type: URL | string,
+    problemType: ClassType<Problem>
+  ): void;
+
+  request(requestSpec: RequestSpec<unknown>): Observable<Request>;
+
+  response(request: Request, dataExpected?: boolean): Observable<Response>;
+
+  response<B>(
+    requestSpec: RequestSpec<B>,
+    dataExpected?: boolean
+  ): Observable<Response>;
+
+  result<B, R>(
+    requestSpec: RequestSpec<B>,
+    resultType: [ClassType<R>]
+  ): Observable<R>;
+
+  result<B, R>(
+    requestSpec: RequestSpec<B>,
+    resultType: [ClassType<Array<unknown>>, ClassType<R>]
+  ): Observable<Array<R>>;
+
+  result<B, R>(
+    requestSpec: RequestSpec<B>,
+    resultType: [ClassType<Set<unknown>>, ClassType<R>]
+  ): Observable<Set<R>>;
+
+  result<B, R>(requestSpec: RequestSpec<B>, resultType: AnyType): Observable<R>;
+
+  result<B>(requestSpec: RequestSpec<B>): Observable<void>;
+
+  eventSource(requestSpec: RequestSpec<void>): EventSource;
+
+  eventStream<E>(
+    requestSpec: RequestSpec<void>,
+    eventTypes: EventTypes<E>
+  ): Observable<E>;
 }
