@@ -40,13 +40,13 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
   val mediaTypes
     by option(
     "-media-type",
-    help = "Specify to control order of initialized media types"
+    help = "Specify order of default media types"
   ).multiple().unique()
 
   val outputCategories
     by option(
     "-category",
-    help = "Add category of type to output ${GeneratedTypeCategory.values()}"
+    help = "Add category of type to output ${GeneratedTypeCategory.values().joinToString { it.name }}"
   ).enum<GeneratedTypeCategory>()
     .multiple(GeneratedTypeCategory.values().toList())
 
