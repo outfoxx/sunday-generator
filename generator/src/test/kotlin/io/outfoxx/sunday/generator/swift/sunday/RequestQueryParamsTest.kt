@@ -88,7 +88,7 @@ class RequestQueryParamsTest {
                 "str-req": strReq,
                 "int": int
               ],
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -162,7 +162,7 @@ class RequestQueryParamsTest {
                 "def1": def1 as Any,
                 "def2": def2 as Any
               ],
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -228,7 +228,7 @@ class RequestQueryParamsTest {
                 "category": category,
                 "type": type
               ],
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil

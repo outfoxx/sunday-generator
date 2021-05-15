@@ -462,7 +462,7 @@ class SwiftSundayGenerator(
         builder.add(",\n")
         builder.add("contentTypes: %L", contentTypesVal)
       } else {
-        builder.add("body: nil as %T?,\ncontentTypes: nil", EMPTY)
+        builder.add("body: %T.none,\ncontentTypes: nil", EMPTY)
       }
 
       builder.add(",\n")

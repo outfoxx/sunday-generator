@@ -80,7 +80,7 @@ class RequestMethodsTest {
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -132,7 +132,7 @@ class RequestMethodsTest {
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -145,7 +145,7 @@ class RequestMethodsTest {
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -158,7 +158,7 @@ class RequestMethodsTest {
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
