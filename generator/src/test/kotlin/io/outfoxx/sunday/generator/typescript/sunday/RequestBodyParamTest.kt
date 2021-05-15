@@ -63,9 +63,16 @@ class RequestBodyParamTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [MediaType.JSON],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [MediaType.JSON];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
           fetchTest(body: Test): Observable<Test> {
@@ -123,9 +130,16 @@ class RequestBodyParamTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [MediaType.JSON],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [MediaType.JSON];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
           fetchTest(body: Test | null): Observable<Test> {
@@ -182,9 +196,16 @@ class RequestBodyParamTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
           fetchTest(body: BodyInit): Observable<object> {

@@ -68,9 +68,16 @@ class ResponseProblemsTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
             requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblem);
             requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
           }
@@ -126,9 +133,16 @@ class ResponseProblemsTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
           fetchTest(): Observable<Test> {
