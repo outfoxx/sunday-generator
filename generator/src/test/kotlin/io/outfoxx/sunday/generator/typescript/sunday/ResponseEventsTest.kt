@@ -61,9 +61,16 @@ class ResponseEventsTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = []) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [];
           }
 
           fetchEvents(): EventSource {
@@ -115,9 +122,16 @@ class ResponseEventsTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = []) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [];
           }
 
           fetchEvents(): Observable<Test1 | Test2> {
@@ -175,9 +189,16 @@ class ResponseEventsTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = []) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [];
           }
 
           fetchEvents(): Observable<Base> {

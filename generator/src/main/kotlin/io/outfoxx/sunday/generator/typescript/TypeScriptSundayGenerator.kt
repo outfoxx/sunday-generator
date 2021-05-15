@@ -131,7 +131,6 @@ class TypeScriptSundayGenerator(
       .addProperty(
         PropertySpec
           .builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .initializer("defaultContentTypes")
           .build()
       )
 
@@ -143,23 +142,25 @@ class TypeScriptSundayGenerator(
       .addProperty(
         PropertySpec
           .builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .initializer("defaultAcceptTypes")
           .build()
       )
 
     consBuilder?.let { consBuilder ->
 
+      val optionsType =
+        TypeName.anonymousType(listOf(
+          TypeName.Anonymous.Member("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true),
+          TypeName.Anonymous.Member("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true)
+        ))
+
       consBuilder
         .addParameter(
-          ParameterSpec.builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-            .defaultValue("%L", mediaTypesArray(contentTypes))
+          ParameterSpec.builder("options", optionsType, true)
+            .defaultValue("undefined")
             .build()
         )
-        .addParameter(
-          ParameterSpec.builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-            .defaultValue("%L", mediaTypesArray(acceptTypes))
-            .build()
-        )
+        .addStatement("this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L", mediaTypesArray(contentTypes))
+        .addStatement("this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L", mediaTypesArray(acceptTypes))
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
         consBuilder.addStatement("requestFactory.registerProblem(%S, %T)", typeId, typeName)

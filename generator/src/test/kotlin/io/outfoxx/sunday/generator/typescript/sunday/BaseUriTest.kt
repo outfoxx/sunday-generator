@@ -63,9 +63,16 @@ class BaseUriTest {
 
         export class API {
 
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
           constructor(public requestFactory: RequestFactory,
-              public defaultContentTypes: Array<MediaType> = [],
-              public defaultAcceptTypes: Array<MediaType> = [MediaType.JSON]) {
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
           static baseURL(server?: string, environment?: Environment, version?: string): URLTemplate {
