@@ -38,7 +38,14 @@ open class Problem: Error, Codable {
 
   public let parameters: [String: AnyValue]?
 
-  public init(type: URL, title: String, status: Int, detail: String, instance: URL?, parameters: [String: AnyValue]? = nil) {
+  public init(
+    type: URL,
+    title: String,
+    status: Int,
+    detail: String? = nil,
+    instance: URL? = nil,
+    parameters: [String: AnyValue]? = nil
+  ) {
     self.type = type
     self.title = title
     self.status = status
