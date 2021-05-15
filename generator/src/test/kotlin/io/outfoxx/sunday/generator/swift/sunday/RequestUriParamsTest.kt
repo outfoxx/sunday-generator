@@ -90,7 +90,7 @@ class RequestUriParamsTest {
                 "int": int
               ],
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -163,7 +163,7 @@ class RequestUriParamsTest {
                 "int": int
               ],
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -239,7 +239,7 @@ class RequestUriParamsTest {
                 "def": def
               ],
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
@@ -305,7 +305,7 @@ class RequestUriParamsTest {
                 "type": type
               ],
               queryParameters: nil,
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil

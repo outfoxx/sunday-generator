@@ -1,7 +1,10 @@
 import Foundation
 import PotentCodables
 
-public struct Empty : Codable {}
+public struct Empty : Codable {
+  public static let instance = Empty()
+  public static let none: Empty? = nil
+}
 
 public struct DescriptionBuilder {
 

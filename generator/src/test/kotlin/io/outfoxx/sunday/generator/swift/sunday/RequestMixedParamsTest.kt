@@ -89,7 +89,7 @@ class RequestMixedParamsTest {
               queryParameters: [
                 "page": page
               ],
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: [
@@ -183,7 +183,7 @@ class RequestMixedParamsTest {
               queryParameters: [
                 "type": type_
               ],
-              body: nil as Empty?,
+              body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: [
