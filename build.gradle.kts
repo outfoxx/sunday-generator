@@ -187,7 +187,7 @@ githubRelease {
   owner("outfoxx")
   repo("sunday-generator")
   tagName("rel/v${releaseVersion}")
-  targetCommitish("develop")
+  targetCommitish("main")
   releaseName("v${releaseVersion}")
   draft(true)
   prerelease(isSnapshot)
