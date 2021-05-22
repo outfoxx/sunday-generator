@@ -418,7 +418,7 @@ class ResponseBodyContentTest {
             self.requestFactory = requestFactory
             self.defaultContentTypes = defaultContentTypes
             self.defaultAcceptTypes = defaultAcceptTypes
-            requestFactory.registerProblem(uri: "http://example.com/test_not_found", type: TestNotFoundProblem.self)
+            requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
           }
 
           func fetchTest() -> RequestResultPublisher<Test?> {

@@ -75,8 +75,8 @@ class ResponseProblemsTest {
             self.requestFactory = requestFactory
             self.defaultContentTypes = defaultContentTypes
             self.defaultAcceptTypes = defaultAcceptTypes
-            requestFactory.registerProblem(uri: "http://example.com/invalid_id", type: InvalidIdProblem.self)
-            requestFactory.registerProblem(uri: "http://example.com/test_not_found", type: TestNotFoundProblem.self)
+            requestFactory.registerProblem(type: "http://example.com/invalid_id", problemType: InvalidIdProblem.self)
+            requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
           }
 
           func fetchTest() -> RequestResultPublisher<Test?> {
@@ -195,7 +195,7 @@ class ResponseProblemsTest {
 
           public static let type: URL = URL(string: "http://example.com/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -272,7 +272,7 @@ class ResponseProblemsTest {
 
           public static let type: URL = URL(string: "http://api.example.com/api/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -349,7 +349,7 @@ class ResponseProblemsTest {
 
           public static let type: URL = URL(string: "http://errors.example.com/docs/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -426,7 +426,7 @@ class ResponseProblemsTest {
 
           public static let type: URL = URL(string: "http://example.com/api/errors/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -503,7 +503,7 @@ class ResponseProblemsTest {
 
           public static let type: URL = URL(string: "http://example.com/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
