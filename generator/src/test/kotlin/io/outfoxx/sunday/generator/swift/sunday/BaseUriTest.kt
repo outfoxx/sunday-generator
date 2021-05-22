@@ -82,7 +82,7 @@ class BaseUriTest {
             version: String = "1"
           ) -> URI.Template {
             return URI.Template(
-              template: "http://{server}.{environment}.example.com/api/{version}",
+              format: "http://{server}.{environment}.example.com/api/{version}",
               parameters: [
                 "server": server,
                 "environment": environment,

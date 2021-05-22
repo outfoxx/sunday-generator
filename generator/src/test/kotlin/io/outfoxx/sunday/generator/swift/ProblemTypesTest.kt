@@ -53,7 +53,7 @@ class ProblemTypesTest {
 
           public static let type: URL = URL(string: "http://example.com/invalid_id")!
           public let offendingId: String
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -107,7 +107,7 @@ class ProblemTypesTest {
         public class AccountNotFoundProblem : Problem {
 
           public static let type: URL = URL(string: "http://example.com/account_not_found")!
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")
@@ -152,7 +152,7 @@ class ProblemTypesTest {
           public let optionalString: String?
           public let arrayOfStrings: [String]
           public let optionalArrayOfStrings: [String]?
-          var description: String {
+          public override var description: String {
             return DescriptionBuilder(Self.self)
                 .add(type, named: "type")
                 .add(title, named: "title")

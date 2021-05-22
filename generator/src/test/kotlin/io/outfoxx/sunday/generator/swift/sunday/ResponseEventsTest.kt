@@ -146,8 +146,8 @@ class ResponseEventsTest {
               acceptTypes: [.eventStream],
               headers: nil,
               eventTypes: [
-                "Test1": Test1.self, 
-                "test2": Test2.self
+                "Test1": .erase(Test1.self), 
+                "test2": .erase(Test2.self)
               ]
             )}
 
@@ -211,8 +211,8 @@ class ResponseEventsTest {
               acceptTypes: [.eventStream],
               headers: nil,
               eventTypes: [
-                "Test1": Test1.self, 
-                "Test2": Test2.self
+                "Test1": .erase(Test1.self), 
+                "Test2": .erase(Test2.self)
               ]
             )}
 

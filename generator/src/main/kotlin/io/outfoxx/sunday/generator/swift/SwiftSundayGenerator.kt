@@ -125,7 +125,7 @@ class SwiftSundayGenerator(
             }
           }
           .addCode("return %T(%>\n", URI_TEMPLATE)
-          .addCode("template: %S,\nparameters: [%>\n", baseURL)
+          .addCode("format: %S,\nparameters: [%>\n", baseURL)
           .apply {
             if (baseURLParameters.isEmpty()) {
               addCode(":")
@@ -201,7 +201,7 @@ class SwiftSundayGenerator(
         .build()
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
-        consBuilder.addStatement("requestFactory.registerProblem(uri: %S, type: %T.self)", typeId, typeName)
+        consBuilder.addStatement("requestFactory.registerProblem(type: %S, problemType: %T.self)", typeId, typeName)
       }
 
       typeBuilder.addFunction(consBuilder.build())
@@ -501,12 +501,12 @@ class SwiftSundayGenerator(
         "discriminated" -> {
 
           val types = (resultBodyType as UnionShape).anyOf.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString { "\n%S: %T.self" }
+          val typesTemplate = types.joinToString { "\n%S: .erase(%T.self)" }
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
               (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? DeclaredTypeName)?.simpleName
-                ?: "$typeName"
+              ?: "$typeName"
             listOf(discValue, typeName)
           }
 
