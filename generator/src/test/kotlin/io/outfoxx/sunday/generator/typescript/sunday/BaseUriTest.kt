@@ -56,8 +56,8 @@ class BaseUriTest {
 
     Assertions.assertEquals(
       """
+        import {Environment} from './environment';
         import {AnyType, MediaType, RequestFactory, URLTemplate} from '@outfoxx/sunday';
-        import {Environment} from 'environment';
         import {Observable} from 'rxjs';
 
 
