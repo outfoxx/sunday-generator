@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    tags: ["rel/v*"]
+    tags: ["[0-9]+.[0-9]+.[0-9]+**"]
 
 jobs:
   release-publish:
@@ -26,7 +26,7 @@ jobs:
         job-id: jdk8-build-test
         arguments: >-
           --continue
-          -Djib.to.auth.username=${{ secrets.DOCKER_PUBLUSH_USER }}
+          -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
           -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
           build
           publishRelease
