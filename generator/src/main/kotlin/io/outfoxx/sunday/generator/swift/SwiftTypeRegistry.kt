@@ -623,8 +623,8 @@ class SwiftTypeRegistry(
       val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
       if (discriminatorPropertyName != null) {
 
-        discriminatorProperty =
-          (originalInheritedProperties + originalLocalProperties).find { it.name == discriminatorPropertyName }
+        discriminatorProperty = (originalInheritedProperties + originalLocalProperties)
+          .find { it.name == discriminatorPropertyName }
           ?: genError("Discriminator property '$discriminatorPropertyName' not found", shape)
 
         val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
