@@ -14,22 +14,37 @@
  * limitations under the License.
  */
 
-@file:Suppress("UnstableApiUsage")
-
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.TypeSpec
 
 fun compileTypes(compiler: SwiftCompiler, types: Map<DeclaredTypeName, TypeSpec>): Boolean {
   try {
-    types.forEach { (typeName, typeSpec) ->
-      FileSpec.get(typeName.moduleName, typeSpec)
-        .writeTo(compiler.srcDir)
+    val fileSpecs =
+      types.map { (typeName, typeSpec) ->
+        FileSpec.get(typeName.moduleName, typeSpec)
+      }
+
+    fileSpecs.forEach { it.writeTo(compiler.srcDir) }
+
+    val (result, output) = compiler.compile()
+
+    if (result != 0) {
+
+      val files =
+        fileSpecs.associate {
+          val builder = StringBuilder()
+          it.writeTo(builder)
+          "${it.name}.swift" to builder.toString()
+        }
+
+      Compilation.printFailure(files, output)
     }
 
-    return compiler.compile() == 0
+    return result == 0
   } finally {
     compiler.srcDir.toFile().deleteRecursively()
   }

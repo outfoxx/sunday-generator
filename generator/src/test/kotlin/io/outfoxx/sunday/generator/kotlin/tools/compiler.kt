@@ -21,21 +21,46 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.outfoxx.sunday.test.utils.Compilation
+import java.io.ByteArrayOutputStream
 
-fun compileTypes(types: Map<ClassName, TypeSpec>) =
-  KotlinCompilation()
-    .apply {
-      sources = types.entries
-        .filter { it.key.topLevelClassName() == it.key }
-        .map { FileSpec.get(it.key.packageName, it.value) }
-        .map {
+fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
+
+  val fileSpecs =
+    types.entries
+      .filter { it.key.topLevelClassName() == it.key }
+      .map { FileSpec.get(it.key.packageName, it.value) }
+
+  val out = ByteArrayOutputStream()
+
+  val result =
+    KotlinCompilation()
+      .apply {
+        sources = fileSpecs.map {
           val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
           SourceFile.kotlin(fileName, it.toString())
         }
-      kotlincArguments = listOf("-jvm-target", "11")
-      inheritClassPath = true
-      verbose = false
-      allWarningsAsErrors = true
-      reportOutputFiles = true
-    }
-    .compile()
+        kotlincArguments = listOf("-jvm-target", "11")
+        inheritClassPath = true
+        verbose = false
+        allWarningsAsErrors = true
+        reportOutputFiles = true
+        messageOutputStream = out
+      }
+      .compile()
+
+  if (result.exitCode != KotlinCompilation.ExitCode.OK) {
+
+    val files =
+      fileSpecs.associate { fileSpec ->
+        val builder = StringBuilder()
+        fileSpec.writeTo(builder)
+
+        fileSpec.name to builder.toString()
+      }
+
+    Compilation.printFailure(files, out.toByteArray().decodeToString())
+  }
+
+  return result.exitCode
+}

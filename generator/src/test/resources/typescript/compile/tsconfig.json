@@ -1,11 +1,8 @@
 {
   "include": ["src/**/*.ts"],
   "compilerOptions": {
+    "moduleResolution": "node",
     "baseUrl": ".",
-    "paths": {
-      "@outfoxx/*": ["outfoxx-mock/*"],
-      "rxjs": ["outfoxx-mock/rxjs"]
-    },
     "target": "ES2018",
     "lib": ["DOM", "ES2018"],
     "strict": true,

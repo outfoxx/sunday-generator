@@ -148,10 +148,12 @@ class TypeScriptSundayGenerator(
     consBuilder?.let { consBuilder ->
 
       val optionsType =
-        TypeName.anonymousType(listOf(
-          TypeName.Anonymous.Member("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true),
-          TypeName.Anonymous.Member("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true)
-        ))
+        TypeName.anonymousType(
+          listOf(
+            TypeName.Anonymous.Member("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true),
+            TypeName.Anonymous.Member("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true)
+          )
+        )
 
       consBuilder
         .addParameter(
@@ -473,7 +475,9 @@ class TypeScriptSundayGenerator(
           val typesTemplate = types.joinToString { "\n%S : [%T]" }
           val typesParams = types.flatMap {
             val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, null))
-            val discValue = (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? TypeName.Standard)?.simpleName() ?: "$typeName"
+            val discValue =
+              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? TypeName.Standard)?.simpleName()
+                ?: "$typeName"
             listOf(discValue, typeName)
           }
 

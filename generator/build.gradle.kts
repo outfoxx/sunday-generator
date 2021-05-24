@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
   `java-library`
@@ -25,6 +24,9 @@ val junitVersion: String by project
 val hamcrestVersion: String by project
 val kotlinCompileTestingVersion: String by project
 val dockerJavaVersion: String by project
+
+val jcolorVersion: String by project
+
 
 configurations.compileClasspath {
   resolutionStrategy {
@@ -66,15 +68,16 @@ dependencies {
   testImplementation("com.github.docker-java:docker-java-transport-httpclient5:$dockerJavaVersion")
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 
+  testImplementation("com.diogonunes:JColor:$jcolorVersion")
 }
 
 
-tasks {
-  withType<ShadowJar> {
-    dependencies {
-      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
-    }
+tasks.shadowJar {
+
+  dependencies {
+    exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
   }
+
 }
 
 

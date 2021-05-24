@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-@file:Suppress("UnstableApiUsage")
-
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.SymbolSpec
@@ -26,19 +25,39 @@ import java.nio.file.Files
 
 fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, ModuleSpec>): Boolean {
   try {
-    types.forEach { (typeName, moduleSpec) ->
+    val fileSpecs =
+      types.map { (typeName, moduleSpec) ->
 
-      val imported = typeName.base as SymbolSpec.Imported
-      val moduleName = imported.source.replaceFirst("!", "")
-      val modulePath = compiler.srcDir.resolve(moduleName).normalize()
+        val imported = typeName.base as SymbolSpec.Imported
+        val modulePath = imported.source.replaceFirst("!", "")
+
+        FileSpec.get(moduleSpec, modulePath)
+      }
+
+    fileSpecs.forEach {
+
+      val modulePath = compiler.srcDir.resolve(it.modulePath).normalize()
 
       Files.createDirectories(modulePath.parent)
 
-      FileSpec.get(moduleSpec, moduleName)
-        .writeTo(compiler.srcDir)
+      it.writeTo(compiler.srcDir)
     }
 
-    return compiler.compile() == 0
+    val (result, output) = compiler.compile()
+
+    if (result != 0) {
+
+      val files =
+        fileSpecs.associate {
+          val builder = StringBuilder()
+          it.writeTo(builder)
+          "${it.modulePath}.ts" to builder.toString()
+        }
+
+      Compilation.printFailure(files, output)
+    }
+
+    return result == 0
   } finally {
     compiler.srcDir.toFile().deleteRecursively()
   }

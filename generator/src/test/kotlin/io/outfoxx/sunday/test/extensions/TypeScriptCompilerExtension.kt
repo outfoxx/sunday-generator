@@ -35,7 +35,7 @@ class TypeScriptCompilerExtension : ParameterResolver {
     Files.createDirectories(workDir)
 
     return store.getOrComputeIfAbsent(TypeScriptCompiler::class.java) {
-      TypeScriptCompiler(workDir)
+      TypeScriptCompiler.create(workDir)
     }
   }
 }

@@ -35,7 +35,7 @@ class SwiftCompilerExtension : ParameterResolver {
     Files.createDirectories(workDir)
 
     return store.getOrComputeIfAbsent(SwiftCompiler::class.java) {
-      SwiftCompiler(workDir)
+      SwiftCompiler.create(workDir)
     }
   }
 }
