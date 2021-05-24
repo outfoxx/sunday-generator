@@ -35,24 +35,21 @@ abstract class SwiftCompiler(val workDir: Path) : Closeable {
 
         val checkSwift =
           ProcessBuilder()
-            .command("command", "-v", "swift")
+            .command("/bin/sh", "command", "-v", "swift")
             .start()
 
         val result = checkSwift.waitFor()
 
-        if (result != 0) {
+        val command =
+          if (result == 0) {
+            checkSwift.inputStream.readAllBytes().decodeToString().trim()
+          } else {
+            "swift"
+          }
 
-          println("### No Local 'swift' command")
+        println("### Using Local 'swift' with command '$command'")
 
-          DockerSwiftCompiler(workDir)
-        } else {
-
-          val command = checkSwift.inputStream.readAllBytes().decodeToString().trim()
-
-          println("### Using Local 'swift' with command '$command'")
-
-          LocalSwiftCompiler(command, workDir)
-        }
+        LocalSwiftCompiler(command, workDir)
       }
     }
   }
