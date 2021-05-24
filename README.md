@@ -1,10 +1,14 @@
+[![Build / Test / Publish](https://github.com/outfoxx/sunday-generator/actions/workflows/build-test-publish.yml/badge.svg)](https://github.com/outfoxx/sunday-generator/actions/workflows/build-test-publish.yml)
+
+---
+
 # Sunday 🙏 The code generator of REST
 
 ---
 
 Code generator for Sunday client libraries and standard server libraries.
 
-## [Read the Documentation](https://outfoxx.github.io/sunday)
+### [Read the Documentation](https://outfoxx.github.io/sunday)
 
 
 License
