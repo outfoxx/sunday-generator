@@ -202,7 +202,6 @@ tasks {
   }
 
   register("publishDockerRelease") {
-    System.setProperty("jib.to.image", "outfoxx/sunday-generator:${releaseVersion}")
     dependsOn(
       ":cli:jib"
     )

@@ -94,10 +94,10 @@ signing {
 
 jib {
   to {
-    image = "docker.pkg.github.com/outfoxx/sunday-generator/sunday-generator:${project.version}"
+    image = "outfoxx/sunday-generator:${project.version}"
     auth {
-      username = project.findProperty("github.user") as String? ?: System.getenv("USERNAME")
-      password = project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")
+      username = project.findProperty("docker.user") as String? ?: System.getenv("DOCKER_PUBLISH_USER")
+      password = project.findProperty("docker.token") as String? ?: System.getenv("DOCKER_PUBLISH_TOKEN")
     }
   }
   from {
