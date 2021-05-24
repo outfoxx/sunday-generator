@@ -1,4 +1,4 @@
-[![Build / Test / Publish](https://github.com/outfoxx/sunday-generator/actions/workflows/build-test-publish.yml/badge.svg)](https://github.com/outfoxx/sunday-generator/actions/workflows/build-test-publish.yml)
+[![CI](https://github.com/outfoxx/sunday-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/outfoxx/sunday-generator/actions/workflows/ci.yml)
 
 ---
 
