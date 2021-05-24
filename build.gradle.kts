@@ -178,11 +178,11 @@ tasks {
 githubRelease {
   owner("outfoxx")
   repo("sunday-generator")
-  tagName("rel/v${releaseVersion}")
+  tagName(releaseVersion)
   targetCommitish("main")
   releaseName("v${releaseVersion}")
   draft(true)
-  prerelease(isSnapshot)
+  prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
     files("${project.rootDir}/cli/build/libs/cli-${releaseVersion}-all.jar") +
       files("${project.rootDir}/generator/build/libs/generator-${releaseVersion}-all.jar") +

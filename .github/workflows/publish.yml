@@ -16,6 +16,9 @@ jobs:
       with:
         java-version: '11'
 
+    - uses: olegtarasov/get-tag@v2.1
+      id: tagName
+
     - name: Publish Maven, Docker, Plugins
       uses: burrunan/gradle-cache-action@v1
       env:
@@ -25,13 +28,13 @@ jobs:
       with:
         job-id: jdk8-build-test
         arguments: >-
-          --continue
           -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
           -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
           build
           publishRelease
           -x test
         properties: |
+          releaseVersion=${{ steps.tagName.outputs.tag }}
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}
           gradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }}
