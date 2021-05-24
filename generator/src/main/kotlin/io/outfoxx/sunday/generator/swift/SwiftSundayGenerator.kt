@@ -505,7 +505,8 @@ class SwiftSundayGenerator(
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
-              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? DeclaredTypeName)?.simpleName
+              (it.resolve as? NodeShape)?.discriminatorValue
+                ?: (typeName as? DeclaredTypeName)?.simpleName
                 ?: "$typeName"
             listOf(discValue, typeName)
           }

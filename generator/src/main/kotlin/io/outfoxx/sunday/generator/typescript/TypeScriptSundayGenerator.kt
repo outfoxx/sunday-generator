@@ -476,7 +476,8 @@ class TypeScriptSundayGenerator(
           val typesParams = types.flatMap {
             val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, null))
             val discValue =
-              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? TypeName.Standard)?.simpleName()
+              (it.resolve as? NodeShape)?.discriminatorValue
+                ?: (typeName as? TypeName.Standard)?.simpleName()
                 ?: "$typeName"
             listOf(discValue, typeName)
           }
