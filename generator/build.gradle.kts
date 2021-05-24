@@ -43,7 +43,7 @@ dependencies {
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
   implementation("com.google.guava:guava:$guavaVersion")
-  implementation("io.outfoxx:sunday:$sundayKtVersion")
+  implementation("io.outfoxx.sunday:sunday:$sundayKtVersion")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
   implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion")
   implementation("javax.validation:validation-api:$validationVersion")
