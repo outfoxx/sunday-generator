@@ -32,11 +32,10 @@ jobs:
       with:
         java-version: '11'
 
-    - name: Build & Test
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk8-build-test
-        arguments: :generator:test --tests "io.outfoxx.sunday.generator.swift.*"
+    - uses: fwal/setup-swift@v1
+
+    - name: Test
+      run: ./gradlew cleanTest :generator:test --tests "io.outfoxx.sunday.generator.swift.*"
 
     - name: Updload Reports
       uses: actions/upload-artifact@v2
@@ -58,11 +57,12 @@ jobs:
       with:
         java-version: '11'
 
-    - name: Build & Test
-      uses: burrunan/gradle-cache-action@v1
+    - uses: actions/setup-node@v2
       with:
-        job-id: jdk8-build-test
-        arguments: :generator:test --tests "io.outfoxx.sunday.generator.typescript.*"
+        node-version: '14'
+
+    - name: Test
+      run: ./gradlew cleanTest :generator:test --tests "io.outfoxx.sunday.generator.typescript.*"
 
     - name: Updload Reports
       uses: actions/upload-artifact@v2
@@ -84,15 +84,11 @@ jobs:
       with:
         java-version: '11'
 
-    - uses: actions/setup-node@v2
-      with:
-        node-version: '14'
-
     - name: Build & Test
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk8-build-test
-        arguments: :generator:test --tests "io.outfoxx.sunday.generator.kotlin.*"
+        arguments: cleanTest :generator:test --tests "io.outfoxx.sunday.generator.kotlin.*"
 
     - name: Updload Reports
       uses: actions/upload-artifact@v2

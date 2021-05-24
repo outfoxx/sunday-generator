@@ -35,24 +35,21 @@ abstract class TypeScriptCompiler(val workDir: Path) : Closeable {
 
         val checkNpm =
           ProcessBuilder()
-            .command("command", "-v", "npm")
+            .command("/bin/sh", "command", "-v", "npm")
             .start()
 
         val result = checkNpm.waitFor()
 
-        if (result != 0) {
+        val command =
+          if (result == 0) {
+            checkNpm.inputStream.readAllBytes().decodeToString().trim()
+          } else {
+            "npm"
+          }
 
-          println("### No Local 'npm' command")
+        println("### Using Local 'npm' with command '$command'")
 
-          DockerTypeScriptCompiler(workDir)
-        } else {
-
-          val command = checkNpm.inputStream.readAllBytes().decodeToString().trim()
-
-          println("### Using Local 'npm' with command '$command'")
-
-          LocalTypeScriptCompiler(command, workDir)
-        }
+        LocalTypeScriptCompiler(command, workDir)
       }
     }
   }
