@@ -570,8 +570,8 @@ abstract class TypeScriptGenerator(
             variable.schema?.let {
               val suggestedName = variable.name?.typeScriptTypeName ?: "URIParameter$idx"
               val suggestedModule =
-                variable.name?.typeScriptTypeName?.camelCaseToKebabCase() ?: "!uri-parameter-idx$idx"
-              resolveTypeName(it, TypeName.namedImport(suggestedName, suggestedModule))
+                variable.name?.typeScriptTypeName?.camelCaseToKebabCase() ?: "uri-parameter-idx$idx"
+              resolveTypeName(it, TypeName.namedImport(suggestedName, "!$suggestedModule"))
             } ?: TypeName.STRING
 
           val defaultValue =
