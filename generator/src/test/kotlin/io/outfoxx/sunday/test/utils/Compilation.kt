@@ -31,7 +31,7 @@ object Compilation {
   val out = System.out
   val err = System.err
 
-  val isCI = !System.getProperty("CI").isNullOrBlank()
+  val isCI = !System.getenv("CI").isNullOrBlank()
 
   fun printFailure(files: Map<String, String>, compilerOutput: String) {
 
