@@ -56,8 +56,8 @@ subprojects {
   //
 
   configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 
     withSourcesJar()
     withJavadocJar()
@@ -78,7 +78,7 @@ subprojects {
   //
 
   configure<JacocoPluginExtension> {
-    toolVersion = "0.8.5"
+    toolVersion = "0.8.7"
   }
 
   tasks {
