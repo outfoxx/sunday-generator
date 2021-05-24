@@ -56,14 +56,14 @@ class ProblemTypesTest {
 
           offendingId: string;
 
-          constructor(offendingId: string, instance: string | null = null) {
-            super(
-              InvalidIdProblem.TYPE,
-              'Invalid Id',
-              400,
-              'The id contains one or more invalid characters.',
+          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+            super({
+              type: InvalidIdProblem.TYPE,
+              title: 'Invalid Id',
+              status: 400,
+              detail: 'The id contains one or more invalid characters.',
               instance
-            );
+            });
             this.offendingId = offendingId;
           }
 
@@ -86,14 +86,14 @@ class ProblemTypesTest {
 
           static TYPE: string = 'http://example.com/account_not_found';
 
-          constructor(instance: string | null = null) {
-            super(
-              AccountNotFoundProblem.TYPE,
-              'Account Not Found',
-              404,
-              'The requested account does not exist or you do not have permission to access it.',
+          constructor(instance: string | URL | undefined = undefined) {
+            super({
+              type: AccountNotFoundProblem.TYPE,
+              title: 'Account Not Found',
+              status: 404,
+              detail: 'The requested account does not exist or you do not have permission to access it.',
               instance
-            );
+            });
           }
 
         }
@@ -122,14 +122,15 @@ class ProblemTypesTest {
           optionalArrayOfStrings: Array<string> | null;
 
           constructor(optionalString: string | null, arrayOfStrings: Array<string>,
-              optionalArrayOfStrings: Array<string> | null, instance: string | null = null) {
-            super(
-              TestResolverProblem.TYPE,
-              'Test Resolve Type Reference',
-              500,
-              'Tests the resolveTypeReference function implementation.',
+              optionalArrayOfStrings: Array<string> | null,
+              instance: string | URL | undefined = undefined) {
+            super({
+              type: TestResolverProblem.TYPE,
+              title: 'Test Resolve Type Reference',
+              status: 500,
+              detail: 'Tests the resolveTypeReference function implementation.',
               instance
-            );
+            });
             this.optionalString = optionalString;
             this.arrayOfStrings = arrayOfStrings;
             this.optionalArrayOfStrings = optionalArrayOfStrings;
@@ -171,14 +172,14 @@ class ProblemTypesTest {
           @JsonClassType({type: () => [String]})
           offendingId: string;
 
-          constructor(offendingId: string, instance: string | null = null) {
-            super(
-              InvalidIdProblem.TYPE,
-              'Invalid Id',
-              400,
-              'The id contains one or more invalid characters.',
+          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+            super({
+              type: InvalidIdProblem.TYPE,
+              title: 'Invalid Id',
+              status: 400,
+              detail: 'The id contains one or more invalid characters.',
               instance
-            );
+            });
             this.offendingId = offendingId;
           }
 
@@ -203,14 +204,14 @@ class ProblemTypesTest {
 
           static TYPE: string = 'http://example.com/account_not_found';
 
-          constructor(instance: string | null = null) {
-            super(
-              AccountNotFoundProblem.TYPE,
-              'Account Not Found',
-              404,
-              'The requested account does not exist or you do not have permission to access it.',
+          constructor(instance: string | URL | undefined = undefined) {
+            super({
+              type: AccountNotFoundProblem.TYPE,
+              title: 'Account Not Found',
+              status: 404,
+              detail: 'The requested account does not exist or you do not have permission to access it.',
               instance
-            );
+            });
           }
 
         }

@@ -64,6 +64,7 @@ import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
 import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
 import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
 import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
+import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
@@ -318,13 +319,13 @@ class TypeScriptTypeRegistry(
         FunctionSpec.constructorBuilder()
           .addCode(
             """
-            |super(
-            |  %T.TYPE,
-            |  %S,
-            |  %L,
-            |  %S,
+            |super({
+            |  type: %T.TYPE,
+            |  title: %S,
+            |  status: %L,
+            |  detail: %S,
             |  instance
-            |);
+            |});
             |
             """.trimMargin(),
             problemTypeName,
@@ -399,8 +400,8 @@ class TypeScriptTypeRegistry(
       }
 
       problemTypeConsBuilder.addParameter(
-        ParameterSpec.builder("instance", STRING.nullable)
-          .defaultValue("null")
+        ParameterSpec.builder("instance", TypeName.unionType(STRING, URL_TYPE).undefinable)
+          .defaultValue("undefined")
           .build()
       )
 
