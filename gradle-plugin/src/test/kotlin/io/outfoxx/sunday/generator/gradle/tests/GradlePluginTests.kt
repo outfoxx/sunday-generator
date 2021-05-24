@@ -88,7 +88,7 @@ class GradlePluginTests {
       }
 
       dependencies {
-        implementation "io.outfoxx:sunday:1.0.0-SNAPSHOT"
+        implementation "io.outfoxx.sunday:sunday:1.0.0-SNAPSHOT"
         implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
         implementation "javax.validation:validation-api:1.1.0.Final"
         implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
