@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     types: [ opened, synchronize, reopened, closed ]
     branches: [ main ]
@@ -128,7 +130,7 @@ jobs:
 
     needs: [check, build-test-tools, build-test-swift, build-test-kotlin, build-test-typescript]
 
-    if: github.event.pull_request.merged
+    if: github.event.pull_request.merged || github.event_name == 'push'
 
     steps:
     - uses: actions/checkout@v2
@@ -152,10 +154,13 @@ jobs:
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk8-build-test
-        arguments: build jib -x test
-        properties: |
-          github.user=${GITHUB_ACTOR}
-          github.token=${{ secrets.GITHUB_TOKEN }}
+        arguments:  >-
+          --continue
+          -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
+          -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
+          build
+          jib
+          -x test
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0
