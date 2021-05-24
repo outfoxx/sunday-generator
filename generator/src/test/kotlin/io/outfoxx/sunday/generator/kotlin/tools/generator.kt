@@ -171,7 +171,7 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertEquals(compileTypes(builtTypes).exitCode, KotlinCompilation.ExitCode.OK)
+  assertEquals(compileTypes(builtTypes), KotlinCompilation.ExitCode.OK)
 
   return builtTypes
 }
@@ -190,7 +190,7 @@ fun generate(
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertEquals(compileTypes(builtTypes).exitCode, KotlinCompilation.ExitCode.OK)
+  assertEquals(compileTypes(builtTypes), KotlinCompilation.ExitCode.OK)
 
   return builtTypes
 }
