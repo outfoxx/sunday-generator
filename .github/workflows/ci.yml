@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened, closed ]
+    branches: [ main ]
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Linting
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: lintKotlin licenseCheck
+
+
+  build-test-swift:
+    runs-on: macos-latest
+
+    needs: [check]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '11'
+
+    - name: Build & Test
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: :generator:test --tests "io.outfoxx.sunday.generator.swift.*"
+
+    - name: Updload Reports
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: reports-swift
+        path: "**/build/reports/"
+
+
+  build-test-typescript:
+    runs-on: ubuntu-latest
+
+    needs: [check]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '11'
+
+    - name: Build & Test
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: :generator:test --tests "io.outfoxx.sunday.generator.typescript.*"
+
+    - name: Updload Reports
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: reports-typescript
+        path: "**/build/reports/"
+
+
+  build-test-kotlin:
+    runs-on: ubuntu-latest
+
+    needs: [check]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '11'
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Build & Test
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: :generator:test --tests "io.outfoxx.sunday.generator.kotlin.*"
+
+    - name: Updload Reports
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: reports-kotlin
+        path: "**/build/reports/"
+
+
+  publish:
+    runs-on: ubuntu-latest
+
+    needs: [check, build-test-swift, build-test-kotlin, build-test-typescript]
+
+    if: github.event.pull_request.merged
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Publish Maven (Snapshot)
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: build publishAllPublicationsToMavenCentralRepository -x test
+        properties: |
+          ossrhUsername=${{ secrets.OSSRH_USER }}
+          ossrhPassword=${{ secrets.OSSRH_PASS }}
+
+    - name: Publish Docker
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: build jib -x test
+        properties: |
+          github.user=${GITHUB_ACTOR}
+          github.token=${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish Documentation
+      uses: JamesIves/github-pages-deploy-action@4.0.0
+      with:
+        branch: gh-pages
+        clean: false
+        folder: build/dokka/
