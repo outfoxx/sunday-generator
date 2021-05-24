@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "SundayGenTest", targets: ["SundayGenTest"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/outfoxx/sunday-swift.git", .revision("2b28d4699782e84f9020612860a50a19c464ba6d"))
+        .package(url: "https://github.com/outfoxx/sunday-swift.git", from: "1.0.0-beta.1")
     ],
     targets: [
         .target(
