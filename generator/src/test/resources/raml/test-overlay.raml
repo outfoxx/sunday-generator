@@ -1,0 +1,10 @@
+#%RAML 1.0 Overlay
+extends: test.raml
+
+annotationTypes:
+  test-ann: boolean
+
+/test/{id}:
+  get:
+    displayName: fetch
+    (test-ann): true
