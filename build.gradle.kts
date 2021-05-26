@@ -1,3 +1,4 @@
+import com.adarshr.gradle.testlogger.TestLoggerExtension
 import net.minecrell.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -9,6 +10,7 @@ plugins {
   id("net.minecrell.licenser") apply false
   id("org.jmailen.kotlinter") apply false
   id("com.github.johnrengelman.shadow") apply false
+  id("com.adarshr.test-logger") apply false
   id("com.github.breadmoirai.github-release")
 }
 
@@ -30,6 +32,7 @@ subprojects {
   apply(plugin = "net.minecrell.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "signing")
+  apply(plugin = "com.adarshr.test-logger")
 
   group = "io.outfoxx.sunday"
   version = releaseVersion
@@ -86,6 +89,7 @@ subprojects {
     }
   }
 
+  the<TestLoggerExtension>().setTheme("mocha")
 
   //
   // DOCS
