@@ -19,6 +19,14 @@ jobs:
     - uses: olegtarasov/get-tag@v2.1
       id: tagName
 
+    - name: Build Release
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk8-build-test
+        arguments: build dokkaHtmlMultiModule -x test
+        properties: |
+          releaseVersion=${{ steps.tagName.outputs.tag }}
+
     - name: Publish Maven, Docker, Plugins
       uses: burrunan/gradle-cache-action@v1
       env:
@@ -30,7 +38,6 @@ jobs:
         arguments: >-
           -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
           -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
-          build
           publishRelease
           -x test
         properties: |
@@ -40,12 +47,6 @@ jobs:
           gradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }}
           gradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
           github.token=${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build Docs
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk8-build-test
-        arguments: dokkaHtmlMultiModule
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0

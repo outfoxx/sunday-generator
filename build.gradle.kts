@@ -156,13 +156,31 @@ subprojects {
 
 tasks {
   dokkaHtmlMultiModule.configure {
-    val docDir = buildDir.resolve("dokka/$releaseVersion")
-    outputDirectory.set(docDir)
+    val docDir = buildDir.resolve("dokka")
+    val relDocDir = docDir.resolve(releaseVersion)
+    outputDirectory.set(relDocDir)
     doLast {
+      // Copy versioned sunday.raml
       copy {
-        into(docDir)
+        into(relDocDir)
         from("generator/src/main/resources") {
           include("sunday.raml")
+        }
+      }
+      // For major.minor.patch releases, add sunday.raml as current
+      // and add docs in "current" directory
+      if (releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())) {
+        copy {
+          into(docDir.resolve("current"))
+          from(relDocDir) {
+            include("**")
+          }
+        }
+        copy {
+          into(docDir)
+          from("generator/src/main/resources") {
+            include("sunday.raml")
+          }
         }
       }
     }
