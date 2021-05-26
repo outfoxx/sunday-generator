@@ -100,12 +100,13 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
       ?: typeRegistry.defaultModelPackageName
 
   val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
+  typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
 
   document.api.endPoints.forEach { endPoint ->
 
     endPoint.operations.forEach { operation ->
 
-      val opName = (operation.operationId ?: operation.name!!).toUpperCamelCase()
+      val opName = (operation.operationId ?: operation.name)?.toUpperCamelCase() ?: ""
 
       operation.requests.forEach { request ->
 
@@ -165,7 +166,8 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
 
   val problemTypesAnn = document.api.findAnnotation(ProblemTypes, typeRegistry.generationMode) as? ObjectNode
   problemTypesAnn?.properties()?.forEach { (problemCode, problemDef) ->
-    val problemType = ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document, problemDef)
+    val problemType =
+      ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document, problemDef)
     typeRegistry.defineProblemType(problemCode, problemType)
   }
 

@@ -86,6 +86,7 @@ import io.outfoxx.typescriptpoet.NameAllocator
 import io.outfoxx.typescriptpoet.ParameterSpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
+import io.outfoxx.typescriptpoet.tag
 import java.net.URI
 import java.net.URISyntaxException
 import javax.ws.rs.core.Response.Status.NO_CONTENT
@@ -125,7 +126,7 @@ abstract class TypeScriptGenerator(
     var serviceTypeBuilder =
       ClassSpec.builder(serviceTypeName)
         .addModifiers(Modifier.EXPORT)
-        .tag(CodeBlock.Builder::class, CodeBlock.builder())
+        .tag(CodeBlock.builder())
 
     // Add baseUrl function
     getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
@@ -258,7 +259,7 @@ abstract class TypeScriptGenerator(
           FunctionSpec.builder(operationName)
             .addModifiers(Modifier.ABSTRACT)
 
-        functionBuilder.tag(NameAllocator::class, NameAllocator())
+        functionBuilder.tag(NameAllocator())
 
         functionBuilder = processResourceMethodStart(endPoint, operation, typeBuilder, functionBuilder)
 

@@ -51,6 +51,7 @@ import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uriParameters
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.typescriptpoet.AnyTypeSpec
+import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -101,13 +102,14 @@ fun generateTypes(
 
   val document = parseAndValidate(uri)
 
-  val apiTypeName = TypeName.standard("API")
+  val apiTypeName = TypeName.namedImport("API", "!api")
+  typeRegistry.addServiceType(apiTypeName, ClassSpec.builder(apiTypeName))
 
   document.api.endPoints.forEach { endPoint ->
 
     endPoint.operations.forEach { operation ->
 
-      val opName = (operation.operationId ?: operation.name!!).toUpperCamelCase()
+      val opName = (operation.operationId ?: operation.name)?.toUpperCamelCase() ?: ""
 
       operation.requests.forEach { request ->
 
@@ -135,8 +137,8 @@ fun generateTypes(
           val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}Payload"))
           typeRegistry.resolveTypeName(payload.schema!!, context)
         }
-        val queryString = request.queryString
-        if (queryString != null) {
+
+        request.queryString?.let { queryString ->
           val context = TypeScriptResolutionContext(document, apiTypeName.nested("${opName}QueryStringParams"))
           typeRegistry.resolveTypeName(queryString, context)
         }

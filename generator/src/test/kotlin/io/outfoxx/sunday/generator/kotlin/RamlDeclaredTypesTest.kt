@@ -23,6 +23,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.contains
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -78,5 +80,17 @@ class RamlDeclaredTypesTest {
           .writeTo(this)
       }
     )
+  }
+
+  @Test
+  fun `test resource fragments with anonymous types can be imported multiple times`(
+    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val nestedTypes = findType("io.test.API", generateTypes(testUri, typeRegistry)).typeSpecs
+
+    assertThat(nestedTypes.map { it.name }, contains("Payload"))
   }
 }
