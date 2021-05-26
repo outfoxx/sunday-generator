@@ -29,7 +29,6 @@ subprojects {
   apply(plugin = "org.jetbrains.dokka")
   apply(plugin = "net.minecrell.licenser")
   apply(plugin = "org.jmailen.kotlinter")
-  apply(plugin = "com.github.johnrengelman.shadow")
   apply(plugin = "signing")
 
   group = "io.outfoxx.sunday"
