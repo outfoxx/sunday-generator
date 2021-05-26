@@ -102,7 +102,7 @@ fun generateTypes(
 
     endPoint.operations.forEach { operation ->
 
-      val opName = (operation.operationId ?: operation.name!!).toUpperCamelCase()
+      val opName = (operation.operationId ?: operation.name)?.toUpperCamelCase() ?: ""
 
       operation.requests.forEach { request ->
 
@@ -130,6 +130,7 @@ fun generateTypes(
           val context = SwiftResolutionContext(document, apiTypeName.nestedType("${opName}Payload"))
           typeRegistry.resolveTypeName(payload.schema!!, context)
         }
+
         val queryString = request.queryString
         if (queryString != null) {
           val context = SwiftResolutionContext(document, apiTypeName.nestedType("${opName}QueryStringParams"))

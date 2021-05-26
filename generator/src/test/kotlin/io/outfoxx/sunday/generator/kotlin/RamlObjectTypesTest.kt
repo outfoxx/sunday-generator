@@ -178,7 +178,9 @@ class RamlObjectTypesTest {
     val typeRegistryOptions = setOf<Option>()
     val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
 
-    val builtTypes = generateTypes(testUri, typeRegistry)
+    val builtTypes =
+      generateTypes(testUri, typeRegistry)
+        .filter { it.key.simpleName != "API" }
 
     assertEquals(
       "io.test.API.FetchTestResponsePayload",

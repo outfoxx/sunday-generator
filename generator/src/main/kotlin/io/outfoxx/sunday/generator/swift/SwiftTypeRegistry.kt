@@ -41,6 +41,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
@@ -140,6 +141,7 @@ import io.outfoxx.swiftpoet.TypeSpec
 import io.outfoxx.swiftpoet.VOID
 import io.outfoxx.swiftpoet.joinToCode
 import io.outfoxx.swiftpoet.parameterizedBy
+import io.outfoxx.swiftpoet.tag
 import java.net.URI
 import java.nio.file.Path
 import java.time.LocalDateTime
@@ -149,8 +151,6 @@ import kotlin.math.min
 class SwiftTypeRegistry(
   val options: Set<Option>
 ) : TypeRegistry {
-
-  data class Id(val value: String)
 
   enum class Option {
     AddGeneratedAnnotation,
@@ -577,7 +577,7 @@ class SwiftTypeRegistry(
     // Check for an existing class built or being built
     val existingBuilder = typeBuilders[className]
     if (existingBuilder != null) {
-      if (existingBuilder.tags[Id::class] != Id(shape.id)) {
+      if (existingBuilder.tags[DefinitionLocation::class] != DefinitionLocation(shape)) {
         genError("Multiple classes defined with name '$className'", shape)
       } else {
         return className
@@ -589,7 +589,7 @@ class SwiftTypeRegistry(
         TypeSpec.classBuilder(name)
       }
 
-    typeBuilder.tag(Id::class, Id(shape.id))
+    typeBuilder.tag(DefinitionLocation(shape))
 
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context)

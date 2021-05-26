@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
@@ -100,5 +101,18 @@ class RamlDeclaredTypesTest {
           .writeTo(this)
       }
     )
+  }
+
+  @Test
+  fun `test resource fragments with anonymous types can be imported multiple times`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val typeModSpec = findTypeMod("API@!api", generateTypes(testUri, typeRegistry, compiler))
+
+    findNestedType(typeModSpec, "API.Payload")
   }
 }

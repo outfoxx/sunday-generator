@@ -69,6 +69,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
+import com.squareup.kotlinpoet.tag
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinImpl
@@ -80,6 +81,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
@@ -170,8 +172,6 @@ class KotlinTypeRegistry(
   val generationMode: GenerationMode,
   val options: Set<Option>
 ) : TypeRegistry {
-
-  data class Id(val value: String)
 
   enum class Option {
     ImplementModel,
@@ -563,7 +563,7 @@ class KotlinTypeRegistry(
     // Check for an existing class built or being built
     val existingBuilder = typeBuilders[className]
     if (existingBuilder != null) {
-      if (existingBuilder.tags[Id::class] != Id(shape.id)) {
+      if (existingBuilder.tags[DefinitionLocation::class] != DefinitionLocation(shape)) {
         genError("Multiple classes defined with name '$className'", shape)
       } else {
         return className
@@ -578,7 +578,7 @@ class KotlinTypeRegistry(
           TypeSpec.interfaceBuilder(name)
       }
 
-    typeBuilder.tag(Id::class, Id(shape.id))
+    typeBuilder.tag(DefinitionLocation(shape))
 
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context)

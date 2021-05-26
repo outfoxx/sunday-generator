@@ -87,6 +87,7 @@ class RamlTypeAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", mode, setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry)
+      .filterNot { it.key.simpleName == "API" }
 
     when (expectedPackageName[0]) {
 

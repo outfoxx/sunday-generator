@@ -144,7 +144,9 @@ class RamlUnionTypesTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val child1TypeModSpec = findTypeMod("Child1@!test/lib/child1", generateTypes(testUri, typeRegistry, compiler))
+    val builtType = generateTypes(testUri, typeRegistry, compiler)
+
+    val child1TypeModSpec = findTypeMod("Child1@!test/lib/child1", builtType)
 
     assertEquals(
       """
@@ -183,7 +185,7 @@ class RamlUnionTypesTest {
       }
     )
 
-    val child2TypeModSpec = findTypeMod("Child2@!test/lib/child2", generateTypes(testUri, typeRegistry, compiler))
+    val child2TypeModSpec = findTypeMod("Child2@!test/lib/child2", builtType)
 
     assertEquals(
       """
@@ -222,7 +224,7 @@ class RamlUnionTypesTest {
       }
     )
 
-    val testTypeModSpec = findTypeMod("Test@!test/lib/test", generateTypes(testUri, typeRegistry, compiler))
+    val testTypeModSpec = findTypeMod("Test@!test/lib/test", builtType)
 
     assertEquals(
       """

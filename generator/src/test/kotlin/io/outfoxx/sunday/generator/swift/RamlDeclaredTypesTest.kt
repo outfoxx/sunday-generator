@@ -18,10 +18,13 @@ package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
+import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.contains
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -48,5 +51,18 @@ class RamlDeclaredTypesTest {
       }
 
     assertTrue(exception.message?.contains("Multiple classes") ?: false)
+  }
+
+  @Test
+  fun `test resource fragments with anonymous types can be imported multiple times`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val nestedTypeSpecs = findType("API", generateTypes(testUri, typeRegistry, compiler)).typeSpecs
+
+    assertThat(nestedTypeSpecs.map { it.name }, contains("Payload"))
   }
 }
