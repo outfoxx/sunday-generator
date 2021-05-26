@@ -115,6 +115,7 @@ import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
+import io.outfoxx.sunday.generator.utils.value
 import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.sunday.generator.utils.xone
 import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
@@ -1170,35 +1171,55 @@ class TypeScriptTypeRegistry(
 
     val modulePath = modulePathOf(shape, context)?.let { "!$it/" } ?: "!"
 
-    val nestedAnn = shape.findAnnotation(Nested, null) as? ObjectNode
-
-    return if (nestedAnn != null) {
-
-      val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
-        ?: genError("Nested annotation is missing parent", nestedAnn)
-
-      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
-        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
-
-      nestedEnclosingType as? Shape
-        ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
-
-      val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null)
-
-      val nestedEnclosingTypeName =
-        resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as TypeName.Standard
-
-      val nestedName = nestedAnn.getValue("name")
-        ?: genError("Nested annotation is missing name", nestedAnn)
-
-      nestedEnclosingTypeName.nested(nestedName)
-    } else {
-
-      TypeName.namedImport(
+    val nestedAnn = shape.findAnnotation(Nested, null)
+      ?: return TypeName.namedImport(
         shape.typeScriptTypeName,
         "$modulePath${shape.typeScriptTypeName.camelCaseToKebabCase()}"
       )
-    }
+
+    val (nestedEnclosedIn, nestedName) =
+      when {
+        nestedAnn is ScalarNode && nestedAnn.value == "dashed" -> {
+
+          val spec = shape.name ?: ""
+          val parts = spec.split("-")
+          if (parts.size < 2) {
+            genError("Nested types using 'dashed' scheme must be named with dashes corresponding to nesting hierarchy.")
+          }
+
+          val enclosedIn = parts.dropLast(1).joinToString("-")
+          val name = parts.last()
+
+          enclosedIn to name
+        }
+
+        nestedAnn is ObjectNode -> {
+
+          val enclosedIn = nestedAnn.getValue("enclosedIn")
+            ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
+
+          val name = nestedAnn.getValue("name")
+            ?: genError("Nested annotation is missing name", nestedAnn)
+
+          enclosedIn to name
+        }
+
+        else ->
+          genError("Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys")
+      }
+
+    val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
+      ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+
+    nestedEnclosingType as? Shape
+      ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
+
+    val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null)
+
+    val nestedEnclosingTypeName =
+      resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as TypeName.Standard
+
+    return nestedEnclosingTypeName.nested(nestedName)
   }
 
   private fun modulePathOf(shape: Shape, context: TypeScriptResolutionContext): String? =

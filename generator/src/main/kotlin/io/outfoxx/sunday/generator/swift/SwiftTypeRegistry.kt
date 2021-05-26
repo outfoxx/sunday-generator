@@ -105,6 +105,7 @@ import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
+import io.outfoxx.sunday.generator.utils.value
 import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.sunday.generator.utils.xone
 import io.outfoxx.swiftpoet.ANY
@@ -1308,33 +1309,53 @@ class SwiftTypeRegistry(
       }
     }
 
-    val nestedAnn = shape.findAnnotation(Nested, null) as? ObjectNode
+    val nestedAnn = shape.findAnnotation(Nested, null)
+      ?: return DeclaredTypeName.typeName(".${shape.swiftTypeName}")
 
-    return if (nestedAnn != null) {
+    val (nestedEnclosedIn, nestedName) =
+      when {
+        nestedAnn is ScalarNode && nestedAnn.value == "dashed" -> {
 
-      val nestedEnclosedIn = nestedAnn.getValue("enclosedIn")
-        ?: genError("Nested annotation is missing parent", nestedAnn)
+          val spec = shape.name ?: ""
+          val parts = spec.split("-")
+          if (parts.size < 2) {
+            genError("Nested types using 'dashed' scheme must be named with dashes corresponding to nesting hierarchy.")
+          }
 
-      val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
-        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+          val enclosedIn = parts.dropLast(1).joinToString("-")
+          val name = parts.last()
 
-      nestedEnclosingType as? Shape
-        ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
+          enclosedIn to name
+        }
 
-      val nestedEnclosingTypeContext = SwiftResolutionContext(nestedEnclosingTypeUnit, null)
+        nestedAnn is ObjectNode -> {
 
-      val nestedEnclosingTypeName =
-        resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? DeclaredTypeName
-          ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
+          val enclosedIn = nestedAnn.getValue("enclosedIn")
+            ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
 
-      val nestedName = nestedAnn.getValue("name")
-        ?: genError("Nested annotation is missing name", nestedAnn)
+          val name = nestedAnn.getValue("name")
+            ?: genError("Nested annotation is missing name", nestedAnn)
 
-      nestedEnclosingTypeName.nestedType(nestedName)
-    } else {
+          enclosedIn to name
+        }
 
-      DeclaredTypeName.typeName(".${shape.swiftTypeName}")
-    }
+        else ->
+          genError("Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys")
+      }
+
+    val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
+      ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+
+    nestedEnclosingType as? Shape
+      ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
+
+    val nestedEnclosingTypeContext = SwiftResolutionContext(nestedEnclosingTypeUnit, null)
+
+    val nestedEnclosingTypeName =
+      resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? DeclaredTypeName
+        ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
+
+    return nestedEnclosingTypeName.nestedType(nestedName)
   }
 
   private fun replaceCollectionValueTypesWithReferenceTypes(typeName: TypeName): Pair<TypeName, TypeName> {
