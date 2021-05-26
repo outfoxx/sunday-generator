@@ -57,9 +57,8 @@ import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uriParameters
 import io.outfoxx.sunday.generator.utils.url
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
-import kotlin.system.exitProcess
 
 fun parseAndValidate(uri: URI): Document {
 
@@ -82,7 +81,7 @@ fun parseAndValidate(uri: URI): Document {
       System.err.println("$location:$line: ${result.message()}")
     }
 
-    exitProcess(1)
+    return fail("Invalid RAML")
   }
 
   return document

@@ -55,9 +55,8 @@ import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
-import kotlin.system.exitProcess
 
 fun parseAndValidate(uri: URI): Document {
 
@@ -80,7 +79,7 @@ fun parseAndValidate(uri: URI): Document {
       System.err.println("$location:$line: ${result.message()}")
     }
 
-    exitProcess(1)
+    return fail("Invalid RAML")
   }
 
   return document
