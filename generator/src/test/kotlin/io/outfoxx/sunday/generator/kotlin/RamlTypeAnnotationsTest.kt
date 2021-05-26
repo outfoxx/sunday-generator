@@ -145,6 +145,45 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for 'nested' annotation (dashed scheme)`(
+    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+
+    val typeSpec = findType("io.test.Group", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.String
+
+        public interface Group {
+          public val value: String
+
+          public interface Member1 : Group {
+            public val memberValue1: String
+
+            public interface Sub : Member1 {
+              public val subMemberValue: String
+            }
+          }
+        
+          public interface Member2 : Group {
+            public val memberValue2: String
+          }
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
   ) {

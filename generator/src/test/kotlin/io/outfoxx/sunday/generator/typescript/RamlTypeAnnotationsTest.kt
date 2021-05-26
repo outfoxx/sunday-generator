@@ -209,6 +209,127 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for 'nested' annotation (dashed scheme)`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val typeModSpec = findTypeMod("Group@!group", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+        
+        export interface Group {
+
+          value: string;
+
+        }
+
+        export class Group implements Group {
+
+          value: string;
+
+          constructor(value: string) {
+            this.value = value;
+          }
+
+          toString(): string {
+            return `Group(value='${'$'}{this.value}')`;
+          }
+
+        }
+
+        export namespace Group {
+
+          export interface Member1 extends Group {
+
+            memberValue1: string;
+
+          }
+
+          export class Member1 extends Group implements Member1 {
+
+            memberValue1: string;
+
+            constructor(value: string, memberValue1: string) {
+              super(value);
+              this.memberValue1 = memberValue1;
+            }
+
+            toString(): string {
+              return `Group.Member1(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}')`;
+            }
+
+          }
+
+          export namespace Member1 {
+
+            export interface Sub extends Member1 {
+
+              subMemberValue: string;
+
+            }
+
+            export class Sub extends Member1 implements Sub {
+
+              subMemberValue: string;
+
+              constructor(value: string, memberValue1: string, subMemberValue: string) {
+                super(value, memberValue1);
+                this.subMemberValue = subMemberValue;
+              }
+        
+              copy(src: Partial<Sub>): Sub {
+                return new Sub(src.value ?? this.value, src.memberValue1 ?? this.memberValue1,
+                    src.subMemberValue ?? this.subMemberValue);
+              }
+        
+              toString(): string {
+                return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
+              }
+
+            }
+
+          }
+
+          export interface Member2 extends Group {
+
+            memberValue2: string;
+
+          }
+
+          export class Member2 extends Group implements Member2 {
+
+            memberValue2: string;
+
+            constructor(value: string, memberValue2: string) {
+              super(value);
+              this.memberValue2 = memberValue2;
+            }
+
+            copy(src: Partial<Member2>): Member2 {
+              return new Member2(src.value ?? this.value, src.memberValue2 ?? this.memberValue2);
+            }
+
+            toString(): string {
+              return `Group.Member2(value='${'$'}{this.value}', memberValue2='${'$'}{this.memberValue2}')`;
+            }
+
+          }
+
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeModSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
