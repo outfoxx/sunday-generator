@@ -46,11 +46,11 @@ import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentif
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
-import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
@@ -471,8 +471,8 @@ class TypeScriptSundayGenerator(
 
         "discriminated" -> {
 
-          val types = (resultBodyType as UnionShape).anyOf.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString { "\n%S : [%T]" }
+          val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
+          val typesTemplate = types.joinToString(",") { "\n%S : [%T]" }
           val typesParams = types.flatMap {
             val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, null))
             val discValue =

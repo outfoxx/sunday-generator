@@ -110,6 +110,7 @@ class ResponseEventsTest {
         import io.outfoxx.sunday.typeOf
         import io.test.Test1
         import io.test.Test2
+        import io.test.Test3
         import kotlin.Any
         import kotlin.collections.List
         import kotlinx.coroutines.flow.Flow
@@ -124,8 +125,9 @@ class ResponseEventsTest {
             pathTemplate = "/tests",
             acceptTypes = listOf(MediaType.EventStream),
             eventTypes = mapOf(
-              "Test1" to typeOf<Test1>(), 
-              "test2" to typeOf<Test2>()
+              "Test1" to typeOf<Test1>(),
+              "test2" to typeOf<Test2>(),
+              "t3" to typeOf<Test3>()
             )
           )
         }
@@ -180,7 +182,7 @@ class ResponseEventsTest {
             pathTemplate = "/tests",
             acceptTypes = listOf(MediaType.EventStream),
             eventTypes = mapOf(
-              "Test1" to typeOf<Test1>(), 
+              "Test1" to typeOf<Test1>(),
               "Test2" to typeOf<Test2>()
             )
           )

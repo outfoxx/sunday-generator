@@ -529,6 +529,7 @@ val ArrayShape.contains: Shape? get() = this.contains()
 val UnionShape.anyOf: List<Shape> get() = this.anyOf()
 val UnionShape.makesNullable: Boolean get() = anyOf.size == 2 && anyOf.any { it is NilShape }
 val UnionShape.nullableType: Shape get() = anyOf.first { it !is NilShape }
+val UnionShape.flattened: List<Shape> get() = this.anyOf.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
 //
 val PropertyShape.path: String? get() = this.path().value

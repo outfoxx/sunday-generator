@@ -47,10 +47,10 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
-import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
@@ -471,8 +471,8 @@ class KotlinSundayGenerator(
 
         "discriminated" -> {
 
-          val types = (resultBodyType as UnionShape).anyOf.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString { "\n%S to %M<%T>()" }
+          val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
+          val typesTemplate = types.joinToString(",") { "\n%S to %M<%T>()" }
           val typesParams = types.flatMap {
             val typeOf = MemberName("io.outfoxx.sunday", "typeOf")
             val typeName = resolveTypeName(it, null)
