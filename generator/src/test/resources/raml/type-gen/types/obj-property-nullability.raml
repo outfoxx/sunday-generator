@@ -13,10 +13,16 @@ types:
         required: false
         type: string
 
+  Test2:
+    type: object
+    properties:
+      optionalObject?: object
+      nillableObject: object?
+
 /tests/{id}:
 
   get:
     displayName: fetchTest
     responses:
       200:
-        body: Test
+        body: Test | Test2

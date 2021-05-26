@@ -65,7 +65,7 @@ class RamlObjectTypesTest {
 
           public required init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.map = try container.decode([String : AnyValue].self, forKey: .map).mapValues { ${'$'}0.unwrapped }
+            self.map = try container.decode([String : AnyValue].self, forKey: .map).mapValues { ${'$'}0.unwrapped as Any }
           }
 
           public func encode(to encoder: Encoder) throws {
@@ -101,7 +101,9 @@ class RamlObjectTypesTest {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
 
-    val typeSpec = findType("Test", generateTypes(testUri, typeRegistry, compiler))
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+
+    val testTypeSpec = findType("Test", builtTypes)
 
     assertEquals(
       """
@@ -154,7 +156,66 @@ class RamlObjectTypesTest {
         
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec.get("", testTypeSpec)
+          .writeTo(this)
+      }
+    )
+
+    val test2TypeSpec = findType("Test2", builtTypes)
+
+    assertEquals(
+      """
+        import PotentCodables
+        import Sunday
+        
+        public class Test2 : Codable, CustomDebugStringConvertible {
+        
+          public let optionalObject: [String : Any]?
+          public let nillableObject: [String : Any]?
+          public var debugDescription: String {
+            return DescriptionBuilder(Test2.self)
+                .add(optionalObject, named: "optionalObject")
+                .add(nillableObject, named: "nillableObject")
+                .build()
+          }
+        
+          public init(optionalObject: [String : Any]?, nillableObject: [String : Any]?) {
+            self.optionalObject = optionalObject
+            self.nillableObject = nillableObject
+          }
+        
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.optionalObject = try container.decodeIfPresent([String : AnyValue].self, forKey: .optionalObject)?.mapValues { ${'$'}0.unwrapped as Any }
+            self.nillableObject = try container.decodeIfPresent([String : AnyValue].self, forKey: .nillableObject)?.mapValues { ${'$'}0.unwrapped as Any }
+          }
+        
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(self.optionalObject?.mapValues { try AnyValue.wrapped(${'$'}0) }, forKey: .optionalObject)
+            try container.encodeIfPresent(self.nillableObject?.mapValues { try AnyValue.wrapped(${'$'}0) }, forKey: .nillableObject)
+          }
+        
+          public func withOptionalObject(optionalObject: [String : Any]?) -> Test2 {
+            return Test2(optionalObject: optionalObject, nillableObject: nillableObject)
+          }
+        
+          public func withNillableObject(nillableObject: [String : Any]?) -> Test2 {
+            return Test2(optionalObject: optionalObject, nillableObject: nillableObject)
+          }
+        
+          fileprivate enum CodingKeys : String, CodingKey {
+        
+            case optionalObject = "optionalObject"
+            case nillableObject = "nillableObject"
+        
+          }
+        
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", test2TypeSpec)
           .writeTo(this)
       }
     )
