@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.typescript
+package io.outfoxx.sunday.generator.common
 
 import amf.client.model.document.BaseUnit
-import io.outfoxx.sunday.generator.common.ResolutionContext
-import io.outfoxx.typescriptpoet.TypeName
+import amf.client.model.domain.DomainElement
+import io.outfoxx.sunday.generator.utils.allUnits
+import io.outfoxx.sunday.generator.utils.findDeclaringUnit
+import io.outfoxx.sunday.generator.utils.findImportingUnit
+import io.outfoxx.sunday.generator.utils.resolveRef
 
-data class TypeScriptResolutionContext(
-  override val unit: BaseUnit,
-  val suggestedTypeName: TypeName.Standard?,
-) : ResolutionContext {
+interface ResolutionContext {
 
-  fun copy(suggestedTypeName: TypeName.Standard? = null): TypeScriptResolutionContext {
-    return TypeScriptResolutionContext(unit, suggestedTypeName)
+  val unit: BaseUnit
+
+  fun resolveRef(name: String, source: DomainElement): Pair<DomainElement, BaseUnit>? {
+    val sourceUnit = unit.findDeclaringUnit(source)
+    return sourceUnit.resolveRef(name)
+      ?: sourceUnit.findImportingUnit(source, unit.allUnits)?.resolveRef(name)
   }
 }
