@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
 plugins {
   application
   id("com.google.cloud.tools.jib")
+  id("com.github.johnrengelman.shadow")
 }
 
 val cliktVersion: String by project
@@ -13,7 +14,7 @@ val hamcrestVersion: String by project
 
 dependencies {
 
-  implementation(project(path = ":generator", configuration = "shadow"))
+  implementation(project(path = ":generator"))
 
   implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
   implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
@@ -37,6 +38,16 @@ application {
   mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
 
+tasks {
+  shadowJar.configure {
+    archiveClassifier.set("")
+    minimize()
+    dependencies {
+      exclude(dependency(project.dependencies.gradleApi()))
+      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
+    }
+  }
+}
 
 publishing {
   publications {

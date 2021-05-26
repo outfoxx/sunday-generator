@@ -1,6 +1,7 @@
 plugins {
   `java-gradle-plugin`
   id("com.gradle.plugin-publish")
+  id("com.github.johnrengelman.shadow")
 }
 
 val junitVersion: String by project
@@ -11,7 +12,7 @@ dependencies {
 
   shadow(gradleApi())
 
-  implementation(project(path = ":generator", configuration = "shadow"))
+  implementation(project(path = ":generator"))
 
   //
   // TESTING
@@ -51,6 +52,7 @@ pluginBundle {
 tasks {
   shadowJar.configure {
     archiveClassifier.set("")
+    minimize()
     dependencies {
       exclude(dependency(project.dependencies.gradleApi()))
       exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))

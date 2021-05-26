@@ -1,4 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
 
 plugins {
   `java-library`
@@ -72,21 +71,11 @@ dependencies {
 }
 
 
-tasks.shadowJar {
-
-  dependencies {
-    exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
-  }
-
-}
-
-
 publishing {
   publications {
     create<MavenPublication>("generator") {
-      the<ShadowExtension>().component(this)
-      artifact(tasks.named("sourcesJar"))
-      artifact(tasks.named("javadocJar"))
+
+      from(components["java"])
 
       pom {
 
