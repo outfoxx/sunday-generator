@@ -110,6 +110,7 @@ import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findDeclaringUnit
 import io.outfoxx.sunday.generator.utils.findInheritingTypes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
 import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.getValue
@@ -1361,7 +1362,7 @@ class KotlinTypeRegistry(
       ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(KotlinModelPkg, generationMode)
       ?: defaultModelPackageName
 
-  private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.anyOf else listOf(it) }
+  private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
   private fun collectProperties(shape: Shape?): List<PropertyShape> =
     when {

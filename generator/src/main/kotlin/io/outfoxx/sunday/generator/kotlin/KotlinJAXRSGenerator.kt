@@ -48,10 +48,10 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
-import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.mediaType
@@ -211,7 +211,7 @@ class KotlinJAXRSGenerator(
 
       // Ensure SSE "messages" are resolved and therefore defined
       if (body is UnionShape) {
-        val types = body.anyOf.filterIsInstance<NodeShape>()
+        val types = body.flattened.filterIsInstance<NodeShape>()
         types.forEach { resolveTypeName(it, null) }
       }
 

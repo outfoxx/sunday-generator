@@ -18,6 +18,12 @@ types:
     properties:
       value: string
 
+  Test3:
+    type: object
+    discriminatorValue: t3
+    properties:
+      value: string
+
 /tests:
   get:
     displayName: fetchEvents
@@ -26,4 +32,4 @@ types:
       200:
         body:
           text/event-stream:
-            type: Test1 | Test2
+            type: Test1 | Test2 | Test3

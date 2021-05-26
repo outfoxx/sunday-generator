@@ -41,10 +41,10 @@ import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_RESULT_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
-import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
@@ -500,8 +500,8 @@ class SwiftSundayGenerator(
 
         "discriminated" -> {
 
-          val types = (resultBodyType as UnionShape).anyOf.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString { "\n%S: .erase(%T.self)" }
+          val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
+          val typesTemplate = types.joinToString(",") { "\n%S: .erase(%T.self)" }
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =

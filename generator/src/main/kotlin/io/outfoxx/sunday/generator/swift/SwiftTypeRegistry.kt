@@ -79,6 +79,7 @@ import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findInheritingTypes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
 import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.getValue
@@ -1382,7 +1383,7 @@ class SwiftTypeRegistry(
     return (if (typeName.optional) mappedTypeName.makeOptional() else mappedTypeName) to elementRefTypeName
   }
 
-  private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.anyOf else listOf(it) }
+  private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
   private fun collectProperties(shape: Shape?): List<PropertyShape> =
     when {
