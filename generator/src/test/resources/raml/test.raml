@@ -81,6 +81,18 @@ types:
     body:
       type: Test
 
+/test2:
+  type:
+    collection:
+      (lib.test): 123
+  get:
+    displayName: list
+
+  /test2/{id}:
+    get:
+      displayName: fetch
+      body:
+        type: Test
 
 annotationTypes:
   myann:

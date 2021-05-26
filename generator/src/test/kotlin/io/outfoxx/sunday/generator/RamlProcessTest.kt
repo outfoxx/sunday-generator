@@ -17,13 +17,19 @@
 package io.outfoxx.sunday.generator
 
 import io.outfoxx.sunday.generator.ProcessResult.Level
+import io.outfoxx.sunday.generator.utils.api
+import io.outfoxx.sunday.generator.utils.endPoints
+import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.blankOrNullString
+import org.hamcrest.Matchers.containsInAnyOrder
+import org.hamcrest.Matchers.empty
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.not
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
@@ -42,5 +48,18 @@ class RamlProcessTest {
     assertThat(entries[0].file, not(blankOrNullString()))
     assertThat(entries[0].line, not(equalTo(0)))
     assertThat(entries[0].message, not(blankOrNullString()))
+  }
+
+  @Test
+  @Disabled("https://github.com/aml-org/amf/issues/962")
+  fun `process produces valid overlays documents`(
+    @ResourceUri("raml/test-overlay.raml") testUri: URI
+  ) {
+
+    val result = process(testUri)
+
+    assertThat(result.isValid, equalTo(true))
+    assertThat(result.entries, empty())
+    assertThat(result.document.api.endPoints.map { it.path }, containsInAnyOrder("/test", "/test/{id}"))
   }
 }
