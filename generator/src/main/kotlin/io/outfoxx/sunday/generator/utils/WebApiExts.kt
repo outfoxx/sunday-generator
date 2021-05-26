@@ -28,6 +28,7 @@ import amf.client.model.document.BaseUnit
 import amf.client.model.document.DeclaresModel
 import amf.client.model.document.Document
 import amf.client.model.document.EncodesModel
+import amf.client.model.document.ExternalFragment
 import amf.client.model.domain.AnyShape
 import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.ArrayShape
@@ -112,6 +113,13 @@ val BaseUnit.modelVersion: String? get() = this.modelVersion().value
 val BaseUnit.sourceVendor: Vendor? get() = this.sourceVendor().orElse(null)
 
 fun BaseUnit.findDeclaringUnit(element: DomainElement) = allUnits.first { it.location == element.annotations.location }
+
+fun BaseUnit.findImportingUnit(element: DomainElement, allUnits: List<BaseUnit>): BaseUnit? {
+  if (this !is ExternalFragment) return null
+
+  val importingUnitLocation = element.id.split("#", limit = 2).first()
+  return allUnits.find { it.location == importingUnitLocation }
+}
 
 fun BaseUnit.findInheritingTypes(type: Shape): List<Shape> {
   val resolvedType = type.resolve
@@ -295,7 +303,7 @@ val Operation.abstract: Boolean? get() = this.isAbstract.value
 val Operation.bindings: OperationBindings get() = this.bindings()
 val Operation.operationId: String? get() = this.operationId().value()
 
-val Operation.operationName: String get() = this.operationId ?: this.name!!
+val Operation.operationName: String get() = this.operationId ?: this.name ?: ""
 
 val Operation.successes: List<Response>
   get() =

@@ -17,22 +17,15 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.client.model.document.BaseUnit
-import amf.client.model.domain.DomainElement
 import com.squareup.kotlinpoet.ClassName
-import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.resolveRef
+import io.outfoxx.sunday.generator.common.ResolutionContext
 
 data class KotlinResolutionContext(
-  val unit: BaseUnit,
+  override val unit: BaseUnit,
   val suggestedTypeName: ClassName?
-) {
+) : ResolutionContext {
 
   fun copy(suggestedTypeName: ClassName? = null): KotlinResolutionContext {
     return KotlinResolutionContext(unit, suggestedTypeName)
-  }
-
-  fun resolveRef(name: String, source: DomainElement): Pair<DomainElement, BaseUnit>? {
-    val sourceUnit = unit.findDeclaringUnit(source)
-    return sourceUnit.resolveRef(name)
   }
 }
