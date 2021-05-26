@@ -47,6 +47,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -62,12 +63,10 @@ import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
-import io.outfoxx.sunday.generator.utils.method
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operations
 import io.outfoxx.sunday.generator.utils.parameters
-import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
@@ -228,16 +227,14 @@ abstract class KotlinGenerator(
     endPoints: List<EndPoint>
   ) {
 
+    val nameGenerator = NameGenerator.createDefaultGenerator()
+
     val problemTypes = findProblemTypes()
 
     for (endPoint in endPoints) {
       for (operation in endPoint.operations) {
 
-        val operationName = operation.kotlinIdentifierName
-        if (operationName == null) {
-          System.err.println("Method ${operation.method} in endpoint with path ${endPoint.path} has no name")
-          continue
-        }
+        val operationName = nameGenerator.generate(endPoint, operation).kotlinIdentifierName
 
         var functionBuilder =
           FunSpec.builder(operationName)
@@ -347,7 +344,8 @@ abstract class KotlinGenerator(
             val referencedProblemTypes =
               referencedProblemCodes
                 .map { problemCode ->
-                  val problemType = problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
+                  val problemType =
+                    problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
                   problemCode to problemType
                 }
                 .toMap()

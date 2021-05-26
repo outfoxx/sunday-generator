@@ -38,6 +38,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
@@ -57,12 +58,10 @@ import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
-import io.outfoxx.sunday.generator.utils.method
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operations
 import io.outfoxx.sunday.generator.utils.parameters
-import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
@@ -244,16 +243,14 @@ abstract class TypeScriptGenerator(
     endPoints: List<EndPoint>
   ) {
 
+    val namedGenerator = NameGenerator.createDefaultGenerator()
+
     val problemTypes = findProblemTypes()
 
     for (endPoint in endPoints) {
       for (operation in endPoint.operations) {
 
-        val operationName = operation.typeScriptIdentifierName
-        if (operationName == null) {
-          System.err.println("Method ${operation.method} in endpoint with path ${endPoint.path} has no name")
-          continue
-        }
+        val operationName = namedGenerator.generate(endPoint, operation).typeScriptIdentifierName
 
         var functionBuilder =
           FunctionSpec.builder(operationName)
