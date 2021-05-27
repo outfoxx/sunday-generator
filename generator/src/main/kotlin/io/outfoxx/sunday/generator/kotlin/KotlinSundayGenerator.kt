@@ -43,6 +43,8 @@ import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
@@ -239,7 +241,11 @@ class KotlinSundayGenerator(
       return Flow::class.asTypeName().parameterizedBy(returnTypeName)
     }
 
-    return returnTypeName
+    return when {
+      operation.findBoolAnnotation(RequestOnly, null) == true -> okhttp3.Request::class.asTypeName()
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> okhttp3.Response::class.asTypeName()
+      else -> returnTypeName
+    }
   }
 
   override fun processResourceMethodStart(

@@ -26,6 +26,8 @@ import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
@@ -38,7 +40,9 @@ import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_COMPLETE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_EVENT_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.swift.utils.REQUEST_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_RESULT_PUBLISHER
+import io.outfoxx.sunday.generator.swift.utils.RESPONSE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
@@ -250,11 +254,12 @@ class SwiftSundayGenerator(
         else -> returnTypeName
       }
 
-    if (elementReturnType == VOID) {
-      return REQUEST_COMPLETE_PUBLISHER
+    return when {
+      operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST_PUBLISHER
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE_PUBLISHER
+      elementReturnType == VOID -> REQUEST_COMPLETE_PUBLISHER
+      else -> REQUEST_RESULT_PUBLISHER.parameterizedBy(elementReturnType)
     }
-
-    return REQUEST_RESULT_PUBLISHER.parameterizedBy(elementReturnType)
   }
 
   override fun processResourceMethodStart(
@@ -520,8 +525,8 @@ class SwiftSundayGenerator(
       }
     } else {
 
-      val requestOnly = operation.findBoolAnnotation(APIAnnotationName.RequestOnly, null) == true
-      val responseOnly = operation.findBoolAnnotation(APIAnnotationName.ResponseOnly, null) == true
+      val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
+      val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
       val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
 
