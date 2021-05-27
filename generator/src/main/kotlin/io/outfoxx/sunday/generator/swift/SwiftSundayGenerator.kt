@@ -35,7 +35,6 @@ import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
 import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
-import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_COMPLETE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_EVENT_PUBLISHER
@@ -559,13 +558,10 @@ class SwiftSundayGenerator(
       "application/cbor" -> CodeBlock.of(".cbor")
       "application/octet-stream" -> CodeBlock.of(".octetStream")
       "text/event-stream" -> CodeBlock.of(".eventStream")
-      "application/x-x509-ca-cert" ->
-        CodeBlock.of(
-          "%T(type: .application, tree: .obsolete, subtype: %S)",
-          MEDIA_TYPE, "x509-ca-cert"
-        )
       "application/x-www-form-urlencoded" -> CodeBlock.of(".wwwFormUrlEncoded")
       "application/problem+json" -> CodeBlock.of(".problem")
+      "application/x-x509-ca-cert" -> CodeBlock.of(".x509CACert")
+      "application/x-x509-user-cert" -> CodeBlock.of(".x509UserCert")
       else -> CodeBlock.of(".init(valid: %S)", value)
     }
 }

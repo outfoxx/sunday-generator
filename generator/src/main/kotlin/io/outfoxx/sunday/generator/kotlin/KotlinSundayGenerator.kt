@@ -533,13 +533,10 @@ class KotlinSundayGenerator(
       "application/cbor" -> CodeBlock.of("%T.CBOR", MediaType::class)
       "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MediaType::class)
       "text/event-stream" -> CodeBlock.of("%T.EventStream", MediaType::class)
-      "application/x-x509-ca-cert" ->
-        CodeBlock.of(
-          "%T(%T.Application, %T.Obsolete, subtype=%S",
-          MediaType::class, MediaType.Type::class, MediaType.Tree::class, "x509-ca-cert"
-        )
       "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormUrlEncoded", MediaType::class)
       "application/problem+json" -> CodeBlock.of("%T.ProblemJSON", MediaType::class)
+      "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MediaType::class)
+      "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MediaType::class)
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
 }
