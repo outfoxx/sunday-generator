@@ -37,7 +37,9 @@ import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_TYPES
 import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
+import io.outfoxx.sunday.generator.typescript.utils.REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
@@ -205,7 +207,14 @@ class TypeScriptSundayGenerator(
       }
     }
 
-    return TypeName.parameterizedType(OBSERVABLE, returnTypeName)
+    val remappedTypeName =
+      when {
+        operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST
+        operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE
+        else -> returnTypeName
+      }
+
+    return TypeName.parameterizedType(OBSERVABLE, remappedTypeName)
   }
 
   override fun processResourceMethodStart(
