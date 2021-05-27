@@ -52,7 +52,6 @@ import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -223,11 +222,7 @@ class KotlinJAXRSGenerator(
     }
 
     return if (generationMode == Client) {
-      if (operation.has404(problemTypes)) {
-        returnTypeName.copy(nullable = true)
-      } else {
-        returnTypeName
-      }
+      returnTypeName
     } else {
       javax.ws.rs.core.Response::class.asTypeName()
     }

@@ -45,7 +45,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -255,14 +254,7 @@ class SwiftSundayGenerator(
       return REQUEST_COMPLETE_PUBLISHER
     }
 
-    val maybeOptionalElementReturnType =
-      if (operation.has404(problemTypes)) {
-        elementReturnType.makeOptional()
-      } else {
-        elementReturnType
-      }
-
-    return REQUEST_RESULT_PUBLISHER.parameterizedBy(maybeOptionalElementReturnType)
+    return REQUEST_RESULT_PUBLISHER.parameterizedBy(elementReturnType)
   }
 
   override fun processResourceMethodStart(
