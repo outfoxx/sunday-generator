@@ -1,4 +1,5 @@
 import com.adarshr.gradle.testlogger.TestLoggerExtension
+import com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA
 import net.minecrell.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -89,7 +90,10 @@ subprojects {
     }
   }
 
-  the<TestLoggerExtension>().setTheme("mocha")
+  configure<TestLoggerExtension> {
+    theme = MOCHA
+    slowThreshold = 4000
+  }
 
   //
   // DOCS
