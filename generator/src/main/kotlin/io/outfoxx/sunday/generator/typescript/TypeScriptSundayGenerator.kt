@@ -553,9 +553,10 @@ class TypeScriptSundayGenerator(
       "application/cbor" -> CodeBlock.of("%T.CBOR", MEDIA_TYPE)
       "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MEDIA_TYPE)
       "text/event-stream" -> CodeBlock.of("%T.EventStream", MEDIA_TYPE)
-      "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MEDIA_TYPE)
       "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormURLEncoded", MEDIA_TYPE)
       "application/problem+json" -> CodeBlock.of("%T.ProblemJSON", MEDIA_TYPE)
-      else -> CodeBlock.of("MediaType.from(%S)", value)
+      "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MEDIA_TYPE)
+      "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MEDIA_TYPE)
+      else -> CodeBlock.of("%T.from(%S)", MEDIA_TYPE, value)
     }
 }
