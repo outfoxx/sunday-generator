@@ -834,7 +834,7 @@ class TypeScriptTypeRegistry(
             declaredProperty.range.findStringAnnotation(ExternalDiscriminator, null)
           if (externalDiscriminatorPropertyName != null) {
 
-            declaredProperty.range as? NodeShape
+            declaredProperty.range.resolve as? NodeShape
               ?: genError("Externally discriminated types must be 'object'", declaredProperty)
 
             (inheritedProperties + declaredProperties).find { it.name == externalDiscriminatorPropertyName }
