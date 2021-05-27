@@ -146,9 +146,9 @@ class RequestHeaderParamsTest {
           fetchTest(
               obj: Test | undefined = undefined,
               str: string | undefined = undefined,
-              int: number | null = null,
+              int: number | undefined = undefined,
               def1: string | undefined = undefined,
-              def2: number | null | undefined = undefined
+              def2: number | undefined = undefined
           ): Observable<Test> {
             return this.requestFactory.result(
                 {

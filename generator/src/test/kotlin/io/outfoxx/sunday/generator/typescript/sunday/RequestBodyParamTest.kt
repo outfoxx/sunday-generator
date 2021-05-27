@@ -142,7 +142,7 @@ class RequestBodyParamTest {
                 options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
-          fetchTest(body: Test | null): Observable<Test> {
+          fetchTest(body: Test | undefined): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
