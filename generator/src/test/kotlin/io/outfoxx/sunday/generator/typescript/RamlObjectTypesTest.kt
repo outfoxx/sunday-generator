@@ -99,7 +99,7 @@ class RamlObjectTypesTest {
         
         export interface Test {
 
-          fromNilUnion: string | null;
+          fromNilUnion: string | undefined;
 
           notRequired: string | undefined;
 
@@ -107,11 +107,11 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          fromNilUnion: string | null;
+          fromNilUnion: string | undefined;
 
           notRequired: string | undefined;
 
-          constructor(fromNilUnion: string | null, notRequired: string | undefined) {
+          constructor(fromNilUnion: string | undefined, notRequired: string | undefined) {
             this.fromNilUnion = fromNilUnion;
             this.notRequired = notRequired;
           }
