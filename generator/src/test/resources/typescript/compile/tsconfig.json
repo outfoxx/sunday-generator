@@ -1,6 +1,7 @@
 {
   "include": ["src/**/*.ts"],
   "compilerOptions": {
+    "incremental": true,
     "moduleResolution": "node",
     "baseUrl": ".",
     "target": "ES2018",
