@@ -51,7 +51,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -240,11 +239,7 @@ class KotlinSundayGenerator(
       return Flow::class.asTypeName().parameterizedBy(returnTypeName)
     }
 
-    return if (operation.has404(problemTypes)) {
-      returnTypeName.copy(nullable = true)
-    } else {
-      returnTypeName
-    }
+    return returnTypeName
   }
 
   override fun processResourceMethodStart(

@@ -77,7 +77,7 @@ class ResponseProblemsTest {
             requestFactory.registerProblem("http://example.com/invalid_id", InvalidIdProblem::class)
             requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
           }
-          public suspend fun fetchTest(): Test? = this.requestFactory.result(
+          public suspend fun fetchTest(): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests",
             acceptTypes = this.defaultAcceptTypes

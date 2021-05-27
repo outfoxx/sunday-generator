@@ -41,7 +41,6 @@ import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
@@ -51,7 +50,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.has404
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -207,14 +205,7 @@ class TypeScriptSundayGenerator(
       }
     }
 
-    val maybeNullableReturnTypeName =
-      if (operation.has404(problemTypes)) {
-        returnTypeName.nullable
-      } else {
-        returnTypeName
-      }
-
-    return TypeName.parameterizedType(OBSERVABLE, maybeNullableReturnTypeName)
+    return TypeName.parameterizedType(OBSERVABLE, returnTypeName)
   }
 
   override fun processResourceMethodStart(

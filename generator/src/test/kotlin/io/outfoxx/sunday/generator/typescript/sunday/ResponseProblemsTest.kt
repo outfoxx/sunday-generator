@@ -82,7 +82,7 @@ class ResponseProblemsTest {
             requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
           }
 
-          fetchTest(): Observable<Test | null> {
+          fetchTest(): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'GET',

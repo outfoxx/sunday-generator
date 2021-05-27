@@ -220,7 +220,7 @@ class ResponseProblemsTest {
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Test?
+          public fun fetchTest(): Test
         
           public companion object {
             public fun registerProblems(mapper: ObjectMapper): Unit {
