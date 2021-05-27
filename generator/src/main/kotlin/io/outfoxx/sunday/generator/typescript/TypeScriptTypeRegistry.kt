@@ -156,7 +156,6 @@ class TypeScriptTypeRegistry(
   private val options: Set<Option>
 ) : TypeRegistry {
 
-  data class Id(val value: String)
   data class ImplementationClass(val value: ClassSpec.Builder)
 
   enum class Option {
@@ -1186,7 +1185,10 @@ class TypeScriptTypeRegistry(
           val spec = shape.name ?: ""
           val parts = spec.split("-")
           if (parts.size < 2) {
-            genError("Nested types using 'dashed' scheme must be named with dashes corresponding to nesting hierarchy.")
+            genError(
+              "Nested types using 'dashed' scheme must be named with dashes corresponding to nesting hierarchy.",
+              shape
+            )
           }
 
           val enclosedIn = parts.dropLast(1).joinToString("-")
@@ -1207,7 +1209,10 @@ class TypeScriptTypeRegistry(
         }
 
         else ->
-          genError("Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys")
+          genError(
+            "Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys",
+            shape
+          )
       }
 
     val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
