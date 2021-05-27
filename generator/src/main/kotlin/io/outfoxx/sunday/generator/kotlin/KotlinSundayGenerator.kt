@@ -499,8 +499,8 @@ class KotlinSundayGenerator(
       }
     } else {
 
-      val requestOnly = operation.findBoolAnnotation(APIAnnotationName.RequestOnly, null) == true
-      val responseOnly = operation.findBoolAnnotation(APIAnnotationName.ResponseOnly, null) == true
+      val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
+      val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
       val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
 
