@@ -66,6 +66,7 @@ import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
 import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
 import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.nonOptional
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
@@ -346,7 +347,7 @@ class TypeScriptTypeRegistry(
           TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
         )
         val customPropertyClassName =
-          if (typeBuilders[customPropertyTypeName] !is EnumSpec.Builder)
+          if (typeBuilders[customPropertyTypeName.nonOptional] !is EnumSpec.Builder)
             customPropertyTypeName
           else
             OBJECT
@@ -785,7 +786,7 @@ class TypeScriptTypeRegistry(
 
         val declaredPropertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
         val declaredPropertyClassName =
-          if (typeBuilders[declaredPropertyTypeName] !is EnumSpec.Builder)
+          if (typeBuilders[declaredPropertyTypeName.nonOptional] !is EnumSpec.Builder)
             declaredPropertyTypeName
           else
             OBJECT
@@ -1090,7 +1091,7 @@ class TypeScriptTypeRegistry(
     val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
     val discriminatorPropertyShape = collectProperties(shape).first { it.name == discriminatorPropertyName }
     val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorPropertyShape, className, context)
-    val isDiscriminatorEnum = typeBuilders[discriminatorPropertyTypeName] is EnumSpec.Builder
+    val isDiscriminatorEnum = typeBuilders[discriminatorPropertyTypeName.nonOptional] is EnumSpec.Builder
 
     val discriminatorMappings = buildDiscriminatorMappings(shape, context)
 
@@ -1103,7 +1104,7 @@ class TypeScriptTypeRegistry(
 
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
-            (typeBuilders[discriminatorPropertyTypeName] as EnumSpec.Builder)
+            (typeBuilders[discriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
