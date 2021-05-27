@@ -72,7 +72,7 @@ fun TypeName.internalTypeInitializer(builder: CodeBlock.Builder) {
       if (isOptionalUnion) {
         nonOptional.internalTypeInitializer(builder)
       } else {
-        builder.add("%T", OBJECT) // proper unions are not currently supported
+        builder.add("%T", OBJECT_CLASS) // proper unions are not currently supported
       }
 
     else -> builder.add("%T", this.box())

@@ -142,6 +142,7 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.BOOLEAN
 import io.outfoxx.typescriptpoet.TypeName.Companion.MAP
 import io.outfoxx.typescriptpoet.TypeName.Companion.NUMBER
 import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT
+import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
@@ -349,7 +350,7 @@ class TypeScriptTypeRegistry(
           if (typeBuilders[customPropertyTypeName.nonOptional] !is EnumSpec.Builder)
             customPropertyTypeName
           else
-            OBJECT
+            OBJECT_CLASS
 
         problemTypeBuilder.addProperty(
           PropertySpec
@@ -788,7 +789,7 @@ class TypeScriptTypeRegistry(
           if (typeBuilders[declaredPropertyTypeName.nonOptional] !is EnumSpec.Builder)
             declaredPropertyTypeName
           else
-            OBJECT
+            OBJECT_CLASS
 
         val implAnn = declaredProperty.range.findAnnotation(TypeScriptImpl, null) as? ObjectNode
         if (implAnn != null) {
