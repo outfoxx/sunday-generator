@@ -248,7 +248,7 @@ class RamlObjectTypesTest {
     val api = findType("API", generateTypes(testUri, typeRegistry, compiler))
 
     assertEquals(
-      "FetchTestResponsePayload",
+      "FetchTestResponse0Payload",
       api.typeSpecs.lastOrNull()?.name
     )
   }

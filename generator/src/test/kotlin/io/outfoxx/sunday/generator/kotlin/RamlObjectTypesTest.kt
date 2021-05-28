@@ -183,7 +183,7 @@ class RamlObjectTypesTest {
         .filter { it.key.simpleName != "API" }
 
     assertEquals(
-      "io.test.API.FetchTestResponsePayload",
+      "io.test.API.FetchTestResponse0Payload",
       builtTypes.keys.first().canonicalName
     )
   }

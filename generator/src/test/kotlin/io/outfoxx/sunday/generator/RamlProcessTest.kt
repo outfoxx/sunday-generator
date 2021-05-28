@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday.generator
 
-import io.outfoxx.sunday.generator.ProcessResult.Level
+import io.outfoxx.sunday.generator.common.APIProcessor
+import io.outfoxx.sunday.generator.common.APIProcessor.Result.Level
+import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.endPoints
 import io.outfoxx.sunday.generator.utils.path
@@ -41,13 +43,13 @@ class RamlProcessTest {
   fun `process produces validation result entries`(
     @ResourceUri("raml/invalid.raml") testUri: URI
   ) {
-    val entries = process(testUri).entries
+    val validationLog = APIProcessor().process(testUri).validationLog
 
-    assertThat(entries, hasSize(1))
-    assertThat(entries[0].level, equalTo(Level.Error))
-    assertThat(entries[0].file, not(blankOrNullString()))
-    assertThat(entries[0].line, not(equalTo(0)))
-    assertThat(entries[0].message, not(blankOrNullString()))
+    assertThat(validationLog, hasSize(1))
+    assertThat(validationLog[0].level, equalTo(Level.Error))
+    assertThat(validationLog[0].file, not(blankOrNullString()))
+    assertThat(validationLog[0].line, not(equalTo(0)))
+    assertThat(validationLog[0].message, not(blankOrNullString()))
   }
 
   @Test
@@ -56,10 +58,10 @@ class RamlProcessTest {
     @ResourceUri("raml/test-overlay.raml") testUri: URI
   ) {
 
-    val result = process(testUri)
+    val result = TestAPIProcessing.process(testUri)
 
     assertThat(result.isValid, equalTo(true))
-    assertThat(result.entries, empty())
+    assertThat(result.validationLog, empty())
     assertThat(result.document.api.endPoints.map { it.path }, containsInAnyOrder("/test", "/test/{id}"))
   }
 }

@@ -21,7 +21,7 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.ProcessResult
+import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
@@ -29,7 +29,6 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import io.outfoxx.sunday.generator.process
 import org.gradle.api.DefaultTask
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
@@ -171,20 +170,22 @@ open class SundayGenerate
 
     val typeRegistry = KotlinTypeRegistry(modelPkgName, mode, options)
 
+    val apiProcessor = APIProcessor()
+
     source.get().forEach { file ->
 
       if (file.isDirectory || file.extension == "git") {
         return
       }
 
-      val processed = process(file.toURI())
+      val processed = apiProcessor.process(file.toURI())
 
-      processed.entries.forEach {
+      processed.validationLog.forEach {
         val level =
           when (it.level) {
-            ProcessResult.Level.Error -> LogLevel.ERROR
-            ProcessResult.Level.Warning -> LogLevel.WARN
-            ProcessResult.Level.Info -> LogLevel.INFO
+            APIProcessor.Result.Level.Error -> LogLevel.ERROR
+            APIProcessor.Result.Level.Warning -> LogLevel.WARN
+            APIProcessor.Result.Level.Info -> LogLevel.INFO
           }
         val errorFile = File(it.file).relativeToOrSelf(project.rootDir)
         logger.log(level, "$errorFile:${it.line}: ${it.message}")
