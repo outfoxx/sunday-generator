@@ -1,0 +1,5 @@
+
+{{ filename }} is generated and should not be edited.
+
+Generator: Sunday (https://outfoxx.github.io/sunday)
+Generated: {{ date }}

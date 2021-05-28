@@ -25,6 +25,7 @@ val kotlinCompileTestingVersion: String by project
 val dockerJavaVersion: String by project
 
 val jcolorVersion: String by project
+val jimfsVersion: String by project
 
 
 configurations.compileClasspath {
@@ -68,6 +69,7 @@ dependencies {
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 
   testImplementation("com.diogonunes:JColor:$jcolorVersion")
+  testImplementation("com.google.jimfs:jimfs:$jimfsVersion")
 }
 
 
