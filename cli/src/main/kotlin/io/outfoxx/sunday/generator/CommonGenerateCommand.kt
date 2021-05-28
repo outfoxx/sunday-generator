@@ -27,6 +27,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
+import io.outfoxx.sunday.generator.common.APIProcessor
 import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
@@ -76,14 +77,16 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
     println("Generating ${this.outputCategories} types")
 
+    val apiProcessor = APIProcessor()
+
     files.forEach { file ->
 
       println("Processing $file")
 
-      val processed = process(file.toURI())
+      val processed = apiProcessor.process(file.toURI())
 
-      processed.entries.forEach {
-        val out = if (it.level == ProcessResult.Level.Error) System.err else System.out
+      processed.validationLog.forEach {
+        val out = if (it.level == APIProcessor.Result.Level.Error) System.err else System.out
         out.println("${it.level.toString().toLowerCase()}| ${it.file}:${it.line}: ${it.message}")
       }
 

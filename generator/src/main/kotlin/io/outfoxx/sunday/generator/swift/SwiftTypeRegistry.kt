@@ -217,7 +217,7 @@ class SwiftTypeRegistry(
     }
   }
 
-  fun defineProblemType(
+  override fun defineProblemType(
     problemCode: String,
     problemTypeDefinition: ProblemTypeDefinition
   ): DeclaredTypeName {

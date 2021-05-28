@@ -91,6 +91,6 @@ class RamlDeclaredTypesTest {
 
     val nestedTypes = findType("io.test.API", generateTypes(testUri, typeRegistry)).typeSpecs
 
-    assertThat(nestedTypes.map { it.name }, contains("Payload"))
+    assertThat(nestedTypes.map { it.name }, contains("Request0Payload"))
   }
 }
