@@ -21,7 +21,7 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
-import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedAnnotation
+import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
@@ -29,7 +29,7 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
   companion object {
 
     val defaultOptions = setOf(
-      AddGeneratedAnnotation,
+      AddGeneratedHeader,
     )
   }
 
