@@ -2,9 +2,14 @@
 extends: test.raml
 
 annotationTypes:
-  test-ann: boolean
+  test-overlay-ann: boolean
+
+types:
+
+  Tester:
+    (test-overlay-ann): true
 
 /test/{id}:
+  (test-overlay-ann): true
   get:
-    displayName: fetch
-    (test-ann): true
+    (test-overlay-ann): true

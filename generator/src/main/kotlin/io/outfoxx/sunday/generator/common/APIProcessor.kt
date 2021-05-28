@@ -22,7 +22,9 @@ import amf.client.AMF
 import amf.client.environment.Environment
 import amf.client.model.document.Document
 import amf.client.parse.Raml10Parser
+import amf.client.resolve.Raml10Resolver
 import amf.client.validate.ValidationReport
+import amf.core.resolution.pipelines.ResolutionPipeline.EDITING_PIPELINE
 import amf.core.validation.SeverityLevels
 import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import java.net.URI
@@ -32,7 +34,6 @@ open class APIProcessor {
 
   data class Result(
     val document: Document,
-    val validatedDocument: Document,
     private val validationReport: ValidationReport
   ) {
 
@@ -70,22 +71,33 @@ open class APIProcessor {
       }
   }
 
+  companion object {
+    init {
+      AMF.init().get()
+    }
+  }
+
+  private val parser = Raml10Parser(Environment().addClientLoader(LocalResourceLoader))
+  private val resolver = Raml10Resolver()
+
   open fun process(uri: URI): Result {
-
-    AMF.init().get()
-
-    val environment = Environment().addClientLoader(LocalResourceLoader)
 
     val document =
       try {
-        Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
+
+        val parsed =
+          parser.parseFileAsync(uri.toString())
+            .get()
+
+        resolver.resolve(parsed, EDITING_PIPELINE()) as Document
       } catch (x: ExecutionException) {
         throw x.cause!!
       }
 
-    val validatedDocument = document.cloneUnit() as Document
-    val validationReport = AMF.validate(validatedDocument, ProfileNames.RAML10(), MessageStyles.RAML()).get()
+    val validationReport =
+      AMF.validateResolved(document, ProfileNames.RAML10(), MessageStyles.RAML())
+        .get()
 
-    return Result(document, validatedDocument, validationReport)
+    return Result(document, validationReport)
   }
 }
