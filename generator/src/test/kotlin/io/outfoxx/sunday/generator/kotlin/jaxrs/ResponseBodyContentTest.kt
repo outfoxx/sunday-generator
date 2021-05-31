@@ -248,7 +248,7 @@ class ResponseBodyContentTest {
           public fun fetchTest(): FetchTestResponseBody
         
           public interface FetchTestResponseBody {
-            public val value: String
+            public val `value`: String
           }
         }
 
@@ -297,7 +297,7 @@ class ResponseBodyContentTest {
           public fun fetchTest(): Response
         
           public interface FetchTestResponseBody {
-            public val value: String
+            public val `value`: String
           }
         }
 

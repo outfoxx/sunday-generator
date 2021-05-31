@@ -170,7 +170,7 @@ class ResponseBodyContentTest {
           )
 
           public interface FetchTestResponseBody {
-            public val value: String
+            public val `value`: String
           }
         }
 
