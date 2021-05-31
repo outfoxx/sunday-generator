@@ -121,7 +121,7 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public interface Group {
-          public val value: String
+          public val `value`: String
 
           public interface Member1 : Group {
             public val memberValue1: String
@@ -160,7 +160,7 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public interface Group {
-          public val value: String
+          public val `value`: String
 
           public interface Member1 : Group {
             public val memberValue1: String
@@ -199,10 +199,10 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public interface Root {
-          public val value: String
+          public val `value`: String
 
           public interface Group {
-            public val value: String
+            public val `value`: String
   
             public interface Member {
               public val memberValue: String
@@ -234,10 +234,10 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public interface Root {
-          public val value: String
+          public val `value`: String
 
           public interface Group {
-            public val value: String
+            public val `value`: String
   
             public interface Member {
               public val memberValue: String
@@ -348,12 +348,12 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public class Child1(
-          public val value: String?
+          public val `value`: String?
         ) : Parent() {
           public override val type: String
             get() = "Child1"
 
-          public fun copy(value: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
 
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
@@ -396,12 +396,12 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         public class Child2(
-          public val value: String?
+          public val `value`: String?
         ) : Parent() {
           public override val type: String
             get() = "child2"
 
-          public fun copy(value: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
         
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()

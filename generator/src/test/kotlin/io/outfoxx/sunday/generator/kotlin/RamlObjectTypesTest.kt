@@ -217,7 +217,7 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public interface Test {
-          public val value: String
+          public val `value`: String
         }
         
       """.trimIndent(),
@@ -307,7 +307,7 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public open class Test(
-          public val value: String
+          public val `value`: String
         ) {
           public override fun hashCode(): Int {
             var result = 1
@@ -346,7 +346,7 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public open class Test2(
-          value: String,
+          `value`: String,
           public val value2: String
         ) : Test(value) {
           public override fun hashCode(): Int {
@@ -389,7 +389,7 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public open class Empty(
-          value: String,
+          `value`: String,
           value2: String
         ) : Test2(value, value2) {
           public override fun equals(other: Any?): Boolean {
@@ -423,12 +423,12 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public class Test3(
-          value: String,
+          `value`: String,
           value2: String,
           public val value3: String
         ) : Empty(value, value2) {
           public fun copy(
-            value: String? = null,
+            `value`: String? = null,
             value2: String? = null,
             value3: String? = null
           ) = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)

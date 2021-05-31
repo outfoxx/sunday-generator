@@ -78,7 +78,7 @@ class RamlUnionTypesTest {
         package io.test
 
         public interface Test {
-          public val value: Base
+          public val `value`: Base
         }
         
       """.trimIndent(),
@@ -105,7 +105,7 @@ class RamlUnionTypesTest {
         import kotlin.Any
 
         public interface Test {
-          public val value: Any
+          public val `value`: Any
         }
         
       """.trimIndent(),

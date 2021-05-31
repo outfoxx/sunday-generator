@@ -85,7 +85,7 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public interface Child1 : Parent {
-          public val value: String?
+          public val `value`: String?
 
           public val value1: Int
         }
@@ -108,7 +108,7 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public interface Child2 : Parent {
-          public val value: String?
+          public val `value`: String?
 
           public val value2: Int
         }
@@ -185,13 +185,13 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public class Child1(
-          public val value: String?,
+          public val `value`: String?,
           public val value1: Int
         ) : Parent() {
           public override val type: String
             get() = "Child1"
 
-          public fun copy(value: String? = null, value1: Int? = null) = Child1(value ?: this.value, value1
+          public fun copy(`value`: String? = null, value1: Int? = null) = Child1(value ?: this.value, value1
               ?: this.value1)
 
           public override fun hashCode(): Int {
@@ -240,13 +240,13 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public class Child2(
-          public val value: String?,
+          public val `value`: String?,
           public val value2: Int
         ) : Parent() {
           public override val type: String
             get() = "child2"
 
-          public fun copy(value: String? = null, value2: Int? = null) = Child2(value ?: this.value, value2
+          public fun copy(`value`: String? = null, value2: Int? = null) = Child2(value ?: this.value, value2
               ?: this.value2)
         
           public override fun hashCode(): Int {
@@ -332,7 +332,7 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public interface Child1 : Parent {
-          public val value: String?
+          public val `value`: String?
         }
         
       """.trimIndent(),
@@ -352,7 +352,7 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public interface Child2 : Parent {
-          public val value: String?
+          public val `value`: String?
         }
         
       """.trimIndent(),
@@ -426,12 +426,12 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public class Child1(
-          public val value: String?
+          public val `value`: String?
         ) : Parent() {
           public override val type: Type
             get() = Type.Child1
 
-          public fun copy(value: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
 
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
@@ -474,12 +474,12 @@ class RamlDiscriminatedTypesTest {
         import kotlin.String
 
         public class Child2(
-          public val value: String?
+          public val `value`: String?
         ) : Parent() {
           public override val type: Type
             get() = Type.Child2
 
-          public fun copy(value: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
         
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
