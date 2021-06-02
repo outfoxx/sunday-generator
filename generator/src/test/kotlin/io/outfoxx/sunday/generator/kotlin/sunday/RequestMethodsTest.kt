@@ -128,4 +128,72 @@ class RequestMethodsTest {
       }
     )
   }
+
+  @Test
+  fun `test request method generation in client mode with nullify`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinSundayGenerator(
+          document,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+        
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import kotlin.Int
+        import kotlin.collections.List
+        import org.zalando.problem.ThrowableProblem
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+        ) {
+          init {
+            requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
+            requestFactory.registerProblem("http://example.com/another_not_found",
+                AnotherNotFoundProblem::class)
+          }
+          public suspend fun fetchTestOrNull(limit: Int): Test? = try {
+            fetchTest(limit)
+          } catch(x: ThrowableProblem) {
+            when {
+              x is TestNotFoundProblem -> null
+              x is AnotherNotFoundProblem -> null
+              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+              else -> throw x
+            }
+          }
+
+          public suspend fun fetchTest(limit: Int): Test = this.requestFactory.result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            queryParameters = mapOf(
+              "limit" to limit
+            ),
+            acceptTypes = this.defaultAcceptTypes
+          )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }

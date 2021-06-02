@@ -31,8 +31,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
-@DisplayName("[Kotlin/JAXRS] [RAML] Response Coroutines Test")
-class ResponseCoroutinesTest {
+@DisplayName("[Kotlin/JAXRS] [RAML] Request Coroutine Methods Test")
+class RequestCoroutineMethodsTest {
 
   @Test
   fun `test basic coroutines method generation in server mode`(
@@ -125,6 +125,72 @@ class ResponseCoroutinesTest {
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun fetchTest(): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test basic coroutines method generation in client mode with nullify`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          )
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.AnotherNotFoundProblem
+        import io.test.Test
+        import io.test.TestNotFoundProblem
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import org.zalando.problem.ThrowableProblem
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          public suspend fun fetchTestOrNull(): Test? = try {
+            fetchTest()
+          } catch(x: ThrowableProblem) {
+            when {
+              x is TestNotFoundProblem -> null
+              x is AnotherNotFoundProblem -> null
+              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+              else -> throw x
+            }
+          }
+
           @GET
           @Path(value = "/tests")
           public suspend fun fetchTest(): Test

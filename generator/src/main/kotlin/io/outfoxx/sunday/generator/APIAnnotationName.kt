@@ -47,6 +47,8 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   ProblemTypes("problemTypes", false),
   Problems("problems", false),
 
+  Nullify("nullify", false),
+
   // Sunday
   EventSource("eventSource", false),
   EventStream("eventStream", false),

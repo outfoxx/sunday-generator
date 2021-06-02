@@ -557,6 +557,7 @@ val DataNode.anyValue: Any? get() =
   }
 
 val DataNode.stringValue: String? get() = anyValue as? String
+val DataNode.numberValue: Number? get() = anyValue as? Number
 val DataNode.rawScalarValue: String? get() = (this as? ScalarNode)?.value
 val DataNode.scalarValue: Any? get() = (this as? ScalarNode)?.value?.let {
   when (dataType().value()) {

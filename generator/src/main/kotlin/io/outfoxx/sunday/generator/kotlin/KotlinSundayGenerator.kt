@@ -509,6 +509,10 @@ class KotlinSundayGenerator(
       builder.add(specGen())
 
       builder.add("⇤\n)\n")
+
+      if (!requestOnly && !responseOnly) {
+        addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
+      }
     }
 
     functionBuilder.addCode(builder.build())

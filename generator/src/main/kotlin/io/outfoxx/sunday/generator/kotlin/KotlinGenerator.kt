@@ -31,15 +31,20 @@ import amf.client.model.domain.Shape
 import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
+import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
@@ -47,11 +52,18 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
+import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE3
+import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE2
+import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE3
+import io.outfoxx.sunday.generator.kotlin.utils.UNI
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.rawType
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -82,8 +94,11 @@ import io.outfoxx.sunday.generator.utils.successes
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
+import org.zalando.problem.ThrowableProblem
 import java.net.URI
 import java.net.URISyntaxException
+import java.util.Optional
+import java.util.concurrent.CompletionStage
 import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
@@ -560,8 +575,8 @@ abstract class KotlinGenerator(
       )?.stringValue?.let { baseUri.resolve(expand(it)) } ?: baseUri
 
     val problemDefLocations: Map<BaseUnit, CustomizableElement> =
-      document.allUnits.filterIsInstance<CustomizableElement>().map { it as BaseUnit to it }.toMap() +
-        document.allUnits.filterIsInstance<EncodesModel>().map { it as BaseUnit to it.encodes }.toMap()
+      document.allUnits.filterIsInstance<CustomizableElement>().associateBy { it as BaseUnit } +
+        document.allUnits.filterIsInstance<EncodesModel>().associate { it as BaseUnit to it.encodes }
 
     return problemDefLocations
       .mapNotNull { (unit, element) ->
@@ -606,5 +621,176 @@ abstract class KotlinGenerator(
         }
 
     return server.url to parameters
+  }
+
+  fun addNullifyMethod(
+    operation: Operation,
+    function: FunSpec,
+    problemTypes: Map<URI, TypeName>,
+    typeBuilder: TypeSpec.Builder,
+    copyAnnotaitons: Boolean = false,
+  ) {
+
+    val nullifyAnn = operation.findArrayAnnotation(Nullify, null)
+    if (nullifyAnn?.isNotEmpty() == true) {
+
+      val (nullifyProblemTypeCodes, nullifyStatuses) = groupNullifyIntoStatusesAndProblems(nullifyAnn)
+
+      val nullifyProblemTypeNames =
+        problemTypes
+          .filter { (key) -> nullifyProblemTypeCodes.any { key.path.endsWith(it) } }
+          .map { it.value }
+          .toSet()
+
+      val nullifyFunctionCodeBlock =
+        if (supportedReactiveReturnTypes.contains(function.returnType?.rawType?.copy(nullable = false))) {
+          createReactiveNullifyMethodCode(function, nullifyStatuses, nullifyProblemTypeNames)
+        } else {
+          createNullifyMethodCode(function, nullifyStatuses, nullifyProblemTypeNames)
+        }
+
+      val returnType = function.returnType?.copy(nullable = false)
+      val nullableReturnType =
+        when {
+          returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 -> {
+
+            val elementType = returnType.typeArguments[0]
+
+            val nullableElementType =
+              if (rxReturnTypes.contains(returnType.rawType)) {
+                Optional::class.asTypeName().parameterizedBy(elementType)
+              } else {
+                elementType.copy(nullable = true)
+              }
+
+            returnType.rawType.parameterizedBy(nullableElementType)
+          }
+
+          else -> returnType?.copy(nullable = true)
+        }
+
+      typeBuilder.addFunction(
+        FunSpec.builder("${function.name}OrNull")
+          .addModifiers(function.modifiers.filter { it != KModifier.ABSTRACT })
+          .addTypeVariables(function.typeVariables)
+          .addParameters(
+            function.parameters.map {
+              // Remove annotations
+              val paramBuilder = it.toBuilder()
+              paramBuilder.annotations.clear()
+              paramBuilder.build()
+            }
+          )
+          .apply {
+            if (copyAnnotaitons) {
+              addAnnotations(function.annotations)
+            }
+            nullableReturnType?.let {
+              returns(it)
+            }
+          }
+          .addKdoc(function.kdoc)
+          .addCode(nullifyFunctionCodeBlock)
+          .build()
+      )
+    }
+  }
+
+  private fun createNullifyMethodCode(
+    function: FunSpec,
+    statuses: Set<Int>,
+    problemTypeNames: Set<TypeName>,
+  ): CodeBlock {
+
+    val codeBuilder =
+      CodeBlock.builder()
+        .beginControlFlow("return try")
+        .addStatement("%L(%L)", function.name, function.parameters.joinToString { it.name })
+        .nextControlFlow("catch(x: %T)", ThrowableProblem::class.asTypeName())
+
+    codeBuilder.add("when {").indent().add("\n")
+
+    problemTypeNames.forEach {
+      codeBuilder.addStatement("x is %T -> null", it)
+    }
+
+    if (statuses.isNotEmpty()) {
+      codeBuilder
+        .addStatement("%L -> null", statuses.joinToString(" || ") { "x.status?.statusCode == $it" })
+    }
+
+    codeBuilder
+      .add("else -> throw x").unindent().add("\n")
+      .add("}").add("\n")
+
+    codeBuilder.endControlFlow()
+
+    return codeBuilder.build()
+  }
+
+  private val rxReturnTypes: List<TypeName> = listOf(
+    RXSINGLE2, RXSINGLE3, RXOBSERVABLE2, RXOBSERVABLE3,
+  )
+
+  private val supportedReactiveReturnTypes = listOf(
+    CompletionStage::class.asTypeName(),
+    UNI,
+  ) + rxReturnTypes
+
+  private fun createReactiveNullifyMethodCode(
+    function: FunSpec,
+    statuses: Set<Int>,
+    problemTypeNames: Set<TypeName>
+  ): CodeBlock {
+
+    val codeBuilder = CodeBlock.builder()
+
+    codeBuilder.add("return %N(%L)", function.name, function.parameters.joinToString { it.name })
+      .indent().add("\n")
+
+    val nullLiteral =
+      when (function.returnType?.rawType?.copy(nullable = false)) {
+
+        CompletionStage::class.asTypeName() -> {
+          codeBuilder.add(".exceptionally { x ->").indent().add("\n")
+          "null"
+        }
+
+        UNI -> {
+          codeBuilder.add(".onFailure().recoverWithItem { x ->").indent().add("\n")
+          "null"
+        }
+
+        RXSINGLE3, RXOBSERVABLE3, RXSINGLE2, RXOBSERVABLE2 -> {
+          codeBuilder.add(".map { %T.of(it) }", Optional::class.asTypeName())
+            .add("\n.onErrorReturn { x ->").indent().add("\n")
+
+          "Optional.empty()"
+        }
+
+        else -> throw IllegalArgumentException("Unsupported reactive return type for nullify")
+      }
+
+    codeBuilder.add("when {").indent().add("\n")
+
+    problemTypeNames.forEach {
+      codeBuilder.addStatement("x is %T -> %L", it, nullLiteral)
+    }
+
+    if (statuses.isNotEmpty()) {
+      codeBuilder.addStatement(
+        "x is %T && (%L) -> %L",
+        ThrowableProblem::class.asTypeName(),
+        statuses.joinToString(" || ") { "x.status?.statusCode == $it" },
+        nullLiteral
+      )
+    }
+
+    codeBuilder
+      .add("else -> throw x").unindent().add("\n")
+      .add("}").unindent().add("\n")
+      .add("}").unindent().add("\n")
+
+    return codeBuilder.build()
   }
 }
