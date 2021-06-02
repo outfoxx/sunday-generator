@@ -12,7 +12,6 @@ val typeScriptPoetVersion: String by project
 val swiftPoetVersion: String by project
 val jacksonVersion: String by project
 
-val guavaVersion: String by project
 val sundayKtVersion: String by project
 val kotlinCoroutinesVersion: String by project
 val jaxrsVersion: String by project
@@ -45,19 +44,17 @@ dependencies {
   api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
-  implementation("com.google.guava:guava:$guavaVersion")
-  implementation("io.outfoxx.sunday:sunday:$sundayKtVersion")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
-  implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion")
-  implementation("javax.validation:validation-api:$validationVersion")
-  implementation("org.zalando:problem:$zalandoProblemVersion")
-  implementation("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
-  implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+  implementation("io.outfoxx.sunday:sunday:$sundayKtVersion") { exclude(group = "*") }
+  implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion") { exclude(group = "*") }
+  implementation("javax.validation:validation-api:$validationVersion") { exclude(group = "*") }
+  implementation("org.zalando:problem:$zalandoProblemVersion") { exclude(group = "*") }
 
   //
   // TESTING
   //
+
+  // redclare these w/o exclude for testing to work
+  testImplementation("io.outfoxx.sunday:sunday:$sundayKtVersion")
 
   testImplementation("io.smallrye.reactive:mutiny:$mutinyVersion")
   testImplementation("io.reactivex.rxjava3:rxjava:$rxJava3Version")
