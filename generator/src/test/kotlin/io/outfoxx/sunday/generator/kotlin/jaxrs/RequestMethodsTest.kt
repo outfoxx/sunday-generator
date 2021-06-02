@@ -191,4 +191,61 @@ class RequestMethodsTest {
       }
     )
   }
+
+  @Test
+  fun `test request method generation in client mode with nullify`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
+        import org.zalando.problem.ThrowableProblem
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          public fun fetchTestOrNull(limit: Int): Test? = try {
+            fetchTest(limit)
+          } catch(x: ThrowableProblem) {
+            when {
+              x is TestNotFoundProblem -> null
+              x is AnotherNotFoundProblem -> null
+              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+              else -> throw x
+            }
+          }
+        
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }
