@@ -38,15 +38,9 @@ application {
   mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
 
-tasks {
-  shadowJar.configure {
-    archiveClassifier.set("")
-    minimize()
-    dependencies {
-      exclude(dependency(project.dependencies.gradleApi()))
-      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
-    }
-  }
+tasks.shadowJar.configure {
+  archiveClassifier.set("")
+  minimize()
 }
 
 publishing {

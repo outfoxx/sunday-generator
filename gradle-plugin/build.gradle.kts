@@ -1,5 +1,6 @@
 plugins {
   `java-gradle-plugin`
+  `maven-publish`
   id("com.gradle.plugin-publish")
   id("com.github.johnrengelman.shadow")
 }
@@ -27,7 +28,18 @@ dependencies {
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 }
 
+tasks.shadowJar.configure {
+  archiveClassifier.set("")
+  dependencies {
+    exclude(dependency("org.jetbrains.kotlin:.*"))
+  }
+  minimize()
+}
+
+
+
 gradlePlugin {
+  isAutomatedPublishing = false
   plugins {
     register("sunday") {
       id = "io.outfoxx.sunday-generator"
@@ -49,13 +61,35 @@ pluginBundle {
   }
 }
 
-tasks {
-  shadowJar.configure {
-    archiveClassifier.set("")
-    minimize()
-    dependencies {
-      exclude(dependency(project.dependencies.gradleApi()))
-      exclude(dependency("org.jetbrains.kotlin:kotlin-.*:.*"))
+publishing {
+  publications {
+    val libraryPub = create<MavenPublication>("library") {
+      project.shadow.component(this)
+      artifact(tasks.javadocJar)
+    }
+
+    val pluginDeclaration = gradlePlugin.plugins.first()
+
+    publications.create<MavenPublication>("marker") {
+      groupId = pluginDeclaration.id
+      artifactId = "${pluginDeclaration.id}.gradle.plugin"
+      pom.withXml {
+        val root = asElement()
+        val document = root.ownerDocument
+        val dependencies = root.appendChild(document.createElement("dependencies"))
+        val dependency = dependencies.appendChild(document.createElement("dependency"))
+
+        val groupId = dependency.appendChild(document.createElement("groupId"))
+        groupId.textContent = libraryPub.groupId
+
+        val artifactId = dependency.appendChild(document.createElement("artifactId"))
+        artifactId.textContent = libraryPub.artifactId
+
+        val version = dependency.appendChild(document.createElement("version"))
+        version.textContent = libraryPub.version
+      }
+      pom.name.set(pluginDeclaration.displayName)
+      pom.description.set(pluginDeclaration.description)
     }
   }
 }
