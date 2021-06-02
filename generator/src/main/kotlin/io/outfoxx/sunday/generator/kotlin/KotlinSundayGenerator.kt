@@ -48,6 +48,9 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.kotlin.utils.FLOW
+import io.outfoxx.sunday.generator.kotlin.utils.REQUEST
+import io.outfoxx.sunday.generator.kotlin.utils.RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
@@ -63,7 +66,6 @@ import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.http.Method
-import kotlinx.coroutines.flow.Flow
 import java.net.URI
 
 class KotlinSundayGenerator(
@@ -238,12 +240,12 @@ class KotlinSundayGenerator(
       if (body !is UnionShape) {
         genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
       }
-      return Flow::class.asTypeName().parameterizedBy(returnTypeName)
+      return FLOW.parameterizedBy(returnTypeName)
     }
 
     return when {
-      operation.findBoolAnnotation(RequestOnly, null) == true -> okhttp3.Request::class.asTypeName()
-      operation.findBoolAnnotation(ResponseOnly, null) == true -> okhttp3.Response::class.asTypeName()
+      operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE
       else -> returnTypeName
     }
   }
