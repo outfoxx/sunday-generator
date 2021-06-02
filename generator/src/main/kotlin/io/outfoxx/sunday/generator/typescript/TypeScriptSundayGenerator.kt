@@ -24,18 +24,21 @@ import amf.client.model.domain.Parameter
 import amf.client.model.domain.Response
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
+import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_TYPES
 import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
@@ -43,12 +46,14 @@ import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.defaultValue
 import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
@@ -520,6 +525,10 @@ class TypeScriptSundayGenerator(
       }
 
       builder.add("%]\n);\n")
+
+      if (!requestOnly && !responseOnly) {
+        addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
+      }
     }
 
     functionBuilder.addCode(builder.build())
@@ -534,6 +543,63 @@ class TypeScriptSundayGenerator(
     }
 
     return resultMethod
+  }
+
+  private fun addNullifyMethod(
+    operation: Operation,
+    function: FunctionSpec,
+    problemTypes: Map<URI, TypeName>,
+    typeBuilder: ClassSpec.Builder
+  ) {
+
+    val nullifyAnn = operation.findArrayAnnotation(APIAnnotationName.Nullify, null)
+    if (nullifyAnn == null || nullifyAnn.isEmpty()) {
+      return
+    }
+
+    val (nullifyProblemTypeCodes, nullifyStatuses) = APIAnnotations.groupNullifyIntoStatusesAndProblems(nullifyAnn)
+
+    val nullifyProblemTypeNames =
+      problemTypes
+        .filter { (key) -> nullifyProblemTypeCodes.any { key.path.endsWith(it) } }
+        .map { it.value }
+        .toTypedArray()
+
+    val nullFunCodeBuilder =
+      CodeBlock.builder()
+        .add(
+          """
+          |return this.%N(${function.parameters.joinToString { "$it: $it" }})
+          |  .pipe(%Q(
+          |    [${nullifyStatuses.joinToString { "$it" }}],
+          |    [${nullifyProblemTypeNames.joinToString { "%T" }}]
+          |  ));
+          |
+          """.trimMargin(),
+          function.name, NULLIFY_RESPONSE, *nullifyProblemTypeNames
+        )
+
+    val returnType = function.returnType
+    val returnTypeOptional =
+      when {
+        returnType is TypeName.Parameterized && returnType.typeArgs.size == 1 ->
+          returnType.rawType.parameterized(returnType.typeArgs[0].nullable)
+        else -> returnType?.nullable
+      }
+
+    typeBuilder.addFunction(
+      FunctionSpec.builder("${function.name}OrNull")
+        .addDecorators(function.decorators)
+        .addModifiers(function.modifiers)
+        .addTypeVariables(function.typeVariables)
+        .addParameters(function.parameters)
+        .apply {
+          returnTypeOptional?.let { returns(it) }
+        }
+        .addTSDoc(function.tsDoc)
+        .addCode(nullFunCodeBuilder.build())
+        .build()
+    )
   }
 
   private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock {

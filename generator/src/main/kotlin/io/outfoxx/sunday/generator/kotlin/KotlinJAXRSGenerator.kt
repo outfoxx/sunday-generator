@@ -500,6 +500,8 @@ class KotlinJAXRSGenerator(
             .build()
         )
       }
+    } else {
+      addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
     }
 
     // Finalize

@@ -61,6 +61,9 @@ types:
   Nested:
     type: NestedDashed | NestedExplicit
 
+  Nullify:
+    type: (string | number)[]
+
 annotationTypes:
 
   group:
@@ -183,4 +186,8 @@ annotationTypes:
     allowedTargets: [Method]
   responseOnly:
     type: boolean
+    allowedTargets: [Method]
+
+  nullify:
+    type: Nullify
     allowedTargets: [Method]

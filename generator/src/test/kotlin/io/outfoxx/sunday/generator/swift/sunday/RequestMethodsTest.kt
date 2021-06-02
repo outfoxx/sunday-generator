@@ -187,4 +187,76 @@ class RequestMethodsTest {
       }
     )
   }
+
+  @Test
+  fun `test request method generation with nullify`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        SwiftSundayGenerator(
+          document,
+          typeRegistry,
+          swiftSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("API", builtTypes)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class API {
+
+          public let requestFactory: RequestFactory
+          public let defaultContentTypes: [MediaType]
+          public let defaultAcceptTypes: [MediaType]
+
+          public init(
+            requestFactory: RequestFactory,
+            defaultContentTypes: [MediaType] = [],
+            defaultAcceptTypes: [MediaType] = [.json]
+          ) {
+            self.requestFactory = requestFactory
+            self.defaultContentTypes = defaultContentTypes
+            self.defaultAcceptTypes = defaultAcceptTypes
+            requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
+            requestFactory.registerProblem(type: "http://example.com/another_not_found", problemType: AnotherNotFoundProblem.self)
+          }
+
+          func fetchTestOrNil() -> RequestResultPublisher<Test?> {
+            return fetchTest()
+              .nilifyResponse(
+                statuses: [404, 405],
+                problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
+              )
+          }
+
+          func fetchTest() -> RequestResultPublisher<Test> {
+            return self.requestFactory.result(
+              method: .get,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }

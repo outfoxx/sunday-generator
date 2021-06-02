@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript.utils
 
+import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 
 const val SUNDAY_PKG = "@outfoxx/sunday"
@@ -30,3 +31,5 @@ val DURATION = TypeName.namedImport("Duration", SUNDAY_PKG)
 val PROBLEM = TypeName.namedImport("Problem", SUNDAY_PKG)
 val MEDIA_TYPE = TypeName.namedImport("MediaType", SUNDAY_PKG)
 val URL_TEMPLATE = TypeName.namedImport("URLTemplate", SUNDAY_PKG)
+
+val NULLIFY_RESPONSE = SymbolSpec.importsName("nullifyResponse", SUNDAY_PKG)

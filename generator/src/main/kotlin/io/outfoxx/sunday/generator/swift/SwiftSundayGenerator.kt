@@ -25,10 +25,12 @@ import amf.client.model.domain.Response
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
@@ -45,6 +47,7 @@ import io.outfoxx.sunday.generator.swift.utils.RESPONSE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
@@ -67,6 +70,7 @@ import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.STATIC
 import io.outfoxx.swiftpoet.NameAllocator
 import io.outfoxx.swiftpoet.ParameterSpec
+import io.outfoxx.swiftpoet.ParameterizedTypeName
 import io.outfoxx.swiftpoet.PropertySpec
 import io.outfoxx.swiftpoet.STRING
 import io.outfoxx.swiftpoet.TypeName
@@ -534,11 +538,72 @@ class SwiftSundayGenerator(
       builder.add(reqGen())
 
       builder.add("%<\n)\n")
+
+      if (!requestOnly && !responseOnly) {
+        addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
+      }
     }
 
     functionBuilder.addCode(builder.build())
 
     return functionBuilder.build()
+  }
+
+  private fun addNullifyMethod(
+    operation: Operation,
+    function: FunctionSpec,
+    problemTypes: Map<URI, TypeName>,
+    typeBuilder: TypeSpec.Builder
+  ) {
+
+    val nullifyAnn = operation.findArrayAnnotation(Nullify, null)
+    if (nullifyAnn == null || nullifyAnn.isEmpty()) {
+      return
+    }
+
+    val (nullifyProblemTypeCodes, nullifyStatuses) = groupNullifyIntoStatusesAndProblems(nullifyAnn)
+
+    val nullifyProblemTypeNames =
+      problemTypes
+        .filter { (key) -> nullifyProblemTypeCodes.any { key.path.endsWith(it) } }
+        .map { it.value }
+        .toTypedArray()
+
+    val nullFunCodeBuilder =
+      CodeBlock.builder()
+        .add(
+          """
+          |return %N(${function.parameters.joinToString { "$it: $it" }})
+          |  .nilifyResponse(
+          |    statuses: [${nullifyStatuses.joinToString { "$it" }}],
+          |    problemTypes: [${nullifyProblemTypeNames.joinToString { "%T.self" }}]
+          |  )
+          |
+          """.trimMargin(),
+          function.name, *nullifyProblemTypeNames
+        )
+
+    val returnType = function.returnType
+    val returnTypeOptional =
+      when {
+        returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 ->
+          returnType.rawType.parameterizedBy(returnType.typeArguments[0].makeOptional())
+        else -> returnType?.makeOptional()
+      }
+
+    typeBuilder.addFunction(
+      FunctionSpec.builder("${function.name}OrNil")
+        .addModifiers(function.modifiers)
+        .addTypeVariables(function.typeVariables)
+        .addParameters(function.parameters)
+        .apply {
+          function.attributes.forEach { addAttribute(it) }
+          returnTypeOptional?.let { returns(it) }
+        }
+        .addDoc(function.doc)
+        .addCode(nullFunCodeBuilder.build())
+        .build()
+    )
   }
 
   private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock {

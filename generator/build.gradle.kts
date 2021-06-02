@@ -18,6 +18,9 @@ val kotlinCoroutinesVersion: String by project
 val jaxrsVersion: String by project
 val validationVersion: String by project
 val zalandoProblemVersion: String by project
+val mutinyVersion: String by project
+val rxJava3Version: String by project
+val rxJava2Version: String by project
 
 val junitVersion: String by project
 val hamcrestVersion: String by project
@@ -55,6 +58,10 @@ dependencies {
   //
   // TESTING
   //
+
+  testImplementation("io.smallrye.reactive:mutiny:$mutinyVersion")
+  testImplementation("io.reactivex.rxjava3:rxjava:$rxJava3Version")
+  testImplementation("io.reactivex.rxjava2:rxjava:$rxJava2Version")
 
   testImplementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
 

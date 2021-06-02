@@ -1,0 +1,35 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.problemTypes):
+
+  test_not_found:
+    status: 404
+    title: Test Not Found
+    detail: The requested test was not found
+
+  another_not_found:
+    status: 404
+    title: Test Not Found
+    detail: The requested test was not found
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+
+/tests:
+  get:
+    displayName: fetchTest
+    (sunday.problems): [test_not_found, another_not_found]
+    (sunday.nullify): [test_not_found, another_not_found, 404, 405]
+    responses:
+      200:
+        body: Test

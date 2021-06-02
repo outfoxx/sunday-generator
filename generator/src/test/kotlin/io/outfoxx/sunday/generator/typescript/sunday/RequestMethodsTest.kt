@@ -189,4 +189,79 @@ class RequestMethodsTest {
       }
     )
   }
+
+  @Test
+  fun `test request method generation with nullify`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document ->
+        TypeScriptSundayGenerator(
+          document,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {AnotherNotFoundProblem} from './another-not-found-problem';
+        import {Test} from './test';
+        import {TestNotFoundProblem} from './test-not-found-problem';
+        import {AnyType, MediaType, RequestFactory, nullifyResponse} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          defaultContentTypes: Array<MediaType>;
+        
+          defaultAcceptTypes: Array<MediaType>;
+        
+          constructor(public requestFactory: RequestFactory,
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
+            requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
+            requestFactory.registerProblem('http://example.com/another_not_found', AnotherNotFoundProblem);
+          }
+        
+          fetchTestOrNull(): Observable<Test | null> {
+            return this.fetchTest()
+              .pipe(nullifyResponse(
+                [404, 405],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest(): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
 }
