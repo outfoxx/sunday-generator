@@ -184,12 +184,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): CompletionStage<Test?> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): CompletionStage<Test?> = fetchTest(limit)
             .exceptionally { x ->
               when {
                 x is TestNotFoundProblem -> null
@@ -202,7 +204,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): CompletionStage<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
         }
 
       """.trimIndent(),
@@ -251,12 +253,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): Uni<Test?> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): Uni<Test?> = fetchTest(limit)
             .onFailure().recoverWithItem { x ->
               when {
                 x is TestNotFoundProblem -> null
@@ -269,7 +273,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Uni<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Uni<Test>
         }
 
       """.trimIndent(),
@@ -319,12 +323,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): Single<Optional<Test>> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): Single<Optional<Test>> = fetchTest(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -338,7 +344,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Single<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Single<Test>
         }
 
       """.trimIndent(),
@@ -388,12 +394,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): Observable<Optional<Test>> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): Observable<Optional<Test>> = fetchTest(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -407,7 +415,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Observable<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Observable<Test>
         }
 
       """.trimIndent(),
@@ -457,12 +465,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): Single<Optional<Test>> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): Single<Optional<Test>> = fetchTest(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -476,7 +486,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Single<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Single<Test>
         }
 
       """.trimIndent(),
@@ -526,12 +536,14 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
         
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(): Observable<Optional<Test>> = fetchTest()
+          public fun fetchTestOrNull(limit: Int): Observable<Optional<Test>> = fetchTest(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -545,7 +557,7 @@ class RequestReactiveMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Observable<Test>
+          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Observable<Test>
         }
 
       """.trimIndent(),

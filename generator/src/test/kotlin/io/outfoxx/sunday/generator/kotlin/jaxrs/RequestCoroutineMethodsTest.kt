@@ -175,13 +175,15 @@ class RequestCoroutineMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
         import org.zalando.problem.ThrowableProblem
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public suspend fun fetchTestOrNull(): Test? = try {
-            fetchTest()
+          public suspend fun fetchTestOrNull(limit: Int): Test? = try {
+            fetchTest(limit)
           } catch(x: ThrowableProblem) {
             when {
               x is TestNotFoundProblem -> null
@@ -193,7 +195,7 @@ class RequestCoroutineMethodsTest {
 
           @GET
           @Path(value = "/tests")
-          public suspend fun fetchTest(): Test
+          public suspend fun fetchTest(@QueryParam(value = "limit") limit: Int): Test
         }
 
       """.trimIndent(),
