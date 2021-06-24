@@ -48,6 +48,22 @@ types:
             value:
               type: string
 
+  NestedDashed:
+    type: string
+    enum: [dashed]
+
+  NestedExplicit:
+    type: object
+    properties:
+      enclosedIn: string
+      name: string
+
+  Nested:
+    type: NestedDashed | NestedExplicit
+
+  Nullify:
+    type: (string | number)[]
+
 annotationTypes:
 
   group:
@@ -119,10 +135,7 @@ annotationTypes:
     allowedTargets: [TypeDeclaration]
 
   nested:
-    type: object
-    properties:
-      enclosedIn: string
-      name: string
+    type: Nested
     allowedTargets: [TypeDeclaration]
 
   externalDiscriminator:
@@ -173,4 +186,8 @@ annotationTypes:
     allowedTargets: [Method]
   responseOnly:
     type: boolean
+    allowedTargets: [Method]
+
+  nullify:
+    type: Nullify
     allowedTargets: [Method]
