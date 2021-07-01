@@ -38,6 +38,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
+import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
@@ -46,12 +47,15 @@ import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.mediaType
 import io.outfoxx.sunday.generator.utils.method
@@ -190,10 +194,11 @@ class KotlinJAXRSGenerator(
       functionBuilder.addModifiers(KModifier.SUSPEND)
     }
 
-    val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true
+    val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods
+    val isFlow = operation.hasAnnotation(EventStream, generationMode) && options.coroutineServiceMethods
 
     val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveDefault
-    if (reactive && reactiveResponseType != null && !isSSE) {
+    if (reactive && reactiveResponseType != null && !isSSE && !isFlow) {
 
       return if (generationMode == Client) {
         reactiveResponseType.parameterizedBy(returnTypeName)
@@ -219,6 +224,13 @@ class KotlinJAXRSGenerator(
       } else {
         UNIT
       }
+    }
+
+    if (operation.findStringAnnotation(EventStream, null) == "discriminated") {
+      if (body !is UnionShape) {
+        genError("Discriminated ($EventStream) requires a union of event types", operation)
+      }
+      return FLOW.parameterizedBy(returnTypeName)
     }
 
     return if (generationMode == Client) {
@@ -477,7 +489,7 @@ class KotlinJAXRSGenerator(
       }
 
       // Add Sse & SseEventSink parameter to sse methods
-      if (operation.findBoolAnnotation(SSE, generationMode) == true) {
+      if (operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods) {
 
         functionBuilder.addParameter(
           ParameterSpec.builder("sse", javax.ws.rs.sse.Sse::class)
