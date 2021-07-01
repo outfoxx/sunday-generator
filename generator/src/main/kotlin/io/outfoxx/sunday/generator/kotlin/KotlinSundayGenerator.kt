@@ -464,9 +464,9 @@ class KotlinSundayGenerator(
 
     val builder = CodeBlock.builder()
 
-    if (operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true || operation.hasAnnotation(
-        APIAnnotationName.EventStream, null
-      )
+    if (
+      operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true ||
+      operation.hasAnnotation(APIAnnotationName.EventStream, null)
     ) {
 
       // Generate EventSource/Event Stream handling method
