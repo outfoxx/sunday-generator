@@ -41,6 +41,7 @@ tasks.shadowJar.configure {
 
 tasks.publishPlugins.configure {
   dependsOn(tasks.shadowJar)
+  useAutomatedPublishing()
 }
 
 
@@ -63,40 +64,26 @@ pluginBundle {
     named("sunday") {
       displayName = "Sunday Generator - Gradle Plugin"
       description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
-      mavenCoordinates {
-        groupId = "io.outfoxx.sunday"
-        artifactId = "gradle-plugin"
-      }
     }
   }
 }
 
 publishing {
   publications {
-    val libraryPub = create<MavenPublication>("library") {
-      project.shadow.component(this)
-      artifact(tasks.javadocJar)
-    }
-
-    // Recreate plugin publishing from MavenPluginPublishPlugin, referencing our shadow jar publication
-    val pluginDeclaration = gradlePlugin.plugins.first()
-    publications.create<MavenPublication>(pluginDeclaration.name + "PluginMarkerMaven") {
-      val internal = this as MavenPublicationInternal
-      internal.isAlias = true
-      internal.artifactId = pluginDeclaration.id + PLUGIN_MARKER_SUFFIX
-      internal.groupId = pluginDeclaration.id
-      internal.pom.withXml {
-        val root = asElement()
-        val document = root.ownerDocument
-        val dependencies = root.appendChild(document.createElement("dependencies"))
-        val dependency = dependencies.appendChild(document.createElement("dependency"))
-
-        dependency.appendChild(document.createElement("groupId")).textContent = libraryPub.groupId
-        dependency.appendChild(document.createElement("artifactId")).textContent = libraryPub.artifactId
-        dependency.appendChild(document.createElement("version")).textContent = libraryPub.version
+    register<MavenPublication>("pluginMaven").configure {
+      // Remove existing "dependencies" node
+      pom {
+        withXml {
+          val pomNode = asNode()
+          (pomNode.get("dependencies") as groovy.util.NodeList).forEach {
+            pomNode.remove(it as groovy.util.Node)
+          }
+        }
       }
-      internal.pom.name.set(pluginDeclaration.displayName)
-      internal.pom.description.set(pluginDeclaration.description)
+
+      project.shadow.component(this)
+      groupId = "io.outfoxx.sunday"
+      artifactId = "gradle-plugin"
     }
   }
 }
