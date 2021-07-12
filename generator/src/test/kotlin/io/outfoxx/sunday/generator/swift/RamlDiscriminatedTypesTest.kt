@@ -340,12 +340,6 @@ class RamlDiscriminatedTypesTest {
               switch type {
               case .child1: self = .child1(try Child1(from: decoder))
               case .child2: self = .child2(try Child2(from: decoder))
-              default:
-                  throw DecodingError.dataCorruptedError(
-                    forKey: CodingKeys.type,
-                    in: container,
-                    debugDescription: "unsupported value for \"type\""
-                  )
               }
             }
 

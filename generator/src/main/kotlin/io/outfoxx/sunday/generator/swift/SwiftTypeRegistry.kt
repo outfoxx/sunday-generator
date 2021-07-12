@@ -696,8 +696,6 @@ class SwiftTypeRegistry(
               val inheritingTypeName = resolveReferencedTypeName(it, context)
               val discriminatorValue = findDiscriminatorPropertyValue(it, context) ?: it.name!!
 
-              usedDiscriminators.add(discriminatorValue)
-
               val discriminatorCase = discriminatorValue.swiftIdentifierName
 
               refTypeBuilder.addEnumCase(discriminatorCase, inheritingTypeName)
@@ -712,11 +710,13 @@ class SwiftTypeRegistry(
                   "case .%N:%Wself = .%N(try %T(from: decoder))",
                   discriminatorCase, discriminatorCase, inheritingTypeName
                 )
+                usedDiscriminators.add(discriminatorCase)
               } else {
                 refDecoderBuilder.addStatement(
                   "case %S:%Wself = .%N(try %T(from: decoder))",
                   discriminatorValue, discriminatorCase, inheritingTypeName
                 )
+                usedDiscriminators.add(discriminatorValue)
               }
 
               refEncoderBuilder.addStatement(
