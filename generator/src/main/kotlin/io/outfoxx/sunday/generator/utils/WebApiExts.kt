@@ -119,7 +119,7 @@ fun BaseUnit.findImportingUnit(element: DomainElement, allUnits: List<BaseUnit>)
   return allUnits.find { it.location == importingUnitLocation }
 }
 
-fun BaseUnit.findInheritingTypes(type: Shape): List<Shape> {
+fun BaseUnit.findInheritingShapes(type: Shape): List<Shape> {
   val resolvedType = type.resolve
   return allUnits.filterIsInstance<DeclaresModel>()
     .flatMap { unit ->

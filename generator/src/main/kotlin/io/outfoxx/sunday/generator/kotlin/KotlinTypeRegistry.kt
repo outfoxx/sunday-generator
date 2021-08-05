@@ -108,7 +108,7 @@ import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.findInheritingTypes
+import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -422,7 +422,7 @@ class KotlinTypeRegistry(
     )
 
     val typeName = resolveTypeName(propertyShape.range, propertyContext)
-    return if (propertyShape.minCount ?: 0 == 0) {
+    return if ((propertyShape.minCount ?: 0) == 0) {
       typeName.copy(nullable = true)
     } else {
       typeName
@@ -470,14 +470,14 @@ class KotlinTypeRegistry(
       else -> ANY
     }
 
-  private fun processScalarShape(type: ScalarShape, context: KotlinResolutionContext): TypeName =
-    when (type.dataType) {
+  private fun processScalarShape(shape: ScalarShape, context: KotlinResolutionContext): TypeName =
+    when (shape.dataType) {
       DataType.String() ->
 
-        if (type.values.isNotEmpty()) {
-          defineEnum(type, context)
+        if (shape.values.isNotEmpty()) {
+          defineEnum(shape, context)
         } else {
-          when (type.format) {
+          when (shape.format) {
             "time" -> LocalTime::class.asTypeName()
             "datetime-only", "date-time-only" -> LocalDateTime::class.asTypeName()
             else -> STRING
@@ -487,12 +487,12 @@ class KotlinTypeRegistry(
       DataType.Boolean() -> BOOLEAN
 
       DataType.Integer() ->
-        when (type.format) {
+        when (shape.format) {
           "int8" -> BYTE
           "int16" -> SHORT
           "int32", "int" -> INT
           "", null -> INT
-          else -> genError("Integer format '${type.format}' is unsupported", type)
+          else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
       DataType.Long() -> LONG
@@ -511,15 +511,15 @@ class KotlinTypeRegistry(
 
       DataType.Binary() -> BYTE_ARRAY
 
-      else -> genError("Scalar data type '${type.dataType}' is unsupported", type)
+      else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
-  private fun processArrayShape(type: ArrayShape, context: KotlinResolutionContext): TypeName {
+  private fun processArrayShape(shape: ArrayShape, context: KotlinResolutionContext): TypeName {
 
-    val elementType = resolveReferencedTypeName(type.items!!, context)
+    val elementType = resolveReferencedTypeName(shape.items!!, context)
 
     val collectionType =
-      if (type.uniqueItems == true) {
+      if (shape.uniqueItems == true) {
         SET
       } else {
         LIST
@@ -528,34 +528,34 @@ class KotlinTypeRegistry(
     return collectionType.parameterizedBy(elementType)
   }
 
-  private fun processUnionShape(type: UnionShape, context: KotlinResolutionContext): TypeName =
-    if (type.makesNullable) {
-      resolveReferencedTypeName(type.nullableType, context).copy(nullable = true)
+  private fun processUnionShape(shape: UnionShape, context: KotlinResolutionContext): TypeName =
+    if (shape.makesNullable) {
+      resolveReferencedTypeName(shape.nullableType, context).copy(nullable = true)
     } else {
-      nearestCommonAncestor(type.anyOf, context) ?: ANY
+      nearestCommonAncestor(shape.anyOf, context) ?: ANY
     }
 
-  private fun processNodeShape(type: NodeShape, context: KotlinResolutionContext): TypeName {
+  private fun processNodeShape(shape: NodeShape, context: KotlinResolutionContext): TypeName {
 
-    if (type.properties.isEmpty() && type.inherits.size == 1 && context.unit.findInheritingTypes(type).isEmpty()) {
-      return resolveReferencedTypeName(type.inherits[0], context)
+    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
+      return resolveReferencedTypeName(shape.inherits[0], context)
     }
 
     if (
-      type.properties.isEmpty() &&
-      type.inherits.isEmpty() &&
-      type.closed != true &&
-      context.unit.findInheritingShapes(type).isEmpty()
+      shape.properties.isEmpty() &&
+      shape.inherits.isEmpty() &&
+      shape.closed != true &&
+      context.unit.findInheritingShapes(shape).isEmpty()
     ) {
 
-      val allTypes = collectTypes(type.properties().map { it.range })
+      val allTypes = collectTypes(shape.properties().map { it.range })
 
       val commonType = nearestCommonAncestor(allTypes, context) ?: ANY
 
       return MAP.parameterizedBy(STRING, commonType)
     }
 
-    return defineClass(type, type.inherits.firstOrNull()?.let { it.resolve as NodeShape }, type, context)
+    return defineClass(shape, shape.inherits.firstOrNull()?.let { it.resolve as NodeShape }, shape, context)
   }
 
   private fun defineClass(
@@ -599,7 +599,7 @@ class KotlinTypeRegistry(
     var inheritedProperties = collectProperties(superShape)
     var declaredProperties = propertyContainerShape.properties
 
-    val inheritingTypes = context.unit.findInheritingTypes(shape)
+    val inheritingTypes = context.unit.findInheritingShapes(shape)
 
     if (inheritingTypes.isNotEmpty() && options.contains(ImplementModel)) {
       typeBuilder.modifiers.add(KModifier.OPEN)

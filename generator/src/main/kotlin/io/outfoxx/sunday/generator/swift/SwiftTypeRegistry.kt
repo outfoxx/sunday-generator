@@ -78,7 +78,7 @@ import io.outfoxx.sunday.generator.utils.discriminatorMapping
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findInheritingTypes
+import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -434,7 +434,7 @@ class SwiftTypeRegistry(
     )
 
     val typeName = resolveTypeName(propertyShape.range, propertyContext)
-    return if (propertyShape.minCount ?: 0 == 0) {
+    return if ((propertyShape.minCount ?: 0) == 0) {
       typeName.makeOptional()
     } else {
       typeName
@@ -482,14 +482,14 @@ class SwiftTypeRegistry(
       else -> ANY_VALUE
     }
 
-  private fun processScalarShape(type: ScalarShape, context: SwiftResolutionContext): TypeName =
-    when (type.dataType) {
+  private fun processScalarShape(shape: ScalarShape, context: SwiftResolutionContext): TypeName =
+    when (shape.dataType) {
       DataType.String() ->
 
-        if (type.values.isNotEmpty()) {
-          defineEnum(type, context)
+        if (shape.values.isNotEmpty()) {
+          defineEnum(shape, context)
         } else {
-          when (type.format) {
+          when (shape.format) {
             "time", "datetime-only", "date-time-only" -> DATE
             else -> STRING
           }
@@ -498,13 +498,13 @@ class SwiftTypeRegistry(
       DataType.Boolean() -> BOOL
 
       DataType.Integer() ->
-        when (type.format) {
+        when (shape.format) {
           "int8" -> INT8
           "int16" -> INT16
           "int32" -> INT32
           "int64" -> INT64
           "int", "", null -> INT
-          else -> genError("Integer format '${type.format}' is unsupported", type)
+          else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
       DataType.Long() -> INT64
@@ -523,15 +523,15 @@ class SwiftTypeRegistry(
 
       DataType.Binary() -> DATE
 
-      else -> genError("Scalar data type '${type.dataType}' is unsupported", type)
+      else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
-  private fun processArrayShape(type: ArrayShape, context: SwiftResolutionContext): TypeName {
+  private fun processArrayShape(shape: ArrayShape, context: SwiftResolutionContext): TypeName {
 
-    val elementType = resolveReferencedTypeName(type.items!!, context)
+    val elementType = resolveReferencedTypeName(shape.items!!, context)
 
     val collectionType =
-      if (type.uniqueItems == true) {
+      if (shape.uniqueItems == true) {
         SET
       } else {
         ARRAY
@@ -540,34 +540,34 @@ class SwiftTypeRegistry(
     return collectionType.parameterizedBy(elementType)
   }
 
-  private fun processUnionShape(type: UnionShape, context: SwiftResolutionContext): TypeName =
-    if (type.makesNullable) {
-      resolveReferencedTypeName(type.nullableType, context).makeOptional()
+  private fun processUnionShape(shape: UnionShape, context: SwiftResolutionContext): TypeName =
+    if (shape.makesNullable) {
+      resolveReferencedTypeName(shape.nullableType, context).makeOptional()
     } else {
-      nearestCommonAncestor(type.anyOf, context) ?: ANY
+      nearestCommonAncestor(shape.anyOf, context) ?: ANY
     }
 
-  private fun processNodeShape(type: NodeShape, context: SwiftResolutionContext): TypeName {
+  private fun processNodeShape(shape: NodeShape, context: SwiftResolutionContext): TypeName {
 
-    if (type.properties.isEmpty() && type.inherits.size == 1 && context.unit.findInheritingTypes(type).isEmpty()) {
-      return resolveReferencedTypeName(type.inherits[0], context)
+    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
+      return resolveReferencedTypeName(shape.inherits[0], context)
     }
 
     if (
-      type.properties.isEmpty() &&
-      type.inherits.isEmpty() &&
-      type.closed != true &&
-      context.unit.findInheritingShapes(type).isEmpty()
+      shape.properties.isEmpty() &&
+      shape.inherits.isEmpty() &&
+      shape.closed != true &&
+      context.unit.findInheritingShapes(shape).isEmpty()
     ) {
 
-      val allTypes = collectTypes(type.properties().map { it.range })
+      val allTypes = collectTypes(shape.properties().map { it.range })
 
       val commonType = nearestCommonAncestor(allTypes, context) ?: ANY
 
       return DICTIONARY.parameterizedBy(STRING, commonType)
     }
 
-    return defineClass(type, type.inherits.firstOrNull()?.let { it.resolve as NodeShape }, type, context)
+    return defineClass(shape, shape.inherits.firstOrNull()?.let { it.resolve as NodeShape }, shape, context)
   }
 
   private fun defineClass(
@@ -616,7 +616,7 @@ class SwiftTypeRegistry(
     val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var localDeclaredProperties = originalLocalDeclaredProperties
 
-    val inheritingTypes = context.unit.findInheritingTypes(shape)
+    val inheritingTypes = context.unit.findInheritingShapes(shape)
 
     if (originalInheritedProperties.isNotEmpty() || originalLocalProperties.isNotEmpty()) {
 
@@ -882,7 +882,7 @@ class SwiftTypeRegistry(
         var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
         var encoderPre = ""
 
-        val isLeaf = context.unit.findInheritingTypes(prop.range).isEmpty()
+        val isLeaf = context.unit.findInheritingShapes(prop.range).isEmpty()
         val (refCollection, refElement) = replaceCollectionValueTypesWithReferenceTypes(propertyTypeName)
 
         if (!isLeaf) {
@@ -948,7 +948,7 @@ class SwiftTypeRegistry(
             resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
           val externalDiscriminatorPropertyEnumCases =
             typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
-          val propertyTypeDerivedShapes = context.unit.findInheritingTypes(prop.range)
+          val propertyTypeDerivedShapes = context.unit.findInheritingShapes(prop.range)
 
           if (externalDiscriminatorProperty.optional && prop.required) {
             genError("($ExternalDiscriminator) property is not required but the property it discriminates is", shape)
