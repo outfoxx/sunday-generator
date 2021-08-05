@@ -91,7 +91,7 @@ import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.findInheritingTypes
+import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -593,7 +593,7 @@ class TypeScriptTypeRegistry(
 
   private fun processNodeShape(shape: NodeShape, context: TypeScriptResolutionContext): TypeName {
 
-    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingTypes(shape).isEmpty()) {
+    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
       return resolveReferencedTypeName(shape.inherits[0], context)
     }
 
@@ -660,7 +660,7 @@ class TypeScriptTypeRegistry(
     var inheritedProperties = collectProperties(superShape)
     var declaredProperties = propertyContainerShape.properties
 
-    val inheritingTypes = context.unit.findInheritingTypes(shape)
+    val inheritingTypes = context.unit.findInheritingShapes(shape)
 
     if (inheritedProperties.isNotEmpty() || declaredProperties.isNotEmpty()) {
 
