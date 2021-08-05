@@ -597,7 +597,12 @@ class TypeScriptTypeRegistry(
       return resolveReferencedTypeName(shape.inherits[0], context)
     }
 
-    if (shape.properties.isEmpty() && shape.inherits.isEmpty() && shape.closed != true) {
+    if (
+      shape.properties.isEmpty() &&
+      shape.inherits.isEmpty() &&
+      shape.closed != true &&
+      context.unit.findInheritingShapes(shape).isEmpty()
+    ) {
 
       val allTypes = collectTypes(shape.properties().map { it.range })
 

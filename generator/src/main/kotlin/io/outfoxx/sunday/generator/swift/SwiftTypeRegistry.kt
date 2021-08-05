@@ -553,7 +553,12 @@ class SwiftTypeRegistry(
       return resolveReferencedTypeName(type.inherits[0], context)
     }
 
-    if (type.properties.isEmpty() && type.inherits.isEmpty() && type.closed != true) {
+    if (
+      type.properties.isEmpty() &&
+      type.inherits.isEmpty() &&
+      type.closed != true &&
+      context.unit.findInheritingShapes(type).isEmpty()
+    ) {
 
       val allTypes = collectTypes(type.properties().map { it.range })
 
