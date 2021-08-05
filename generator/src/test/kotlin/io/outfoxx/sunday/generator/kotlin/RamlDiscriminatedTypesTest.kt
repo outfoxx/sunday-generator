@@ -60,8 +60,8 @@ class RamlDiscriminatedTypesTest {
           property = "type"
         )
         @JsonSubTypes(value = [
-          JsonSubTypes.Type(name = "Child1", value = Child1::class),
-          JsonSubTypes.Type(name = "child2", value = Child2::class)
+          JsonSubTypes.Type(value = Child1::class),
+          JsonSubTypes.Type(value = Child2::class)
         ])
         public interface Parent {
           public val type: String
@@ -81,9 +81,11 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("Child1")
         public interface Child1 : Parent {
           public val `value`: String?
 
@@ -104,9 +106,11 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("child2")
         public interface Child2 : Parent {
           public val `value`: String?
 
@@ -149,8 +153,8 @@ class RamlDiscriminatedTypesTest {
           property = "type"
         )
         @JsonSubTypes(value = [
-          JsonSubTypes.Type(name = "Child1", value = Child1::class),
-          JsonSubTypes.Type(name = "child2", value = Child2::class)
+          JsonSubTypes.Type(value = Child1::class),
+          JsonSubTypes.Type(value = Child2::class)
         ])
         public abstract class Parent {
           public abstract val type: String
@@ -179,11 +183,13 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("Child1")
         public class Child1(
           public val `value`: String?,
           public val value1: Int
@@ -234,11 +240,13 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("child2")
         public class Child2(
           public val `value`: String?,
           public val value2: Int
@@ -308,8 +316,8 @@ class RamlDiscriminatedTypesTest {
           property = "type"
         )
         @JsonSubTypes(value = [
-          JsonSubTypes.Type(name = "Child1", value = Child1::class),
-          JsonSubTypes.Type(name = "Child2", value = Child2::class)
+          JsonSubTypes.Type(value = Child1::class),
+          JsonSubTypes.Type(value = Child2::class)
         ])
         public interface Parent {
           public val type: Type
@@ -329,8 +337,10 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.String
 
+        @JsonTypeName("Child1")
         public interface Child1 : Parent {
           public val `value`: String?
         }
@@ -349,8 +359,10 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.String
 
+        @JsonTypeName("Child2")
         public interface Child2 : Parent {
           public val `value`: String?
         }
@@ -390,8 +402,8 @@ class RamlDiscriminatedTypesTest {
           property = "type"
         )
         @JsonSubTypes(value = [
-          JsonSubTypes.Type(name = "Child1", value = Child1::class),
-          JsonSubTypes.Type(name = "Child2", value = Child2::class)
+          JsonSubTypes.Type(value = Child1::class),
+          JsonSubTypes.Type(value = Child2::class)
         ])
         public abstract class Parent {
           public abstract val type: Type
@@ -420,11 +432,13 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("Child1")
         public class Child1(
           public val `value`: String?
         ) : Parent() {
@@ -468,11 +482,13 @@ class RamlDiscriminatedTypesTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("Child2")
         public class Child2(
           public val `value`: String?
         ) : Parent() {

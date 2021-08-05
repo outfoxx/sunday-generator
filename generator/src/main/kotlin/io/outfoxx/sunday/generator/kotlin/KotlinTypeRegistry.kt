@@ -1046,6 +1046,25 @@ class KotlinTypeRegistry(
 
       if (!propertyContainerShape.discriminator.isNullOrBlank()) {
         addJacksonPolymorphism(propertyContainerShape, inheritingTypes, typeBuilder, context)
+      } else if (!typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
+
+        val root = shape.inheritanceRoot as? NodeShape
+        if (root?.discriminator != null && shape is NodeShape) {
+
+          val discriminatorMappings = buildDiscriminatorMappings(shape, context)
+
+          val mappedDiscriminator = discriminatorMappings.entries.find { it.value == shape.id }?.key
+
+          val subTypeName = shape.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: shape.name
+          if (subTypeName != null) {
+
+            typeBuilder.addAnnotation(
+              AnnotationSpec.builder(JsonTypeName::class)
+                .addMember("%S", subTypeName)
+                .build()
+            )
+          }
+        }
       }
     }
 
@@ -1254,16 +1273,11 @@ class KotlinTypeRegistry(
     context: KotlinResolutionContext
   ) {
 
-    val discriminatorMappings = buildDiscriminatorMappings(shape, context)
-
     val subTypes = inheritingTypes
       .map { inheritingType ->
 
-        val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
-
-        "%T(name = %S, value = %T::class)" to listOf(
+        "%T(value = %T::class)" to listOf(
           JsonSubTypes.Type::class,
-          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name,
           resolveReferencedTypeName(inheritingType, context)
         )
       }
