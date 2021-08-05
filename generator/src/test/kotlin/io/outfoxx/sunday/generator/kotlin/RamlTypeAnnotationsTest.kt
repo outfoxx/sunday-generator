@@ -311,8 +311,8 @@ class RamlTypeAnnotationsTest {
         import kotlin.String
 
         @JsonSubTypes(value = [
-          JsonSubTypes.Type(name = "Child1", value = Child1::class),
-          JsonSubTypes.Type(name = "child2", value = Child2::class)
+          JsonSubTypes.Type(value = Child1::class),
+          JsonSubTypes.Type(value = Child2::class)
         ])
         public abstract class Parent {
           @get:JsonIgnore
@@ -342,11 +342,13 @@ class RamlTypeAnnotationsTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("Child1")
         public class Child1(
           public val `value`: String?
         ) : Parent() {
@@ -390,11 +392,13 @@ class RamlTypeAnnotationsTest {
       """
         package io.test
 
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
 
+        @JsonTypeName("child2")
         public class Child2(
           public val `value`: String?
         ) : Parent() {
