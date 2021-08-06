@@ -1044,12 +1044,19 @@ class KotlinTypeRegistry(
 
     if (options.contains(JacksonAnnotations)) {
 
-      if (!propertyContainerShape.discriminator.isNullOrBlank()) {
+      if (
+        !propertyContainerShape.discriminator.isNullOrBlank() ||
+        shape.findBoolAnnotation(ExternallyDiscriminated, null) == true
+      ) {
+
         addJacksonPolymorphism(propertyContainerShape, inheritingTypes, typeBuilder, context)
       } else if (!typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
 
         val root = shape.inheritanceRoot as? NodeShape
-        if (root?.discriminator != null && shape is NodeShape) {
+        if (
+          (root?.discriminator != null || root?.findBoolAnnotation(ExternallyDiscriminated, null) == true) &&
+          shape is NodeShape
+        ) {
 
           val discriminatorMappings = buildDiscriminatorMappings(shape, context)
 
