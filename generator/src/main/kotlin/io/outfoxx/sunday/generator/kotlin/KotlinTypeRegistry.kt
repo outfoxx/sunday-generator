@@ -738,19 +738,46 @@ class KotlinTypeRegistry(
               .addStatement("if (this === other) return true")
               .addStatement("if (javaClass != other?.javaClass) return false", className)
 
-          if (definedProperties.isNotEmpty()) {
+          if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
             equalsBuilder
               .addCode("\n")
               .addStatement("other as %T", className)
           }
 
           equalsBuilder.addCode("\n")
-
-          if (superShape != null) {
-            equalsBuilder.addStatement("if (!super.equals(other)) return false")
-          }
         } else {
           equalsBuilder = null
+        }
+
+        fun addEquals(propertyTypeName: TypeName, property: PropertyShape) {
+          equalsBuilder ?: return
+          if (propertyTypeName.isArray) {
+            if (propertyTypeName.isNullable) {
+              equalsBuilder
+                .beginControlFlow("if (%L != null)", property.kotlinIdentifierName)
+                .addStatement("if (other.%L == null) return false", property.kotlinIdentifierName)
+                .addStatement(
+                  "if (!%L.contentEquals(other.%L)) return false",
+                  property.kotlinIdentifierName, property.kotlinIdentifierName
+                )
+                .endControlFlow()
+                .addStatement("else if (other.%L != null) return false", property.kotlinIdentifierName)
+            } else {
+              equalsBuilder.addStatement(
+                "if (!%L.contentEquals(other.%L)) return false",
+                property.kotlinIdentifierName, property.kotlinIdentifierName
+              )
+            }
+          } else {
+            equalsBuilder.addStatement(
+              "if (%L != other.%L) return false",
+              property.kotlinIdentifierName, property.kotlinIdentifierName
+            )
+          }
+        }
+
+        inheritedProperties.forEach { inheritedProperty ->
+          addEquals(resolvePropertyTypeName(inheritedProperty, className, context), inheritedProperty)
         }
 
         // Generate related code for each property
@@ -849,33 +876,7 @@ class KotlinTypeRegistry(
               }
             }
 
-            // Add equals value
-            //
-            if (equalsBuilder != null) {
-              if (declaredPropertyTypeName.isArray) {
-                if (declaredPropertyTypeName.isNullable) {
-                  equalsBuilder
-                    .beginControlFlow("if (%L != null)", declaredProperty.kotlinIdentifierName)
-                    .addStatement("if (other.%L == null) return false", declaredProperty.kotlinIdentifierName)
-                    .addStatement(
-                      "if (!%L.contentEquals(other.%L)) return false",
-                      declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName
-                    )
-                    .endControlFlow()
-                    .addStatement("else if (other.%L != null) return false", declaredProperty.kotlinIdentifierName)
-                } else {
-                  equalsBuilder.addStatement(
-                    "if (!%L.contentEquals(other.%L)) return false",
-                    declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName
-                  )
-                }
-              } else {
-                equalsBuilder.addStatement(
-                  "if (%L != other.%L) return false",
-                  declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName
-                )
-              }
-            }
+            addEquals(declaredPropertyTypeName, declaredProperty)
           }
 
           typeBuilder.addProperty(declaredPropertyBuilder.build())
