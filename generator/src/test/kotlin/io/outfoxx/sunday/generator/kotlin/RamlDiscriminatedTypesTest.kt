@@ -213,7 +213,6 @@ class RamlDiscriminatedTypesTest {
 
             other as Child1
 
-            if (!super.equals(other)) return false
             if (value != other.value) return false
             if (value1 != other.value1) return false
 
@@ -270,7 +269,6 @@ class RamlDiscriminatedTypesTest {
         
             other as Child2
         
-            if (!super.equals(other)) return false
             if (value != other.value) return false
             if (value2 != other.value2) return false
         
@@ -459,7 +457,6 @@ class RamlDiscriminatedTypesTest {
 
             other as Child1
 
-            if (!super.equals(other)) return false
             if (value != other.value) return false
 
             return true
@@ -509,7 +506,6 @@ class RamlDiscriminatedTypesTest {
         
             other as Child2
         
-            if (!super.equals(other)) return false
             if (value != other.value) return false
         
             return true

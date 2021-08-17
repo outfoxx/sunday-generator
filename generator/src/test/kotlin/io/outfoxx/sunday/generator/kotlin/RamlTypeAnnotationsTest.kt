@@ -369,7 +369,6 @@ class RamlTypeAnnotationsTest {
 
             other as Child1
 
-            if (!super.equals(other)) return false
             if (value != other.value) return false
 
             return true
@@ -419,7 +418,6 @@ class RamlTypeAnnotationsTest {
         
             other as Child2
         
-            if (!super.equals(other)) return false
             if (value != other.value) return false
         
             return true
@@ -555,7 +553,6 @@ class RamlTypeAnnotationsTest {
 
             other as Child1
 
-            if (!super.equals(other)) return false
             if (value != other.value) return false
 
             return true
@@ -602,7 +599,6 @@ class RamlTypeAnnotationsTest {
         
             other as Child2
         
-            if (!super.equals(other)) return false
             if (value != other.value) return false
         
             return true

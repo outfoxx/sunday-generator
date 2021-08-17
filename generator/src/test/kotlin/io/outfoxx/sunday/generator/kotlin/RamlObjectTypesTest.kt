@@ -361,7 +361,7 @@ class RamlObjectTypesTest {
 
             other as Test2
 
-            if (!super.equals(other)) return false
+            if (value != other.value) return false
             if (value2 != other.value2) return false
 
             return true
@@ -396,7 +396,10 @@ class RamlObjectTypesTest {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            if (!super.equals(other)) return false
+            other as Empty
+
+            if (value != other.value) return false
+            if (value2 != other.value2) return false
             return true
           }
 
@@ -445,7 +448,8 @@ class RamlObjectTypesTest {
 
             other as Test3
 
-            if (!super.equals(other)) return false
+            if (value != other.value) return false
+            if (value2 != other.value2) return false
             if (value3 != other.value3) return false
 
             return true
