@@ -60,6 +60,7 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   Asynchronous("asynchronous", false),
   Reactive("reactive", false),
   SSE("sse", false),
+  JsonBody("jsonBody", true),
 
   ;
 

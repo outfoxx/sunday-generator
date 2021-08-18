@@ -26,6 +26,7 @@ import amf.client.model.domain.SecurityRequirement
 import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
@@ -39,6 +40,7 @@ import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
+import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
@@ -462,6 +464,11 @@ class KotlinJAXRSGenerator(
         .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
         .build()
       functionBuilder.addAnnotation(prodAnn)
+    }
+
+    if (operation.findBoolAnnotation(JsonBody, generationMode) == true) {
+      val orig = parameterBuilder.build()
+      return ParameterSpec.builder(orig.name, JsonNode::class.java).build()
     }
 
     // Finalize

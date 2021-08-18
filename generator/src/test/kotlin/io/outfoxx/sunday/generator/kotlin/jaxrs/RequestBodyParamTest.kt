@@ -81,6 +81,113 @@ class RequestBodyParamTest {
   }
 
   @Test
+  fun `test body parameter generation with json override (server mode)`(
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.JsonNode
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(body: JsonNode): Response
+
+          @GET
+          @Path(value = "/tests-client")
+          public fun fetchTestClient(body: Test): Response
+
+          @GET
+          @Path(value = "/tests-server")
+          public fun fetchTestServer(body: JsonNode): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test body parameter generation with json override (client mode)`(
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document ->
+        KotlinJAXRSGenerator(
+          document,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.JsonNode
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(body: JsonNode): Test
+
+          @GET
+          @Path(value = "/tests-client")
+          public fun fetchTestClient(body: JsonNode): Test
+
+          @GET
+          @Path(value = "/tests-server")
+          public fun fetchTestServer(body: Test): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test basic body parameter generation with validation constraints`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
   ) {
