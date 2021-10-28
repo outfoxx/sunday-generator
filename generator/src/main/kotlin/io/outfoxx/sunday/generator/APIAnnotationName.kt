@@ -66,7 +66,7 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
 
   fun matches(test: String, generationMode: GenerationMode? = null) =
     if (modeSpecific && generationMode != null) {
-      test == "$id:${generationMode.name.toLowerCase()}" || test == "sunday-$id-${generationMode.name.toLowerCase()}"
+      test == "$id:${generationMode.name.lowercase()}" || test == "sunday-$id-${generationMode.name.lowercase()}"
     } else {
       test == id || test == "sunday-$id"
     }

@@ -400,7 +400,7 @@ class TypeScriptSundayGenerator(
     fun specGen(): CodeBlock {
       val builder = CodeBlock.builder()
       builder.add("{%>\n")
-      builder.add("method: %S", operation.method.toUpperCase())
+      builder.add("method: %S", operation.method.uppercase())
       builder.add(",\n")
       builder.add("pathTemplate: %S", endPoint.path)
 

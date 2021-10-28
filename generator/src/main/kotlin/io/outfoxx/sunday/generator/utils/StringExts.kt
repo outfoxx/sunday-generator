@@ -24,7 +24,7 @@ fun String.toLowercaseInitialWordOrAbbreviation(): String {
       needToLower = false
       builder.append(it)
     } else {
-      builder.append(it.toLowerCase())
+      builder.append(it.lowercase())
     }
   }
   return builder.toString()
@@ -38,19 +38,19 @@ fun String.toUppercaseInitialWordOrAbbreviation(): String {
       needToUpper = false
       builder.append(it)
     } else {
-      builder.append(it.toUpperCase())
+      builder.append(it.uppercase())
     }
   }
   return builder.toString()
 }
 
-fun String.toUpperCamelCase(): String = split('-', '_', '.').joinToString("") { it.capitalize() }
+fun String.toUpperCamelCase(): String = split('-', '_', '.').joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
 
-fun String.toLowerCamelCase(): String = toUpperCamelCase().decapitalize()
+fun String.toLowerCamelCase(): String = toUpperCamelCase().replaceFirstChar { it.lowercase() }
 
 val camelRegex = """(?<=[a-zA-Z])[A-Z]""".toRegex()
 
 fun String.camelCaseToKebabCase() =
   camelRegex.replace(this) { "-${it.value}" }
-    .toLowerCase()
+    .lowercase()
     .replace("a-p-i", "api")

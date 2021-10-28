@@ -16,7 +16,7 @@ pluginManagement {
     id("com.google.cloud.tools.jib") version jibPluginVersion
     id("com.github.johnrengelman.shadow") version shadowPluginVersion
     id("org.jetbrains.dokka") version dokkaPluginVersion
-    id("net.minecrell.licenser") version licenserPluginVersion
+    id("org.cadixdev.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("com.gradle.plugin-publish") version pluginPublishPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion

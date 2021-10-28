@@ -433,7 +433,7 @@ class TypeScriptTypeRegistry(
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
     val elementTypeName =
-      when (elementTypeNameStr.toLowerCase()) {
+      when (elementTypeNameStr.lowercase()) {
         "boolean" -> BOOLEAN
         "integer" -> NUMBER
         "number" -> NUMBER

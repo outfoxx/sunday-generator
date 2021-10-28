@@ -387,7 +387,7 @@ class SwiftTypeRegistry(
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
     val elementTypeName =
-      when (elementTypeNameStr.toLowerCase()) {
+      when (elementTypeNameStr.lowercase()) {
         "boolean" -> BOOL
         "integer" -> INT
         "number" -> DOUBLE
@@ -1175,7 +1175,7 @@ class SwiftTypeRegistry(
         val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
 
         val fluentBuilder =
-          FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.capitalize())
+          FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
             .addModifiers(*if (!isInherited) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
             .returns(className)
             .addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)

@@ -379,7 +379,7 @@ class KotlinTypeRegistry(
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
     val elementTypeName =
-      when (elementTypeNameStr.toLowerCase()) {
+      when (elementTypeNameStr.lowercase()) {
         "boolean" -> BOOLEAN
         "integer" -> INT
         "number" -> DOUBLE
@@ -1083,7 +1083,7 @@ class KotlinTypeRegistry(
 
     val className = typeNameOf(shape, context)
 
-    val enumBuilder = defineType(className, (TypeSpec)::enumBuilder)
+    val enumBuilder = defineType(className, TypeSpec::enumBuilder)
 
     shape.values.filterIsInstance<ScalarNode>().forEach { enum ->
 

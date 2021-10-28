@@ -18,7 +18,7 @@ package io.outfoxx.sunday.generator.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.SourceTask
 
@@ -58,7 +58,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.outputDir.set(gen.outputDir)
       }
 
-      project.convention.findPlugin(JavaPluginConvention::class.java)
+      project.extensions.findByType(JavaPluginExtension::class.java)
         ?.sourceSets?.findByName(MAIN_SOURCE_SET_NAME)?.java?.srcDir(genTask.get().outputDir)
 
       project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {

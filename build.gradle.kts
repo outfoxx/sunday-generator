@@ -1,6 +1,6 @@
 import com.adarshr.gradle.testlogger.TestLoggerExtension
 import com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA
-import net.minecrell.gradle.licenser.LicenseExtension
+import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jmailen.gradle.kotlinter.KotlinterExtension
@@ -8,7 +8,7 @@ import org.jmailen.gradle.kotlinter.KotlinterExtension
 plugins {
   kotlin("jvm") apply false
   id("org.jetbrains.dokka")
-  id("net.minecrell.licenser") apply false
+  id("org.cadixdev.licenser") apply false
   id("org.jmailen.kotlinter") apply false
   id("com.github.johnrengelman.shadow") apply false
   id("com.adarshr.test-logger") apply false
@@ -17,7 +17,6 @@ plugins {
 
 repositories {
   mavenCentral()
-  jcenter()
 }
 
 val releaseVersion: String by project
@@ -30,7 +29,7 @@ subprojects {
   apply(plugin = "org.jetbrains.kotlin.jvm")
   apply(plugin = "jacoco")
   apply(plugin = "org.jetbrains.dokka")
-  apply(plugin = "net.minecrell.licenser")
+  apply(plugin = "org.cadixdev.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "signing")
   apply(plugin = "com.adarshr.test-logger")
@@ -116,7 +115,7 @@ subprojects {
   }
 
   configure<LicenseExtension> {
-    header = file("${rootDir}/HEADER.txt")
+    setHeader(file("${rootDir}/HEADER.txt"))
     include("**/*.kt")
   }
 

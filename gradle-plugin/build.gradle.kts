@@ -32,6 +32,7 @@ dependencies {
 }
 
 tasks.shadowJar.configure {
+  isZip64 = true
   archiveClassifier.set("")
   dependencies {
     exclude(dependency("org.jetbrains.kotlin:.*"))

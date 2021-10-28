@@ -87,7 +87,7 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
       processed.validationLog.forEach {
         val out = if (it.level == APIProcessor.Result.Level.Error) System.err else System.out
-        out.println("${it.level.toString().toLowerCase()}| ${it.file}:${it.line}: ${it.message}")
+        out.println("${it.level.toString().lowercase()}| ${it.file}:${it.line}: ${it.message}")
       }
 
       if (!processed.isValid) {

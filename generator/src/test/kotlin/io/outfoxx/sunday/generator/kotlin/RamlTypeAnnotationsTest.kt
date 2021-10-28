@@ -79,7 +79,7 @@ class RamlTypeAnnotationsTest {
     expectedPackageName: String
   ) {
 
-    val testAnnName = annotationName.split("""(?=[A-Z])|:""".toRegex()).joinToString("-") { it.toLowerCase() }
+    val testAnnName = annotationName.split("""(?=[A-Z])|:""".toRegex()).joinToString("-") { it.lowercase() }
     val testRamlFile = "raml/type-gen/annotations/type-$testAnnName.raml"
     val testUri = resourceClassLoader.getResource(testRamlFile)?.toURI()
       ?: fail("unable to find test RAML file: $testRamlFile")
