@@ -54,7 +54,7 @@ class GradlePluginTests {
       import static io.outfoxx.sunday.generator.GenerationMode.*
 
       plugins {
-        id 'org.jetbrains.kotlin.jvm' version '1.4.30'
+        id 'org.jetbrains.kotlin.jvm' version '1.5.31'
         id 'io.outfoxx.sunday-generator'
       }
 
@@ -63,7 +63,6 @@ class GradlePluginTests {
         maven {
           url = "https://oss.sonatype.org/content/repositories/snapshots/"
         }
-        jcenter()
         maven {
           url = "https://repository-master.mulesoft.org/nexus/content/repositories/releases"
         }

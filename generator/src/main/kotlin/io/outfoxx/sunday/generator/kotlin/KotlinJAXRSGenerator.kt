@@ -253,7 +253,7 @@ class KotlinJAXRSGenerator(
     val parameterTypeNameContext =
       KotlinResolutionContext(
         document,
-        schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.capitalize()}Param")
+        schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.replaceFirstChar { it.titlecase() }}Param")
       )
 
     return typeRegistry.resolveTypeName(parameter.schema!!, parameterTypeNameContext)
@@ -308,7 +308,8 @@ class KotlinJAXRSGenerator(
         scheme.headers?.forEach { header ->
           val headerName = (header.parameterName ?: header.name)!!
           val headerTypeName = resolveSecuritySchemeParameterTypeName(scheme, header, "header")
-          val headerParamName = "${scheme.name.kotlinIdentifierName}${headerName.kotlinIdentifierName.capitalize()}"
+          val headerParamName =
+            "${scheme.name.kotlinIdentifierName}${headerName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }}"
           val parameterBuilder = methodParameter(header, ParameterSpec.builder(headerParamName, headerTypeName))
           parameterBuilder.addAnnotation(
             AnnotationSpec.builder(HeaderParam::class)
@@ -323,7 +324,7 @@ class KotlinJAXRSGenerator(
           val queryParameterTypeName =
             resolveSecuritySchemeParameterTypeName(scheme, queryParameter, "queryParameter")
           val queryParameterParamName =
-            "${scheme.name.kotlinIdentifierName}${queryParameterName.kotlinIdentifierName.capitalize()}"
+            "${scheme.name.kotlinIdentifierName}${queryParameterName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }}"
           val parameterBuilder =
             methodParameter(queryParameter, ParameterSpec.builder(queryParameterParamName, queryParameterTypeName))
           functionBuilder.addParameter(parameterBuilder.build())
@@ -528,7 +529,7 @@ class KotlinJAXRSGenerator(
   }
 
   private fun httpMethod(methodName: String) =
-    when (methodName.toUpperCase()) {
+    when (methodName.uppercase()) {
       "DELETE" -> DELETE::class
       "GET" -> GET::class
       "HEAD" -> HEAD::class

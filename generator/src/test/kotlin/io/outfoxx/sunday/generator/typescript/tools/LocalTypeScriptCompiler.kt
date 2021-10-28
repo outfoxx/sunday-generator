@@ -41,11 +41,12 @@ class LocalTypeScriptCompiler(val command: String, workDir: Path) : TypeScriptCo
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(command, "run", "build")
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
         .start()
 
     val result = buildPkg.waitFor()
 
-    return result to buildPkg.inputStream.readAllBytes().decodeToString()
+    return result to buildPkg.errorStream.readAllBytes().decodeToString()
   }
 
   override fun close() {

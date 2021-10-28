@@ -136,7 +136,7 @@ abstract class KotlinGenerator(
         api.findStringAnnotation(KotlinPkg, generationMode)
           ?: options.defaultServicePackageName
 
-      val serviceSimpleName = "${groupName?.capitalize() ?: ""}${options.serviceSuffix}"
+      val serviceSimpleName = "${groupName?.replaceFirstChar { it.titlecase() } ?: ""}${options.serviceSuffix}"
 
       val serviceTypeName = ClassName.bestGuess("$servicePackageName.$serviceSimpleName")
 

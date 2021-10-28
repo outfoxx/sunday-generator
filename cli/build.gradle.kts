@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
+import com.google.cloud.tools.jib.gradle.PlatformParameters
 
 plugins {
   application
@@ -35,7 +36,6 @@ dependencies {
 application {
   applicationName = "sunday-generator"
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
-  mainClassName = "io.outfoxx.sunday.generator.MainKt"
 }
 
 tasks.shadowJar.configure {
@@ -106,7 +106,17 @@ jib {
     }
   }
   from {
-    image = "openjdk:14-jdk-alpine"
+    image = "openjdk:17-jdk"
+    platforms {
+      platform {
+        os = "linux"
+        architecture = "arm64"
+      }
+      platform {
+        os = "linux"
+        architecture = "amd64"
+      }
+    }
   }
   containerizingMode = "packaged"
 }

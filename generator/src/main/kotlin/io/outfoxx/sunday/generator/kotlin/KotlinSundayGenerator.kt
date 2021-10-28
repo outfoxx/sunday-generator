@@ -410,7 +410,7 @@ class KotlinSundayGenerator(
 
     fun specGen(): CodeBlock {
       val builder = CodeBlock.builder()
-      builder.add("method = %T.%L", Method::class, operation.method.capitalize())
+      builder.add("method = %T.%L", Method::class, operation.method.replaceFirstChar { it.titlecase() })
       builder.add(",\n")
       builder.add("pathTemplate = %S", endPoint.path)
 

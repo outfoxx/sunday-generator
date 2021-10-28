@@ -426,7 +426,7 @@ class SwiftSundayGenerator(
 
     fun reqGen(): CodeBlock {
       val builder = CodeBlock.builder()
-      builder.add("method: .%L", operation.method.toLowerCase())
+      builder.add("method: .%L", operation.method.lowercase())
       builder.add(",\n")
       builder.add("pathTemplate: %S", endPoint.path)
 

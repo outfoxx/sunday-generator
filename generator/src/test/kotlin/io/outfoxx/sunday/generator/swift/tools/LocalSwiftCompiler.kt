@@ -53,11 +53,12 @@ class LocalSwiftCompiler(val command: String, workDir: Path) : SwiftCompiler(wor
           "--build-path", "${swiftBuildDir.resolve("build")}",
           "--cache-path", "${swiftBuildDir.resolve("cache")}",
         )
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
         .start()
 
     val result = buildPkg.waitFor()
 
-    return result to buildPkg.inputStream.readAllBytes().decodeToString()
+    return result to buildPkg.errorStream.readAllBytes().decodeToString()
   }
 
   override fun close() {
