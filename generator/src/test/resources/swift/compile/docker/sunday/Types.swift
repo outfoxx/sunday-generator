@@ -70,30 +70,30 @@ public protocol RequestFactory {
     pathParameters: Parameters?, queryParameters: Parameters?, body: B?,
     contentTypes: [MediaType]?, acceptTypes: [MediaType]?,
     headers: Parameters?
-  ) -> RequestPublisher
+  ) async throws -> URLRequest
 
   func response<B: Encodable>(
     method: HTTP.Method, pathTemplate: String,
     pathParameters: Parameters?, queryParameters: Parameters?, body: B?,
     contentTypes: [MediaType]?, acceptTypes: [MediaType]?,
     headers: Parameters?
-  ) -> RequestResponsePublisher
+  ) async throws -> (Data?, HTTPURLResponse)
 
-  func response(request: URLRequest) -> RequestResponsePublisher
+  func response(request: URLRequest) async throws -> (Data?, HTTPURLResponse)
 
   func result<B: Encodable, D: Decodable>(
     method: HTTP.Method, pathTemplate: String,
     pathParameters: Parameters?, queryParameters: Parameters?, body: B?,
     contentTypes: [MediaType]?, acceptTypes: [MediaType]?,
     headers: Parameters?
-  ) -> RequestResultPublisher<D>
+  ) async throws -> D
 
   func result<B: Encodable>(
     method: HTTP.Method, pathTemplate: String,
     pathParameters: Parameters?, queryParameters: Parameters?, body: B?,
     contentTypes: [MediaType]?, acceptTypes: [MediaType]?,
     headers: Parameters?
-  ) -> RequestCompletePublisher
+  ) async throws
 
   func eventSource<B: Encodable>(
     method: HTTP.Method, pathTemplate: String,
@@ -107,7 +107,7 @@ public protocol RequestFactory {
     pathParameters: Parameters?, queryParameters: Parameters?, body: B?,
     contentTypes: [MediaType]?, acceptTypes: [MediaType]?,
     headers: Parameters?, eventTypes: [String: AnyTextMediaTypeDecodable]
-  ) -> RequestEventPublisher<D>
+  ) -> AsyncStream<D>
 
   func close(cancelOutstandingRequests: Bool)
 
@@ -159,11 +159,5 @@ public struct AnyTextMediaTypeDecodable {
     return AnyTextMediaTypeDecodable()
   }
 }
-
-public typealias RequestPublisher = AnyPublisher<URLRequest, Error>
-public typealias RequestResponsePublisher = AnyPublisher<(response: HTTPURLResponse, data: Data?), Error>
-public typealias RequestResultPublisher<T> = AnyPublisher<T, Error>
-public typealias RequestCompletePublisher = RequestResultPublisher<Void>
-public typealias RequestEventPublisher<E> = AnyPublisher<E, Error>
 
 public struct EventSource {}

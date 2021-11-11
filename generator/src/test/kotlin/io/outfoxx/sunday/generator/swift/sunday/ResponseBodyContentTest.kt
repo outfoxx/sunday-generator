@@ -74,8 +74,8 @@ class ResponseBodyContentTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -137,8 +137,8 @@ class ResponseBodyContentTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResultPublisher<Data> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> Data {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -199,8 +199,8 @@ class ResponseBodyContentTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResultPublisher<FetchTestResponseBody> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> FetchTestResponseBody {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -296,8 +296,8 @@ class ResponseBodyContentTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestCompletePublisher {
-            return self.requestFactory.result(
+          func fetchTest() async throws {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,

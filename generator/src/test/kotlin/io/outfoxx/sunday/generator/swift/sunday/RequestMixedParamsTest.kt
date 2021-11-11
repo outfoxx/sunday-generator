@@ -79,8 +79,8 @@ class RequestMixedParamsTest {
             select: FetchTestSelectUriParam,
             page: FetchTestPageQueryParam,
             xType: FetchTestXTypeHeaderParam
-          ) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          ) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{select}",
               pathParameters: [
@@ -173,8 +173,8 @@ class RequestMixedParamsTest {
             type: FetchTestTypeUriParam,
             type_: FetchTestTypeQueryParam,
             type__: FetchTestTypeHeaderParam
-          ) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          ) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{type}",
               pathParameters: [

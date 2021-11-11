@@ -78,8 +78,8 @@ class RequestHeaderParamsTest {
             obj: Test,
             strReq: String,
             int: Int = 5
-          ) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          ) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -150,8 +150,8 @@ class RequestHeaderParamsTest {
             int: Int? = nil,
             def1: String? = "test",
             def2: Int? = 10
-          ) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          ) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -219,8 +219,8 @@ class RequestHeaderParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(category: FetchTestCategoryHeaderParam, type: FetchTestTypeHeaderParam) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          func fetchTest(category: FetchTestCategoryHeaderParam, type: FetchTestTypeHeaderParam) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,

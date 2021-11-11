@@ -74,8 +74,8 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Test) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest(body: Test) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -136,8 +136,8 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Test?) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest(body: Test?) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -200,8 +200,8 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Data) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          func fetchTest(body: Data) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,

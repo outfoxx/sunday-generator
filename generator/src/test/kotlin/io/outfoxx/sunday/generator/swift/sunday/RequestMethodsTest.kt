@@ -74,8 +74,8 @@ class RequestMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -87,8 +87,8 @@ class RequestMethodsTest {
             )
           }
 
-          func putTest(body: Test) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func putTest(body: Test) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .put,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -100,8 +100,8 @@ class RequestMethodsTest {
             )
           }
 
-          func postTest(body: Test) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func postTest(body: Test) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .post,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -113,8 +113,8 @@ class RequestMethodsTest {
             )
           }
 
-          func patchTest(body: Test) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func patchTest(body: Test) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .patch,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -126,8 +126,8 @@ class RequestMethodsTest {
             )
           }
 
-          func deleteTest() -> RequestCompletePublisher {
-            return self.requestFactory.result(
+          func deleteTest() async throws {
+            return try await self.requestFactory.result(
               method: .delete,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -139,8 +139,8 @@ class RequestMethodsTest {
             )
           }
 
-          func headTest() -> RequestCompletePublisher {
-            return self.requestFactory.result(
+          func headTest() async throws {
+            return try await self.requestFactory.result(
               method: .head,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -152,8 +152,8 @@ class RequestMethodsTest {
             )
           }
 
-          func optionsTest() -> RequestCompletePublisher {
-            return self.requestFactory.result(
+          func optionsTest() async throws {
+            return try await self.requestFactory.result(
               method: .options,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -165,8 +165,8 @@ class RequestMethodsTest {
             )
           }
 
-          func patchableTest(body: PatchableTest.Patch) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func patchableTest(body: PatchableTest.Patch) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .patch,
               pathTemplate: "/tests2",
               pathParameters: nil,
@@ -229,16 +229,17 @@ class RequestMethodsTest {
             requestFactory.registerProblem(type: "http://example.com/another_not_found", problemType: AnotherNotFoundProblem.self)
           }
 
-          func fetchTestOrNil(limit: Int) -> RequestResultPublisher<Test?> {
-            return fetchTest(limit: limit)
-              .nilifyResponse(
+          func fetchTestOrNil(limit: Int) async throws -> Test? {
+            return try await nilifyResponse(
                 statuses: [404, 405],
                 problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-              )
+              ) {
+                try await fetchTest(limit: limit)
+              }
           }
 
-          func fetchTest(limit: Int) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest(limit: Int) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
