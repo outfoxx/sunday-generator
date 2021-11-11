@@ -33,18 +33,16 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
+import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
+import io.outfoxx.sunday.generator.swift.utils.DATA_RESPONSE
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
 import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
 import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
-import io.outfoxx.sunday.generator.swift.utils.REQUEST_COMPLETE_PUBLISHER
-import io.outfoxx.sunday.generator.swift.utils.REQUEST_EVENT_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
-import io.outfoxx.sunday.generator.swift.utils.REQUEST_PUBLISHER
-import io.outfoxx.sunday.generator.swift.utils.REQUEST_RESULT_PUBLISHER
-import io.outfoxx.sunday.generator.swift.utils.RESPONSE_PUBLISHER
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
+import io.outfoxx.sunday.generator.swift.utils.URL_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
@@ -247,7 +245,7 @@ class SwiftSundayGenerator(
       if (body !is UnionShape) {
         genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
       }
-      return REQUEST_EVENT_PUBLISHER.parameterizedBy(returnTypeName)
+      return ASYNC_STREAM.parameterizedBy(returnTypeName)
     }
 
     val elementReturnType =
@@ -258,10 +256,9 @@ class SwiftSundayGenerator(
       }
 
     return when {
-      operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST_PUBLISHER
-      operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE_PUBLISHER
-      elementReturnType == VOID -> REQUEST_COMPLETE_PUBLISHER
-      else -> REQUEST_RESULT_PUBLISHER.parameterizedBy(elementReturnType)
+      operation.findBoolAnnotation(RequestOnly, null) == true -> URL_REQUEST
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> DATA_RESPONSE
+      else -> elementReturnType
     }
   }
 
@@ -533,7 +530,7 @@ class SwiftSundayGenerator(
 
       val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
 
-      builder.add("return self.requestFactory.%L(%>\n", factoryMethod)
+      builder.add("return try await self.requestFactory.%L(%>\n", factoryMethod)
 
       builder.add(reqGen())
 
@@ -542,6 +539,10 @@ class SwiftSundayGenerator(
       if (!requestOnly && !responseOnly) {
         addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
       }
+
+      functionBuilder
+        .async(true)
+        .throws(true)
     }
 
     functionBuilder.addCode(builder.build())
@@ -573,14 +574,15 @@ class SwiftSundayGenerator(
       CodeBlock.builder()
         .add(
           """
-          |return %N(${function.parameters.map { it.parameterName }.joinToString { "$it: $it" }})
-          |  .nilifyResponse(
+          |return try await nilifyResponse(
           |    statuses: [${nullifyStatuses.joinToString { "$it" }}],
           |    problemTypes: [${nullifyProblemTypeNames.joinToString { "%T.self" }}]
-          |  )
+          |  ) {
+          |    try await %N(${function.parameters.map { it.parameterName }.joinToString { "$it: $it" }})
+          |  }
           |
           """.trimMargin(),
-          function.name, *nullifyProblemTypeNames
+          *nullifyProblemTypeNames, function.name,
         )
 
     val returnType = function.returnType
@@ -600,6 +602,8 @@ class SwiftSundayGenerator(
           function.attributes.forEach { addAttribute(it) }
           returnTypeOptional?.let { returns(it) }
         }
+        .async(true)
+        .throws(true)
         .addDoc(function.doc)
         .addCode(nullFunCodeBuilder.build())
         .build()

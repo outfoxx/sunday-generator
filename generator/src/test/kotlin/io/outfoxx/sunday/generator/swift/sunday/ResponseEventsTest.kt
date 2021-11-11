@@ -135,7 +135,7 @@ class ResponseEventsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchEvents() -> RequestEventPublisher<Any> {
+          func fetchEvents() -> AsyncStream<Any> {
             return self.requestFactory.eventStream(
               method: .get,
               pathTemplate: "/tests",
@@ -201,7 +201,7 @@ class ResponseEventsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchEvents() -> RequestEventPublisher<Base> {
+          func fetchEvents() -> AsyncStream<Base> {
             return self.requestFactory.eventStream(
               method: .get,
               pathTemplate: "/tests",

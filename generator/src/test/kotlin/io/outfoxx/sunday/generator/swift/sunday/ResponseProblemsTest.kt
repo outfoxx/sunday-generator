@@ -79,8 +79,8 @@ class ResponseProblemsTest {
             requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
           }
 
-          func fetchTest() -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,
@@ -141,8 +141,8 @@ class ResponseProblemsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,

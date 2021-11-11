@@ -56,6 +56,7 @@ class BuilderMethodsTest {
 
     assertEquals(
       """
+        import Foundation
         import Sunday
 
         public class API {
@@ -74,8 +75,8 @@ class BuilderMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestPublisher {
-            return self.requestFactory.request(
+          func fetchTest() async throws -> URLRequest {
+            return try await self.requestFactory.request(
               method: .get,
               pathTemplate: "/test/request",
               pathParameters: nil,
@@ -118,8 +119,9 @@ class BuilderMethodsTest {
 
     assertEquals(
       """
+        import Foundation
         import Sunday
-
+        
         public class API {
 
           public let requestFactory: RequestFactory
@@ -136,8 +138,8 @@ class BuilderMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() -> RequestResponsePublisher {
-            return self.requestFactory.response(
+          func fetchTest() async throws -> (Data?, HTTPURLResponse) {
+            return try await self.requestFactory.response(
               method: .get,
               pathTemplate: "/test/response",
               pathParameters: nil,

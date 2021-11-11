@@ -91,8 +91,8 @@ class BaseUriTest {
             )
           }
 
-          func fetchTest() -> RequestResultPublisher<String> {
-            return self.requestFactory.result(
+          func fetchTest() async throws -> String {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
               pathParameters: nil,

@@ -79,8 +79,8 @@ class RequestUriParamsTest {
             obj: Test,
             strReq: String,
             int: Int = 5
-          ) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          ) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{obj}/{str-req}/{int}/{def}",
               pathParameters: [
@@ -152,8 +152,8 @@ class RequestUriParamsTest {
             str: String,
             def: String,
             int: Int
-          ) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          ) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
               pathParameters: [
@@ -226,8 +226,8 @@ class RequestUriParamsTest {
             def1: String? = "test",
             int: Int? = nil,
             def: String
-          ) -> RequestResultPublisher<Test> {
-            return self.requestFactory.result(
+          ) async throws -> Test {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
               pathParameters: [
@@ -296,8 +296,8 @@ class RequestUriParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) -> RequestResultPublisher<[String : AnyValue]> {
-            return self.requestFactory.result(
+          func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) async throws -> [String : AnyValue] {
+            return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{category}/{type}",
               pathParameters: [
