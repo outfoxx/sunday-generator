@@ -1,0 +1,26 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+- application/yaml
+- application/cbor
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value1: string
+      value2: integer
+
+
+/tests:
+  get:
+    displayName: fetchTest
+    body:
+      application/yaml:
+        type: Test
+    responses:
+      200:
+        body:
+          type: Test
