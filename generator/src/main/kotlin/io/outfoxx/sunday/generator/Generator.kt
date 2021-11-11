@@ -42,20 +42,21 @@ abstract class Generator(
 
     // Sort default media types according to provided parameter
 
-    val sorted = LinkedHashSet<String>()
-    val mediaTypes = api.contentType.filterNotNull() + api.accepts.filterNotNull()
+    val ordered = LinkedHashSet<String>()
+    val mediaTypes = api.contentType.filterNotNull().toMutableList()
+    api.accepts.filterNotNull().filterNot(mediaTypes::contains).forEach(mediaTypes::add)
 
     // Add any from command line also referenced in model
     options.defaultMediaTypes.forEach { defaultMediaType ->
       if (mediaTypes.contains(defaultMediaType)) {
-        sorted.add(defaultMediaType)
+        ordered.add(defaultMediaType)
       }
     }
 
     // Ensure all from model are included (in declaration order)
-    mediaTypes.forEach { sorted.add(it) }
+    mediaTypes.forEach { ordered.add(it) }
 
-    this.defaultMediaTypes = sorted.toList()
+    this.defaultMediaTypes = ordered.toList()
   }
 
   abstract fun generateServiceTypes()

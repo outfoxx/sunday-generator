@@ -135,7 +135,11 @@ class KotlinJAXRSGenerator(
     val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
     typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
 
-    if (options.defaultMediaTypes.isNotEmpty()) {
+    if (defaultMediaTypes.isNotEmpty()) {
+
+      if (defaultMediaTypes.size > 1 && generationMode == Client) {
+        println("[WARN] Using multiple default media types for a JAX-RS client is not supported, the first value will be chosen")
+      }
 
       val prodAnn = AnnotationSpec.builder(Produces::class)
         .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
@@ -143,7 +147,7 @@ class KotlinJAXRSGenerator(
       typeBuilder.addAnnotation(prodAnn)
 
       val consAnn = AnnotationSpec.builder(Consumes::class)
-        .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
+        .addMember("value = [%S]", defaultMediaTypes.first())
         .build()
       typeBuilder.addAnnotation(consAnn)
     }
@@ -461,10 +465,10 @@ class KotlinJAXRSGenerator(
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
 
     if (mediaTypesForPayloads.isNotEmpty() && mediaTypesForPayloads != defaultMediaTypes) {
-      val prodAnn = AnnotationSpec.builder(Consumes::class)
-        .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
+      val consAnn = AnnotationSpec.builder(Consumes::class)
+        .addMember("value = [%S]", mediaTypesForPayloads.first())
         .build()
-      functionBuilder.addAnnotation(prodAnn)
+      functionBuilder.addAnnotation(consAnn)
     }
 
     if (operation.findBoolAnnotation(JsonBody, generationMode) == true) {
