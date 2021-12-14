@@ -54,6 +54,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.coroutines.set(gen.coroutines)
         genTask.reactiveResponseType.set(gen.reactiveResponseType)
         genTask.explicitSecurityParameters.set(gen.explicitSecurityParameters)
+        genTask.baseUriPathOnly.set(gen.baseUriPathOnly)
         genTask.defaultMediaTypes.set(gen.defaultMediaTypes)
         genTask.outputDir.set(gen.outputDir)
       }
