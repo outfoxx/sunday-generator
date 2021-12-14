@@ -120,6 +120,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val baseUriPathOnly: Property<Boolean> = objects.property(Boolean::class.java)
+
+  @Input
+  @Optional
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
 
   @OutputDirectory
@@ -205,6 +209,7 @@ open class SundayGenerate
                 coroutines.orNull ?: false,
                 reactiveResponseType.orNull,
                 explicitSecurityParameters.orNull ?: false,
+                baseUriPathOnly.orNull ?: false,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),

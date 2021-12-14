@@ -52,6 +52,12 @@ class KotlinJAXRSGenerateCommand :
     help = "Include security parameters in service methods"
   ).flag(default = false)
 
+  private val baseUriPathOnly
+    by option(
+    "-base-uri-path-only",
+    help = "Only uses the path portion of the baseUri for a service's @Path annotation"
+  ).flag(default = false)
+
   override fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry) =
     KotlinJAXRSGenerator(
       document,
@@ -60,6 +66,7 @@ class KotlinJAXRSGenerateCommand :
         coroutineServiceMethods,
         reactiveResponseType,
         explicitSecurityParameters,
+        baseUriPathOnly,
         servicePackageName ?: packageName,
         problemBaseUri,
         mediaTypes.toList(),
