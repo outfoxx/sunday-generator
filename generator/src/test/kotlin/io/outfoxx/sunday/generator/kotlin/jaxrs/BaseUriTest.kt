@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
@@ -37,7 +38,7 @@ import java.net.URI
 class BaseUriTest {
 
   @Test
-  fun `test baseUrl (full) generation in API`(
+  fun `test baseUrl generation in API (client mode)`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
   ) {
 
@@ -85,30 +86,18 @@ class BaseUriTest {
   }
 
   @Test
-  fun `test baseUrl (path only) generation in API`(
+  fun `test baseUrl generation in API (server mode)`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Client, setOf())
-
-    val options =
-      KotlinJAXRSGenerator.Options(
-        kotlinJAXRSTestOptions.coroutineServiceMethods,
-        kotlinJAXRSTestOptions.reactiveResponseType,
-        kotlinJAXRSTestOptions.explicitSecurityParameters,
-        true,
-        kotlinJAXRSTestOptions.defaultServicePackageName,
-        kotlinJAXRSTestOptions.defaultProblemBaseUri,
-        kotlinJAXRSTestOptions.defaultMediaTypes,
-        kotlinJAXRSTestOptions.serviceSuffix
-      )
+    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
         KotlinJAXRSGenerator(
           document,
           typeRegistry,
-          options,
+          kotlinJAXRSTestOptions,
         )
       }
 
@@ -122,7 +111,7 @@ class BaseUriTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
-        import kotlin.String
+        import javax.ws.rs.core.Response
         
         @Path(value = "/api/1")
         @Produces(value = ["application/json"])
@@ -130,7 +119,7 @@ class BaseUriTest {
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): String
+          public fun fetchTest(): Response
         }
 
       """.trimIndent(),

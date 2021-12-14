@@ -22,7 +22,7 @@ val kotlinJAXRSTestOptions = KotlinJAXRSGenerator.Options(
   false,
   null,
   false,
-  false,
+  null,
   "io.test.service",
   "http://example.com/",
   listOf("application/json"),

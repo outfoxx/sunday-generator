@@ -119,7 +119,7 @@ class KotlinJAXRSGenerator(
     val coroutineServiceMethods: Boolean,
     val reactiveResponseType: String?,
     val explicitSecurityParameters: Boolean,
-    val baseUriPathOnly: Boolean,
+    val baseUriMode: BaseUriMode?,
     defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
@@ -129,7 +129,13 @@ class KotlinJAXRSGenerator(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
-  )
+  ) {
+
+    enum class BaseUriMode {
+      FULL,
+      PATH_ONLY,
+    }
+  }
 
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
@@ -149,15 +155,22 @@ class KotlinJAXRSGenerator(
 
       val expandedBaseURL = UriTemplate.buildFromTemplate(baseURL).build().expand(parameterValues)
 
+      val baseUriMode =
+        options.baseUriMode ?: if (generationMode == Client)
+          Options.BaseUriMode.FULL
+        else
+          Options.BaseUriMode.PATH_ONLY
+
       val finalBaseURL =
-        if (options.baseUriPathOnly) {
-          try {
-            URL(expandedBaseURL).path
-          } catch (x: Throwable) {
-            expandedBaseURL.replace("//", "").dropWhile { it != '/' }
-          }
-        } else {
-          expandedBaseURL
+        when (baseUriMode) {
+          Options.BaseUriMode.FULL -> expandedBaseURL
+
+          Options.BaseUriMode.PATH_ONLY ->
+            try {
+              URL(expandedBaseURL).path
+            } catch (x: Throwable) {
+              expandedBaseURL.replace("//", "").dropWhile { it != '/' }
+            }
         }
 
       typeBuilder.addAnnotation(

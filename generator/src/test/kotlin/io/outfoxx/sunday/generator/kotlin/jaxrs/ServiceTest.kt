@@ -45,7 +45,7 @@ class ServiceTest {
       false,
       null,
       false,
-      false,
+      null,
       "io.test.service",
       "http://example.com/",
       listOf("application/cbor", "application/yaml"),

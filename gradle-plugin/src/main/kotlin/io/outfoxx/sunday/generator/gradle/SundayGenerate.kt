@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
@@ -120,7 +121,7 @@ open class SundayGenerate
 
   @Input
   @Optional
-  val baseUriPathOnly: Property<Boolean> = objects.property(Boolean::class.java)
+  val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)
 
   @Input
   @Optional
@@ -209,7 +210,7 @@ open class SundayGenerate
                 coroutines.orNull ?: false,
                 reactiveResponseType.orNull,
                 explicitSecurityParameters.orNull ?: false,
-                baseUriPathOnly.orNull ?: false,
+                baseUriMode.orNull,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),

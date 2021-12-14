@@ -22,6 +22,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 class KotlinJAXRSGenerateCommand :
@@ -54,9 +55,9 @@ class KotlinJAXRSGenerateCommand :
 
   private val baseUriPathOnly
     by option(
-    "-base-uri-path-only",
-    help = "Only uses the path portion of the baseUri for a service's @Path annotation"
-  ).flag(default = false)
+    "-base-uri-mode",
+    help = "Portion of the baseUri that will be used in each generated service's @Path annotation",
+  ).enum<BaseUriMode> { it.name.replace("_", "-").lowercase() }
 
   override fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry) =
     KotlinJAXRSGenerator(
