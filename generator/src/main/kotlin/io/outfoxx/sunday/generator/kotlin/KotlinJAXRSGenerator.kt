@@ -26,6 +26,7 @@ import amf.client.model.domain.SecurityRequirement
 import amf.client.model.domain.SecurityScheme
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
+import com.damnhandy.uri.template.UriTemplate
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.AnnotationSpec
@@ -71,6 +72,7 @@ import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
 import io.outfoxx.sunday.generator.utils.resolve
+import io.outfoxx.sunday.generator.utils.scalarValue
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.scheme
 import io.outfoxx.sunday.generator.utils.schemes
@@ -78,6 +80,7 @@ import io.outfoxx.sunday.generator.utils.security
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
 import java.net.URI
+import java.net.URL
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.DefaultValue
@@ -88,6 +91,7 @@ import javax.ws.rs.OPTIONS
 import javax.ws.rs.PATCH
 import javax.ws.rs.POST
 import javax.ws.rs.PUT
+import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 import javax.ws.rs.QueryParam
@@ -115,6 +119,7 @@ class KotlinJAXRSGenerator(
     val coroutineServiceMethods: Boolean,
     val reactiveResponseType: String?,
     val explicitSecurityParameters: Boolean,
+    val baseUriPathOnly: Boolean,
     defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
@@ -134,6 +139,33 @@ class KotlinJAXRSGenerator(
 
     val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
     typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
+
+    getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
+
+      val parameterValues = baseURLParameters.associate { param ->
+        val defaultValue = param.defaultValue?.scalarValue?.toString() ?: "{${param.name}}"
+        param.name to defaultValue
+      }
+
+      val expandedBaseURL = UriTemplate.buildFromTemplate(baseURL).build().expand(parameterValues)
+
+      val finalBaseURL =
+        if (options.baseUriPathOnly) {
+          try {
+            URL(expandedBaseURL).path
+          } catch (x: Throwable) {
+            expandedBaseURL.replace("//", "").dropWhile { it != '/' }
+          }
+        } else {
+          expandedBaseURL
+        }
+
+      typeBuilder.addAnnotation(
+        AnnotationSpec.builder(Path::class)
+          .addMember("value = %S", finalBaseURL)
+          .build()
+      )
+    }
 
     if (defaultMediaTypes.isNotEmpty()) {
 
