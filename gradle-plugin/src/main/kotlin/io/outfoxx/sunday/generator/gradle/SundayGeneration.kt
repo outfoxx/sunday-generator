@@ -19,6 +19,7 @@
 package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
@@ -51,7 +52,7 @@ class SundayGeneration(
   var coroutines: Property<Boolean> = objects.property(Boolean::class.java)
   var reactiveResponseType: Property<String> = objects.property(String::class.java)
   val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java)
-  val baseUriPathOnly: Property<Boolean> = objects.property(Boolean::class.java)
+  val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty().convention(outputDirDef)
 }
