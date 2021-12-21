@@ -42,7 +42,7 @@ class BaseUriTest {
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -90,7 +90,7 @@ class BaseUriTest {
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

@@ -39,7 +39,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -87,7 +87,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -135,7 +135,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -187,7 +187,7 @@ class ResponseBodyContentTest {
     @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

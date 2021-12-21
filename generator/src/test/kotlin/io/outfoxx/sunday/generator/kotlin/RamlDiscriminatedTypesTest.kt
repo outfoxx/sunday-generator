@@ -39,7 +39,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -130,7 +130,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -294,7 +294,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -378,7 +378,7 @@ class RamlDiscriminatedTypesTest {
     @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 

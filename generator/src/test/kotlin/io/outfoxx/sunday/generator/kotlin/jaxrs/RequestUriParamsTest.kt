@@ -40,7 +40,7 @@ class RequestUriParamsTest {
     @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -94,7 +94,7 @@ class RequestUriParamsTest {
     @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -149,7 +149,7 @@ class RequestUriParamsTest {
     @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -203,7 +203,7 @@ class RequestUriParamsTest {
     @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -259,7 +259,7 @@ class RequestUriParamsTest {
     @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

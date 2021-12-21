@@ -38,7 +38,7 @@ class ProblemTypesTest {
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -155,7 +155,7 @@ class ProblemTypesTest {
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 

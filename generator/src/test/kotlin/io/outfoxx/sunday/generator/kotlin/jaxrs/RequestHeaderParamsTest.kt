@@ -40,7 +40,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -93,7 +93,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -148,7 +148,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -204,7 +204,7 @@ class RequestHeaderParamsTest {
     @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

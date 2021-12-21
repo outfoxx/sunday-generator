@@ -39,7 +39,7 @@ class RequestMixedParamsTest {
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -105,7 +105,7 @@ class RequestMixedParamsTest {
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

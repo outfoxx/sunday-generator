@@ -56,6 +56,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.explicitSecurityParameters.set(gen.explicitSecurityParameters)
         genTask.baseUriMode.set(gen.baseUriMode)
         genTask.defaultMediaTypes.set(gen.defaultMediaTypes)
+        genTask.generatedAnnotation.set(gen.generatedAnnotation)
         genTask.outputDir.set(gen.outputDir)
       }
 

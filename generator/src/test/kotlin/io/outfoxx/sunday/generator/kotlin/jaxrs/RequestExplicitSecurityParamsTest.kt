@@ -54,7 +54,7 @@ class RequestExplicitSecurityParamsTest {
     @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

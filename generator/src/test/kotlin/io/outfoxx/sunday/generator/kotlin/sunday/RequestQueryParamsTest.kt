@@ -39,7 +39,7 @@ class RequestQueryParamsTest {
     @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -98,7 +98,7 @@ class RequestQueryParamsTest {
     @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -161,7 +161,7 @@ class RequestQueryParamsTest {
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

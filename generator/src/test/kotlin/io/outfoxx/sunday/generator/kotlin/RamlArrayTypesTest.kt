@@ -38,7 +38,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -76,7 +76,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -111,7 +111,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -196,7 +196,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -269,7 +269,7 @@ class RamlArrayTypesTest {
     @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 

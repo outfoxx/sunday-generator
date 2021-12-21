@@ -38,7 +38,7 @@ class RamlValidationConstraintsTest {
     @ResourceUri("raml/type-gen/validation/constraints-array.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -78,7 +78,7 @@ class RamlValidationConstraintsTest {
     @ResourceUri("raml/type-gen/validation/constraints-string.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -114,7 +114,7 @@ class RamlValidationConstraintsTest {
     @ResourceUri("raml/type-gen/validation/constraints-integer.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -176,7 +176,7 @@ class RamlValidationConstraintsTest {
     @ResourceUri("raml/type-gen/validation/constraints-number.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ValidationConstraints))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 

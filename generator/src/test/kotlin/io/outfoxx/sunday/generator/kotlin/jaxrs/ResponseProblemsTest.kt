@@ -43,7 +43,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -87,7 +87,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -131,7 +131,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -188,7 +188,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -245,7 +245,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -302,7 +302,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -359,7 +359,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -416,7 +416,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -473,7 +473,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -530,7 +530,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

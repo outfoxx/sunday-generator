@@ -84,7 +84,7 @@ class RamlTypeAnnotationsTest {
     val testUri = resourceClassLoader.getResource(testRamlFile)?.toURI()
       ?: fail("unable to find test RAML file: $testRamlFile")
 
-    val typeRegistry = KotlinTypeRegistry("io.test", mode, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, mode, setOf())
 
     val builtTypes = generateTypes(testUri, typeRegistry)
       .filterNot { it.key.simpleName == "API" }
@@ -110,7 +110,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
 
     val typeSpec = findType("io.test.Group", generateTypes(testUri, typeRegistry))
 
@@ -149,7 +149,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
 
     val typeSpec = findType("io.test.Group", generateTypes(testUri, typeRegistry))
 
@@ -188,7 +188,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
 
     val typeSpec = findType("io.test.Root", generateTypes(testUri, typeRegistry))
 
@@ -223,7 +223,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
 
     val typeSpec = findType("io.test.Root", generateTypes(testUri, typeRegistry))
 
@@ -258,7 +258,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-kotlin-impl.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -293,7 +293,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -496,7 +496,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-no-property.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -677,7 +677,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel, JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
 
     val exception =
       assertThrows<GenerationException> {
@@ -692,7 +692,7 @@ class RamlTypeAnnotationsTest {
     @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -774,12 +774,12 @@ class RamlTypeAnnotationsTest {
   ) {
     val valueTypeName = ClassName.bestGuess("io.test.Value")
 
-    val serverTypeRegistry = KotlinTypeRegistry("io.test", Server, setOf())
+    val serverTypeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
     val serverTypes = generateTypes(testUri, serverTypeRegistry)
 
     val serverTypeSpec = findType("io.test.Test", serverTypes)
 
-    val clientTypeRegistry = KotlinTypeRegistry("io.test", Client, setOf())
+    val clientTypeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
     val clientTypes = generateTypes(testUri, clientTypeRegistry)
     val clientTypeSpec = findType("io.test.Test", clientTypes)
 

@@ -42,7 +42,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf<Option>()
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -72,7 +72,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf<Option>()
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -101,7 +101,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -160,7 +160,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf<Option>()
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -176,7 +176,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf<Option>()
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val builtTypes =
       generateTypes(testUri, typeRegistry)
@@ -194,7 +194,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf<Option>()
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -281,7 +281,7 @@ class RamlObjectTypesTest {
   ) {
 
     val typeRegistryOptions = setOf(ImplementModel)
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, typeRegistryOptions)
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -475,7 +475,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -504,7 +504,7 @@ class RamlObjectTypesTest {
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(ImplementModel))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
