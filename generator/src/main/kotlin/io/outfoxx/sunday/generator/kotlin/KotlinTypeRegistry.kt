@@ -1139,6 +1139,10 @@ class KotlinTypeRegistry(
             .build()
         )
       }
+    } else if (options.contains(AddGeneratedAnnotation)) {
+      builder.addAnnotation(
+        AnnotationSpec.builder(generatedAnnotationName).build()
+      )
     }
 
     return builder
