@@ -372,6 +372,15 @@ class KotlinTypeRegistry(
       )
     }
 
+    if (options.contains(AddGeneratedAnnotation)) {
+      problemTypeBuilder.addAnnotation(
+        AnnotationSpec.builder(generatedAnnotationName)
+          .addMember("value = [%S]", javaClass.name)
+          .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
+          .build()
+      )
+    }
+
     typeBuilders[problemTypeName] = problemTypeBuilder
 
     return problemTypeName
