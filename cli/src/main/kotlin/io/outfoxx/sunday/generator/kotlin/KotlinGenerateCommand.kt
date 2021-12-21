@@ -73,11 +73,18 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
   ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
+  val generatedAnnotationName
+    by option(
+    "-generated-annotation",
+    help = "Fully qualified name of generated source annotation"
+  )
+
   val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
 
   override val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
       modelPackageName ?: packageName,
+      generatedAnnotationName,
       mode,
       options,
     )

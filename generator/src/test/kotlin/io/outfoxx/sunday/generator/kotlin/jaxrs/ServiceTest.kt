@@ -39,7 +39,7 @@ class ServiceTest {
     @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val options = KotlinJAXRSGenerator.Options(
       false,

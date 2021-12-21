@@ -39,7 +39,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -92,7 +92,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -145,7 +145,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -214,7 +214,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -269,7 +269,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -324,7 +324,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -379,7 +379,7 @@ class RequestCoroutineMethodsTest {
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

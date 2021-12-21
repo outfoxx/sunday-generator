@@ -39,7 +39,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -89,7 +89,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -139,7 +139,7 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

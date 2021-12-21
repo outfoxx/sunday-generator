@@ -40,7 +40,7 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -48,11 +48,23 @@ class RamlGeneratedAnnotationsTest {
   }
 
   @Test
+  fun `test special generated annotation is added to root classes`(
+    @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", "javax.annotation.Generated", GenerationMode.Server, setOf(AddGeneratedAnnotation))
+
+    val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertTrue(type.toString().contains("@javax.`annotation`.Generated"))
+  }
+
+  @Test
   fun `test warning annotations are added to hide public api`(
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(SuppressPublicApiWarnings))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -64,7 +76,7 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -85,7 +97,7 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(SuppressPublicApiWarnings))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

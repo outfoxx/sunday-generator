@@ -39,7 +39,7 @@ class ResponseSseTest {
     @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->
@@ -86,7 +86,7 @@ class ResponseSseTest {
     @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
       generate(testUri, typeRegistry) { document ->

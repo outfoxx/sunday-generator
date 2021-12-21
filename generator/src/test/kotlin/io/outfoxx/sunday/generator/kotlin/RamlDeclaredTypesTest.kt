@@ -43,7 +43,7 @@ class RamlDeclaredTypesTest {
   ) {
 
     // 'Client' mode assigns a specific package, generate in server mode to test collision detection
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val exception =
       assertThrows<GenerationException> {
@@ -59,7 +59,7 @@ class RamlDeclaredTypesTest {
   ) {
 
     // 'Client' mode assigns a specific package, generate in client mode to allow generation
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -87,7 +87,7 @@ class RamlDeclaredTypesTest {
     @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Client, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val nestedTypes = findType("io.test.API", generateTypes(testUri, typeRegistry)).typeSpecs
 

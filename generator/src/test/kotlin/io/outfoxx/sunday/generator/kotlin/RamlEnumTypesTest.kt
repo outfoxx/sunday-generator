@@ -38,7 +38,7 @@ class RamlEnumTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.TestEnum", generateTypes(testUri, typeRegistry))
 
@@ -67,7 +67,7 @@ class RamlEnumTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
 
     val typeSpec = findType("io.test.TestEnum", generateTypes(testUri, typeRegistry))
 

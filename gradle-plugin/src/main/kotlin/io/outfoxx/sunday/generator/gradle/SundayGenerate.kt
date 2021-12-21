@@ -127,6 +127,10 @@ open class SundayGenerate
   @Optional
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
 
+  @Input
+  @Optional
+  val generatedAnnotation: Property<String> = objects.property(String::class.java)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
 
@@ -173,7 +177,7 @@ open class SundayGenerate
       options.remove(ValidationConstraints)
     }
 
-    val typeRegistry = KotlinTypeRegistry(modelPkgName, mode, options)
+    val typeRegistry = KotlinTypeRegistry(modelPkgName, generatedAnnotation.orNull, mode, options)
 
     val apiProcessor = APIProcessor()
 

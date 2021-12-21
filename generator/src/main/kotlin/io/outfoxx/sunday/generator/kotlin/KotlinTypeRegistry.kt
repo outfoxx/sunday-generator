@@ -171,6 +171,7 @@ import kotlin.math.min
 
 class KotlinTypeRegistry(
   val defaultModelPackageName: String,
+  generatedAnnotationName: String?,
   val generationMode: GenerationMode,
   val options: Set<Option>
 ) : TypeRegistry {
@@ -183,6 +184,7 @@ class KotlinTypeRegistry(
     SuppressPublicApiWarnings
   }
 
+  private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
 
@@ -231,7 +233,7 @@ class KotlinTypeRegistry(
 
     if (options.contains(AddGeneratedAnnotation)) {
       serviceType.addAnnotation(
-        AnnotationSpec.builder(Generated::class)
+        AnnotationSpec.builder(generatedAnnotationName)
           .addMember("value = [%S]", javaClass.name)
           .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
           .build()
@@ -1123,7 +1125,7 @@ class KotlinTypeRegistry(
 
       if (options.contains(AddGeneratedAnnotation)) {
         builder.addAnnotation(
-          AnnotationSpec.builder(Generated::class)
+          AnnotationSpec.builder(generatedAnnotationName)
             .addMember("value = [%S]", javaClass.name)
             .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
             .build()

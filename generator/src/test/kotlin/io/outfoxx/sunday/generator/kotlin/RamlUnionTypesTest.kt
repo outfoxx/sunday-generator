@@ -37,7 +37,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -69,7 +69,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -94,7 +94,7 @@ class RamlUnionTypesTest {
     @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.lib.Test", generateTypes(testUri, typeRegistry))
 

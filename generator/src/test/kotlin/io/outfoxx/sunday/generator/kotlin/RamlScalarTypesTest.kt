@@ -37,7 +37,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -76,7 +76,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -118,7 +118,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
@@ -150,7 +150,7 @@ class RamlScalarTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", GenerationMode.Server, setOf())
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
