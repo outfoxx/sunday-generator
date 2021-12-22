@@ -205,6 +205,7 @@ class KotlinJAXRSGenerator(
     if (typeRegistry.options.contains(JacksonAnnotations) && referencedProblemTypes.isNotEmpty()) {
       typeBuilder.addType(
         TypeSpec.companionObjectBuilder()
+          .apply { typeRegistry.addGeneratedTo(this, false) }
           .addFunction(
             FunSpec.builder("registerProblems")
               .addParameter("mapper", ObjectMapper::class)

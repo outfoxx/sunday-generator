@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
+import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
@@ -25,7 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -43,8 +44,27 @@ class RamlGeneratedAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+    assertEquals(
+      """
+        package io.test.service
+        
+        import javax.`annotation`.processing.Generated
+        import kotlin.String
+        
+        @Generated(
+          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+          date = "${typeRegistry.generationTimestamp}"
+        )
+        public interface Test {
+          public val `value`: String
+        }
 
-    assertTrue(type.toString().contains("@javax.`annotation`.processing.Generated"))
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", type)
+          .writeTo(this)
+      }
+    )
   }
 
   @Test
@@ -55,8 +75,27 @@ class RamlGeneratedAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", "javax.annotation.Generated", GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+    assertEquals(
+      """
+        package io.test.service
+        
+        import javax.`annotation`.Generated
+        import kotlin.String
+        
+        @Generated(
+          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+          date = "${typeRegistry.generationTimestamp}"
+        )
+        public interface Test {
+          public val `value`: String
+        }
 
-    assertTrue(type.toString().contains("@javax.`annotation`.Generated"))
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", type)
+          .writeTo(this)
+      }
+    )
   }
 
   @Test
@@ -67,8 +106,24 @@ class RamlGeneratedAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+    assertEquals(
+      """
+        package io.test.service
+        
+        import kotlin.String
+        import kotlin.Suppress
+        
+        @Suppress("RedundantVisibilityModifier")
+        public interface Test {
+          public val `value`: String
+        }
 
-    assertTrue(type.toString().contains("@kotlin.Suppress"))
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", type)
+          .writeTo(this)
+      }
+    )
   }
 
   @Test
@@ -88,8 +143,37 @@ class RamlGeneratedAnnotationsTest {
       }
 
     val type = findType("io.test.service.API", builtTypes)
+    assertEquals(
+      """
+        package io.test.service
 
-    assertTrue(type.toString().contains("@javax.`annotation`.processing.Generated"))
+        import javax.`annotation`.processing.Generated
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.String
+        
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        @Generated(
+          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+          date = "${typeRegistry.generationTimestamp}"
+        )
+        public interface API {
+          @GET
+          @Path(value = "/tests/{id}")
+          public fun fetchTest(@PathParam(value = "id") id: String): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", type)
+          .writeTo(this)
+      }
+    )
   }
 
   @Test
@@ -109,7 +193,33 @@ class RamlGeneratedAnnotationsTest {
       }
 
     val type = findType("io.test.service.API", builtTypes)
+    assertEquals(
+      """
+        package io.test.service
 
-    assertTrue(type.toString().contains("@kotlin.Suppress"))
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.String
+        import kotlin.Suppress
+        
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
+        public interface API {
+          @GET
+          @Path(value = "/tests/{id}")
+          public fun fetchTest(@PathParam(value = "id") id: String): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", type)
+          .writeTo(this)
+      }
+    )
   }
 }

@@ -108,39 +108,41 @@ class KotlinSundayGenerator(
     getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
 
       val companionTypeBuilder = serviceTypeBuilder.tags[TypeSpec.Builder::class] as TypeSpec.Builder
-      companionTypeBuilder.addFunction(
-        FunSpec.builder("baseURL")
-          .returns(URITemplate::class)
-          .apply {
-            baseURLParameters.forEach { param ->
-              val paramTypeName =
-                if (param.defaultValue != null) param.typeName.copy(nullable = false) else param.typeName
-              addParameter(
-                ParameterSpec.builder(param.name, paramTypeName)
-                  .apply {
-                    if (param.defaultValue != null) {
-                      defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
+      companionTypeBuilder
+        .apply { typeRegistry.addGeneratedTo(this, false) }
+        .addFunction(
+          FunSpec.builder("baseURL")
+            .returns(URITemplate::class)
+            .apply {
+              baseURLParameters.forEach { param ->
+                val paramTypeName =
+                  if (param.defaultValue != null) param.typeName.copy(nullable = false) else param.typeName
+                addParameter(
+                  ParameterSpec.builder(param.name, paramTypeName)
+                    .apply {
+                      if (param.defaultValue != null) {
+                        defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
+                      }
                     }
-                  }
-                  .build()
-              )
-            }
-          }
-          .addCode("return %T(⇥\n", URITemplate::class)
-          .addCode("%S,\nmapOf(", baseURL)
-          .apply {
-            baseURLParameters.forEachIndexed { idx, param ->
-
-              addCode("%S to %L", param.name, param.name)
-
-              if (idx < baseURLParameters.size - 1) {
-                addCode(", ")
+                    .build()
+                )
               }
             }
-          }
-          .addCode(")⇤\n)\n")
-          .build()
-      )
+            .addCode("return %T(⇥\n", URITemplate::class)
+            .addCode("%S,\nmapOf(", baseURL)
+            .apply {
+              baseURLParameters.forEachIndexed { idx, param ->
+
+                addCode("%S to %L", param.name, param.name)
+
+                if (idx < baseURLParameters.size - 1) {
+                  addCode(", ")
+                }
+              }
+            }
+            .addCode(")⇤\n)\n")
+            .build()
+        )
     }
 
     referencedContentTypes = mutableSetOf()

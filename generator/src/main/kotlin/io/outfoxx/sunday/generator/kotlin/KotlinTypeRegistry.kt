@@ -184,6 +184,7 @@ class KotlinTypeRegistry(
     SuppressPublicApiWarnings
   }
 
+  val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
@@ -231,14 +232,8 @@ class KotlinTypeRegistry(
 
   fun addServiceType(className: ClassName, serviceType: TypeSpec.Builder) {
 
-    if (options.contains(AddGeneratedAnnotation)) {
-      serviceType.addAnnotation(
-        AnnotationSpec.builder(generatedAnnotationName)
-          .addMember("value = [%S]", javaClass.name)
-          .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
-          .build()
-      )
-    }
+    serviceType.addGenerated(true)
+
     if (options.contains(SuppressPublicApiWarnings)) {
       serviceType.addAnnotation(
         AnnotationSpec.builder(Suppress::class)
@@ -270,6 +265,7 @@ class KotlinTypeRegistry(
         .superclass(AbstractThrowableProblem::class.asTypeName())
         .addType(
           TypeSpec.companionObjectBuilder()
+            .addGenerated(false)
             .addProperty(
               PropertySpec.builder("TYPE", STRING)
                 .addModifiers(KModifier.CONST)
@@ -372,14 +368,7 @@ class KotlinTypeRegistry(
       )
     }
 
-    if (options.contains(AddGeneratedAnnotation)) {
-      problemTypeBuilder.addAnnotation(
-        AnnotationSpec.builder(generatedAnnotationName)
-          .addMember("value = [%S]", javaClass.name)
-          .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
-          .build()
-      )
-    }
+    problemTypeBuilder.addGenerated(true)
 
     typeBuilders[problemTypeName] = problemTypeBuilder
 
@@ -1132,14 +1121,7 @@ class KotlinTypeRegistry(
 
     if (className.enclosingClassName() == null) {
 
-      if (options.contains(AddGeneratedAnnotation)) {
-        builder.addAnnotation(
-          AnnotationSpec.builder(generatedAnnotationName)
-            .addMember("value = [%S]", javaClass.name)
-            .addMember("date = %S", LocalDateTime.now().format(ISO_LOCAL_DATE_TIME))
-            .build()
-        )
-      }
+      builder.addGenerated(true)
 
       if (options.contains(SuppressPublicApiWarnings)) {
         builder.addAnnotation(
@@ -1148,10 +1130,8 @@ class KotlinTypeRegistry(
             .build()
         )
       }
-    } else if (options.contains(AddGeneratedAnnotation)) {
-      builder.addAnnotation(
-        AnnotationSpec.builder(generatedAnnotationName).build()
-      )
+    } else {
+      builder.addGenerated(false)
     }
 
     return builder
@@ -1490,4 +1470,22 @@ class KotlinTypeRegistry(
       val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
+
+  private fun TypeSpec.Builder.addGenerated(verbose: Boolean): TypeSpec.Builder {
+    if (options.contains(AddGeneratedAnnotation)) {
+      addAnnotation(
+        AnnotationSpec.builder(generatedAnnotationName)
+          .apply {
+            if (verbose) {
+              addMember("value = [%S]", this@KotlinTypeRegistry.javaClass.name)
+              addMember("date = %S", generationTimestamp)
+            }
+          }
+          .build()
+      )
+    }
+    return this
+  }
+
+  fun addGeneratedTo(builder: TypeSpec.Builder, verbose: Boolean) = builder.addGenerated(verbose)
 }
