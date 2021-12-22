@@ -232,15 +232,9 @@ class KotlinTypeRegistry(
 
   fun addServiceType(className: ClassName, serviceType: TypeSpec.Builder) {
 
-    serviceType.addGenerated(true)
-
-    if (options.contains(SuppressPublicApiWarnings)) {
-      serviceType.addAnnotation(
-        AnnotationSpec.builder(Suppress::class)
-          .addMember("%S, %S", "RedundantVisibilityModifier", "RedundantUnitReturnType")
-          .build()
-      )
-    }
+    serviceType
+      .addGenerated(true)
+      .addSuppress()
 
     serviceType.tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Service)
 
@@ -262,6 +256,8 @@ class KotlinTypeRegistry(
     val problemTypeBuilder =
       TypeSpec.classBuilder(problemTypeName)
         .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
+        .addGenerated(true)
+        .addSuppress()
         .superclass(AbstractThrowableProblem::class.asTypeName())
         .addType(
           TypeSpec.companionObjectBuilder()
@@ -367,8 +363,6 @@ class KotlinTypeRegistry(
           .build()
       )
     }
-
-    problemTypeBuilder.addGenerated(true)
 
     typeBuilders[problemTypeName] = problemTypeBuilder
 
@@ -1121,15 +1115,9 @@ class KotlinTypeRegistry(
 
     if (className.enclosingClassName() == null) {
 
-      builder.addGenerated(true)
-
-      if (options.contains(SuppressPublicApiWarnings)) {
-        builder.addAnnotation(
-          AnnotationSpec.builder(Suppress::class)
-            .addMember("%S", "RedundantVisibilityModifier")
-            .build()
-        )
-      }
+      builder
+        .addGenerated(true)
+        .addSuppress()
     } else {
       builder.addGenerated(false)
     }
@@ -1488,4 +1476,15 @@ class KotlinTypeRegistry(
   }
 
   fun addGeneratedTo(builder: TypeSpec.Builder, verbose: Boolean) = builder.addGenerated(verbose)
+
+  private fun TypeSpec.Builder.addSuppress(): TypeSpec.Builder {
+    if (options.contains(SuppressPublicApiWarnings)) {
+      addAnnotation(
+        AnnotationSpec.builder(Suppress::class)
+          .addMember("%S, %S", "RedundantVisibilityModifier", "RedundantUnitReturnType")
+          .build()
+      )
+    }
+    return this
+  }
 }
