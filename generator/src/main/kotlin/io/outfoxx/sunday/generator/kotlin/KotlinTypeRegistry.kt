@@ -973,6 +973,7 @@ class KotlinTypeRegistry(
       val patchClassBuilder =
         TypeSpec.classBuilder(patchClassName)
           .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
+          .addGenerated(false)
           .addModifiers(KModifier.DATA)
           .addAnnotation(
             AnnotationSpec.builder(JsonInclude::class)
