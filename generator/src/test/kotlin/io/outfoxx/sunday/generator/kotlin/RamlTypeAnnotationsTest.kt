@@ -711,19 +711,26 @@ class RamlTypeAnnotationsTest {
         public class Test(
           public val string: String,
           public val int: Int,
-          public val bool: Boolean
+          public val bool: Boolean,
+          public val nullable: String?,
+          public val optional: String?
         ) {
           public fun copy(
             string: String? = null,
             int: Int? = null,
-            bool: Boolean? = null
-          ) = Test(string ?: this.string, int ?: this.int, bool ?: this.bool)
+            bool: Boolean? = null,
+            nullable: String? = null,
+            optional: String? = null
+          ) = Test(string ?: this.string, int ?: this.int, bool ?: this.bool, nullable ?: this.nullable,
+              optional ?: this.optional)
 
           public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + string.hashCode()
             result = 31 * result + int.hashCode()
             result = 31 * result + bool.hashCode()
+            result = 31 * result + (nullable?.hashCode() ?: 0)
+            result = 31 * result + (optional?.hashCode() ?: 0)
             return result
           }
 
@@ -736,6 +743,8 @@ class RamlTypeAnnotationsTest {
             if (string != other.string) return false
             if (int != other.int) return false
             if (bool != other.bool) return false
+            if (nullable != other.nullable) return false
+            if (optional != other.optional) return false
 
             return true
           }
@@ -743,20 +752,26 @@ class RamlTypeAnnotationsTest {
           public override fun toString() = ""${'"'}
           |Test(string='${'$'}string',
           | int='${'$'}int',
-          | bool='${'$'}bool')
+          | bool='${'$'}bool',
+          | nullable='${'$'}nullable',
+          | optional='${'$'}optional')
           ""${'"'}.trimMargin()
 
           public fun patch(source: ObjectNode): Patch = Patch(
-            if (source.has("string")) Optional.ofNullable(string) else null,
-            if (source.has("int")) Optional.ofNullable(int) else null,
-            if (source.has("bool")) Optional.ofNullable(bool) else null
+            if (source.has("string")) string else null,
+            if (source.has("int")) int else null,
+            if (source.has("bool")) bool else null,
+            if (source.has("nullable")) Optional.ofNullable(nullable) else null,
+            if (source.has("optional")) Optional.ofNullable(optional) else null
           )
 
           @JsonInclude(JsonInclude.Include.NON_NULL)
           public data class Patch(
-            public val string: Optional<String>? = null,
-            public val int: Optional<Int>? = null,
-            public val bool: Optional<Boolean>? = null
+            public val string: String? = null,
+            public val int: Int? = null,
+            public val bool: Boolean? = null,
+            public val nullable: Optional<String>? = null,
+            public val optional: Optional<String>? = null
           )
         }
         

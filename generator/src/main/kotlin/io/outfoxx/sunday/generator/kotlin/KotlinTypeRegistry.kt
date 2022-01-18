@@ -134,6 +134,7 @@ import io.outfoxx.sunday.generator.utils.minLength
 import io.outfoxx.sunday.generator.utils.minimum
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nullableType
+import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.properties
@@ -184,7 +185,7 @@ class KotlinTypeRegistry(
     SuppressPublicApiWarnings
   }
 
-  val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)
+  val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)!!
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
@@ -985,27 +986,39 @@ class KotlinTypeRegistry(
       val patchFields = mutableListOf<CodeBlock>()
 
       for (propertyDecl in propertyContainerShape.properties) {
-        val propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context).copy(nullable = false)
-        val optionalPropertyTypeName =
-          Optional::class.asTypeName().parameterizedBy(propertyTypeName).copy(nullable = true)
+        var propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
+        val isPropertyTypeNameNullable = propertyTypeName.isNullable || propertyDecl.optional
+        if (isPropertyTypeNameNullable) {
+          propertyTypeName = Optional::class.asTypeName().parameterizedBy(propertyTypeName.copy(nullable = false))
+        }
+        val nullablePropertyTypeName = propertyTypeName.copy(nullable = true)
 
         patchClassBuilder.addProperty(
-          PropertySpec.builder(propertyDecl.kotlinIdentifierName, optionalPropertyTypeName)
+          PropertySpec.builder(propertyDecl.kotlinIdentifierName, nullablePropertyTypeName)
             .initializer(propertyDecl.kotlinIdentifierName)
             .build()
         )
         patchClassConsBuilder.addParameter(
-          ParameterSpec.builder(propertyDecl.kotlinIdentifierName, optionalPropertyTypeName)
+          ParameterSpec.builder(propertyDecl.kotlinIdentifierName, nullablePropertyTypeName)
             .defaultValue("null")
             .build()
         )
 
-        patchFields.add(
-          CodeBlock.of(
-            "if (source.has(%S)) Optional.ofNullable(%L) else null",
-            propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
+        if (isPropertyTypeNameNullable) {
+          patchFields.add(
+            CodeBlock.of(
+              "if (source.has(%S)) Optional.ofNullable(%L) else null",
+              propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
+            )
           )
-        )
+        } else {
+          patchFields.add(
+            CodeBlock.of(
+              "if (source.has(%S)) %L else null",
+              propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
+            )
+          )
+        }
       }
 
       patchClassBuilder.primaryConstructor(patchClassConsBuilder.build())

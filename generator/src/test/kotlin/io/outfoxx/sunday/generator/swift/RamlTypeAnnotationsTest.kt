@@ -1047,22 +1047,30 @@ class RamlTypeAnnotationsTest {
           public let string: String
           public let int: Int
           public let bool: Bool
+          public let nullable: String?
+          public let optional: String?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(string, named: "string")
                 .add(int, named: "int")
                 .add(bool, named: "bool")
+                .add(nullable, named: "nullable")
+                .add(optional, named: "optional")
                 .build()
           }
 
           public init(
             string: String,
             int: Int,
-            bool: Bool
+            bool: Bool,
+            nullable: String?,
+            optional: String?
           ) {
             self.string = string
             self.int = int
             self.bool = bool
+            self.nullable = nullable
+            self.optional = optional
           }
 
           public required init(from decoder: Decoder) throws {
@@ -1070,6 +1078,8 @@ class RamlTypeAnnotationsTest {
             self.string = try container.decode(String.self, forKey: .string)
             self.int = try container.decode(Int.self, forKey: .int)
             self.bool = try container.decode(Bool.self, forKey: .bool)
+            self.nullable = try container.decodeIfPresent(String.self, forKey: .nullable)
+            self.optional = try container.decodeIfPresent(String.self, forKey: .optional)
           }
 
           public func encode(to encoder: Encoder) throws {
@@ -1077,24 +1087,36 @@ class RamlTypeAnnotationsTest {
             try container.encode(self.string, forKey: .string)
             try container.encode(self.int, forKey: .int)
             try container.encode(self.bool, forKey: .bool)
+            try container.encodeIfPresent(self.nullable, forKey: .nullable)
+            try container.encodeIfPresent(self.optional, forKey: .optional)
           }
 
           public func withString(string: String) -> Test {
-            return Test(string: string, int: int, bool: bool)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
           }
 
           public func withInt(int: Int) -> Test {
-            return Test(string: string, int: int, bool: bool)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
           }
 
           public func withBool(bool: Bool) -> Test {
-            return Test(string: string, int: int, bool: bool)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+          }
+        
+          public func withNullable(nullable: String?) -> Test {
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+          }
+        
+          public func withOptional(optional: String?) -> Test {
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
           }
 
           func patch(source: [String : Any]) -> Patch {
             return Patch(string: source.keys.contains("string") ? Optional.some(string) : nil,
                 int: source.keys.contains("int") ? Optional.some(int) : nil,
-                bool: source.keys.contains("bool") ? Optional.some(bool) : nil)
+                bool: source.keys.contains("bool") ? Optional.some(bool) : nil,
+                nullable: source.keys.contains("nullable") ? Optional.some(nullable) : nil,
+                optional: source.keys.contains("optional") ? Optional.some(optional) : nil)
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
@@ -1102,6 +1124,8 @@ class RamlTypeAnnotationsTest {
             case string = "string"
             case int = "int"
             case bool = "bool"
+            case nullable = "nullable"
+            case optional = "optional"
 
           }
 
@@ -1110,15 +1134,21 @@ class RamlTypeAnnotationsTest {
             let string: String?
             let int: Int?
             let bool: Bool?
+            let nullable: String??
+            let optional: String??
 
             init(
               string: String?,
               int: Int?,
-              bool: Bool?
+              bool: Bool?,
+              nullable: String??,
+              optional: String??
             ) {
               self.string = string
               self.int = int
               self.bool = bool
+              self.nullable = nullable
+              self.optional = optional
             }
 
           }
