@@ -804,6 +804,10 @@ class RamlTypeAnnotationsTest {
 
           bool: boolean;
 
+          nullable: string | undefined;
+        
+          optional: string | undefined;
+
         }
 
         export class Test implements Test {
@@ -814,25 +818,40 @@ class RamlTypeAnnotationsTest {
 
           bool: boolean;
 
-          constructor(string: string, int: number, bool: boolean) {
+          nullable: string | undefined;
+        
+          optional: string | undefined;
+        
+          constructor(
+              string: string,
+              int: number,
+              bool: boolean,
+              nullable: string | undefined,
+              optional: string | undefined
+          ) {
             this.string = string;
             this.int = int;
             this.bool = bool;
+            this.nullable = nullable;
+            this.optional = optional;
           }
 
           copy(src: Partial<Test>): Test {
-            return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool);
+            return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool,
+                src.nullable ?? this.nullable, src.optional ?? this.optional);
           }
 
           toString(): string {
-            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}')`;
+            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}')`;
           }
 
           patch(source: Partial<Test>): Test.Patch {
             return new Test.Patch(
               source['string'] !== undefined ? this.string : null,
               source['int'] !== undefined ? this.int : null,
-              source['bool'] !== undefined ? this.bool : null
+              source['bool'] !== undefined ? this.bool : null,
+              source['nullable'] !== undefined ? this.nullable : null,
+              source['optional'] !== undefined ? this.optional : null
             );
           }
 
@@ -842,8 +861,13 @@ class RamlTypeAnnotationsTest {
 
           export class Patch {
 
-            constructor(public string: string | null | undefined, public int: number | null | undefined,
-                public bool: boolean | null | undefined) {
+            constructor(
+                public string: string | null | undefined,
+                public int: number | null | undefined,
+                public bool: boolean | null | undefined,
+                public nullable: string | undefined | null | undefined,
+                public optional: string | null | undefined
+            ) {
             }
 
           }

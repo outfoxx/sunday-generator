@@ -1215,8 +1215,11 @@ class SwiftTypeRegistry(
       val patchFields = mutableListOf<CodeBlock>()
 
       for (propertyDecl in propertyContainerShape.properties) {
-        val propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
-        val optionalPropertyTypeName = propertyTypeName.makeOptional()
+        var propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
+        if (propertyDecl.optional) {
+          propertyTypeName = propertyTypeName.wrapOptional()
+        }
+        val optionalPropertyTypeName = propertyTypeName.wrapOptional()
 
         patchClassBuilder.addProperty(propertyDecl.swiftIdentifierName, optionalPropertyTypeName)
         patchClassConsBuilder.addParameter(propertyDecl.swiftIdentifierName, optionalPropertyTypeName)
