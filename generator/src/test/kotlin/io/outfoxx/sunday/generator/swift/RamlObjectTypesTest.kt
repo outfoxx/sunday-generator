@@ -482,6 +482,158 @@ class RamlObjectTypesTest {
   }
 
   @Test
+  fun `test generated classes for object hierarchy with empty root`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/types/obj-inherits-empty-root.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+
+    val rootSpec = builtTypes[DeclaredTypeName.typeName(".Root")]
+    rootSpec ?: fail("No Root class defined")
+
+    val branchSpec = builtTypes[DeclaredTypeName.typeName(".Branch")]
+    branchSpec ?: fail("No Branch class defined")
+
+    val leafSpec = builtTypes[DeclaredTypeName.typeName(".Leaf")]
+    leafSpec ?: fail("No Leaf class defined")
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Root : Codable, CustomDebugStringConvertible {
+
+          public var debugDescription: String {
+            return DescriptionBuilder(Root.self)
+                .build()
+          }
+
+          public init() {
+          }
+
+          public required init(from decoder: Decoder) throws {
+          }
+
+          public func encode(to encoder: Encoder) throws {
+          }
+
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", rootSpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Branch : Root {
+
+          public let value: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Branch.self)
+                .add(value, named: "value")
+                .build()
+          }
+
+          public init(value: String) {
+            self.value = value
+            super.init()
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.value = try container.decode(String.self, forKey: .value)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.value, forKey: .value)
+          }
+
+          public func withValue(value: String) -> Branch {
+            return Branch(value: value)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case value = "value"
+
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", branchSpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Leaf : Branch {
+
+          public let value2: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Leaf.self)
+                .add(value, named: "value")
+                .add(value2, named: "value2")
+                .build()
+          }
+
+          public init(value: String, value2: String) {
+            self.value2 = value2
+            super.init(value: value)
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.value2 = try container.decode(String.self, forKey: .value2)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.value2, forKey: .value2)
+          }
+
+          public override func withValue(value: String) -> Leaf {
+            return Leaf(value: value, value2: value2)
+          }
+
+          public func withValue2(value2: String) -> Leaf {
+            return Leaf(value: value, value2: value2)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+        
+            case value2 = "value2"
+        
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", leafSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
   fun `test generated class property with kebab or snake case names`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
