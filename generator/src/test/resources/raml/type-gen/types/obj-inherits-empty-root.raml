@@ -1,0 +1,29 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Root:
+    type: object
+
+  Branch:
+    type: Root
+    properties:
+      value: string
+
+  Leaf:
+    type: Branch
+    properties:
+      value2: string
+
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Root

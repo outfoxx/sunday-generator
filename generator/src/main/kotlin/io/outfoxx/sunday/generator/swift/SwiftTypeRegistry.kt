@@ -624,581 +624,578 @@ class SwiftTypeRegistry(
 
     val inheritingTypes = context.unit.findInheritingShapes(shape)
 
-    if (originalInheritedProperties.isNotEmpty() || originalLocalProperties.isNotEmpty()) {
+    /*
+      Computed discriminator values (for generating polymorphic Codable)
+     */
 
-      /*
-        Computed discriminator values (for generating polymorphic Codable)
-       */
+    var discriminatorProperty: PropertyShape? = null
+    val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
+    if (discriminatorPropertyName != null) {
 
-      var discriminatorProperty: PropertyShape? = null
-      val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
-      if (discriminatorPropertyName != null) {
+      discriminatorProperty = (originalInheritedProperties + originalLocalProperties)
+        .find { it.name == discriminatorPropertyName }
+        ?: genError("Discriminator property '$discriminatorPropertyName' not found", shape)
 
-        discriminatorProperty = (originalInheritedProperties + originalLocalProperties)
-          .find { it.name == discriminatorPropertyName }
-          ?: genError("Discriminator property '$discriminatorPropertyName' not found", shape)
+      val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
+      val discriminatorPropertyTypeEnumCases =
+        typeBuilders[discriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
 
-        val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorProperty, className, context)
-        val discriminatorPropertyTypeEnumCases =
-          typeBuilders[discriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
+      // Remove discriminator from property sets
+      inheritedDeclaredProperties = inheritedDeclaredProperties.filter { it.name != discriminatorPropertyName }
+      localProperties = localProperties.filter { it.name != discriminatorPropertyName }
+      localDeclaredProperties = localDeclaredProperties.filter { it.name != discriminatorPropertyName }
 
-        // Remove discriminator from property sets
-        inheritedDeclaredProperties = inheritedDeclaredProperties.filter { it.name != discriminatorPropertyName }
-        localProperties = localProperties.filter { it.name != discriminatorPropertyName }
-        localDeclaredProperties = localDeclaredProperties.filter { it.name != discriminatorPropertyName }
+      // Add abstract discriminator if this is the root of the discriminator tree
 
-        // Add abstract discriminator if this is the root of the discriminator tree
+      if (propertyContainerShape.discriminator == discriminatorPropertyName) {
 
-        if (propertyContainerShape.discriminator == discriminatorPropertyName) {
-
-          typeBuilder.addProperty(
-            PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
-              .getter(
-                FunctionSpec.getterBuilder()
-                  .addStatement("fatalError(\"abstract type method\")")
-                  .build()
-              )
-              .build()
-          )
-
-          if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
-
-            /*
-            Generate polymorphic encoding/decoding type (replaces type name)
-           */
-
-            val refTypeName = className.nestedType(ANY_REF_NAME)
-            referenceTypes[className] = refTypeName
-
-            val refTypeBuilder =
-              TypeSpec.enumBuilder(refTypeName)
-                .addModifiers(PUBLIC)
-                .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE))
-
-            val refValueInitBuilder = FunctionSpec.constructorBuilder()
-              .addModifiers(PUBLIC)
-              .addParameter("value", className)
-              .beginControlFlow("switch", "value")
-            val refDecoderBuilder = FunctionSpec.constructorBuilder()
-              .addModifiers(PUBLIC)
-              .addParameter("from", "decoder", DECODER)
-              .throws(true)
-              .addCode("let container = try decoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
-              .addCode(
-                "let type = try container.decode(%T.self, forKey: %T.%N)\n", discriminatorPropertyTypeName,
-                codingKeysTypeName, discriminatorPropertyName
-              )
-              .beginControlFlow("switch", "type")
-            val refEncoderBuilder = FunctionSpec.builder("encode")
-              .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
-              .addParameter("to", "encoder", ENCODER)
-              .throws(true)
-              .addCode("var container = encoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
-              .beginControlFlow("switch", "self")
-            val refValueBuilder = FunctionSpec.getterBuilder()
-              .beginControlFlow("switch", "self")
-            val refDescriptionBuilder = FunctionSpec.getterBuilder()
-              .beginControlFlow("switch", "self")
-
-            val usedDiscriminators = mutableSetOf<String>()
-
-            inheritingTypes.forEach {
-
-              val inheritingTypeName = resolveReferencedTypeName(it, context)
-              val discriminatorValue = findDiscriminatorPropertyValue(it, context) ?: it.name!!
-
-              val discriminatorCase = discriminatorValue.swiftIdentifierName
-
-              refTypeBuilder.addEnumCase(discriminatorCase, inheritingTypeName)
-
-              refValueInitBuilder.addStatement(
-                "case let value as %T:%Wself = .%N(value)",
-                inheritingTypeName, discriminatorCase
-              )
-
-              if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
-                refDecoderBuilder.addStatement(
-                  "case .%N:%Wself = .%N(try %T(from: decoder))",
-                  discriminatorCase, discriminatorCase, inheritingTypeName
-                )
-                usedDiscriminators.add(discriminatorCase)
-              } else {
-                refDecoderBuilder.addStatement(
-                  "case %S:%Wself = .%N(try %T(from: decoder))",
-                  discriminatorValue, discriminatorCase, inheritingTypeName
-                )
-                usedDiscriminators.add(discriminatorValue)
-              }
-
-              refEncoderBuilder.addStatement(
-                "case .%N(let value):\ntry container.encode(%S, forKey: .%N)\ntry value.encode(to: encoder)",
-                discriminatorCase, discriminatorValue, discriminatorPropertyName
-              )
-
-              refValueBuilder.addStatement("case .%N(let value):%Wreturn value", discriminatorCase)
-
-              refDescriptionBuilder.addStatement(
-                "case .%N(let value):%Wreturn value.%N",
-                discriminatorCase, DESCRIPTION_PROP_NAME
-              )
-            }
-
-            refValueInitBuilder.addStatement("default:%WfatalError(\"Invalid value type\")")
-            refValueInitBuilder.endControlFlow("switch")
-            refTypeBuilder.addFunction(refValueInitBuilder.build())
-
-            if (
-              discriminatorPropertyTypeEnumCases.isNullOrEmpty() ||
-              !usedDiscriminators.containsAll(discriminatorPropertyTypeEnumCases)
-            ) {
-              refDecoderBuilder.addStatement(
-                "default:\nthrow %T.dataCorruptedError(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
-                DECODING_ERROR, codingKeysTypeName, discriminatorPropertyName,
-                "unsupported value for \"$discriminatorPropertyName\""
-              )
-            }
-            refDecoderBuilder.endControlFlow("switch")
-            refTypeBuilder.addFunction(refDecoderBuilder.build())
-
-            refEncoderBuilder.endControlFlow("switch")
-            refTypeBuilder.addFunction(refEncoderBuilder.build())
-
-            refValueBuilder.endControlFlow("switch")
-            refTypeBuilder.addProperty(
-              PropertySpec.builder("value", className, PUBLIC)
-                .getter(refValueBuilder.build())
-                .build()
-            )
-
-            refDescriptionBuilder.endControlFlow("switch")
-            refTypeBuilder.addProperty(
-              PropertySpec.builder(DESCRIPTION_PROP_NAME, STRING, PUBLIC)
-                .getter(refDescriptionBuilder.build())
-                .build()
-            )
-
-            val refType = refTypeBuilder.build()
-
-            typeBuilder.addType(refType)
-          } else {
-            discriminatorProperty = null
-          }
-        } else {
-
-          // Add concrete discriminator for leaf of the discriminated tree
-
-          val discriminatorBuilder =
-            PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
-              .addModifiers(OVERRIDE)
-
-          val discriminatorValue = findDiscriminatorPropertyValue(shape, context) ?: shape.name!!
-
-          if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
-            discriminatorBuilder.getter(
+        typeBuilder.addProperty(
+          PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
+            .getter(
               FunctionSpec.getterBuilder()
-                .addStatement(
-                  "return %T.%N",
-                  discriminatorPropertyTypeName,
-                  discriminatorValue.swiftIdentifierName
-                )
+                .addStatement("fatalError(\"abstract type method\")")
                 .build()
             )
-          } else {
-            discriminatorBuilder.getter(
-              FunctionSpec.getterBuilder()
-                .addStatement("return %S", discriminatorValue)
-                .build()
-            )
-          }
-
-          typeBuilder.addProperty(discriminatorBuilder.build())
-        }
-      }
-
-      /*
-        Generate Codable support
-      */
-
-      if (isRoot) {
-        typeBuilder.addSuperType(CODABLE)
-      }
-
-      if (localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
-        val codingKeysBuilder =
-          TypeSpec.enumBuilder(codingKeysTypeName)
-            .addModifiers(FILEPRIVATE)
-            .addSuperType(STRING)
-            .addSuperType(CODING_KEY)
-
-        if (isRoot && discriminatorProperty != null) {
-          codingKeysBuilder.addEnumCase(discriminatorProperty.swiftIdentifierName, discriminatorProperty.name!!)
-        }
-
-        localDeclaredProperties
-          .filter { it.name != discriminatorProperty?.name }
-          .forEach {
-            codingKeysBuilder.addEnumCase(it.swiftIdentifierName, it.name!!)
-          }
-
-        codingKeysType = codingKeysBuilder.build()
-      }
-
-      val decoderInitFunctionBuilder = FunctionSpec.constructorBuilder()
-        .addModifiers(PUBLIC, REQUIRED)
-        .addParameter("from", "decoder", DECODER)
-        .throws(true)
-
-      if (localDeclaredProperties.isNotEmpty()) {
-        decoderInitFunctionBuilder.addStatement(
-          "let container = try decoder.container(keyedBy: %T.self)",
-          codingKeysTypeName
+            .build()
         )
-      }
 
-      val encoderFunctionBuilder = FunctionSpec.builder("encode")
-        .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
-        .addParameter("to", "encoder", ENCODER)
-        .throws(true)
-      if (!isRoot) {
-        encoderFunctionBuilder.addStatement("try super.encode(to: encoder)")
-      }
-      if (localDeclaredProperties.isNotEmpty()) {
-        encoderFunctionBuilder.addStatement("var container = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
-      }
+        if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
 
-      // Unpack all properties without (externalDiscriminator) annotation
+          /*
+          Generate polymorphic encoding/decoding type (replaces type name)
+         */
 
-      localDeclaredProperties.filterNot { it.range.hasAnnotation(ExternalDiscriminator, null) }.forEach { prop ->
-        var propertyTypeName = resolvePropertyTypeName(prop, className, context)
-        if (propertyTypeName == VOID) {
-          return@forEach
-        }
+          val refTypeName = className.nestedType(ANY_REF_NAME)
+          referenceTypes[className] = refTypeName
 
-        val (coderSuffix, isOptional) =
-          if (propertyTypeName.optional) {
-            propertyTypeName = propertyTypeName.makeNonOptional()
-            "IfPresent" to true
-          } else {
-            "" to false
-          }
+          val refTypeBuilder =
+            TypeSpec.enumBuilder(refTypeName)
+              .addModifiers(PUBLIC)
+              .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE))
 
-        val decoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
-        var decoderPost = ""
-
-        var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
-        var encoderPre = ""
-
-        val isLeaf = context.unit.findInheritingShapes(prop.range).isEmpty()
-        val (refCollection, refElement) = replaceCollectionValueTypesWithReferenceTypes(propertyTypeName)
-
-        if (!isLeaf) {
-          propertyTypeName = if (isOptional) {
-            (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME).makeOptional()
-          } else {
-            (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
-          }
-
-          decoderPost = "${if (isOptional) "?" else ""}.value"
-        } else if (refCollection != propertyTypeName) {
-
-          propertyTypeName = refCollection
-          decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.value }"
-          encoderPre = "${if (isOptional) "?" else ""}.mapValues { ${refElement.name}(value: $0) }"
-        } else if (propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL) {
-
-          propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
-          decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.unwrapped as Any }"
-          encoderPre = "${if (isOptional) "?" else ""}.mapValues { try AnyValue.wrapped($0) }"
-        } else if (propertyTypeName == ARRAY_ANY || propertyTypeName == ARRAY_ANY_OPTIONAL) {
-
-          propertyTypeName = ARRAY.parameterizedBy(ANY_VALUE)
-          decoderPost = "${if (isOptional) "?" else ""}.map { $0.unwrapped }"
-          encoderPre = "${if (isOptional) "?" else ""}.map { try AnyValue.wrapped($0) }"
-        } else if (propertyTypeName.unwrapOptional() == ANY) {
-
-          propertyTypeName = ANY_VALUE
-          decoderPost = "${if (isOptional) "?" else ""}.unwrapped"
-          encoderPropertyRef = CodeBlock.of("%T.wrapped(%N)", ANY_VALUE, prop.swiftIdentifierName)
-        }
-
-        decoderInitFunctionBuilder
-          .addCode("%[")
-          .addCode(decoderPropertyRef)
-          .addCode(
-            " = try container.decode%L(%T.self, forKey: .%N)%L%]\n",
-            coderSuffix, propertyTypeName, prop.swiftIdentifierName, decoderPost
-          )
-
-        encoderFunctionBuilder
-          .addCode("%[try container.encode%L(", coderSuffix)
-          .addCode(encoderPropertyRef)
-          .addCode(
-            "%L, forKey: .%N)%]\n",
-            encoderPre, prop.swiftIdentifierName
-          )
-      }
-
-      // Unpack all properties with (externalDiscriminator) annotation, because we know the discriminator is already unpacked!
-
-      localDeclaredProperties.filter { it.range.hasAnnotation(ExternalDiscriminator, null) }
-        .forEach { prop ->
-          val propertyTypeName = resolvePropertyTypeName(prop, className, context)
-          val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
-
-          val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, null)!!
-          val externalDiscriminatorProperty =
-            (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
-              ?: genError("($ExternalDiscriminator) property '$externalDiscriminator' is not valid", shape)
-          val externalDiscriminatorPropertyName = externalDiscriminatorProperty.swiftIdentifierName
-          val externalDiscriminatorPropertyTypeName =
-            resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
-          val externalDiscriminatorPropertyEnumCases =
-            typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
-          val propertyTypeDerivedShapes = context.unit.findInheritingShapes(prop.range)
-
-          if (externalDiscriminatorProperty.optional && prop.required) {
-            genError("($ExternalDiscriminator) property is not required but the property it discriminates is", shape)
-          }
-
-          val switchOn =
-            if (externalDiscriminatorProperty.optional) {
-              decoderInitFunctionBuilder.beginControlFlow(
-                "if", "let %N = self.%N",
-                externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
-              )
-              encoderFunctionBuilder.beginControlFlow(
-                "if", "let %N = self.%N",
-                externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
-              )
-              CodeBlock.of("%N", externalDiscriminatorPropertyName)
-            } else {
-              CodeBlock.of("self.%N", externalDiscriminatorPropertyName)
-            }
-
-          decoderInitFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
-          encoderFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
+          val refValueInitBuilder = FunctionSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter("value", className)
+            .beginControlFlow("switch", "value")
+          val refDecoderBuilder = FunctionSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter("from", "decoder", DECODER)
+            .throws(true)
+            .addCode("let container = try decoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
+            .addCode(
+              "let type = try container.decode(%T.self, forKey: %T.%N)\n", discriminatorPropertyTypeName,
+              codingKeysTypeName, discriminatorPropertyName
+            )
+            .beginControlFlow("switch", "type")
+          val refEncoderBuilder = FunctionSpec.builder("encode")
+            .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
+            .addParameter("to", "encoder", ENCODER)
+            .throws(true)
+            .addCode("var container = encoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
+            .beginControlFlow("switch", "self")
+          val refValueBuilder = FunctionSpec.getterBuilder()
+            .beginControlFlow("switch", "self")
+          val refDescriptionBuilder = FunctionSpec.getterBuilder()
+            .beginControlFlow("switch", "self")
 
           val usedDiscriminators = mutableSetOf<String>()
 
-          propertyTypeDerivedShapes.forEach { propertyTypeDerivedShape ->
+          inheritingTypes.forEach {
 
-            val discriminatorValue =
-              findDiscriminatorPropertyValue(propertyTypeDerivedShape, context) ?: propertyTypeDerivedShape.name!!
-
-            usedDiscriminators.add(discriminatorValue)
+            val inheritingTypeName = resolveReferencedTypeName(it, context)
+            val discriminatorValue = findDiscriminatorPropertyValue(it, context) ?: it.name!!
 
             val discriminatorCase = discriminatorValue.swiftIdentifierName
-            val propDerivedTypeName = resolveReferencedTypeName(propertyTypeDerivedShape, context)
-            val propDerivedTypeSuffix = if (propertyTypeName.optional) "?" else ""
 
-            if (!externalDiscriminatorPropertyEnumCases.isNullOrEmpty()) {
-              decoderInitFunctionBuilder.addStatement(
-                "case .%N:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
-                discriminatorCase,
-                prop.swiftIdentifierName,
-                coderSuffix,
-                propDerivedTypeName,
-                prop.swiftIdentifierName
+            refTypeBuilder.addEnumCase(discriminatorCase, inheritingTypeName)
+
+            refValueInitBuilder.addStatement(
+              "case let value as %T:%Wself = .%N(value)",
+              inheritingTypeName, discriminatorCase
+            )
+
+            if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
+              refDecoderBuilder.addStatement(
+                "case .%N:%Wself = .%N(try %T(from: decoder))",
+                discriminatorCase, discriminatorCase, inheritingTypeName
               )
-              encoderFunctionBuilder.addStatement(
-                "case .%N:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-                discriminatorCase, coderSuffix, prop.swiftIdentifierName,
-                propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
-              )
+              usedDiscriminators.add(discriminatorCase)
             } else {
-              decoderInitFunctionBuilder.addStatement(
-                "case %S:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
-                discriminatorValue, prop.swiftIdentifierName,
-                coderSuffix, propDerivedTypeName, prop.swiftIdentifierName
+              refDecoderBuilder.addStatement(
+                "case %S:%Wself = .%N(try %T(from: decoder))",
+                discriminatorValue, discriminatorCase, inheritingTypeName
               )
-              encoderFunctionBuilder.addStatement(
-                "case %S:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-                discriminatorValue, coderSuffix, prop.swiftIdentifierName,
-                propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
-              )
+              usedDiscriminators.add(discriminatorValue)
             }
+
+            refEncoderBuilder.addStatement(
+              "case .%N(let value):\ntry container.encode(%S, forKey: .%N)\ntry value.encode(to: encoder)",
+              discriminatorCase, discriminatorValue, discriminatorPropertyName
+            )
+
+            refValueBuilder.addStatement("case .%N(let value):%Wreturn value", discriminatorCase)
+
+            refDescriptionBuilder.addStatement(
+              "case .%N(let value):%Wreturn value.%N",
+              discriminatorCase, DESCRIPTION_PROP_NAME
+            )
           }
+
+          refValueInitBuilder.addStatement("default:%WfatalError(\"Invalid value type\")")
+          refValueInitBuilder.endControlFlow("switch")
+          refTypeBuilder.addFunction(refValueInitBuilder.build())
 
           if (
-            externalDiscriminatorPropertyEnumCases.isNullOrEmpty() ||
-            !usedDiscriminators.containsAll(externalDiscriminatorPropertyEnumCases)
+            discriminatorPropertyTypeEnumCases.isNullOrEmpty() ||
+            !usedDiscriminators.containsAll(discriminatorPropertyTypeEnumCases)
           ) {
+            refDecoderBuilder.addStatement(
+              "default:\nthrow %T.dataCorruptedError(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
+              DECODING_ERROR, codingKeysTypeName, discriminatorPropertyName,
+              "unsupported value for \"$discriminatorPropertyName\""
+            )
+          }
+          refDecoderBuilder.endControlFlow("switch")
+          refTypeBuilder.addFunction(refDecoderBuilder.build())
+
+          refEncoderBuilder.endControlFlow("switch")
+          refTypeBuilder.addFunction(refEncoderBuilder.build())
+
+          refValueBuilder.endControlFlow("switch")
+          refTypeBuilder.addProperty(
+            PropertySpec.builder("value", className, PUBLIC)
+              .getter(refValueBuilder.build())
+              .build()
+          )
+
+          refDescriptionBuilder.endControlFlow("switch")
+          refTypeBuilder.addProperty(
+            PropertySpec.builder(DESCRIPTION_PROP_NAME, STRING, PUBLIC)
+              .getter(refDescriptionBuilder.build())
+              .build()
+          )
+
+          val refType = refTypeBuilder.build()
+
+          typeBuilder.addType(refType)
+        } else {
+          discriminatorProperty = null
+        }
+      } else {
+
+        // Add concrete discriminator for leaf of the discriminated tree
+
+        val discriminatorBuilder =
+          PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
+            .addModifiers(OVERRIDE)
+
+        val discriminatorValue = findDiscriminatorPropertyValue(shape, context) ?: shape.name!!
+
+        if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
+          discriminatorBuilder.getter(
+            FunctionSpec.getterBuilder()
+              .addStatement(
+                "return %T.%N",
+                discriminatorPropertyTypeName,
+                discriminatorValue.swiftIdentifierName
+              )
+              .build()
+          )
+        } else {
+          discriminatorBuilder.getter(
+            FunctionSpec.getterBuilder()
+              .addStatement("return %S", discriminatorValue)
+              .build()
+          )
+        }
+
+        typeBuilder.addProperty(discriminatorBuilder.build())
+      }
+    }
+
+    /*
+      Generate Codable support
+    */
+
+    if (isRoot) {
+      typeBuilder.addSuperType(CODABLE)
+    }
+
+    if (localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
+      val codingKeysBuilder =
+        TypeSpec.enumBuilder(codingKeysTypeName)
+          .addModifiers(FILEPRIVATE)
+          .addSuperType(STRING)
+          .addSuperType(CODING_KEY)
+
+      if (isRoot && discriminatorProperty != null) {
+        codingKeysBuilder.addEnumCase(discriminatorProperty.swiftIdentifierName, discriminatorProperty.name!!)
+      }
+
+      localDeclaredProperties
+        .filter { it.name != discriminatorProperty?.name }
+        .forEach {
+          codingKeysBuilder.addEnumCase(it.swiftIdentifierName, it.name!!)
+        }
+
+      codingKeysType = codingKeysBuilder.build()
+    }
+
+    val decoderInitFunctionBuilder = FunctionSpec.constructorBuilder()
+      .addModifiers(PUBLIC, REQUIRED)
+      .addParameter("from", "decoder", DECODER)
+      .throws(true)
+
+    if (localDeclaredProperties.isNotEmpty()) {
+      decoderInitFunctionBuilder.addStatement(
+        "let container = try decoder.container(keyedBy: %T.self)",
+        codingKeysTypeName
+      )
+    }
+
+    val encoderFunctionBuilder = FunctionSpec.builder("encode")
+      .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
+      .addParameter("to", "encoder", ENCODER)
+      .throws(true)
+    if (!isRoot) {
+      encoderFunctionBuilder.addStatement("try super.encode(to: encoder)")
+    }
+    if (localDeclaredProperties.isNotEmpty()) {
+      encoderFunctionBuilder.addStatement("var container = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
+    }
+
+    // Unpack all properties without (externalDiscriminator) annotation
+
+    localDeclaredProperties.filterNot { it.range.hasAnnotation(ExternalDiscriminator, null) }.forEach { prop ->
+      var propertyTypeName = resolvePropertyTypeName(prop, className, context)
+      if (propertyTypeName == VOID) {
+        return@forEach
+      }
+
+      val (coderSuffix, isOptional) =
+        if (propertyTypeName.optional) {
+          propertyTypeName = propertyTypeName.makeNonOptional()
+          "IfPresent" to true
+        } else {
+          "" to false
+        }
+
+      val decoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
+      var decoderPost = ""
+
+      var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
+      var encoderPre = ""
+
+      val isLeaf = context.unit.findInheritingShapes(prop.range).isEmpty()
+      val (refCollection, refElement) = replaceCollectionValueTypesWithReferenceTypes(propertyTypeName)
+
+      if (!isLeaf) {
+        propertyTypeName = if (isOptional) {
+          (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME).makeOptional()
+        } else {
+          (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
+        }
+
+        decoderPost = "${if (isOptional) "?" else ""}.value"
+      } else if (refCollection != propertyTypeName) {
+
+        propertyTypeName = refCollection
+        decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.value }"
+        encoderPre = "${if (isOptional) "?" else ""}.mapValues { ${refElement.name}(value: $0) }"
+      } else if (propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL) {
+
+        propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+        decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.unwrapped as Any }"
+        encoderPre = "${if (isOptional) "?" else ""}.mapValues { try AnyValue.wrapped($0) }"
+      } else if (propertyTypeName == ARRAY_ANY || propertyTypeName == ARRAY_ANY_OPTIONAL) {
+
+        propertyTypeName = ARRAY.parameterizedBy(ANY_VALUE)
+        decoderPost = "${if (isOptional) "?" else ""}.map { $0.unwrapped }"
+        encoderPre = "${if (isOptional) "?" else ""}.map { try AnyValue.wrapped($0) }"
+      } else if (propertyTypeName.unwrapOptional() == ANY) {
+
+        propertyTypeName = ANY_VALUE
+        decoderPost = "${if (isOptional) "?" else ""}.unwrapped"
+        encoderPropertyRef = CodeBlock.of("%T.wrapped(%N)", ANY_VALUE, prop.swiftIdentifierName)
+      }
+
+      decoderInitFunctionBuilder
+        .addCode("%[")
+        .addCode(decoderPropertyRef)
+        .addCode(
+          " = try container.decode%L(%T.self, forKey: .%N)%L%]\n",
+          coderSuffix, propertyTypeName, prop.swiftIdentifierName, decoderPost
+        )
+
+      encoderFunctionBuilder
+        .addCode("%[try container.encode%L(", coderSuffix)
+        .addCode(encoderPropertyRef)
+        .addCode(
+          "%L, forKey: .%N)%]\n",
+          encoderPre, prop.swiftIdentifierName
+        )
+    }
+
+    // Unpack all properties with (externalDiscriminator) annotation, because we know the discriminator is already unpacked!
+
+    localDeclaredProperties.filter { it.range.hasAnnotation(ExternalDiscriminator, null) }
+      .forEach { prop ->
+        val propertyTypeName = resolvePropertyTypeName(prop, className, context)
+        val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
+
+        val externalDiscriminator = prop.range.findStringAnnotation(ExternalDiscriminator, null)!!
+        val externalDiscriminatorProperty =
+          (originalInheritedProperties + originalLocalProperties).firstOrNull { it.name == externalDiscriminator }
+            ?: genError("($ExternalDiscriminator) property '$externalDiscriminator' is not valid", shape)
+        val externalDiscriminatorPropertyName = externalDiscriminatorProperty.swiftIdentifierName
+        val externalDiscriminatorPropertyTypeName =
+          resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
+        val externalDiscriminatorPropertyEnumCases =
+          typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
+        val propertyTypeDerivedShapes = context.unit.findInheritingShapes(prop.range)
+
+        if (externalDiscriminatorProperty.optional && prop.required) {
+          genError("($ExternalDiscriminator) property is not required but the property it discriminates is", shape)
+        }
+
+        val switchOn =
+          if (externalDiscriminatorProperty.optional) {
+            decoderInitFunctionBuilder.beginControlFlow(
+              "if", "let %N = self.%N",
+              externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
+            )
+            encoderFunctionBuilder.beginControlFlow(
+              "if", "let %N = self.%N",
+              externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
+            )
+            CodeBlock.of("%N", externalDiscriminatorPropertyName)
+          } else {
+            CodeBlock.of("self.%N", externalDiscriminatorPropertyName)
+          }
+
+        decoderInitFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
+        encoderFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
+
+        val usedDiscriminators = mutableSetOf<String>()
+
+        propertyTypeDerivedShapes.forEach { propertyTypeDerivedShape ->
+
+          val discriminatorValue =
+            findDiscriminatorPropertyValue(propertyTypeDerivedShape, context) ?: propertyTypeDerivedShape.name!!
+
+          usedDiscriminators.add(discriminatorValue)
+
+          val discriminatorCase = discriminatorValue.swiftIdentifierName
+          val propDerivedTypeName = resolveReferencedTypeName(propertyTypeDerivedShape, context)
+          val propDerivedTypeSuffix = if (propertyTypeName.optional) "?" else ""
+
+          if (!externalDiscriminatorPropertyEnumCases.isNullOrEmpty()) {
             decoderInitFunctionBuilder.addStatement(
-              "default:\nthrow %T.%N(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
-              DECODING_ERROR, "dataCorruptedError", codingKeysTypeName, externalDiscriminatorPropertyName,
-              "unsupported value for \"$externalDiscriminatorPropertyName\""
+              "case .%N:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
+              discriminatorCase,
+              prop.swiftIdentifierName,
+              coderSuffix,
+              propDerivedTypeName,
+              prop.swiftIdentifierName
             )
             encoderFunctionBuilder.addStatement(
-              "default:\nthrow %T.%N(%>\n%L,\n%T(%>\ncodingPath: encoder.codingPath + [%T.%N],\ndebugDescription: %S%<\n)%<\n)",
-              ENCODING_ERROR, "invalidValue", switchOn, ENCODING_ERROR.nestedType("Context"), codingKeysTypeName,
-              externalDiscriminatorPropertyName, "unsupported value for \"$externalDiscriminatorPropertyName\""
+              "case .%N:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
+              discriminatorCase, coderSuffix, prop.swiftIdentifierName,
+              propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
+            )
+          } else {
+            decoderInitFunctionBuilder.addStatement(
+              "case %S:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
+              discriminatorValue, prop.swiftIdentifierName,
+              coderSuffix, propDerivedTypeName, prop.swiftIdentifierName
+            )
+            encoderFunctionBuilder.addStatement(
+              "case %S:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
+              discriminatorValue, coderSuffix, prop.swiftIdentifierName,
+              propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
             )
           }
-          decoderInitFunctionBuilder.endControlFlow("switch")
-          encoderFunctionBuilder.endControlFlow("switch")
-
-          if (externalDiscriminatorProperty.optional) {
-            decoderInitFunctionBuilder.nextControlFlow("else", "")
-            decoderInitFunctionBuilder.addStatement("self.%N = nil", prop.swiftIdentifierName)
-            decoderInitFunctionBuilder.endControlFlow("if")
-            encoderFunctionBuilder.endControlFlow("if")
-          }
         }
 
-      if (!isRoot) {
-        decoderInitFunctionBuilder.addStatement("try super.init(from: decoder)")
-      }
-
-      val decoderInitFunction = decoderInitFunctionBuilder.build()
-      val encoderFunction = encoderFunctionBuilder.build()
-
-      /*
-        Generate class implementations
-       */
-
-      // Build parameter constructor
-      //
-      val paramConsBuilder = FunctionSpec.constructorBuilder()
-        .addModifiers(*if (!isRoot && localDeclaredProperties.isEmpty()) arrayOf(PUBLIC, OVERRIDE) else arrayOf(PUBLIC))
-
-      inheritedDeclaredProperties.forEach {
-        var paramType = resolvePropertyTypeName(it, className, context)
-        paramType = if (it.required) {
-          paramType.makeNonOptional()
-        } else {
-          paramType.makeOptional()
+        if (
+          externalDiscriminatorPropertyEnumCases.isNullOrEmpty() ||
+          !usedDiscriminators.containsAll(externalDiscriminatorPropertyEnumCases)
+        ) {
+          decoderInitFunctionBuilder.addStatement(
+            "default:\nthrow %T.%N(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
+            DECODING_ERROR, "dataCorruptedError", codingKeysTypeName, externalDiscriminatorPropertyName,
+            "unsupported value for \"$externalDiscriminatorPropertyName\""
+          )
+          encoderFunctionBuilder.addStatement(
+            "default:\nthrow %T.%N(%>\n%L,\n%T(%>\ncodingPath: encoder.codingPath + [%T.%N],\ndebugDescription: %S%<\n)%<\n)",
+            ENCODING_ERROR, "invalidValue", switchOn, ENCODING_ERROR.nestedType("Context"), codingKeysTypeName,
+            externalDiscriminatorPropertyName, "unsupported value for \"$externalDiscriminatorPropertyName\""
+          )
         }
-        paramConsBuilder.addParameter(it.swiftIdentifierName, paramType)
-      }
+        decoderInitFunctionBuilder.endControlFlow("switch")
+        encoderFunctionBuilder.endControlFlow("switch")
 
-      // Description builder
-      //
-      val descriptionCodeBuilder = CodeBlock.builder()
-        .add("%[return %T(%T.self)\n", DESCRIPTION_BUILDER, className)
-      originalInheritedDeclaredProperties.forEach {
-        descriptionCodeBuilder.add(".add(%N, named: %S)\n", it.swiftIdentifierName, it.swiftIdentifierName)
-      }
-      if (isRoot) {
-        typeBuilder.addSuperType(CUSTOM_STRING_CONVERTIBLE)
-      }
-
-      // Generate related code for each property
-      //
-      localProperties.forEach { propertyDeclaration ->
-
-        val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
-
-        val implAnn = propertyDeclaration.range.findAnnotation(SwiftImpl, null) as? ObjectNode
-        if (implAnn != null) {
-
-          val propertyBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
-
-          val code = implAnn.getValue("code") ?: ""
-          val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
-          val convertedCodeParams = codeParams.map { codeParam ->
-            val atype = codeParam.getValue("type")
-            val avalue = codeParam.getValue("value")
-            if (atype != null && avalue != null) {
-              when (atype) {
-                "Type" -> DeclaredTypeName.typeName(avalue.toString())
-                else -> avalue.toString()
-              }
-            } else
-              ""
-          }
-
-          propertyBuilder.getter(
-            FunctionSpec.getterBuilder()
-              .addStatement(code, *convertedCodeParams.toTypedArray())
-              .build()
-          )
-
-          typeBuilder.addProperty(propertyBuilder.build())
-        } else {
-
-          // Add public field
-          //
-          val fieldBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
-          typeBuilder.addProperty(fieldBuilder.build())
-
-          // Add constructor parameter & initializer
-          //
-          paramConsBuilder.addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
-          paramConsBuilder.addStatement(
-            "self.%N = %N",
-            propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
-          )
-
-          // Add description value
-          //
-          descriptionCodeBuilder.add(
-            ".add(%N, named: %S)\n",
-            propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
-          )
+        if (externalDiscriminatorProperty.optional) {
+          decoderInitFunctionBuilder.nextControlFlow("else", "")
+          decoderInitFunctionBuilder.addStatement("self.%N = nil", prop.swiftIdentifierName)
+          decoderInitFunctionBuilder.endControlFlow("if")
+          encoderFunctionBuilder.endControlFlow("if")
         }
       }
 
-      // Finish parameter constructor
-      //
+    if (!isRoot) {
+      decoderInitFunctionBuilder.addStatement("try super.init(from: decoder)")
+    }
 
-      if (!isRoot) {
+    val decoderInitFunction = decoderInitFunctionBuilder.build()
+    val encoderFunction = encoderFunctionBuilder.build()
+
+    /*
+      Generate class implementations
+     */
+
+    // Build parameter constructor
+    //
+    val paramConsBuilder = FunctionSpec.constructorBuilder()
+      .addModifiers(*if (!isRoot && localDeclaredProperties.isEmpty()) arrayOf(PUBLIC, OVERRIDE) else arrayOf(PUBLIC))
+
+    inheritedDeclaredProperties.forEach {
+      var paramType = resolvePropertyTypeName(it, className, context)
+      paramType = if (it.required) {
+        paramType.makeNonOptional()
+      } else {
+        paramType.makeOptional()
+      }
+      paramConsBuilder.addParameter(it.swiftIdentifierName, paramType)
+    }
+
+    // Description builder
+    //
+    val descriptionCodeBuilder = CodeBlock.builder()
+      .add("%[return %T(%T.self)\n", DESCRIPTION_BUILDER, className)
+    originalInheritedDeclaredProperties.forEach {
+      descriptionCodeBuilder.add(".add(%N, named: %S)\n", it.swiftIdentifierName, it.swiftIdentifierName)
+    }
+    if (isRoot) {
+      typeBuilder.addSuperType(CUSTOM_STRING_CONVERTIBLE)
+    }
+
+    // Generate related code for each property
+    //
+    localProperties.forEach { propertyDeclaration ->
+
+      val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
+
+      val implAnn = propertyDeclaration.range.findAnnotation(SwiftImpl, null) as? ObjectNode
+      if (implAnn != null) {
+
+        val propertyBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
+
+        val code = implAnn.getValue("code") ?: ""
+        val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
+        val convertedCodeParams = codeParams.map { codeParam ->
+          val atype = codeParam.getValue("type")
+          val avalue = codeParam.getValue("value")
+          if (atype != null && avalue != null) {
+            when (atype) {
+              "Type" -> DeclaredTypeName.typeName(avalue.toString())
+              else -> avalue.toString()
+            }
+          } else
+            ""
+        }
+
+        propertyBuilder.getter(
+          FunctionSpec.getterBuilder()
+            .addStatement(code, *convertedCodeParams.toTypedArray())
+            .build()
+        )
+
+        typeBuilder.addProperty(propertyBuilder.build())
+      } else {
+
+        // Add public field
+        //
+        val fieldBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
+        typeBuilder.addProperty(fieldBuilder.build())
+
+        // Add constructor parameter & initializer
+        //
+        paramConsBuilder.addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
         paramConsBuilder.addStatement(
-          "super.init(%L)",
-          inheritedDeclaredProperties.map { CodeBlock.of("%L: %N", it.swiftIdentifierName, it.swiftIdentifierName) }
-            .joinToCode(",%W")
+          "self.%N = %N",
+          propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
+        )
+
+        // Add description value
+        //
+        descriptionCodeBuilder.add(
+          ".add(%N, named: %S)\n",
+          propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
         )
       }
-      typeBuilder.addFunction(paramConsBuilder.build())
+    }
 
-      // Finish description property
-      //
+    // Finish parameter constructor
+    //
 
-      typeBuilder.addProperty(
-        PropertySpec.builder(
-          DESCRIPTION_PROP_NAME, STRING,
-          *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE)
-        )
-          .getter(
-            FunctionSpec.getterBuilder()
-              .addCode(descriptionCodeBuilder.add(".build()%]\n").build())
-              .build()
-          )
-          .build()
+    if (!isRoot) {
+      paramConsBuilder.addStatement(
+        "super.init(%L)",
+        inheritedDeclaredProperties.map { CodeBlock.of("%L: %N", it.swiftIdentifierName, it.swiftIdentifierName) }
+          .joinToCode(",%W")
       )
+    }
+    typeBuilder.addFunction(paramConsBuilder.build())
 
-      // Add codable methods
-      //
+    // Finish description property
+    //
 
-      typeBuilder.addFunction(decoderInitFunction)
-      typeBuilder.addFunction(encoderFunction)
+    typeBuilder.addProperty(
+      PropertySpec.builder(
+        DESCRIPTION_PROP_NAME, STRING,
+        *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE)
+      )
+        .getter(
+          FunctionSpec.getterBuilder()
+            .addCode(descriptionCodeBuilder.add(".build()%]\n").build())
+            .build()
+        )
+        .build()
+    )
 
-      // Add fluent builders
-      //
+    // Add codable methods
+    //
 
-      (inheritedDeclaredProperties + localDeclaredProperties).forEach { propertyDeclaration ->
+    typeBuilder.addFunction(decoderInitFunction)
+    typeBuilder.addFunction(encoderFunction)
 
-        val isInherited = !isRoot && inheritedDeclaredProperties.contains(propertyDeclaration)
-        val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
+    // Add fluent builders
+    //
 
-        val fluentBuilder =
-          FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
-            .addModifiers(*if (!isInherited) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
-            .returns(className)
-            .addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
-            .addStatement(
-              "return %T(%L)",
-              className,
-              (inheritedDeclaredProperties + localDeclaredProperties).map {
-                CodeBlock.of(
-                  "%L: %N",
-                  it.swiftIdentifierName,
-                  it.swiftIdentifierName
-                )
-              }.joinToCode(",%W")
-            )
+    (inheritedDeclaredProperties + localDeclaredProperties).forEach { propertyDeclaration ->
 
-        typeBuilder.addFunction(fluentBuilder.build())
-      }
+      val isInherited = !isRoot && inheritedDeclaredProperties.contains(propertyDeclaration)
+      val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
+
+      val fluentBuilder =
+        FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
+          .addModifiers(*if (!isInherited) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
+          .returns(className)
+          .addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
+          .addStatement(
+            "return %T(%L)",
+            className,
+            (inheritedDeclaredProperties + localDeclaredProperties).map {
+              CodeBlock.of(
+                "%L: %N",
+                it.swiftIdentifierName,
+                it.swiftIdentifierName
+              )
+            }.joinToCode(",%W")
+          )
+
+      typeBuilder.addFunction(fluentBuilder.build())
     }
 
     codingKeysType?.let { typeBuilder.addType(it) }
