@@ -81,7 +81,7 @@ class BaseUriTest {
       }
     )
 
-    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.EnvironmentURIParameter")]
+    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]
     assertNotNull(envTypeSpec)
   }
 
@@ -129,7 +129,7 @@ class BaseUriTest {
       }
     )
 
-    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.EnvironmentURIParameter")]
+    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]
     assertNotNull(envTypeSpec)
   }
 }

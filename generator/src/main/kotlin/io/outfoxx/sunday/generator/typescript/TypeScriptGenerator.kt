@@ -147,7 +147,7 @@ abstract class TypeScriptGenerator(
               val defaultValue = param.defaultValue
               if (defaultValue != null) {
                 addCode("%L: %L ?? ", param.name, param.name)
-                addCode(defaultValue.typeScriptConstant(param.typeName, param.shape))
+                addCode(defaultValue.typeScriptConstant(param.typeName, param.shape?.resolve))
               } else {
                 addCode("%L", param.name)
               }

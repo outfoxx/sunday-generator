@@ -10,11 +10,14 @@ baseUriParameters:
     type: string
     default: master
   environment:
-    type: string
-    enum:
-      - sbx
-      - prd
+    type: Environment
     default: sbx
+
+types:
+
+  Environment:
+    type: string
+    enum: [ sbx, prd ]
 
 /tests:
   get:
