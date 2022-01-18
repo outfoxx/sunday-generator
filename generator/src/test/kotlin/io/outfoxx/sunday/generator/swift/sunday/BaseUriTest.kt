@@ -78,7 +78,7 @@ class BaseUriTest {
 
           public static func baseURL(
             server: String = "master",
-            environment: EnvironmentURIParameter = EnvironmentURIParameter.sbx,
+            environment: Environment = Environment.sbx,
             version: String = "1"
           ) -> URI.Template {
             return URI.Template(
@@ -113,7 +113,7 @@ class BaseUriTest {
       }
     )
 
-    val envTypeSpec = builtTypes[DeclaredTypeName.typeName(".EnvironmentURIParameter")]
+    val envTypeSpec = builtTypes[DeclaredTypeName.typeName(".Environment")]
     assertNotNull(envTypeSpec)
   }
 }

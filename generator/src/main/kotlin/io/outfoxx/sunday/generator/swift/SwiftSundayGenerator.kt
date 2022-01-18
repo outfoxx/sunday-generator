@@ -121,7 +121,7 @@ class SwiftSundayGenerator(
                 ParameterSpec.builder(param.name, paramTypeName)
                   .apply {
                     if (param.defaultValue != null) {
-                      defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape))
+                      defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape?.resolve))
                     }
                   }
                   .build()

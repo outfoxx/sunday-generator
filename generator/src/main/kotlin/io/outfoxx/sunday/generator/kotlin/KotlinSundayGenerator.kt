@@ -121,7 +121,7 @@ class KotlinSundayGenerator(
                   ParameterSpec.builder(param.name, paramTypeName)
                     .apply {
                       if (param.defaultValue != null) {
-                        defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
+                        defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape?.resolve))
                       }
                     }
                     .build()

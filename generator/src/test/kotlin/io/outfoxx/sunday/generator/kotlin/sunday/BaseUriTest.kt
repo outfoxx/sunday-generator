@@ -62,7 +62,7 @@ class BaseUriTest {
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.URITemplate
         import io.outfoxx.sunday.http.Method
-        import io.test.EnvironmentURIParameter
+        import io.test.Environment
         import kotlin.String
         import kotlin.collections.List
 
@@ -80,7 +80,7 @@ class BaseUriTest {
           public companion object {
             public fun baseURL(
               server: String = "master",
-              environment: EnvironmentURIParameter = EnvironmentURIParameter.Sbx,
+              environment: Environment = Environment.Sbx,
               version: String = "1"
             ): URITemplate = URITemplate(
               "http://{server}.{environment}.example.com/api/{version}",
@@ -96,7 +96,7 @@ class BaseUriTest {
       }
     )
 
-    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.EnvironmentURIParameter")]
+    val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]
     assertNotNull(envTypeSpec)
   }
 }
