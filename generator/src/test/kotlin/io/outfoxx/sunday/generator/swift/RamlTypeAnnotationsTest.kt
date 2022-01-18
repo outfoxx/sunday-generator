@@ -54,6 +54,40 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test module annotation`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-swift-module.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val types = generateTypes(testUri, typeRegistry, compiler)
+
+    val apiTypes = types.filter { it.key.simpleName == "API" }.toList()
+    val modelTypes = types.filterNot { it.key.simpleName == "API" }.toList()
+
+    assertEquals("Explicit", apiTypes.first().first.moduleName)
+    assertEquals("", modelTypes.first().first.moduleName)
+  }
+
+  @Test
+  fun `test model module annotation`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-swift-model-module.raml") testUri: URI
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val types = generateTypes(testUri, typeRegistry, compiler)
+
+    val apiTypes = types.filter { it.key.simpleName == "API" }.toList()
+    val modelTypes = types.filterNot { it.key.simpleName == "API" }.toList()
+
+    assertEquals("", apiTypes.first().first.moduleName)
+    assertEquals("Explicit", modelTypes.first().first.moduleName)
+  }
+
+  @Test
   fun `test class hierarchy generated for 'nested' annotation`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
