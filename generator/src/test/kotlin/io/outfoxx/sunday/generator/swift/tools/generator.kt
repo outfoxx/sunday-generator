@@ -17,11 +17,14 @@
 package io.outfoxx.sunday.generator.swift.tools
 
 import amf.client.model.document.Document
+import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.swift.SwiftGenerator
 import io.outfoxx.sunday.generator.swift.SwiftResolutionContext
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
+import io.outfoxx.sunday.generator.utils.encodes
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.TypeSpec
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -39,7 +42,11 @@ fun generateTypes(
 
   val document = TestAPIProcessing.process(uri).document
 
-  val apiTypeName = DeclaredTypeName.typeName(".API")
+  val apiModuleName =
+    document.encodes.findStringAnnotation(APIAnnotationName.SwiftModule, null)
+      ?: ""
+
+  val apiTypeName = DeclaredTypeName.typeName("$apiModuleName.API")
   typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
 
   TestAPIProcessing.generateTypes(document, Client, typeRegistry::defineProblemType) { name, shape ->

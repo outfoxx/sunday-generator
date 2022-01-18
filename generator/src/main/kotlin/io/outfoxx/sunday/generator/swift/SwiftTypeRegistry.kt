@@ -18,9 +18,12 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import amf.client.model.document.BaseUnit
+import amf.client.model.document.EncodesModel
 import amf.client.model.domain.AnyShape
 import amf.client.model.domain.ArrayNode
 import amf.client.model.domain.ArrayShape
+import amf.client.model.domain.CustomizableElement
 import amf.client.model.domain.DomainElement
 import amf.client.model.domain.FileShape
 import amf.client.model.domain.NilShape
@@ -32,6 +35,7 @@ import amf.client.model.domain.ScalarShape
 import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
 import amf.core.model.DataType
+import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
 import io.outfoxx.sunday.generator.APIAnnotationName.Nested
@@ -76,8 +80,10 @@ import io.outfoxx.sunday.generator.utils.dataType
 import io.outfoxx.sunday.generator.utils.discriminator
 import io.outfoxx.sunday.generator.utils.discriminatorMapping
 import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findDeclaringUnit
 import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
@@ -1312,8 +1318,10 @@ class SwiftTypeRegistry(
       }
     }
 
+    val moduleName = moduleNameOf(shape, context)
+
     val nestedAnn = shape.findAnnotation(Nested, null)
-      ?: return DeclaredTypeName.typeName(".${shape.swiftTypeName}")
+      ?: return DeclaredTypeName.typeName("$moduleName.${shape.swiftTypeName}")
 
     val (nestedEnclosedIn, nestedName) =
       when {
@@ -1360,6 +1368,14 @@ class SwiftTypeRegistry(
 
     return nestedEnclosingTypeName.nestedType(nestedName)
   }
+
+  private fun moduleNameOf(shape: Shape, context: SwiftResolutionContext): String =
+    moduleNameOf(context.unit.findDeclaringUnit(shape))
+
+  private fun moduleNameOf(unit: BaseUnit?): String =
+    (unit as? CustomizableElement)?.findStringAnnotation(APIAnnotationName.SwiftModelModule, null)
+      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(APIAnnotationName.SwiftModelModule, null)
+      ?: ""
 
   private fun replaceCollectionValueTypesWithReferenceTypes(typeName: TypeName): Pair<TypeName, TypeName> {
     val baseTypeName =

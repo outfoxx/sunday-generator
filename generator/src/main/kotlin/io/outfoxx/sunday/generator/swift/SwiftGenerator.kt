@@ -35,6 +35,8 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
+import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModelModule
+import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModule
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.NameGenerator
@@ -105,7 +107,11 @@ abstract class SwiftGenerator(
 
       val serviceSimpleName = "${groupName?.replaceFirstChar { it.titlecase() } ?: ""}${options.serviceSuffix}"
 
-      val serviceTypeName = DeclaredTypeName.typeName(".$serviceSimpleName")
+      val serviceModuleName =
+        api.findStringAnnotation(SwiftModule, null)
+          ?: ""
+
+      val serviceTypeName = DeclaredTypeName.typeName("$serviceModuleName.$serviceSimpleName")
 
       val serviceTypeBuilder = generateServiceType(serviceTypeName, endPoints)
 
@@ -556,9 +562,11 @@ abstract class SwiftGenerator(
           val name = variable.name ?: "uriParameter$idx"
 
           val variableTypeName =
-            variable.schema?.let {
-              val suggestedName = "${variable.name?.kotlinTypeName}URIParameter"
-              resolveTypeName(it, DeclaredTypeName.typeName(".$suggestedName"))
+            variable.schema?.let { shape ->
+              val suggestedModuleName = api.findStringAnnotation(SwiftModelModule, null) ?: ""
+              val suggestedName = variable.name?.let { "${it}URIParameter".kotlinTypeName } ?: name.kotlinTypeName
+              val suggestedTypeName = DeclaredTypeName.typeName("$suggestedModuleName.$suggestedName")
+              resolveTypeName(shape, suggestedTypeName)
             } ?: STRING
 
           val defaultValue =
