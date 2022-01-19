@@ -74,7 +74,7 @@ class RequestHeaderParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             obj: Test,
             strReq: String,
             int: Int = 5
@@ -144,7 +144,7 @@ class RequestHeaderParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             obj: Test? = nil,
             str: String? = nil,
             int: Int? = nil,
@@ -219,7 +219,7 @@ class RequestHeaderParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(category: FetchTestCategoryHeaderParam, type: FetchTestTypeHeaderParam) async throws -> [String : AnyValue] {
+          public func fetchTest(category: FetchTestCategoryHeaderParam, type: FetchTestTypeHeaderParam) async throws -> [String : AnyValue] {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",

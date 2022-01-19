@@ -74,7 +74,7 @@ class RequestMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() async throws -> Test {
+          public func fetchTest() async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
@@ -87,7 +87,7 @@ class RequestMethodsTest {
             )
           }
 
-          func putTest(body: Test) async throws -> Test {
+          public func putTest(body: Test) async throws -> Test {
             return try await self.requestFactory.result(
               method: .put,
               pathTemplate: "/tests",
@@ -100,7 +100,7 @@ class RequestMethodsTest {
             )
           }
 
-          func postTest(body: Test) async throws -> Test {
+          public func postTest(body: Test) async throws -> Test {
             return try await self.requestFactory.result(
               method: .post,
               pathTemplate: "/tests",
@@ -113,7 +113,7 @@ class RequestMethodsTest {
             )
           }
 
-          func patchTest(body: Test) async throws -> Test {
+          public func patchTest(body: Test) async throws -> Test {
             return try await self.requestFactory.result(
               method: .patch,
               pathTemplate: "/tests",
@@ -126,7 +126,7 @@ class RequestMethodsTest {
             )
           }
 
-          func deleteTest() async throws {
+          public func deleteTest() async throws {
             return try await self.requestFactory.result(
               method: .delete,
               pathTemplate: "/tests",
@@ -139,7 +139,7 @@ class RequestMethodsTest {
             )
           }
 
-          func headTest() async throws {
+          public func headTest() async throws {
             return try await self.requestFactory.result(
               method: .head,
               pathTemplate: "/tests",
@@ -152,7 +152,7 @@ class RequestMethodsTest {
             )
           }
 
-          func optionsTest() async throws {
+          public func optionsTest() async throws {
             return try await self.requestFactory.result(
               method: .options,
               pathTemplate: "/tests",
@@ -165,7 +165,7 @@ class RequestMethodsTest {
             )
           }
 
-          func patchableTest(body: PatchableTest.Patch) async throws -> Test {
+          public func patchableTest(body: PatchableTest.Patch) async throws -> Test {
             return try await self.requestFactory.result(
               method: .patch,
               pathTemplate: "/tests2",
@@ -229,7 +229,7 @@ class RequestMethodsTest {
             requestFactory.registerProblem(type: "http://example.com/another_not_found", problemType: AnotherNotFoundProblem.self)
           }
 
-          func fetchTestOrNil(limit: Int) async throws -> Test? {
+          public func fetchTestOrNil(limit: Int) async throws -> Test? {
             return try await nilifyResponse(
                 statuses: [404, 405],
                 problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
@@ -238,7 +238,7 @@ class RequestMethodsTest {
               }
           }
 
-          func fetchTest(limit: Int) async throws -> Test {
+          public func fetchTest(limit: Int) async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",

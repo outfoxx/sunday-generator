@@ -75,7 +75,7 @@ class RequestMixedParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             select: FetchTestSelectUriParam,
             page: FetchTestPageQueryParam,
             xType: FetchTestXTypeHeaderParam
@@ -169,7 +169,7 @@ class RequestMixedParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             type: FetchTestTypeUriParam,
             type_: FetchTestTypeQueryParam,
             type__: FetchTestTypeHeaderParam
