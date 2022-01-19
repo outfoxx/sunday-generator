@@ -228,8 +228,10 @@ class SwiftTypeRegistry(
     problemTypeDefinition: ProblemTypeDefinition
   ): DeclaredTypeName {
 
+    val moduleName = moduleNameOf(problemTypeDefinition.definedIn)
+
     val problemTypeName =
-      DeclaredTypeName.typeName(".${problemCode.toUpperCamelCase()}Problem")
+      DeclaredTypeName.typeName("$moduleName.${problemCode.toUpperCamelCase()}Problem")
 
     val problemCodingKeysTypeName = problemTypeName.nestedType(CODING_KEYS_NAME)
 
