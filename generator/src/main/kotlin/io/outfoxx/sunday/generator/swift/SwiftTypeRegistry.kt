@@ -979,18 +979,18 @@ class SwiftTypeRegistry(
         decoderInitFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
         encoderFunctionBuilder.beginControlFlow("switch", "%L", switchOn)
 
-        val usedDiscriminators = mutableSetOf<String>()
+        val usedCases = mutableSetOf<String>()
 
         propertyTypeDerivedShapes.forEach { propertyTypeDerivedShape ->
 
           val discriminatorValue =
             findDiscriminatorPropertyValue(propertyTypeDerivedShape, context) ?: propertyTypeDerivedShape.name!!
 
-          usedDiscriminators.add(discriminatorValue)
-
           val discriminatorCase = discriminatorValue.swiftIdentifierName
           val propDerivedTypeName = resolveReferencedTypeName(propertyTypeDerivedShape, context)
           val propDerivedTypeSuffix = if (propertyTypeName.optional) "?" else ""
+
+          usedCases.add(discriminatorCase)
 
           if (!externalDiscriminatorPropertyEnumCases.isNullOrEmpty()) {
             decoderInitFunctionBuilder.addStatement(
@@ -1022,7 +1022,7 @@ class SwiftTypeRegistry(
 
         if (
           externalDiscriminatorPropertyEnumCases.isNullOrEmpty() ||
-          !usedDiscriminators.containsAll(externalDiscriminatorPropertyEnumCases)
+          !usedCases.containsAll(externalDiscriminatorPropertyEnumCases)
         ) {
           decoderInitFunctionBuilder.addStatement(
             "default:\nthrow %T.%N(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
