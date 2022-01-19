@@ -79,7 +79,7 @@ class ResponseProblemsTest {
             requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
           }
 
-          func fetchTest() async throws -> Test {
+          public func fetchTest() async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
@@ -141,7 +141,7 @@ class ResponseProblemsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() async throws -> Test {
+          public func fetchTest() async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
@@ -206,7 +206,7 @@ class ResponseProblemsTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,
@@ -283,7 +283,7 @@ class ResponseProblemsTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,
@@ -360,7 +360,7 @@ class ResponseProblemsTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,
@@ -437,7 +437,7 @@ class ResponseProblemsTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,
@@ -514,7 +514,7 @@ class ResponseProblemsTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,

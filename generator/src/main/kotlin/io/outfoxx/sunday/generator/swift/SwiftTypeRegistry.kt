@@ -248,6 +248,7 @@ class SwiftTypeRegistry(
         )
         .addFunction(
           FunctionSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
             .apply {
               // Add all custom properties to constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->

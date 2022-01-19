@@ -74,7 +74,7 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Test) async throws -> Test {
+          public func fetchTest(body: Test) async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
@@ -136,7 +136,7 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Test?) async throws -> Test {
+          public func fetchTest(body: Test?) async throws -> Test {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
@@ -200,7 +200,7 @@ class RequestBodyParamTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(body: Data) async throws -> [String : AnyValue] {
+          public func fetchTest(body: Data) async throws -> [String : AnyValue] {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",

@@ -74,7 +74,7 @@ class RequestUriParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             def: String,
             obj: Test,
             strReq: String,
@@ -147,7 +147,7 @@ class RequestUriParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             obj: [String : Any],
             str: String,
             def: String,
@@ -219,7 +219,7 @@ class RequestUriParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(
+          public func fetchTest(
             def2: Int? = 10,
             obj: Test? = nil,
             str: String? = nil,
@@ -296,7 +296,7 @@ class RequestUriParamsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) async throws -> [String : AnyValue] {
+          public func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) async throws -> [String : AnyValue] {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests/{category}/{type}",

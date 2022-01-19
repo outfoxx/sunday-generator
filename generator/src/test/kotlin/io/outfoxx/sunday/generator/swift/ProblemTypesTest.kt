@@ -64,7 +64,7 @@ class ProblemTypesTest {
                 .build()
           }
 
-          init(offendingId: String, instance: URL? = nil) {
+          public init(offendingId: String, instance: URL? = nil) {
             self.offendingId = offendingId
             super.init(type: Self.type, title: "Invalid Id", status: 400,
                 detail: "The id contains one or more invalid characters.", instance: instance,
@@ -117,7 +117,7 @@ class ProblemTypesTest {
                 .build()
           }
 
-          init(instance: URL? = nil) {
+          public init(instance: URL? = nil) {
             super.init(type: Self.type, title: "Account Not Found", status: 404,
                 detail: "The requested account does not exist or you do not have permission to access it.",
                 instance: instance, parameters: nil)
@@ -165,7 +165,7 @@ class ProblemTypesTest {
                 .build()
           }
 
-          init(
+          public init(
             optionalString: String?,
             arrayOfStrings: [String],
             optionalArrayOfStrings: [String]?,

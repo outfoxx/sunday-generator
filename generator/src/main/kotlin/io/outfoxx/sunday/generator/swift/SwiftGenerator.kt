@@ -77,6 +77,7 @@ import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FunctionSpec
+import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.NameAllocator
 import io.outfoxx.swiftpoet.ParameterSpec
 import io.outfoxx.swiftpoet.STRING
@@ -213,6 +214,7 @@ abstract class SwiftGenerator(
 
         var functionBuilder =
           FunctionSpec.builder(operationName)
+            .addModifiers(PUBLIC)
             .returns(VOID)
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())

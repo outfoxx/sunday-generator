@@ -75,7 +75,7 @@ class BuilderMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() async throws -> URLRequest {
+          public func fetchTest() async throws -> URLRequest {
             return try await self.requestFactory.request(
               method: .get,
               pathTemplate: "/test/request",
@@ -138,7 +138,7 @@ class BuilderMethodsTest {
             self.defaultAcceptTypes = defaultAcceptTypes
           }
 
-          func fetchTest() async throws -> (Data?, HTTPURLResponse) {
+          public func fetchTest() async throws -> (Data?, HTTPURLResponse) {
             return try await self.requestFactory.response(
               method: .get,
               pathTemplate: "/test/response",

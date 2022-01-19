@@ -91,7 +91,7 @@ class BaseUriTest {
             )
           }
 
-          func fetchTest() async throws -> String {
+          public func fetchTest() async throws -> String {
             return try await self.requestFactory.result(
               method: .get,
               pathTemplate: "/tests",
