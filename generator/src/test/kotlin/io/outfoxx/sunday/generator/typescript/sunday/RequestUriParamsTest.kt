@@ -214,11 +214,11 @@ class RequestUriParamsTest {
           }
 
           fetchTest(
-              def2: number | undefined = undefined,
+              def2: number | null | undefined = undefined,
               obj: Test | undefined = undefined,
               str: string | undefined = undefined,
               def1: string | undefined = undefined,
-              int: number | undefined = undefined,
+              int: number | null = null,
               def: string
           ): Observable<Test> {
             return this.requestFactory.result(

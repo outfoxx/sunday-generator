@@ -52,7 +52,7 @@ class RamlUnionTypesTest {
 
           duplicate: string;
 
-          nullable: string | undefined;
+          nullable: string | null;
 
         }
 
@@ -62,9 +62,9 @@ class RamlUnionTypesTest {
 
           duplicate: string;
 
-          nullable: string | undefined;
+          nullable: string | null;
 
-          constructor(any: number | string, duplicate: string, nullable: string | undefined) {
+          constructor(any: number | string, duplicate: string, nullable: string | null) {
             this.any = any;
             this.duplicate = duplicate;
             this.nullable = nullable;

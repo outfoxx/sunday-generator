@@ -115,14 +115,14 @@ class ProblemTypesTest {
 
           static TYPE: string = 'http://example.com/test_resolver';
 
-          optionalString: string | undefined;
+          optionalString: string | null;
 
           arrayOfStrings: Array<string>;
 
-          optionalArrayOfStrings: Array<string> | undefined;
+          optionalArrayOfStrings: Array<string> | null;
 
-          constructor(optionalString: string | undefined, arrayOfStrings: Array<string>,
-              optionalArrayOfStrings: Array<string> | undefined,
+          constructor(optionalString: string | null, arrayOfStrings: Array<string>,
+              optionalArrayOfStrings: Array<string> | null,
               instance: string | URL | undefined = undefined) {
             super({
               type: TestResolverProblem.TYPE,

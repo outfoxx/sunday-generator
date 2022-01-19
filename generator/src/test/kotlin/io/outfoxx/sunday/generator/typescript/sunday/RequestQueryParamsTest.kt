@@ -146,9 +146,9 @@ class RequestQueryParamsTest {
           fetchTest(
               obj: Test | undefined = undefined,
               str: string | undefined = undefined,
-              int: number | undefined = undefined,
+              int: number | null = null,
               def1: string | undefined = undefined,
-              def2: number | undefined = undefined
+              def2: number | null | undefined = undefined
           ): Observable<Test> {
             return this.requestFactory.result(
                 {
