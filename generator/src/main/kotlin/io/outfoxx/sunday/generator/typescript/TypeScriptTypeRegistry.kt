@@ -460,7 +460,7 @@ class TypeScriptTypeRegistry(
         elementTypeName
       }
     return if (nameStr.endsWith("?"))
-      typeName.undefinable
+      typeName.nullable
     else
       typeName
   }
@@ -585,7 +585,7 @@ class TypeScriptTypeRegistry(
 
   private fun processUnionShape(shape: UnionShape, context: TypeScriptResolutionContext): TypeName =
     if (shape.makesNullable) {
-      resolveReferencedTypeName(shape.nullableType, context).undefinable
+      resolveReferencedTypeName(shape.nullableType, context).nullable
     } else {
       nearestCommonAncestor(shape.anyOf, context)
         ?: TypeName.unionType(*shape.anyOf.map { resolveReferencedTypeName(it, context) }.toTypedArray())

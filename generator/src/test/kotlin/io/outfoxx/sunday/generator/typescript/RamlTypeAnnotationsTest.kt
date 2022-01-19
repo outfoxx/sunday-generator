@@ -804,9 +804,11 @@ class RamlTypeAnnotationsTest {
 
           bool: boolean;
 
-          nullable: string | undefined;
+          nullable: string | null;
         
           optional: string | undefined;
+
+          nullableOptional: string | null | undefined;
 
         }
 
@@ -818,31 +820,36 @@ class RamlTypeAnnotationsTest {
 
           bool: boolean;
 
-          nullable: string | undefined;
+          nullable: string | null;
         
           optional: string | undefined;
         
+          nullableOptional: string | null | undefined;
+
           constructor(
               string: string,
               int: number,
               bool: boolean,
-              nullable: string | undefined,
-              optional: string | undefined
+              nullable: string | null,
+              optional: string | undefined,
+              nullableOptional: string | null | undefined
           ) {
             this.string = string;
             this.int = int;
             this.bool = bool;
             this.nullable = nullable;
             this.optional = optional;
+            this.nullableOptional = nullableOptional;
           }
 
           copy(src: Partial<Test>): Test {
             return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool,
-                src.nullable ?? this.nullable, src.optional ?? this.optional);
+                src.nullable ?? this.nullable, src.optional ?? this.optional,
+                src.nullableOptional ?? this.nullableOptional);
           }
 
           toString(): string {
-            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}')`;
+            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
           }
 
           patch(source: Partial<Test>): Test.Patch {
@@ -851,7 +858,8 @@ class RamlTypeAnnotationsTest {
               source['int'] !== undefined ? this.int : null,
               source['bool'] !== undefined ? this.bool : null,
               source['nullable'] !== undefined ? this.nullable : null,
-              source['optional'] !== undefined ? this.optional : null
+              source['optional'] !== undefined ? this.optional : null,
+              source['nullableOptional'] !== undefined ? this.nullableOptional : null
             );
           }
 
@@ -865,8 +873,9 @@ class RamlTypeAnnotationsTest {
                 public string: string | null | undefined,
                 public int: number | null | undefined,
                 public bool: boolean | null | undefined,
-                public nullable: string | undefined | null | undefined,
-                public optional: string | null | undefined
+                public nullable: string | null | undefined,
+                public optional: string | null | undefined,
+                public nullableOptional: string | null | undefined
             ) {
             }
 

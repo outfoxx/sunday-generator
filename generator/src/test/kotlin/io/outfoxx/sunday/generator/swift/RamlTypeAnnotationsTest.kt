@@ -1049,6 +1049,7 @@ class RamlTypeAnnotationsTest {
           public let bool: Bool
           public let nullable: String?
           public let optional: String?
+          public let nullableOptional: String?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(string, named: "string")
@@ -1056,6 +1057,7 @@ class RamlTypeAnnotationsTest {
                 .add(bool, named: "bool")
                 .add(nullable, named: "nullable")
                 .add(optional, named: "optional")
+                .add(nullableOptional, named: "nullableOptional")
                 .build()
           }
 
@@ -1064,13 +1066,15 @@ class RamlTypeAnnotationsTest {
             int: Int,
             bool: Bool,
             nullable: String?,
-            optional: String?
+            optional: String?,
+            nullableOptional: String?
           ) {
             self.string = string
             self.int = int
             self.bool = bool
             self.nullable = nullable
             self.optional = optional
+            self.nullableOptional = nullableOptional
           }
 
           public required init(from decoder: Decoder) throws {
@@ -1080,6 +1084,7 @@ class RamlTypeAnnotationsTest {
             self.bool = try container.decode(Bool.self, forKey: .bool)
             self.nullable = try container.decodeIfPresent(String.self, forKey: .nullable)
             self.optional = try container.decodeIfPresent(String.self, forKey: .optional)
+            self.nullableOptional = try container.decodeIfPresent(String.self, forKey: .nullableOptional)
           }
 
           public func encode(to encoder: Encoder) throws {
@@ -1089,26 +1094,37 @@ class RamlTypeAnnotationsTest {
             try container.encode(self.bool, forKey: .bool)
             try container.encodeIfPresent(self.nullable, forKey: .nullable)
             try container.encodeIfPresent(self.optional, forKey: .optional)
+            try container.encodeIfPresent(self.nullableOptional, forKey: .nullableOptional)
           }
 
           public func withString(string: String) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
           }
 
           public func withInt(int: Int) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
           }
 
           public func withBool(bool: Bool) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
           }
         
           public func withNullable(nullable: String?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
           }
         
           public func withOptional(optional: String?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional)
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
+          }
+        
+          public func withNullableOptional(nullableOptional: String?) -> Test {
+            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional)
           }
 
           func patch(source: [String : Any]) -> Patch {
@@ -1116,7 +1132,8 @@ class RamlTypeAnnotationsTest {
                 int: source.keys.contains("int") ? Optional.some(int) : nil,
                 bool: source.keys.contains("bool") ? Optional.some(bool) : nil,
                 nullable: source.keys.contains("nullable") ? Optional.some(nullable) : nil,
-                optional: source.keys.contains("optional") ? Optional.some(optional) : nil)
+                optional: source.keys.contains("optional") ? Optional.some(optional) : nil,
+                nullableOptional: source.keys.contains("nullableOptional") ? Optional.some(nullableOptional) : nil)
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
@@ -1126,6 +1143,7 @@ class RamlTypeAnnotationsTest {
             case bool = "bool"
             case nullable = "nullable"
             case optional = "optional"
+            case nullableOptional = "nullableOptional"
 
           }
 
@@ -1136,19 +1154,22 @@ class RamlTypeAnnotationsTest {
             let bool: Bool?
             let nullable: String??
             let optional: String??
+            let nullableOptional: String??
 
-            init(
+            public init(
               string: String?,
               int: Int?,
               bool: Bool?,
               nullable: String??,
-              optional: String??
+              optional: String??,
+              nullableOptional: String??
             ) {
               self.string = string
               self.int = int
               self.bool = bool
               self.nullable = nullable
               self.optional = optional
+              self.nullableOptional = nullableOptional
             }
 
           }

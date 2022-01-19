@@ -50,15 +50,15 @@ class RamlArrayTypesTest {
       
           arrayOfStrings: Array<string>;
       
-          arrayOfNullableStrings: Array<string | undefined>;
+          arrayOfNullableStrings: Array<string | null>;
       
-          nullableArrayOfStrings: Array<string> | undefined;
+          nullableArrayOfStrings: Array<string> | null;
       
-          nullableArrayOfNullableStrings: Array<string | undefined> | undefined;
+          nullableArrayOfNullableStrings: Array<string | null> | null;
       
           declaredArrayOfStrings: Array<string>;
       
-          declaredArrayOfNullableStrings: Array<string | undefined>;
+          declaredArrayOfNullableStrings: Array<string | null>;
       
         }
       
@@ -66,23 +66,23 @@ class RamlArrayTypesTest {
 
           arrayOfStrings: Array<string>;
 
-          arrayOfNullableStrings: Array<string | undefined>;
+          arrayOfNullableStrings: Array<string | null>;
 
-          nullableArrayOfStrings: Array<string> | undefined;
+          nullableArrayOfStrings: Array<string> | null;
 
-          nullableArrayOfNullableStrings: Array<string | undefined> | undefined;
+          nullableArrayOfNullableStrings: Array<string | null> | null;
 
           declaredArrayOfStrings: Array<string>;
 
-          declaredArrayOfNullableStrings: Array<string | undefined>;
+          declaredArrayOfNullableStrings: Array<string | null>;
 
           constructor(
               arrayOfStrings: Array<string>,
-              arrayOfNullableStrings: Array<string | undefined>,
-              nullableArrayOfStrings: Array<string> | undefined,
-              nullableArrayOfNullableStrings: Array<string | undefined> | undefined,
+              arrayOfNullableStrings: Array<string | null>,
+              nullableArrayOfStrings: Array<string> | null,
+              nullableArrayOfNullableStrings: Array<string | null> | null,
               declaredArrayOfStrings: Array<string>,
-              declaredArrayOfNullableStrings: Array<string | undefined>
+              declaredArrayOfNullableStrings: Array<string | null>
           ) {
             this.arrayOfStrings = arrayOfStrings;
             this.arrayOfNullableStrings = arrayOfNullableStrings;
@@ -194,7 +194,7 @@ class RamlArrayTypesTest {
       
           binary: ArrayBuffer;
       
-          nullableBinary: ArrayBuffer | undefined;
+          nullableBinary: ArrayBuffer | null;
       
         }
       
@@ -202,9 +202,9 @@ class RamlArrayTypesTest {
 
           binary: ArrayBuffer;
 
-          nullableBinary: ArrayBuffer | undefined;
+          nullableBinary: ArrayBuffer | null;
 
-          constructor(binary: ArrayBuffer, nullableBinary: ArrayBuffer | undefined) {
+          constructor(binary: ArrayBuffer, nullableBinary: ArrayBuffer | null) {
             this.binary = binary;
             this.nullableBinary = nullableBinary;
           }

@@ -1213,13 +1213,15 @@ class SwiftTypeRegistry(
           .addSuperType(CODABLE)
           .addModifiers(PUBLIC)
 
-      val patchClassConsBuilder = FunctionSpec.constructorBuilder()
+      val patchClassConsBuilder =
+        FunctionSpec.constructorBuilder()
+          .addModifiers(PUBLIC)
 
       val patchFields = mutableListOf<CodeBlock>()
 
       for (propertyDecl in propertyContainerShape.properties) {
         var propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
-        if (propertyDecl.optional) {
+        if (propertyDecl.optional && !propertyTypeName.optional) {
           propertyTypeName = propertyTypeName.wrapOptional()
         }
         val optionalPropertyTypeName = propertyTypeName.wrapOptional()
