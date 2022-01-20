@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
-import com.google.cloud.tools.jib.gradle.PlatformParameters
 
 plugins {
   application
