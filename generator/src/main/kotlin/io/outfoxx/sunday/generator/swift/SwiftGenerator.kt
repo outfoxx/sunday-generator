@@ -35,6 +35,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
+import io.outfoxx.sunday.generator.APIAnnotationName.ServiceName
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModelModule
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModule
 import io.outfoxx.sunday.generator.Generator
@@ -106,7 +107,9 @@ abstract class SwiftGenerator(
 
     endPointGroups.map { (groupName, endPoints) ->
 
-      val serviceSimpleName = "${groupName?.replaceFirstChar { it.titlecase() } ?: ""}${options.serviceSuffix}"
+      val servicePrefix = groupName ?: api.findStringAnnotation(ServiceName, null) ?: ""
+
+      val serviceSimpleName = "${servicePrefix.swiftTypeName}${options.serviceSuffix}"
 
       val serviceModuleName =
         api.findStringAnnotation(SwiftModule, null)

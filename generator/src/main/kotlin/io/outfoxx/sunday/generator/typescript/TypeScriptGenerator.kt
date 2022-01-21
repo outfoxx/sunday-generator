@@ -30,17 +30,17 @@ import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
 import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
-import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
+import io.outfoxx.sunday.generator.APIAnnotationName.ServiceName
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModule
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
@@ -107,7 +107,9 @@ abstract class TypeScriptGenerator(
 
     endPointGroups.map { (groupName, endPoints) ->
 
-      val serviceSimpleName = "${groupName?.kotlinTypeName ?: ""}${options.serviceSuffix}"
+      val servicePrefix = groupName ?: api.findStringAnnotation(ServiceName, null) ?: ""
+
+      val serviceSimpleName = "${servicePrefix.typeScriptTypeName}${options.serviceSuffix}"
 
       val modulePath = modulePathOf(document)?.let { "!$it/" } ?: "!"
 
@@ -551,8 +553,8 @@ abstract class TypeScriptGenerator(
   }
 
   private fun modulePathOf(unit: BaseUnit?): String? =
-    (unit as? CustomizableElement)?.findStringAnnotation(APIAnnotationName.TypeScriptModule, null)
-      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(APIAnnotationName.TypeScriptModule, null)
+    (unit as? CustomizableElement)?.findStringAnnotation(TypeScriptModule, null)
+      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(TypeScriptModule, null)
 
   private fun getBaseURIInfo(): Pair<String, List<URIParameter>>? {
 
