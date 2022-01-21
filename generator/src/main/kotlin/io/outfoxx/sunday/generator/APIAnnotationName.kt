@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator
 
 enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) {
 
+  ServiceName("name", false),
   ServiceGroup("group", false),
 
   KotlinPkg("kotlinPackage", true),

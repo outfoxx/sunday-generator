@@ -42,7 +42,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
-import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinModelPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
@@ -50,6 +50,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
 import io.outfoxx.sunday.generator.APIAnnotationName.Problems
 import io.outfoxx.sunday.generator.APIAnnotationName.ServiceGroup
+import io.outfoxx.sunday.generator.APIAnnotationName.ServiceName
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
@@ -127,16 +128,17 @@ abstract class KotlinGenerator(
 
   override fun generateServiceTypes() {
 
-    val endPointGroups =
-      api.endPoints.groupBy { it.root.findStringAnnotation(ServiceGroup, generationMode) }
+    val endPointGroups = api.endPoints.groupBy { it.root.findStringAnnotation(ServiceGroup, generationMode) }
 
     endPointGroups.map { (groupName, endPoints) ->
+
+      val servicePrefix = groupName ?: api.findStringAnnotation(ServiceName, generationMode) ?: ""
 
       val servicePackageName =
         api.findStringAnnotation(KotlinPkg, generationMode)
           ?: options.defaultServicePackageName
 
-      val serviceSimpleName = "${groupName?.replaceFirstChar { it.titlecase() } ?: ""}${options.serviceSuffix}"
+      val serviceSimpleName = "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
 
       val serviceTypeName = ClassName.bestGuess("$servicePackageName.$serviceSimpleName")
 
@@ -596,7 +598,7 @@ abstract class KotlinGenerator(
     val server = document.api.servers.firstOrNull() ?: return null
 
     val documentPackageName =
-      document.api.findStringAnnotation(APIAnnotationName.KotlinModelPkg, generationMode)
+      document.api.findStringAnnotation(KotlinModelPkg, generationMode)
         ?: typeRegistry.defaultModelPackageName
 
     val parameters =
