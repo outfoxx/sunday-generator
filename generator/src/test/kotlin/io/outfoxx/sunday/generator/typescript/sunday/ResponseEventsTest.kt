@@ -117,7 +117,7 @@ class ResponseEventsTest {
         import {Test1} from './test1';
         import {Test2} from './test2';
         import {Test3} from './test3';
-        import {EventTypes, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {MediaType, RequestFactory} from '@outfoxx/sunday';
         import {Observable} from 'rxjs';
 
 
@@ -134,20 +134,35 @@ class ResponseEventsTest {
             this.defaultAcceptTypes =
                 options?.defaultAcceptTypes ?? [];
           }
+        
+          fetchEventsSimple(): Observable<Test1> {
+            return this.requestFactory.eventStream<Test1>(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test1',
+                  acceptTypes: [MediaType.EventStream]
+                },
+                (decoder, event, id, data) => decoder.decodeText(data, [Test1])
+            );
+          }
 
-          fetchEvents(): Observable<Test1 | Test2 | Test3> {
-            const eventTypes: EventTypes<Test1 | Test2 | Test3> = {
-              'Test1' : [Test1],
-              'test2' : [Test2],
-              't3' : [Test3]
-            };
+          fetchEventsDiscriminated(): Observable<Test1 | Test2 | Test3> {
             return this.requestFactory.eventStream<Test1 | Test2 | Test3>(
                 {
                   method: 'GET',
-                  pathTemplate: '/tests',
+                  pathTemplate: '/test2',
                   acceptTypes: [MediaType.EventStream]
                 },
-                eventTypes
+                (decoder, event, id, data, logger) => {
+                  switch (event) {
+                  case 'Test1': return decoder.decodeText(data, [Test1]);
+                  case 'test2': return decoder.decodeText(data, [Test2]);
+                  case 't3': return decoder.decodeText(data, [Test3]);
+                  default:
+                    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+                    return undefined;
+                  }
+                },
             );
           }
 
@@ -185,7 +200,7 @@ class ResponseEventsTest {
         import {Base} from './base';
         import {Test1} from './test1';
         import {Test2} from './test2';
-        import {EventTypes, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {MediaType, RequestFactory} from '@outfoxx/sunday';
         import {Observable} from 'rxjs';
 
 
@@ -202,19 +217,34 @@ class ResponseEventsTest {
             this.defaultAcceptTypes =
                 options?.defaultAcceptTypes ?? [];
           }
-
-          fetchEvents(): Observable<Base> {
-            const eventTypes: EventTypes<Base> = {
-              'Test1' : [Test1],
-              'Test2' : [Test2]
-            };
+        
+          fetchEventsSimple(): Observable<Base> {
             return this.requestFactory.eventStream<Base>(
                 {
                   method: 'GET',
-                  pathTemplate: '/tests',
+                  pathTemplate: '/test1',
                   acceptTypes: [MediaType.EventStream]
                 },
-                eventTypes
+                (decoder, event, id, data) => decoder.decodeText(data, [Base])
+            );
+          }
+
+          fetchEventsDiscriminated(): Observable<Base> {
+            return this.requestFactory.eventStream<Base>(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test2',
+                  acceptTypes: [MediaType.EventStream]
+                },
+                (decoder, event, id, data, logger) => {
+                  switch (event) {
+                  case 'Test1': return decoder.decodeText(data, [Test1]);
+                  case 'Test2': return decoder.decodeText(data, [Test2]);
+                  default:
+                    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+                    return undefined;
+                  }
+                },
             );
           }
 

@@ -10,6 +10,7 @@ types:
   Test1:
     type: object
     properties:
+      type: string
       value: string
 
   Test2:
@@ -24,9 +25,19 @@ types:
     properties:
       value: string
 
-/tests:
+/test1:
   get:
-    displayName: fetchEvents
+    displayName: fetchEventsSimple
+    (sunday.eventStream): simple
+    responses:
+      200:
+        body:
+          text/event-stream:
+            type: Test1
+
+/test2:
+  get:
+    displayName: fetchEventsDiscriminated
     (sunday.eventStream): discriminated
     responses:
       200:

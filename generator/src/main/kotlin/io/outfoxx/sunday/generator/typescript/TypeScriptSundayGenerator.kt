@@ -36,7 +36,6 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
-import io.outfoxx.sunday.generator.typescript.utils.EVENT_TYPES
 import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
@@ -206,9 +205,12 @@ class TypeScriptSundayGenerator(
       return EVENT_SOURCE
     }
 
-    if (operation.findStringAnnotation(EventStream, null) == "discriminated") {
-      if (body !is UnionShape) {
-        genError("Discriminated ($EventStream) requires a union of event types", operation)
+    when (operation.findStringAnnotation(EventStream, null)) {
+      "simple" -> Unit
+      "discriminated" -> {
+        if (body !is UnionShape) {
+          genError("Discriminated ($EventStream) requires a union of event types", operation)
+        }
       }
     }
 
@@ -474,10 +476,17 @@ class TypeScriptSundayGenerator(
       // Generate EventSource/Event Stream handling method
       when (operation.findStringAnnotation(EventStream, null)) {
 
+        "simple" -> {
+          builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
+          builder.add(specGen())
+          builder.add(",\n")
+          builder.add("(decoder, event, id, data) => decoder.decodeText(data, [%T])%]\n);\n", originalReturnType)
+        }
+
         "discriminated" -> {
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString(",") { "\n%S : [%T]" }
+          val typesTemplate = types.joinToString("\n  ") { "case %S: return decoder.decodeText(data, [%T]);" }
           val typesParams = types.flatMap {
             val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, null))
             val discValue =
@@ -487,17 +496,22 @@ class TypeScriptSundayGenerator(
             listOf(discValue, typeName)
           }
 
-          builder.add(
-            "const eventTypes: %T<%T> = {%>$typesTemplate%<\n};\n",
-            EVENT_TYPES,
-            originalReturnType,
-            *typesParams.toTypedArray()
-          )
-
           builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
           builder.add(specGen())
-          builder.add(",\n")
-          builder.add("eventTypes%]\n);\n")
+          builder.add(
+            """,
+            |(decoder, event, id, data, logger) => {
+            |  switch (event) {
+            |  $typesTemplate
+            |  default:
+            |    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+            |    return undefined;
+            |  }
+            |},
+            """.trimMargin(),
+            *typesParams.toTypedArray()
+          )
+          builder.add("%]\n);\n")
         }
 
         else -> {

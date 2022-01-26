@@ -278,11 +278,16 @@ class KotlinJAXRSGenerator(
       }
     }
 
-    if (operation.findStringAnnotation(EventStream, null) == "discriminated") {
-      if (body !is UnionShape) {
-        genError("Discriminated ($EventStream) requires a union of event types", operation)
+    when (operation.findStringAnnotation(EventStream, null)) {
+      "simple" -> {
+        return FLOW.parameterizedBy(returnTypeName)
       }
-      return FLOW.parameterizedBy(returnTypeName)
+      "discriminated" -> {
+        if (body !is UnionShape) {
+          genError("Discriminated ($EventStream) requires a union of event types", operation)
+        }
+        return FLOW.parameterizedBy(returnTypeName)
+      }
     }
 
     return if (generationMode == Client) {

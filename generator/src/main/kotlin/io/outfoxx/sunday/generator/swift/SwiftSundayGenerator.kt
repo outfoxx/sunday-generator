@@ -241,11 +241,16 @@ class SwiftSundayGenerator(
       return EVENT_SOURCE
     }
 
-    if (operation.findStringAnnotation(APIAnnotationName.EventStream, null) == "discriminated") {
-      if (body !is UnionShape) {
-        genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
+    when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
+      "simple" -> {
+        return ASYNC_STREAM.parameterizedBy(returnTypeName)
       }
-      return ASYNC_STREAM.parameterizedBy(returnTypeName)
+      "discriminated" -> {
+        if (body !is UnionShape) {
+          genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
+        }
+        return ASYNC_STREAM.parameterizedBy(returnTypeName)
+      }
     }
 
     val elementReturnType =
@@ -495,10 +500,23 @@ class SwiftSundayGenerator(
       // Generate EventSource/Event Stream handling method
       when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
 
+        "simple" -> {
+          val decodeType = typeRegistry.getReferenceType(originalReturnType!!) ?: originalReturnType
+          val decodeUnwrap = if (decodeType != originalReturnType) ".value" else ""
+          builder.add("return self.requestFactory.eventStream(%>\n", originalReturnType)
+          builder.add(reqGen())
+          builder.add(
+            ",\ndecoder: { decoder, _, _, data, _ in try decoder.decode(%T.self, from: data)%L }",
+            decodeType,
+            decodeUnwrap
+          )
+          builder.add("%<\n)\n")
+        }
+
         "discriminated" -> {
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString(",") { "\n%S: .erase(%T.self)" }
+          val typesTemplate = types.joinToString("\n  ") { "case %S: return try decoder.decode(%T.self, from: data)" }
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
@@ -511,10 +529,19 @@ class SwiftSundayGenerator(
           builder.add("return self.requestFactory.eventStream(%>\n", originalReturnType)
           builder.add(reqGen())
           builder.add(
-            ",\neventTypes: [%>$typesTemplate%<\n]",
+            """,
+            |decoder: { decoder, event, _, data, log in
+            |  switch event {
+            |  $typesTemplate
+            |  default:
+            |    log.error("Unknown event type, ignoring event: event=\(event)")
+            |    return nil
+            |  }
+            |}
+            """.trimMargin(),
             *typesParams.toTypedArray()
           )
-          builder.add("%<\n)")
+          builder.add("%<\n)\n")
         }
 
         else -> {
