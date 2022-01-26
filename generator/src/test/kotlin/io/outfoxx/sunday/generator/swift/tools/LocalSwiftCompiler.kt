@@ -20,9 +20,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class LocalSwiftCompiler(val command: String, workDir: Path) : SwiftCompiler(workDir) {
+class LocalSwiftCompiler(private val command: String, workDir: Path) : SwiftCompiler(workDir) {
 
-  val swiftBuildDir: Path
+  private val swiftBuildDir: Path
 
   init {
 
@@ -53,12 +53,12 @@ class LocalSwiftCompiler(val command: String, workDir: Path) : SwiftCompiler(wor
           "--build-path", "${swiftBuildDir.resolve("build")}",
           "--cache-path", "${swiftBuildDir.resolve("cache")}",
         )
-        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        .redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()
 
-    return result to buildPkg.errorStream.readAllBytes().decodeToString()
+    return result to buildPkg.inputStream.readAllBytes().decodeToString()
   }
 
   override fun close() {

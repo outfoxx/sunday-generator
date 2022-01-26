@@ -9,7 +9,9 @@ types:
 
   Base:
     type: object
+    discriminator: type
     properties:
+      type: string
       value: string
 
   Test1:
@@ -22,9 +24,18 @@ types:
     properties:
       value2: string
 
-/tests:
+/test1:
   get:
-    displayName: fetchEvents
+    displayName: fetchEventsSimple
+    (sunday.eventStream): simple
+    responses:
+      200:
+        body:
+          text/event-stream:
+            type: Base
+/test2:
+  get:
+    displayName: fetchEventsDiscriminated
     (sunday.eventStream): discriminated
     responses:
       200:

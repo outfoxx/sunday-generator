@@ -238,11 +238,16 @@ class KotlinSundayGenerator(
       return EventSource::class.asTypeName()
     }
 
-    if (operation.findStringAnnotation(APIAnnotationName.EventStream, null) == "discriminated") {
-      if (body !is UnionShape) {
-        genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
+    when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
+      "simple" -> {
+        return FLOW.parameterizedBy(returnTypeName)
       }
-      return FLOW.parameterizedBy(returnTypeName)
+      "discriminated" -> {
+        if (body !is UnionShape) {
+          genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
+        }
+        return FLOW.parameterizedBy(returnTypeName)
+      }
     }
 
     return when {
@@ -474,22 +479,44 @@ class KotlinSundayGenerator(
       // Generate EventSource/Event Stream handling method
       when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
 
+        "simple" -> {
+
+          builder.add("return this.requestFactory.eventStream(⇥\n", originalReturnType)
+          builder.add(specGen())
+          builder.add(
+            ",\ndecoder = { decoder, _, _, data, _ -> decoder.decode<%T>(data, %M<%T>()) }",
+            originalReturnType,
+            TYPE_OF,
+            originalReturnType,
+          )
+          builder.add("⇤\n)")
+        }
+
         "discriminated" -> {
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString(",") { "\n%S to %M<%T>()" }
+          val typesTemplate = types.joinToString("\n    ") { "%S -> decoder.decode<%T>(data, %M<%T>())" }
           val typesParams = types.flatMap {
-            val typeOf = MemberName("io.outfoxx.sunday", "typeOf")
             val typeName = resolveTypeName(it, null)
             val discValue =
               (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
-            listOf(discValue, typeOf, typeName)
+            listOf(discValue, typeName, TYPE_OF, typeName)
           }
 
           builder.add("return this.requestFactory.eventStream(⇥\n", originalReturnType)
           builder.add(specGen())
           builder.add(
-            ",\neventTypes = mapOf(⇥$typesTemplate⇤\n)",
+            """,
+            |decoder = { decoder, event, _, data, logger ->
+            |  when (event) {
+            |    $typesTemplate
+            |    else -> {
+            |      logger.error("Unknown event type, ignoring event: event=${'$'}event")
+            |      null
+            |    }
+            |  }
+            |}
+            """.trimMargin(),
             *typesParams.toTypedArray()
           )
           builder.add("⇤\n)")
@@ -548,3 +575,5 @@ class KotlinSundayGenerator(
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
 }
+
+private val TYPE_OF = MemberName("kotlin.reflect", "typeOf")

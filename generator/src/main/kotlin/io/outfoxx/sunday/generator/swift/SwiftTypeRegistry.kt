@@ -208,6 +208,8 @@ class SwiftTypeRegistry(
     return typeName
   }
 
+  fun getReferenceType(className: TypeName): TypeName? = referenceTypes[className]
+
   fun addServiceType(className: DeclaredTypeName, serviceType: TypeSpec.Builder) {
 
     serviceType.addModifiers(PUBLIC)

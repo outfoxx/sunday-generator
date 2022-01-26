@@ -21,7 +21,6 @@ import io.outfoxx.typescriptpoet.TypeName
 
 const val SUNDAY_PKG = "@outfoxx/sunday"
 val REQUEST_FACTORY = TypeName.namedImport("RequestFactory", SUNDAY_PKG)
-val EVENT_TYPES = TypeName.namedImport("EventTypes", SUNDAY_PKG)
 val ANY_TYPE = TypeName.namedImport("AnyType", SUNDAY_PKG)
 val OFFSET_DATETIME = TypeName.namedImport("OffsetDateTime", SUNDAY_PKG)
 val LOCAL_DATETIME = TypeName.namedImport("LocalDateTime", SUNDAY_PKG)

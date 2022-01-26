@@ -41,6 +41,7 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
           SourceFile.kotlin(fileName, it.toString())
         }
         kotlincArguments = listOf("-jvm-target", "11")
+        languageVersion = "1.6"
         inheritClassPath = true
         verbose = false
         allWarningsAsErrors = true

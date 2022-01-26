@@ -18,7 +18,7 @@ package io.outfoxx.sunday.generator.typescript.tools
 
 import java.nio.file.Path
 
-class LocalTypeScriptCompiler(val command: String, workDir: Path) : TypeScriptCompiler(workDir) {
+class LocalTypeScriptCompiler(private val command: String, workDir: Path) : TypeScriptCompiler(workDir) {
 
   init {
 
@@ -41,12 +41,12 @@ class LocalTypeScriptCompiler(val command: String, workDir: Path) : TypeScriptCo
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(command, "run", "build")
-        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        .redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()
 
-    return result to buildPkg.errorStream.readAllBytes().decodeToString()
+    return result to buildPkg.inputStream.readAllBytes().decodeToString()
   }
 
   override fun close() {
