@@ -540,12 +540,12 @@ abstract class SwiftGenerator(
       )?.stringValue?.let { baseUri.resolve(expand(it)) } ?: baseUri
 
     val problemDefLocations: Map<BaseUnit, CustomizableElement> =
-      document.allUnits.filterIsInstance<CustomizableElement>().map { it as BaseUnit to it }.toMap() +
-        document.allUnits.filterIsInstance<EncodesModel>().map { it as BaseUnit to it.encodes }.toMap()
+      document.allUnits.filterIsInstance<CustomizableElement>().associateBy { it as BaseUnit } +
+        document.allUnits.filterIsInstance<EncodesModel>().associate { it as BaseUnit to it.encodes }
 
     return problemDefLocations
       .mapNotNull { (unit, element) ->
-        val problemAnn = (element.findAnnotation(ProblemTypes, null) as? ObjectNode) ?: return@mapNotNull null
+        val problemAnn = element.findAnnotation(ProblemTypes, null) as? ObjectNode ?: return@mapNotNull null
         problemAnn
           .properties()
           ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit, problemAnn) }
