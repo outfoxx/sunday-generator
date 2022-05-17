@@ -226,12 +226,7 @@ class KotlinSundayGenerator(
     originalReturnType = returnTypeName
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
-    resultContentTypes =
-      if (mediaTypesForPayloads.isNotEmpty()) {
-        mediaTypesForPayloads
-      } else {
-        defaultMediaTypes
-      }
+    resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
     referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
 
     if (operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true) {
@@ -365,12 +360,7 @@ class KotlinSundayGenerator(
     val request = operation.request ?: operation.requests.first()
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
-    val requestBodyContentTypes =
-      if (mediaTypesForPayloads.isNotEmpty()) {
-        mediaTypesForPayloads
-      } else {
-        defaultMediaTypes
-      }
+    val requestBodyContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
     referencedContentTypes.addAll(requestBodyContentTypes)
 
     requestBodyContentType = requestBodyContentTypes.firstOrNull()
