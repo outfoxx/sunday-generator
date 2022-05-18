@@ -583,15 +583,14 @@ class RamlTypeAnnotationsTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
 
     val parenTypeSpec = builtTypes[TypeName.namedImport("Parent", "!parent")]
       ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        import {Child1} from './child1';
-        import {Child2} from './child2';
+        import {Child1, Child2} from './index';
         import {JsonSubTypes} from '@outfoxx/jackson-js';
 
 
@@ -603,8 +602,8 @@ class RamlTypeAnnotationsTest {
 
         @JsonSubTypes({
           types: [
-            {class: () => eval('Child1'), name: 'Child1'},
-            {class: () => eval('Child2'), name: 'child2'}
+            {class: () => Child1, name: 'Child1'},
+            {class: () => Child2, name: 'child2'}
           ]
         })
         export abstract class Parent implements Parent {

@@ -1098,20 +1098,31 @@ class TypeScriptTypeRegistry(
         val discriminatorValue =
           inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
+        val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
+        val classNameSymbol = className.base as SymbolSpec.Imported
+        val pathCount = classNameSymbol.source.count { it == '/' }
+        val path =
+          if (pathCount > 0) {
+            (0 until pathCount).joinToString("/") { ".." }
+          } else {
+            "."
+          }
+        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
+
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
             (typeBuilders[discriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
-          "{class: () => eval('%T'), name: %T.%L}" to listOf(
-            resolveReferencedTypeName(inheritingType, context),
+          "{class: () => %T, name: %T.%L}" to listOf(
+            indirectTypeName,
             discriminatorPropertyTypeName,
             enumDiscriminatorValue,
           )
         } else {
-          "{class: () => eval('%T'), name: %S}" to listOf(
-            resolveReferencedTypeName(inheritingType, context),
+          "{class: () => %T, name: %S}" to listOf(
+            indirectTypeName,
             discriminatorValue,
           )
         }

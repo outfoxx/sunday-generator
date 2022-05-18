@@ -17,22 +17,40 @@
 package io.outfoxx.sunday.generator.typescript.tools
 
 import io.outfoxx.sunday.test.utils.Compilation
+import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import java.nio.file.Files
 
-fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, ModuleSpec>): Boolean {
+fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, ModuleSpec>, generateIndex: Boolean = false): Boolean {
   try {
+    val indexBuilder = FileSpec.builder("index")
+
     val fileSpecs =
       types.map { (typeName, moduleSpec) ->
+
+        val importSymbol = typeName.base as? SymbolSpec.Imported
+        if (importSymbol != null) {
+          indexBuilder.addCode(
+            CodeBlock.of(
+              "export {%L} from './%L';",
+              importSymbol.value,
+              importSymbol.source.removePrefix("!"),
+            )
+          )
+        }
 
         val imported = typeName.base as SymbolSpec.Imported
         val modulePath = imported.source.replaceFirst("!", "")
 
         FileSpec.get(moduleSpec, modulePath)
-      }
+      }.toMutableList()
+
+    if (generateIndex) {
+      fileSpecs.add(indexBuilder.build())
+    }
 
     fileSpecs.forEach {
 

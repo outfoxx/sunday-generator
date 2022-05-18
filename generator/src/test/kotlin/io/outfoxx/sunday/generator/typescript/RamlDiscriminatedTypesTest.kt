@@ -41,14 +41,13 @@ class RamlDiscriminatedTypesTest {
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
 
     val parentTypeModSpec = findTypeMod("Parent@!parent", generatedTypes)
 
     assertEquals(
       """
-        import {Child1} from './child1';
-        import {Child2} from './child2';
+        import {Child1, Child2} from './index';
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
         
@@ -65,8 +64,8 @@ class RamlDiscriminatedTypesTest {
         })
         @JsonSubTypes({
           types: [
-            {class: () => eval('Child1'), name: 'Child1'},
-            {class: () => eval('Child2'), name: 'child2'}
+            {class: () => Child1, name: 'Child1'},
+            {class: () => Child2, name: 'child2'}
           ]
         })
         export abstract class Parent implements Parent {
@@ -194,14 +193,13 @@ class RamlDiscriminatedTypesTest {
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
 
     val parentTypeModSpec = findTypeMod("Parent@!parent", generatedTypes)
 
     assertEquals(
       """
-        import {Child1} from './child1';
-        import {Child2} from './child2';
+        import {Child1, Child2} from './index';
         import {Type} from './type';
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
@@ -219,8 +217,8 @@ class RamlDiscriminatedTypesTest {
         })
         @JsonSubTypes({
           types: [
-            {class: () => eval('Child1'), name: Type.Child1},
-            {class: () => eval('Child2'), name: Type.Child2}
+            {class: () => Child1, name: Type.Child1},
+            {class: () => Child2, name: Type.Child2}
           ]
         })
         export abstract class Parent implements Parent {

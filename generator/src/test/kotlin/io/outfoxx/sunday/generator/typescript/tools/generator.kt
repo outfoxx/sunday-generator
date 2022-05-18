@@ -41,7 +41,8 @@ fun findNestedType(typeModSpec: ModuleSpec, vararg names: String): AnyTypeSpec? 
 fun generateTypes(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
-  compiler: TypeScriptCompiler
+  compiler: TypeScriptCompiler,
+  includeIndex: Boolean = false
 ): Map<TypeName.Standard, ModuleSpec> {
 
   val document = TestAPIProcessing.process(uri).document
@@ -56,7 +57,7 @@ fun generateTypes(
 
   val builtTypes = typeRegistry.buildTypes()
 
-  assertTrue(compileTypes(compiler, builtTypes))
+  assertTrue(compileTypes(compiler, builtTypes, generateIndex = includeIndex))
 
   return builtTypes
 }
