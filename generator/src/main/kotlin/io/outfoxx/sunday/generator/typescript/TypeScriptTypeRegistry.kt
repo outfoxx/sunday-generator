@@ -845,11 +845,19 @@ class TypeScriptTypeRegistry(
             declaredProperty.range.resolve as? NodeShape
               ?: genError("Externally discriminated types must be 'object'", declaredProperty)
 
-            (inheritedProperties + declaredProperties).find { it.name == externalDiscriminatorPropertyName }
-              ?: genError("External discriminator '$externalDiscriminatorPropertyName' not found in object", shape)
+            val externalDiscriminatorPropertyShape =
+              (inheritedProperties + declaredProperties).find { it.name == externalDiscriminatorPropertyName }
+                ?: genError("External discriminator '$externalDiscriminatorPropertyName' not found in object", shape)
 
             if (options.contains(JacksonDecorators)) {
-              addJacksonPolymorphismOverride(declaredPropertyBuilder, externalDiscriminatorPropertyName)
+              addJacksonPolymorphismOverride(
+                className,
+                declaredProperty,
+                declaredPropertyTypeName,
+                declaredPropertyBuilder,
+                externalDiscriminatorPropertyShape,
+                context
+              )
             }
           }
 
@@ -1053,11 +1061,62 @@ class TypeScriptTypeRegistry(
   }
 
   private fun addJacksonPolymorphismOverride(
-    propertySpec: PropertySpec.Builder,
-    externalDiscriminatorPropertyName: String
+    className: TypeName.Standard,
+    valuePropertyShape: PropertyShape,
+    valuePropertyTypeName: TypeName,
+    valuePropertySpec: PropertySpec.Builder,
+    externalDiscriminatorPropertyShape: PropertyShape,
+    context: TypeScriptResolutionContext,
   ) {
+    val valueRawPropertyTypeName = valuePropertyTypeName.nonOptional as? TypeName.Standard ?: return
+    val valuePropertyTypeShape = valuePropertyShape.range.resolve as? NodeShape ?: return
 
-    propertySpec.addDecorator(
+    val externalDiscriminatorPropertyName = externalDiscriminatorPropertyShape.name?.typeScriptIdentifierName ?: return
+    val externalDiscriminatorPropertyTypeName =
+      resolvePropertyTypeName(externalDiscriminatorPropertyShape, className, context)
+    val isDiscriminatorEnum = typeBuilders[externalDiscriminatorPropertyTypeName.nonOptional] is EnumSpec.Builder
+
+    val inheritingTypes = context.unit.findInheritingShapes(valuePropertyTypeShape)
+    val discriminatorMappings = buildDiscriminatorMappings(valuePropertyTypeShape, context)
+
+    val subTypes = inheritingTypes
+      .map { inheritingType ->
+
+        val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
+        val discriminatorValue =
+          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
+
+        val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
+        val classNameSymbol = valueRawPropertyTypeName.base as SymbolSpec.Imported
+        val pathCount = classNameSymbol.source.count { it == '/' }
+        val path =
+          if (pathCount > 0) {
+            (0 until pathCount).joinToString("/") { ".." }
+          } else {
+            "."
+          }
+        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
+
+        if (isDiscriminatorEnum) {
+          val enumDiscriminatorValue =
+            (typeBuilders[externalDiscriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
+              .constants.entries
+              .first { it.value?.toString() == "'$discriminatorValue'" }.key
+
+          "{class: () => %T, name: %T.%L}" to listOf(
+            indirectTypeName,
+            externalDiscriminatorPropertyTypeName,
+            enumDiscriminatorValue,
+          )
+        } else {
+          "{class: () => %T, name: %S}" to listOf(
+            indirectTypeName,
+            discriminatorValue,
+          )
+        }
+      }
+
+    valuePropertySpec.addDecorator(
       DecoratorSpec.builder(JSON_TYPE_INFO)
         .addParameter(
           null,
@@ -1071,6 +1130,22 @@ class TypeScriptTypeRegistry(
           JSON_TYPE_INFO_ID, "NAME",
           JSON_TYPE_INFO_AS, "EXTERNAL_PROPERTY",
           externalDiscriminatorPropertyName
+        )
+        .build()
+    )
+
+    valuePropertySpec.addDecorator(
+      DecoratorSpec.builder(JSON_SUB_TYPES)
+        .addParameter(
+          null,
+          """
+            |{
+            |  types: [
+            |    ${subTypes.joinToString(",\n    ") { it.first }}
+            |  ]
+            |}
+            """.trimMargin(),
+          *subTypes.map { it.second }.flatten().toTypedArray()
         )
         .build()
     )
