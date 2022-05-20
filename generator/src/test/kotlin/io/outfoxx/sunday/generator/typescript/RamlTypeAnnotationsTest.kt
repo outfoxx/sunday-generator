@@ -718,8 +718,9 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
+        import {Child1, Child2} from './index';
         import {Parent} from './parent';
-        import {JsonClassType, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
         export interface Test {
@@ -736,6 +737,12 @@ class RamlTypeAnnotationsTest {
             use: JsonTypeInfoId.NAME,
             include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
             property: 'parentType',
+          })
+          @JsonSubTypes({
+            types: [
+              {class: () => Child1, name: 'Child1'},
+              {class: () => Child2, name: 'child2'}
+            ]
           })
           @JsonClassType({type: () => [Parent]})
           parent: Parent;
