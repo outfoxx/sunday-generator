@@ -570,11 +570,14 @@ abstract class KotlinGenerator(
 
     val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
 
-    val problemBaseUri =
+    var problemBaseUri =
       document.api.findAnnotation(
         ProblemBaseUri,
         typeRegistry.generationMode
-      )?.stringValue?.let { baseUri.resolve(expand(it)) } ?: baseUri
+      )?.stringValue?.let { expand(it) } ?: baseUri
+    if (!problemBaseUri.isAbsolute) {
+      problemBaseUri = baseUri.resolve(problemBaseUri)
+    }
 
     val problemDefLocations: Map<BaseUnit, CustomizableElement> =
       document.allUnits.filterIsInstance<CustomizableElement>().associateBy { it as BaseUnit } +
