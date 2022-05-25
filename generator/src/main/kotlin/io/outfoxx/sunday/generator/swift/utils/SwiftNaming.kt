@@ -34,6 +34,14 @@ val PropertyShape.swiftIdentifierName: String get() = name!!.toLowerCamelCase()
 
 val ScalarNode.swiftIdentifierName: String get() = stringValue!!.toLowerCamelCase()
 
+private val enumSplitRegex = """\W""".toRegex()
+
+val ScalarNode.swiftEnumName: String
+  get() = stringValue!!
+    .split(enumSplitRegex)
+    .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
+    .toLowerCamelCase()
+
 val Parameter.swiftTypeName: String get() = parameterName!!.toUpperCamelCase()
 val Parameter.swiftIdentifierName: String get() = parameterName!!.toLowerCamelCase()
 

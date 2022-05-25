@@ -66,6 +66,7 @@ import io.outfoxx.sunday.generator.swift.utils.ENCODER
 import io.outfoxx.sunday.generator.swift.utils.ENCODING_ERROR
 import io.outfoxx.sunday.generator.swift.utils.PROBLEM
 import io.outfoxx.sunday.generator.swift.utils.URL
+import io.outfoxx.sunday.generator.swift.utils.swiftEnumName
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
 import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
@@ -1297,7 +1298,7 @@ class SwiftTypeRegistry(
     enumBuilder.tag(DefinitionLocation(shape))
 
     shape.values.filterIsInstance<ScalarNode>().forEach { enum ->
-      enumBuilder.addEnumCase(enum.swiftIdentifierName, enum.stringValue!!)
+      enumBuilder.addEnumCase(enum.swiftEnumName, enum.stringValue!!)
     }
 
     return className

@@ -52,7 +52,8 @@ class RamlEnumTypesTest {
           Some = 'some',
           All = 'all',
           SnakeCase = 'snake_case',
-          KebabCase = 'kebab-case'
+          KebabCase = 'kebab-case',
+          InvalidChar = 'invalid:char'
         }
 
       """.trimIndent(),

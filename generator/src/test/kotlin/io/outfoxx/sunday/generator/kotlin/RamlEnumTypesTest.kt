@@ -52,6 +52,7 @@ class RamlEnumTypesTest {
           All,
           SnakeCase,
           KebabCase,
+          InvalidChar,
         }
         
       """.trimIndent(),
@@ -88,6 +89,8 @@ class RamlEnumTypesTest {
           SnakeCase,
           @JsonProperty(value = "kebab-case")
           KebabCase,
+          @JsonProperty(value = "invalid:char")
+          InvalidChar,
         }
         
       """.trimIndent(),

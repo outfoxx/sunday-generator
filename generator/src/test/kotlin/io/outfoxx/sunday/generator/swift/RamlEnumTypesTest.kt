@@ -52,6 +52,7 @@ class RamlEnumTypesTest {
           case all = "all"
           case snakeCase = "snake_case"
           case kebabCase = "kebab-case"
+          case invalidChar = "invalid:char"
 
         }
         
