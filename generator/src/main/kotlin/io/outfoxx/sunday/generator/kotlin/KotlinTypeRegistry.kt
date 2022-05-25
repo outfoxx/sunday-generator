@@ -1091,7 +1091,19 @@ class KotlinTypeRegistry(
 
     val className = typeNameOf(shape, context)
 
+    // Check for an existing class built or being built
+    val existingBuilder = typeBuilders[className]
+    if (existingBuilder != null) {
+      if (existingBuilder.tags[DefinitionLocation::class] != DefinitionLocation(shape)) {
+        genError("Multiple classes defined with name '$className'", shape)
+      } else {
+        return className
+      }
+    }
+
     val enumBuilder = defineType(className, TypeSpec::enumBuilder)
+
+    enumBuilder.tag(DefinitionLocation(shape))
 
     shape.values.filterIsInstance<ScalarNode>().forEach { enum ->
 
