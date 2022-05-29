@@ -42,7 +42,9 @@ class RamlEnumTypesTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
 
-    val typeModSpec = findTypeMod("TestEnum@!test-enum", generateTypes(testUri, typeRegistry, compiler))
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
+    val enumTypeModSpec = findTypeMod("TestEnum@!test-enum", generatedTypes)
+    val usageTypeModSpec = findTypeMod("Test@!test", generatedTypes)
 
     assertEquals(
       """
@@ -58,7 +60,58 @@ class RamlEnumTypesTest {
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
+        FileSpec.get(enumTypeModSpec)
+          .writeTo(this)
+      }
+    )
+
+    assertEquals(
+      """       
+        import {TestEnum} from './test-enum';
+        import {JsonClassType} from '@outfoxx/jackson-js';
+        
+        
+        export interface Test {
+        
+          enumVal: TestEnum;
+        
+          setVal: Set<TestEnum>;
+        
+          arrayVal: Array<TestEnum>;
+        
+        }
+        
+        export class Test implements Test {
+        
+          @JsonClassType({type: () => [Object]})
+          enumVal: TestEnum;
+        
+          @JsonClassType({type: () => [Set, [Object]]})
+          setVal: Set<TestEnum>;
+        
+          @JsonClassType({type: () => [Array, [Object]]})
+          arrayVal: Array<TestEnum>;
+        
+          constructor(enumVal: TestEnum, setVal: Set<TestEnum>, arrayVal: Array<TestEnum>) {
+            this.enumVal = enumVal;
+            this.setVal = setVal;
+            this.arrayVal = arrayVal;
+          }
+        
+          copy(src: Partial<Test>): Test {
+            return new Test(src.enumVal ?? this.enumVal, src.setVal ?? this.setVal,
+                src.arrayVal ?? this.arrayVal);
+          }
+        
+          toString(): string {
+            return `Test(enumVal='${'$'}{this.enumVal}', setVal='${'$'}{this.setVal}', arrayVal='${'$'}{this.arrayVal}')`;
+          }
+        
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(usageTypeModSpec)
           .writeTo(this)
       }
     )

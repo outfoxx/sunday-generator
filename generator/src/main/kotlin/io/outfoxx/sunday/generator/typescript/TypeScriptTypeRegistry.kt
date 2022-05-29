@@ -348,12 +348,6 @@ class TypeScriptTypeRegistry(
           problemTypeDefinition.source,
           TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
         )
-        val customPropertyClassName =
-          if (typeBuilders[customPropertyTypeName.nonOptional] !is EnumSpec.Builder)
-            customPropertyTypeName
-          else
-            OBJECT_CLASS
-
         problemTypeBuilder.addProperty(
           PropertySpec
             .builder(customPropertyName.kotlinIdentifierName, customPropertyTypeName)
@@ -374,7 +368,7 @@ class TypeScriptTypeRegistry(
                       null,
                       CodeBlock.builder()
                         .add("{type: () => ")
-                        .add(customPropertyClassName.typeInitializer())
+                        .add(reflectionTypeName(customPropertyTypeName).typeInitializer())
                         .add("}")
                         .build()
                     )
@@ -792,11 +786,6 @@ class TypeScriptTypeRegistry(
       declaredProperties.forEach { declaredProperty ->
 
         val declaredPropertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
-        val declaredPropertyClassName =
-          if (typeBuilders[declaredPropertyTypeName.nonOptional] !is EnumSpec.Builder)
-            declaredPropertyTypeName
-          else
-            OBJECT_CLASS
 
         val implAnn = declaredProperty.range.findAnnotation(TypeScriptImpl, null) as? ObjectNode
         if (implAnn != null) {
@@ -878,7 +867,7 @@ class TypeScriptTypeRegistry(
                     null,
                     CodeBlock.builder()
                       .add("{type: () => ")
-                      .add(declaredPropertyClassName.typeInitializer())
+                      .add(reflectionTypeName(declaredPropertyTypeName).typeInitializer())
                       .add("}")
                       .build()
                   )
@@ -1417,4 +1406,43 @@ class TypeScriptTypeRegistry(
       val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
+
+  private fun reflectionTypeName(typeName: TypeName): TypeName =
+    when (typeName) {
+      is TypeName.Standard ->
+        if (typeBuilders[typeName.nonOptional] !is EnumSpec.Builder) {
+          typeName
+        } else {
+          OBJECT_CLASS
+        }
+
+      is TypeName.Parameterized ->
+        TypeName.parameterizedType(
+          reflectionTypeName(typeName.rawType) as TypeName.Standard,
+          *typeName.typeArgs.map { reflectionTypeName(it) }.toTypedArray()
+        )
+
+      is TypeName.Union ->
+        TypeName.unionType(*typeName.typeChoices.map { reflectionTypeName(it) }.toTypedArray())
+
+      is TypeName.Intersection ->
+        TypeName.intersectionType(*typeName.typeRequirements.map { reflectionTypeName(it) }.toTypedArray())
+
+      is TypeName.Tuple ->
+        TypeName.tupleType(*typeName.memberTypes.map { reflectionTypeName(it) }.toTypedArray())
+
+      is TypeName.Anonymous ->
+        TypeName.anonymousType(
+          typeName.members.map {
+            TypeName.Anonymous.Member(
+              it.name,
+              reflectionTypeName(it.type),
+              it.optional
+            )
+          }
+        )
+
+      else ->
+        error("Lambda Unsupported TypeName for Rewrite")
+    }
 }
