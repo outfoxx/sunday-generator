@@ -13,6 +13,14 @@ types:
     properties:
       enumVal:
         type: TestEnum
+      setVal:
+        type: array
+        uniqueItems: true
+        items: TestEnum
+      arrayVal:
+        type: array
+        uniqueItems: false
+        items: TestEnum
 
 /tests/{id}:
 
