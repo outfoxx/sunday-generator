@@ -498,15 +498,6 @@ class KotlinJAXRSGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    if (
-      payloadSchema.resolve.findBoolAnnotation(Patchable, generationMode) == true &&
-      operation.method.equals("patch", ignoreCase = true)
-    ) {
-      val orig = parameterBuilder.build()
-      val origTypeName = orig.type as ClassName
-      return ParameterSpec.builder(orig.name, origTypeName.nestedClass("Patch")).build()
-    }
-
     typeRegistry.applyUseSiteAnnotations(payloadSchema, parameterBuilder.build().type) {
       parameterBuilder.addAnnotation(it)
     }
@@ -522,13 +513,25 @@ class KotlinJAXRSGenerator(
       functionBuilder.addAnnotation(consAnn)
     }
 
-    if (operation.findBoolAnnotation(JsonBody, generationMode) == true) {
-      val orig = parameterBuilder.build()
-      return ParameterSpec.builder(orig.name, JsonNode::class.java).build()
-    }
+    val isPatchMethod = operation.method.equals("patch", ignoreCase = true)
+    val isPatchableType = payloadSchema.resolve.findBoolAnnotation(Patchable, generationMode) == true
+    val isJsonBodyRequested = operation.findBoolAnnotation(JsonBody, generationMode) == true
 
-    // Finalize
-    return parameterBuilder.build()
+    return when {
+      (isPatchMethod && isPatchableType && generationMode == Server) || isJsonBodyRequested -> {
+        val orig = parameterBuilder.build()
+        ParameterSpec.builder(orig.name, JsonNode::class.java).build()
+      }
+      isPatchMethod && isPatchableType -> {
+        val orig = parameterBuilder.build()
+        val origTypeName = orig.type as ClassName
+        ParameterSpec.builder(orig.name, origTypeName.nestedClass("Patch")).build()
+      }
+      else -> {
+        // Finalize
+        parameterBuilder.build()
+      }
+    }
   }
 
   override fun processResourceMethodEnd(
