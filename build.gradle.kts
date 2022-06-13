@@ -39,7 +39,6 @@ subprojects {
 
   repositories {
     mavenCentral()
-    jcenter()
     maven {
       setUrl("https://repository-master.mulesoft.org/nexus/content/repositories/releases")
     }
