@@ -42,7 +42,6 @@ import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
@@ -71,7 +70,6 @@ import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.scalarValue
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.scheme
@@ -513,19 +511,12 @@ class KotlinJAXRSGenerator(
       functionBuilder.addAnnotation(consAnn)
     }
 
-    val isPatchMethod = operation.method.equals("patch", ignoreCase = true)
-    val isPatchableType = payloadSchema.resolve.findBoolAnnotation(Patchable, generationMode) == true
     val isJsonBodyRequested = operation.findBoolAnnotation(JsonBody, generationMode) == true
 
     return when {
-      (isPatchMethod && isPatchableType && generationMode == Server) || isJsonBodyRequested -> {
+      isJsonBodyRequested -> {
         val orig = parameterBuilder.build()
         ParameterSpec.builder(orig.name, JsonNode::class.java).build()
-      }
-      isPatchMethod && isPatchableType -> {
-        val orig = parameterBuilder.build()
-        val origTypeName = orig.type as ClassName
-        ParameterSpec.builder(orig.name, origTypeName.nestedClass("Patch")).build()
       }
       else -> {
         // Finalize

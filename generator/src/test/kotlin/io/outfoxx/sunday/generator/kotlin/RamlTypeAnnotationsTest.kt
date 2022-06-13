@@ -701,39 +701,32 @@ class RamlTypeAnnotationsTest {
         package io.test
 
         import com.fasterxml.jackson.`annotation`.JsonInclude
-        import com.fasterxml.jackson.databind.node.ObjectNode
-        import java.util.Optional
+        import io.outfoxx.sunday.json.patch.Patch
+        import io.outfoxx.sunday.json.patch.PatchOp
+        import io.outfoxx.sunday.json.patch.UpdateOp
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
         import kotlin.String
+        import kotlin.Unit
 
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public class Test(
-          public val string: String,
-          public val int: Int,
-          public val bool: Boolean,
-          public val nullable: String?,
-          public val optional: String?,
-          public val nullableOptional: String?
-        ) {
-          public fun copy(
-            string: String? = null,
-            int: Int? = null,
-            bool: Boolean? = null,
-            nullable: String? = null,
-            optional: String? = null,
-            nullableOptional: String? = null
-          ) = Test(string ?: this.string, int ?: this.int, bool ?: this.bool, nullable ?: this.nullable,
-              optional ?: this.optional, nullableOptional ?: this.nullableOptional)
-
+          public var string: UpdateOp<String> = PatchOp.none(),
+          public var int: UpdateOp<Int> = PatchOp.none(),
+          public var bool: UpdateOp<Boolean> = PatchOp.none(),
+          public var nullable: PatchOp<String> = PatchOp.none(),
+          public var optional: UpdateOp<String> = PatchOp.none(),
+          public var nullableOptional: PatchOp<String> = PatchOp.none()
+        ) : Patch {
           public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + string.hashCode()
             result = 31 * result + int.hashCode()
             result = 31 * result + bool.hashCode()
-            result = 31 * result + (nullable?.hashCode() ?: 0)
-            result = 31 * result + (optional?.hashCode() ?: 0)
-            result = 31 * result + (nullableOptional?.hashCode() ?: 0)
+            result = 31 * result + nullable.hashCode()
+            result = 31 * result + optional.hashCode()
+            result = 31 * result + nullableOptional.hashCode()
             return result
           }
 
@@ -762,24 +755,15 @@ class RamlTypeAnnotationsTest {
           | nullableOptional='${'$'}nullableOptional')
           ""${'"'}.trimMargin()
 
-          public fun patch(source: ObjectNode): Patch = Patch(
-            if (source.has("string")) string else null,
-            if (source.has("int")) int else null,
-            if (source.has("bool")) bool else null,
-            if (source.has("nullable")) Optional.ofNullable(nullable) else null,
-            if (source.has("optional")) Optional.ofNullable(optional) else null,
-            if (source.has("nullableOptional")) Optional.ofNullable(nullableOptional) else null
-          )
-
-          @JsonInclude(JsonInclude.Include.NON_NULL)
-          public data class Patch(
-            public val string: String? = null,
-            public val int: Int? = null,
-            public val bool: Boolean? = null,
-            public val nullable: Optional<String>? = null,
-            public val optional: Optional<String>? = null,
-            public val nullableOptional: Optional<String>? = null
-          )
+          public companion object {
+            public inline fun merge(`init`: Test.() -> Unit): PatchOp.Set<Test> {
+              val patch = Test()
+              patch.init()
+              return PatchOp.Set(patch)
+            }
+        
+            public inline fun patch(`init`: Test.() -> Unit) = merge(init).value
+          }
         }
         
       """.trimIndent(),

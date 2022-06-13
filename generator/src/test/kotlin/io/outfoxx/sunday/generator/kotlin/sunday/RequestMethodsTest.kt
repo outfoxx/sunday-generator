@@ -112,7 +112,7 @@ class RequestMethodsTest {
             pathTemplate = "/tests"
           )
 
-          public suspend fun patchableTest(body: PatchableTest.Patch): Test = this.requestFactory.result(
+          public suspend fun patchableTest(body: PatchableTest): Test = this.requestFactory.result(
             method = Method.Patch,
             pathTemplate = "/tests2",
             body = body,

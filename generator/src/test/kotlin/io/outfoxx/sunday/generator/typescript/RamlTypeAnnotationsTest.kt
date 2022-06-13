@@ -858,33 +858,92 @@ class RamlTypeAnnotationsTest {
             return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
           }
 
-          patch(source: Partial<Test>): Test.Patch {
-            return new Test.Patch(
-              source['string'] !== undefined ? this.string : null,
-              source['int'] !== undefined ? this.int : null,
-              source['bool'] !== undefined ? this.bool : null,
-              source['nullable'] !== undefined ? this.nullable : null,
-              source['optional'] !== undefined ? this.optional : null,
-              source['nullableOptional'] !== undefined ? this.nullableOptional : null
-            );
-          }
+        }
+        
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      }
+    )
+  }
+
+  @Test
+  fun `test patchable class generation with Jackson`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+        import {JsonClassType, JsonInclude, JsonIncludeType} from '@outfoxx/jackson-js';
+
+
+        export interface Test {
+
+          string: string;
+
+          int: number;
+
+          bool: boolean;
+
+          nullable: string | null;
+        
+          optional: string | undefined;
+
+          nullableOptional: string | null | undefined;
 
         }
 
-        export namespace Test {
+        @JsonInclude({value: JsonIncludeType.ALWAYS})
+        export class Test implements Test {
 
-          export class Patch {
+          @JsonClassType({type: () => [String]})
+          string: string;
 
-            constructor(
-                public string: string | null | undefined,
-                public int: number | null | undefined,
-                public bool: boolean | null | undefined,
-                public nullable: string | null | undefined,
-                public optional: string | null | undefined,
-                public nullableOptional: string | null | undefined
-            ) {
-            }
+          @JsonClassType({type: () => [Number]})
+          int: number;
 
+          @JsonClassType({type: () => [Boolean]})
+          bool: boolean;
+
+          @JsonClassType({type: () => [String]})
+          nullable: string | null;
+        
+          @JsonClassType({type: () => [String]})
+          optional: string | undefined;
+        
+          @JsonClassType({type: () => [String]})
+          nullableOptional: string | null | undefined;
+
+          constructor(
+              string: string,
+              int: number,
+              bool: boolean,
+              nullable: string | null,
+              optional: string | undefined,
+              nullableOptional: string | null | undefined
+          ) {
+            this.string = string;
+            this.int = int;
+            this.bool = bool;
+            this.nullable = nullable;
+            this.optional = optional;
+            this.nullableOptional = nullableOptional;
+          }
+
+          copy(src: Partial<Test>): Test {
+            return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool,
+                src.nullable ?? this.nullable, src.optional ?? this.optional,
+                src.nullableOptional ?? this.nullableOptional);
+          }
+
+          toString(): string {
+            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
           }
 
         }

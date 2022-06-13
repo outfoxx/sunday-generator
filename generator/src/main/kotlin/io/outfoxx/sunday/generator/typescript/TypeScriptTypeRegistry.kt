@@ -54,6 +54,8 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.Jack
 import io.outfoxx.sunday.generator.typescript.utils.DURATION
 import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_PROPERTY
 import io.outfoxx.sunday.generator.typescript.utils.JSON_SUB_TYPES
 import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO
@@ -114,6 +116,7 @@ import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.properties
 import io.outfoxx.sunday.generator.utils.range
+import io.outfoxx.sunday.generator.utils.required
 import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
@@ -124,7 +127,6 @@ import io.outfoxx.sunday.generator.utils.xone
 import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
-import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
 import io.outfoxx.typescriptpoet.DecoratorSpec
 import io.outfoxx.typescriptpoet.EnumSpec
 import io.outfoxx.typescriptpoet.FileSpec
@@ -855,7 +857,7 @@ class TypeScriptTypeRegistry(
               declaredPropertyBuilder
                 .addDecorator(
                   DecoratorSpec.builder(JSON_PROPERTY)
-                    .addParameter(null, "{value: %S}", declaredProperty.name())
+                    .addParameter(null, "{value: %S, required: %L}", declaredProperty.name(), declaredProperty.required)
                     .build()
                 )
             }
@@ -942,59 +944,14 @@ class TypeScriptTypeRegistry(
 
     if (shape.findBoolAnnotation(Patchable, null) == true) {
 
-      val patchClassName = className.nested("Patch")
-
-      val patchClassBuilder =
-        defineType(patchClassName) { name ->
-          ClassSpec.builder(name.simpleName())
-            .addModifiers(Modifier.EXPORT)
-        } as ClassSpec.Builder
-
-      val patchClassConsBuilder = FunctionSpec.constructorBuilder()
-
-      val patchFields = mutableListOf<CodeBlock>()
-
-      for (propertyDecl in propertyContainerShape.properties) {
-        val propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context).nullable
-
-        patchClassBuilder.addProperty(
-          PropertySpec.builder(propertyDecl.typeScriptIdentifierName, propertyTypeName, optional = true)
-            .initializer(propertyDecl.typeScriptIdentifierName)
-            .build()
-        )
-        patchClassConsBuilder.addParameter(
-          ParameterSpec.builder(propertyDecl.typeScriptIdentifierName, propertyTypeName, optional = true)
-            .build()
-        )
-
-        patchFields.add(
-          CodeBlock.of(
-            "source[%S] !== undefined ? this.%L : null",
-            propertyDecl.typeScriptIdentifierName, propertyDecl.typeScriptIdentifierName
+      if (options.contains(JacksonDecorators)) {
+        classBuilder
+          .addDecorator(
+            DecoratorSpec.builder(JSON_INCLUDE)
+              .addParameter(null, "{value: %Q.ALWAYS}", JSON_INCLUDE_TYPE)
+              .build()
           )
-        )
       }
-
-      patchClassBuilder.constructor(patchClassConsBuilder.build())
-
-      classBuilder.addFunction(
-        FunctionSpec.builder("patch")
-          .addParameter(
-            ParameterSpec.builder("source", PARTIAL.parameterized(className))
-              .build()
-          )
-          .returns(patchClassName)
-          .addCode(
-            CodeBlock.builder()
-              .add("return new %T(", patchClassName).indent().add("\n")
-              .add(patchFields.joinToCode(",\n"))
-              .unindent().add("\n);\n")
-              .build()
-          )
-          .build()
-      )
-
-      typeBuildersOrdered[patchClassName] = patchClassBuilder
     }
 
     typeBuildersOrdered[className] = ifaceBuilder

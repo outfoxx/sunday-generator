@@ -42,7 +42,6 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
@@ -341,22 +340,6 @@ class KotlinSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val actualParameterBuilder =
-      if (payloadSchema.resolve.findBoolAnnotation(Patchable, null) == true && operation.method == "patch") {
-
-        val original = parameterBuilder.build()
-        val originalTypeName = original.type
-        val patchTypeName =
-          if (originalTypeName is ClassName)
-            originalTypeName.nestedClass("Patch")
-          else
-            Any::class.asTypeName()
-
-        ParameterSpec.builder(original.name, patchTypeName)
-      } else {
-        parameterBuilder
-      }
-
     val request = operation.request ?: operation.requests.first()
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
@@ -364,10 +347,10 @@ class KotlinSundayGenerator(
     referencedContentTypes.addAll(requestBodyContentTypes)
 
     requestBodyContentType = requestBodyContentTypes.firstOrNull()
-    requestBodyParameter = actualParameterBuilder.build().name
+    requestBodyParameter = parameterBuilder.build().name
     requestBodyType = payloadSchema
 
-    val parameter = actualParameterBuilder.build()
+    val parameter = parameterBuilder.build()
 
     return if (requestBodyContentType == "application/octet-stream") {
       ParameterSpec.builder(parameter.name, ByteArray::class, *parameter.modifiers.toTypedArray()).build()
@@ -559,9 +542,11 @@ class KotlinSundayGenerator(
       "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MediaType::class)
       "text/event-stream" -> CodeBlock.of("%T.EventStream", MediaType::class)
       "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormUrlEncoded", MediaType::class)
-      "application/problem+json" -> CodeBlock.of("%T.ProblemJSON", MediaType::class)
+      "application/problem+json" -> CodeBlock.of("%T.Problem", MediaType::class)
       "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MediaType::class)
       "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MediaType::class)
+      "application/json-patch+json" -> CodeBlock.of("%T.JsonPatch", MediaType::class)
+      "application/merge-patch+json" -> CodeBlock.of("%T.MergePatch", MediaType::class)
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
 }

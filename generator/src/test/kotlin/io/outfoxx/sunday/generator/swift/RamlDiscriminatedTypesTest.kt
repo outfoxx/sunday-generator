@@ -151,8 +151,8 @@ class RamlDiscriminatedTypesTest {
           public override var type: String {
             return "Child1"
           }
-          public let value: String?
-          public let value1: Int
+          public var value: String?
+          public var value1: Int
           public override var debugDescription: String {
             return DescriptionBuilder(Child1.self)
                 .add(type, named: "type")
@@ -217,8 +217,8 @@ class RamlDiscriminatedTypesTest {
           public override var type: String {
             return "child2"
           }
-          public let value: String?
-          public let value2: Int
+          public var value: String?
+          public var value2: Int
           public override var debugDescription: String {
             return DescriptionBuilder(Child2.self)
                 .add(type, named: "type")
@@ -384,7 +384,7 @@ class RamlDiscriminatedTypesTest {
           public override var type: `Type` {
             return `Type`.child1
           }
-          public let value: String?
+          public var value: String?
           public override var debugDescription: String {
             return DescriptionBuilder(Child1.self)
                 .add(type, named: "type")
@@ -440,7 +440,7 @@ class RamlDiscriminatedTypesTest {
           public override var type: `Type` {
             return `Type`.child2
           }
-          public let value: String?
+          public var value: String?
           public override var debugDescription: String {
             return DescriptionBuilder(Child2.self)
                 .add(type, named: "type")

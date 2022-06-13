@@ -529,6 +529,7 @@ val PropertyShape.maxCount: Int? get() = this.maxCount().value
 val PropertyShape.patternName: String? get() = this.patternName().value
 val PropertyShape.optional: Boolean get() = (this.minCount ?: 0) == 0
 val PropertyShape.required: Boolean get() = (this.minCount ?: 0) > 0
+val PropertyShape.nullable: Boolean get() = (range.resolve as? UnionShape)?.makesNullable ?: false
 
 //
 val DataNode.anyValue: Any? get() =

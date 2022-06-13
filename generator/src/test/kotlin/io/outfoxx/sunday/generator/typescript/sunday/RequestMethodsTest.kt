@@ -156,7 +156,7 @@ class RequestMethodsTest {
             );
           }
 
-          patchableTest(body: PatchableTest.Patch): Observable<Test> {
+          patchableTest(body: PatchableTest): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'PATCH',

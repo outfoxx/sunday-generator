@@ -49,12 +49,12 @@ class RamlArrayTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let arrayOfStrings: [String]
-          public let arrayOfNullableStrings: [String?]
-          public let nullableArrayOfStrings: [String]?
-          public let nullableArrayOfNullableStrings: [String?]?
-          public let declaredArrayOfStrings: [String]
-          public let declaredArrayOfNullableStrings: [String?]
+          public var arrayOfStrings: [String]
+          public var arrayOfNullableStrings: [String?]
+          public var nullableArrayOfStrings: [String]?
+          public var nullableArrayOfNullableStrings: [String?]?
+          public var declaredArrayOfStrings: [String]
+          public var declaredArrayOfNullableStrings: [String?]
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(arrayOfStrings, named: "arrayOfStrings")
@@ -187,10 +187,10 @@ class RamlArrayTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let implicit: [String]
-          public let unspecified: [String]
-          public let nonUnique: [String]
-          public let unique: Set<String>
+          public var implicit: [String]
+          public var unspecified: [String]
+          public var nonUnique: [String]
+          public var unique: Set<String>
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(implicit, named: "implicit")
@@ -280,8 +280,8 @@ class RamlArrayTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let binary: Data
-          public let nullableBinary: Data?
+          public var binary: Data
+          public var nullableBinary: Data?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(binary, named: "binary")

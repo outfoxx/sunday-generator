@@ -26,7 +26,6 @@ import amf.client.model.domain.Shape
 import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
@@ -349,22 +348,6 @@ class SwiftSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val actualParameterBuilder =
-      if (payloadSchema.resolve.findBoolAnnotation(Patchable, null) == true && operation.method == "patch") {
-
-        val original = parameterBuilder.build()
-        val originalTypeName = original.type
-        val patchTypeName =
-          if (originalTypeName is DeclaredTypeName)
-            originalTypeName.nestedType("Patch")
-          else
-            ANY
-
-        ParameterSpec.builder(original.parameterName, patchTypeName)
-      } else {
-        parameterBuilder
-      }
-
     val request = operation.request ?: operation.requests.first()
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
@@ -372,10 +355,10 @@ class SwiftSundayGenerator(
     referencedContentTypes.addAll(requestBodyContentTypes)
 
     requestBodyContentType = requestBodyContentTypes.firstOrNull()
-    requestBodyParameter = actualParameterBuilder.build().parameterName
+    requestBodyParameter = parameterBuilder.build().parameterName
     requestBodyType = payloadSchema
 
-    val parameter = actualParameterBuilder.build()
+    val parameter = parameterBuilder.build()
 
     return if (requestBodyContentType == "application/octet-stream") {
       ParameterSpec.builder(parameter.parameterName, DATA, *parameter.modifiers.toTypedArray()).build()
@@ -648,6 +631,8 @@ class SwiftSundayGenerator(
       "application/problem+json" -> CodeBlock.of(".problem")
       "application/x-x509-ca-cert" -> CodeBlock.of(".x509CACert")
       "application/x-x509-user-cert" -> CodeBlock.of(".x509UserCert")
+      "application/json-patch+json" -> CodeBlock.of(".jsonPatch")
+      "application/merge-patch+json" -> CodeBlock.of(".mergePatch")
       else -> CodeBlock.of(".init(valid: %S)", value)
     }
 }

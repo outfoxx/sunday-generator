@@ -104,6 +104,7 @@ import io.outfoxx.sunday.generator.utils.items
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.minCount
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nullable
 import io.outfoxx.sunday.generator.utils.nullableType
 import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
@@ -126,6 +127,8 @@ import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DICTIONARY
 import io.outfoxx.swiftpoet.DOUBLE
 import io.outfoxx.swiftpoet.DeclaredTypeName
+import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
+import io.outfoxx.swiftpoet.ExtensionSpec
 import io.outfoxx.swiftpoet.FLOAT
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.FunctionSpec
@@ -139,7 +142,6 @@ import io.outfoxx.swiftpoet.Modifier.OVERRIDE
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.REQUIRED
 import io.outfoxx.swiftpoet.Modifier.STATIC
-import io.outfoxx.swiftpoet.OPTIONAL
 import io.outfoxx.swiftpoet.ParameterSpec
 import io.outfoxx.swiftpoet.ParameterizedTypeName
 import io.outfoxx.swiftpoet.PropertySpec
@@ -148,6 +150,9 @@ import io.outfoxx.swiftpoet.STRING
 import io.outfoxx.swiftpoet.SelfTypeName
 import io.outfoxx.swiftpoet.TypeName
 import io.outfoxx.swiftpoet.TypeSpec
+import io.outfoxx.swiftpoet.TypeVariableName.Bound.Constraint.SAME_TYPE
+import io.outfoxx.swiftpoet.TypeVariableName.Companion.bound
+import io.outfoxx.swiftpoet.TypeVariableName.Companion.typeVariable
 import io.outfoxx.swiftpoet.VOID
 import io.outfoxx.swiftpoet.joinToCode
 import io.outfoxx.swiftpoet.parameterizedBy
@@ -170,12 +175,26 @@ class SwiftTypeRegistry(
 
   override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
 
+    fun addExtensions(builder: FileSpec.Builder, typeSpec: TypeSpec) {
+      typeSpec.tag<AssociatedExtensions>()?.forEach { builder.addExtension(it) }
+      typeSpec.typeSpecs.forEach {
+        if (it is TypeSpec) {
+          addExtensions(builder, it)
+        }
+      }
+    }
+
     val builtTypes = buildTypes()
 
     builtTypes.entries
       .filter { it.key.topLevelTypeName() == it.key }
       .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
-      .map { FileSpec.get(it.key.moduleName, it.value) }
+      .map { (typeName, typeSpec) ->
+        FileSpec.builder(typeName.moduleName, typeSpec.name)
+          .addType(typeSpec)
+          .apply { addExtensions(this, typeSpec) }
+          .build()
+      }
       .forEach { it.writeTo(outputDirectory) }
   }
 
@@ -234,7 +253,7 @@ class SwiftTypeRegistry(
     val moduleName = moduleNameOf(problemTypeDefinition.definedIn)
 
     val problemTypeName =
-      DeclaredTypeName.typeName("$moduleName.${problemCode.toUpperCamelCase()}Problem")
+      typeName("$moduleName.${problemCode.toUpperCamelCase()}Problem")
 
     val problemCodingKeysTypeName = problemTypeName.nestedType(CODING_KEYS_NAME)
 
@@ -457,7 +476,7 @@ class SwiftTypeRegistry(
 
     val swiftTypeAnn = shape.findStringAnnotation(SwiftType, null)
     if (swiftTypeAnn != null) {
-      return DeclaredTypeName.typeName(swiftTypeAnn)
+      return typeName(swiftTypeAnn)
     }
 
     return processShape(shape, context)
@@ -614,6 +633,7 @@ class SwiftTypeRegistry(
     }
 
     val isRoot = superShape == null
+    val isPatchable = shape.resolve.findBoolAnnotation(Patchable, null) == true
 
     val codingKeysTypeName = className.nestedType(CODING_KEYS_NAME)
     var codingKeysType: TypeSpec? = null
@@ -879,7 +899,10 @@ class SwiftTypeRegistry(
       }
 
       val (coderSuffix, isOptional) =
-        if (propertyTypeName.optional) {
+        if (isPatchable) {
+          propertyTypeName = propertyTypeName.makeNonOptional()
+          "IfExists" to true
+        } else if (propertyTypeName.optional) {
           propertyTypeName = propertyTypeName.makeNonOptional()
           "IfPresent" to true
         } else {
@@ -1090,12 +1113,21 @@ class SwiftTypeRegistry(
     //
     localProperties.forEach { propertyDeclaration ->
 
-      val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
+      val propertyTypeName =
+        resolvePropertyTypeName(propertyDeclaration, className, context)
+          .run {
+            if (isPatchable) {
+              val base = if (propertyDeclaration.nullable) PATCH_OP else UPDATE_OP
+              base.parameterizedBy(makeNonOptional()).makeOptional()
+            } else {
+              this
+            }
+          }
 
       val implAnn = propertyDeclaration.range.findAnnotation(SwiftImpl, null) as? ObjectNode
       if (implAnn != null) {
 
-        val propertyBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
+        val propertyBuilder = PropertySpec.varBuilder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
 
         val code = implAnn.getValue("code") ?: ""
         val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
@@ -1104,7 +1136,7 @@ class SwiftTypeRegistry(
           val avalue = codeParam.getValue("value")
           if (atype != null && avalue != null) {
             when (atype) {
-              "Type" -> DeclaredTypeName.typeName(avalue.toString())
+              "Type" -> typeName(avalue.toString())
               else -> avalue.toString()
             }
           } else
@@ -1122,12 +1154,26 @@ class SwiftTypeRegistry(
 
         // Add public field
         //
-        val fieldBuilder = PropertySpec.builder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
+        val fieldBuilder = PropertySpec.varBuilder(propertyDeclaration.swiftIdentifierName, propertyTypeName, PUBLIC)
         typeBuilder.addProperty(fieldBuilder.build())
 
         // Add constructor parameter & initializer
         //
-        paramConsBuilder.addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
+        paramConsBuilder
+          .addParameter(
+            ParameterSpec
+              .builder(
+                propertyDeclaration.swiftIdentifierName,
+                propertyTypeName
+              )
+              .apply {
+                if (isPatchable) {
+                  defaultValue(".none")
+                }
+              }
+              .build()
+          )
+
         paramConsBuilder.addStatement(
           "self.%N = %N",
           propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
@@ -1182,7 +1228,16 @@ class SwiftTypeRegistry(
     (inheritedDeclaredProperties + localDeclaredProperties).forEach { propertyDeclaration ->
 
       val isInherited = !isRoot && inheritedDeclaredProperties.contains(propertyDeclaration)
-      val propertyTypeName = resolvePropertyTypeName(propertyDeclaration, className, context)
+      val propertyTypeName =
+        resolvePropertyTypeName(propertyDeclaration, className, context)
+          .run {
+            if (isPatchable) {
+              val base = if (propertyDeclaration.nullable) PATCH_OP else UPDATE_OP
+              base.parameterizedBy(makeNonOptional()).makeOptional()
+            } else {
+              this
+            }
+          }
 
       val fluentBuilder =
         FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
@@ -1204,69 +1259,43 @@ class SwiftTypeRegistry(
       typeBuilder.addFunction(fluentBuilder.build())
     }
 
-    codingKeysType?.let { typeBuilder.addType(it) }
+    // Add PatchOp extension
 
-    if (shape.findBoolAnnotation(Patchable, null) == true) {
+    if (isPatchable) {
 
-      val patchClassName = className.nestedType("Patch")
+      val typeSpec = typeBuilder.build()
+      val propertySpecs = typeSpec.propertySpecs.filter { it.name != DESCRIPTION_PROP_NAME }
 
-      val patchClassBuilder =
-        TypeSpec.structBuilder(patchClassName)
-          .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
-          .addSuperType(CODABLE)
-          .addModifiers(PUBLIC)
-
-      val patchClassConsBuilder =
-        FunctionSpec.constructorBuilder()
-          .addModifiers(PUBLIC)
-
-      val patchFields = mutableListOf<CodeBlock>()
-
-      for (propertyDecl in propertyContainerShape.properties) {
-        var propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
-        if (propertyDecl.optional && !propertyTypeName.optional) {
-          propertyTypeName = propertyTypeName.wrapOptional()
-        }
-        val optionalPropertyTypeName = propertyTypeName.wrapOptional()
-
-        patchClassBuilder.addProperty(propertyDecl.swiftIdentifierName, optionalPropertyTypeName)
-        patchClassConsBuilder.addParameter(propertyDecl.swiftIdentifierName, optionalPropertyTypeName)
-
-        patchClassConsBuilder.addStatement(
-          "self.%N = %N",
-          propertyDecl.swiftIdentifierName, propertyDecl.swiftIdentifierName
-        )
-
-        patchFields.add(
-          CodeBlock.of(
-            "%N: source.keys.contains(%S) ? %T.some(%N) : nil",
-            propertyDecl.swiftIdentifierName, propertyDecl.swiftIdentifierName,
-            OPTIONAL, propertyDecl.swiftIdentifierName
-          )
-        )
-      }
-
-      patchClassBuilder.addFunction(patchClassConsBuilder.build())
-
-      typeBuilder.addFunction(
-        FunctionSpec.builder("patch")
-          .addParameter(
-            ParameterSpec.builder("source", DICTIONARY_STRING_ANY)
-              .build()
-          )
-          .returns(patchClassName)
-          .addCode(
-            CodeBlock.builder()
-              .add("return %T(", patchClassName)
-              .add(patchFields.joinToCode(",%W"))
-              .add(")\n")
+      val patchOpExt =
+        ExtensionSpec.builder(ANY_PATCH_OP)
+          .addConditionalConstraint(typeVariable("Value", bound(SAME_TYPE, className)))
+          .addFunction(
+            FunctionSpec.builder("merge")
+              .addModifiers(PUBLIC, STATIC)
+              .returns(SelfTypeName.INSTANCE)
+              .apply {
+                for (propertySpec in propertySpecs) {
+                  addParameter(
+                    ParameterSpec.builder(propertySpec.name, propertySpec.type)
+                      .defaultValue(".none")
+                      .build()
+                  )
+                }
+              }
+              .addStatement(
+                "%T.merge(%T(%L))",
+                SelfTypeName.INSTANCE,
+                className,
+                propertySpecs.map { CodeBlock.of("%L: %L", it.name, it.name) }.joinToCode(",%W"),
+              )
               .build()
           )
           .build()
-      )
 
-      typeBuilder.addType(patchClassBuilder.build())
+      typeBuilder.associatedExtensions.add(patchOpExt)
     }
+
+    codingKeysType?.let { typeBuilder.addType(it) }
 
     inheritingTypes.forEach { inheritingType ->
       resolveReferencedTypeName(inheritingType, context)
@@ -1341,7 +1370,7 @@ class SwiftTypeRegistry(
     val moduleName = moduleNameOf(shape, context)
 
     val nestedAnn = shape.findAnnotation(Nested, null)
-      ?: return DeclaredTypeName.typeName("$moduleName.${shape.swiftTypeName}")
+      ?: return typeName("$moduleName.${shape.swiftTypeName}")
 
     val (nestedEnclosedIn, nestedName) =
       when {
@@ -1513,5 +1542,22 @@ class SwiftTypeRegistry(
     private const val DESCRIPTION_PROP_NAME = "debugDescription"
     private const val ANY_REF_NAME = "AnyRef"
     private const val CODING_KEYS_NAME = "CodingKeys"
+
+    private const val SUNDAY_MODULE = "Sunday"
+    private val ANY_PATCH_OP = typeName("$SUNDAY_MODULE.AnyPatchOp")
+    private val UPDATE_OP = typeName("$SUNDAY_MODULE.UpdateOp")
+    private val PATCH_OP = typeName("$SUNDAY_MODULE.PatchOp")
   }
 }
+
+class AssociatedExtensions : ArrayList<ExtensionSpec>()
+
+private val TypeSpec.Builder.associatedExtensions: AssociatedExtensions
+  get() {
+    var value = tags[AssociatedExtensions::class] as AssociatedExtensions?
+    if (value == null) {
+      value = AssociatedExtensions()
+      tag(value)
+    }
+    return value
+  }
