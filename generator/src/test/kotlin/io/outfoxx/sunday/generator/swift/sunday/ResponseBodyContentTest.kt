@@ -214,7 +214,7 @@ class ResponseBodyContentTest {
 
           public class FetchTestResponseBody : Codable, CustomDebugStringConvertible {
 
-            public let value: String
+            public var value: String
             public var debugDescription: String {
               return DescriptionBuilder(FetchTestResponseBody.self)
                   .add(value, named: "value")

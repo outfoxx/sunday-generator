@@ -27,7 +27,6 @@ import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
@@ -306,22 +305,6 @@ class TypeScriptSundayGenerator(
     parameterBuilder: ParameterSpec.Builder
   ): ParameterSpec {
 
-    val actualParameterBuilder =
-      if (payloadSchema.resolve.findBoolAnnotation(Patchable, null) == true && operation.method == "patch") {
-
-        val original = parameterBuilder.build()
-        val originalTypeName = original.type
-        val patchTypeName =
-          if (originalTypeName is TypeName.Standard)
-            originalTypeName.nested("Patch")
-          else
-            TypeName.ANY
-
-        ParameterSpec.builder(original.name, patchTypeName)
-      } else {
-        parameterBuilder
-      }
-
     val request = operation.request ?: operation.requests.first()
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
@@ -329,10 +312,10 @@ class TypeScriptSundayGenerator(
     referencedContentTypes.addAll(requestBodyContentTypes)
 
     requestBodyContentType = requestBodyContentTypes.firstOrNull()
-    requestBodyParameter = actualParameterBuilder.build().name
+    requestBodyParameter = parameterBuilder.build().name
     requestBodyType = payloadSchema
 
-    val parameter = actualParameterBuilder.build()
+    val parameter = parameterBuilder.build()
 
     return if (requestBodyContentType == "application/octet-stream") {
       ParameterSpec.builder(parameter.name, BODY_INIT, false, *parameter.modifiers.toTypedArray()).build()
@@ -624,9 +607,11 @@ class TypeScriptSundayGenerator(
       "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MEDIA_TYPE)
       "text/event-stream" -> CodeBlock.of("%T.EventStream", MEDIA_TYPE)
       "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormURLEncoded", MEDIA_TYPE)
-      "application/problem+json" -> CodeBlock.of("%T.ProblemJSON", MEDIA_TYPE)
+      "application/problem+json" -> CodeBlock.of("%T.Problem", MEDIA_TYPE)
       "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MEDIA_TYPE)
       "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MEDIA_TYPE)
+      "application/json-patch+json" -> CodeBlock.of("%T.JsonPatch", MEDIA_TYPE)
+      "application/merge-patch+json" -> CodeBlock.of("%T.MergePatch", MEDIA_TYPE)
       else -> CodeBlock.of("%T.from(%S)", MEDIA_TYPE, value)
     }
 }

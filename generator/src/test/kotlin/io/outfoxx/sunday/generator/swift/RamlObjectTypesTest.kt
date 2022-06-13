@@ -52,7 +52,7 @@ class RamlObjectTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let map: [String : Any]
+          public var map: [String : Any]
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(map, named: "map")
@@ -111,8 +111,8 @@ class RamlObjectTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let fromNilUnion: String?
-          public let notRequired: String?
+          public var fromNilUnion: String?
+          public var notRequired: String?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(fromNilUnion, named: "fromNilUnion")
@@ -170,8 +170,8 @@ class RamlObjectTypesTest {
         
         public class Test2 : Codable, CustomDebugStringConvertible {
         
-          public let optionalObject: [String : Any]?
-          public let nillableObject: [String : Any]?
+          public var optionalObject: [String : Any]?
+          public var nillableObject: [String : Any]?
           public var debugDescription: String {
             return DescriptionBuilder(Test2.self)
                 .add(optionalObject, named: "optionalObject")
@@ -281,7 +281,7 @@ class RamlObjectTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let value: String
+          public var value: String
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(value, named: "value")
@@ -327,7 +327,7 @@ class RamlObjectTypesTest {
 
         public class Test2 : Test {
 
-          public let value2: String
+          public var value2: String
           public override var debugDescription: String {
             return DescriptionBuilder(Test2.self)
                 .add(value, named: "value")
@@ -423,7 +423,7 @@ class RamlObjectTypesTest {
 
         public class Test3 : Empty {
 
-          public let value3: String
+          public var value3: String
           public override var debugDescription: String {
             return DescriptionBuilder(Test3.self)
                 .add(value, named: "value")
@@ -535,7 +535,7 @@ class RamlObjectTypesTest {
 
         public class Branch : Root {
 
-          public let value: String
+          public var value: String
           public override var debugDescription: String {
             return DescriptionBuilder(Branch.self)
                 .add(value, named: "value")
@@ -584,7 +584,7 @@ class RamlObjectTypesTest {
 
         public class Leaf : Branch {
 
-          public let value2: String
+          public var value2: String
           public override var debugDescription: String {
             return DescriptionBuilder(Leaf.self)
                 .add(value, named: "value")
@@ -649,8 +649,8 @@ class RamlObjectTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let someValue: String
-          public let anotherValue: String
+          public var someValue: String
+          public var anotherValue: String
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(someValue, named: "someValue")

@@ -165,7 +165,7 @@ class RequestMethodsTest {
             )
           }
 
-          public func patchableTest(body: PatchableTest.Patch) async throws -> Test {
+          public func patchableTest(body: PatchableTest) async throws -> Test {
             return try await self.requestFactory.result(
               method: .patch,
               pathTemplate: "/tests2",

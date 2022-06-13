@@ -25,6 +25,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.FileSpec
+import io.outfoxx.swiftpoet.tag
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -103,7 +104,7 @@ class RamlTypeAnnotationsTest {
 
         public class Group : Codable, CustomDebugStringConvertible {
 
-          public let value: String
+          public var value: String
           public var debugDescription: String {
             return DescriptionBuilder(Group.self)
                 .add(value, named: "value")
@@ -136,7 +137,7 @@ class RamlTypeAnnotationsTest {
 
           public class Member1 : Group {
 
-            public let memberValue1: String
+            public var memberValue1: String
             public override var debugDescription: String {
               return DescriptionBuilder(Member1.self)
                   .add(value, named: "value")
@@ -177,7 +178,7 @@ class RamlTypeAnnotationsTest {
 
             public class Sub : Member1 {
 
-              public let subMemberValue: String
+              public var subMemberValue: String
               public override var debugDescription: String {
                 return DescriptionBuilder(Sub.self)
                     .add(value, named: "value")
@@ -231,7 +232,7 @@ class RamlTypeAnnotationsTest {
 
           public class Member2 : Group {
 
-            public let memberValue2: String
+            public var memberValue2: String
             public override var debugDescription: String {
               return DescriptionBuilder(Member2.self)
                   .add(value, named: "value")
@@ -298,7 +299,7 @@ class RamlTypeAnnotationsTest {
 
         public class Group : Codable, CustomDebugStringConvertible {
 
-          public let value: String
+          public var value: String
           public var debugDescription: String {
             return DescriptionBuilder(Group.self)
                 .add(value, named: "value")
@@ -331,7 +332,7 @@ class RamlTypeAnnotationsTest {
 
           public class Member1 : Group {
 
-            public let memberValue1: String
+            public var memberValue1: String
             public override var debugDescription: String {
               return DescriptionBuilder(Member1.self)
                   .add(value, named: "value")
@@ -372,7 +373,7 @@ class RamlTypeAnnotationsTest {
 
             public class Sub : Member1 {
 
-              public let subMemberValue: String
+              public var subMemberValue: String
               public override var debugDescription: String {
                 return DescriptionBuilder(Sub.self)
                     .add(value, named: "value")
@@ -426,7 +427,7 @@ class RamlTypeAnnotationsTest {
 
           public class Member2 : Group {
 
-            public let memberValue2: String
+            public var memberValue2: String
             public override var debugDescription: String {
               return DescriptionBuilder(Member2.self)
                   .add(value, named: "value")
@@ -493,7 +494,7 @@ class RamlTypeAnnotationsTest {
 
         public class Root : Codable, CustomDebugStringConvertible {
 
-          public let value: String
+          public var value: String
           public var debugDescription: String {
             return DescriptionBuilder(Root.self)
                 .add(value, named: "value")
@@ -526,7 +527,7 @@ class RamlTypeAnnotationsTest {
 
           public class Group : Codable, CustomDebugStringConvertible {
 
-            public let value: String
+            public var value: String
             public var debugDescription: String {
               return DescriptionBuilder(Group.self)
                   .add(value, named: "value")
@@ -559,7 +560,7 @@ class RamlTypeAnnotationsTest {
 
             public class Member : Codable, CustomDebugStringConvertible {
 
-              public let memberValue: String
+              public var memberValue: String
               public var debugDescription: String {
                 return DescriptionBuilder(Member.self)
                     .add(memberValue, named: "memberValue")
@@ -620,7 +621,7 @@ class RamlTypeAnnotationsTest {
 
         public class Root : Codable, CustomDebugStringConvertible {
 
-          public let value: String
+          public var value: String
           public var debugDescription: String {
             return DescriptionBuilder(Root.self)
                 .add(value, named: "value")
@@ -653,7 +654,7 @@ class RamlTypeAnnotationsTest {
 
           public class Group : Codable, CustomDebugStringConvertible {
 
-            public let value: String
+            public var value: String
             public var debugDescription: String {
               return DescriptionBuilder(Group.self)
                   .add(value, named: "value")
@@ -686,7 +687,7 @@ class RamlTypeAnnotationsTest {
 
             public class Member : Codable, CustomDebugStringConvertible {
 
-              public let memberValue: String
+              public var memberValue: String
               public var debugDescription: String {
                 return DescriptionBuilder(Member.self)
                     .add(memberValue, named: "memberValue")
@@ -832,7 +833,7 @@ class RamlTypeAnnotationsTest {
           public override var type: String {
             return "Child1"
           }
-          public let value: String?
+          public var value: String?
           public override var debugDescription: String {
             return DescriptionBuilder(Child1.self)
                 .add(type, named: "type")
@@ -888,7 +889,7 @@ class RamlTypeAnnotationsTest {
           public override var type: String {
             return "child2"
           }
-          public let value: String?
+          public var value: String?
           public override var debugDescription: String {
             return DescriptionBuilder(Child2.self)
                 .add(type, named: "type")
@@ -941,8 +942,8 @@ class RamlTypeAnnotationsTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let parent: Parent
-          public let parentType: String
+          public var parent: Parent
+          public var parentType: String
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(parent, named: "parent")
@@ -1044,12 +1045,12 @@ class RamlTypeAnnotationsTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let string: String
-          public let int: Int
-          public let bool: Bool
-          public let nullable: String?
-          public let optional: String?
-          public let nullableOptional: String?
+          public var string: UpdateOp<String>?
+          public var int: UpdateOp<Int>?
+          public var bool: UpdateOp<Bool>?
+          public var nullable: PatchOp<String>?
+          public var optional: UpdateOp<String>?
+          public var nullableOptional: PatchOp<String>?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(string, named: "string")
@@ -1062,12 +1063,12 @@ class RamlTypeAnnotationsTest {
           }
 
           public init(
-            string: String,
-            int: Int,
-            bool: Bool,
-            nullable: String?,
-            optional: String?,
-            nullableOptional: String?
+            string: UpdateOp<String>? = .none,
+            int: UpdateOp<Int>? = .none,
+            bool: UpdateOp<Bool>? = .none,
+            nullable: PatchOp<String>? = .none,
+            optional: UpdateOp<String>? = .none,
+            nullableOptional: PatchOp<String>? = .none
           ) {
             self.string = string
             self.int = int
@@ -1079,61 +1080,52 @@ class RamlTypeAnnotationsTest {
 
           public required init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.string = try container.decode(String.self, forKey: .string)
-            self.int = try container.decode(Int.self, forKey: .int)
-            self.bool = try container.decode(Bool.self, forKey: .bool)
-            self.nullable = try container.decodeIfPresent(String.self, forKey: .nullable)
-            self.optional = try container.decodeIfPresent(String.self, forKey: .optional)
-            self.nullableOptional = try container.decodeIfPresent(String.self, forKey: .nullableOptional)
+            self.string = try container.decodeIfExists(String.self, forKey: .string)
+            self.int = try container.decodeIfExists(Int.self, forKey: .int)
+            self.bool = try container.decodeIfExists(Bool.self, forKey: .bool)
+            self.nullable = try container.decodeIfExists(String.self, forKey: .nullable)
+            self.optional = try container.decodeIfExists(String.self, forKey: .optional)
+            self.nullableOptional = try container.decodeIfExists(String.self, forKey: .nullableOptional)
           }
 
           public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.string, forKey: .string)
-            try container.encode(self.int, forKey: .int)
-            try container.encode(self.bool, forKey: .bool)
-            try container.encodeIfPresent(self.nullable, forKey: .nullable)
-            try container.encodeIfPresent(self.optional, forKey: .optional)
-            try container.encodeIfPresent(self.nullableOptional, forKey: .nullableOptional)
+            try container.encodeIfExists(self.string, forKey: .string)
+            try container.encodeIfExists(self.int, forKey: .int)
+            try container.encodeIfExists(self.bool, forKey: .bool)
+            try container.encodeIfExists(self.nullable, forKey: .nullable)
+            try container.encodeIfExists(self.optional, forKey: .optional)
+            try container.encodeIfExists(self.nullableOptional, forKey: .nullableOptional)
           }
 
-          public func withString(string: String) -> Test {
+          public func withString(string: UpdateOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
 
-          public func withInt(int: Int) -> Test {
+          public func withInt(int: UpdateOp<Int>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
 
-          public func withBool(bool: Bool) -> Test {
+          public func withBool(bool: UpdateOp<Bool>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
         
-          public func withNullable(nullable: String?) -> Test {
+          public func withNullable(nullable: PatchOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
         
-          public func withOptional(optional: String?) -> Test {
+          public func withOptional(optional: UpdateOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
         
-          public func withNullableOptional(nullableOptional: String?) -> Test {
+          public func withNullableOptional(nullableOptional: PatchOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
-          }
-
-          func patch(source: [String : Any]) -> Patch {
-            return Patch(string: source.keys.contains("string") ? Optional.some(string) : nil,
-                int: source.keys.contains("int") ? Optional.some(int) : nil,
-                bool: source.keys.contains("bool") ? Optional.some(bool) : nil,
-                nullable: source.keys.contains("nullable") ? Optional.some(nullable) : nil,
-                optional: source.keys.contains("optional") ? Optional.some(optional) : nil,
-                nullableOptional: source.keys.contains("nullableOptional") ? Optional.some(nullableOptional) : nil)
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
@@ -1147,38 +1139,32 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          public struct Patch : Codable {
+        }
+        
+        extension AnyPatchOp where Value == Test {
 
-            let string: String?
-            let int: Int?
-            let bool: Bool?
-            let nullable: String??
-            let optional: String??
-            let nullableOptional: String??
-
-            public init(
-              string: String?,
-              int: Int?,
-              bool: Bool?,
-              nullable: String??,
-              optional: String??,
-              nullableOptional: String??
-            ) {
-              self.string = string
-              self.int = int
-              self.bool = bool
-              self.nullable = nullable
-              self.optional = optional
-              self.nullableOptional = nullableOptional
-            }
-
+          public static func merge(
+            string: Sunday.UpdateOp<Swift.String>? = .none,
+            int: Sunday.UpdateOp<Swift.Int>? = .none,
+            bool: Sunday.UpdateOp<Swift.Bool>? = .none,
+            nullable: Sunday.PatchOp<Swift.String>? = .none,
+            optional: Sunday.UpdateOp<Swift.String>? = .none,
+            nullableOptional: Sunday.PatchOp<Swift.String>? = .none
+          ) -> Self {
+            Self.merge(Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+                nullableOptional: nullableOptional))
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec.builder("", typeSpec.name)
+          .addType(typeSpec)
+          .apply {
+            typeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }
+          .build()
           .writeTo(this)
       }
     )

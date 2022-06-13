@@ -394,11 +394,11 @@ class RamlObjectTypesTest {
 
         export class Test implements Test {
 
-          @JsonProperty({value: 'some-value'})
+          @JsonProperty({value: 'some-value', required: true})
           @JsonClassType({type: () => [String]})
           someValue: string;
 
-          @JsonProperty({value: 'another_value'})
+          @JsonProperty({value: 'another_value', required: true})
           @JsonClassType({type: () => [String]})
           anotherValue: string;
 

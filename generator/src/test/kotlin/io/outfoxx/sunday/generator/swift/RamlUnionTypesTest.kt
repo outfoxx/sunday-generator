@@ -51,9 +51,9 @@ class RamlUnionTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let any: Any
-          public let duplicate: String
-          public let nullable: String?
+          public var any: Any
+          public var duplicate: String
+          public var nullable: String?
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(any, named: "any")
@@ -132,7 +132,7 @@ class RamlUnionTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let value: Base
+          public var value: Base
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(value, named: "value")

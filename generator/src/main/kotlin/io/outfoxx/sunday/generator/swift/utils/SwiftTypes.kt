@@ -24,6 +24,7 @@ import io.outfoxx.swiftpoet.STRING
 import io.outfoxx.swiftpoet.parameterizedBy
 
 const val SWIFT_MODULE = "Swift"
+val EQUATABLE = typeName("$SWIFT_MODULE.Equatable")
 val CODABLE = typeName("$SWIFT_MODULE.Codable")
 val ENCODABLE = typeName("$SWIFT_MODULE.Encodable")
 val DECODABLE = typeName("$SWIFT_MODULE.Decodable")

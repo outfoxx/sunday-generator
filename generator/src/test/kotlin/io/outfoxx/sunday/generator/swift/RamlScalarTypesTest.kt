@@ -51,11 +51,11 @@ class RamlScalarTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let bool: Bool
-          public let string: String
-          public let file: Data
-          public let any: AnyValue
-          public let `nil`: Void
+          public var bool: Bool
+          public var string: String
+          public var file: Data
+          public var any: AnyValue
+          public var `nil`: Void
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(bool, named: "bool")
@@ -152,13 +152,13 @@ class RamlScalarTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let int8: Int8
-          public let int16: Int16
-          public let int32: Int32
-          public let int64: Int64
-          public let int: Int
-          public let long: Int64
-          public let none: Int
+          public var int8: Int8
+          public var int16: Int16
+          public var int32: Int32
+          public var int64: Int64
+          public var int: Int
+          public var long: Int64
+          public var none: Int
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(int8, named: "int8")
@@ -284,9 +284,9 @@ class RamlScalarTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let float: Float
-          public let double: Double
-          public let none: Double
+          public var float: Float
+          public var double: Double
+          public var none: Double
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(float, named: "float")
@@ -366,10 +366,10 @@ class RamlScalarTypesTest {
 
         public class Test : Codable, CustomDebugStringConvertible {
 
-          public let dateOnly: Date
-          public let timeOnly: Date
-          public let dateTimeOnly: Date
-          public let dateTime: Date
+          public var dateOnly: Date
+          public var timeOnly: Date
+          public var dateTimeOnly: Date
+          public var dateTime: Date
           public var debugDescription: String {
             return DescriptionBuilder(Test.self)
                 .add(dateOnly, named: "dateOnly")

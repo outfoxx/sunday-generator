@@ -57,6 +57,7 @@ import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.LONG
+import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MAP
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -68,7 +69,6 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
-import com.squareup.kotlinpoet.joinToCode
 import com.squareup.kotlinpoet.tag
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
@@ -133,8 +133,8 @@ import io.outfoxx.sunday.generator.utils.minItems
 import io.outfoxx.sunday.generator.utils.minLength
 import io.outfoxx.sunday.generator.utils.minimum
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nullable
 import io.outfoxx.sunday.generator.utils.nullableType
-import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.properties
@@ -159,7 +159,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
-import java.util.Optional
 import javax.annotation.processing.Generated
 import javax.validation.Valid
 import javax.validation.constraints.DecimalMax
@@ -591,6 +590,18 @@ class KotlinTypeRegistry(
       }
     }
 
+    val isPatchable = shape.resolve.findBoolAnnotation(Patchable, generationMode) == true
+
+    if (isPatchable) {
+      typeBuilder
+        .addSuperinterface(PATCH)
+        .addAnnotation(
+          AnnotationSpec.builder(JsonInclude::class)
+            .addMember("%T.%L", JsonInclude.Include::class, JsonInclude.Include.NON_EMPTY.name)
+            .build()
+        )
+    }
+
     var inheritedProperties = collectProperties(superShape)
     var declaredProperties = propertyContainerShape.properties
 
@@ -686,13 +697,19 @@ class KotlinTypeRegistry(
         // Build parameter constructor
         //
         var paramConsBuilder: FunSpec.Builder? = null
-        if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
+        if (isPatchable || inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
           paramConsBuilder = FunSpec.constructorBuilder()
           inheritedProperties.forEach { inheritedProperty ->
+
             paramConsBuilder.addParameter(
-              inheritedProperty.kotlinIdentifierName,
-              resolvePropertyTypeName(inheritedProperty, className, context)
+              ParameterSpec
+                .builder(
+                  inheritedProperty.kotlinIdentifierName,
+                  resolvePropertyTypeName(inheritedProperty, className, context)
+                )
+                .build()
             )
+
             typeBuilder.addSuperclassConstructorParameter("%L", inheritedProperty.kotlinIdentifierName)
           }
         }
@@ -779,10 +796,24 @@ class KotlinTypeRegistry(
         //
         declaredProperties.forEach { declaredProperty ->
 
-          val declaredPropertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
+          val declaredPropertyTypeName =
+            resolvePropertyTypeName(declaredProperty, className, context)
+              .run {
+                if (isPatchable) {
+                  val base = if (declaredProperty.nullable) PATCH_OP else UPDATE_OP
+                  base.parameterizedBy(copy(nullable = false))
+                } else {
+                  this
+                }
+              }
 
           val declaredPropertyBuilder =
             PropertySpec.builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+
+          if (isPatchable) {
+            declaredPropertyBuilder
+              .mutable(true)
+          }
 
           val externalDiscriminatorPropertyName =
             declaredProperty.range.findStringAnnotation(ExternalDiscriminator, generationMode)
@@ -846,7 +877,16 @@ class KotlinTypeRegistry(
 
             // Add constructor parameter
             //
-            paramConsBuilder?.addParameter(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+            paramConsBuilder?.addParameter(
+              ParameterSpec
+                .builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+                .apply {
+                  if (isPatchable) {
+                    defaultValue("%T.none()", PATCH_OP)
+                  }
+                }
+                .build()
+            )
 
             // Add toString value
             //
@@ -879,7 +919,7 @@ class KotlinTypeRegistry(
 
         // Add copy method
         //
-        if (inheritingTypes.isEmpty()) {
+        if (inheritingTypes.isEmpty() && !isPatchable) {
 
           val copyBuilder =
             FunSpec.builder("copy")
@@ -967,80 +1007,33 @@ class KotlinTypeRegistry(
       }
     }
 
-    if (shape.findBoolAnnotation(Patchable, generationMode) == true) {
+    if (isPatchable && options.contains(ImplementModel)) {
 
-      val patchClassName = className.nestedClass("Patch")
+      val initLambdaTypeName = LambdaTypeName.get(className, listOf(), UNIT)
 
-      val patchClassBuilder =
-        TypeSpec.classBuilder(patchClassName)
-          .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
-          .addGenerated(false)
-          .addModifiers(KModifier.DATA)
-          .addAnnotation(
-            AnnotationSpec.builder(JsonInclude::class)
-              .addMember("%T.NON_NULL", JsonInclude.Include::class)
+      typeBuilder.addType(
+        TypeSpec.companionObjectBuilder()
+          // Add merge method to companion object
+          .addFunction(
+            FunSpec.builder("merge")
+              .addModifiers(KModifier.INLINE)
+              .returns(PATCH_SET_OP.parameterizedBy(className))
+              .addParameter("init", initLambdaTypeName)
+              .addStatement("val patch = %T()", className)
+              .addStatement("patch.init()")
+              .addStatement("return %T(patch)", PATCH_SET_OP)
               .build()
           )
-      val patchClassConsBuilder = FunSpec.constructorBuilder()
-
-      val patchFields = mutableListOf<CodeBlock>()
-
-      for (propertyDecl in propertyContainerShape.properties) {
-        var propertyTypeName = resolveReferencedTypeName(propertyDecl.range, context)
-        val isPropertyTypeNameNullable = propertyTypeName.isNullable || propertyDecl.optional
-        if (isPropertyTypeNameNullable) {
-          propertyTypeName = Optional::class.asTypeName().parameterizedBy(propertyTypeName.copy(nullable = false))
-        }
-        val nullablePropertyTypeName = propertyTypeName.copy(nullable = true)
-
-        patchClassBuilder.addProperty(
-          PropertySpec.builder(propertyDecl.kotlinIdentifierName, nullablePropertyTypeName)
-            .initializer(propertyDecl.kotlinIdentifierName)
-            .build()
-        )
-        patchClassConsBuilder.addParameter(
-          ParameterSpec.builder(propertyDecl.kotlinIdentifierName, nullablePropertyTypeName)
-            .defaultValue("null")
-            .build()
-        )
-
-        if (isPropertyTypeNameNullable) {
-          patchFields.add(
-            CodeBlock.of(
-              "if (source.has(%S)) Optional.ofNullable(%L) else null",
-              propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
-            )
-          )
-        } else {
-          patchFields.add(
-            CodeBlock.of(
-              "if (source.has(%S)) %L else null",
-              propertyDecl.kotlinIdentifierName, propertyDecl.kotlinIdentifierName
-            )
-          )
-        }
-      }
-
-      patchClassBuilder.primaryConstructor(patchClassConsBuilder.build())
-
-      typeBuilder.addFunction(
-        FunSpec.builder("patch")
-          .addParameter(
-            ParameterSpec.builder("source", com.fasterxml.jackson.databind.node.ObjectNode::class.asTypeName())
-              .build()
-          )
-          .returns(patchClassName)
-          .addCode(
-            CodeBlock.builder()
-              .add("return %T(", patchClassName).indent().add("\n")
-              .add(patchFields.joinToCode(",\n"))
-              .unindent().add("\n)")
+          // Add patch method to companion object
+          .addFunction(
+            FunSpec.builder("patch")
+              .addModifiers(KModifier.INLINE)
+              .addParameter("init", initLambdaTypeName)
+              .addStatement("return merge(init).value")
               .build()
           )
           .build()
       )
-
-      typeBuilder.addType(patchClassBuilder.build())
     }
 
     if (typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
@@ -1512,5 +1505,14 @@ class KotlinTypeRegistry(
       )
     }
     return this
+  }
+
+  companion object {
+
+    val PATCH_OP = ClassName("io.outfoxx.sunday.json.patch", "PatchOp")
+    val PATCH_SET_OP = PATCH_OP.nestedClass("Set")
+    val UPDATE_OP = ClassName("io.outfoxx.sunday.json.patch", "UpdateOp")
+
+    val PATCH = ClassName("io.outfoxx.sunday.json.patch", "Patch")
   }
 }
