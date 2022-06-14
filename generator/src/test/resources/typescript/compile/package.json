@@ -9,8 +9,8 @@
   "author": "nobody",
   "license": "outfox",
   "dependencies": {
-    "@outfoxx/sunday": "~1.1.0-alpha.8",
-    "@outfoxx/jackson-js": "~1.2.22"
+    "@outfoxx/sunday": "~1.1.0-alpha.17",
+    "@outfoxx/jackson-js": "~1.3.4"
   },
   "devDependencies": {
     "typescript": "^4.0.2"
