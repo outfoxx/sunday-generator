@@ -51,10 +51,7 @@ class RamlDiscriminatedTypesTest {
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
         
-        export interface Parent {
-        
-          type: string;
-        
+        export interface ParentSpec {
         }
         
         @JsonTypeInfo({
@@ -68,7 +65,7 @@ class RamlDiscriminatedTypesTest {
             {class: () => Child2, name: 'child2'}
           ]
         })
-        export abstract class Parent implements Parent {
+        export abstract class Parent implements ParentSpec {
         
           toString(): string {
             return `Parent()`;
@@ -87,19 +84,19 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {JsonClassType} from '@outfoxx/jackson-js';
         
         
-        export interface Child1 extends Parent {
+        export interface Child1Spec extends ParentSpec {
         
-          value: string | undefined;
+          value?: string;
         
           value1: number;
         
         }
         
-        export class Child1 extends Parent implements Child1 {
+        export class Child1 extends Parent implements Child1Spec {
         
           @JsonClassType({type: () => [String]})
           value: string | undefined;
@@ -107,18 +104,18 @@ class RamlDiscriminatedTypesTest {
           @JsonClassType({type: () => [Number]})
           value1: number;
         
-          constructor(value: string | undefined, value1: number) {
+          constructor(init: Child1Spec) {
             super();
-            this.value = value;
-            this.value1 = value1;
+            this.value = init.value;
+            this.value1 = init.value1;
           }
         
           get type(): string {
             return 'Child1';
           }
         
-          copy(src: Partial<Child1>): Child1 {
-            return new Child1(src.value ?? this.value, src.value1 ?? this.value1);
+          copy(changes: Partial<Child1Spec>): Child1 {
+            return new Child1(Object.assign({}, this, changes));
           }
         
           toString(): string {
@@ -138,19 +135,19 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {JsonClassType} from '@outfoxx/jackson-js';
         
         
-        export interface Child2 extends Parent {
+        export interface Child2Spec extends ParentSpec {
         
-          value: string | undefined;
+          value?: string;
         
           value2: number;
         
         }
         
-        export class Child2 extends Parent implements Child2 {
+        export class Child2 extends Parent implements Child2Spec {
         
           @JsonClassType({type: () => [String]})
           value: string | undefined;
@@ -158,18 +155,18 @@ class RamlDiscriminatedTypesTest {
           @JsonClassType({type: () => [Number]})
           value2: number;
         
-          constructor(value: string | undefined, value2: number) {
+          constructor(init: Child2Spec) {
             super();
-            this.value = value;
-            this.value2 = value2;
+            this.value = init.value;
+            this.value2 = init.value2;
           }
         
           get type(): string {
             return 'child2';
           }
         
-          copy(src: Partial<Child2>): Child2 {
-            return new Child2(src.value ?? this.value, src.value2 ?? this.value2);
+          copy(changes: Partial<Child2Spec>): Child2 {
+            return new Child2(Object.assign({}, this, changes));
           }
         
           toString(): string {
@@ -204,10 +201,7 @@ class RamlDiscriminatedTypesTest {
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
         
-        export interface Parent {
-        
-          type: Type;
-        
+        export interface ParentSpec {
         }
         
         @JsonTypeInfo({
@@ -221,7 +215,7 @@ class RamlDiscriminatedTypesTest {
             {class: () => Child2, name: Type.Child2}
           ]
         })
-        export abstract class Parent implements Parent {
+        export abstract class Parent implements ParentSpec {
         
           toString(): string {
             return `Parent()`;
@@ -240,33 +234,33 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {Type} from './type';
         import {JsonClassType} from '@outfoxx/jackson-js';
         
         
-        export interface Child1 extends Parent {
+        export interface Child1Spec extends ParentSpec {
         
-          value: string | undefined;
+          value?: string;
         
         }
         
-        export class Child1 extends Parent implements Child1 {
+        export class Child1 extends Parent implements Child1Spec {
 
           @JsonClassType({type: () => [String]})
           value: string | undefined;
 
-          constructor(value: string | undefined) {
+          constructor(init: Child1Spec) {
             super();
-            this.value = value;
+            this.value = init.value;
           }
 
           get type(): Type {
             return Type.Child1;
           }
         
-          copy(src: Partial<Child1>): Child1 {
-            return new Child1(src.value ?? this.value);
+          copy(changes: Partial<Child1Spec>): Child1 {
+            return new Child1(Object.assign({}, this, changes));
           }
         
           toString(): string {
@@ -286,33 +280,33 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {Type} from './type';
         import {JsonClassType} from '@outfoxx/jackson-js';
         
         
-        export interface Child2 extends Parent {
+        export interface Child2Spec extends ParentSpec {
         
-          value: string | undefined;
+          value?: string;
         
         }
         
-        export class Child2 extends Parent implements Child2 {
+        export class Child2 extends Parent implements Child2Spec {
         
           @JsonClassType({type: () => [String]})
           value: string | undefined;
         
-          constructor(value: string | undefined) {
+          constructor(init: Child2Spec) {
             super();
-            this.value = value;
+            this.value = init.value;
           }
         
           get type(): Type {
             return Type.Child2;
           }
         
-          copy(src: Partial<Child2>): Child2 {
-            return new Child2(src.value ?? this.value);
+          copy(changes: Partial<Child2Spec>): Child2 {
+            return new Child2(Object.assign({}, this, changes));
           }
         
           toString(): string {

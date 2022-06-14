@@ -214,22 +214,22 @@ class ResponseBodyContentTest {
 
         export namespace API {
 
-          export interface FetchTestResponseBody {
+          export interface FetchTestResponseBodySpec {
 
             value: string;
 
           }
 
-          export class FetchTestResponseBody implements FetchTestResponseBody {
+          export class FetchTestResponseBody implements FetchTestResponseBodySpec {
 
             value: string;
 
-            constructor(value: string) {
-              this.value = value;
+            constructor(init: FetchTestResponseBodySpec) {
+              this.value = init.value;
             }
 
-            copy(src: Partial<FetchTestResponseBody>): FetchTestResponseBody {
-              return new FetchTestResponseBody(src.value ?? this.value);
+            copy(changes: Partial<FetchTestResponseBodySpec>): FetchTestResponseBody {
+              return new FetchTestResponseBody(Object.assign({}, this, changes));
             }
 
             toString(): string {

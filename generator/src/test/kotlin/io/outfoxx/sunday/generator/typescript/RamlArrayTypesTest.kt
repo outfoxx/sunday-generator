@@ -46,7 +46,7 @@ class RamlArrayTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
       
           arrayOfStrings: Array<string>;
       
@@ -62,7 +62,7 @@ class RamlArrayTypesTest {
       
         }
       
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           arrayOfStrings: Array<string>;
 
@@ -76,29 +76,17 @@ class RamlArrayTypesTest {
 
           declaredArrayOfNullableStrings: Array<string | null>;
 
-          constructor(
-              arrayOfStrings: Array<string>,
-              arrayOfNullableStrings: Array<string | null>,
-              nullableArrayOfStrings: Array<string> | null,
-              nullableArrayOfNullableStrings: Array<string | null> | null,
-              declaredArrayOfStrings: Array<string>,
-              declaredArrayOfNullableStrings: Array<string | null>
-          ) {
-            this.arrayOfStrings = arrayOfStrings;
-            this.arrayOfNullableStrings = arrayOfNullableStrings;
-            this.nullableArrayOfStrings = nullableArrayOfStrings;
-            this.nullableArrayOfNullableStrings = nullableArrayOfNullableStrings;
-            this.declaredArrayOfStrings = declaredArrayOfStrings;
-            this.declaredArrayOfNullableStrings = declaredArrayOfNullableStrings;
+          constructor(init: TestSpec) {
+            this.arrayOfStrings = init.arrayOfStrings;
+            this.arrayOfNullableStrings = init.arrayOfNullableStrings;
+            this.nullableArrayOfStrings = init.nullableArrayOfStrings;
+            this.nullableArrayOfNullableStrings = init.nullableArrayOfNullableStrings;
+            this.declaredArrayOfStrings = init.declaredArrayOfStrings;
+            this.declaredArrayOfNullableStrings = init.declaredArrayOfNullableStrings;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.arrayOfStrings ?? this.arrayOfStrings,
-                src.arrayOfNullableStrings ?? this.arrayOfNullableStrings,
-                src.nullableArrayOfStrings ?? this.nullableArrayOfStrings,
-                src.nullableArrayOfNullableStrings ?? this.nullableArrayOfNullableStrings,
-                src.declaredArrayOfStrings ?? this.declaredArrayOfStrings,
-                src.declaredArrayOfNullableStrings ?? this.declaredArrayOfNullableStrings);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
       
           toString(): string {
@@ -128,7 +116,7 @@ class RamlArrayTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
       
           implicit: Array<string>;
       
@@ -140,7 +128,7 @@ class RamlArrayTypesTest {
       
         }
       
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           implicit: Array<string>;
 
@@ -150,17 +138,15 @@ class RamlArrayTypesTest {
 
           unique: Set<string>;
 
-          constructor(implicit: Array<string>, unspecified: Array<string>, nonUnique: Array<string>,
-              unique: Set<string>) {
-            this.implicit = implicit;
-            this.unspecified = unspecified;
-            this.nonUnique = nonUnique;
-            this.unique = unique;
+          constructor(init: TestSpec) {
+            this.implicit = init.implicit;
+            this.unspecified = init.unspecified;
+            this.nonUnique = init.nonUnique;
+            this.unique = init.unique;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.implicit ?? this.implicit, src.unspecified ?? this.unspecified,
-                src.nonUnique ?? this.nonUnique, src.unique ?? this.unique);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
       
           toString(): string {
@@ -190,7 +176,7 @@ class RamlArrayTypesTest {
     assertEquals(
       """
       
-        export interface Test {
+        export interface TestSpec {
       
           binary: ArrayBuffer;
       
@@ -198,19 +184,19 @@ class RamlArrayTypesTest {
       
         }
       
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           binary: ArrayBuffer;
 
           nullableBinary: ArrayBuffer | null;
 
-          constructor(binary: ArrayBuffer, nullableBinary: ArrayBuffer | null) {
-            this.binary = binary;
-            this.nullableBinary = nullableBinary;
+          constructor(init: TestSpec) {
+            this.binary = init.binary;
+            this.nullableBinary = init.nullableBinary;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.binary ?? this.binary, src.nullableBinary ?? this.nullableBinary);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
       
           toString(): string {
