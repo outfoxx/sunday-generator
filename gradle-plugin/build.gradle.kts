@@ -2,8 +2,6 @@ import org.gradle.api.publish.maven.internal.publication.MavenPublicationInterna
 import org.gradle.plugin.use.resolve.internal.ArtifactRepositoriesPluginResolver.PLUGIN_MARKER_SUFFIX
 
 plugins {
-  `java-gradle-plugin`
-  `maven-publish`
   id("com.gradle.plugin-publish")
   id("com.github.johnrengelman.shadow")
 }
@@ -40,18 +38,13 @@ tasks.shadowJar.configure {
   minimize()
 }
 
-tasks.publishPlugins.configure {
-  dependsOn(tasks.shadowJar)
-  useAutomatedPublishing()
-}
-
-
 gradlePlugin {
-  isAutomatedPublishing = false
   plugins {
     register("sunday") {
       id = "io.outfoxx.sunday-generator"
       implementationClass = "io.outfoxx.sunday.generator.gradle.SundayGeneratorPlugin"
+      displayName = "Sunday Generator - Gradle Plugin"
+      description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
     }
   }
 }
@@ -60,31 +53,5 @@ pluginBundle {
   website = "https://outfoxx.github.io/sunday"
   vcsUrl = "https://github.com/outfoxx/sunday-generator"
   tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
-
-  plugins {
-    named("sunday") {
-      displayName = "Sunday Generator - Gradle Plugin"
-      description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
-    }
-  }
-}
-
-publishing {
-  publications {
-    register<MavenPublication>("pluginMaven").configure {
-      // Remove existing "dependencies" node
-      pom {
-        withXml {
-          val pomNode = asNode()
-          (pomNode.get("dependencies") as groovy.util.NodeList).forEach {
-            pomNode.remove(it as groovy.util.Node)
-          }
-        }
-      }
-
-      project.shadow.component(this)
-      groupId = "io.outfoxx.sunday"
-      artifactId = "gradle-plugin"
-    }
-  }
+  description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
 }
