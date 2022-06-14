@@ -71,7 +71,7 @@ class RamlEnumTypesTest {
         import {JsonClassType} from '@outfoxx/jackson-js';
         
         
-        export interface Test {
+        export interface TestSpec {
         
           enumVal: TestEnum;
         
@@ -81,7 +81,7 @@ class RamlEnumTypesTest {
         
         }
         
-        export class Test implements Test {
+        export class Test implements TestSpec {
         
           @JsonClassType({type: () => [Object]})
           enumVal: TestEnum;
@@ -92,15 +92,14 @@ class RamlEnumTypesTest {
           @JsonClassType({type: () => [Array, [Object]]})
           arrayVal: Array<TestEnum>;
         
-          constructor(enumVal: TestEnum, setVal: Set<TestEnum>, arrayVal: Array<TestEnum>) {
-            this.enumVal = enumVal;
-            this.setVal = setVal;
-            this.arrayVal = arrayVal;
+          constructor(init: TestSpec) {
+            this.enumVal = init.enumVal;
+            this.setVal = init.setVal;
+            this.arrayVal = init.arrayVal;
           }
         
-          copy(src: Partial<Test>): Test {
-            return new Test(src.enumVal ?? this.enumVal, src.setVal ?? this.setVal,
-                src.arrayVal ?? this.arrayVal);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
         
           toString(): string {

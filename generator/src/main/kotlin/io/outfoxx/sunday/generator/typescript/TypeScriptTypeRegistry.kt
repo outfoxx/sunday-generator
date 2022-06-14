@@ -69,7 +69,9 @@ import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
 import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
 import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nonOptional
+import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
@@ -158,7 +160,7 @@ class TypeScriptTypeRegistry(
   private val options: Set<Option>
 ) : TypeRegistry {
 
-  data class ImplementationClass(val value: ClassSpec.Builder)
+  data class SpecificationInterface(val value: InterfaceSpec.Builder)
 
   enum class Option {
     JacksonDecorators,
@@ -232,8 +234,8 @@ class TypeScriptTypeRegistry(
 
         // Add types
         val typeSpec = typeBuilder.build()
+        typeSpec.tag<SpecificationInterface>()?.value?.let { enclosingMod.addInterface(it.build()) }
         enclosingMod.addType(typeSpec)
-        typeSpec.tag<ImplementationClass>()?.value?.let { enclosingMod.addClass(it.build()) }
 
         // Add nested module (if exists)
         typeModBuilders[typeName]?.let { enclosingMod.addModule(it.build()) }
@@ -247,17 +249,14 @@ class TypeScriptTypeRegistry(
 
         val rootModuleSpec =
           ModuleSpec.builder(typeName.simpleName(), ModuleSpec.Kind.MODULE)
-            .addType(rootTypeSpec)
 
         rootModuleSpec.tags.putAll(rootTypeSpec.tags)
 
         when (typeBuilder) {
-          is InterfaceSpec.Builder -> {
-            (typeBuilder.tags[ImplementationClass::class] as? ImplementationClass)?.let {
-              rootModuleSpec.addClass(it.value.build())
-            }
-          }
           is ClassSpec.Builder -> {
+            (typeBuilder.tags[SpecificationInterface::class] as? SpecificationInterface)?.let {
+              rootModuleSpec.addInterface(it.value.build())
+            }
             (typeBuilder.tags[CodeBlock.Builder::class] as? CodeBlock.Builder)?.let {
               if (it.isNotEmpty()) {
                 rootModuleSpec.addCode(it.build())
@@ -265,6 +264,8 @@ class TypeScriptTypeRegistry(
             }
           }
         }
+
+        rootModuleSpec.addType(rootTypeSpec)
 
         val typeModBuilder = getTypeModBuilder(typeName)
         if (typeModBuilder.isNotEmpty()) {
@@ -629,29 +630,28 @@ class TypeScriptTypeRegistry(
       }
     }
 
-    val ifaceBuilder =
+    val classBuilder =
       defineType(className) { name ->
-        InterfaceSpec.builder(name.simpleName())
+        ClassSpec.builder(name.simpleName())
+          .tag(GeneratedTypeCategory.Model)
           .tag(DefinitionLocation(shape))
           .addModifiers(Modifier.EXPORT)
-      } as InterfaceSpec.Builder
+      } as ClassSpec.Builder
 
-    val classBuilder =
-      ClassSpec.builder(className.simpleName())
-        .tag(GeneratedTypeCategory.Model)
+    val ifaceName = className.sibling("Spec")
+    val ifaceBuilder =
+      InterfaceSpec.builder(ifaceName.simpleName())
         .tag(DefinitionLocation(shape))
         .addModifiers(Modifier.EXPORT)
-        .addMixin(className)
 
-    val superClassName =
-      if (superShape != null) {
-        val superClassName = resolveReferencedTypeName(superShape, context)
-        ifaceBuilder.addSuperInterface(superClassName)
-        classBuilder.superClass(superClassName)
-        superClassName
-      } else {
-        null
-      }
+    classBuilder.addMixin(ifaceName)
+
+    if (superShape != null) {
+      val superClassName = resolveReferencedTypeName(superShape, context) as TypeName.Standard
+      classBuilder.superClass(superClassName)
+
+      ifaceBuilder.addSuperInterface(superClassName.sibling("Spec"))
+    }
 
     var inheritedProperties = collectProperties(superShape)
     var declaredProperties = propertyContainerShape.properties
@@ -677,10 +677,6 @@ class TypeScriptTypeRegistry(
 
           declaredProperties = declaredProperties.filter { it.name != discriminatorPropertyName }
           inheritedProperties = inheritedProperties.filter { it.name != discriminatorPropertyName }
-
-          if (propertyContainerShape.discriminator == discriminatorPropertyName) {
-            ifaceBuilder.addProperty(discriminatorProperty.typeScriptIdentifierName, discriminatorPropertyTypeName)
-          }
 
           // Add concrete discriminator for leaf of the discriminated tree
 
@@ -731,7 +727,8 @@ class TypeScriptTypeRegistry(
         //
         ifaceBuilder.addProperty(
           PropertySpec
-            .builder(declaredProperty.typeScriptIdentifierName, propertyTypeName)
+            .builder(declaredProperty.typeScriptIdentifierName, propertyTypeName.nonUndefinable)
+            .optional(propertyTypeName.isUndefinable)
             .build()
         )
       }
@@ -739,36 +736,6 @@ class TypeScriptTypeRegistry(
       /*
         Generate class implementation
        */
-
-      // Build parameter constructor
-      //
-      var paramConsBuilder: FunctionSpec.Builder? = null
-      if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
-
-        paramConsBuilder = FunctionSpec.constructorBuilder()
-
-        inheritedProperties.forEach { inheritedProperty ->
-          paramConsBuilder.addParameter(
-            inheritedProperty.typeScriptIdentifierName,
-            resolvePropertyTypeName(inheritedProperty, className, context),
-          )
-        }
-
-        if (superClassName != null) {
-          paramConsBuilder
-            .addStatement(
-              "super(${inheritedProperties.joinToString(",%W") { "%N" }})",
-              *inheritedProperties.map { it.typeScriptIdentifierName }.toTypedArray()
-            )
-        }
-
-        definedProperties.forEach { propertyShape ->
-          paramConsBuilder.addStatement(
-            "this.%L = %L",
-            propertyShape.kotlinIdentifierName, propertyShape.kotlinIdentifierName
-          )
-        }
-      }
 
       // toString builder
       //
@@ -877,10 +844,6 @@ class TypeScriptTypeRegistry(
               )
           }
 
-          // Add constructor parameter
-          //
-          paramConsBuilder?.addParameter(declaredProperty.typeScriptIdentifierName, declaredPropertyTypeName)
-
           // Add toString value
           //
           toStringCode.add(
@@ -897,34 +860,39 @@ class TypeScriptTypeRegistry(
 
       // Add copy method
       //
-      if (inheritingTypes.isEmpty()) {
-
-        val copyBuilder =
+      if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
+        classBuilder.addFunction(
           FunctionSpec.builder("copy")
             .returns(className)
-            .addParameter("src", TypeName.parameterizedType(PARTIAL, className))
-            .addCode("%[return new %T(", className)
-
-        val copyArgs =
-          (inheritedProperties + definedProperties).map { copyProperty ->
-
-            CodeBlock.of(
-              "src.%L ?? this.%L",
-              copyProperty.typeScriptIdentifierName,
-              copyProperty.typeScriptIdentifierName
-            )
-          }
-
-        copyBuilder
-          .addCode(copyArgs.joinToString(",%W"))
-          .addCode(");%]\n")
-
-        classBuilder.addFunction(copyBuilder.build())
+            .addParameter("changes", PARTIAL.parameterized(ifaceName))
+            .addStatement("return new %T(Object.assign({}, this, changes))", className)
+            .build()
+        )
       }
 
-      // Finish parameter constructor
-      paramConsBuilder?.let {
-        classBuilder.constructor(it.build())
+      // Build constructor
+      //
+      if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
+
+        val classSpec = classBuilder.build()
+
+        val consBuilder =
+          FunctionSpec.constructorBuilder()
+            .addParameter(
+              ParameterSpec.builder("init", ifaceName)
+                .build()
+            )
+
+        if (superShape != null) {
+          val init = if (inheritedProperties.isNotEmpty()) "init" else ""
+          consBuilder.addStatement("super($init)")
+        }
+
+        for (propertySpec in classSpec.propertySpecs) {
+          consBuilder.addStatement("this.%L = init.%L", propertySpec.name, propertySpec.name)
+        }
+
+        classBuilder.constructor(consBuilder.build())
       }
 
       // Finish toString method
@@ -954,7 +922,7 @@ class TypeScriptTypeRegistry(
       }
     }
 
-    typeBuildersOrdered[className] = ifaceBuilder
+    typeBuildersOrdered[className] = classBuilder
 
     inheritingTypes.forEach { inheritingType ->
       resolveReferencedTypeName(inheritingType, context)
@@ -967,7 +935,7 @@ class TypeScriptTypeRegistry(
       }
     }
 
-    ifaceBuilder.tag(ImplementationClass(classBuilder))
+    classBuilder.tag(SpecificationInterface(ifaceBuilder))
 
     return className
   }
@@ -1403,3 +1371,11 @@ class TypeScriptTypeRegistry(
         error("Lambda Unsupported TypeName for Rewrite")
     }
 }
+
+private fun TypeName.Standard.sibling(name: String): TypeName.Standard =
+  when (base) {
+    is SymbolSpec.Imported ->
+      TypeName.standard(SymbolSpec.importsName(base.value + name, (base as SymbolSpec.Imported).source))
+    is SymbolSpec.Implicit ->
+      TypeName.standard(SymbolSpec.implicit(base.value + name))
+  }

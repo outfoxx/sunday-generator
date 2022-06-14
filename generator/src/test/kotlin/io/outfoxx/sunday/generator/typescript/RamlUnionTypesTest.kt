@@ -46,7 +46,7 @@ class RamlUnionTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           any: number | string;
 
@@ -56,7 +56,7 @@ class RamlUnionTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           any: number | string;
 
@@ -64,15 +64,14 @@ class RamlUnionTypesTest {
 
           nullable: string | null;
 
-          constructor(any: number | string, duplicate: string, nullable: string | null) {
-            this.any = any;
-            this.duplicate = duplicate;
-            this.nullable = nullable;
+          constructor(init: TestSpec) {
+            this.any = init.any;
+            this.duplicate = init.duplicate;
+            this.nullable = init.nullable;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.any ?? this.any, src.duplicate ?? this.duplicate,
-                src.nullable ?? this.nullable);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -104,22 +103,22 @@ class RamlUnionTypesTest {
         import {Base} from './base';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           value: Base;
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           value: Base;
 
-          constructor(value: Base) {
-            this.value = value;
+          constructor(init: TestSpec) {
+            this.value = init.value;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.value ?? this.value);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -150,26 +149,26 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Base} from './base';
+        import {Base, BaseSpec} from './base';
 
 
-        export interface Child1 extends Base {
+        export interface Child1Spec extends BaseSpec {
 
           childValue: string;
 
         }
 
-        export class Child1 extends Base implements Child1 {
+        export class Child1 extends Base implements Child1Spec {
 
           childValue: string;
 
-          constructor(value: string, childValue: string) {
-            super(value);
-            this.childValue = childValue;
+          constructor(init: Child1Spec) {
+            super(init);
+            this.childValue = init.childValue;
           }
 
-          copy(src: Partial<Child1>): Child1 {
-            return new Child1(src.value ?? this.value, src.childValue ?? this.childValue);
+          copy(changes: Partial<Child1Spec>): Child1 {
+            return new Child1(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -189,26 +188,26 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Base} from '../../base';
+        import {Base, BaseSpec} from '../../base';
 
 
-        export interface Child2 extends Base {
+        export interface Child2Spec extends BaseSpec {
 
           childValue: string;
 
         }
 
-        export class Child2 extends Base implements Child2 {
+        export class Child2 extends Base implements Child2Spec {
 
           childValue: string;
 
-          constructor(value: string, childValue: string) {
-            super(value);
-            this.childValue = childValue;
+          constructor(init: Child2Spec) {
+            super(init);
+            this.childValue = init.childValue;
           }
         
-          copy(src: Partial<Child2>): Child2 {
-            return new Child2(src.value ?? this.value, src.childValue ?? this.childValue);
+          copy(changes: Partial<Child2Spec>): Child2 {
+            return new Child2(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -230,25 +229,25 @@ class RamlUnionTypesTest {
       """
         import {Child1} from './test/lib/child1';
         import {Child2} from './test/lib/child2';
-        import {Test as Test_} from './test/lib/test';
+        import {Test as Test_, TestSpec as TestSpec_} from './test/lib/test';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           value: Child1 | Child2;
 
         }
 
-        export class Test implements Test_ {
+        export class Test implements TestSpec_ {
 
           value: Child1 | Child2;
 
-          constructor(value: Child1 | Child2) {
-            this.value = value;
+          constructor(init: TestSpec_) {
+            this.value = init.value;
           }
 
-          copy(src: Partial<Test_>): Test_ {
-            return new Test_(src.value ?? this.value);
+          copy(changes: Partial<TestSpec_>): Test_ {
+            return new Test_(Object.assign({}, this, changes));
           }
 
           toString(): string {

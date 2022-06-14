@@ -47,7 +47,7 @@ class RamlScalarTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           bool: boolean;
 
@@ -61,7 +61,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           bool: boolean;
 
@@ -73,23 +73,16 @@ class RamlScalarTypesTest {
 
           nil: void;
 
-          constructor(
-              bool: boolean,
-              string: string,
-              file: ArrayBuffer,
-              any: any,
-              nil: void
-          ) {
-            this.bool = bool;
-            this.string = string;
-            this.file = file;
-            this.any = any;
-            this.nil = nil;
+          constructor(init: TestSpec) {
+            this.bool = init.bool;
+            this.string = init.string;
+            this.file = init.file;
+            this.any = init.any;
+            this.nil = init.nil;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.bool ?? this.bool, src.string ?? this.string, src.file ?? this.file,
-                src.any ?? this.any, src.nil ?? this.nil);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -121,7 +114,7 @@ class RamlScalarTypesTest {
         import {JsonClassType} from '@outfoxx/jackson-js';
 
         
-        export interface Test {
+        export interface TestSpec {
 
           bool: boolean;
 
@@ -135,7 +128,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Boolean]})
           bool: boolean;
@@ -152,23 +145,16 @@ class RamlScalarTypesTest {
           @JsonClassType({type: () => [Object]})
           nil: void;
 
-          constructor(
-              bool: boolean,
-              string: string,
-              file: ArrayBuffer,
-              any: any,
-              nil: void
-          ) {
-            this.bool = bool;
-            this.string = string;
-            this.file = file;
-            this.any = any;
-            this.nil = nil;
+          constructor(init: TestSpec) {
+            this.bool = init.bool;
+            this.string = init.string;
+            this.file = init.file;
+            this.any = init.any;
+            this.nil = init.nil;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.bool ?? this.bool, src.string ?? this.string, src.file ?? this.file,
-                src.any ?? this.any, src.nil ?? this.nil);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -198,7 +184,7 @@ class RamlScalarTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           int8: number;
 
@@ -216,7 +202,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           int8: number;
 
@@ -232,27 +218,18 @@ class RamlScalarTypesTest {
 
           none: number;
 
-          constructor(
-              int8: number,
-              int16: number,
-              int32: number,
-              int64: number,
-              int: number,
-              long: number,
-              none: number
-          ) {
-            this.int8 = int8;
-            this.int16 = int16;
-            this.int32 = int32;
-            this.int64 = int64;
-            this.int = int;
-            this.long = long;
-            this.none = none;
+          constructor(init: TestSpec) {
+            this.int8 = init.int8;
+            this.int16 = init.int16;
+            this.int32 = init.int32;
+            this.int64 = init.int64;
+            this.int = init.int;
+            this.long = init.long;
+            this.none = init.none;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.int8 ?? this.int8, src.int16 ?? this.int16, src.int32 ?? this.int32,
-                src.int64 ?? this.int64, src.int ?? this.int, src.long ?? this.long, src.none ?? this.none);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -284,7 +261,7 @@ class RamlScalarTypesTest {
         import {JsonClassType} from '@outfoxx/jackson-js';
 
         
-        export interface Test {
+        export interface TestSpec {
 
           int8: number;
 
@@ -302,7 +279,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Number]})
           int8: number;
@@ -325,27 +302,18 @@ class RamlScalarTypesTest {
           @JsonClassType({type: () => [Number]})
           none: number;
 
-          constructor(
-              int8: number,
-              int16: number,
-              int32: number,
-              int64: number,
-              int: number,
-              long: number,
-              none: number
-          ) {
-            this.int8 = int8;
-            this.int16 = int16;
-            this.int32 = int32;
-            this.int64 = int64;
-            this.int = int;
-            this.long = long;
-            this.none = none;
+          constructor(init: TestSpec) {
+            this.int8 = init.int8;
+            this.int16 = init.int16;
+            this.int32 = init.int32;
+            this.int64 = init.int64;
+            this.int = init.int;
+            this.long = init.long;
+            this.none = init.none;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.int8 ?? this.int8, src.int16 ?? this.int16, src.int32 ?? this.int32,
-                src.int64 ?? this.int64, src.int ?? this.int, src.long ?? this.long, src.none ?? this.none);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -375,7 +343,7 @@ class RamlScalarTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           float: number;
 
@@ -385,7 +353,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           float: number;
 
@@ -393,14 +361,14 @@ class RamlScalarTypesTest {
 
           none: number;
 
-          constructor(float: number, double: number, none: number) {
-            this.float = float;
-            this.double = double;
-            this.none = none;
+          constructor(init: TestSpec) {
+            this.float = init.float;
+            this.double = init.double;
+            this.none = init.none;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.float ?? this.float, src.double ?? this.double, src.none ?? this.none);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -432,7 +400,7 @@ class RamlScalarTypesTest {
         import {JsonClassType} from '@outfoxx/jackson-js';
 
         
-        export interface Test {
+        export interface TestSpec {
 
           float: number;
 
@@ -442,7 +410,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Number]})
           float: number;
@@ -453,14 +421,14 @@ class RamlScalarTypesTest {
           @JsonClassType({type: () => [Number]})
           none: number;
 
-          constructor(float: number, double: number, none: number) {
-            this.float = float;
-            this.double = double;
-            this.none = none;
+          constructor(init: TestSpec) {
+            this.float = init.float;
+            this.double = init.double;
+            this.none = init.none;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.float ?? this.float, src.double ?? this.double, src.none ?? this.none);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -492,7 +460,7 @@ class RamlScalarTypesTest {
         import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           dateOnly: LocalDate;
 
@@ -504,7 +472,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           dateOnly: LocalDate;
 
@@ -514,17 +482,15 @@ class RamlScalarTypesTest {
 
           dateTime: OffsetDateTime;
 
-          constructor(dateOnly: LocalDate, timeOnly: LocalTime, dateTimeOnly: LocalDateTime,
-              dateTime: OffsetDateTime) {
-            this.dateOnly = dateOnly;
-            this.timeOnly = timeOnly;
-            this.dateTimeOnly = dateTimeOnly;
-            this.dateTime = dateTime;
+          constructor(init: TestSpec) {
+            this.dateOnly = init.dateOnly;
+            this.timeOnly = init.timeOnly;
+            this.dateTimeOnly = init.dateTimeOnly;
+            this.dateTime = init.dateTime;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.dateOnly ?? this.dateOnly, src.timeOnly ?? this.timeOnly,
-                src.dateTimeOnly ?? this.dateTimeOnly, src.dateTime ?? this.dateTime);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -557,7 +523,7 @@ class RamlScalarTypesTest {
         import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           dateOnly: LocalDate;
 
@@ -569,7 +535,7 @@ class RamlScalarTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonClassType({type: () => [LocalDate]})
           dateOnly: LocalDate;
@@ -583,17 +549,15 @@ class RamlScalarTypesTest {
           @JsonClassType({type: () => [OffsetDateTime]})
           dateTime: OffsetDateTime;
 
-          constructor(dateOnly: LocalDate, timeOnly: LocalTime, dateTimeOnly: LocalDateTime,
-              dateTime: OffsetDateTime) {
-            this.dateOnly = dateOnly;
-            this.timeOnly = timeOnly;
-            this.dateTimeOnly = dateTimeOnly;
-            this.dateTime = dateTime;
+          constructor(init: TestSpec) {
+            this.dateOnly = init.dateOnly;
+            this.timeOnly = init.timeOnly;
+            this.dateTimeOnly = init.dateTimeOnly;
+            this.dateTime = init.dateTime;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.dateOnly ?? this.dateOnly, src.timeOnly ?? this.timeOnly,
-                src.dateTimeOnly ?? this.dateTimeOnly, src.dateTime ?? this.dateTime);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {

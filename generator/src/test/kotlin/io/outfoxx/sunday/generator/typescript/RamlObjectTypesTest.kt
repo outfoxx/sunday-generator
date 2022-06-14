@@ -52,22 +52,22 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           map: object;
 
         }
         
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           map: object;
 
-          constructor(map: object) {
-            this.map = map;
+          constructor(init: TestSpec) {
+            this.map = init.map;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.map ?? this.map);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -97,27 +97,27 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           fromNilUnion: string | null;
 
-          notRequired: string | undefined;
+          notRequired?: string;
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           fromNilUnion: string | null;
 
           notRequired: string | undefined;
 
-          constructor(fromNilUnion: string | null, notRequired: string | undefined) {
-            this.fromNilUnion = fromNilUnion;
-            this.notRequired = notRequired;
+          constructor(init: TestSpec) {
+            this.fromNilUnion = init.fromNilUnion;
+            this.notRequired = init.notRequired;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.fromNilUnion ?? this.fromNilUnion, src.notRequired ?? this.notRequired);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -194,18 +194,22 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           value: string;
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           value: string;
 
-          constructor(value: string) {
-            this.value = value;
+          constructor(init: TestSpec) {
+            this.value = init.value;
+          }
+        
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -223,22 +227,26 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {Test} from './test';
+        import {Test, TestSpec} from './test';
 
 
-        export interface Test2 extends Test {
+        export interface Test2Spec extends TestSpec {
 
           value2: string;
 
         }
 
-        export class Test2 extends Test implements Test2 {
+        export class Test2 extends Test implements Test2Spec {
 
           value2: string;
 
-          constructor(value: string, value2: string) {
-            super(value);
-            this.value2 = value2;
+          constructor(init: Test2Spec) {
+            super(init);
+            this.value2 = init.value2;
+          }
+
+          copy(changes: Partial<Test2Spec>): Test2 {
+            return new Test2(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -256,16 +264,20 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {Test2} from './test2';
+        import {Test2, Test2Spec} from './test2';
 
 
-        export interface Empty extends Test2 {
+        export interface EmptySpec extends Test2Spec {
         }
 
-        export class Empty extends Test2 implements Empty {
+        export class Empty extends Test2 implements EmptySpec {
 
-          constructor(value: string, value2: string) {
-            super(value, value2);
+          constructor(init: EmptySpec) {
+            super(init);
+          }
+
+          copy(changes: Partial<EmptySpec>): Empty {
+            return new Empty(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -283,26 +295,26 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {Empty} from './empty';
+        import {Empty, EmptySpec} from './empty';
 
 
-        export interface Test3 extends Empty {
+        export interface Test3Spec extends EmptySpec {
 
           value3: string;
 
         }
 
-        export class Test3 extends Empty implements Test3 {
+        export class Test3 extends Empty implements Test3Spec {
 
           value3: string;
 
-          constructor(value: string, value2: string, value3: string) {
-            super(value, value2);
-            this.value3 = value3;
+          constructor(init: Test3Spec) {
+            super(init);
+            this.value3 = init.value3;
           }
 
-          copy(src: Partial<Test3>): Test3 {
-            return new Test3(src.value ?? this.value, src.value2 ?? this.value2, src.value3 ?? this.value3);
+          copy(changes: Partial<Test3Spec>): Test3 {
+            return new Test3(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -332,7 +344,7 @@ class RamlObjectTypesTest {
     assertEquals(
       """
 
-        export interface Test {
+        export interface TestSpec {
 
           someValue: string;
 
@@ -340,19 +352,19 @@ class RamlObjectTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           someValue: string;
 
           anotherValue: string;
 
-          constructor(someValue: string, anotherValue: string) {
-            this.someValue = someValue;
-            this.anotherValue = anotherValue;
+          constructor(init: TestSpec) {
+            this.someValue = init.someValue;
+            this.anotherValue = init.anotherValue;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.someValue ?? this.someValue, src.anotherValue ?? this.anotherValue);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -384,7 +396,7 @@ class RamlObjectTypesTest {
         import {JsonClassType, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           someValue: string;
 
@@ -392,7 +404,7 @@ class RamlObjectTypesTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonProperty({value: 'some-value', required: true})
           @JsonClassType({type: () => [String]})
@@ -402,13 +414,13 @@ class RamlObjectTypesTest {
           @JsonClassType({type: () => [String]})
           anotherValue: string;
 
-          constructor(someValue: string, anotherValue: string) {
-            this.someValue = someValue;
-            this.anotherValue = anotherValue;
+          constructor(init: TestSpec) {
+            this.someValue = init.someValue;
+            this.anotherValue = init.anotherValue;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.someValue ?? this.someValue, src.anotherValue ?? this.anotherValue);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {

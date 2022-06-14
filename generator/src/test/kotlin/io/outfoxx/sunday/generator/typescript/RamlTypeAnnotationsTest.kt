@@ -100,18 +100,22 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         
-        export interface Group {
+        export interface GroupSpec {
 
           value: string;
 
         }
 
-        export class Group implements Group {
+        export class Group implements GroupSpec {
 
           value: string;
 
-          constructor(value: string) {
-            this.value = value;
+          constructor(init: GroupSpec) {
+            this.value = init.value;
+          }
+
+          copy(changes: Partial<GroupSpec>): Group {
+            return new Group(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -122,19 +126,23 @@ class RamlTypeAnnotationsTest {
 
         export namespace Group {
 
-          export interface Member1 extends Group {
+          export interface Member1Spec extends GroupSpec {
 
             memberValue1: string;
 
           }
 
-          export class Member1 extends Group implements Member1 {
+          export class Member1 extends Group implements Member1Spec {
 
             memberValue1: string;
 
-            constructor(value: string, memberValue1: string) {
-              super(value);
-              this.memberValue1 = memberValue1;
+            constructor(init: Member1Spec) {
+              super(init);
+              this.memberValue1 = init.memberValue1;
+            }
+
+            copy(changes: Partial<Member1Spec>): Member1 {
+              return new Member1(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -145,24 +153,23 @@ class RamlTypeAnnotationsTest {
 
           export namespace Member1 {
 
-            export interface Sub extends Member1 {
+            export interface SubSpec extends Member1Spec {
 
               subMemberValue: string;
 
             }
 
-            export class Sub extends Member1 implements Sub {
+            export class Sub extends Member1 implements SubSpec {
 
               subMemberValue: string;
 
-              constructor(value: string, memberValue1: string, subMemberValue: string) {
-                super(value, memberValue1);
-                this.subMemberValue = subMemberValue;
+              constructor(init: SubSpec) {
+                super(init);
+                this.subMemberValue = init.subMemberValue;
               }
         
-              copy(src: Partial<Sub>): Sub {
-                return new Sub(src.value ?? this.value, src.memberValue1 ?? this.memberValue1,
-                    src.subMemberValue ?? this.subMemberValue);
+              copy(changes: Partial<SubSpec>): Sub {
+                return new Sub(Object.assign({}, this, changes));
               }
         
               toString(): string {
@@ -173,23 +180,23 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          export interface Member2 extends Group {
+          export interface Member2Spec extends GroupSpec {
 
             memberValue2: string;
 
           }
 
-          export class Member2 extends Group implements Member2 {
+          export class Member2 extends Group implements Member2Spec {
 
             memberValue2: string;
 
-            constructor(value: string, memberValue2: string) {
-              super(value);
-              this.memberValue2 = memberValue2;
+            constructor(init: Member2Spec) {
+              super(init);
+              this.memberValue2 = init.memberValue2;
             }
 
-            copy(src: Partial<Member2>): Member2 {
-              return new Member2(src.value ?? this.value, src.memberValue2 ?? this.memberValue2);
+            copy(changes: Partial<Member2Spec>): Member2 {
+              return new Member2(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -221,18 +228,22 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         
-        export interface Group {
+        export interface GroupSpec {
 
           value: string;
 
         }
 
-        export class Group implements Group {
+        export class Group implements GroupSpec {
 
           value: string;
 
-          constructor(value: string) {
-            this.value = value;
+          constructor(init: GroupSpec) {
+            this.value = init.value;
+          }
+
+          copy(changes: Partial<GroupSpec>): Group {
+            return new Group(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -243,19 +254,23 @@ class RamlTypeAnnotationsTest {
 
         export namespace Group {
 
-          export interface Member1 extends Group {
+          export interface Member1Spec extends GroupSpec {
 
             memberValue1: string;
 
           }
 
-          export class Member1 extends Group implements Member1 {
+          export class Member1 extends Group implements Member1Spec {
 
             memberValue1: string;
 
-            constructor(value: string, memberValue1: string) {
-              super(value);
-              this.memberValue1 = memberValue1;
+            constructor(init: Member1Spec) {
+              super(init);
+              this.memberValue1 = init.memberValue1;
+            }
+
+            copy(changes: Partial<Member1Spec>): Member1 {
+              return new Member1(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -266,24 +281,23 @@ class RamlTypeAnnotationsTest {
 
           export namespace Member1 {
 
-            export interface Sub extends Member1 {
+            export interface SubSpec extends Member1Spec {
 
               subMemberValue: string;
 
             }
 
-            export class Sub extends Member1 implements Sub {
+            export class Sub extends Member1 implements SubSpec {
 
               subMemberValue: string;
 
-              constructor(value: string, memberValue1: string, subMemberValue: string) {
-                super(value, memberValue1);
-                this.subMemberValue = subMemberValue;
+              constructor(init: SubSpec) {
+                super(init);
+                this.subMemberValue = init.subMemberValue;
               }
         
-              copy(src: Partial<Sub>): Sub {
-                return new Sub(src.value ?? this.value, src.memberValue1 ?? this.memberValue1,
-                    src.subMemberValue ?? this.subMemberValue);
+              copy(changes: Partial<SubSpec>): Sub {
+                return new Sub(Object.assign({}, this, changes));
               }
         
               toString(): string {
@@ -294,23 +308,23 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          export interface Member2 extends Group {
+          export interface Member2Spec extends GroupSpec {
 
             memberValue2: string;
 
           }
 
-          export class Member2 extends Group implements Member2 {
+          export class Member2 extends Group implements Member2Spec {
 
             memberValue2: string;
 
-            constructor(value: string, memberValue2: string) {
-              super(value);
-              this.memberValue2 = memberValue2;
+            constructor(init: Member2Spec) {
+              super(init);
+              this.memberValue2 = init.memberValue2;
             }
 
-            copy(src: Partial<Member2>): Member2 {
-              return new Member2(src.value ?? this.value, src.memberValue2 ?? this.memberValue2);
+            copy(changes: Partial<Member2Spec>): Member2 {
+              return new Member2(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -342,22 +356,22 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         
-        export interface Root {
+        export interface RootSpec {
 
           value: string;
 
         }
 
-        export class Root implements Root {
+        export class Root implements RootSpec {
 
           value: string;
 
-          constructor(value: string) {
-            this.value = value;
+          constructor(init: RootSpec) {
+            this.value = init.value;
           }
 
-          copy(src: Partial<Root>): Root {
-            return new Root(src.value ?? this.value);
+          copy(changes: Partial<RootSpec>): Root {
+            return new Root(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -368,22 +382,22 @@ class RamlTypeAnnotationsTest {
 
         export namespace Root {
 
-          export interface Group {
+          export interface GroupSpec {
 
             value: string;
 
           }
 
-          export class Group implements Group {
+          export class Group implements GroupSpec {
 
             value: string;
 
-            constructor(value: string) {
-              this.value = value;
+            constructor(init: GroupSpec) {
+              this.value = init.value;
             }
 
-            copy(src: Partial<Group>): Group {
-              return new Group(src.value ?? this.value);
+            copy(changes: Partial<GroupSpec>): Group {
+              return new Group(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -394,22 +408,22 @@ class RamlTypeAnnotationsTest {
         
           export namespace Group {
 
-            export interface Member {
+            export interface MemberSpec {
   
               memberValue: string;
   
             }
   
-            export class Member implements Member {
+            export class Member implements MemberSpec {
   
               memberValue: string;
 
-              constructor(memberValue: string) {
-                this.memberValue = memberValue;
+              constructor(init: MemberSpec) {
+                this.memberValue = init.memberValue;
               }
   
-              copy(src: Partial<Member>): Member {
-                return new Member(src.memberValue ?? this.memberValue);
+              copy(changes: Partial<MemberSpec>): Member {
+                return new Member(Object.assign({}, this, changes));
               }
   
               toString(): string {
@@ -443,22 +457,22 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         
-        export interface Root {
+        export interface RootSpec {
 
           value: string;
 
         }
 
-        export class Root implements Root {
+        export class Root implements RootSpec {
 
           value: string;
 
-          constructor(value: string) {
-            this.value = value;
+          constructor(init: RootSpec) {
+            this.value = init.value;
           }
 
-          copy(src: Partial<Root>): Root {
-            return new Root(src.value ?? this.value);
+          copy(changes: Partial<RootSpec>): Root {
+            return new Root(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -469,22 +483,22 @@ class RamlTypeAnnotationsTest {
 
         export namespace Root {
 
-          export interface Group {
+          export interface GroupSpec {
 
             value: string;
 
           }
 
-          export class Group implements Group {
+          export class Group implements GroupSpec {
 
             value: string;
 
-            constructor(value: string) {
-              this.value = value;
+            constructor(init: GroupSpec) {
+              this.value = init.value;
             }
 
-            copy(src: Partial<Group>): Group {
-              return new Group(src.value ?? this.value);
+            copy(changes: Partial<GroupSpec>): Group {
+              return new Group(Object.assign({}, this, changes));
             }
 
             toString(): string {
@@ -495,22 +509,22 @@ class RamlTypeAnnotationsTest {
         
           export namespace Group {
 
-            export interface Member {
+            export interface MemberSpec {
   
               memberValue: string;
   
             }
   
-            export class Member implements Member {
+            export class Member implements MemberSpec {
   
               memberValue: string;
 
-              constructor(memberValue: string) {
-                this.memberValue = memberValue;
+              constructor(init: MemberSpec) {
+                this.memberValue = init.memberValue;
               }
   
-              copy(src: Partial<Member>): Member {
-                return new Member(src.memberValue ?? this.memberValue);
+              copy(changes: Partial<MemberSpec>): Member {
+                return new Member(Object.assign({}, this, changes));
               }
   
               toString(): string {
@@ -547,18 +561,14 @@ class RamlTypeAnnotationsTest {
         import {OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface Test {
+        export interface TestSpec {
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonIgnore()
           get className(): string {
             return OffsetDateTime.name + '-value-' + "-literal";
-          }
-
-          copy(src: Partial<Test>): Test {
-            return new Test();
           }
 
           toString(): string {
@@ -594,10 +604,7 @@ class RamlTypeAnnotationsTest {
         import {JsonSubTypes} from '@outfoxx/jackson-js';
 
 
-        export interface Parent {
-
-          type: string;
-
+        export interface ParentSpec {
         }
 
         @JsonSubTypes({
@@ -606,7 +613,7 @@ class RamlTypeAnnotationsTest {
             {class: () => Child2, name: 'child2'}
           ]
         })
-        export abstract class Parent implements Parent {
+        export abstract class Parent implements ParentSpec {
 
           toString(): string {
             return `Parent()`;
@@ -626,32 +633,32 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {JsonClassType} from '@outfoxx/jackson-js';
 
 
-        export interface Child1 extends Parent {
+        export interface Child1Spec extends ParentSpec {
 
-          value: string | undefined;
+          value?: string;
 
         }
 
-        export class Child1 extends Parent implements Child1 {
+        export class Child1 extends Parent implements Child1Spec {
         
           @JsonClassType({type: () => [String]})
           value: string | undefined;
 
-          constructor(value: string | undefined) {
+          constructor(init: Child1Spec) {
             super();
-            this.value = value;
+            this.value = init.value;
           }
 
           get type(): string {
             return 'Child1';
           }
 
-          copy(src: Partial<Child1>): Child1 {
-            return new Child1(src.value ?? this.value);
+          copy(changes: Partial<Child1Spec>): Child1 {
+            return new Child1(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -672,32 +679,32 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {Parent} from './parent';
+        import {Parent, ParentSpec} from './parent';
         import {JsonClassType} from '@outfoxx/jackson-js';
 
 
-        export interface Child2 extends Parent {
+        export interface Child2Spec extends ParentSpec {
 
-          value: string | undefined;
+          value?: string;
 
         }
 
-        export class Child2 extends Parent implements Child2 {
+        export class Child2 extends Parent implements Child2Spec {
         
           @JsonClassType({type: () => [String]})
           value: string | undefined;
 
-          constructor(value: string | undefined) {
+          constructor(init: Child2Spec) {
             super();
-            this.value = value;
+            this.value = init.value;
           }
 
           get type(): string {
             return 'child2';
           }
 
-          copy(src: Partial<Child2>): Child2 {
-            return new Child2(src.value ?? this.value);
+          copy(changes: Partial<Child2Spec>): Child2 {
+            return new Child2(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -723,7 +730,7 @@ class RamlTypeAnnotationsTest {
         import {JsonClassType, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           parent: Parent;
 
@@ -731,7 +738,7 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
         
           @JsonTypeInfo({
             use: JsonTypeInfoId.NAME,
@@ -750,13 +757,13 @@ class RamlTypeAnnotationsTest {
           @JsonClassType({type: () => [String]})
           parentType: string;
         
-          constructor(parent: Parent, parentType: string) {
-            this.parent = parent;
-            this.parentType = parentType;
+          constructor(init: TestSpec) {
+            this.parent = init.parent;
+            this.parentType = init.parentType;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.parent ?? this.parent, src.parentType ?? this.parentType);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -802,7 +809,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         
-        export interface Test {
+        export interface TestSpec {
 
           string: string;
 
@@ -812,13 +819,13 @@ class RamlTypeAnnotationsTest {
 
           nullable: string | null;
         
-          optional: string | undefined;
+          optional?: string;
 
-          nullableOptional: string | null | undefined;
+          nullableOptional?: string | null;
 
         }
 
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           string: string;
 
@@ -832,26 +839,17 @@ class RamlTypeAnnotationsTest {
         
           nullableOptional: string | null | undefined;
 
-          constructor(
-              string: string,
-              int: number,
-              bool: boolean,
-              nullable: string | null,
-              optional: string | undefined,
-              nullableOptional: string | null | undefined
-          ) {
-            this.string = string;
-            this.int = int;
-            this.bool = bool;
-            this.nullable = nullable;
-            this.optional = optional;
-            this.nullableOptional = nullableOptional;
+          constructor(init: TestSpec) {
+            this.string = init.string;
+            this.int = init.int;
+            this.bool = init.bool;
+            this.nullable = init.nullable;
+            this.optional = init.optional;
+            this.nullableOptional = init.nullableOptional;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool,
-                src.nullable ?? this.nullable, src.optional ?? this.optional,
-                src.nullableOptional ?? this.nullableOptional);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
@@ -883,7 +881,7 @@ class RamlTypeAnnotationsTest {
         import {JsonClassType, JsonInclude, JsonIncludeType} from '@outfoxx/jackson-js';
 
 
-        export interface Test {
+        export interface TestSpec {
 
           string: string;
 
@@ -893,14 +891,14 @@ class RamlTypeAnnotationsTest {
 
           nullable: string | null;
         
-          optional: string | undefined;
+          optional?: string;
 
-          nullableOptional: string | null | undefined;
+          nullableOptional?: string | null;
 
         }
 
         @JsonInclude({value: JsonIncludeType.ALWAYS})
-        export class Test implements Test {
+        export class Test implements TestSpec {
 
           @JsonClassType({type: () => [String]})
           string: string;
@@ -920,26 +918,17 @@ class RamlTypeAnnotationsTest {
           @JsonClassType({type: () => [String]})
           nullableOptional: string | null | undefined;
 
-          constructor(
-              string: string,
-              int: number,
-              bool: boolean,
-              nullable: string | null,
-              optional: string | undefined,
-              nullableOptional: string | null | undefined
-          ) {
-            this.string = string;
-            this.int = int;
-            this.bool = bool;
-            this.nullable = nullable;
-            this.optional = optional;
-            this.nullableOptional = nullableOptional;
+          constructor(init: TestSpec) {
+            this.string = init.string;
+            this.int = init.int;
+            this.bool = init.bool;
+            this.nullable = init.nullable;
+            this.optional = init.optional;
+            this.nullableOptional = init.nullableOptional;
           }
 
-          copy(src: Partial<Test>): Test {
-            return new Test(src.string ?? this.string, src.int ?? this.int, src.bool ?? this.bool,
-                src.nullable ?? this.nullable, src.optional ?? this.optional,
-                src.nullableOptional ?? this.nullableOptional);
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
           }
 
           toString(): string {
