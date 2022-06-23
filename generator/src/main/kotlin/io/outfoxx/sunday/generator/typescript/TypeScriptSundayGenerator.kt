@@ -27,6 +27,7 @@ import amf.client.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
+import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
@@ -522,11 +523,14 @@ class TypeScriptSundayGenerator(
 
     val resultMethod = functionBuilder.build()
 
-    val typeCodeBuilder = typeBuilder.tags[CodeBlock.Builder::class] as CodeBlock.Builder
-    typeProperties.forEach { (propName, propInit) ->
-      typeCodeBuilder.add("%[const %N: %T = ", propName, ANY_TYPE)
-      typeCodeBuilder.add(propInit)
-      typeCodeBuilder.add(";\n%]")
+    if (operation.findBoolAnnotation(Exclude, null) != true) {
+
+      val typeCodeBuilder = typeBuilder.tags[CodeBlock.Builder::class] as CodeBlock.Builder
+      typeProperties.forEach { (propName, propInit) ->
+        typeCodeBuilder.add("%[const %N: %T = ", propName, ANY_TYPE)
+        typeCodeBuilder.add(propInit)
+        typeCodeBuilder.add(";\n%]")
+      }
     }
 
     return resultMethod

@@ -42,6 +42,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
+import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinModelPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.KotlinPkg
 import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
@@ -74,6 +75,7 @@ import io.outfoxx.sunday.generator.utils.endPoints
 import io.outfoxx.sunday.generator.utils.failures
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.name
@@ -376,6 +378,10 @@ abstract class KotlinGenerator(
 
         val functionSpec =
           processResourceMethodEnd(endPoint, operation, responseProblemTypes, typeBuilder, functionBuilder)
+
+        if (operation.findBoolAnnotation(Exclude, generationMode) == true) {
+          continue
+        }
 
         typeBuilder.addFunction(functionSpec)
       }
