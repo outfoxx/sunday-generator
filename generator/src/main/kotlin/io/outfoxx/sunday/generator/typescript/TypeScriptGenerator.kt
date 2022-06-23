@@ -30,6 +30,7 @@ import amf.client.model.domain.ScalarNode
 import amf.client.model.domain.Shape
 import amf.core.model.DataType
 import com.damnhandy.uri.template.UriTemplate
+import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUriParams
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemTypes
@@ -56,6 +57,7 @@ import io.outfoxx.sunday.generator.utils.endPoints
 import io.outfoxx.sunday.generator.utils.failures
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.headers
 import io.outfoxx.sunday.generator.utils.name
@@ -366,6 +368,10 @@ abstract class TypeScriptGenerator(
 
         val functionSpec =
           processResourceMethodEnd(endPoint, operation, responseProblemTypes, typeBuilder, functionBuilder)
+
+        if (operation.findBoolAnnotation(Exclude, null) == true) {
+          continue
+        }
 
         typeBuilder.addFunction(functionSpec)
       }

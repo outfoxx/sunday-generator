@@ -66,3 +66,12 @@ types:
       200:
         body:
           type: Test
+/excluded:
+  post:
+    displayName: excludedTest
+    body: string
+    responses:
+      200:
+        body:
+          type: Test
+    (sunday.exclude): true
