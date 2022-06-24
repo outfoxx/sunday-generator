@@ -1,0 +1,218 @@
+#%RAML 1.0 Library
+
+types:
+
+  ResponseProblemTypes:
+    type: object
+    properties:
+      /^[a-z0-9_]+$/: ResponseProblemType
+
+  ResponseProblemType:
+    type: object
+    properties:
+      status:
+        type: integer
+        minimum: 100
+        maximum: 599
+      title:
+        type: string
+      detail:
+        type: string
+      custom?: object
+    additionalProperties: false
+
+  ResponseProblemCodes:
+    type: array
+    items: ResponseProblemCode
+
+  ResponseProblemCode:
+    type: string
+    pattern: '^[a-z0-9_]+$'
+
+  TypeImplementation:
+    type: object
+    properties:
+      code: string
+      parameters:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+              default: Literal
+              enum:
+                - Type
+                - Literal
+                - String
+            value:
+              type: string
+
+  NestedDashed:
+    type: string
+    enum: [dashed]
+
+  NestedExplicit:
+    type: object
+    properties:
+      enclosedIn: string
+      name: string
+
+  Nested:
+    type: NestedDashed | NestedExplicit
+
+  Nullify:
+    type: (string | number)[]
+
+annotationTypes:
+
+  name:
+    type: string
+    allowedTargets: [API]
+
+  group:
+    type: string
+    allowedTargets: [Resource]
+
+  kotlinPackage:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  kotlinPackage:client:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  kotlinPackage:server:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  kotlinModelPackage:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  kotlinModelPackage:client:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  kotlinModelPackage:server:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  kotlinType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  kotlinType:client:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  kotlinType:server:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  kotlinImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  kotlinImplementation:client:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+  kotlinImplementation:server:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  swiftModule:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+  swiftModelModule:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  swiftType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  swiftImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  typeScriptModule:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  typeScriptModelModule:
+    type: string
+    allowedTargets: [API, Extension, Library, Overlay, TypeDeclaration]
+
+  typeScriptType:
+    type: string
+    allowedTargets: [TypeDeclaration]
+
+  typeScriptImplementation:
+    type: TypeImplementation
+    allowedTargets: [TypeDeclaration]
+
+  nested:
+    type: Nested
+    allowedTargets: [TypeDeclaration]
+
+  externalDiscriminator:
+    type: string
+    allowedTargets: [TypeDeclaration]
+  externallyDiscriminated:
+    type: boolean
+    allowedTargets: [TypeDeclaration]
+
+  patchable:
+    type: boolean
+    allowedTargets: [TypeDeclaration]
+
+  asynchronous:
+    type: boolean
+    allowedTargets: [Method]
+  reactive:
+    type: boolean
+    allowedTargets: [Method]
+
+  sse:
+    type: boolean
+    allowedTargets: [Method]
+
+  eventSource:
+    type: boolean
+    allowedTargets: [Method]
+  eventStream:
+    type: string
+    enum: [simple, discriminated]
+    allowedTargets: [Method]
+
+  problemBaseUri:
+    type: string
+    allowedTargets: [API, Overlay]
+  problemBaseUriParams:
+    type: object
+    allowedTargets: [API, Overlay]
+  problemTypes:
+    type: ResponseProblemTypes
+    allowedTargets: [API, Extension, Library, Overlay]
+  problems:
+    type: ResponseProblemCodes
+    allowedTargets: [Method]
+
+  requestOnly:
+    type: boolean
+    allowedTargets: [Method]
+  responseOnly:
+    type: boolean
+    allowedTargets: [Method]
+
+  nullify:
+    type: Nullify
+    allowedTargets: [Method]
+
+  exclude:
+    type: boolean
+    allowedTargets: [Method]
+
+  jsonBody:
+    type: boolean
+    allowedTargets: [Method]
+  jsonBody:client:
+    type: boolean
+    allowedTargets: [Method]
+  jsonBody:server:
+    type: boolean
+    allowedTargets: [Method]
