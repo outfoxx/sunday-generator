@@ -53,6 +53,8 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddG
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.utils.DURATION
 import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR_MODE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE_TYPE
@@ -873,6 +875,12 @@ class TypeScriptTypeRegistry(
       // Build constructor
       //
       if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
+
+        classBuilder.addDecorator(
+          DecoratorSpec.builder(JSON_CREATOR)
+            .addParameter(null, "{ mode: %Q.DELEGATING }", JSON_CREATOR_MODE)
+            .build()
+        )
 
         val classSpec = classBuilder.build()
 

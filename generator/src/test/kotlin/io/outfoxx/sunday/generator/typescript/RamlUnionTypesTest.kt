@@ -45,6 +45,8 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        
         
         export interface TestSpec {
 
@@ -56,6 +58,7 @@ class RamlUnionTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           any: number | string;
@@ -101,6 +104,7 @@ class RamlUnionTypesTest {
     assertEquals(
       """
         import {Base} from './base';
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface TestSpec {
@@ -109,6 +113,7 @@ class RamlUnionTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           value: Base;
@@ -150,6 +155,7 @@ class RamlUnionTypesTest {
     assertEquals(
       """
         import {Base, BaseSpec} from './base';
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface Child1Spec extends BaseSpec {
@@ -158,6 +164,7 @@ class RamlUnionTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child1 extends Base implements Child1Spec {
 
           childValue: string;
@@ -189,6 +196,7 @@ class RamlUnionTypesTest {
     assertEquals(
       """
         import {Base, BaseSpec} from '../../base';
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface Child2Spec extends BaseSpec {
@@ -197,6 +205,7 @@ class RamlUnionTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child2 extends Base implements Child2Spec {
 
           childValue: string;
@@ -230,6 +239,7 @@ class RamlUnionTypesTest {
         import {Child1} from './test/lib/child1';
         import {Child2} from './test/lib/child2';
         import {Test as Test_, TestSpec as TestSpec_} from './test/lib/test';
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface TestSpec {
@@ -238,6 +248,7 @@ class RamlUnionTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec_ {
 
           value: Child1 | Child2;

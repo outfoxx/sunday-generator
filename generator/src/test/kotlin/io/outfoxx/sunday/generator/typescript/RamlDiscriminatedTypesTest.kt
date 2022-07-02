@@ -85,7 +85,7 @@ class RamlDiscriminatedTypesTest {
     assertEquals(
       """
         import {Parent, ParentSpec} from './parent';
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         
         
         export interface Child1Spec extends ParentSpec {
@@ -96,6 +96,7 @@ class RamlDiscriminatedTypesTest {
         
         }
         
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child1 extends Parent implements Child1Spec {
         
           @JsonClassType({type: () => [String]})
@@ -136,7 +137,7 @@ class RamlDiscriminatedTypesTest {
     assertEquals(
       """
         import {Parent, ParentSpec} from './parent';
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         
         
         export interface Child2Spec extends ParentSpec {
@@ -147,6 +148,7 @@ class RamlDiscriminatedTypesTest {
         
         }
         
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child2 extends Parent implements Child2Spec {
         
           @JsonClassType({type: () => [String]})
@@ -236,7 +238,7 @@ class RamlDiscriminatedTypesTest {
       """
         import {Parent, ParentSpec} from './parent';
         import {Type} from './type';
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         
         
         export interface Child1Spec extends ParentSpec {
@@ -245,6 +247,7 @@ class RamlDiscriminatedTypesTest {
         
         }
         
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child1 extends Parent implements Child1Spec {
 
           @JsonClassType({type: () => [String]})
@@ -282,8 +285,8 @@ class RamlDiscriminatedTypesTest {
       """
         import {Parent, ParentSpec} from './parent';
         import {Type} from './type';
-        import {JsonClassType} from '@outfoxx/jackson-js';
-        
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+
         
         export interface Child2Spec extends ParentSpec {
         
@@ -291,6 +294,7 @@ class RamlDiscriminatedTypesTest {
         
         }
         
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Child2 extends Parent implements Child2Spec {
         
           @JsonClassType({type: () => [String]})

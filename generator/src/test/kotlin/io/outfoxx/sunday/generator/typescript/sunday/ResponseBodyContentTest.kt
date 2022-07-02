@@ -181,6 +181,7 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
         import {Observable} from 'rxjs';
 
@@ -220,6 +221,7 @@ class ResponseBodyContentTest {
 
           }
 
+          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class FetchTestResponseBody implements FetchTestResponseBodySpec {
 
             value: string;

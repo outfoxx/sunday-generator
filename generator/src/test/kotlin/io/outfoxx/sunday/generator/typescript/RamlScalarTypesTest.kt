@@ -46,6 +46,8 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        
         
         export interface TestSpec {
 
@@ -61,6 +63,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           bool: boolean;
@@ -111,7 +114,7 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
         
         export interface TestSpec {
@@ -128,6 +131,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Boolean]})
@@ -183,6 +187,8 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        
         
         export interface TestSpec {
 
@@ -202,6 +208,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           int8: number;
@@ -258,7 +265,7 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
         
         export interface TestSpec {
@@ -279,6 +286,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Number]})
@@ -342,6 +350,8 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        
         
         export interface TestSpec {
 
@@ -353,6 +363,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           float: number;
@@ -397,7 +408,7 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
         
         export interface TestSpec {
@@ -410,6 +421,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           @JsonClassType({type: () => [Number]})
@@ -457,6 +469,7 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
@@ -472,6 +485,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           dateOnly: LocalDate;
@@ -519,7 +533,7 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
@@ -535,6 +549,7 @@ class RamlScalarTypesTest {
 
         }
 
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           @JsonClassType({type: () => [LocalDate]})

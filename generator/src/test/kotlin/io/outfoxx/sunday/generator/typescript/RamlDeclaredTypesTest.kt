@@ -68,6 +68,7 @@ class RamlDeclaredTypesTest {
     assertEquals(
       """
         import {Test as Test_, TestSpec as TestSpec_} from './test/client/test';
+        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
         
         
         export interface TestSpec extends TestSpec_ {
@@ -76,6 +77,7 @@ class RamlDeclaredTypesTest {
 
         }
         
+        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test extends Test_ implements TestSpec {
 
           value2: string;

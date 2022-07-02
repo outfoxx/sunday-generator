@@ -20,6 +20,8 @@ import io.outfoxx.typescriptpoet.SymbolSpec
 
 const val JACKSON_PKG = "@outfoxx/jackson-js"
 val JSON_CLASS_TYPE = SymbolSpec.from("JsonClassType@$JACKSON_PKG")
+val JSON_CREATOR = SymbolSpec.from("JsonCreator@$JACKSON_PKG")
+val JSON_CREATOR_MODE = SymbolSpec.from("JsonCreatorMode@$JACKSON_PKG")
 val JSON_IGNORE = SymbolSpec.from("JsonIgnore@$JACKSON_PKG")
 val JSON_INCLUDE = SymbolSpec.from("JsonInclude@$JACKSON_PKG")
 val JSON_INCLUDE_TYPE = SymbolSpec.from("JsonIncludeType@$JACKSON_PKG")
