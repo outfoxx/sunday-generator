@@ -99,8 +99,6 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface GroupSpec {
 
@@ -108,7 +106,6 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Group implements GroupSpec {
 
           value: string;
@@ -135,7 +132,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Member1 extends Group implements Member1Spec {
 
             memberValue1: string;
@@ -163,7 +159,6 @@ class RamlTypeAnnotationsTest {
 
             }
 
-            @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
             export class Sub extends Member1 implements SubSpec {
 
               subMemberValue: string;
@@ -191,7 +186,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Member2 extends Group implements Member2Spec {
 
             memberValue2: string;
@@ -233,8 +227,6 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface GroupSpec {
 
@@ -242,7 +234,6 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Group implements GroupSpec {
 
           value: string;
@@ -269,7 +260,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Member1 extends Group implements Member1Spec {
 
             memberValue1: string;
@@ -297,7 +287,6 @@ class RamlTypeAnnotationsTest {
 
             }
 
-            @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
             export class Sub extends Member1 implements SubSpec {
 
               subMemberValue: string;
@@ -325,7 +314,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Member2 extends Group implements Member2Spec {
 
             memberValue2: string;
@@ -367,8 +355,6 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface RootSpec {
 
@@ -376,7 +362,6 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Root implements RootSpec {
 
           value: string;
@@ -403,7 +388,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Group implements GroupSpec {
 
             value: string;
@@ -430,7 +414,6 @@ class RamlTypeAnnotationsTest {
   
             }
   
-            @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
             export class Member implements MemberSpec {
   
               memberValue: string;
@@ -473,8 +456,6 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface RootSpec {
 
@@ -482,7 +463,6 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Root implements RootSpec {
 
           value: string;
@@ -509,7 +489,6 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
           export class Group implements GroupSpec {
 
             value: string;
@@ -536,7 +515,6 @@ class RamlTypeAnnotationsTest {
   
             }
   
-            @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
             export class Member implements MemberSpec {
   
               memberValue: string;
@@ -656,7 +634,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
         export interface Child1Spec extends ParentSpec {
@@ -665,9 +643,10 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Child1 extends Parent implements Child1Spec {
         
+          @JsonProperty()
           @JsonClassType({type: () => [String]})
           value: string | undefined;
 
@@ -703,7 +682,7 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
         import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
         export interface Child2Spec extends ParentSpec {
@@ -712,9 +691,10 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Child2 extends Parent implements Child2Spec {
         
+          @JsonProperty()
           @JsonClassType({type: () => [String]})
           value: string | undefined;
 
@@ -751,7 +731,7 @@ class RamlTypeAnnotationsTest {
       """
         import {Child1, Child2} from './index';
         import {Parent} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
         export interface TestSpec {
@@ -762,7 +742,7 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Test implements TestSpec {
         
           @JsonTypeInfo({
@@ -776,9 +756,11 @@ class RamlTypeAnnotationsTest {
               {class: () => Child2, name: 'child2'}
             ]
           })
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Parent]})
           parent: Parent;
         
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [String]})
           parentType: string;
         
@@ -833,8 +815,6 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
 
@@ -852,7 +832,6 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           string: string;
@@ -906,7 +885,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonInclude, JsonIncludeType} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonInclude, JsonIncludeType, JsonProperty} from '@outfoxx/jackson-js';
 
 
         export interface TestSpec {
@@ -925,25 +904,31 @@ class RamlTypeAnnotationsTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         @JsonInclude({value: JsonIncludeType.ALWAYS})
         export class Test implements TestSpec {
 
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [String]})
           string: string;
 
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Number]})
           int: number;
 
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Boolean]})
           bool: boolean;
 
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [String]})
           nullable: string | null;
         
+          @JsonProperty()
           @JsonClassType({type: () => [String]})
           optional: string | undefined;
         
+          @JsonProperty()
           @JsonClassType({type: () => [String]})
           nullableOptional: string | null | undefined;
 

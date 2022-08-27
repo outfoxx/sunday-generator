@@ -48,7 +48,6 @@ import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.utils.DURATION
@@ -355,14 +354,18 @@ class TypeScriptTypeRegistry(
         )
         problemTypeBuilder.addProperty(
           PropertySpec
-            .builder(customPropertyName.kotlinIdentifierName, customPropertyTypeName)
+            .builder(customPropertyName.typeScriptIdentifierName, customPropertyTypeName)
             .apply {
               if (options.contains(JacksonDecorators)) {
 
-                if (customPropertyName != customPropertyName.kotlinIdentifierName) {
+                if (customPropertyName != customPropertyName.typeScriptIdentifierName) {
                   addDecorator(
                     DecoratorSpec.builder(JSON_PROPERTY)
-                      .addParameter(null, "{value: %S}", customPropertyName)
+                      .addJsonPropertyInit(
+                        customPropertyName,
+                        customPropertyName.typeScriptIdentifierName,
+                        customPropertyTypeName.isUndefinable,
+                      )
                       .build()
                   )
                 }
@@ -387,13 +390,13 @@ class TypeScriptTypeRegistry(
         problemTypeConsBuilder
           .addStatement(
             "this.%L = %L",
-            customPropertyName.kotlinIdentifierName,
-            customPropertyName.kotlinIdentifierName
+            customPropertyName.typeScriptIdentifierName,
+            customPropertyName.typeScriptIdentifierName
           )
           .addParameter(
             ParameterSpec
               .builder(
-                customPropertyName.kotlinIdentifierName,
+                customPropertyName.typeScriptIdentifierName,
                 resolveTypeReference(
                   customPropertyTypeNameStr,
                   problemTypeDefinition.source,
@@ -822,16 +825,16 @@ class TypeScriptTypeRegistry(
           }
 
           if (options.contains(JacksonDecorators)) {
-            if (declaredProperty.typeScriptIdentifierName != declaredProperty.name) {
-              declaredPropertyBuilder
-                .addDecorator(
-                  DecoratorSpec.builder(JSON_PROPERTY)
-                    .addParameter(null, "{value: %S, required: %L}", declaredProperty.name(), declaredProperty.required)
-                    .build()
-                )
-            }
-
             declaredPropertyBuilder
+              .addDecorator(
+                DecoratorSpec.builder(JSON_PROPERTY)
+                  .addJsonPropertyInit(
+                    declaredProperty.name!!,
+                    declaredProperty.typeScriptIdentifierName,
+                    declaredProperty.required
+                  )
+                  .build()
+              )
               .addDecorator(
                 DecoratorSpec.builder(JSON_CLASS_TYPE)
                   .addParameter(
@@ -876,11 +879,13 @@ class TypeScriptTypeRegistry(
       //
       if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
 
-        classBuilder.addDecorator(
-          DecoratorSpec.builder(JSON_CREATOR)
-            .addParameter(null, "{ mode: %Q.DELEGATING }", JSON_CREATOR_MODE)
-            .build()
-        )
+        if (options.contains(JacksonDecorators)) {
+          classBuilder.addDecorator(
+            DecoratorSpec.builder(JSON_CREATOR)
+              .addParameter(null, "{ mode: %Q.PROPERTIES_OBJECT }", JSON_CREATOR_MODE)
+              .build()
+          )
+        }
 
         val classSpec = classBuilder.build()
 
@@ -1387,3 +1392,17 @@ private fun TypeName.Standard.sibling(name: String): TypeName.Standard =
     is SymbolSpec.Implicit ->
       TypeName.standard(SymbolSpec.implicit(base.value + name))
   }
+
+private fun DecoratorSpec.Builder.addJsonPropertyInit(declaredName: String, codeName: String, required: Boolean): DecoratorSpec.Builder {
+  val differentName = declaredName != codeName
+  return when {
+    differentName && required ->
+      addParameter(null, "{value: %S, required: %L}", declaredName, true)
+    !differentName && required ->
+      addParameter(null, "{required: %L}", true)
+    differentName && !required ->
+      addParameter(null, "{value: %S}", declaredName)
+    else ->
+      addParameter(null, CodeBlock.empty())
+  }
+}

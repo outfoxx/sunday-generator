@@ -51,8 +51,6 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
 
@@ -60,7 +58,6 @@ class RamlObjectTypesTest {
 
         }
         
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           map: object;
@@ -99,8 +96,6 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
 
@@ -110,7 +105,6 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           fromNilUnion: string | null;
@@ -199,8 +193,6 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
 
@@ -208,7 +200,6 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           value: string;
@@ -237,7 +228,6 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         import {Test, TestSpec} from './test';
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface Test2Spec extends TestSpec {
@@ -246,7 +236,6 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test2 extends Test implements Test2Spec {
 
           value2: string;
@@ -276,13 +265,11 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         import {Test2, Test2Spec} from './test2';
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface EmptySpec extends Test2Spec {
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Empty extends Test2 implements EmptySpec {
 
           constructor(init: EmptySpec) {
@@ -309,7 +296,6 @@ class RamlObjectTypesTest {
     assertEquals(
       """
         import {Empty, EmptySpec} from './empty';
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
 
 
         export interface Test3Spec extends EmptySpec {
@@ -318,7 +304,6 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test3 extends Empty implements Test3Spec {
 
           value3: string;
@@ -358,8 +343,6 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
 
         export interface TestSpec {
 
@@ -369,7 +352,6 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           someValue: string;
@@ -422,7 +404,7 @@ class RamlObjectTypesTest {
 
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Test implements TestSpec {
 
           @JsonProperty({value: 'some-value', required: true})

@@ -68,7 +68,7 @@ class RamlEnumTypesTest {
     assertEquals(
       """       
         import {TestEnum} from './test-enum';
-        import {JsonClassType, JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
         
         
         export interface TestSpec {
@@ -81,15 +81,18 @@ class RamlEnumTypesTest {
         
         }
         
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Test implements TestSpec {
         
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Object]})
           enumVal: TestEnum;
         
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Set, [Object]]})
           setVal: Set<TestEnum>;
         
+          @JsonProperty({required: true})
           @JsonClassType({type: () => [Array, [Object]]})
           arrayVal: Array<TestEnum>;
         
