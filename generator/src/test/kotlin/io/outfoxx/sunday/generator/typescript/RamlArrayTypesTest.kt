@@ -45,8 +45,6 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
       
@@ -64,7 +62,6 @@ class RamlArrayTypesTest {
       
         }
       
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           arrayOfStrings: Array<string>;
@@ -118,8 +115,6 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
         
         export interface TestSpec {
       
@@ -133,7 +128,6 @@ class RamlArrayTypesTest {
       
         }
       
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           implicit: Array<string>;
@@ -181,8 +175,6 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        import {JsonCreator, JsonCreatorMode} from '@outfoxx/jackson-js';
-        
       
         export interface TestSpec {
       
@@ -192,7 +184,6 @@ class RamlArrayTypesTest {
       
         }
       
-        @JsonCreator({ mode: JsonCreatorMode.DELEGATING })
         export class Test implements TestSpec {
 
           binary: ArrayBuffer;
