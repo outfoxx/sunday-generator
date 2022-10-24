@@ -42,6 +42,7 @@ class RequestExplicitSecurityParamsTest {
         null,
         true,
         null,
+        false,
         "io.test.service",
         "http://example.com/",
         listOf("application/json"),

@@ -131,6 +131,10 @@ open class SundayGenerate
   @Optional
   val generatedAnnotation: Property<String> = objects.property(String::class.java)
 
+  @Input
+  @Optional
+  val alwaysUseResponseReturnType: Property<Boolean> = objects.property(Boolean::class.java)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
 
@@ -215,6 +219,7 @@ open class SundayGenerate
                 reactiveResponseType.orNull,
                 explicitSecurityParameters.orNull ?: false,
                 baseUriMode.orNull,
+                alwaysUseResponseReturnType.orNull ?: false,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),

@@ -118,6 +118,7 @@ class KotlinJAXRSGenerator(
     val reactiveResponseType: String?,
     val explicitSecurityParameters: Boolean,
     val baseUriMode: BaseUriMode?,
+    val alwaysUseResponseReturnType: Boolean,
     defaultServicePackageName: String,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
@@ -250,10 +251,10 @@ class KotlinJAXRSGenerator(
     val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveDefault
     if (reactive && reactiveResponseType != null && !isSSE && !isFlow) {
 
-      return if (generationMode == Client) {
-        reactiveResponseType.parameterizedBy(returnTypeName)
-      } else {
+      return if (generationMode == Server || options.alwaysUseResponseReturnType) {
         reactiveResponseType.parameterizedBy(javax.ws.rs.core.Response::class.asTypeName())
+      } else {
+        reactiveResponseType.parameterizedBy(returnTypeName)
       }
     }
 
@@ -288,10 +289,10 @@ class KotlinJAXRSGenerator(
       }
     }
 
-    return if (generationMode == Client) {
-      returnTypeName
-    } else {
+    return if (generationMode == Server || options.alwaysUseResponseReturnType) {
       javax.ws.rs.core.Response::class.asTypeName()
+    } else {
+      returnTypeName
     }
   }
 
