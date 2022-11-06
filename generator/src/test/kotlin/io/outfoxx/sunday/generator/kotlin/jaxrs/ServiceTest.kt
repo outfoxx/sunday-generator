@@ -54,9 +54,10 @@ class ServiceTest {
     )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           options,
         )

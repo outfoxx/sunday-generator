@@ -18,23 +18,23 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.AnyShape
-import amf.client.model.domain.ArrayNode
-import amf.client.model.domain.ArrayShape
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DomainElement
-import amf.client.model.domain.FileShape
-import amf.client.model.domain.NilShape
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.PropertyShape
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.ScalarShape
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
-import amf.core.model.DataType
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -82,6 +82,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
@@ -92,14 +93,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.isArray
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceSuper
-import io.outfoxx.sunday.generator.utils.and
-import io.outfoxx.sunday.generator.utils.anyInheritance
-import io.outfoxx.sunday.generator.utils.anyInheritanceNode
-import io.outfoxx.sunday.generator.utils.anyInheritanceSuper
 import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.closed
 import io.outfoxx.sunday.generator.utils.dataType
 import io.outfoxx.sunday.generator.utils.discriminator
 import io.outfoxx.sunday.generator.utils.discriminatorMapping
@@ -107,8 +101,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -116,13 +108,6 @@ import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.getValue
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.inheritanceRoot
-import io.outfoxx.sunday.generator.utils.inherits
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceNode
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceSuper
-import io.outfoxx.sunday.generator.utils.inheritsViaAggregation
-import io.outfoxx.sunday.generator.utils.inheritsViaInherits
-import io.outfoxx.sunday.generator.utils.isOrWasLink
 import io.outfoxx.sunday.generator.utils.items
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.maxItems
@@ -133,13 +118,13 @@ import io.outfoxx.sunday.generator.utils.minItems
 import io.outfoxx.sunday.generator.utils.minLength
 import io.outfoxx.sunday.generator.utils.minimum
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.nullable
 import io.outfoxx.sunday.generator.utils.nullableType
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.pattern
-import io.outfoxx.sunday.generator.utils.properties
+import io.outfoxx.sunday.generator.utils.patternProperties
 import io.outfoxx.sunday.generator.utils.range
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.scalarValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -153,7 +138,6 @@ import org.zalando.problem.ThrowableProblem
 import java.math.BigDecimal
 import java.net.URI
 import java.nio.file.Path
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -217,14 +201,14 @@ class KotlinTypeRegistry(
 
   fun resolveTypeName(shape: Shape, context: KotlinResolutionContext): TypeName {
 
-    val resolvedShape = shape.resolve
+    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
 
-    var typeName = typeNameMappings[resolvedShape.id]
+    var typeName = typeNameMappings[shape.id]
     if (typeName == null) {
 
-      typeName = generateTypeName(resolvedShape, context)
+      typeName = generateTypeName(shape, context)
 
-      typeNameMappings[resolvedShape.id] = typeName
+      typeNameMappings[shape.id] = typeName
     }
 
     return typeName
@@ -245,7 +229,8 @@ class KotlinTypeRegistry(
 
   override fun defineProblemType(
     problemCode: String,
-    problemTypeDefinition: ProblemTypeDefinition
+    problemTypeDefinition: ProblemTypeDefinition,
+    shapeIndex: ShapeIndex,
   ): ClassName {
 
     val problemPackageName = packageNameOf(problemTypeDefinition.definedIn)
@@ -287,7 +272,7 @@ class KotlinTypeRegistry(
                       resolveTypeReference(
                         customPropertyTypeNameStr,
                         problemTypeDefinition.source,
-                        KotlinResolutionContext(problemTypeDefinition.definedIn, null)
+                        KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                       )
                     )
                     .apply {
@@ -339,7 +324,7 @@ class KotlinTypeRegistry(
                   resolveTypeReference(
                     customPropertyTypeNameStr,
                     problemTypeDefinition.source,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, null)
+                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                   ),
                   KModifier.PUBLIC
                 )
@@ -390,7 +375,7 @@ class KotlinTypeRegistry(
             ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
-          resolveReferencedTypeName(element, KotlinResolutionContext(unit, null))
+          resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
         }
       }
     val typeName =
@@ -447,11 +432,9 @@ class KotlinTypeRegistry(
 
   private fun processAnyShape(shape: AnyShape, context: KotlinResolutionContext): TypeName =
     when {
-      shape.inheritsViaAggregation ->
+      context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          shape.and.first { it.isOrWasLink }.resolve,
-          shape.and.first { !it.isOrWasLink } as NodeShape,
           context
         )
 
@@ -466,7 +449,7 @@ class KotlinTypeRegistry(
 
   private fun processScalarShape(shape: ScalarShape, context: KotlinResolutionContext): TypeName =
     when (shape.dataType) {
-      DataType.String() ->
+      DataTypes.String() ->
 
         if (shape.values.isNotEmpty()) {
           defineEnum(shape, context)
@@ -478,9 +461,9 @@ class KotlinTypeRegistry(
           }
         }
 
-      DataType.Boolean() -> BOOLEAN
+      DataTypes.Boolean() -> BOOLEAN
 
-      DataType.Integer() ->
+      DataTypes.Integer() ->
         when (shape.format) {
           "int8" -> BYTE
           "int16" -> SHORT
@@ -489,21 +472,21 @@ class KotlinTypeRegistry(
           else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
-      DataType.Long() -> LONG
+      DataTypes.Long() -> LONG
 
-      DataType.Float() -> FLOAT
-      DataType.Double() -> DOUBLE
-      DataType.Number() -> DOUBLE
+      DataTypes.Float() -> FLOAT
+      DataTypes.Double() -> DOUBLE
+      DataTypes.Number() -> DOUBLE
 
-      DataType.Decimal() -> BigDecimal::class.asTypeName()
+      DataTypes.Decimal() -> BigDecimal::class.asTypeName()
 
-      DataType.Duration() -> Duration::class.asTypeName()
-      DataType.Date() -> LocalDate::class.asTypeName()
-      DataType.Time() -> LocalTime::class.asTypeName()
-      DataType.DateTimeOnly() -> LocalDateTime::class.asTypeName()
-      DataType.DateTime() -> OffsetDateTime::class.asTypeName()
+      //      DataTypes.Duration() -> Duration::class.asTypeName()
+      DataTypes.Date() -> LocalDate::class.asTypeName()
+      DataTypes.Time() -> LocalTime::class.asTypeName()
+      DataTypes.DateTimeOnly() -> LocalDateTime::class.asTypeName()
+      DataTypes.DateTime() -> OffsetDateTime::class.asTypeName()
 
-      DataType.Binary() -> BYTE_ARRAY
+      DataTypes.Binary() -> BYTE_ARRAY
 
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
@@ -531,31 +514,31 @@ class KotlinTypeRegistry(
 
   private fun processNodeShape(shape: NodeShape, context: KotlinResolutionContext): TypeName {
 
-    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
-      return resolveReferencedTypeName(shape.inherits[0], context)
-    }
-
     if (
-      shape.properties.isEmpty() &&
-      shape.inherits.isEmpty() &&
-      shape.closed != true &&
-      context.unit.findInheritingShapes(shape).isEmpty()
+      shape.nonPatternProperties.isEmpty() &&
+      context.hasNoInherited(shape) &&
+      context.hasNoInheriting(shape)
     ) {
 
-      val allTypes = collectTypes(shape.properties().map { it.range })
+      val patternProperties = shape.patternProperties
+      return if (patternProperties.isNotEmpty()) {
 
-      val commonType = nearestCommonAncestor(allTypes, context) ?: ANY
+        val patternPropertyShapes = collectTypes(patternProperties.map { it.range })
 
-      return MAP.parameterizedBy(STRING, commonType)
+        val valueTypeName = nearestCommonAncestor(patternPropertyShapes, context) ?: ANY
+
+        MAP.parameterizedBy(STRING, valueTypeName)
+      } else {
+
+        MAP.parameterizedBy(STRING, ANY)
+      }
     }
 
-    return defineClass(shape, shape.inherits.firstOrNull()?.let { it.resolve as NodeShape }, shape, context)
+    return defineClass(shape, context)
   }
 
   private fun defineClass(
-    shape: Shape,
-    superShape: Shape?,
-    propertyContainerShape: NodeShape,
+    shape: NodeShape,
     context: KotlinResolutionContext
   ): TypeName {
 
@@ -581,6 +564,7 @@ class KotlinTypeRegistry(
 
     typeBuilder.tag(DefinitionLocation(shape))
 
+    val superShape = context.findSuperShapeOrNull(shape) as NodeShape?
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context)
       if (options.contains(ImplementModel)) {
@@ -590,7 +574,7 @@ class KotlinTypeRegistry(
       }
     }
 
-    val isPatchable = shape.resolve.findBoolAnnotation(Patchable, generationMode) == true
+    val isPatchable = shape.findBoolAnnotation(Patchable, generationMode) == true
 
     if (isPatchable) {
       typeBuilder
@@ -602,10 +586,10 @@ class KotlinTypeRegistry(
         )
     }
 
-    var inheritedProperties = collectProperties(superShape)
-    var declaredProperties = propertyContainerShape.properties
+    var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
+    var declaredProperties = context.findProperties(shape)
 
-    val inheritingTypes = context.unit.findInheritingShapes(shape)
+    val inheritingTypes = context.findInheritingShapes(shape)
 
     if (inheritingTypes.isNotEmpty() && options.contains(ImplementModel)) {
       typeBuilder.modifiers.add(KModifier.OPEN)
@@ -619,7 +603,7 @@ class KotlinTypeRegistry(
 
       if (options.contains(JacksonAnnotations)) {
 
-        val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
+        val discriminatorPropertyName = findDiscriminatorPropertyName(shape, context)
         if (discriminatorPropertyName != null) {
 
           val discriminatorProperty =
@@ -633,7 +617,7 @@ class KotlinTypeRegistry(
 
           // Add abstract discriminator if this is the root of the discriminator tree
 
-          if (propertyContainerShape.discriminator == discriminatorPropertyName) {
+          if (context.hasNoInherited(shape)) {
 
             val discriminatorBuilder =
               PropertySpec.builder(discriminatorProperty.kotlinIdentifierName, discriminatorPropertyTypeName)
@@ -819,7 +803,7 @@ class KotlinTypeRegistry(
             declaredProperty.range.findStringAnnotation(ExternalDiscriminator, generationMode)
           if (externalDiscriminatorPropertyName != null) {
 
-            declaredProperty.range.resolve as? NodeShape
+            declaredProperty.range as? NodeShape
               ?: genError(" Externally discriminated types must be 'object'", declaredProperty)
 
             (inheritedProperties + declaredProperties).find { it.name == externalDiscriminatorPropertyName }
@@ -1046,25 +1030,22 @@ class KotlinTypeRegistry(
 
     if (options.contains(JacksonAnnotations)) {
 
-      if (
-        !propertyContainerShape.discriminator.isNullOrBlank() ||
-        shape.findBoolAnnotation(ExternallyDiscriminated, null) == true
-      ) {
+      val root = context.findRootShape(shape) as NodeShape
 
-        addJacksonPolymorphism(propertyContainerShape, inheritingTypes, typeBuilder, context)
+      // Is this shape the root with discrimination?
+      if (root.id == shape.id && shape.supportsDiscrimination) {
+
+        addJacksonPolymorphism(shape, inheritingTypes, typeBuilder, context)
       } else if (!typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
 
-        val root = shape.inheritanceRoot as? NodeShape
-        if (
-          (root?.discriminator != null || root?.findBoolAnnotation(ExternallyDiscriminated, null) == true) &&
-          shape is NodeShape
-        ) {
+        // Does the root of this shape tree support discrimination
+        if (root.supportsDiscrimination) {
 
           val discriminatorMappings = buildDiscriminatorMappings(shape, context)
 
           val mappedDiscriminator = discriminatorMappings.entries.find { it.value == shape.id }?.key
 
-          val subTypeName = shape.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: shape.name
+          val subTypeName = shape.discriminatorValue ?: mappedDiscriminator ?: shape.name
           if (subTypeName != null) {
 
             typeBuilder.addAnnotation(
@@ -1166,7 +1147,7 @@ class KotlinTypeRegistry(
             // Apply min/max (if set)
             var sizeBuilder: AnnotationSpec.Builder? = null
             if (use.maxLength != null && use.maxLength != Integer.MAX_VALUE) {
-              sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(Size::class)
+              sizeBuilder = AnnotationSpec.builder(Size::class)
               sizeBuilder.addMember("max = %L", use.maxLength().toString())
             }
             if (use.minLength != null && use.minLength != 0) {
@@ -1235,7 +1216,7 @@ class KotlinTypeRegistry(
         // Apply max (if set)
         var sizeBuilder: AnnotationSpec.Builder? = null
         if (use.maxItems != null && use.maxItems != Integer.MAX_VALUE) {
-          sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(Size::class)
+          sizeBuilder = AnnotationSpec.builder(Size::class)
           sizeBuilder.addMember("max = %L", use.maxItems().toString())
         }
 
@@ -1295,11 +1276,14 @@ class KotlinTypeRegistry(
     if (subTypes.isNotEmpty()) {
 
       if (shape.findBoolAnnotation(ExternallyDiscriminated, generationMode) != true) {
+
+        val discriminator = shape.discriminator ?: genError("Missing required discriminator", shape)
+
         classBuilder.addAnnotation(
           AnnotationSpec.builder(JsonTypeInfo::class)
             .addMember("use = %T.%L", JsonTypeInfo.Id::class, "NAME")
             .addMember("include = %T.%L", JsonTypeInfo.As::class, "EXISTING_PROPERTY")
-            .addMember("property = %S", shape.discriminator())
+            .addMember("property = %S", discriminator)
             .build()
         )
       }
@@ -1325,12 +1309,8 @@ class KotlinTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: KotlinResolutionContext): ClassName {
 
-    if (context.suggestedTypeName != null) {
-      val typeIdFrag = URI(shape.id).fragment
-      val typeName = shape.name
-      if (typeIdFrag.endsWith("/property/$typeName/$typeName") || !typeIdFrag.startsWith("/declarations")) {
-        return context.suggestedTypeName
-      }
+    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+      return context.suggestedTypeName
     }
 
     val pkgName = packageNameOf(shape, context)
@@ -1375,7 +1355,7 @@ class KotlinTypeRegistry(
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
-    val nestedEnclosingTypeContext = KotlinResolutionContext(nestedEnclosingTypeUnit, null)
+    val nestedEnclosingTypeContext = context.copy(unit = nestedEnclosingTypeUnit, suggestedTypeName = null)
 
     val nestedEnclosingTypeName = resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? ClassName
       ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
@@ -1384,7 +1364,7 @@ class KotlinTypeRegistry(
   }
 
   private fun packageNameOf(shape: Shape, context: KotlinResolutionContext): String =
-    packageNameOf(context.unit.findDeclaringUnit(shape))
+    packageNameOf(context.findDeclaringUnit(shape))
 
   private fun packageNameOf(unit: BaseUnit?): String =
     (unit as? CustomizableElement)?.findStringAnnotation(KotlinModelPkg, generationMode)
@@ -1393,44 +1373,14 @@ class KotlinTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun collectProperties(shape: Shape?): List<PropertyShape> =
-    when {
-      shape == null -> emptyList()
-      shape is NodeShape && shape.inheritsViaInherits -> collectInheritedProperties(shape)
-      shape.inheritsViaAggregation -> collectAggregatedProperties(shape)
-      shape is NodeShape -> shape.properties
-      else -> emptyList()
-    }
-
-  private fun collectAggregatedProperties(shape: Shape): List<PropertyShape> {
-    val parent = shape.aggregateInheritanceSuper.resolve
-    val current = shape.aggregateInheritanceNode
-    val parentProperties =
-      when {
-        parent.inheritsViaAggregation -> collectAggregatedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
-  private fun collectInheritedProperties(shape: NodeShape): List<PropertyShape> {
-    val parent = shape.inheritsInheritanceSuper.resolve
-    val current = shape.inheritsInheritanceNode
-    val parentProperties =
-      when {
-        parent is NodeShape && parent.inheritsViaInherits -> collectInheritedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
   private fun nearestCommonAncestor(types: List<Shape>, context: KotlinResolutionContext): ClassName? {
+
+    // TODO(https://github.com/outfoxx/sunday-generator/issues/45):
+    // Support JVM hierarchy for known JVM types.
 
     var currentClassNameHierarchy: List<ClassName>? = null
     for (type in types) {
-      val propertyClassNameHierarchy = classNameHierarchy(type.resolve, context) ?: break
+      val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
       currentClassNameHierarchy =
         if (currentClassNameHierarchy == null)
           propertyClassNameHierarchy
@@ -1451,24 +1401,23 @@ class KotlinTypeRegistry(
     while (current != null) {
       val currentClass = resolveReferencedTypeName(current, context) as? ClassName ?: return null
       names.add(currentClass)
-      current = current.anyInheritanceSuper
+      current = context.findSuperShapeOrNull(current)
     }
 
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: Shape): String? =
+  private fun findDiscriminatorPropertyName(shape: NodeShape, context: KotlinResolutionContext): String? =
     when {
-      shape is NodeShape && !shape.discriminator.isNullOrEmpty() -> shape.discriminator
-      shape.anyInheritance && !shape.anyInheritanceNode?.discriminator.isNullOrEmpty() -> shape.anyInheritanceNode?.discriminator
-      else -> shape.anyInheritanceSuper?.let { findDiscriminatorPropertyName(it) }
+      !shape.discriminator.isNullOrEmpty() -> shape.discriminator
+      else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: Shape, context: KotlinResolutionContext): String? =
-    if (shape is NodeShape && !shape.discriminatorValue.isNullOrEmpty()) {
+  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: KotlinResolutionContext): String? =
+    if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
-      val root = shape.inheritanceRoot as NodeShape
+      val root = context.findRootShape(shape) as NodeShape
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 
@@ -1506,6 +1455,10 @@ class KotlinTypeRegistry(
     }
     return this
   }
+
+  private val NodeShape.supportsDiscrimination: Boolean
+    get() =
+      !discriminator.isNullOrEmpty() || findBoolAnnotation(ExternallyDiscriminated, null) == true
 
   companion object {
 

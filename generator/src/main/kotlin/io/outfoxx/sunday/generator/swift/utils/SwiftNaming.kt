@@ -16,11 +16,11 @@
 
 package io.outfoxx.sunday.generator.swift.utils
 
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.PropertyShape
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.Shape
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.operationId
 import io.outfoxx.sunday.generator.utils.parameterName

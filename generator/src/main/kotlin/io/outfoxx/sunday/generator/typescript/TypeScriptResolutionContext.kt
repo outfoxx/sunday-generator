@@ -16,16 +16,13 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.client.model.document.BaseUnit
+import amf.core.client.platform.model.document.BaseUnit
 import io.outfoxx.sunday.generator.common.ResolutionContext
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.typescriptpoet.TypeName
 
 data class TypeScriptResolutionContext(
   override val unit: BaseUnit,
+  override val shapeIndex: ShapeIndex,
   val suggestedTypeName: TypeName.Standard?,
-) : ResolutionContext {
-
-  fun copy(suggestedTypeName: TypeName.Standard? = null): TypeScriptResolutionContext {
-    return TypeScriptResolutionContext(unit, suggestedTypeName)
-  }
-}
+) : ResolutionContext

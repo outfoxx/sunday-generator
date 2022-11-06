@@ -43,9 +43,10 @@ class RequestHeaderParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -96,9 +97,10 @@ class RequestHeaderParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -151,9 +153,10 @@ class RequestHeaderParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -207,9 +210,10 @@ class RequestHeaderParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )

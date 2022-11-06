@@ -16,12 +16,12 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
-import amf.client.model.domain.ArrayNode
-import amf.client.model.domain.DataNode
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.Shape
-import amf.core.model.DataType
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.TypeName
 import io.outfoxx.sunday.generator.utils.value
@@ -38,9 +38,9 @@ fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?, builder: CodeBloc
     is ScalarNode ->
       when (dataType().value()) {
 
-        DataType.Nil() -> builder.add("null")
+        DataTypes.Nil() -> builder.add("null")
 
-        DataType.String() ->
+        DataTypes.String() ->
           if (value != null && shape?.values?.isNotEmpty() == true)
             builder.add("%T.%L", typeName, kotlinEnumName)
           else if (value != null)
@@ -48,15 +48,15 @@ fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?, builder: CodeBloc
           else
             builder.add("null")
 
-        DataType.Date(), DataType.Time(), DataType.DateTime(), DataType.DateTimeOnly() ->
+        DataTypes.Date(), DataTypes.Time(), DataTypes.DateTime(), DataTypes.DateTimeOnly() ->
           if (value != null)
             builder.add("%S", value)
           else
             builder.add("null")
 
-        DataType.Boolean(),
-        DataType.Byte(), DataType.Integer(), DataType.Number(), DataType.Long(),
-        DataType.Double(), DataType.Float(), DataType.Decimal() ->
+        DataTypes.Boolean(),
+        DataTypes.Byte(), DataTypes.Integer(), DataTypes.Number(), DataTypes.Long(),
+        DataTypes.Double(), DataTypes.Float(), DataTypes.Decimal() ->
           if (value != null)
             builder.add("%L", value)
           else

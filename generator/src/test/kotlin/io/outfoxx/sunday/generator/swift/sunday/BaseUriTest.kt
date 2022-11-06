@@ -46,9 +46,10 @@ class BaseUriTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document ->
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
         SwiftSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           swiftSundayTestOptions,
         )

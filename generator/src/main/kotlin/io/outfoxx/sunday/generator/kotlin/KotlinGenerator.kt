@@ -16,19 +16,19 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.Document
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DataNode
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.Shape
-import amf.core.model.DataType
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
 import com.damnhandy.uri.template.UriTemplate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
@@ -56,6 +56,7 @@ import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.common.NameGenerator
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE3
@@ -87,7 +88,6 @@ import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.root
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.servers
@@ -109,6 +109,7 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
  */
 abstract class KotlinGenerator(
   val document: Document,
+  val shapeIndex: ShapeIndex,
   val typeRegistry: KotlinTypeRegistry,
   override val options: Options
 ) : Generator(document.api, options) {
@@ -281,6 +282,7 @@ abstract class KotlinGenerator(
             val requestBodyParameterTypeNameContext =
               KotlinResolutionContext(
                 document,
+                shapeIndex,
                 typeName.nestedClass("${operation.kotlinTypeName}RequestBody"),
               )
 
@@ -299,7 +301,7 @@ abstract class KotlinGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema.resolve,
+                payloadSchema,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder
@@ -317,6 +319,7 @@ abstract class KotlinGenerator(
             val responseBodyTypeNameContext =
               KotlinResolutionContext(
                 document,
+                shapeIndex,
                 typeName.nestedClass("${operation.kotlinTypeName}ResponseBody"),
               )
 
@@ -327,7 +330,7 @@ abstract class KotlinGenerator(
                 endPoint,
                 operation,
                 response,
-                responseBodyType.resolve,
+                responseBodyType,
                 problemTypes,
                 typeBuilder,
                 functionBuilder,
@@ -352,7 +355,7 @@ abstract class KotlinGenerator(
           val bodyType = response.payloads.firstOrNull()?.schema
           if (bodyType != null) {
 
-            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, null))
+            typeRegistry.resolveTypeName(bodyType, KotlinResolutionContext(document, shapeIndex, null))
           }
         }
 
@@ -371,7 +374,7 @@ abstract class KotlinGenerator(
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
               }
               .toMap()
           } ?: emptyMap()
@@ -401,6 +404,7 @@ abstract class KotlinGenerator(
       val uriParameterTypeNameContext =
         KotlinResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}UriParam"),
         )
 
@@ -456,6 +460,7 @@ abstract class KotlinGenerator(
       val queryParameterTypeNameContext =
         KotlinResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}QueryParam")
         )
 
@@ -510,6 +515,7 @@ abstract class KotlinGenerator(
       val headerParameterTypeNameContext =
         KotlinResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam")
         )
 
@@ -550,7 +556,7 @@ abstract class KotlinGenerator(
   }
 
   fun resolveTypeName(shape: Shape, suggestedTypeName: ClassName?): TypeName {
-    return typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, suggestedTypeName))
+    return typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, shapeIndex, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -624,7 +630,7 @@ abstract class KotlinGenerator(
 
           val defaultValue =
             if (variable.name == "version")
-              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
             else
               variable.schema?.defaultValue
 

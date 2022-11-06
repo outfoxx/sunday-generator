@@ -16,16 +16,16 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.Document
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.SecurityRequirement
-import amf.client.model.domain.SecurityScheme
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
+import amf.apicontract.client.platform.model.domain.security.SecurityScheme
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import com.damnhandy.uri.template.UriTemplate
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -33,6 +33,7 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.KModifier.SUSPEND
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
@@ -47,6 +48,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
@@ -54,6 +56,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
+import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
@@ -99,16 +102,34 @@ import javax.ws.rs.core.Context
 import javax.ws.rs.core.Response.Status.CREATED
 import javax.ws.rs.core.UriInfo
 import javax.ws.rs.sse.SseEventSource
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.associate
+import kotlin.collections.filterIsInstance
+import kotlin.collections.first
+import kotlin.collections.firstOrNull
+import kotlin.collections.forEach
+import kotlin.collections.isNotEmpty
+import kotlin.collections.joinToString
+import kotlin.collections.mapNotNull
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.plusAssign
+import kotlin.collections.set
+import kotlin.collections.toList
+import kotlin.collections.toTypedArray
 
 /**
  * Generator for Kotlin/'JAX-RS 2' interfaces
  */
 class KotlinJAXRSGenerator(
   document: Document,
+  shapeIndex: ShapeIndex,
   typeRegistry: KotlinTypeRegistry,
   override val options: Options
 ) : KotlinGenerator(
   document,
+  shapeIndex,
   typeRegistry,
   options
 ) {
@@ -234,7 +255,7 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
 
-    if (mediaTypesForPayloads.isNotEmpty() && mediaTypesForPayloads != defaultMediaTypes) {
+    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
       val prodAnn = AnnotationSpec.builder(Produces::class)
         .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
         .build()
@@ -242,7 +263,7 @@ class KotlinJAXRSGenerator(
     }
 
     if (options.coroutineServiceMethods) {
-      functionBuilder.addModifiers(KModifier.SUSPEND)
+      functionBuilder.addModifiers(SUSPEND)
     }
 
     val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods
@@ -307,6 +328,7 @@ class KotlinJAXRSGenerator(
     val parameterTypeNameContext =
       KotlinResolutionContext(
         document,
+        shapeIndex,
         schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.replaceFirstChar { it.titlecase() }}Param")
       )
 
@@ -505,7 +527,7 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
 
-    if (mediaTypesForPayloads.isNotEmpty() && mediaTypesForPayloads != defaultMediaTypes) {
+    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
       val consAnn = AnnotationSpec.builder(Consumes::class)
         .addMember("value = [%S]", mediaTypesForPayloads.first())
         .build()

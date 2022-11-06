@@ -14,27 +14,8 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator
+package io.outfoxx.sunday.generator.utils
 
-import amf.core.client.platform.model.domain.DomainElement
-import io.outfoxx.sunday.generator.utils.location
-
-class GenerationException(
-  message: String,
-  val file: String,
-  val line: Int,
-  val column: Int
-) : Exception(message)
-
-fun genError(message: String, element: DomainElement? = null): Nothing {
-  if (element == null) {
-    throw GenerationException(message, "", 0, 0)
-  }
-
-  throw GenerationException(
-    message,
-    element.annotations().location,
-    element.position().start().line(),
-    element.position().start().column()
-  )
+fun <T> Collection<T>.equalsInAnyOrder(other: Collection<T>): Boolean {
+  return size == other.size && containsAll(other)
 }

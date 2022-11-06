@@ -46,9 +46,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -100,9 +101,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -148,9 +150,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -205,9 +208,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -262,9 +266,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -319,9 +324,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -376,9 +382,10 @@ class ResponseProblemsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )

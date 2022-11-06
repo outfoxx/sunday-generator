@@ -16,8 +16,8 @@
 
 package io.outfoxx.sunday.generator.common
 
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
 import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.operationId
 

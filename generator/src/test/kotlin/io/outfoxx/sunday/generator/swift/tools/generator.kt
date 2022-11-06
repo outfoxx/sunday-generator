@@ -16,9 +16,10 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.swift.SwiftGenerator
 import io.outfoxx.sunday.generator.swift.SwiftResolutionContext
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
@@ -40,7 +41,7 @@ fun generateTypes(
   compiler: SwiftCompiler
 ): Map<DeclaredTypeName, TypeSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
   val apiModuleName =
     document.encodes.findStringAnnotation(APIAnnotationName.SwiftModule, null)
@@ -49,8 +50,8 @@ fun generateTypes(
   val apiTypeName = DeclaredTypeName.typeName("$apiModuleName.API")
   typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
 
-  TestAPIProcessing.generateTypes(document, Client, typeRegistry::defineProblemType) { name, shape ->
-    val context = SwiftResolutionContext(document, apiTypeName.nestedType(name))
+  TestAPIProcessing.generateTypes(document, shapeIndex, Client, typeRegistry::defineProblemType) { name, shape ->
+    val context = SwiftResolutionContext(document, shapeIndex, apiTypeName.nestedType(name))
     typeRegistry.resolveTypeName(shape, context)
   }
 
@@ -67,12 +68,12 @@ fun generate(
   uri: URI,
   typeRegistry: SwiftTypeRegistry,
   compiler: SwiftCompiler,
-  generatorFactory: (Document) -> SwiftGenerator
+  generatorFactory: (Document, ShapeIndex) -> SwiftGenerator
 ): Map<DeclaredTypeName, TypeSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
-  val generator = generatorFactory(document)
+  val generator = generatorFactory(document, shapeIndex)
 
   generator.generateServiceTypes()
 

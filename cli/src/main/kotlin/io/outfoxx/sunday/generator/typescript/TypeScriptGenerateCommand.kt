@@ -16,11 +16,12 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -55,7 +56,7 @@ abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGen
     TypeScriptTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document) = generatorFactory(document, typeRegistry)
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) = generatorFactory(document, shapeIndex, typeRegistry)
 
-  abstract fun generatorFactory(document: Document, typeRegistry: TypeScriptTypeRegistry): TypeScriptGenerator
+  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry): TypeScriptGenerator
 }

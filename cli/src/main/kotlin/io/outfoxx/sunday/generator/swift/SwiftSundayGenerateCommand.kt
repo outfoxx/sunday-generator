@@ -16,15 +16,17 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.Generator
+import io.outfoxx.sunday.generator.common.ShapeIndex
 
 class SwiftSundayGenerateCommand :
   SwiftGenerateCommand(name = "swift/sunday", help = "Generate Swift client for Sunday framework") {
 
-  override fun generatorFactory(document: Document, typeRegistry: SwiftTypeRegistry) =
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: SwiftTypeRegistry) =
     SwiftSundayGenerator(
       document,
+      shapeIndex,
       typeRegistry,
       Generator.Options(
         problemBaseUri,

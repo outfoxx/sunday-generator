@@ -16,8 +16,9 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.GenerationMode.Client
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptResolutionContext
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
@@ -45,13 +46,13 @@ fun generateTypes(
   includeIndex: Boolean = false
 ): Map<TypeName.Standard, ModuleSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
   val apiTypeName = TypeName.namedImport("API", "!api")
   typeRegistry.addServiceType(apiTypeName, ClassSpec.builder(apiTypeName))
 
-  TestAPIProcessing.generateTypes(document, Client, typeRegistry::defineProblemType) { name, schema ->
-    val context = TypeScriptResolutionContext(document, apiTypeName.nested(name))
+  TestAPIProcessing.generateTypes(document, shapeIndex, Client, typeRegistry::defineProblemType) { name, schema ->
+    val context = TypeScriptResolutionContext(document, shapeIndex, apiTypeName.nested(name))
     typeRegistry.resolveTypeName(schema, context)
   }
 
@@ -66,12 +67,12 @@ fun generate(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
   compiler: TypeScriptCompiler,
-  generatorFactory: (Document) -> TypeScriptGenerator
+  generatorFactory: (Document, ShapeIndex) -> TypeScriptGenerator
 ): Map<TypeName.Standard, ModuleSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
-  val generator = generatorFactory(document)
+  val generator = generatorFactory(document, shapeIndex)
 
   generator.generateServiceTypes()
 

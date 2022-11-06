@@ -16,20 +16,21 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.Document
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
@@ -56,7 +57,6 @@ import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.DATA
@@ -79,10 +79,12 @@ import java.net.URI
 
 class SwiftSundayGenerator(
   document: Document,
+  shapeIndex: ShapeIndex,
   typeRegistry: SwiftTypeRegistry,
   options: Options,
 ) : SwiftGenerator(
   document,
+  shapeIndex,
   typeRegistry,
   options,
 ) {
@@ -120,7 +122,7 @@ class SwiftSundayGenerator(
                 ParameterSpec.builder(param.name, paramTypeName)
                   .apply {
                     if (param.defaultValue != null) {
-                      defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape?.resolve))
+                      defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape))
                     }
                   }
                   .build()
@@ -493,7 +495,7 @@ class SwiftSundayGenerator(
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
-              (it.resolve as? NodeShape)?.discriminatorValue
+              (it as? NodeShape)?.discriminatorValue
                 ?: (typeName as? DeclaredTypeName)?.simpleName
                 ?: "$typeName"
             listOf(discValue, typeName)
@@ -558,7 +560,7 @@ class SwiftSundayGenerator(
   ) {
 
     val nullifyAnn = operation.findArrayAnnotation(Nullify, null)
-    if (nullifyAnn == null || nullifyAnn.isEmpty()) {
+    if (nullifyAnn.isNullOrEmpty()) {
       return
     }
 
