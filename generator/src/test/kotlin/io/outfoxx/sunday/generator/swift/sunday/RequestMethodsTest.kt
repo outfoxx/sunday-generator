@@ -38,7 +38,7 @@ class RequestMethodsTest {
   @Test
   fun `test request method generation in client mode`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -185,14 +185,14 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test request method generation with nullify`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -261,7 +261,7 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

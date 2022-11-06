@@ -47,8 +47,6 @@ subprojects {
     }
   }
 
-
-
   //
   // COMPILE
   //
@@ -68,7 +66,6 @@ subprojects {
         jvmTarget = "11"
       }
     }
-
   }
 
   //
@@ -104,20 +101,17 @@ subprojects {
     }
   }
 
-
   //
   // CHECKS
   //
 
   configure<KotlinterExtension> {
-    indentSize = 2
   }
 
   configure<LicenseExtension> {
-    setHeader(file("${rootDir}/HEADER.txt"))
+    setHeader(file("$rootDir/HEADER.txt"))
     include("**/*.kt")
   }
-
 
   //
   // PUBLISHING
@@ -150,9 +144,7 @@ subprojects {
   tasks.withType<Sign>().configureEach {
     onlyIf { !isSnapshot }
   }
-
 }
-
 
 //
 // DOCS
@@ -189,9 +181,7 @@ tasks {
       }
     }
   }
-
 }
-
 
 //
 // RELEASING
@@ -202,13 +192,13 @@ githubRelease {
   repo("sunday-generator")
   tagName(releaseVersion)
   targetCommitish("main")
-  releaseName("v${releaseVersion}")
+  releaseName("v$releaseVersion")
   draft(true)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    files("${project.rootDir}/cli/build/libs/cli-${releaseVersion}-all.jar") +
-      files("${project.rootDir}/generator/build/libs/generator-${releaseVersion}-all.jar") +
-      files("${project.rootDir}/gradle-plugin/build/libs/gradle-plugin-${releaseVersion}.jar")
+    files("${project.rootDir}/cli/build/libs/cli-$releaseVersion-all.jar") +
+      files("${project.rootDir}/generator/build/libs/generator-$releaseVersion-all.jar") +
+      files("${project.rootDir}/gradle-plugin/build/libs/gradle-plugin-$releaseVersion.jar"),
   )
   overwrite(true)
   token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
@@ -219,19 +209,19 @@ tasks {
   register("publishMavenRelease") {
     dependsOn(
       ":generator:publishAllPublicationsToMavenCentralRepository",
-      ":cli:publishAllPublicationsToMavenCentralRepository"
+      ":cli:publishAllPublicationsToMavenCentralRepository",
     )
   }
 
   register("publishDockerRelease") {
     dependsOn(
-      ":cli:jib"
+      ":cli:jib",
     )
   }
 
   register("publishPluginRelease") {
     dependsOn(
-      ":gradle-plugin:publishPlugins"
+      ":gradle-plugin:publishPlugins",
     )
   }
 
@@ -240,8 +230,7 @@ tasks {
       "publishMavenRelease",
       "publishDockerRelease",
       "publishPluginRelease",
-      "githubRelease"
+      "githubRelease",
     )
   }
-
 }

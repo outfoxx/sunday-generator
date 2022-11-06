@@ -36,7 +36,7 @@ class ResponseSseTest {
 
   @Test
   fun `test basic sse method generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -78,13 +78,13 @@ class ResponseSseTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic sse method generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -123,7 +123,7 @@ class ResponseSseTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

@@ -22,7 +22,6 @@ pluginManagement {
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
     id("com.adarshr.test-logger") version testLoggerPluginVersion
   }
-
 }
 
 rootProject.name = "sunday-generator"
@@ -30,5 +29,5 @@ rootProject.name = "sunday-generator"
 include(
   "generator",
   "cli",
-  "gradle-plugin"
+  "gradle-plugin",
 )

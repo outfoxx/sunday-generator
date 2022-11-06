@@ -24,7 +24,11 @@ import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import java.nio.file.Files
 
-fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, ModuleSpec>, generateIndex: Boolean = false): Boolean {
+fun compileTypes(
+  compiler: TypeScriptCompiler,
+  types: Map<TypeName.Standard, ModuleSpec>,
+  generateIndex: Boolean = false,
+): Boolean {
   try {
     val indexBuilder = FileSpec.builder("index")
 
@@ -38,7 +42,7 @@ fun compileTypes(compiler: TypeScriptCompiler, types: Map<TypeName.Standard, Mod
               "export {%L} from './%L';",
               importSymbol.value,
               importSymbol.source.removePrefix("!"),
-            )
+            ),
           )
         }
 

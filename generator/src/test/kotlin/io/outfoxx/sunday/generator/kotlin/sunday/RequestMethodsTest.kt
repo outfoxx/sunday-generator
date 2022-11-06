@@ -36,7 +36,7 @@ class RequestMethodsTest {
 
   @Test
   fun `test request method generation in client mode`(
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -56,7 +56,7 @@ class RequestMethodsTest {
     assertEquals(
       """
         package io.test
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -66,7 +66,7 @@ class RequestMethodsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(): Test = this.requestFactory.result(
             method = Method.Get,
@@ -126,13 +126,13 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test request method generation in client mode with nullify`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -152,7 +152,7 @@ class RequestMethodsTest {
     assertEquals(
       """
         package io.test
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -163,7 +163,7 @@ class RequestMethodsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           init {
             requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
@@ -195,7 +195,7 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

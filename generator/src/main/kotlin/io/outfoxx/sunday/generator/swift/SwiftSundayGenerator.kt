@@ -125,7 +125,7 @@ class SwiftSundayGenerator(
                       defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape))
                     }
                   }
-                  .build()
+                  .build(),
               )
             }
           }
@@ -145,7 +145,7 @@ class SwiftSundayGenerator(
             }
           }
           .addCode("%<\n]%<\n)\n")
-          .build()
+          .build(),
       )
     }
 
@@ -173,7 +173,7 @@ class SwiftSundayGenerator(
         PropertySpec
           .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
           .addModifiers(PUBLIC)
-          .build()
+          .build(),
       )
 
     // Add default accept types (in priority order)
@@ -185,7 +185,7 @@ class SwiftSundayGenerator(
         PropertySpec
           .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
           .addModifiers(PUBLIC)
-          .build()
+          .build(),
       )
 
     consBuilder?.let { consBuilder ->
@@ -194,13 +194,13 @@ class SwiftSundayGenerator(
         .addParameter(
           ParameterSpec.builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
             .defaultValue("%L", mediaTypesArray(contentTypes))
-            .build()
+            .build(),
         )
         .addStatement("self.defaultContentTypes = defaultContentTypes")
         .addParameter(
           ParameterSpec.builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
             .defaultValue("%L", mediaTypesArray(acceptTypes))
-            .build()
+            .build(),
         )
         .addStatement("self.defaultAcceptTypes = defaultAcceptTypes")
         .build()
@@ -223,7 +223,7 @@ class SwiftSundayGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName {
 
     resultBodyType = body
@@ -267,7 +267,7 @@ class SwiftSundayGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec.Builder {
 
     uriParameters = mutableListOf()
@@ -299,7 +299,7 @@ class SwiftSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -315,7 +315,7 @@ class SwiftSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -331,7 +331,7 @@ class SwiftSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -347,7 +347,7 @@ class SwiftSundayGenerator(
     payloadSchema: Shape,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val request = operation.request ?: operation.requests.first()
@@ -374,7 +374,7 @@ class SwiftSundayGenerator(
     operation: Operation,
     problemTypes: Map<URI, DeclaredTypeName>,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec {
 
     referencedProblemTypes.putAll(problemTypes)
@@ -483,7 +483,7 @@ class SwiftSundayGenerator(
           builder.add(
             ",\ndecoder: { decoder, _, _, data, _ in try decoder.decode(%T.self, from: data)%L }",
             decodeType,
-            decodeUnwrap
+            decodeUnwrap,
           )
           builder.add("%<\n)\n")
         }
@@ -514,7 +514,7 @@ class SwiftSundayGenerator(
             |  }
             |}
             """.trimMargin(),
-            *typesParams.toTypedArray()
+            *typesParams.toTypedArray(),
           )
           builder.add("%<\n)\n")
         }
@@ -556,7 +556,7 @@ class SwiftSundayGenerator(
     operation: Operation,
     function: FunctionSpec,
     problemTypes: Map<URI, TypeName>,
-    typeBuilder: TypeSpec.Builder
+    typeBuilder: TypeSpec.Builder,
   ) {
 
     val nullifyAnn = operation.findArrayAnnotation(Nullify, null)
@@ -584,7 +584,8 @@ class SwiftSundayGenerator(
           |  }
           |
           """.trimMargin(),
-          *nullifyProblemTypeNames, function.name,
+          *nullifyProblemTypeNames,
+          function.name,
         )
 
     val returnType = function.returnType
@@ -608,7 +609,7 @@ class SwiftSundayGenerator(
         .throws(true)
         .addDoc(function.doc)
         .addCode(nullFunCodeBuilder.build())
-        .build()
+        .build(),
     )
   }
 

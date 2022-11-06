@@ -37,7 +37,7 @@ class RequestQueryParamsTest {
 
   @Test
   fun `test basic query parameter generation`(
-    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -77,7 +77,7 @@ class RequestQueryParamsTest {
           public fun fetchTest(
             @QueryParam(value = "obj") obj: Test,
             @QueryParam(value = "str-req") strReq: String,
-            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int
+            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
         }
 
@@ -85,13 +85,13 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic query parameter generation with validation constraints`(
-    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
@@ -132,7 +132,7 @@ class RequestQueryParamsTest {
           public fun fetchTest(
             @QueryParam(value = "obj") @Valid obj: Test,
             @QueryParam(value = "str-req") strReq: String,
-            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int
+            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
         }
 
@@ -140,13 +140,13 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional query parameter generation`(
-    @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -188,7 +188,7 @@ class RequestQueryParamsTest {
             @QueryParam(value = "str") str: String?,
             @QueryParam(value = "int") int: Int?,
             @QueryParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @QueryParam(value = "def2") @DefaultValue(value = "10") def2: Int
+            @QueryParam(value = "def2") @DefaultValue(value = "10") def2: Int,
           ): Response
         }
 
@@ -196,13 +196,13 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple query parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -253,7 +253,7 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

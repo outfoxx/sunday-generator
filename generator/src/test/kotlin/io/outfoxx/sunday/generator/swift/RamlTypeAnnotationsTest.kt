@@ -41,7 +41,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test type annotation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-swift-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-swift-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -50,14 +50,14 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       "Foundation.URL",
-      type.propertySpecs.firstOrNull()?.type?.toString()
+      type.propertySpecs.firstOrNull()?.type?.toString(),
     )
   }
 
   @Test
   fun `test module annotation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-swift-module.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-swift-module.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -74,7 +74,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test model module annotation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-swift-model-module.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-swift-model-module.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -91,7 +91,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test class hierarchy generated for 'nested' annotation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -279,14 +279,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation (dashed scheme)`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -474,14 +474,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -601,14 +601,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using only library types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -728,14 +728,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class generated swift implementations`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-swift-impl.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-swift-impl.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -772,14 +772,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for externally discriminated types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -818,7 +818,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[typeName(".Child1")]
@@ -874,7 +874,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[typeName(".Child2")]
@@ -930,7 +930,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val testTypeSpec = builtTypes[typeName(".Test")]
@@ -1009,14 +1009,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get("", testTypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test external discriminator must exist`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -1032,7 +1032,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test patchable class generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -1166,7 +1166,7 @@ class RamlTypeAnnotationsTest {
           }
           .build()
           .writeTo(this)
-      }
+      },
     )
   }
 }

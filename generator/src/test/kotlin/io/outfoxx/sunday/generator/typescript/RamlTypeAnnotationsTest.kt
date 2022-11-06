@@ -46,7 +46,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test generated types for type annotation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-ts-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-ts-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -55,14 +55,14 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       "FormData",
-      (type.members.firstOrNull() as? InterfaceSpec)?.propertySpecs?.firstOrNull()?.type?.toString()
+      (type.members.firstOrNull() as? InterfaceSpec)?.propertySpecs?.firstOrNull()?.type?.toString(),
     )
   }
 
   @Test
   fun `test generated module for typeScriptModelModule annotation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-ts-model-module.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-ts-model-module.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -75,7 +75,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test generated module for typeScriptModule annotation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-ts-module.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-ts-module.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -85,7 +85,7 @@ class RamlTypeAnnotationsTest {
         document,
         shapeIndex,
         typeRegistry,
-        typeScriptSundayTestOptions
+        typeScriptSundayTestOptions,
       )
     }
 
@@ -95,7 +95,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test class hierarchy generated for 'nested' annotation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -216,14 +216,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation (dashed scheme)`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -344,14 +344,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -445,14 +445,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using only library types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -546,14 +546,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class generated TypeScript implementations`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-ts-impl.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-ts-impl.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -586,14 +586,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for externally discriminated types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -630,7 +630,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[TypeName.namedImport("Child1", "!child1")]
@@ -678,7 +678,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[TypeName.namedImport("Child2", "!child2")]
@@ -726,7 +726,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val testTypeSpec = builtTypes[TypeName.namedImport("Test", "!test")]
@@ -788,14 +788,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(testTypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test external discriminator must exist`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -811,7 +811,7 @@ class RamlTypeAnnotationsTest {
   @Test
   fun `test patchable class generation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -874,14 +874,14 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test patchable class generation with Jackson`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -960,7 +960,7 @@ class RamlTypeAnnotationsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

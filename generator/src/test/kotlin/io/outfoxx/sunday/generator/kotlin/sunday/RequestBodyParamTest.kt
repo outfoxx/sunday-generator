@@ -36,7 +36,7 @@ class RequestBodyParamTest {
 
   @Test
   fun `test basic body parameter generation`(
-    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -66,7 +66,7 @@ class RequestBodyParamTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(body: Test): Test = this.requestFactory.result(
             method = Method.Get,
@@ -81,13 +81,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional body parameter generation`(
-    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -107,7 +107,7 @@ class RequestBodyParamTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -117,7 +117,7 @@ class RequestBodyParamTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(body: Test?): Test = this.requestFactory.result(
             method = Method.Get,
@@ -132,13 +132,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with explicit content type`(
-    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -158,7 +158,7 @@ class RequestBodyParamTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -171,7 +171,7 @@ class RequestBodyParamTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(body: ByteArray): Map<String, Any> = this.requestFactory.result(
             method = Method.Get,
@@ -186,7 +186,7 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

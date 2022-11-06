@@ -37,7 +37,7 @@ class RamlDiscriminatedTypesTest {
   @Test
   fun `test polymorphism added to generated classes of string discriminated types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
+    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -77,7 +77,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(parentTypeModSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeModSpec = findTypeMod("Child1@!child1", generatedTypes)
@@ -131,7 +131,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(child1TypeModSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeModSpec = findTypeMod("Child2@!child2", generatedTypes)
@@ -185,14 +185,14 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(child2TypeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test polymorphism added to generated classes of enum discriminated types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
+    @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -233,7 +233,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(parentTypeModSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeModSpec = findTypeMod("Child1@!child1", generatedTypes)
@@ -281,7 +281,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(child1TypeModSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeModSpec = findTypeMod("Child2@!child2", generatedTypes)
@@ -329,7 +329,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get(child2TypeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

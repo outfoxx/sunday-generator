@@ -37,7 +37,7 @@ class ProblemTypesTest {
   @Test
   fun `generates problem types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -73,7 +73,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
 
     val accountNotFoundTypeModSpec = findTypeMod("AccountNotFoundProblem@!account-not-found-problem", builtTypes)
@@ -102,7 +102,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get(accountNotFoundTypeModSpec, "account-not-found-problem")
           .writeTo(this)
-      }
+      },
     )
 
     val testResolverModSpec = findTypeMod("TestResolverProblem@!test-resolver-problem", builtTypes)
@@ -142,14 +142,14 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get(testResolverModSpec, "test-resolver-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `generates problem types with jackson annotations`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -189,7 +189,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
 
     val accountNotFoundTypeModSpec = findTypeMod("AccountNotFoundProblem@!account-not-found-problem", builtTypes)
@@ -220,7 +220,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get(accountNotFoundTypeModSpec, "account-not-found-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 }

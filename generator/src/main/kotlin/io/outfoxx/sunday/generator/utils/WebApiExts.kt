@@ -452,7 +452,8 @@ val DataNode.scalarValue: Any? get() = (this as? ScalarNode)?.value?.let {
   }
 }
 val DataNode.arrayValue: List<Any?>? get() = (this as? ArrayNode)?.members()?.map { it.anyValue }
-val DataNode.objectValue: Map<String, Any?>? get() = (this as? ObjectNode)?.properties()?.mapValues { it.value.anyValue }
+val DataNode.objectValue: Map<String, Any?>? get() =
+  (this as? ObjectNode)?.properties()?.mapValues { it.value.anyValue }
 
 //
 val ScalarNode.value: String? get() = this.value().value

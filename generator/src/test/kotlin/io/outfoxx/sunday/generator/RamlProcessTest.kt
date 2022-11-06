@@ -46,7 +46,7 @@ class RamlProcessTest {
 
   @Test
   fun `process produces validation result entries`(
-    @ResourceUri("raml/invalid.raml") testUri: URI
+    @ResourceUri("raml/invalid.raml") testUri: URI,
   ) {
     val validationLog = APIProcessor().process(testUri).validationLog
 
@@ -59,14 +59,17 @@ class RamlProcessTest {
 
   @Test
   fun `process produces valid overlays documents`(
-    @ResourceUri("raml/test-overlay.raml") testUri: URI
+    @ResourceUri("raml/test-overlay.raml") testUri: URI,
   ) {
 
     val result = TestAPIProcessing.process(testUri)
 
     assertThat(result.isValid, equalTo(true))
     assertThat(result.validationLog, empty())
-    assertThat(result.document.api.endPoints.map { it.path }, containsInAnyOrder("/test", "/test/{id}", "/test2", "/test2/{id}"))
+    assertThat(
+      result.document.api.endPoints.map { it.path },
+      containsInAnyOrder("/test", "/test/{id}", "/test2", "/test2/{id}"),
+    )
 
     val testIdEndPoint = result.document.api.endPoints.first { it.path == "/test/{id}" }
     val getOperation = testIdEndPoint.operations.firstOrNull { it.method == "get" }

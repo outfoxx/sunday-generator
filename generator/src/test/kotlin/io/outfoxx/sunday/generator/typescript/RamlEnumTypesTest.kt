@@ -37,7 +37,7 @@ class RamlEnumTypesTest {
   @Test
   fun `test names generated for enums types & values`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -62,7 +62,7 @@ class RamlEnumTypesTest {
       buildString {
         FileSpec.get(enumTypeModSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -116,7 +116,7 @@ class RamlEnumTypesTest {
       buildString {
         FileSpec.get(usageTypeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

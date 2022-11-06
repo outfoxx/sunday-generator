@@ -36,7 +36,7 @@ class ProblemTypesTest {
   @Test
   fun `generates problem types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -95,7 +95,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get("", invalidIdType)
           .writeTo(this)
-      }
+      },
     )
 
     val accountNotFoundType = findType("AccountNotFoundProblem", builtTypes)
@@ -137,7 +137,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get("", accountNotFoundType)
           .writeTo(this)
-      }
+      },
     )
 
     val testResolverType = findType("TestResolverProblem", builtTypes)
@@ -209,7 +209,7 @@ class ProblemTypesTest {
       buildString {
         FileSpec.get("", testResolverType)
           .writeTo(this)
-      }
+      },
     )
   }
 }

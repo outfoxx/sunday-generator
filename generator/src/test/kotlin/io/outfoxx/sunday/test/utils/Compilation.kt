@@ -44,7 +44,7 @@ object Compilation {
         ${colorize("COMPILER OUTPUT", headerNameFmt)}
         ${colorize(" ".repeat(60), headerMarkerFmt)}
         
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     out.println(colorize(compilerOutput, outputFmt))
@@ -56,7 +56,7 @@ object Compilation {
         ${colorize("CODE", headerNameFmt)}
         ${colorize(" ".repeat(60), headerMarkerFmt)}
         
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     files.forEach { (name, content) ->

@@ -29,7 +29,6 @@ val dockerJavaVersion: String by project
 val jcolorVersion: String by project
 val jimfsVersion: String by project
 
-
 configurations.compileClasspath {
   resolutionStrategy {
     force("org.scala-lang:scala-library:2.12.10")
@@ -78,7 +77,6 @@ dependencies {
   testImplementation("com.google.jimfs:jimfs:$jimfsVersion")
 }
 
-
 publishing {
   publications {
     create<MavenPublication>("generator") {
@@ -88,7 +86,9 @@ publishing {
       pom {
 
         name.set("Sunday Generator")
-        description.set("Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.")
+        description.set(
+          "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
+        )
         url.set("https://outfoxx.github.io/sunday-generator")
 
         organization {
@@ -122,7 +122,6 @@ publishing {
             email.set("kevin@outfoxx.io")
           }
         }
-
       }
     }
   }

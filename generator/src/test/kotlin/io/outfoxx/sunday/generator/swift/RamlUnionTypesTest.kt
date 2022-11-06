@@ -37,7 +37,7 @@ class RamlUnionTypesTest {
   @Test
   fun `test generated types for general union types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -112,14 +112,14 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated types for common object types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -169,14 +169,15 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
-  @Test @Disabled("Swift doesn't allow types with the same name")
+  @Test
+  @Disabled("Swift doesn't allow types with the same name")
   fun `test generated types for similarly named but uncommon object types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -191,7 +192,7 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

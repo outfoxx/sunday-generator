@@ -38,7 +38,7 @@ class ResponseEventsTest {
   @Test
   fun `test event source method`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -90,14 +90,14 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -174,14 +174,14 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation for common base events`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -257,7 +257,7 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

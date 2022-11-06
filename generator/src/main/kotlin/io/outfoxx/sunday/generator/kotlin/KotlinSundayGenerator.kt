@@ -72,12 +72,12 @@ class KotlinSundayGenerator(
   document: Document,
   shapeIndex: ShapeIndex,
   typeRegistry: KotlinTypeRegistry,
-  options: Options
+  options: Options,
 ) : KotlinGenerator(
   document,
   shapeIndex,
   typeRegistry,
-  options
+  options,
 ) {
 
   init {
@@ -126,7 +126,7 @@ class KotlinSundayGenerator(
                         defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
                       }
                     }
-                    .build()
+                    .build(),
                 )
               }
             }
@@ -143,7 +143,7 @@ class KotlinSundayGenerator(
               }
             }
             .addCode(")⇤\n)\n")
-            .build()
+            .build(),
         )
     }
 
@@ -154,7 +154,7 @@ class KotlinSundayGenerator(
       .addProperty(
         PropertySpec.builder("requestFactory", RequestFactory::class, PUBLIC)
           .initializer("requestFactory")
-          .build()
+          .build(),
       )
 
     consBuilder = FunSpec.constructorBuilder()
@@ -174,7 +174,7 @@ class KotlinSundayGenerator(
         PropertySpec
           .builder("defaultContentTypes", List::class.parameterizedBy(MediaType::class))
           .initializer("defaultContentTypes")
-          .build()
+          .build(),
       )
 
     // Add default accept types (in priority order)
@@ -186,7 +186,7 @@ class KotlinSundayGenerator(
         PropertySpec
           .builder("defaultAcceptTypes", List::class.parameterizedBy(MediaType::class))
           .initializer("defaultAcceptTypes")
-          .build()
+          .build(),
       )
 
     consBuilder?.let { consBuilder ->
@@ -195,12 +195,12 @@ class KotlinSundayGenerator(
         .addParameter(
           ParameterSpec.builder("defaultContentTypes", List::class.parameterizedBy(MediaType::class))
             .defaultValue("%L", mediaTypesArray(contentTypes))
-            .build()
+            .build(),
         )
         .addParameter(
           ParameterSpec.builder("defaultAcceptTypes", List::class.parameterizedBy(MediaType::class))
             .defaultValue("%L", mediaTypesArray(acceptTypes))
-            .build()
+            .build(),
         )
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
@@ -221,7 +221,7 @@ class KotlinSundayGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName {
 
     resultBodyType = body
@@ -258,7 +258,7 @@ class KotlinSundayGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec.Builder {
 
     functionBuilder.addModifiers(KModifier.SUSPEND)
@@ -292,7 +292,7 @@ class KotlinSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -308,7 +308,7 @@ class KotlinSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -324,7 +324,7 @@ class KotlinSundayGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -340,7 +340,7 @@ class KotlinSundayGenerator(
     payloadSchema: Shape,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val request = operation.request ?: operation.requests.first()
@@ -367,7 +367,7 @@ class KotlinSundayGenerator(
     operation: Operation,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec {
 
     referencedProblemTypes.putAll(problemTypes)
@@ -493,7 +493,7 @@ class KotlinSundayGenerator(
             |  }
             |}
             """.trimMargin(),
-            *typesParams.toTypedArray()
+            *typesParams.toTypedArray(),
           )
           builder.add("⇤\n)")
         }

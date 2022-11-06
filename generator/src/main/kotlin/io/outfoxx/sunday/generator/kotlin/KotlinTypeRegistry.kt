@@ -157,7 +157,7 @@ class KotlinTypeRegistry(
   val defaultModelPackageName: String,
   generatedAnnotationName: String?,
   val generationMode: GenerationMode,
-  val options: Set<Option>
+  val options: Set<Option>,
 ) : TypeRegistry {
 
   enum class Option {
@@ -165,7 +165,7 @@ class KotlinTypeRegistry(
     ValidationConstraints,
     JacksonAnnotations,
     AddGeneratedAnnotation,
-    SuppressPublicApiWarnings
+    SuppressPublicApiWarnings,
   }
 
   val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)!!
@@ -251,14 +251,14 @@ class KotlinTypeRegistry(
               PropertySpec.builder("TYPE", STRING)
                 .addModifiers(KModifier.CONST)
                 .initializer("%S", problemTypeDefinition.type)
-                .build()
+                .build(),
             )
             .addProperty(
               PropertySpec.builder("TYPE_URI", URI::class.asTypeName())
                 .initializer("%T(%L)", URI::class.asTypeName(), "TYPE")
-                .build()
+                .build(),
             )
-            .build()
+            .build(),
         )
         .primaryConstructor(
           FunSpec.constructorBuilder()
@@ -272,45 +272,45 @@ class KotlinTypeRegistry(
                       resolveTypeReference(
                         customPropertyTypeNameStr,
                         problemTypeDefinition.source,
-                        KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
-                      )
+                        KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                      ),
                     )
                     .apply {
                       if (customPropertyName.kotlinIdentifierName != customPropertyName) {
                         addAnnotation(
                           AnnotationSpec.builder(JsonProperty::class)
                             .addMember("value = %S", customPropertyName)
-                            .build()
+                            .build(),
                         )
                       }
                     }
-                    .build()
+                    .build(),
                 )
               }
             }
             .addParameter(
               ParameterSpec.builder("instance", URI::class.asTypeName().copy(nullable = true))
                 .defaultValue("null")
-                .build()
+                .build(),
             )
             .addParameter(
               ParameterSpec.builder("cause", ThrowableProblem::class.asTypeName().copy(nullable = true))
                 .defaultValue("null")
-                .build()
+                .build(),
             )
             .apply {
               if (options.contains(JacksonAnnotations)) {
                 addAnnotation(JsonCreator::class)
               }
             }
-            .build()
+            .build(),
         )
         .addSuperclassConstructorParameter("TYPE_URI")
         .addSuperclassConstructorParameter("%S", problemTypeDefinition.title)
         .addSuperclassConstructorParameter(
           "%T.%L",
           Status::class.asTypeName(),
-          Status.valueOf(problemTypeDefinition.status).name
+          Status.valueOf(problemTypeDefinition.status).name,
         )
         .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
         .addSuperclassConstructorParameter("instance")
@@ -324,12 +324,12 @@ class KotlinTypeRegistry(
                   resolveTypeReference(
                     customPropertyTypeNameStr,
                     problemTypeDefinition.source,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
+                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
                   ),
-                  KModifier.PUBLIC
+                  KModifier.PUBLIC,
                 )
                 .initializer(customPropertyName.kotlinIdentifierName)
-                .build()
+                .build(),
             )
           }
         }
@@ -338,14 +338,14 @@ class KotlinTypeRegistry(
             .returns(Exceptional::class.asTypeName().copy(nullable = true))
             .addModifiers(KModifier.OVERRIDE)
             .addCode("return super.cause")
-            .build()
+            .build(),
         )
 
     if (options.contains(JacksonAnnotations)) {
       problemTypeBuilder.addAnnotation(
         AnnotationSpec.builder(JsonTypeName::class)
           .addMember("%T.TYPE", problemTypeName)
-          .build()
+          .build(),
       )
     }
 
@@ -393,7 +393,7 @@ class KotlinTypeRegistry(
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
     className: ClassName,
-    context: KotlinResolutionContext
+    context: KotlinResolutionContext,
   ): TypeName {
 
     val propertyContext = context.copy(
@@ -435,7 +435,7 @@ class KotlinTypeRegistry(
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          context
+          context,
         )
 
       shape.or.isNotEmpty() ->
@@ -539,7 +539,7 @@ class KotlinTypeRegistry(
 
   private fun defineClass(
     shape: NodeShape,
-    context: KotlinResolutionContext
+    context: KotlinResolutionContext,
   ): TypeName {
 
     val className = typeNameOf(shape, context)
@@ -556,10 +556,11 @@ class KotlinTypeRegistry(
 
     val typeBuilder =
       defineType(className) { name ->
-        if (options.contains(ImplementModel))
+        if (options.contains(ImplementModel)) {
           TypeSpec.classBuilder(name)
-        else
+        } else {
           TypeSpec.interfaceBuilder(name)
+        }
       }
 
     typeBuilder.tag(DefinitionLocation(shape))
@@ -582,7 +583,7 @@ class KotlinTypeRegistry(
         .addAnnotation(
           AnnotationSpec.builder(JsonInclude::class)
             .addMember("%T.%L", JsonInclude.Include::class, JsonInclude.Include.NON_EMPTY.name)
-            .build()
+            .build(),
         )
     }
 
@@ -626,7 +627,7 @@ class KotlinTypeRegistry(
               discriminatorBuilder.addAnnotation(
                 AnnotationSpec.builder(JsonIgnore::class)
                   .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
-                  .build()
+                  .build(),
               )
             }
 
@@ -653,15 +654,15 @@ class KotlinTypeRegistry(
                   .addStatement(
                     "return %T.%L",
                     discriminatorPropertyTypeName,
-                    discriminatorValue.toUpperCamelCase()
+                    discriminatorValue.toUpperCamelCase(),
                   )
-                  .build()
+                  .build(),
               )
             } else {
               discriminatorBuilder.getter(
                 FunSpec.getterBuilder()
                   .addStatement("return %S", discriminatorValue)
-                  .build()
+                  .build(),
               )
             }
 
@@ -689,9 +690,9 @@ class KotlinTypeRegistry(
               ParameterSpec
                 .builder(
                   inheritedProperty.kotlinIdentifierName,
-                  resolvePropertyTypeName(inheritedProperty, className, context)
+                  resolvePropertyTypeName(inheritedProperty, className, context),
                 )
-                .build()
+                .build(),
             )
 
             typeBuilder.addSuperclassConstructorParameter("%L", inheritedProperty.kotlinIdentifierName)
@@ -713,10 +714,11 @@ class KotlinTypeRegistry(
             FunSpec.builder("hashCode")
               .addModifiers(KModifier.OVERRIDE)
               .returns(INT)
-          if (superShape != null)
+          if (superShape != null) {
             hashBuilder.addStatement("var result = 31 * super.hashCode()")
-          else
+          } else {
             hashBuilder.addStatement("var result = 1")
+          }
         } else {
           hashBuilder = null
         }
@@ -754,20 +756,23 @@ class KotlinTypeRegistry(
                 .addStatement("if (other.%L == null) return false", property.kotlinIdentifierName)
                 .addStatement(
                   "if (!%L.contentEquals(other.%L)) return false",
-                  property.kotlinIdentifierName, property.kotlinIdentifierName
+                  property.kotlinIdentifierName,
+                  property.kotlinIdentifierName,
                 )
                 .endControlFlow()
                 .addStatement("else if (other.%L != null) return false", property.kotlinIdentifierName)
             } else {
               equalsBuilder.addStatement(
                 "if (!%L.contentEquals(other.%L)) return false",
-                property.kotlinIdentifierName, property.kotlinIdentifierName
+                property.kotlinIdentifierName,
+                property.kotlinIdentifierName,
               )
             }
           } else {
             equalsBuilder.addStatement(
               "if (%L != other.%L) return false",
-              property.kotlinIdentifierName, property.kotlinIdentifierName
+              property.kotlinIdentifierName,
+              property.kotlinIdentifierName,
             )
           }
         }
@@ -820,7 +825,7 @@ class KotlinTypeRegistry(
             declaredPropertyBuilder.addAnnotation(
               AnnotationSpec.builder(JsonIgnore::class)
                 .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
-                .build()
+                .build(),
             )
 
             val code = implAnn.getValue("code") ?: ""
@@ -833,14 +838,15 @@ class KotlinTypeRegistry(
                   "Type" -> ClassName.bestGuess(avalue.toString())
                   else -> avalue.toString()
                 }
-              } else
+              } else {
                 ""
+              }
             }
 
             declaredPropertyBuilder.getter(
               FunSpec.getterBuilder()
                 .addStatement(code, *convertedCodeParams.toTypedArray())
-                .build()
+                .build(),
             )
           } else {
 
@@ -855,7 +861,7 @@ class KotlinTypeRegistry(
                 .addAnnotation(
                   AnnotationSpec.builder(JsonProperty::class)
                     .addMember("value = %S", declaredProperty.name())
-                    .build()
+                    .build(),
                 )
             }
 
@@ -869,13 +875,13 @@ class KotlinTypeRegistry(
                     defaultValue("%T.none()", PATCH_OP)
                   }
                 }
-                .build()
+                .build(),
             )
 
             // Add toString value
             //
             toStringCode.add(
-              CodeBlock.of("%L='\$%L'", declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName)
+              CodeBlock.of("%L='\$%L'", declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName),
             )
 
             // Add hashCode value
@@ -885,12 +891,14 @@ class KotlinTypeRegistry(
               if (declaredPropertyTypeName.isNullable) {
                 hashBuilder.addStatement(
                   "result = 31 * result + (%L?.%L() ?: 0)",
-                  declaredProperty.kotlinIdentifierName, hashMember
+                  declaredProperty.kotlinIdentifierName,
+                  hashMember,
                 )
               } else {
                 hashBuilder.addStatement(
                   "result = 31 * result + %L.%L()",
-                  declaredProperty.kotlinIdentifierName, hashMember
+                  declaredProperty.kotlinIdentifierName,
+                  hashMember,
                 )
               }
             }
@@ -917,7 +925,7 @@ class KotlinTypeRegistry(
               copyBuilder.addParameter(
                 ParameterSpec.builder(copyProperty.kotlinIdentifierName, propertyTypeName.copy(nullable = true))
                   .defaultValue("null")
-                  .build()
+                  .build(),
               )
 
               CodeBlock.of("%L ?: this.%L", copyProperty.kotlinIdentifierName, copyProperty.kotlinIdentifierName)
@@ -956,14 +964,15 @@ class KotlinTypeRegistry(
         val toStringTemplate =
           CodeBlock.of(
             "%L(%L)",
-            className.simpleName, toStringCode.joinToString(",\n ")
+            className.simpleName,
+            toStringCode.joinToString(",\n "),
           ).toString()
 
         typeBuilder.addFunction(
           FunSpec.builder("toString")
             .addModifiers(KModifier.OVERRIDE)
             .addStatement("return %P", toStringTemplate)
-            .build()
+            .build(),
         )
       } else {
 
@@ -1006,7 +1015,7 @@ class KotlinTypeRegistry(
               .addStatement("val patch = %T()", className)
               .addStatement("patch.init()")
               .addStatement("return %T(patch)", PATCH_SET_OP)
-              .build()
+              .build(),
           )
           // Add patch method to companion object
           .addFunction(
@@ -1014,9 +1023,9 @@ class KotlinTypeRegistry(
               .addModifiers(KModifier.INLINE)
               .addParameter("init", initLambdaTypeName)
               .addStatement("return merge(init).value")
-              .build()
+              .build(),
           )
-          .build()
+          .build(),
       )
     }
 
@@ -1051,7 +1060,7 @@ class KotlinTypeRegistry(
             typeBuilder.addAnnotation(
               AnnotationSpec.builder(JsonTypeName::class)
                 .addMember("%S", subTypeName)
-                .build()
+                .build(),
             )
           }
         }
@@ -1087,7 +1096,7 @@ class KotlinTypeRegistry(
             .addAnnotation(
               AnnotationSpec.builder(JsonProperty::class)
                 .addMember("value = %S", enum.scalarValue!!)
-                .build()
+                .build(),
             )
             .build()
 
@@ -1102,7 +1111,7 @@ class KotlinTypeRegistry(
 
   private fun defineType(
     className: ClassName,
-    builderBlock: (ClassName) -> TypeSpec.Builder
+    builderBlock: (ClassName) -> TypeSpec.Builder,
   ): TypeSpec.Builder {
 
     val builder = builderBlock(className)
@@ -1163,7 +1172,7 @@ class KotlinTypeRegistry(
               applicator.invoke(
                 AnnotationSpec.builder(Pattern::class)
                   .addMember("regexp = %P", use.pattern())
-                  .build()
+                  .build(),
               )
             }
           }
@@ -1175,7 +1184,7 @@ class KotlinTypeRegistry(
               applicator.invoke(
                 AnnotationSpec.builder(Max::class)
                   .addMember("value = %L", use.maximum!!.toLong())
-                  .build()
+                  .build(),
               )
             }
 
@@ -1184,7 +1193,7 @@ class KotlinTypeRegistry(
               applicator.invoke(
                 AnnotationSpec.builder(Min::class)
                   .addMember("value = %L", use.minimum!!.toLong())
-                  .build()
+                  .build(),
               )
             }
           }
@@ -1196,7 +1205,7 @@ class KotlinTypeRegistry(
               applicator.invoke(
                 AnnotationSpec.builder(DecimalMax::class)
                   .addMember("value = %S", use.maximum!!.toBigDecimal())
-                  .build()
+                  .build(),
               )
             }
             // Apply min (if set)
@@ -1204,7 +1213,7 @@ class KotlinTypeRegistry(
               applicator.invoke(
                 AnnotationSpec.builder(DecimalMin::class)
                   .addMember("value = %S", use.minimum!!.toBigDecimal())
-                  .build()
+                  .build(),
               )
             }
           }
@@ -1236,7 +1245,7 @@ class KotlinTypeRegistry(
         if (typeName != ANY) {
           applicator.invoke(
             AnnotationSpec.builder(Valid::class)
-              .build()
+              .build(),
           )
         }
       }
@@ -1245,7 +1254,7 @@ class KotlinTypeRegistry(
 
   private fun addJacksonPolymorphismOverride(
     propertySpec: PropertySpec.Builder,
-    externalDiscriminatorPropertyName: String
+    externalDiscriminatorPropertyName: String,
   ) {
 
     propertySpec.addAnnotation(
@@ -1253,7 +1262,7 @@ class KotlinTypeRegistry(
         .addMember("use = %T.%L", JsonTypeInfo.Id::class, "NAME")
         .addMember("include = %T.%L", JsonTypeInfo.As::class, "EXTERNAL_PROPERTY")
         .addMember("property = %S", externalDiscriminatorPropertyName)
-        .build()
+        .build(),
     )
   }
 
@@ -1261,7 +1270,7 @@ class KotlinTypeRegistry(
     shape: NodeShape,
     inheritingTypes: List<Shape>,
     classBuilder: TypeSpec.Builder,
-    context: KotlinResolutionContext
+    context: KotlinResolutionContext,
   ) {
 
     val subTypes = inheritingTypes
@@ -1269,7 +1278,7 @@ class KotlinTypeRegistry(
 
         "%T(value = %T::class)" to listOf(
           JsonSubTypes.Type::class,
-          resolveReferencedTypeName(inheritingType, context)
+          resolveReferencedTypeName(inheritingType, context),
         )
       }
 
@@ -1284,7 +1293,7 @@ class KotlinTypeRegistry(
             .addMember("use = %T.%L", JsonTypeInfo.Id::class, "NAME")
             .addMember("include = %T.%L", JsonTypeInfo.As::class, "EXISTING_PROPERTY")
             .addMember("property = %S", discriminator)
-            .build()
+            .build(),
         )
       }
 
@@ -1296,13 +1305,13 @@ class KotlinTypeRegistry(
               .indent()
               .add(
                 "\n${subTypes.joinToString(",\n") { it.first }}",
-                *subTypes.map { it.second }.flatten().toTypedArray()
+                *subTypes.map { it.second }.flatten().toTypedArray(),
               )
               .unindent()
               .add("\n]")
-              .build()
+              .build(),
           )
-          .build()
+          .build(),
       )
     }
   }
@@ -1382,12 +1391,13 @@ class KotlinTypeRegistry(
     for (type in types) {
       val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
       currentClassNameHierarchy =
-        if (currentClassNameHierarchy == null)
+        if (currentClassNameHierarchy == null) {
           propertyClassNameHierarchy
-        else
+        } else {
           (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
             .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
             .map { propertyClassNameHierarchy[it] }
+        }
     }
 
     return currentClassNameHierarchy?.firstOrNull()
@@ -1437,7 +1447,7 @@ class KotlinTypeRegistry(
               addMember("date = %S", generationTimestamp)
             }
           }
-          .build()
+          .build(),
       )
     }
     return this
@@ -1450,7 +1460,7 @@ class KotlinTypeRegistry(
       addAnnotation(
         AnnotationSpec.builder(Suppress::class)
           .addMember("%S, %S", "RedundantVisibilityModifier", "RedundantUnitReturnType")
-          .build()
+          .build(),
       )
     }
     return this

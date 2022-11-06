@@ -1,5 +1,3 @@
-import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal
-import org.gradle.plugin.use.resolve.internal.ArtifactRepositoriesPluginResolver.PLUGIN_MARKER_SUFFIX
 
 plugins {
   id("com.gradle.plugin-publish")

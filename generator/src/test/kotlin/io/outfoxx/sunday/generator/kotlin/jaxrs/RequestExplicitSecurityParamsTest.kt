@@ -52,7 +52,7 @@ class RequestExplicitSecurityParamsTest {
 
   @Test
   fun `test explicit security parameter generation`(
-    @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -95,7 +95,7 @@ class RequestExplicitSecurityParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

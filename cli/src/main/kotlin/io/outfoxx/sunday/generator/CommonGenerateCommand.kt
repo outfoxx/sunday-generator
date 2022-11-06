@@ -33,41 +33,35 @@ import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
 
-  val serviceSuffix
-    by option(
+  val serviceSuffix by option(
     "-service-suffix",
-    help = "Suffix for generated services"
+    help = "Suffix for generated services",
   ).default("API")
 
-  val mediaTypes
-    by option(
+  val mediaTypes by option(
     "-media-type",
-    help = "Specify order of default media types"
+    help = "Specify order of default media types",
   ).multiple().unique()
 
-  val outputCategories
-    by option(
+  val outputCategories by option(
     "-category",
-    help = "Add category of type to output ${GeneratedTypeCategory.values().joinToString { it.name }}"
+    help = "Add category of type to output ${GeneratedTypeCategory.values().joinToString { it.name }}",
   ).enum<GeneratedTypeCategory>()
     .multiple(GeneratedTypeCategory.values().toList())
 
-  val outputDirectory
-    by option(
+  val outputDirectory by option(
     "-out",
-    help = "Output directory"
+    help = "Output directory",
   ).file(mustExist = true, canBeFile = false, canBeDir = true)
     .required()
 
-  val problemBaseUri
-    by option(
+  val problemBaseUri by option(
     "-problem-base",
-    help = "Default problem base URI"
+    help = "Default problem base URI",
   ).default("http://example.com/")
 
-  val files
-    by argument(
-    help = "RAML source files"
+  val files by argument(
+    help = "RAML source files",
   ).file(mustExist = true, canBeFile = true, canBeDir = false)
     .multiple(required = true)
 
@@ -75,7 +69,6 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
   abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex): Generator
 
   override fun run() {
-
     println("Generating ${this.outputCategories} types")
 
     val apiProcessor = APIProcessor()

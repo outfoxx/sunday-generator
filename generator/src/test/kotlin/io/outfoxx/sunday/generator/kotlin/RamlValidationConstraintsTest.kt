@@ -35,7 +35,7 @@ class RamlValidationConstraintsTest {
 
   @Test
   fun `test arrays generated with constraint annotations`(
-    @ResourceUri("raml/type-gen/validation/constraints-array.raml") testUri: URI
+    @ResourceUri("raml/type-gen/validation/constraints-array.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
@@ -69,13 +69,13 @@ class RamlValidationConstraintsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test strings generated with constraint annotations`(
-    @ResourceUri("raml/type-gen/validation/constraints-string.raml") testUri: URI
+    @ResourceUri("raml/type-gen/validation/constraints-string.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
@@ -105,13 +105,13 @@ class RamlValidationConstraintsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test integer numbers generated with constraint annotations`(
-    @ResourceUri("raml/type-gen/validation/constraints-integer.raml") testUri: URI
+    @ResourceUri("raml/type-gen/validation/constraints-integer.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
@@ -167,13 +167,13 @@ class RamlValidationConstraintsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test real numbers generated with constraint annotations`(
-    @ResourceUri("raml/type-gen/validation/constraints-number.raml") testUri: URI
+    @ResourceUri("raml/type-gen/validation/constraints-number.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
@@ -211,7 +211,7 @@ class RamlValidationConstraintsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

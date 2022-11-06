@@ -36,17 +36,15 @@ abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGen
     )
   }
 
-  val enabledOptions
-    by option(
+  val enabledOptions by option(
     "-enable",
-    help = "Enable type generation option"
+    help = "Enable type generation option",
   ).enum<TypeScriptTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
-  val disabledOptions
-    by option(
+  val disabledOptions by option(
     "-disable",
-    help = "Disable type generation option"
+    help = "Disable type generation option",
   ).enum<TypeScriptTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
@@ -56,7 +54,12 @@ abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGen
     TypeScriptTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) = generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
+    generatorFactory(document, shapeIndex, typeRegistry)
 
-  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry): TypeScriptGenerator
+  abstract fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: TypeScriptTypeRegistry,
+  ): TypeScriptGenerator
 }

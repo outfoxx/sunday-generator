@@ -126,12 +126,12 @@ class KotlinJAXRSGenerator(
   document: Document,
   shapeIndex: ShapeIndex,
   typeRegistry: KotlinTypeRegistry,
-  override val options: Options
+  override val options: Options,
 ) : KotlinGenerator(
   document,
   shapeIndex,
   typeRegistry,
-  options
+  options,
 ) {
 
   class Options(
@@ -176,10 +176,11 @@ class KotlinJAXRSGenerator(
       val expandedBaseURL = UriTemplate.buildFromTemplate(baseURL).build().expand(parameterValues)
 
       val baseUriMode =
-        options.baseUriMode ?: if (generationMode == Client)
+        options.baseUriMode ?: if (generationMode == Client) {
           Options.BaseUriMode.FULL
-        else
+        } else {
           Options.BaseUriMode.PATH_ONLY
+        }
 
       val finalBaseURL =
         when (baseUriMode) {
@@ -196,14 +197,17 @@ class KotlinJAXRSGenerator(
       typeBuilder.addAnnotation(
         AnnotationSpec.builder(Path::class)
           .addMember("value = %S", finalBaseURL)
-          .build()
+          .build(),
       )
     }
 
     if (defaultMediaTypes.isNotEmpty()) {
 
       if (defaultMediaTypes.size > 1 && generationMode == Client) {
-        println("[WARN] Using multiple default media types for a JAX-RS client is not supported, the first value will be chosen")
+        println(
+          "[WARN] Using multiple default media types for a JAX-RS client is not supported, " +
+            "the first value will be chosen",
+        )
       }
 
       val prodAnn = AnnotationSpec.builder(Produces::class)
@@ -230,12 +234,14 @@ class KotlinJAXRSGenerator(
             FunSpec.builder("registerProblems")
               .addParameter("mapper", ObjectMapper::class)
               .addCode(
-                "mapper.registerSubtypes(⇥\n${referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" }}⇤\n)",
-                *referencedProblemTypes.values.toTypedArray()
+                "mapper.registerSubtypes(⇥\n" +
+                  referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" } +
+                  "⇤\n)",
+                *referencedProblemTypes.values.toTypedArray(),
               )
-              .build()
+              .build(),
           )
-          .build()
+          .build(),
       )
     }
 
@@ -250,7 +256,7 @@ class KotlinJAXRSGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName {
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
@@ -320,7 +326,7 @@ class KotlinJAXRSGenerator(
   private fun resolveSecuritySchemeParameterTypeName(
     scheme: SecurityScheme,
     parameter: Parameter,
-    type: String
+    type: String,
   ): TypeName {
 
     val schemeTypeName = ClassName.bestGuess("${scheme.name.kotlinTypeName}SecurityScheme")
@@ -329,7 +335,7 @@ class KotlinJAXRSGenerator(
       KotlinResolutionContext(
         document,
         shapeIndex,
-        schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.replaceFirstChar { it.titlecase() }}Param")
+        schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.replaceFirstChar { it.titlecase() }}Param"),
       )
 
     return typeRegistry.resolveTypeName(parameter.schema!!, parameterTypeNameContext)
@@ -375,7 +381,7 @@ class KotlinJAXRSGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec.Builder {
 
     if (options.explicitSecurityParameters) {
@@ -390,7 +396,7 @@ class KotlinJAXRSGenerator(
           parameterBuilder.addAnnotation(
             AnnotationSpec.builder(HeaderParam::class)
               .addMember("value = %S", headerName)
-              .build()
+              .build(),
           )
           functionBuilder.addParameter(parameterBuilder.build())
         }
@@ -400,7 +406,8 @@ class KotlinJAXRSGenerator(
           val queryParameterTypeName =
             resolveSecuritySchemeParameterTypeName(scheme, queryParameter, "queryParameter")
           val queryParameterParamName =
-            "${scheme.name.kotlinIdentifierName}${queryParameterName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }}"
+            scheme.name.kotlinIdentifierName +
+              queryParameterName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }
           val parameterBuilder =
             methodParameter(queryParameter, ParameterSpec.builder(queryParameterParamName, queryParameterTypeName))
           functionBuilder.addParameter(parameterBuilder.build())
@@ -425,7 +432,7 @@ class KotlinJAXRSGenerator(
 
   private fun methodParameter(
     parameterShape: Parameter,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec.Builder {
 
     val builtParameter = parameterBuilder.build()
@@ -445,7 +452,7 @@ class KotlinJAXRSGenerator(
       newParameter.addAnnotation(
         AnnotationSpec.builder(DefaultValue::class)
           .addMember("value = %S", defaultValue)
-          .build()
+          .build(),
       )
       return newParameter
     }
@@ -459,14 +466,14 @@ class KotlinJAXRSGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     // Add @PathParam to URI parameters
     parameterBuilder.addAnnotation(
       AnnotationSpec.builder(PathParam::class)
         .addMember("value = %S", parameter.name())
-        .build()
+        .build(),
     )
 
     return methodParameter(parameter, parameterBuilder).build()
@@ -478,14 +485,14 @@ class KotlinJAXRSGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     // Add @QueryParam to URI parameters
     parameterBuilder.addAnnotation(
       AnnotationSpec.builder(QueryParam::class)
         .addMember("value = %S", parameter.name())
-        .build()
+        .build(),
     )
 
     return methodParameter(parameter, parameterBuilder).build()
@@ -497,14 +504,14 @@ class KotlinJAXRSGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     // Add @HeaderParam to URI parameters
     parameterBuilder.addAnnotation(
       AnnotationSpec.builder(HeaderParam::class)
         .addMember("value = %S", parameter.name())
-        .build()
+        .build(),
     )
 
     return methodParameter(parameter, parameterBuilder).build()
@@ -516,7 +523,7 @@ class KotlinJAXRSGenerator(
     payloadSchema: Shape,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     typeRegistry.applyUseSiteAnnotations(payloadSchema, parameterBuilder.build().type) {
@@ -553,7 +560,7 @@ class KotlinJAXRSGenerator(
     operation: Operation,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec {
 
     referencedProblemTypes.putAll(problemTypes)
@@ -564,7 +571,7 @@ class KotlinJAXRSGenerator(
         functionBuilder.addParameter(
           ParameterSpec.builder("asyncResponse", AsyncResponse::class)
             .addAnnotation(Suspended::class)
-            .build()
+            .build(),
         )
       }
 
@@ -574,13 +581,13 @@ class KotlinJAXRSGenerator(
         functionBuilder.addParameter(
           ParameterSpec.builder("sse", javax.ws.rs.sse.Sse::class)
             .addAnnotation(Context::class)
-            .build()
+            .build(),
         )
 
         functionBuilder.addParameter(
           ParameterSpec.builder("sseEvents", javax.ws.rs.sse.SseEventSink::class)
             .addAnnotation(Context::class)
-            .build()
+            .build(),
         )
       }
 
@@ -589,7 +596,7 @@ class KotlinJAXRSGenerator(
         functionBuilder.addParameter(
           ParameterSpec.builder("uriInfo", UriInfo::class)
             .addAnnotation(Context::class)
-            .build()
+            .build(),
         )
       }
     } else {

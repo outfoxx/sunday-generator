@@ -36,7 +36,7 @@ class RequestMethodsTest {
 
   @Test
   fun `test request method generation in server mode`(
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -111,13 +111,13 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test request method generation in client mode`(
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -190,13 +190,13 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test request method generation in client mode with nullify`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -248,7 +248,7 @@ class RequestMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

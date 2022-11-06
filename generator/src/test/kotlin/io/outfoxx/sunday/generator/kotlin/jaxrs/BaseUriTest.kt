@@ -39,7 +39,7 @@ class BaseUriTest {
 
   @Test
   fun `test baseUrl generation in API (client mode)`(
-    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
@@ -79,7 +79,7 @@ class BaseUriTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]
@@ -88,7 +88,7 @@ class BaseUriTest {
 
   @Test
   fun `test baseUrl generation in API (server mode)`(
-    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
@@ -128,7 +128,7 @@ class BaseUriTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]

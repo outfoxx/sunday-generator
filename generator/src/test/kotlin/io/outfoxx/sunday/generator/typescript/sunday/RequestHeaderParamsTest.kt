@@ -38,7 +38,7 @@ class RequestHeaderParamsTest {
   @Test
   fun `test basic header parameter generation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -100,14 +100,14 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional header parameter generation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -177,14 +177,14 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple header parameters with inline type definitions`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -259,7 +259,7 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

@@ -41,7 +41,7 @@ class ResponseProblemsTest {
   @Test
   fun `test API problem registration`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -102,14 +102,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test API problem registration when no problems`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -166,14 +166,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -221,14 +221,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using base uri`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -276,14 +276,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using absolute problem base uri`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -331,14 +331,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using relative problem base uri`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -386,14 +386,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation locates problems in libraries`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -441,7 +441,7 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get(typeSpec, "invalid-id-problem")
           .writeTo(this)
-      }
+      },
     )
   }
 }

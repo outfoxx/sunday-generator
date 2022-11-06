@@ -38,7 +38,7 @@ class BaseUriTest {
 
   @Test
   fun `test baseUrl generation in API`(
-    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
@@ -70,7 +70,7 @@ class BaseUriTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(): String = this.requestFactory.result(
             method = Method.Get,
@@ -82,7 +82,7 @@ class BaseUriTest {
             public fun baseURL(
               server: String = "master",
               environment: Environment = Environment.Sbx,
-              version: String = "1"
+              version: String = "1",
             ): URITemplate = URITemplate(
               "http://{server}.{environment}.example.com/api/{version}",
               mapOf("server" to server, "environment" to environment, "version" to version)
@@ -94,7 +94,7 @@ class BaseUriTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val envTypeSpec = builtTypes[ClassName.bestGuess("io.test.Environment")]

@@ -32,6 +32,6 @@ class TypeScriptSundayGenerateCommand :
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,
-      )
+      ),
     )
 }

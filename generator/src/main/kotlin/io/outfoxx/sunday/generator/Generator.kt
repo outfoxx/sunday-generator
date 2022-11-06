@@ -26,13 +26,13 @@ import io.outfoxx.sunday.generator.utils.contentType
 
 abstract class Generator(
   val api: WebApi,
-  options: Options
+  options: Options,
 ) {
 
   open class Options(
     val defaultProblemBaseUri: String,
     val defaultMediaTypes: List<String>,
-    val serviceSuffix: String
+    val serviceSuffix: String,
   )
 
   open val options: Options = options

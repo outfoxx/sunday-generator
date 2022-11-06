@@ -90,7 +90,7 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
         .withCmd("sleep", "3600")
         .withHostConfig(
           HostConfig.newHostConfig()
-            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/"))
+            .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/")),
         )
         .exec().id
 

@@ -36,7 +36,7 @@ class RequestMixedParamsTest {
 
   @Test
   fun `test generation of multiple parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -56,7 +56,7 @@ class RequestMixedParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -68,12 +68,12 @@ class RequestMixedParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             select: FetchTestSelectUriParam,
             page: FetchTestPageQueryParam,
-            xType: FetchTestXTypeHeaderParam
+            xType: FetchTestXTypeHeaderParam,
           ): Map<String, Any> = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{select}",
@@ -109,13 +109,13 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple parameters of same name with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -147,12 +147,12 @@ class RequestMixedParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             type: FetchTestTypeUriParam,
             type_: FetchTestTypeQueryParam,
-            type__: FetchTestTypeHeaderParam
+            type__: FetchTestTypeHeaderParam,
           ): Map<String, Any> = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{type}",
@@ -188,7 +188,7 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

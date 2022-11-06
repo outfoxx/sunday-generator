@@ -51,7 +51,7 @@ object TestAPIProcessing : APIProcessor() {
     shapeIndex: ShapeIndex,
     mode: GenerationMode,
     problemTypeHandler: (String, ProblemTypeDefinition, ShapeIndex) -> Unit,
-    typeHandler: (name: String, shape: Shape) -> Unit
+    typeHandler: (name: String, shape: Shape) -> Unit,
   ) {
 
     document.api.endPoints.forEach { endPoint ->
@@ -68,7 +68,7 @@ object TestAPIProcessing : APIProcessor() {
           request.payloads.forEachIndexed { index, payload ->
             typeHandler(
               "${opName}Request${payload.name ?: "$index"}Payload",
-              payload.schema!!
+              payload.schema!!,
             )
           }
           request.queryString?.let { queryString -> typeHandler("${opName}QueryString", queryString) }
@@ -79,7 +79,7 @@ object TestAPIProcessing : APIProcessor() {
           response.payloads.forEachIndexed { index, payload ->
             typeHandler(
               "${opName}Response${payload.name ?: "$index"}Payload",
-              payload.schema!!
+              payload.schema!!,
             )
           }
         }

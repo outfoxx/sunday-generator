@@ -39,7 +39,7 @@ class RamlDeclaredTypesTest {
   @Test
   fun `test multiple declarations with same name in separate files throws collision error`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/decl-dups-fail.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/decl-dups-fail.raml") testUri: URI,
   ) {
 
     // 'Client' mode assigns a specific package, generate in server mode to test collision detection
@@ -56,7 +56,7 @@ class RamlDeclaredTypesTest {
   @Test
   fun `test resource fragments with anonymous types can be imported multiple times`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())

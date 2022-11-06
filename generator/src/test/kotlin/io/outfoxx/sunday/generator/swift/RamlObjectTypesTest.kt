@@ -38,7 +38,7 @@ class RamlObjectTypesTest {
   @Test
   fun `test generated freeform object`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -89,14 +89,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated nullability of property types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -158,7 +158,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", testTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val test2TypeSpec = findType("Test2", builtTypes)
@@ -217,14 +217,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", test2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test naming of types defined inline in property`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -233,14 +233,14 @@ class RamlObjectTypesTest {
 
     assertEquals(
       "Value",
-      typeSpec.typeSpecs.lastOrNull()?.name
+      typeSpec.typeSpecs.lastOrNull()?.name,
     )
   }
 
   @Test
   fun `test naming of types defined inline in resource`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -249,14 +249,14 @@ class RamlObjectTypesTest {
 
     assertEquals(
       "FetchTestResponse0Payload",
-      api.typeSpecs.lastOrNull()?.name
+      api.typeSpecs.lastOrNull()?.name,
     )
   }
 
   @Test
   fun `test generated classes for object hierarchy`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -318,7 +318,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", testSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -372,7 +372,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", test2Spec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -414,7 +414,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", emptySpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -477,14 +477,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", test3Spec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated classes for object hierarchy with empty root`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-inherits-empty-root.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-inherits-empty-root.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -526,7 +526,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", rootSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -575,7 +575,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", branchSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -629,14 +629,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", leafSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated class property with kebab or snake case names`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -696,7 +696,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

@@ -36,7 +36,7 @@ class RamlUnionTypesTest {
   @Test
   fun `test generated types for general union types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -84,14 +84,14 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated types for common object types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -131,14 +131,14 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated types for similarly named but uncommon object types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -181,7 +181,7 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get(child1TypeModSpec, "test/lib/child1")
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeModSpec = findTypeMod("Child2@!test/lib/child2", builtType)
@@ -220,7 +220,7 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get(child2TypeModSpec, "test/lib/child2")
           .writeTo(this)
-      }
+      },
     )
 
     val testTypeModSpec = findTypeMod("Test@!test/lib/test", builtType)
@@ -260,7 +260,7 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get(testTypeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

@@ -36,7 +36,7 @@ class RamlArrayTypesTest {
   @Test
   fun `test generated nullability of array types and elements in classes`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -99,14 +99,14 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated collection class`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -159,14 +159,14 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated primitive class`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -209,7 +209,7 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

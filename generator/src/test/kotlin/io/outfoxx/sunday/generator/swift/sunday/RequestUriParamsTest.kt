@@ -38,7 +38,7 @@ class RequestUriParamsTest {
   @Test
   fun `test basic uri parameter generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -104,14 +104,14 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test inherited uri parameter generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -178,14 +178,14 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional uri parameter generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -255,14 +255,14 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple uri parameters with inline type definitions`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -336,7 +336,7 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

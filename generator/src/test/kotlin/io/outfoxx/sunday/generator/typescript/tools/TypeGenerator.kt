@@ -43,7 +43,7 @@ fun generateTypes(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
   compiler: TypeScriptCompiler,
-  includeIndex: Boolean = false
+  includeIndex: Boolean = false,
 ): Map<TypeName.Standard, ModuleSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)
@@ -67,7 +67,7 @@ fun generate(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
   compiler: TypeScriptCompiler,
-  generatorFactory: (Document, ShapeIndex) -> TypeScriptGenerator
+  generatorFactory: (Document, ShapeIndex) -> TypeScriptGenerator,
 ): Map<TypeName.Standard, ModuleSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)

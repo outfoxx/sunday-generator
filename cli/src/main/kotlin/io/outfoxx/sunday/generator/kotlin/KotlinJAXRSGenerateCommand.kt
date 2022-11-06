@@ -29,39 +29,33 @@ import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 class KotlinJAXRSGenerateCommand :
   KotlinGenerateCommand(name = "kotlin/jaxrs", help = "Generate Kotlin for JAX-RS framework") {
 
-  override val mode
-    by option(
+  override val mode by option(
     "-mode",
-    help = "Target 'client' or 'server' for generated services"
+    help = "Target 'client' or 'server' for generated services",
   ).enum<GenerationMode> { it.name.camelCaseToKebabCase() }
     .default(GenerationMode.Client)
 
-  private val coroutineServiceMethods
-    by option(
+  private val coroutineServiceMethods by option(
     "-coroutines",
-    help = "Generate suspendable service methods for coroutine support"
+    help = "Generate suspendable service methods for coroutine support",
   ).flag()
 
-  private val reactiveResponseType
-    by option(
+  private val reactiveResponseType by option(
     "-reactive",
-    help = "Generic result type for reactive service methods"
+    help = "Generic result type for reactive service methods",
   )
 
-  private val explicitSecurityParameters
-    by option(
+  private val explicitSecurityParameters by option(
     "-explicit-security-parameters",
-    help = "Include security parameters in service methods"
+    help = "Include security parameters in service methods",
   ).flag(default = false)
 
-  private val baseUriPathOnly
-    by option(
+  private val baseUriPathOnly by option(
     "-base-uri-mode",
     help = "Portion of the baseUri that will be used in each generated service's @Path annotation",
   ).enum<BaseUriMode> { it.name.replace("_", "-").lowercase() }
 
-  private val alwaysUseResponseReturnType
-    by option(
+  private val alwaysUseResponseReturnType by option(
     "-always-use-response-return-type",
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
@@ -81,6 +75,6 @@ class KotlinJAXRSGenerateCommand :
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,
-      )
+      ),
     )
 }

@@ -36,7 +36,7 @@ class ResponseBodyContentTest {
 
   @Test
   fun `test basic body parameter generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -75,13 +75,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with explicit content type in server mode`(
-    @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -121,13 +121,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic body parameter generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -166,13 +166,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with explicit content type in client mode`(
-    @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -212,13 +212,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with inline type in client mode`(
-    @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -261,13 +261,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with inline type in server mode`(
-    @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -311,13 +311,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of response body that is no content client mode`(
-    @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -356,13 +356,13 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of response body that is no content server mode`(
-    @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -401,7 +401,7 @@ class ResponseBodyContentTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }
