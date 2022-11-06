@@ -16,14 +16,14 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.client.model.document.Document
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
@@ -32,6 +32,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
@@ -64,7 +65,6 @@ import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
@@ -78,16 +78,21 @@ import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import java.net.URI
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * Generator for TypeScript/Sunday interfaces
  */
 class TypeScriptSundayGenerator(
   document: Document,
+  shapeIndex: ShapeIndex,
   typeRegistry: TypeScriptTypeRegistry,
   options: Options,
 ) : TypeScriptGenerator(
   document,
+  shapeIndex,
   typeRegistry,
   options,
 ) {
@@ -395,7 +400,7 @@ class TypeScriptSundayGenerator(
         builder.add(CodeBlock.of("body: %L", requestBodyParameter))
         if (requestBodyType != null) {
 
-          val requestBodyTypeContext = TypeScriptResolutionContext(document, null)
+          val requestBodyTypeContext = TypeScriptResolutionContext(document, shapeIndex, null)
 
           val requestBodyTypeName = typeRegistry.resolveTypeName(requestBodyType!!, requestBodyTypeContext)
           if (requestBodyTypeName != VOID) {
@@ -462,9 +467,9 @@ class TypeScriptSundayGenerator(
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n  ") { "case %S: return decoder.decodeText(data, [%T]);" }
           val typesParams = types.flatMap {
-            val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, null))
+            val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, shapeIndex, null))
             val discValue =
-              (it.resolve as? NodeShape)?.discriminatorValue
+              (it as? NodeShape)?.discriminatorValue
                 ?: (typeName as? TypeName.Standard)?.simpleName()
                 ?: "$typeName"
             listOf(discValue, typeName)
@@ -544,7 +549,7 @@ class TypeScriptSundayGenerator(
   ) {
 
     val nullifyAnn = operation.findArrayAnnotation(APIAnnotationName.Nullify, null)
-    if (nullifyAnn == null || nullifyAnn.isEmpty()) {
+    if (nullifyAnn.isNullOrEmpty()) {
       return
     }
 

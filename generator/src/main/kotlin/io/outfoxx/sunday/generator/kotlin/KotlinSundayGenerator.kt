@@ -16,18 +16,19 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.Document
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.KModifier.PUBLIC
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
@@ -46,6 +47,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.REQUEST
@@ -63,16 +65,17 @@ import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.http.Method
 import java.net.URI
 
 class KotlinSundayGenerator(
   document: Document,
+  shapeIndex: ShapeIndex,
   typeRegistry: KotlinTypeRegistry,
   options: Options
 ) : KotlinGenerator(
   document,
+  shapeIndex,
   typeRegistry,
   options
 ) {
@@ -120,7 +123,7 @@ class KotlinSundayGenerator(
                   ParameterSpec.builder(param.name, paramTypeName)
                     .apply {
                       if (param.defaultValue != null) {
-                        defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape?.resolve))
+                        defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
                       }
                     }
                     .build()
@@ -149,7 +152,7 @@ class KotlinSundayGenerator(
 
     serviceTypeBuilder
       .addProperty(
-        PropertySpec.builder("requestFactory", RequestFactory::class, KModifier.PUBLIC)
+        PropertySpec.builder("requestFactory", RequestFactory::class, PUBLIC)
           .initializer("requestFactory")
           .build()
       )
@@ -472,7 +475,7 @@ class KotlinSundayGenerator(
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
-              (it.resolve as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
+              (it as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
             listOf(discValue, typeName, TYPE_OF, typeName)
           }
 

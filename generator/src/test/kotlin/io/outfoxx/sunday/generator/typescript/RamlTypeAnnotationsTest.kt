@@ -80,8 +80,13 @@ class RamlTypeAnnotationsTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val generatedTypes = generate(testUri, typeRegistry, compiler) {
-      TypeScriptSundayGenerator(it, typeRegistry, typeScriptSundayTestOptions)
+    val generatedTypes = generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+      TypeScriptSundayGenerator(
+        document,
+        shapeIndex,
+        typeRegistry,
+        typeScriptSundayTestOptions
+      )
     }
 
     assertThat(generatedTypes.keys, hasItem(TypeName.namedImport("API", "!explicit/client/api")))

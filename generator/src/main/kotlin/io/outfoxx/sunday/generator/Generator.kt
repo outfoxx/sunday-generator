@@ -16,7 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.client.model.domain.WebApi
+import amf.apicontract.client.platform.model.domain.api.WebApi
 import io.outfoxx.sunday.generator.utils.accepts
 import io.outfoxx.sunday.generator.utils.contentType
 

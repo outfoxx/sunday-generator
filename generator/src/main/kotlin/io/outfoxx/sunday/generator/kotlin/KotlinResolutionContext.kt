@@ -16,16 +16,13 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.BaseUnit
+import amf.core.client.platform.model.document.BaseUnit
 import com.squareup.kotlinpoet.ClassName
 import io.outfoxx.sunday.generator.common.ResolutionContext
+import io.outfoxx.sunday.generator.common.ShapeIndex
 
 data class KotlinResolutionContext(
   override val unit: BaseUnit,
+  override val shapeIndex: ShapeIndex,
   val suggestedTypeName: ClassName?
-) : ResolutionContext {
-
-  fun copy(suggestedTypeName: ClassName? = null): KotlinResolutionContext {
-    return KotlinResolutionContext(unit, suggestedTypeName)
-  }
-}
+) : ResolutionContext

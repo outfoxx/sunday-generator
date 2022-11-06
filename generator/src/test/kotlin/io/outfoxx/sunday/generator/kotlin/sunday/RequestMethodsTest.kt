@@ -42,9 +42,10 @@ class RequestMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )
@@ -137,9 +138,10 @@ class RequestMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )

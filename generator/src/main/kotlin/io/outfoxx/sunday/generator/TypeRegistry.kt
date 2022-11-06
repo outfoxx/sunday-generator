@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import java.nio.file.Path
 
 interface TypeRegistry {
@@ -24,6 +25,7 @@ interface TypeRegistry {
 
   fun defineProblemType(
     problemCode: String,
-    problemTypeDefinition: ProblemTypeDefinition
+    problemTypeDefinition: ProblemTypeDefinition,
+    shapeIndex: ShapeIndex,
   ): Any
 }

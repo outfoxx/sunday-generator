@@ -18,23 +18,23 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.AnyShape
-import amf.client.model.domain.ArrayNode
-import amf.client.model.domain.ArrayShape
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DomainElement
-import amf.client.model.domain.FileShape
-import amf.client.model.domain.NilShape
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.PropertyShape
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.ScalarShape
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
-import amf.core.model.DataType
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
 import io.outfoxx.sunday.generator.APIAnnotationName.Nested
@@ -47,10 +47,10 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.typescript.utils.DURATION
 import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR
 import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR_MODE
@@ -79,15 +79,8 @@ import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
 import io.outfoxx.sunday.generator.typescript.utils.undefinable
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceSuper
-import io.outfoxx.sunday.generator.utils.and
-import io.outfoxx.sunday.generator.utils.anyInheritance
-import io.outfoxx.sunday.generator.utils.anyInheritanceNode
-import io.outfoxx.sunday.generator.utils.anyInheritanceSuper
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
-import io.outfoxx.sunday.generator.utils.closed
 import io.outfoxx.sunday.generator.utils.dataType
 import io.outfoxx.sunday.generator.utils.discriminator
 import io.outfoxx.sunday.generator.utils.discriminatorMapping
@@ -95,8 +88,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -104,23 +95,16 @@ import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.getValue
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.inheritanceRoot
-import io.outfoxx.sunday.generator.utils.inherits
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceNode
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceSuper
-import io.outfoxx.sunday.generator.utils.inheritsViaAggregation
-import io.outfoxx.sunday.generator.utils.inheritsViaInherits
-import io.outfoxx.sunday.generator.utils.isOrWasLink
 import io.outfoxx.sunday.generator.utils.items
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.nullableType
 import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
-import io.outfoxx.sunday.generator.utils.properties
+import io.outfoxx.sunday.generator.utils.patternProperties
 import io.outfoxx.sunday.generator.utils.range
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -153,7 +137,6 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import io.outfoxx.typescriptpoet.tag
-import java.net.URI
 import java.nio.file.Path
 import kotlin.math.min
 
@@ -279,14 +262,14 @@ class TypeScriptTypeRegistry(
 
   fun resolveTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName {
 
-    val resolvedShape = shape.resolve
+    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
 
-    var typeName = typeNameMappings[resolvedShape.id]
+    var typeName = typeNameMappings[shape.id]
     if (typeName == null) {
 
-      typeName = generateTypeName(resolvedShape, context)
+      typeName = generateTypeName(shape, context)
 
-      typeNameMappings[resolvedShape.id] = typeName
+      typeNameMappings[shape.id] = typeName
     }
 
     return typeName
@@ -305,7 +288,8 @@ class TypeScriptTypeRegistry(
 
   override fun defineProblemType(
     problemCode: String,
-    problemTypeDefinition: ProblemTypeDefinition
+    problemTypeDefinition: ProblemTypeDefinition,
+    shapeIndex: ShapeIndex,
   ): TypeName {
 
     val problemTypeNameStr = "${problemCode.typeScriptTypeName}Problem"
@@ -350,7 +334,7 @@ class TypeScriptTypeRegistry(
         val customPropertyTypeName = resolveTypeReference(
           customPropertyTypeNameStr,
           problemTypeDefinition.source,
-          TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
+          TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
         )
         problemTypeBuilder.addProperty(
           PropertySpec
@@ -400,7 +384,7 @@ class TypeScriptTypeRegistry(
                 resolveTypeReference(
                   customPropertyTypeNameStr,
                   problemTypeDefinition.source,
-                  TypeScriptResolutionContext(problemTypeDefinition.definedIn, null)
+                  TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                 )
               )
               .build()
@@ -452,7 +436,7 @@ class TypeScriptTypeRegistry(
             ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
-          resolveReferencedTypeName(element, TypeScriptResolutionContext(unit, null))
+          resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
         }
       }
     val typeName =
@@ -510,11 +494,9 @@ class TypeScriptTypeRegistry(
 
   private fun processAnyShape(shape: AnyShape, context: TypeScriptResolutionContext): TypeName =
     when {
-      shape.inheritsViaAggregation ->
+      context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          shape.and.first { it.isOrWasLink }.resolve,
-          shape.and.first { !it.isOrWasLink } as NodeShape,
           context
         )
 
@@ -529,7 +511,7 @@ class TypeScriptTypeRegistry(
 
   private fun processScalarShape(shape: ScalarShape, context: TypeScriptResolutionContext): TypeName =
     when (shape.dataType) {
-      DataType.String() ->
+      DataTypes.String() ->
 
         if (shape.values.isNotEmpty()) {
           defineEnum(shape, context)
@@ -541,9 +523,9 @@ class TypeScriptTypeRegistry(
           }
         }
 
-      DataType.Boolean() -> BOOLEAN
+      DataTypes.Boolean() -> BOOLEAN
 
-      DataType.Integer() ->
+      DataTypes.Integer() ->
         when (shape.format) {
           "int8" -> NUMBER
           "int16" -> NUMBER
@@ -552,21 +534,21 @@ class TypeScriptTypeRegistry(
           else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
-      DataType.Long() -> NUMBER
+      DataTypes.Long() -> NUMBER
 
-      DataType.Float() -> NUMBER
-      DataType.Double() -> NUMBER
-      DataType.Number() -> NUMBER
+      DataTypes.Float() -> NUMBER
+      DataTypes.Double() -> NUMBER
+      DataTypes.Number() -> NUMBER
 
-      DataType.Decimal() -> NUMBER
+      DataTypes.Decimal() -> NUMBER
 
-      DataType.Duration() -> DURATION
-      DataType.Date() -> LOCAL_DATE
-      DataType.Time() -> LOCAL_TIME
-      DataType.DateTimeOnly() -> LOCAL_DATETIME
-      DataType.DateTime() -> OFFSET_DATETIME
+//      DataTypes.Duration() -> DURATION
+      DataTypes.Date() -> LOCAL_DATE
+      DataTypes.Time() -> LOCAL_TIME
+      DataTypes.DateTimeOnly() -> LOCAL_DATETIME
+      DataTypes.DateTime() -> OFFSET_DATETIME
 
-      DataType.Binary() -> ARRAY_BUFFER
+      DataTypes.Binary() -> ARRAY_BUFFER
 
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
@@ -595,31 +577,31 @@ class TypeScriptTypeRegistry(
 
   private fun processNodeShape(shape: NodeShape, context: TypeScriptResolutionContext): TypeName {
 
-    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
-      return resolveReferencedTypeName(shape.inherits[0], context)
-    }
-
     if (
-      shape.properties.isEmpty() &&
-      shape.inherits.isEmpty() &&
-      shape.closed != true &&
-      context.unit.findInheritingShapes(shape).isEmpty()
+      shape.nonPatternProperties.isEmpty() &&
+      context.hasNoInherited(shape) &&
+      context.hasNoInheriting(shape)
     ) {
 
-      val allTypes = collectTypes(shape.properties().map { it.range })
+      val patternProperties = shape.patternProperties
+      return if (patternProperties.isNotEmpty()) {
 
-      val commonType = nearestCommonAncestor(allTypes, context) ?: return OBJECT
+        val patternPropertyShapes = collectTypes(patternProperties.map { it.range })
 
-      return TypeName.parameterizedType(MAP, STRING, commonType)
+        val valueTypeName = nearestCommonAncestor(patternPropertyShapes, context) ?: return OBJECT
+
+        MAP.parameterized(STRING, valueTypeName)
+      } else {
+
+        OBJECT
+      }
     }
 
-    return defineClass(shape, shape.inherits.firstOrNull()?.let { it.resolve as NodeShape }, shape, context)
+    return defineClass(shape, context)
   }
 
   private fun defineClass(
-    shape: Shape,
-    superShape: Shape?,
-    propertyContainerShape: NodeShape,
+    shape: NodeShape,
     context: TypeScriptResolutionContext
   ): TypeName {
 
@@ -651,6 +633,7 @@ class TypeScriptTypeRegistry(
 
     classBuilder.addMixin(ifaceName)
 
+    val superShape = context.findSuperShapeOrNull(shape) as NodeShape?
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context) as TypeName.Standard
       classBuilder.superClass(superClassName)
@@ -658,10 +641,10 @@ class TypeScriptTypeRegistry(
       ifaceBuilder.addSuperInterface(superClassName.sibling("Spec"))
     }
 
-    var inheritedProperties = collectProperties(superShape)
-    var declaredProperties = propertyContainerShape.properties
+    var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
+    var declaredProperties = context.findProperties(shape)
 
-    val inheritingTypes = context.unit.findInheritingShapes(shape)
+    val inheritingTypes = context.findInheritingShapes(shape).map { it as NodeShape }
 
     if (inheritedProperties.isNotEmpty() || declaredProperties.isNotEmpty()) {
 
@@ -671,7 +654,7 @@ class TypeScriptTypeRegistry(
 
       if (options.contains(JacksonDecorators)) {
 
-        val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
+        val discriminatorPropertyName = findDiscriminatorPropertyName(shape, context)
         if (discriminatorPropertyName != null) {
 
           val discriminatorProperty =
@@ -685,7 +668,7 @@ class TypeScriptTypeRegistry(
 
           // Add concrete discriminator for leaf of the discriminated tree
 
-          if (propertyContainerShape.discriminator != discriminatorPropertyName) {
+          if (context.hasNoInheriting(shape)) {
 
             val discriminatorBuilder =
               FunctionSpec.builder(discriminatorProperty.typeScriptIdentifierName)
@@ -805,7 +788,7 @@ class TypeScriptTypeRegistry(
             declaredProperty.range.findStringAnnotation(ExternalDiscriminator, null)
           if (externalDiscriminatorPropertyName != null) {
 
-            declaredProperty.range.resolve as? NodeShape
+            declaredProperty.range as? NodeShape
               ?: genError("Externally discriminated types must be 'object'", declaredProperty)
 
             val externalDiscriminatorPropertyShape =
@@ -943,8 +926,8 @@ class TypeScriptTypeRegistry(
 
     if (options.contains(JacksonDecorators)) {
 
-      if (!propertyContainerShape.discriminator.isNullOrBlank()) {
-        addJacksonPolymorphism(propertyContainerShape, inheritingTypes, className, classBuilder, context)
+      if (context.hasNoInherited(shape) && !shape.discriminator.isNullOrBlank()) {
+        addJacksonPolymorphism(shape, inheritingTypes, className, classBuilder, context)
       }
     }
 
@@ -1008,22 +991,21 @@ class TypeScriptTypeRegistry(
     context: TypeScriptResolutionContext,
   ) {
     val valueRawPropertyTypeName = valuePropertyTypeName.nonOptional as? TypeName.Standard ?: return
-    val valuePropertyTypeShape = valuePropertyShape.range.resolve as? NodeShape ?: return
+    val valuePropertyTypeShape = valuePropertyShape.range as? NodeShape ?: return
 
     val externalDiscriminatorPropertyName = externalDiscriminatorPropertyShape.name?.typeScriptIdentifierName ?: return
     val externalDiscriminatorPropertyTypeName =
       resolvePropertyTypeName(externalDiscriminatorPropertyShape, className, context)
     val isDiscriminatorEnum = typeBuilders[externalDiscriminatorPropertyTypeName.nonOptional] is EnumSpec.Builder
 
-    val inheritingTypes = context.unit.findInheritingShapes(valuePropertyTypeShape)
+    val inheritingTypes = context.findInheritingShapes(valuePropertyTypeShape).map { it as NodeShape }
     val discriminatorMappings = buildDiscriminatorMappings(valuePropertyTypeShape, context)
 
     val subTypes = inheritingTypes
       .map { inheritingType ->
 
         val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
-        val discriminatorValue =
-          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
+        val discriminatorValue = inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
         val classNameSymbol = valueRawPropertyTypeName.base as SymbolSpec.Imported
@@ -1092,14 +1074,14 @@ class TypeScriptTypeRegistry(
 
   private fun addJacksonPolymorphism(
     shape: NodeShape,
-    inheritingTypes: List<Shape>,
+    inheritingTypes: List<NodeShape>,
     className: TypeName.Standard,
     classBuilder: ClassSpec.Builder,
     context: TypeScriptResolutionContext
   ) {
 
-    val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
-    val discriminatorPropertyShape = collectProperties(shape).first { it.name == discriminatorPropertyName }
+    val discriminatorPropertyName = findDiscriminatorPropertyName(shape, context)
+    val discriminatorPropertyShape = context.findAllProperties(shape).first { it.name == discriminatorPropertyName }
     val discriminatorPropertyTypeName = resolvePropertyTypeName(discriminatorPropertyShape, className, context)
     val isDiscriminatorEnum = typeBuilders[discriminatorPropertyTypeName.nonOptional] is EnumSpec.Builder
 
@@ -1110,7 +1092,7 @@ class TypeScriptTypeRegistry(
 
         val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
         val discriminatorValue =
-          inheritingType.anyInheritanceNode?.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
+          inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
         val classNameSymbol = className.base as SymbolSpec.Imported
@@ -1145,6 +1127,9 @@ class TypeScriptTypeRegistry(
     if (subTypes.isNotEmpty()) {
 
       if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
+
+        val discriminator = shape.discriminator ?: genError("Missing required discriminator", shape)
+
         classBuilder.addDecorator(
           DecoratorSpec.builder(JSON_TYPE_INFO)
             .addParameter(
@@ -1158,7 +1143,7 @@ class TypeScriptTypeRegistry(
               """.trimIndent(),
               JSON_TYPE_INFO_ID, "NAME",
               JSON_TYPE_INFO_AS, "PROPERTY",
-              shape.discriminator
+              discriminator
             )
             .build()
         )
@@ -1184,12 +1169,8 @@ class TypeScriptTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: TypeScriptResolutionContext): TypeName.Standard {
 
-    if (context.suggestedTypeName != null) {
-      val typeIdFrag = URI(shape.id).fragment
-      val typeName = shape.name
-      if (typeIdFrag.endsWith("/property/$typeName/$typeName") || !typeIdFrag.startsWith("/declarations")) {
-        return context.suggestedTypeName
-      }
+    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+      return context.suggestedTypeName
     }
 
     val modulePath = modulePathOf(shape, context)?.let { "!$it/" } ?: "!"
@@ -1243,7 +1224,7 @@ class TypeScriptTypeRegistry(
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
-    val nestedEnclosingTypeContext = TypeScriptResolutionContext(nestedEnclosingTypeUnit, null)
+    val nestedEnclosingTypeContext = context.copy(unit = nestedEnclosingTypeUnit, suggestedTypeName = null)
 
     val nestedEnclosingTypeName =
       resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as TypeName.Standard
@@ -1252,7 +1233,7 @@ class TypeScriptTypeRegistry(
   }
 
   private fun modulePathOf(shape: Shape, context: TypeScriptResolutionContext): String? =
-    modulePathOf(context.unit.findDeclaringUnit(shape))
+    modulePathOf(context.findDeclaringUnit(shape))
 
   private fun modulePathOf(unit: BaseUnit?): String? =
     (unit as? CustomizableElement)?.findStringAnnotation(TypeScriptModelModule, null)
@@ -1260,44 +1241,11 @@ class TypeScriptTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun collectProperties(shape: Shape?): List<PropertyShape> =
-    when {
-      shape == null -> emptyList()
-      shape is NodeShape && shape.inheritsViaInherits -> collectInheritedProperties(shape)
-      shape.inheritsViaAggregation -> collectAggregatedProperties(shape)
-      shape is NodeShape -> shape.properties
-      else -> emptyList()
-    }
-
-  private fun collectAggregatedProperties(shape: Shape): List<PropertyShape> {
-    val parent = shape.aggregateInheritanceSuper.resolve
-    val current = shape.aggregateInheritanceNode
-    val parentProperties =
-      when {
-        parent.inheritsViaAggregation -> collectAggregatedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
-  private fun collectInheritedProperties(shape: NodeShape): List<PropertyShape> {
-    val parent = shape.inheritsInheritanceSuper.resolve
-    val current = shape.inheritsInheritanceNode
-    val parentProperties =
-      when {
-        parent is NodeShape && parent.inheritsViaInherits -> collectInheritedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
   private fun nearestCommonAncestor(types: List<Shape>, context: TypeScriptResolutionContext): TypeName? {
 
     var currentClassNameHierarchy: List<TypeName>? = null
     for (type in types) {
-      val propertyClassNameHierarchy = classNameHierarchy(type.resolve, context)
+      val propertyClassNameHierarchy = classNameHierarchy(type, context)
       currentClassNameHierarchy =
         if (currentClassNameHierarchy == null)
           propertyClassNameHierarchy
@@ -1318,24 +1266,23 @@ class TypeScriptTypeRegistry(
     while (current != null) {
       val currentClass = resolveReferencedTypeName(current, context)
       names.add(currentClass)
-      current = current.anyInheritanceSuper
+      current = context.findSuperShapeOrNull(current)
     }
 
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: Shape): String? =
+  private fun findDiscriminatorPropertyName(shape: NodeShape, context: TypeScriptResolutionContext): String? =
     when {
-      shape is NodeShape && !shape.discriminator.isNullOrEmpty() -> shape.discriminator
-      shape.anyInheritance && !shape.anyInheritanceNode?.discriminator.isNullOrEmpty() -> shape.anyInheritanceNode?.discriminator
-      else -> shape.anyInheritanceSuper?.let { findDiscriminatorPropertyName(it) }
+      !shape.discriminator.isNullOrEmpty() -> shape.discriminator
+      else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: Shape, context: TypeScriptResolutionContext): String? =
-    if (shape is NodeShape && !shape.discriminatorValue.isNullOrEmpty()) {
+  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: TypeScriptResolutionContext): String? =
+    if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
-      val root = shape.inheritanceRoot as NodeShape
+      val root = context.findRootShape(shape) as NodeShape
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 

@@ -16,11 +16,12 @@
 
 package io.outfoxx.sunday.generator.kotlin.tools
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.APIAnnotationName
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinResolutionContext
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -36,7 +37,7 @@ fun findType(name: String, types: Map<ClassName, TypeSpec>): TypeSpec =
 
 fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, TypeSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
   val apiPackageName =
     document.encodes.findStringAnnotation(APIAnnotationName.KotlinPkg, typeRegistry.generationMode)
@@ -45,8 +46,8 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
   val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
   typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
 
-  TestAPIProcessing.generateTypes(document, typeRegistry.generationMode, typeRegistry::defineProblemType) { name, schema ->
-    val context = KotlinResolutionContext(document, apiTypeName.nestedClass(name))
+  TestAPIProcessing.generateTypes(document, shapeIndex, typeRegistry.generationMode, typeRegistry::defineProblemType) { name, schema ->
+    val context = KotlinResolutionContext(document, shapeIndex, apiTypeName.nestedClass(name))
     typeRegistry.resolveTypeName(schema, context)
   }
 
@@ -60,12 +61,12 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
 fun generate(
   uri: URI,
   typeRegistry: KotlinTypeRegistry,
-  generatorFactory: (Document) -> KotlinGenerator
+  generatorFactory: (Document, ShapeIndex) -> KotlinGenerator
 ): Map<ClassName, TypeSpec> {
 
-  val document = TestAPIProcessing.process(uri).document
+  val (document, shapeIndex) = TestAPIProcessing.process(uri)
 
-  val generator = generatorFactory(document)
+  val generator = generatorFactory(document, shapeIndex)
 
   generator.generateServiceTypes()
 

@@ -156,9 +156,10 @@ class RamlObjectTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) {
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
         TypeScriptSundayGenerator(
-          it,
+          document,
+          shapeIndex,
           typeRegistry,
           typeScriptSundayTestOptions
         )

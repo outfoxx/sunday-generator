@@ -38,7 +38,9 @@ configurations.compileClasspath {
 
 dependencies {
 
-  api("com.github.amlorg:amf-client_2.12:$amfClientVersion")
+  api("com.github.amlorg:amf-api-contract_2.12:$amfClientVersion")
+
+  api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 
   api("com.squareup:kotlinpoet:$kotlinPoetVersion")
   api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")

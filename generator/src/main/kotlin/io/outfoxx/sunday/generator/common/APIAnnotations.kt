@@ -16,7 +16,7 @@
 
 package io.outfoxx.sunday.generator.common
 
-import amf.client.model.domain.DataNode
+import amf.core.client.platform.model.domain.DataNode
 import io.outfoxx.sunday.generator.utils.numberValue
 import io.outfoxx.sunday.generator.utils.stringValue
 

@@ -16,7 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -28,6 +28,7 @@ import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import io.outfoxx.sunday.generator.common.APIProcessor
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
@@ -71,7 +72,7 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
     .multiple(required = true)
 
   abstract val typeRegistry: TypeRegistry
-  abstract fun generatorFactory(document: Document): Generator
+  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex): Generator
 
   override fun run() {
 
@@ -94,7 +95,7 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
         exitProcess(1)
       }
 
-      val generator = generatorFactory(processed.document)
+      val generator = generatorFactory(processed.document, processed.shapeIndex)
 
       try {
         generator.generateServiceTypes()

@@ -16,11 +16,12 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
@@ -53,7 +54,7 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
     SwiftTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document) = generatorFactory(document, typeRegistry)
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) = generatorFactory(document, shapeIndex, typeRegistry)
 
-  abstract fun generatorFactory(document: Document, typeRegistry: SwiftTypeRegistry): SwiftGenerator
+  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: SwiftTypeRegistry): SwiftGenerator
 }

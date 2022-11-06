@@ -44,9 +44,10 @@ class ResponseEventsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document ->
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
         TypeScriptSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           typeScriptSundayTestOptions,
         )
@@ -102,9 +103,10 @@ class ResponseEventsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document ->
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
         TypeScriptSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           typeScriptSundayTestOptions,
         )
@@ -185,9 +187,10 @@ class ResponseEventsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document ->
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
         TypeScriptSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           typeScriptSundayTestOptions,
         )

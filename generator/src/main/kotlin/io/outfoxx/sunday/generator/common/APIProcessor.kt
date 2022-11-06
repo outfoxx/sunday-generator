@@ -16,14 +16,11 @@
 
 package io.outfoxx.sunday.generator.common
 
-import amf.MessageStyles
-import amf.ProfileNames
-import amf.client.AMF
-import amf.client.environment.Environment
-import amf.client.model.document.Document
-import amf.client.parse.Raml10Parser
-import amf.client.validate.ValidationReport
-import amf.core.validation.SeverityLevels
+import amf.apicontract.client.platform.RAMLConfiguration
+import amf.core.client.common.transform.PipelineId
+import amf.core.client.common.validation.SeverityLevels
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.validation.AMFValidationReport
 import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import java.net.URI
 import java.util.concurrent.ExecutionException
@@ -32,8 +29,8 @@ open class APIProcessor {
 
   data class Result(
     val document: Document,
-    val validatedDocument: Document,
-    private val validationReport: ValidationReport
+    val shapeIndex: ShapeIndex,
+    private val validationReport: AMFValidationReport
   ) {
 
     enum class Level {
@@ -52,12 +49,12 @@ open class APIProcessor {
     val isValid: Boolean
       get() =
         validationReport.conforms() &&
-          validationReport.results().none { it.level() == SeverityLevels.VIOLATION() }
+          validationReport.results().none { it.severityLevel() == SeverityLevels.VIOLATION() }
 
     val validationLog: List<Entry>
       get() = validationReport.results().map {
         val level =
-          when (it.level()) {
+          when (it.severityLevel()) {
             SeverityLevels.VIOLATION() -> Level.Error
             SeverityLevels.WARNING() -> Level.Warning
             SeverityLevels.INFO() -> Level.Info
@@ -72,20 +69,24 @@ open class APIProcessor {
 
   open fun process(uri: URI): Result {
 
-    AMF.init().get()
+    val ramlClient =
+      RAMLConfiguration.RAML10()
+        .withResourceLoader(LocalResourceLoader)
+        .baseUnitClient()
 
-    val environment = Environment().addClientLoader(LocalResourceLoader)
-
-    val document =
+    val unresolvedDocument =
       try {
-        Raml10Parser(environment).parseFileAsync(uri.toString()).get() as Document
+        ramlClient.parseDocument(uri.toString()).get().document()
       } catch (x: ExecutionException) {
-        throw x.cause!!
+        throw x.cause ?: x
       }
 
-    val validatedDocument = document.cloneUnit() as Document
-    val validationReport = AMF.validate(validatedDocument, ProfileNames.RAML10(), MessageStyles.RAML()).get()
+    val shapeIndex = ShapeIndex.builder().index(unresolvedDocument).build()
 
-    return Result(document, validatedDocument, validationReport)
+    val validationReport = ramlClient.validate(unresolvedDocument).get()
+
+    val resolvedDocument = ramlClient.transform(unresolvedDocument, PipelineId.Cache()).baseUnit() as Document
+
+    return Result(resolvedDocument, shapeIndex, validationReport)
   }
 }

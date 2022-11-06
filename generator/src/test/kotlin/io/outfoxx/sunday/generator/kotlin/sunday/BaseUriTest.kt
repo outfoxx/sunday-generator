@@ -44,9 +44,10 @@ class BaseUriTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinSundayGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinSundayTestOptions,
         )

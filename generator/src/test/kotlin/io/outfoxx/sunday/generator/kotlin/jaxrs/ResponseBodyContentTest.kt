@@ -42,9 +42,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -86,9 +87,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -131,9 +133,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -175,9 +178,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -220,9 +224,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -268,9 +273,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -317,9 +323,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )
@@ -361,9 +368,10 @@ class ResponseBodyContentTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )

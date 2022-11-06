@@ -16,12 +16,12 @@
 
 package io.outfoxx.sunday.generator.common
 
-import amf.client.model.domain.DomainElement
-import amf.core.parser.Range
+import amf.core.client.platform.model.domain.DomainElement
 import io.outfoxx.sunday.generator.utils.annotations
 import io.outfoxx.sunday.generator.utils.location
+import org.mulesoft.common.client.lexical.PositionRange
 
-data class DefinitionLocation(val location: String, val range: Range) {
+data class DefinitionLocation(val location: String, val range: PositionRange) {
 
   constructor(element: DomainElement) : this(element.annotations.location, element.position())
 

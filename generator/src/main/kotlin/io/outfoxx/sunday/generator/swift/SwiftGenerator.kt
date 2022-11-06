@@ -16,19 +16,19 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.Document
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DataNode
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.Shape
-import amf.core.model.DataType
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
@@ -42,6 +42,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModule
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.NameGenerator
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
@@ -68,7 +69,6 @@ import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.root
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.servers
@@ -96,6 +96,7 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
  */
 abstract class SwiftGenerator(
   val document: Document,
+  val shapeIndex: ShapeIndex,
   val typeRegistry: SwiftTypeRegistry,
   override val options: Options,
 ) : Generator(document.api, options) {
@@ -244,6 +245,7 @@ abstract class SwiftGenerator(
             val requestBodyParameterTypeNameContext =
               SwiftResolutionContext(
                 document,
+                shapeIndex,
                 typeName.nestedType("${operation.swiftTypeName}RequestBody"),
               )
 
@@ -262,7 +264,7 @@ abstract class SwiftGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema.resolve,
+                payloadSchema,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder
@@ -280,6 +282,7 @@ abstract class SwiftGenerator(
             val responseBodyTypeNameContext =
               SwiftResolutionContext(
                 document,
+                shapeIndex,
                 typeName.nestedType("${operation.swiftTypeName}ResponseBody"),
               )
 
@@ -290,7 +293,7 @@ abstract class SwiftGenerator(
                 endPoint,
                 operation,
                 response,
-                responseBodyType.resolve,
+                responseBodyType,
                 problemTypes,
                 typeBuilder,
                 functionBuilder,
@@ -315,7 +318,7 @@ abstract class SwiftGenerator(
           val bodyType = response.payloads.firstOrNull()?.schema
           if (bodyType != null) {
 
-            typeRegistry.resolveTypeName(bodyType, SwiftResolutionContext(document, null))
+            typeRegistry.resolveTypeName(bodyType, SwiftResolutionContext(document, shapeIndex, null))
           }
         }
 
@@ -334,7 +337,7 @@ abstract class SwiftGenerator(
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
               }
               .toMap()
           } ?: emptyMap()
@@ -364,6 +367,7 @@ abstract class SwiftGenerator(
       val uriParameterTypeNameContext =
         SwiftResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedType("${operation.swiftTypeName}${parameter.swiftTypeName}UriParam"),
         )
 
@@ -419,6 +423,7 @@ abstract class SwiftGenerator(
       val queryParameterTypeNameContext =
         SwiftResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedType("${operation.swiftTypeName}${parameter.swiftTypeName}QueryParam")
         )
 
@@ -473,6 +478,7 @@ abstract class SwiftGenerator(
       val headerParameterTypeNameContext =
         SwiftResolutionContext(
           document,
+          shapeIndex,
           typeName.nestedType("${operation.swiftTypeName}${header.swiftTypeName}HeaderParam")
         )
 
@@ -513,7 +519,7 @@ abstract class SwiftGenerator(
   }
 
   fun resolveTypeName(shape: Shape, suggestedTypeName: DeclaredTypeName?): TypeName {
-    return typeRegistry.resolveTypeName(shape, SwiftResolutionContext(document, suggestedTypeName))
+    return typeRegistry.resolveTypeName(shape, SwiftResolutionContext(document, shapeIndex, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -585,7 +591,7 @@ abstract class SwiftGenerator(
 
           val defaultValue =
             if (variable.name == "version")
-              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
             else
               variable.schema?.defaultValue
 

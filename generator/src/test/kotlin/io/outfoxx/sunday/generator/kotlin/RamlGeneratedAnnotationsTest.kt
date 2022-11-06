@@ -72,14 +72,14 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", "javax.annotation.Generated", GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry = KotlinTypeRegistry("io.test", "io.outfoxx.sunday.annotation.Generated", GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
     assertEquals(
       """
         package io.test.service
         
-        import javax.`annotation`.Generated
+        import io.outfoxx.sunday.`annotation`.Generated
         import kotlin.String
         
         @Generated(
@@ -134,9 +134,10 @@ class RamlGeneratedAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions
         )
@@ -184,9 +185,10 @@ class RamlGeneratedAnnotationsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           kotlinJAXRSTestOptions,
         )

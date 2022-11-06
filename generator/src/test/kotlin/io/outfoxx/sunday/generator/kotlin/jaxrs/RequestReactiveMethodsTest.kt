@@ -48,9 +48,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -103,9 +104,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -158,9 +160,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -229,9 +232,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -300,9 +304,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -373,9 +378,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -446,9 +452,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,
@@ -519,9 +526,10 @@ class RequestReactiveMethodsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document ->
+      generate(testUri, typeRegistry) { document, shapeIndex ->
         KotlinJAXRSGenerator(
           document,
+          shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
             false,

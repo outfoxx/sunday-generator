@@ -16,16 +16,13 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.BaseUnit
+import amf.core.client.platform.model.document.BaseUnit
 import io.outfoxx.sunday.generator.common.ResolutionContext
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.swiftpoet.DeclaredTypeName
 
 data class SwiftResolutionContext(
   override val unit: BaseUnit,
+  override val shapeIndex: ShapeIndex,
   val suggestedTypeName: DeclaredTypeName?
-) : ResolutionContext {
-
-  fun copy(suggestedTypeName: DeclaredTypeName? = null): SwiftResolutionContext {
-    return SwiftResolutionContext(unit, suggestedTypeName)
-  }
-}
+) : ResolutionContext

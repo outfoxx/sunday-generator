@@ -16,9 +16,9 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.domain.DataNode
-import amf.client.model.domain.ObjectNode
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.ObjectNode
 import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.rawScalarValue
 import io.outfoxx.sunday.generator.utils.stringValue

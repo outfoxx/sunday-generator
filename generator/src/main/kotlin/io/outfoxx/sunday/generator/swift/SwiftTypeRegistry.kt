@@ -18,23 +18,23 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.AnyShape
-import amf.client.model.domain.ArrayNode
-import amf.client.model.domain.ArrayShape
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DomainElement
-import amf.client.model.domain.FileShape
-import amf.client.model.domain.NilShape
-import amf.client.model.domain.NodeShape
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.PropertyShape
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.ScalarShape
-import amf.client.model.domain.Shape
-import amf.client.model.domain.UnionShape
-import amf.core.model.DataType
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
 import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
@@ -47,6 +47,7 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
@@ -69,14 +70,7 @@ import io.outfoxx.sunday.generator.swift.utils.URL
 import io.outfoxx.sunday.generator.swift.utils.swiftEnumName
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceNode
-import io.outfoxx.sunday.generator.utils.aggregateInheritanceSuper
-import io.outfoxx.sunday.generator.utils.and
-import io.outfoxx.sunday.generator.utils.anyInheritance
-import io.outfoxx.sunday.generator.utils.anyInheritanceNode
-import io.outfoxx.sunday.generator.utils.anyInheritanceSuper
 import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.closed
 import io.outfoxx.sunday.generator.utils.dataType
 import io.outfoxx.sunday.generator.utils.discriminator
 import io.outfoxx.sunday.generator.utils.discriminatorMapping
@@ -84,8 +78,6 @@ import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.encodes
 import io.outfoxx.sunday.generator.utils.findAnnotation
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findDeclaringUnit
-import io.outfoxx.sunday.generator.utils.findInheritingShapes
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.format
@@ -93,25 +85,18 @@ import io.outfoxx.sunday.generator.utils.get
 import io.outfoxx.sunday.generator.utils.getValue
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.inheritanceRoot
-import io.outfoxx.sunday.generator.utils.inherits
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceNode
-import io.outfoxx.sunday.generator.utils.inheritsInheritanceSuper
-import io.outfoxx.sunday.generator.utils.inheritsViaAggregation
-import io.outfoxx.sunday.generator.utils.inheritsViaInherits
-import io.outfoxx.sunday.generator.utils.isOrWasLink
 import io.outfoxx.sunday.generator.utils.items
 import io.outfoxx.sunday.generator.utils.makesNullable
 import io.outfoxx.sunday.generator.utils.minCount
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.nullable
 import io.outfoxx.sunday.generator.utils.nullableType
 import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
-import io.outfoxx.sunday.generator.utils.properties
+import io.outfoxx.sunday.generator.utils.patternProperties
 import io.outfoxx.sunday.generator.utils.range
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import io.outfoxx.sunday.generator.utils.uniqueItems
@@ -157,7 +142,6 @@ import io.outfoxx.swiftpoet.VOID
 import io.outfoxx.swiftpoet.joinToCode
 import io.outfoxx.swiftpoet.parameterizedBy
 import io.outfoxx.swiftpoet.tag
-import java.net.URI
 import java.nio.file.Path
 import kotlin.math.min
 
@@ -215,14 +199,14 @@ class SwiftTypeRegistry(
 
   fun resolveTypeName(shape: Shape, context: SwiftResolutionContext): TypeName {
 
-    val resolvedShape = shape.resolve
+    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
 
-    var typeName = typeNameMappings[resolvedShape.id]
+    var typeName = typeNameMappings[shape.id]
     if (typeName == null) {
 
-      typeName = generateTypeName(resolvedShape, context)
+      typeName = generateTypeName(shape, context)
 
-      typeNameMappings[resolvedShape.id] = typeName
+      typeNameMappings[shape.id] = typeName
     }
 
     return typeName
@@ -247,7 +231,8 @@ class SwiftTypeRegistry(
 
   override fun defineProblemType(
     problemCode: String,
-    problemTypeDefinition: ProblemTypeDefinition
+    problemTypeDefinition: ProblemTypeDefinition,
+    shapeIndex: ShapeIndex,
   ): DeclaredTypeName {
 
     val moduleName = moduleNameOf(problemTypeDefinition.definedIn)
@@ -281,7 +266,7 @@ class SwiftTypeRegistry(
                       resolveTypeReference(
                         customPropertyTypeNameStr,
                         problemTypeDefinition.source,
-                        SwiftResolutionContext(problemTypeDefinition.definedIn, null)
+                        SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                       )
                     )
                     .build()
@@ -315,7 +300,7 @@ class SwiftTypeRegistry(
                 resolveTypeReference(
                   customPropertyTypeNameStr,
                   problemTypeDefinition.source,
-                  SwiftResolutionContext(problemTypeDefinition.definedIn, null)
+                  SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                 ),
                 PUBLIC
               )
@@ -359,7 +344,7 @@ class SwiftTypeRegistry(
                   resolveTypeReference(
                     customPropertyTypeNameStr,
                     problemTypeDefinition.source,
-                    SwiftResolutionContext(problemTypeDefinition.definedIn, null)
+                    SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
                   )
                 addStatement(
                   "self.%N = try container.decode%L(%T.self, forKey: %T.%N)",
@@ -434,9 +419,8 @@ class SwiftTypeRegistry(
           val (element, unit) = context.resolveRef(elementTypeNameStr, source)
             ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
-          val resContext = SwiftResolutionContext(unit, null)
 
-          resolveReferencedTypeName(element, resContext)
+          resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
         }
       }
     val typeName =
@@ -496,11 +480,9 @@ class SwiftTypeRegistry(
 
   private fun processAnyShape(shape: AnyShape, context: SwiftResolutionContext): TypeName =
     when {
-      shape.inheritsViaAggregation ->
+      context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          shape.and.first { it.isOrWasLink }.resolve,
-          shape.and.first { !it.isOrWasLink } as NodeShape,
           context
         )
 
@@ -515,7 +497,7 @@ class SwiftTypeRegistry(
 
   private fun processScalarShape(shape: ScalarShape, context: SwiftResolutionContext): TypeName =
     when (shape.dataType) {
-      DataType.String() ->
+      DataTypes.String() ->
 
         if (shape.values.isNotEmpty()) {
           defineEnum(shape, context)
@@ -526,9 +508,9 @@ class SwiftTypeRegistry(
           }
         }
 
-      DataType.Boolean() -> BOOL
+      DataTypes.Boolean() -> BOOL
 
-      DataType.Integer() ->
+      DataTypes.Integer() ->
         when (shape.format) {
           "int8" -> INT8
           "int16" -> INT16
@@ -538,21 +520,21 @@ class SwiftTypeRegistry(
           else -> genError("Integer format '${shape.format}' is unsupported", shape)
         }
 
-      DataType.Long() -> INT64
+      DataTypes.Long() -> INT64
 
-      DataType.Float() -> FLOAT
-      DataType.Double() -> DOUBLE
-      DataType.Number() -> DOUBLE
+      DataTypes.Float() -> FLOAT
+      DataTypes.Double() -> DOUBLE
+      DataTypes.Number() -> DOUBLE
 
-      DataType.Decimal() -> DECIMAL
+      DataTypes.Decimal() -> DECIMAL
 
-      DataType.Duration() -> INT64
-      DataType.Date() -> DATE
-      DataType.Time() -> DATE
-      DataType.DateTimeOnly() -> DATE
-      DataType.DateTime() -> DATE
+//      DataTypes.Duration() -> INT64
+      DataTypes.Date() -> DATE
+      DataTypes.Time() -> DATE
+      DataTypes.DateTimeOnly() -> DATE
+      DataTypes.DateTime() -> DATE
 
-      DataType.Binary() -> DATE
+      DataTypes.Binary() -> DATE
 
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
@@ -580,31 +562,31 @@ class SwiftTypeRegistry(
 
   private fun processNodeShape(shape: NodeShape, context: SwiftResolutionContext): TypeName {
 
-    if (shape.properties.isEmpty() && shape.inherits.size == 1 && context.unit.findInheritingShapes(shape).isEmpty()) {
-      return resolveReferencedTypeName(shape.inherits[0], context)
-    }
-
     if (
-      shape.properties.isEmpty() &&
-      shape.inherits.isEmpty() &&
-      shape.closed != true &&
-      context.unit.findInheritingShapes(shape).isEmpty()
+      shape.nonPatternProperties.isEmpty() &&
+      context.hasNoInherited(shape) &&
+      context.hasNoInheriting(shape)
     ) {
 
-      val allTypes = collectTypes(shape.properties().map { it.range })
+      val patternProperties = shape.patternProperties
+      return if (patternProperties.isNotEmpty()) {
 
-      val commonType = nearestCommonAncestor(allTypes, context) ?: ANY
+        val patternPropertyShapes = collectTypes(patternProperties.map { it.range })
 
-      return DICTIONARY.parameterizedBy(STRING, commonType)
+        val valueTypeName = nearestCommonAncestor(patternPropertyShapes, context) ?: ANY
+
+        DICTIONARY.parameterizedBy(STRING, valueTypeName)
+      } else {
+
+        DICTIONARY.parameterizedBy(STRING, ANY)
+      }
     }
 
-    return defineClass(shape, shape.inherits.firstOrNull()?.let { it.resolve as NodeShape }, shape, context)
+    return defineClass(shape, context)
   }
 
   private fun defineClass(
-    shape: Shape,
-    superShape: Shape?,
-    propertyContainerShape: NodeShape,
+    shape: NodeShape,
     context: SwiftResolutionContext
   ): DeclaredTypeName {
 
@@ -627,35 +609,36 @@ class SwiftTypeRegistry(
 
     typeBuilder.tag(DefinitionLocation(shape))
 
+    val superShape = context.findSuperShapeOrNull(shape) as NodeShape?
     if (superShape != null) {
       val superClassName = resolveReferencedTypeName(superShape, context)
       typeBuilder.addSuperType(superClassName)
     }
 
     val isRoot = superShape == null
-    val isPatchable = shape.resolve.findBoolAnnotation(Patchable, null) == true
+    val isPatchable = shape.findBoolAnnotation(Patchable, null) == true
 
     val codingKeysTypeName = className.nestedType(CODING_KEYS_NAME)
     var codingKeysType: TypeSpec? = null
 
-    val originalInheritedProperties = collectProperties(superShape)
+    val originalInheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
     val originalInheritedDeclaredProperties =
       originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var inheritedDeclaredProperties = originalInheritedDeclaredProperties
 
-    val originalLocalProperties = propertyContainerShape.properties
+    val originalLocalProperties = context.findProperties(shape)
     var localProperties = originalLocalProperties
     val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var localDeclaredProperties = originalLocalDeclaredProperties
 
-    val inheritingTypes = context.unit.findInheritingShapes(shape)
+    val inheritingTypes = context.findInheritingShapes(shape).map { it as NodeShape }
 
     /*
       Computed discriminator values (for generating polymorphic Codable)
      */
 
     var discriminatorProperty: PropertyShape? = null
-    val discriminatorPropertyName = findDiscriminatorPropertyName(shape)
+    val discriminatorPropertyName = findDiscriminatorPropertyName(shape, context)
     if (discriminatorPropertyName != null) {
 
       discriminatorProperty = (originalInheritedProperties + originalLocalProperties)
@@ -673,7 +656,7 @@ class SwiftTypeRegistry(
 
       // Add abstract discriminator if this is the root of the discriminator tree
 
-      if (propertyContainerShape.discriminator == discriminatorPropertyName) {
+      if (context.hasNoInherited(shape)) {
 
         typeBuilder.addProperty(
           PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
@@ -915,7 +898,7 @@ class SwiftTypeRegistry(
       var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
       var encoderPre = ""
 
-      val isLeaf = context.unit.findInheritingShapes(prop.range).isEmpty()
+      val isLeaf = context.hasNoInheriting(prop.range)
       val (refCollection, refElement) = replaceCollectionValueTypesWithReferenceTypes(propertyTypeName)
 
       if (!isLeaf) {
@@ -981,7 +964,7 @@ class SwiftTypeRegistry(
           resolvePropertyTypeName(externalDiscriminatorProperty, className, context)
         val externalDiscriminatorPropertyEnumCases =
           typeBuilders[externalDiscriminatorPropertyTypeName]?.build()?.enumCases?.map { it.name }
-        val propertyTypeDerivedShapes = context.unit.findInheritingShapes(prop.range)
+        val propertyTypeDerivedShapes = context.findInheritingShapes(prop.range).map { it as NodeShape }
 
         if (externalDiscriminatorProperty.optional && prop.required) {
           genError("($ExternalDiscriminator) property is not required but the property it discriminates is", shape)
@@ -1359,12 +1342,8 @@ class SwiftTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: SwiftResolutionContext): DeclaredTypeName {
 
-    if (context.suggestedTypeName != null) {
-      val typeIdFrag = URI(shape.id).fragment
-      val typeName = shape.name
-      if (typeIdFrag.endsWith("/property/$typeName/$typeName") || !typeIdFrag.startsWith("/declarations")) {
-        return context.suggestedTypeName
-      }
+    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+      return context.suggestedTypeName
     }
 
     val moduleName = moduleNameOf(shape, context)
@@ -1409,7 +1388,7 @@ class SwiftTypeRegistry(
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
-    val nestedEnclosingTypeContext = SwiftResolutionContext(nestedEnclosingTypeUnit, null)
+    val nestedEnclosingTypeContext = context.copy(unit = nestedEnclosingTypeUnit, suggestedTypeName = null)
 
     val nestedEnclosingTypeName =
       resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? DeclaredTypeName
@@ -1419,7 +1398,7 @@ class SwiftTypeRegistry(
   }
 
   private fun moduleNameOf(shape: Shape, context: SwiftResolutionContext): String =
-    moduleNameOf(context.unit.findDeclaringUnit(shape))
+    moduleNameOf(context.findDeclaringUnit(shape))
 
   private fun moduleNameOf(unit: BaseUnit?): String =
     (unit as? CustomizableElement)?.findStringAnnotation(APIAnnotationName.SwiftModelModule, null)
@@ -1452,44 +1431,11 @@ class SwiftTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun collectProperties(shape: Shape?): List<PropertyShape> =
-    when {
-      shape == null -> emptyList()
-      shape is NodeShape && shape.inheritsViaInherits -> collectInheritedProperties(shape)
-      shape.inheritsViaAggregation -> collectAggregatedProperties(shape)
-      shape is NodeShape -> shape.properties
-      else -> emptyList()
-    }
-
-  private fun collectAggregatedProperties(shape: Shape): List<PropertyShape> {
-    val parent = shape.aggregateInheritanceSuper.resolve
-    val current = shape.aggregateInheritanceNode
-    val parentProperties =
-      when {
-        parent.inheritsViaAggregation -> collectAggregatedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
-  private fun collectInheritedProperties(shape: NodeShape): List<PropertyShape> {
-    val parent = shape.inheritsInheritanceSuper.resolve
-    val current = shape.inheritsInheritanceNode
-    val parentProperties =
-      when {
-        parent is NodeShape && parent.inheritsViaInherits -> collectInheritedProperties(parent)
-        parent is NodeShape -> parent.properties
-        else -> emptyList()
-      }
-    return parentProperties.plus(current.properties)
-  }
-
   private fun nearestCommonAncestor(types: List<Shape>, context: SwiftResolutionContext): DeclaredTypeName? {
 
     var currentClassNameHierarchy: List<DeclaredTypeName>? = null
     for (type in types) {
-      val propertyClassNameHierarchy = classNameHierarchy(type.resolve, context) ?: break
+      val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
       currentClassNameHierarchy =
         if (currentClassNameHierarchy == null)
           propertyClassNameHierarchy
@@ -1510,24 +1456,23 @@ class SwiftTypeRegistry(
     while (current != null) {
       val currentClass = resolveReferencedTypeName(current, context) as? DeclaredTypeName ?: return null
       names.add(currentClass)
-      current = current.anyInheritanceSuper
+      current = context.findSuperShapeOrNull(current)
     }
 
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: Shape): String? =
+  private fun findDiscriminatorPropertyName(shape: NodeShape, context: SwiftResolutionContext): String? =
     when {
-      shape is NodeShape && !shape.discriminator.isNullOrEmpty() -> shape.discriminator
-      shape.anyInheritance && !shape.anyInheritanceNode?.discriminator.isNullOrEmpty() -> shape.anyInheritanceNode?.discriminator
-      else -> shape.anyInheritanceSuper?.let { findDiscriminatorPropertyName(it) }
+      !shape.discriminator.isNullOrEmpty() -> shape.discriminator
+      else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: Shape, context: SwiftResolutionContext): String? =
-    if (shape is NodeShape && !shape.discriminatorValue.isNullOrEmpty()) {
+  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: SwiftResolutionContext): String? =
+    if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
-      val root = shape.inheritanceRoot as NodeShape
+      val root = context.findRootShape(shape) as NodeShape
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 

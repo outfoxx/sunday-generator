@@ -16,17 +16,19 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.common.ShapeIndex
 
 class KotlinSundayGenerateCommand :
   KotlinGenerateCommand(name = "kotlin/sunday", help = "Generate Kotlin client for Sunday framework") {
 
   override val mode = GenerationMode.Client
 
-  override fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry) =
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
     KotlinSundayGenerator(
       document,
+      shapeIndex,
       typeRegistry,
       KotlinGenerator.Options(
         servicePackageName ?: packageName,

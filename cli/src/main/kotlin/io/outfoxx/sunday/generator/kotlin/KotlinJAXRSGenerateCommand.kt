@@ -16,12 +16,13 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.client.model.document.Document
+import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
@@ -65,9 +66,10 @@ class KotlinJAXRSGenerateCommand :
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
 
-  override fun generatorFactory(document: Document, typeRegistry: KotlinTypeRegistry) =
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
     KotlinJAXRSGenerator(
       document,
+      shapeIndex,
       typeRegistry,
       KotlinJAXRSGenerator.Options(
         coroutineServiceMethods,

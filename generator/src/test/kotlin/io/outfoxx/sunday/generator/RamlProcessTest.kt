@@ -20,7 +20,11 @@ import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.common.APIProcessor.Result.Level
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.generator.utils.api
+import io.outfoxx.sunday.generator.utils.customDomainProperties
 import io.outfoxx.sunday.generator.utils.endPoints
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.operations
 import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -29,9 +33,10 @@ import org.hamcrest.Matchers.blankOrNullString
 import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.empty
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.not
-import org.junit.jupiter.api.Disabled
+import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
@@ -53,7 +58,6 @@ class RamlProcessTest {
   }
 
   @Test
-  @Disabled("https://github.com/aml-org/amf/issues/962")
   fun `process produces valid overlays documents`(
     @ResourceUri("raml/test-overlay.raml") testUri: URI
   ) {
@@ -62,6 +66,11 @@ class RamlProcessTest {
 
     assertThat(result.isValid, equalTo(true))
     assertThat(result.validationLog, empty())
-    assertThat(result.document.api.endPoints.map { it.path }, containsInAnyOrder("/test", "/test/{id}"))
+    assertThat(result.document.api.endPoints.map { it.path }, containsInAnyOrder("/test", "/test/{id}", "/test2", "/test2/{id}"))
+
+    val testIdEndPoint = result.document.api.endPoints.first { it.path == "/test/{id}" }
+    val getOperation = testIdEndPoint.operations.firstOrNull { it.method == "get" }
+    assertThat(getOperation, notNullValue())
+    assertThat(getOperation?.customDomainProperties?.map { it.name }, hasItem("test-ann"))
   }
 }

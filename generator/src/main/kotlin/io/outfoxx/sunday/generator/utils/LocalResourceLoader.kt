@@ -16,34 +16,26 @@
 
 package io.outfoxx.sunday.generator.utils
 
-import amf.client.remote.Content
-import amf.client.resource.ClientResourceLoader
-import amf.client.resource.FileResourceLoader
-import amf.client.resource.HttpResourceLoader
-import amf.core.remote.FileNotFound
-import amf.core.remote.UnsupportedUrlScheme
+import amf.core.client.common.remote.Content
+import amf.core.client.platform.resource.HttpResourceLoader
+import amf.core.client.platform.resource.ResourceLoader
 import java.util.concurrent.CompletableFuture
 
-object LocalResourceLoader : ClientResourceLoader {
+object LocalResourceLoader : ResourceLoader {
 
-  private val fileLoader = FileResourceLoader()
   private val httpLoader = HttpResourceLoader()
 
+  override fun accepts(resource: String?): Boolean {
+    return resource.equals("https://outfoxx.github.io/sunday-generator/sunday.raml", ignoreCase = true)
+  }
+
   override fun fetch(resource: String): CompletableFuture<Content> {
-    return if (resource.equals("https://outfoxx.github.io/sunday-generator/sunday.raml", ignoreCase = true)) {
-      val bytes = LocalResourceLoader::class.java.getResource("/sunday.raml")?.openStream()?.readAllBytes()
-      if (bytes != null) {
-        val content = Content(String(bytes, Charsets.UTF_8), resource)
-        CompletableFuture.completedFuture(content)
-      } else {
-        httpLoader.fetch(resource)
-      }
-    } else if (resource.startsWith("file:")) {
-      fileLoader.fetch(resource)
-    } else if (resource.startsWith("http:") || resource.startsWith("https:")) {
-      httpLoader.fetch(resource)
+    val bytes = LocalResourceLoader::class.java.getResource("/sunday.raml")?.openStream()?.readAllBytes()
+    return if (bytes != null) {
+      val content = Content(String(bytes, Charsets.UTF_8), resource)
+      CompletableFuture.completedFuture(content)
     } else {
-      throw FileNotFound(UnsupportedUrlScheme(resource))
+      return httpLoader.fetch(resource)
     }
   }
 }

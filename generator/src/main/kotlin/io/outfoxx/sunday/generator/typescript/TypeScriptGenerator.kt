@@ -16,19 +16,19 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.client.model.document.BaseUnit
-import amf.client.model.document.Document
-import amf.client.model.document.EncodesModel
-import amf.client.model.domain.CustomizableElement
-import amf.client.model.domain.DataNode
-import amf.client.model.domain.EndPoint
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.Operation
-import amf.client.model.domain.Parameter
-import amf.client.model.domain.Response
-import amf.client.model.domain.ScalarNode
-import amf.client.model.domain.Shape
-import amf.core.model.DataType
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Response
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.document.EncodesModel
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.ProblemBaseUri
@@ -41,6 +41,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModule
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.NameGenerator
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
@@ -69,7 +70,6 @@ import io.outfoxx.sunday.generator.utils.queryParameters
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.resolve
 import io.outfoxx.sunday.generator.utils.root
 import io.outfoxx.sunday.generator.utils.schema
 import io.outfoxx.sunday.generator.utils.servers
@@ -97,6 +97,7 @@ import javax.ws.rs.core.Response.Status.NO_CONTENT
  */
 abstract class TypeScriptGenerator(
   val document: Document,
+  val shapeIndex: ShapeIndex,
   val typeRegistry: TypeScriptTypeRegistry,
   override val options: Options,
 ) : Generator(document.api, options) {
@@ -151,7 +152,7 @@ abstract class TypeScriptGenerator(
               val defaultValue = param.defaultValue
               if (defaultValue != null) {
                 addCode("%L: %L ?? ", param.name, param.name)
-                addCode(defaultValue.typeScriptConstant(param.typeName, param.shape?.resolve))
+                addCode(defaultValue.typeScriptConstant(param.typeName, param.shape))
               } else {
                 addCode("%L", param.name)
               }
@@ -294,7 +295,7 @@ abstract class TypeScriptGenerator(
               processResourceMethodBodyParameter(
                 endPoint,
                 operation,
-                payloadSchema.resolve,
+                payloadSchema,
                 typeBuilder,
                 functionBuilder,
                 requestBodyParameterBuilder
@@ -317,7 +318,7 @@ abstract class TypeScriptGenerator(
                 endPoint,
                 operation,
                 response,
-                responseBodyType.resolve,
+                responseBodyType,
                 problemTypes,
                 typeBuilder,
                 functionBuilder,
@@ -361,7 +362,7 @@ abstract class TypeScriptGenerator(
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
               }
               .toMap()
           } ?: emptyMap()
@@ -512,7 +513,7 @@ abstract class TypeScriptGenerator(
   }
 
   private fun resolveTypeName(shape: Shape, suggestedTypeName: TypeName.Standard): TypeName {
-    return typeRegistry.resolveTypeName(shape, TypeScriptResolutionContext(document, suggestedTypeName))
+    return typeRegistry.resolveTypeName(shape, TypeScriptResolutionContext(document, shapeIndex, suggestedTypeName))
   }
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
@@ -585,7 +586,7 @@ abstract class TypeScriptGenerator(
 
           val defaultValue =
             if (variable.name == "version")
-              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataType.String())
+              variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
             else
               variable.schema?.defaultValue
 

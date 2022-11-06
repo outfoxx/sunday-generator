@@ -213,6 +213,7 @@ open class SundayGenerate
           TargetFramework.JAXRS ->
             KotlinJAXRSGenerator(
               processed.document,
+              processed.shapeIndex,
               typeRegistry,
               KotlinJAXRSGenerator.Options(
                 coroutines.orNull ?: false,
@@ -230,6 +231,7 @@ open class SundayGenerate
           TargetFramework.Sunday ->
             KotlinSundayGenerator(
               processed.document,
+              processed.shapeIndex,
               typeRegistry,
               KotlinGenerator.Options(
                 servicePkgName,

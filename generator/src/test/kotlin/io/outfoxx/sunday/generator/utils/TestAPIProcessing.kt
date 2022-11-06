@@ -16,14 +16,15 @@
 
 package io.outfoxx.sunday.generator.utils
 
-import amf.client.model.document.Document
-import amf.client.model.domain.ObjectNode
-import amf.client.model.domain.Shape
+import amf.core.client.platform.model.document.Document
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.Shape
 import com.damnhandy.uri.template.UriTemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIProcessor
+import io.outfoxx.sunday.generator.common.ShapeIndex
 import org.junit.jupiter.api.fail
 import java.net.URI
 
@@ -47,8 +48,9 @@ object TestAPIProcessing : APIProcessor() {
 
   fun generateTypes(
     document: Document,
+    shapeIndex: ShapeIndex,
     mode: GenerationMode,
-    problemTypeHandler: (String, ProblemTypeDefinition) -> Unit,
+    problemTypeHandler: (String, ProblemTypeDefinition, ShapeIndex) -> Unit,
     typeHandler: (name: String, shape: Shape) -> Unit
   ) {
 
@@ -96,7 +98,7 @@ object TestAPIProcessing : APIProcessor() {
     problemTypesAnn?.properties()?.forEach { (problemCode, problemDef) ->
       val problemType =
         ProblemTypeDefinition(problemCode, problemDef as ObjectNode, URI(problemBaseUri), document, problemDef)
-      problemTypeHandler(problemCode, problemType)
+      problemTypeHandler(problemCode, problemType, shapeIndex)
     }
   }
 }
