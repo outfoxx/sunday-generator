@@ -35,7 +35,7 @@ class RamlEnumTypesTest {
 
   @Test
   fun `test names generated for enums types & values`(
-    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -59,13 +59,13 @@ class RamlEnumTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test names generated for enums types & values with jackson`(
-    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
@@ -97,7 +97,7 @@ class RamlEnumTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

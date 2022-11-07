@@ -38,7 +38,7 @@ fun findType(name: String, types: Map<DeclaredTypeName, TypeSpec>): TypeSpec =
 fun generateTypes(
   uri: URI,
   typeRegistry: SwiftTypeRegistry,
-  compiler: SwiftCompiler
+  compiler: SwiftCompiler,
 ): Map<DeclaredTypeName, TypeSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)
@@ -68,7 +68,7 @@ fun generate(
   uri: URI,
   typeRegistry: SwiftTypeRegistry,
   compiler: SwiftCompiler,
-  generatorFactory: (Document, ShapeIndex) -> SwiftGenerator
+  generatorFactory: (Document, ShapeIndex) -> SwiftGenerator,
 ): Map<DeclaredTypeName, TypeSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)

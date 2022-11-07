@@ -36,7 +36,7 @@ class RamlDiscriminatedTypesTest {
   @Test
   fun `test polymorphism added to generated classes of string discriminated types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI
+    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -136,7 +136,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[typeName(".Child1")]
@@ -202,7 +202,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[typeName(".Child2")]
@@ -268,14 +268,14 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test polymorphism added to generated classes of enum discriminated types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI
+    @ResourceUri("raml/type-gen/discriminated/enum.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -369,7 +369,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[typeName(".Child1")]
@@ -425,7 +425,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[typeName(".Child2")]
@@ -481,7 +481,7 @@ class RamlDiscriminatedTypesTest {
       buildString {
         FileSpec.get("", child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

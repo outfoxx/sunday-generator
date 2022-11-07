@@ -39,7 +39,7 @@ class RamlDeclaredTypesTest {
 
   @Test
   fun `test multiple declarations with same name in separate files throws collision error`(
-    @ResourceUri("raml/type-gen/types/decl-dups-fail.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/decl-dups-fail.raml") testUri: URI,
   ) {
 
     // 'Client' mode assigns a specific package, generate in server mode to test collision detection
@@ -55,7 +55,7 @@ class RamlDeclaredTypesTest {
 
   @Test
   fun `test multiple declarations with same name in separate files is fixed by package annotation`(
-    @ResourceUri("raml/type-gen/types/decl-dups.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/decl-dups.raml") testUri: URI,
   ) {
 
     // 'Client' mode assigns a specific package, generate in client mode to allow generation
@@ -78,13 +78,13 @@ class RamlDeclaredTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test resource fragments with anonymous types can be imported multiple times`(
-    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/res-frag-anon-decl-dup.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())

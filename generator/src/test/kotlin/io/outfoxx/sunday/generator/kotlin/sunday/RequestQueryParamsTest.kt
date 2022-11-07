@@ -36,7 +36,7 @@ class RequestQueryParamsTest {
 
   @Test
   fun `test basic query parameter generation`(
-    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -56,7 +56,7 @@ class RequestQueryParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -68,12 +68,12 @@ class RequestQueryParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             obj: Test,
             strReq: String,
-            int: Int = 5
+            int: Int = 5,
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests",
@@ -90,13 +90,13 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional query parameter generation`(
-    @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -116,7 +116,7 @@ class RequestQueryParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -128,14 +128,14 @@ class RequestQueryParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             obj: Test? = null,
             str: String? = null,
             int: Int? = null,
             def1: String? = "test",
-            def2: Int? = 10
+            def2: Int? = 10,
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests",
@@ -154,13 +154,13 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple query parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -180,7 +180,7 @@ class RequestQueryParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -192,7 +192,7 @@ class RequestQueryParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(category: FetchTestCategoryQueryParam,
               type: FetchTestTypeQueryParam): Map<String, Any> = this.requestFactory.result(
@@ -220,7 +220,7 @@ class RequestQueryParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

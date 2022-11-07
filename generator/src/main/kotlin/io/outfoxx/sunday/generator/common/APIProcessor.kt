@@ -30,20 +30,20 @@ open class APIProcessor {
   data class Result(
     val document: Document,
     val shapeIndex: ShapeIndex,
-    private val validationReport: AMFValidationReport
+    private val validationReport: AMFValidationReport,
   ) {
 
     enum class Level {
       Error,
       Warning,
-      Info
+      Info,
     }
 
     data class Entry(
       val level: Level,
       val file: String,
       val line: Int,
-      val message: String
+      val message: String,
     )
 
     val isValid: Boolean

@@ -34,7 +34,7 @@ class RamlUnionTypesTest {
 
   @Test
   fun `test generated types for general union types`(
-    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-general.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -60,13 +60,13 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated types for common object types`(
-    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-common-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -85,13 +85,13 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated types for similarly named but uncommon object types`(
-    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/unions-uncommon-objects.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -112,7 +112,7 @@ class RamlUnionTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

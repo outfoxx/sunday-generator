@@ -36,7 +36,7 @@ class ResponseAsyncTest {
 
   @Test
   fun `test basic body parameter generation in async server mode`(
-    @ResourceUri("raml/resource-gen/res-async.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-async.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -77,7 +77,7 @@ class ResponseAsyncTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

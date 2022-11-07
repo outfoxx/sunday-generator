@@ -36,7 +36,7 @@ class RamlArrayTypesTest {
   @Test
   fun `test generated nullability of array types and elements`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -167,14 +167,14 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated collections`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -259,14 +259,14 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated primitive`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -327,7 +327,7 @@ class RamlArrayTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

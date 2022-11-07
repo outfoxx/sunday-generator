@@ -38,7 +38,7 @@ class RamlObjectTypesTest {
 
   @Test
   fun `test generated freeform object`(
-    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf<Option>()
@@ -57,18 +57,18 @@ class RamlObjectTypesTest {
         public interface Test {
           public val map: Map<String, Any>
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated nullability of property types in interfaces`(
-    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf<Option>()
@@ -84,21 +84,21 @@ class RamlObjectTypesTest {
 
         public interface Test {
           public val fromNilUnion: String?
-        
+
           public val notRequired: String?
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated nullability of property types in classes`(
-    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
@@ -116,7 +116,7 @@ class RamlObjectTypesTest {
 
         public class Test(
           public val fromNilUnion: String?,
-          public val notRequired: String?
+          public val notRequired: String?,
         ) {
           public fun copy(fromNilUnion: String? = null, notRequired: String? = null) = Test(fromNilUnion ?:
               this.fromNilUnion, notRequired ?: this.notRequired)
@@ -145,18 +145,18 @@ class RamlObjectTypesTest {
           | notRequired='${'$'}notRequired')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test naming of types defined inline in property`(
-    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf<Option>()
@@ -166,13 +166,13 @@ class RamlObjectTypesTest {
 
     assertEquals(
       "Value",
-      typeSpec.typeSpecs.firstOrNull()?.name
+      typeSpec.typeSpecs.firstOrNull()?.name,
     )
   }
 
   @Test
   fun `test naming of types defined inline in resource`(
-    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf<Option>()
@@ -184,13 +184,13 @@ class RamlObjectTypesTest {
 
     assertEquals(
       "io.test.API.FetchTestResponse0Payload",
-      builtTypes.keys.first().canonicalName
+      builtTypes.keys.first().canonicalName,
     )
   }
 
   @Test
   fun `test generated interfaces for object hierarchy`(
-    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf<Option>()
@@ -219,12 +219,12 @@ class RamlObjectTypesTest {
         public interface Test {
           public val `value`: String
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", testSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -236,12 +236,12 @@ class RamlObjectTypesTest {
         public interface Test2 : Test {
           public val value2: String
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", test2Spec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -249,12 +249,12 @@ class RamlObjectTypesTest {
         package io.test
 
         public interface Empty : Test2
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", emptySpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -266,18 +266,18 @@ class RamlObjectTypesTest {
         public interface Test3 : Empty {
           public val value3: String
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", test3Spec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated classes for object hierarchy`(
-    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI,
   ) {
 
     val typeRegistryOptions = setOf(ImplementModel)
@@ -307,7 +307,7 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public open class Test(
-          public val `value`: String
+          public val `value`: String,
         ) {
           public override fun hashCode(): Int {
             var result = 1
@@ -328,12 +328,12 @@ class RamlObjectTypesTest {
 
           public override fun toString() = ${'"'}""Test(value='${'$'}value')""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", testSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -347,7 +347,7 @@ class RamlObjectTypesTest {
 
         public open class Test2(
           `value`: String,
-          public val value2: String
+          public val value2: String,
         ) : Test(value) {
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
@@ -372,12 +372,12 @@ class RamlObjectTypesTest {
           | value2='${'$'}value2')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", test2Spec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -390,7 +390,7 @@ class RamlObjectTypesTest {
 
         public open class Empty(
           `value`: String,
-          value2: String
+          value2: String,
         ) : Test2(value, value2) {
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -408,12 +408,12 @@ class RamlObjectTypesTest {
           | value2='${'$'}value2')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", emptySpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -428,12 +428,12 @@ class RamlObjectTypesTest {
         public class Test3(
           `value`: String,
           value2: String,
-          public val value3: String
+          public val value3: String,
         ) : Empty(value, value2) {
           public fun copy(
             `value`: String? = null,
             value2: String? = null,
-            value3: String? = null
+            value3: String? = null,
           ) = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
 
           public override fun hashCode(): Int {
@@ -466,13 +466,13 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get("io.test", test3Spec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated interface property with kebab case name`(
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -487,21 +487,21 @@ class RamlObjectTypesTest {
 
         public interface Test {
           public val someValue: String
-        
+
           public val anotherValue: String
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated class property with kebab or snake case names`(
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
@@ -522,41 +522,41 @@ class RamlObjectTypesTest {
           @JsonProperty(value = "some-value")
           public val someValue: String,
           @JsonProperty(value = "another_value")
-          public val anotherValue: String
+          public val anotherValue: String,
         ) {
           public fun copy(someValue: String? = null, anotherValue: String? = null) = Test(someValue ?:
               this.someValue, anotherValue ?: this.anotherValue)
-        
+
           public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + someValue.hashCode()
             result = 31 * result + anotherValue.hashCode()
             return result
           }
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-        
+
             other as Test
-        
+
             if (someValue != other.someValue) return false
             if (anotherValue != other.anotherValue) return false
-        
+
             return true
           }
-        
+
           public override fun toString() = ""${'"'}
           |Test(someValue='${'$'}someValue',
           | anotherValue='${'$'}anotherValue')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

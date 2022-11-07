@@ -86,7 +86,11 @@ fun TypeName.mutable(): TypeName {
 val TypeName.isArray: Boolean
   get() =
     when (this.copy(nullable = false)) {
-      BOOLEAN_ARRAY, BYTE_ARRAY, CHAR_ARRAY, SHORT_ARRAY, INT_ARRAY, LONG_ARRAY, FLOAT_ARRAY, DOUBLE_ARRAY, U_BYTE_ARRAY, U_SHORT_ARRAY, U_INT_ARRAY, U_LONG_ARRAY -> true
+      BOOLEAN_ARRAY,
+      BYTE_ARRAY, CHAR_ARRAY, SHORT_ARRAY, INT_ARRAY, LONG_ARRAY,
+      U_BYTE_ARRAY, U_SHORT_ARRAY, U_INT_ARRAY, U_LONG_ARRAY,
+      FLOAT_ARRAY, DOUBLE_ARRAY,
+      -> true
       else -> false
     }
 

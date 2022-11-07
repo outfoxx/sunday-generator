@@ -37,7 +37,7 @@ class RequestUriParamsTest {
 
   @Test
   fun `test basic uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -78,7 +78,7 @@ class RequestUriParamsTest {
             @PathParam(value = "def") def: String,
             @PathParam(value = "obj") obj: Test,
             @PathParam(value = "str-req") strReq: String,
-            @PathParam(value = "int") @DefaultValue(value = "5") int: Int
+            @PathParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
         }
 
@@ -86,13 +86,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic uri parameter generation with validation constraints`(
-    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
@@ -134,7 +134,7 @@ class RequestUriParamsTest {
             @PathParam(value = "def") def: String,
             @PathParam(value = "obj") @Valid obj: Test,
             @PathParam(value = "str-req") strReq: String,
-            @PathParam(value = "int") @DefaultValue(value = "5") int: Int
+            @PathParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
         }
 
@@ -142,13 +142,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test inherited uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -189,7 +189,7 @@ class RequestUriParamsTest {
             @PathParam(value = "obj") obj: Map<String, Any>,
             @PathParam(value = "str") str: String,
             @PathParam(value = "def") def: String,
-            @PathParam(value = "int") int: Int
+            @PathParam(value = "int") int: Int,
           ): Response
         }
 
@@ -197,13 +197,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -246,7 +246,7 @@ class RequestUriParamsTest {
             @PathParam(value = "str") str: String?,
             @PathParam(value = "def1") @DefaultValue(value = "test") def1: String,
             @PathParam(value = "int") int: Int?,
-            @PathParam(value = "def") def: String
+            @PathParam(value = "def") def: String,
           ): Response
         }
 
@@ -254,13 +254,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple uri parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -311,7 +311,7 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

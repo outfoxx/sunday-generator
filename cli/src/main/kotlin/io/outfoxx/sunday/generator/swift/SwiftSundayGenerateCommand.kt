@@ -32,6 +32,6 @@ class SwiftSundayGenerateCommand :
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,
-      )
+      ),
     )
 }

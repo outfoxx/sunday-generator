@@ -28,9 +28,7 @@ dependencies {
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
 
   testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
-
 }
-
 
 application {
   applicationName = "sunday-generator"
@@ -52,7 +50,9 @@ publishing {
       pom {
 
         name.set("Sunday Generator - CLI")
-        description.set("Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.")
+        description.set(
+          "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
+        )
         url.set("https://outfoxx.github.io/sunday-generator")
 
         organization {
@@ -86,7 +86,6 @@ publishing {
             email.set("kevin@outfoxx.io")
           }
         }
-
       }
     }
   }

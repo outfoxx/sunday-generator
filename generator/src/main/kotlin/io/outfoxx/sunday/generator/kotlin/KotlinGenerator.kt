@@ -111,7 +111,7 @@ abstract class KotlinGenerator(
   val document: Document,
   val shapeIndex: ShapeIndex,
   val typeRegistry: KotlinTypeRegistry,
-  override val options: Options
+  override val options: Options,
 ) : Generator(document.api, options) {
 
   open class Options(
@@ -166,7 +166,7 @@ abstract class KotlinGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec.Builder
 
   abstract fun processResourceMethodUriParameter(
@@ -175,7 +175,7 @@ abstract class KotlinGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodQueryParameter(
@@ -184,7 +184,7 @@ abstract class KotlinGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodHeaderParameter(
@@ -193,7 +193,7 @@ abstract class KotlinGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodBodyParameter(
@@ -202,7 +202,7 @@ abstract class KotlinGenerator(
     payloadSchema: Shape,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processReturnType(
@@ -221,7 +221,7 @@ abstract class KotlinGenerator(
     operation: Operation,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ): FunSpec
 
   open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
@@ -244,7 +244,7 @@ abstract class KotlinGenerator(
   private fun generateClientServiceMethods(
     typeName: ClassName,
     typeBuilder: TypeSpec.Builder,
-    endPoints: List<EndPoint>
+    endPoints: List<EndPoint>,
   ) {
 
     val nameGenerator = NameGenerator.createDefaultGenerator()
@@ -294,7 +294,7 @@ abstract class KotlinGenerator(
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
                 functionBuilderNameAllocator.newName("body", payloadSchema),
-                requestBodyParameterTypeName
+                requestBodyParameterTypeName,
               )
 
             val requestBodyParameterSpec =
@@ -304,7 +304,7 @@ abstract class KotlinGenerator(
                 payloadSchema,
                 typeBuilder,
                 functionBuilder,
-                requestBodyParameterBuilder
+                requestBodyParameterBuilder,
               )
 
             functionBuilder.addParameter(requestBodyParameterSpec)
@@ -374,7 +374,11 @@ abstract class KotlinGenerator(
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(
+                  problemCode,
+                  problemTypeDefinition,
+                  shapeIndex,
+                )
               }
               .toMap()
           } ?: emptyMap()
@@ -396,7 +400,7 @@ abstract class KotlinGenerator(
     operation: Operation,
     typeName: ClassName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ) {
 
     endPoint.parameters.forEach { parameter ->
@@ -423,7 +427,7 @@ abstract class KotlinGenerator(
       val uriParameterBuilder =
         ParameterSpec.builder(
           functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
-          uriParameterTypeName
+          uriParameterTypeName,
         )
 
       val defaultValue = parameter.schema?.defaultValue
@@ -438,7 +442,7 @@ abstract class KotlinGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          uriParameterBuilder,
         )
 
       functionBuilder.addParameter(uriParameterSpec)
@@ -450,7 +454,7 @@ abstract class KotlinGenerator(
     operation: Operation,
     typeName: ClassName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ) {
 
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
@@ -461,7 +465,7 @@ abstract class KotlinGenerator(
         KotlinResolutionContext(
           document,
           shapeIndex,
-          typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}QueryParam")
+          typeName.nestedClass("${operation.kotlinTypeName}${parameter.kotlinTypeName}QueryParam"),
         )
 
       val queryParameterTypeName =
@@ -478,7 +482,7 @@ abstract class KotlinGenerator(
 
       val queryParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
-        queryParameterTypeName
+        queryParameterTypeName,
       )
 
       val defaultValue = parameter.schema?.defaultValue
@@ -493,7 +497,7 @@ abstract class KotlinGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          queryParameterBuilder
+          queryParameterBuilder,
         )
 
       functionBuilder.addParameter(queryParameterSpec)
@@ -505,7 +509,7 @@ abstract class KotlinGenerator(
     operation: Operation,
     typeName: ClassName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunSpec.Builder
+    functionBuilder: FunSpec.Builder,
   ) {
 
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
@@ -516,7 +520,7 @@ abstract class KotlinGenerator(
         KotlinResolutionContext(
           document,
           shapeIndex,
-          typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam")
+          typeName.nestedClass("${operation.kotlinTypeName}${header.kotlinTypeName}HeaderParam"),
         )
 
       val headerParameterTypeName =
@@ -533,7 +537,7 @@ abstract class KotlinGenerator(
 
       val headerParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
-        headerParameterTypeName
+        headerParameterTypeName,
       )
 
       val defaultValue = header.schema?.defaultValue
@@ -548,7 +552,7 @@ abstract class KotlinGenerator(
           header,
           typeBuilder,
           functionBuilder,
-          headerParameterBuilder
+          headerParameterBuilder,
         )
 
       functionBuilder.addParameter(headerParameterSpec)
@@ -564,7 +568,7 @@ abstract class KotlinGenerator(
     val problemBaseUriParams =
       document.api.findAnnotation(
         ProblemBaseUriParams,
-        typeRegistry.generationMode
+        typeRegistry.generationMode,
       )?.objectValue ?: emptyMap()
 
     fun expand(template: String): URI {
@@ -585,7 +589,7 @@ abstract class KotlinGenerator(
     var problemBaseUri =
       document.api.findAnnotation(
         ProblemBaseUri,
-        typeRegistry.generationMode
+        typeRegistry.generationMode,
       )?.stringValue?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
@@ -629,10 +633,11 @@ abstract class KotlinGenerator(
             } ?: String::class.asTypeName()
 
           val defaultValue =
-            if (variable.name == "version")
+            if (variable.name == "version") {
               variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
-            else
+            } else {
               variable.schema?.defaultValue
+            }
 
           URIParameter(name, variableTypeName, variable.schema, defaultValue)
         }
@@ -696,7 +701,7 @@ abstract class KotlinGenerator(
               val paramBuilder = it.toBuilder()
               paramBuilder.annotations.clear()
               paramBuilder.build()
-            }
+            },
           )
           .apply {
             if (copyAnnotaitons) {
@@ -708,7 +713,7 @@ abstract class KotlinGenerator(
           }
           .addKdoc(function.kdoc)
           .addCode(nullifyFunctionCodeBlock)
-          .build()
+          .build(),
       )
     }
   }
@@ -746,7 +751,10 @@ abstract class KotlinGenerator(
   }
 
   private val rxReturnTypes: List<TypeName> = listOf(
-    RXSINGLE2, RXSINGLE3, RXOBSERVABLE2, RXOBSERVABLE3,
+    RXSINGLE2,
+    RXSINGLE3,
+    RXOBSERVABLE2,
+    RXOBSERVABLE3,
   )
 
   private val supportedReactiveReturnTypes = listOf(
@@ -757,7 +765,7 @@ abstract class KotlinGenerator(
   private fun createReactiveNullifyMethodCode(
     function: FunSpec,
     statuses: Set<Int>,
-    problemTypeNames: Set<TypeName>
+    problemTypeNames: Set<TypeName>,
   ): CodeBlock {
 
     val codeBuilder = CodeBlock.builder()
@@ -799,7 +807,7 @@ abstract class KotlinGenerator(
         "x is %T && (%L) -> %L",
         ThrowableProblem::class.asTypeName(),
         statuses.joinToString(" || ") { "x.status?.statusCode == $it" },
-        nullLiteral
+        nullLiteral,
       )
     }
 

@@ -30,7 +30,7 @@ import org.gradle.api.provider.Property
 class SundayGeneration(
   val name: String,
   objects: ObjectFactory,
-  project: Project
+  project: Project,
 ) {
 
   private val sourceDef = project.fileTree("src/main/sunday") { it.include("**/*.raml") }

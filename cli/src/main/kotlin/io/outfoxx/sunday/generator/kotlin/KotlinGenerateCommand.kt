@@ -42,42 +42,36 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
     )
   }
 
-  val packageName
-    by option(
+  val packageName by option(
     "-pkg",
-    help = "Default package"
+    help = "Default package",
   ).required()
 
-  val modelPackageName
-    by option(
+  val modelPackageName by option(
     "-model-pkg",
-    help = "Default model package, if not specified '-pkg' is used"
+    help = "Default model package, if not specified '-pkg' is used",
   )
 
-  val servicePackageName
-    by option(
+  val servicePackageName by option(
     "-service-pkg",
-    help = "Default service package, if not specified '-pkg' is used"
+    help = "Default service package, if not specified '-pkg' is used",
   )
 
-  val enabledOptions
-    by option(
+  val enabledOptions by option(
     "-enable",
-    help = "Enable type generation option"
+    help = "Enable type generation option",
   ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
-  val disabledOptions
-    by option(
+  val disabledOptions by option(
     "-disable",
-    help = "Disable type generation option"
+    help = "Disable type generation option",
   ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
-  val generatedAnnotationName
-    by option(
+  val generatedAnnotationName by option(
     "-generated-annotation",
-    help = "Fully qualified name of generated source annotation"
+    help = "Fully qualified name of generated source annotation",
   )
 
   val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
@@ -93,7 +87,12 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
 
   abstract val mode: GenerationMode
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) = generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
+    generatorFactory(document, shapeIndex, typeRegistry)
 
-  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry): KotlinGenerator
+  abstract fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: KotlinTypeRegistry,
+  ): KotlinGenerator
 }

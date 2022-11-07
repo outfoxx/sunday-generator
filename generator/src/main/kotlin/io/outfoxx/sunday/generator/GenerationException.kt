@@ -23,7 +23,7 @@ class GenerationException(
   message: String,
   val file: String,
   val line: Int,
-  val column: Int
+  val column: Int,
 ) : Exception(message)
 
 fun genError(message: String, element: DomainElement? = null): Nothing {
@@ -35,6 +35,6 @@ fun genError(message: String, element: DomainElement? = null): Nothing {
     message,
     element.annotations().location,
     element.position().start().line(),
-    element.position().start().column()
+    element.position().start().column(),
   )
 }

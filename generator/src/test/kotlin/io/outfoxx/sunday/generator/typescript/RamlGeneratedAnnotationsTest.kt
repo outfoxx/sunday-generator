@@ -43,7 +43,7 @@ class RamlGeneratedAnnotationsTest {
   @Test
   fun `test generated annotation is added to files`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
+    @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
     val fs = Jimfs.newFileSystem(Configuration.unix())
 
@@ -63,7 +63,7 @@ class RamlGeneratedAnnotationsTest {
   @Test
   fun `test no generated annotation is added to files`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI
+    @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
     val fs = Jimfs.newFileSystem(Configuration.unix())
 

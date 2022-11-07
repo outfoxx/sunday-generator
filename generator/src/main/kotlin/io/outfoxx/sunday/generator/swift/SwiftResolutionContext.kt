@@ -24,5 +24,5 @@ import io.outfoxx.swiftpoet.DeclaredTypeName
 data class SwiftResolutionContext(
   override val unit: BaseUnit,
   override val shapeIndex: ShapeIndex,
-  val suggestedTypeName: DeclaredTypeName?
+  val suggestedTypeName: DeclaredTypeName?,
 ) : ResolutionContext

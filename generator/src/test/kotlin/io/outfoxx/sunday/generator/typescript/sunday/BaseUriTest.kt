@@ -38,7 +38,7 @@ class BaseUriTest {
   @Test
   fun `test baseUrl generation in API`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -102,7 +102,7 @@ class BaseUriTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

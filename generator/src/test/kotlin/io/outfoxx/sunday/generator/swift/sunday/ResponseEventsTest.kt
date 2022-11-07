@@ -38,7 +38,7 @@ class ResponseEventsTest {
   @Test
   fun `test event source method`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -93,14 +93,14 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -180,14 +180,14 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation for common base events`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -266,7 +266,7 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

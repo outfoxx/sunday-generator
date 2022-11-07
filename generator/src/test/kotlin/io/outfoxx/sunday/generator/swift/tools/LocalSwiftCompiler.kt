@@ -49,9 +49,12 @@ class LocalSwiftCompiler(private val command: String, workDir: Path) : SwiftComp
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(
-          command, "build",
-          "--build-path", "${swiftBuildDir.resolve("build")}",
-          "--cache-path", "${swiftBuildDir.resolve("cache")}",
+          command,
+          "build",
+          "--build-path",
+          "${swiftBuildDir.resolve("build")}",
+          "--cache-path",
+          "${swiftBuildDir.resolve("cache")}",
         )
         .redirectErrorStream(true)
         .start()

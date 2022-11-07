@@ -38,7 +38,7 @@ class RequestMixedParamsTest {
   @Test
   fun `test generation of multiple parameters with inline type definitions`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -123,14 +123,14 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple parameters of same name with inline type definitions`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -215,7 +215,7 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

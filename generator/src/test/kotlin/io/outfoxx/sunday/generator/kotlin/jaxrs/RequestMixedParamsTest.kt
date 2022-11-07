@@ -36,7 +36,7 @@ class RequestMixedParamsTest {
 
   @Test
   fun `test generation of multiple parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -74,7 +74,7 @@ class RequestMixedParamsTest {
           public fun fetchTest(
             @PathParam(value = "select") select: FetchTestSelectUriParam,
             @QueryParam(value = "page") page: FetchTestPageQueryParam,
-            @HeaderParam(value = "x-type") xType: FetchTestXTypeHeaderParam
+            @HeaderParam(value = "x-type") xType: FetchTestXTypeHeaderParam,
           ): Response
 
           public enum class FetchTestSelectUriParam {
@@ -86,7 +86,7 @@ class RequestMixedParamsTest {
             All,
             Limited,
           }
-        
+
           public enum class FetchTestXTypeHeaderParam {
             All,
             Limited,
@@ -97,13 +97,13 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple parameters of same name with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -141,7 +141,7 @@ class RequestMixedParamsTest {
           public fun fetchTest(
             @PathParam(value = "type") type: FetchTestTypeUriParam,
             @QueryParam(value = "type") type_: FetchTestTypeQueryParam,
-            @HeaderParam(value = "type") type__: FetchTestTypeHeaderParam
+            @HeaderParam(value = "type") type__: FetchTestTypeHeaderParam,
           ): Response
 
           public enum class FetchTestTypeUriParam {
@@ -164,7 +164,7 @@ class RequestMixedParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

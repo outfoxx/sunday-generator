@@ -38,7 +38,7 @@ class RequestBodyParamTest {
   @Test
   fun `test basic body parameter generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -94,14 +94,14 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional body parameter generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -157,14 +157,14 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with explicit content type`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -222,7 +222,7 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

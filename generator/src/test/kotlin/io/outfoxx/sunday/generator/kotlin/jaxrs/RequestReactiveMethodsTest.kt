@@ -42,7 +42,7 @@ class RequestReactiveMethodsTest {
 
   @Test
   fun `test basic reactive method generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -63,7 +63,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -92,13 +92,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -119,7 +119,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -148,13 +148,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (CompletionStage)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -175,7 +175,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -220,13 +220,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (Uni)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -247,7 +247,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -292,13 +292,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (Single)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -319,7 +319,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -366,13 +366,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (Observable)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -393,7 +393,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -440,13 +440,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (Single v2)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -467,7 +467,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -514,13 +514,13 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic reactive method generation with nullify in client mode (Observable v2)`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -541,7 +541,7 @@ class RequestReactiveMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -588,7 +588,7 @@ class RequestReactiveMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

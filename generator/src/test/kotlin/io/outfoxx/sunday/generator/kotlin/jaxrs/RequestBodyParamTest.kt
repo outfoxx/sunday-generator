@@ -37,7 +37,7 @@ class RequestBodyParamTest {
 
   @Test
   fun `test basic body parameter generation`(
-    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -77,13 +77,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test body parameter generation with json override (server mode)`(
-    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -132,13 +132,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test body parameter generation with json override (client mode)`(
-    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -186,13 +186,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic body parameter generation with validation constraints`(
-    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
@@ -233,13 +233,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional body parameter generation`(
-    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -279,13 +279,13 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of body parameter with explicit content type`(
-    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -326,7 +326,7 @@ class RequestBodyParamTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

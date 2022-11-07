@@ -36,7 +36,7 @@ class RamlScalarTypesTest {
   @Test
   fun `test type names generated for general scalar types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -132,14 +132,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for integer scalar types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -264,14 +264,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for float scalar types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -345,14 +345,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for date & time scalar types`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -442,7 +442,7 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

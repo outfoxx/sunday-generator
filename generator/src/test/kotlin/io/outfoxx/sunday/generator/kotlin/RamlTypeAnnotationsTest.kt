@@ -71,12 +71,12 @@ class RamlTypeAnnotationsTest {
     "kotlinType:server,             Server,   ~java.time.Instant",
     "kotlinType:server,             Client,   ~java.time.LocalDateTime",
     "kotlinType:client,             Server,   ~java.time.Instant",
-    "kotlinType:client,             Client,   ~java.time.LocalDateTime"
+    "kotlinType:client,             Client,   ~java.time.LocalDateTime",
   )
   fun `test type annotations`(
     annotationName: String,
     mode: GenerationMode,
-    expectedPackageName: String
+    expectedPackageName: String,
   ) {
 
     val testAnnName = annotationName.split("""(?=[A-Z])|:""".toRegex()).joinToString("-") { it.lowercase() }
@@ -94,20 +94,20 @@ class RamlTypeAnnotationsTest {
       '+' ->
         assertEquals(
           expectedPackageName.substring(1),
-          builtTypes.entries.first().key.packageName
+          builtTypes.entries.first().key.packageName,
         )
 
       '~' ->
         assertEquals(
           expectedPackageName.substring(1),
-          builtTypes.entries.first().value.propertySpecs.firstOrNull()?.type?.toString()
+          builtTypes.entries.first().value.propertySpecs.firstOrNull()?.type?.toString(),
         )
     }
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation`(
-    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
@@ -130,23 +130,23 @@ class RamlTypeAnnotationsTest {
               public val subMemberValue: String
             }
           }
-        
+
           public interface Member2 : Group {
             public val memberValue2: String
           }
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation (dashed scheme)`(
-    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-dashed.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
@@ -169,23 +169,23 @@ class RamlTypeAnnotationsTest {
               public val subMemberValue: String
             }
           }
-        
+
           public interface Member2 : Group {
             public val memberValue2: String
           }
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using library types`(
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
@@ -203,24 +203,24 @@ class RamlTypeAnnotationsTest {
 
           public interface Group {
             public val `value`: String
-  
+
             public interface Member {
               public val memberValue: String
             }
           }
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for 'nested' annotation using only library types`(
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib2.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf())
@@ -238,24 +238,24 @@ class RamlTypeAnnotationsTest {
 
           public interface Group {
             public val `value`: String
-  
+
             public interface Member {
               public val memberValue: String
             }
           }
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class generated kotlin implementations`(
-    @ResourceUri("raml/type-gen/annotations/type-kotlin-impl.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-kotlin-impl.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel))
@@ -276,21 +276,21 @@ class RamlTypeAnnotationsTest {
             get() = LocalDateTime::class.qualifiedName + "-value-" + "-literal"
 
           public fun copy() = Test()
-        
+
           public override fun toString() = ${'"'}""Test()""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for externally discriminated types`(
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
@@ -317,7 +317,7 @@ class RamlTypeAnnotationsTest {
         public abstract class Parent {
           @get:JsonIgnore
           public abstract val type: String
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -327,12 +327,12 @@ class RamlTypeAnnotationsTest {
 
           public override fun toString() = ${'"'}""Parent()""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
@@ -350,7 +350,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?
+          public val `value`: String?,
         ) : Parent() {
           public override val type: String
             get() = "Child1"
@@ -376,12 +376,12 @@ class RamlTypeAnnotationsTest {
 
           public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
@@ -399,38 +399,38 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child2")
         public class Child2(
-          public val `value`: String?
+          public val `value`: String?,
         ) : Parent() {
           public override val type: String
             get() = "child2"
 
           public fun copy(`value`: String? = null) = Child2(value ?: this.value)
-        
+
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-        
+
             other as Child2
-        
+
             if (value != other.value) return false
-        
+
             return true
           }
-        
+
           public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val testTypeSpec = builtTypes[ClassName.bestGuess("io.test.Test")]
@@ -450,50 +450,50 @@ class RamlTypeAnnotationsTest {
           @JsonTypeInfo(
             use = JsonTypeInfo.Id.NAME,
             include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
-            property = "parentType"
+            property = "parentType",
           )
           public val parent: Parent,
-          public val parentType: String
+          public val parentType: String,
         ) {
           public fun copy(parent: Parent? = null, parentType: String? = null) = Test(parent ?: this.parent,
               parentType ?: this.parentType)
-        
+
           public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-        
+
             other as Test
-        
+
             if (parent != other.parent) return false
             if (parentType != other.parentType) return false
-        
+
             return true
           }
-        
+
           public override fun toString() = ""${'"'}
           |Test(parent='${'$'}parent',
           | parentType='${'$'}parentType')
           ${'"'}"".trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", testTypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test class hierarchy generated for externally discriminated types with no discriminator property`(
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-no-property.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-no-property.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
@@ -514,12 +514,12 @@ class RamlTypeAnnotationsTest {
           JsonSubTypes.Type(value = Child2::class)
         ])
         public open class Parent
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", parenTypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
@@ -537,7 +537,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?
+          public val `value`: String?,
         ) : Parent() {
           public fun copy(`value`: String? = null) = Child1(value ?: this.value)
 
@@ -560,12 +560,12 @@ class RamlTypeAnnotationsTest {
 
           public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", child1TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
@@ -583,35 +583,35 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child2")
         public class Child2(
-          public val `value`: String?
+          public val `value`: String?,
         ) : Parent() {
           public fun copy(`value`: String? = null) = Child2(value ?: this.value)
-        
+
           public override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-        
+
             other as Child2
-        
+
             if (value != other.value) return false
-        
+
             return true
           }
-        
+
           public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", child2TypeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val testTypeSpec = builtTypes[ClassName.bestGuess("io.test.Test")]
@@ -631,50 +631,50 @@ class RamlTypeAnnotationsTest {
           @JsonTypeInfo(
             use = JsonTypeInfo.Id.NAME,
             include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
-            property = "parentType"
+            property = "parentType",
           )
           public val parent: Parent,
-          public val parentType: String
+          public val parentType: String,
         ) {
           public fun copy(parent: Parent? = null, parentType: String? = null) = Test(parent ?: this.parent,
               parentType ?: this.parentType)
-        
+
           public override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
-        
+
           public override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-        
+
             other as Test
-        
+
             if (parent != other.parent) return false
             if (parentType != other.parentType) return false
-        
+
             return true
           }
-        
+
           public override fun toString() = ""${'"'}
           |Test(parent='${'$'}parent',
           | parentType='${'$'}parentType')
           ${'"'}"".trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", testTypeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test external discriminator must exist`(
-    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
@@ -689,7 +689,7 @@ class RamlTypeAnnotationsTest {
 
   @Test
   fun `test patchable class generation`(
-    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-patchable.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel))
@@ -717,7 +717,7 @@ class RamlTypeAnnotationsTest {
           public var bool: UpdateOp<Boolean> = PatchOp.none(),
           public var nullable: PatchOp<String> = PatchOp.none(),
           public var optional: UpdateOp<String> = PatchOp.none(),
-          public var nullableOptional: PatchOp<String> = PatchOp.none()
+          public var nullableOptional: PatchOp<String> = PatchOp.none(),
         ) : Patch {
           public override fun hashCode(): Int {
             var result = 1
@@ -761,22 +761,22 @@ class RamlTypeAnnotationsTest {
               patch.init()
               return PatchOp.Set(patch)
             }
-        
+
             public inline fun patch(`init`: Test.() -> Unit) = merge(init).value
           }
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test types can be generated in one mode and overridden in another`(
-    @ResourceUri("raml/type-gen/annotations/type-kotlin-type-dual.raml") testUri: URI
+    @ResourceUri("raml/type-gen/annotations/type-kotlin-type-dual.raml") testUri: URI,
   ) {
     val valueTypeName = ClassName.bestGuess("io.test.Value")
 

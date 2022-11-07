@@ -141,7 +141,7 @@ abstract class SwiftGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec.Builder
 
   abstract fun processResourceMethodUriParameter(
@@ -150,7 +150,7 @@ abstract class SwiftGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodQueryParameter(
@@ -159,7 +159,7 @@ abstract class SwiftGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodHeaderParameter(
@@ -168,7 +168,7 @@ abstract class SwiftGenerator(
     parameter: Parameter,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodBodyParameter(
@@ -177,7 +177,7 @@ abstract class SwiftGenerator(
     payloadSchema: Shape,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processReturnType(
@@ -188,7 +188,7 @@ abstract class SwiftGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName
 
   abstract fun processResourceMethodEnd(
@@ -196,7 +196,7 @@ abstract class SwiftGenerator(
     operation: Operation,
     problemTypes: Map<URI, DeclaredTypeName>,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec
 
   open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
@@ -206,7 +206,7 @@ abstract class SwiftGenerator(
   private fun generateClientServiceMethods(
     typeName: DeclaredTypeName,
     typeBuilder: TypeSpec.Builder,
-    endPoints: List<EndPoint>
+    endPoints: List<EndPoint>,
   ) {
 
     val nameGenerator = NameGenerator.createDefaultGenerator()
@@ -257,7 +257,7 @@ abstract class SwiftGenerator(
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
                 functionBuilderNameAllocator.newName("body", payloadSchema),
-                requestBodyParameterTypeName
+                requestBodyParameterTypeName,
               )
 
             val requestBodyParameterSpec =
@@ -267,7 +267,7 @@ abstract class SwiftGenerator(
                 payloadSchema,
                 typeBuilder,
                 functionBuilder,
-                requestBodyParameterBuilder
+                requestBodyParameterBuilder,
               )
 
             functionBuilder.addParameter(requestBodyParameterSpec)
@@ -297,7 +297,7 @@ abstract class SwiftGenerator(
                 problemTypes,
                 typeBuilder,
                 functionBuilder,
-                responseBodyTypeName
+                responseBodyTypeName,
               )
 
             if (processedResponseBodyTypeName != VOID) {
@@ -337,7 +337,11 @@ abstract class SwiftGenerator(
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(
+                  problemCode,
+                  problemTypeDefinition,
+                  shapeIndex,
+                )
               }
               .toMap()
           } ?: emptyMap()
@@ -359,7 +363,7 @@ abstract class SwiftGenerator(
     operation: Operation,
     typeName: DeclaredTypeName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
 
     endPoint.parameters.forEach { parameter ->
@@ -386,7 +390,7 @@ abstract class SwiftGenerator(
       val uriParameterBuilder =
         ParameterSpec.builder(
           functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
-          uriParameterTypeName
+          uriParameterTypeName,
         )
 
       val defaultValue = parameter.schema?.defaultValue
@@ -401,7 +405,7 @@ abstract class SwiftGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          uriParameterBuilder,
         )
 
       functionBuilder.addParameter(uriParameterSpec)
@@ -413,7 +417,7 @@ abstract class SwiftGenerator(
     operation: Operation,
     typeName: DeclaredTypeName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
 
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
@@ -424,7 +428,7 @@ abstract class SwiftGenerator(
         SwiftResolutionContext(
           document,
           shapeIndex,
-          typeName.nestedType("${operation.swiftTypeName}${parameter.swiftTypeName}QueryParam")
+          typeName.nestedType("${operation.swiftTypeName}${parameter.swiftTypeName}QueryParam"),
         )
 
       val queryParameterTypeName =
@@ -441,7 +445,7 @@ abstract class SwiftGenerator(
 
       val queryParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
-        queryParameterTypeName
+        queryParameterTypeName,
       )
 
       val defaultValue = parameter.schema?.defaultValue
@@ -456,7 +460,7 @@ abstract class SwiftGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          queryParameterBuilder
+          queryParameterBuilder,
         )
 
       functionBuilder.addParameter(queryParameterSpec)
@@ -468,7 +472,7 @@ abstract class SwiftGenerator(
     operation: Operation,
     typeName: DeclaredTypeName,
     typeBuilder: TypeSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
 
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
@@ -479,7 +483,7 @@ abstract class SwiftGenerator(
         SwiftResolutionContext(
           document,
           shapeIndex,
-          typeName.nestedType("${operation.swiftTypeName}${header.swiftTypeName}HeaderParam")
+          typeName.nestedType("${operation.swiftTypeName}${header.swiftTypeName}HeaderParam"),
         )
 
       val headerParameterTypeName =
@@ -496,7 +500,7 @@ abstract class SwiftGenerator(
 
       val headerParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(header.swiftIdentifierName, header),
-        headerParameterTypeName
+        headerParameterTypeName,
       )
 
       val defaultValue = header.schema?.defaultValue
@@ -511,7 +515,7 @@ abstract class SwiftGenerator(
           header,
           typeBuilder,
           functionBuilder,
-          headerParameterBuilder
+          headerParameterBuilder,
         )
 
       functionBuilder.addParameter(headerParameterSpec)
@@ -527,7 +531,7 @@ abstract class SwiftGenerator(
     val problemBaseUriParams =
       document.api.findAnnotation(
         ProblemBaseUriParams,
-        null
+        null,
       )?.objectValue ?: emptyMap()
 
     fun expand(template: String): URI {
@@ -538,7 +542,7 @@ abstract class SwiftGenerator(
           """
             Problem URI is not a valid URI; it cannot be a template.
             Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
-          """.trimIndent()
+          """.trimIndent(),
         )
       }
     }
@@ -548,7 +552,7 @@ abstract class SwiftGenerator(
     var problemBaseUri =
       document.api.findAnnotation(
         ProblemBaseUri,
-        null
+        null,
       )?.stringValue?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
@@ -590,10 +594,11 @@ abstract class SwiftGenerator(
             } ?: STRING
 
           val defaultValue =
-            if (variable.name == "version")
+            if (variable.name == "version") {
               variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
-            else
+            } else {
               variable.schema?.defaultValue
+            }
 
           URIParameter(name, variableTypeName, variable.schema, defaultValue)
         }

@@ -34,17 +34,15 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
     )
   }
 
-  val enabledOptions
-    by option(
+  val enabledOptions by option(
     "-enable",
-    help = "Enable type generation option"
+    help = "Enable type generation option",
   ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
-  val disabledOptions
-    by option(
+  val disabledOptions by option(
     "-disable",
-    help = "Disable type generation option"
+    help = "Disable type generation option",
   ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
 
@@ -54,7 +52,12 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
     SwiftTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) = generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
+    generatorFactory(document, shapeIndex, typeRegistry)
 
-  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: SwiftTypeRegistry): SwiftGenerator
+  abstract fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: SwiftTypeRegistry,
+  ): SwiftGenerator
 }

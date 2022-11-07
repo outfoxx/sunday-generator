@@ -46,7 +46,12 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
   val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
   typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
 
-  TestAPIProcessing.generateTypes(document, shapeIndex, typeRegistry.generationMode, typeRegistry::defineProblemType) { name, schema ->
+  TestAPIProcessing.generateTypes(
+    document,
+    shapeIndex,
+    typeRegistry.generationMode,
+    typeRegistry::defineProblemType,
+  ) { name, schema ->
     val context = KotlinResolutionContext(document, shapeIndex, apiTypeName.nestedClass(name))
     typeRegistry.resolveTypeName(schema, context)
   }
@@ -61,7 +66,7 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
 fun generate(
   uri: URI,
   typeRegistry: KotlinTypeRegistry,
-  generatorFactory: (Document, ShapeIndex) -> KotlinGenerator
+  generatorFactory: (Document, ShapeIndex) -> KotlinGenerator,
 ): Map<ClassName, TypeSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)

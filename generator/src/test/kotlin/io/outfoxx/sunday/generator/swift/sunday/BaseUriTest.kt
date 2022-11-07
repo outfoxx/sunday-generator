@@ -40,7 +40,7 @@ class BaseUriTest {
   @Test
   fun `test baseUrl generation in API`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -111,7 +111,7 @@ class BaseUriTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
 
     val envTypeSpec = builtTypes[DeclaredTypeName.typeName(".Environment")]

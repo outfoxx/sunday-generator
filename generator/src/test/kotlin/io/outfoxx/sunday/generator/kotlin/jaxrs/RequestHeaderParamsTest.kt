@@ -37,7 +37,7 @@ class RequestHeaderParamsTest {
 
   @Test
   fun `test basic header parameter generation`(
-    @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -77,7 +77,7 @@ class RequestHeaderParamsTest {
           public fun fetchTest(
             @HeaderParam(value = "obj") obj: Test,
             @HeaderParam(value = "str-req") strReq: String,
-            @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int
+            @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
         }
 
@@ -85,13 +85,13 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional header parameter generation`(
-    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -133,7 +133,7 @@ class RequestHeaderParamsTest {
             @HeaderParam(value = "str") str: String?,
             @HeaderParam(value = "int") int: Int?,
             @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int
+            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
           ): Response
         }
 
@@ -141,13 +141,13 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional header parameter generation with validation constraints`(
-    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
@@ -190,7 +190,7 @@ class RequestHeaderParamsTest {
             @HeaderParam(value = "str") str: String?,
             @HeaderParam(value = "int") int: Int?,
             @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int
+            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
           ): Response
         }
 
@@ -198,13 +198,13 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple header parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -255,7 +255,7 @@ class RequestHeaderParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

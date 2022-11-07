@@ -141,14 +141,14 @@ import java.nio.file.Path
 import kotlin.math.min
 
 class TypeScriptTypeRegistry(
-  private val options: Set<Option>
+  private val options: Set<Option>,
 ) : TypeRegistry {
 
   data class SpecificationInterface(val value: InterfaceSpec.Builder)
 
   enum class Option {
     JacksonDecorators,
-    AddGenerationHeader
+    AddGenerationHeader,
   }
 
   private val typeBuildersOrdered = LinkedHashMap<TypeName.Standard, AnyTypeSpecBuilder>()
@@ -189,8 +189,8 @@ class TypeScriptTypeRegistry(
       indexBuilder.addCode(
         CodeBlock.of(
           "export * from './%L';",
-          name.base.value.removePrefix("!").camelCaseToKebabCase()
-        )
+          name.base.value.removePrefix("!").camelCaseToKebabCase(),
+        ),
       )
     }
 
@@ -306,7 +306,7 @@ class TypeScriptTypeRegistry(
             PropertySpec.builder("TYPE", STRING)
               .addModifiers(Modifier.STATIC)
               .initializer("%S", problemTypeDefinition.type)
-              .build()
+              .build(),
           )
 
       val problemTypeConsBuilder =
@@ -334,7 +334,7 @@ class TypeScriptTypeRegistry(
         val customPropertyTypeName = resolveTypeReference(
           customPropertyTypeNameStr,
           problemTypeDefinition.source,
-          TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
+          TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
         )
         problemTypeBuilder.addProperty(
           PropertySpec
@@ -350,7 +350,7 @@ class TypeScriptTypeRegistry(
                         customPropertyName.typeScriptIdentifierName,
                         customPropertyTypeName.isUndefinable,
                       )
-                      .build()
+                      .build(),
                   )
                 }
 
@@ -362,20 +362,20 @@ class TypeScriptTypeRegistry(
                         .add("{type: () => ")
                         .add(reflectionTypeName(customPropertyTypeName).typeInitializer())
                         .add("}")
-                        .build()
+                        .build(),
                     )
-                    .build()
+                    .build(),
                 )
               }
             }
-            .build()
+            .build(),
         )
 
         problemTypeConsBuilder
           .addStatement(
             "this.%L = %L",
             customPropertyName.typeScriptIdentifierName,
-            customPropertyName.typeScriptIdentifierName
+            customPropertyName.typeScriptIdentifierName,
           )
           .addParameter(
             ParameterSpec
@@ -384,24 +384,24 @@ class TypeScriptTypeRegistry(
                 resolveTypeReference(
                   customPropertyTypeNameStr,
                   problemTypeDefinition.source,
-                  TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
-                )
+                  TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                ),
               )
-              .build()
+              .build(),
           )
       }
 
       problemTypeConsBuilder.addParameter(
         ParameterSpec.builder("instance", TypeName.unionType(STRING, URL_TYPE).undefinable)
           .defaultValue("undefined")
-          .build()
+          .build(),
       )
 
       if (options.contains(JacksonDecorators)) {
         problemTypeBuilder.addDecorator(
           DecoratorSpec.builder(JSON_TYPE_NAME)
             .addParameter(null, "{value: %T.TYPE}", problemTypeName)
-            .build()
+            .build(),
         )
       }
 
@@ -414,7 +414,7 @@ class TypeScriptTypeRegistry(
   private fun resolveTypeReference(
     nameStr: String,
     source: DomainElement,
-    context: TypeScriptResolutionContext
+    context: TypeScriptResolutionContext,
   ): TypeName {
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
@@ -445,10 +445,11 @@ class TypeScriptTypeRegistry(
       } else {
         elementTypeName
       }
-    return if (nameStr.endsWith("?"))
+    return if (nameStr.endsWith("?")) {
       typeName.nullable
-    else
+    } else {
       typeName
+    }
   }
 
   private fun resolveReferencedTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName =
@@ -457,7 +458,7 @@ class TypeScriptTypeRegistry(
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
     className: TypeName.Standard,
-    context: TypeScriptResolutionContext
+    context: TypeScriptResolutionContext,
   ): TypeName {
 
     val propertyContext = context.copy(suggestedTypeName = className.nested(propertyShape.typeScriptTypeName))
@@ -497,7 +498,7 @@ class TypeScriptTypeRegistry(
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          context
+          context,
         )
 
       shape.or.isNotEmpty() ->
@@ -602,7 +603,7 @@ class TypeScriptTypeRegistry(
 
   private fun defineClass(
     shape: NodeShape,
-    context: TypeScriptResolutionContext
+    context: TypeScriptResolutionContext,
   ): TypeName {
 
     val className = typeNameOf(shape, context)
@@ -683,7 +684,7 @@ class TypeScriptTypeRegistry(
                 .addStatement(
                   "return %T.%L",
                   discriminatorPropertyTypeName,
-                  discriminatorValue.toUpperCamelCase()
+                  discriminatorValue.toUpperCamelCase(),
                 )
                 .build()
             } else {
@@ -717,7 +718,7 @@ class TypeScriptTypeRegistry(
           PropertySpec
             .builder(declaredProperty.typeScriptIdentifierName, propertyTypeName.nonUndefinable)
             .optional(propertyTypeName.isUndefinable)
-            .build()
+            .build(),
         )
       }
 
@@ -733,8 +734,8 @@ class TypeScriptTypeRegistry(
           CodeBlock.of(
             "%L='${'$'}{this.%L}'",
             it.typeScriptIdentifierName,
-            it.typeScriptIdentifierName
-          )
+            it.typeScriptIdentifierName,
+          ),
         )
       }
 
@@ -754,7 +755,7 @@ class TypeScriptTypeRegistry(
               .addDecorator(
                 DecoratorSpec.builder(JSON_IGNORE)
                   .asFactory()
-                  .build()
+                  .build(),
               )
 
           val code = implAnn.getValue("code") ?: ""
@@ -802,7 +803,7 @@ class TypeScriptTypeRegistry(
                 declaredPropertyTypeName,
                 declaredPropertyBuilder,
                 externalDiscriminatorPropertyShape,
-                context
+                context,
               )
             }
           }
@@ -814,9 +815,9 @@ class TypeScriptTypeRegistry(
                   .addJsonPropertyInit(
                     declaredProperty.name!!,
                     declaredProperty.typeScriptIdentifierName,
-                    declaredProperty.required
+                    declaredProperty.required,
                   )
-                  .build()
+                  .build(),
               )
               .addDecorator(
                 DecoratorSpec.builder(JSON_CLASS_TYPE)
@@ -826,9 +827,9 @@ class TypeScriptTypeRegistry(
                       .add("{type: () => ")
                       .add(reflectionTypeName(declaredPropertyTypeName).typeInitializer())
                       .add("}")
-                      .build()
+                      .build(),
                   )
-                  .build()
+                  .build(),
               )
           }
 
@@ -838,8 +839,8 @@ class TypeScriptTypeRegistry(
             CodeBlock.of(
               "%L='\${this.%L}'",
               declaredProperty.typeScriptIdentifierName,
-              declaredProperty.typeScriptIdentifierName
-            )
+              declaredProperty.typeScriptIdentifierName,
+            ),
           )
 
           classBuilder.addProperty(declaredPropertyBuilder.build())
@@ -854,7 +855,7 @@ class TypeScriptTypeRegistry(
             .returns(className)
             .addParameter("changes", PARTIAL.parameterized(ifaceName))
             .addStatement("return new %T(Object.assign({}, this, changes))", className)
-            .build()
+            .build(),
         )
       }
 
@@ -866,7 +867,7 @@ class TypeScriptTypeRegistry(
           classBuilder.addDecorator(
             DecoratorSpec.builder(JSON_CREATOR)
               .addParameter(null, "{ mode: %Q.PROPERTIES_OBJECT }", JSON_CREATOR_MODE)
-              .build()
+              .build(),
           )
         }
 
@@ -876,7 +877,7 @@ class TypeScriptTypeRegistry(
           FunctionSpec.constructorBuilder()
             .addParameter(
               ParameterSpec.builder("init", ifaceName)
-                .build()
+                .build(),
             )
 
         if (superShape != null) {
@@ -895,14 +896,15 @@ class TypeScriptTypeRegistry(
       val toStringTemplate =
         CodeBlock.of(
           "%N(%L)",
-          className, toStringCode.joinToString(", ")
+          className,
+          toStringCode.joinToString(", "),
         ).toString()
 
       classBuilder.addFunction(
         FunctionSpec.builder("toString")
           .returns(STRING)
           .addStatement("return %P", toStringTemplate)
-          .build()
+          .build(),
       )
     }
 
@@ -913,7 +915,7 @@ class TypeScriptTypeRegistry(
           .addDecorator(
             DecoratorSpec.builder(JSON_INCLUDE)
               .addParameter(null, "{value: %Q.ALWAYS}", JSON_INCLUDE_TYPE)
-              .build()
+              .build(),
           )
       }
     }
@@ -968,7 +970,7 @@ class TypeScriptTypeRegistry(
 
   private fun defineType(
     className: TypeName.Standard,
-    builderBlock: (TypeName.Standard) -> AnyTypeSpecBuilder
+    builderBlock: (TypeName.Standard) -> AnyTypeSpecBuilder,
   ): AnyTypeSpecBuilder {
 
     val builder = builderBlock(className)
@@ -1048,11 +1050,13 @@ class TypeScriptTypeRegistry(
               property: %S,
             }
           """.trimIndent(),
-          JSON_TYPE_INFO_ID, "NAME",
-          JSON_TYPE_INFO_AS, "EXTERNAL_PROPERTY",
-          externalDiscriminatorPropertyName
+          JSON_TYPE_INFO_ID,
+          "NAME",
+          JSON_TYPE_INFO_AS,
+          "EXTERNAL_PROPERTY",
+          externalDiscriminatorPropertyName,
         )
-        .build()
+        .build(),
     )
 
     valuePropertySpec.addDecorator(
@@ -1065,10 +1069,10 @@ class TypeScriptTypeRegistry(
             |    ${subTypes.joinToString(",\n    ") { it.first }}
             |  ]
             |}
-            """.trimMargin(),
-          *subTypes.map { it.second }.flatten().toTypedArray()
+          """.trimMargin(),
+          *subTypes.map { it.second }.flatten().toTypedArray(),
         )
-        .build()
+        .build(),
     )
   }
 
@@ -1077,7 +1081,7 @@ class TypeScriptTypeRegistry(
     inheritingTypes: List<NodeShape>,
     className: TypeName.Standard,
     classBuilder: ClassSpec.Builder,
-    context: TypeScriptResolutionContext
+    context: TypeScriptResolutionContext,
   ) {
 
     val discriminatorPropertyName = findDiscriminatorPropertyName(shape, context)
@@ -1141,11 +1145,13 @@ class TypeScriptTypeRegistry(
                   property: %S,
                 }
               """.trimIndent(),
-              JSON_TYPE_INFO_ID, "NAME",
-              JSON_TYPE_INFO_AS, "PROPERTY",
-              discriminator
+              JSON_TYPE_INFO_ID,
+              "NAME",
+              JSON_TYPE_INFO_AS,
+              "PROPERTY",
+              discriminator,
             )
-            .build()
+            .build(),
         )
       }
 
@@ -1160,9 +1166,9 @@ class TypeScriptTypeRegistry(
             |  ]
             |}
             """.trimMargin(),
-            *subTypes.map { it.second }.flatten().toTypedArray()
+            *subTypes.map { it.second }.flatten().toTypedArray(),
           )
-          .build()
+          .build(),
       )
     }
   }
@@ -1178,7 +1184,7 @@ class TypeScriptTypeRegistry(
     val nestedAnn = shape.findAnnotation(Nested, null)
       ?: return TypeName.namedImport(
         shape.typeScriptTypeName,
-        "$modulePath${shape.typeScriptTypeName.camelCaseToKebabCase()}"
+        "$modulePath${shape.typeScriptTypeName.camelCaseToKebabCase()}",
       )
 
     val (nestedEnclosedIn, nestedName) =
@@ -1190,7 +1196,7 @@ class TypeScriptTypeRegistry(
           if (parts.size < 2) {
             genError(
               "Nested types using 'dashed' scheme must be named with dashes corresponding to nesting hierarchy.",
-              shape
+              shape,
             )
           }
 
@@ -1214,7 +1220,7 @@ class TypeScriptTypeRegistry(
         else ->
           genError(
             "Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys",
-            shape
+            shape,
           )
       }
 
@@ -1247,12 +1253,13 @@ class TypeScriptTypeRegistry(
     for (type in types) {
       val propertyClassNameHierarchy = classNameHierarchy(type, context)
       currentClassNameHierarchy =
-        if (currentClassNameHierarchy == null)
+        if (currentClassNameHierarchy == null) {
           propertyClassNameHierarchy
-        else
+        } else {
           (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
             .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
             .map { propertyClassNameHierarchy[it] }
+        }
     }
 
     return currentClassNameHierarchy?.firstOrNull()
@@ -1304,7 +1311,7 @@ class TypeScriptTypeRegistry(
       is TypeName.Parameterized ->
         TypeName.parameterizedType(
           reflectionTypeName(typeName.rawType) as TypeName.Standard,
-          *typeName.typeArgs.map { reflectionTypeName(it) }.toTypedArray()
+          *typeName.typeArgs.map { reflectionTypeName(it) }.toTypedArray(),
         )
 
       is TypeName.Union ->
@@ -1322,9 +1329,9 @@ class TypeScriptTypeRegistry(
             TypeName.Anonymous.Member(
               it.name,
               reflectionTypeName(it.type),
-              it.optional
+              it.optional,
             )
-          }
+          },
         )
 
       else ->
@@ -1336,19 +1343,27 @@ private fun TypeName.Standard.sibling(name: String): TypeName.Standard =
   when (base) {
     is SymbolSpec.Imported ->
       TypeName.standard(SymbolSpec.importsName(base.value + name, (base as SymbolSpec.Imported).source))
+
     is SymbolSpec.Implicit ->
       TypeName.standard(SymbolSpec.implicit(base.value + name))
   }
 
-private fun DecoratorSpec.Builder.addJsonPropertyInit(declaredName: String, codeName: String, required: Boolean): DecoratorSpec.Builder {
+private fun DecoratorSpec.Builder.addJsonPropertyInit(
+  declaredName: String,
+  codeName: String,
+  required: Boolean,
+): DecoratorSpec.Builder {
   val differentName = declaredName != codeName
   return when {
     differentName && required ->
       addParameter(null, "{value: %S, required: %L}", declaredName, true)
+
     !differentName && required ->
       addParameter(null, "{required: %L}", true)
+
     differentName && !required ->
       addParameter(null, "{value: %S}", declaredName)
+
     else ->
       addParameter(null, CodeBlock.empty())
   }

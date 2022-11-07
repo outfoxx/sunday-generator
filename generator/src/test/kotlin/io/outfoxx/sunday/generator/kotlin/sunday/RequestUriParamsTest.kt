@@ -36,7 +36,7 @@ class RequestUriParamsTest {
 
   @Test
   fun `test basic uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -56,7 +56,7 @@ class RequestUriParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -68,13 +68,13 @@ class RequestUriParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             def: String,
             obj: Test,
             strReq: String,
-            int: Int = 5
+            int: Int = 5,
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{obj}/{str-req}/{int}/{def}",
@@ -92,13 +92,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test inherited uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -118,7 +118,7 @@ class RequestUriParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -131,13 +131,13 @@ class RequestUriParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             obj: Map<String, Any>,
             str: String,
             def: String,
-            int: Int
+            int: Int,
           ): Map<String, Any> = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{obj}/{str}/{int}/{def}",
@@ -155,13 +155,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test optional uri parameter generation`(
-    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -181,7 +181,7 @@ class RequestUriParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -193,7 +193,7 @@ class RequestUriParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(
             def2: Int? = 10,
@@ -201,7 +201,7 @@ class RequestUriParamsTest {
             str: String? = null,
             def1: String? = "test",
             int: Int? = null,
-            def: String
+            def: String,
           ): Test = this.requestFactory.result(
             method = Method.Get,
             pathTemplate = "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
@@ -221,13 +221,13 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generation of multiple uri parameters with inline type definitions`(
-    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -247,7 +247,7 @@ class RequestUriParamsTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -259,7 +259,7 @@ class RequestUriParamsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam):
               Map<String, Any> = this.requestFactory.result(
@@ -287,7 +287,7 @@ class RequestUriParamsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

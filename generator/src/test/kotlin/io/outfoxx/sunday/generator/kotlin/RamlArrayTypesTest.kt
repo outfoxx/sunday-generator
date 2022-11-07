@@ -35,7 +35,7 @@ class RamlArrayTypesTest {
 
   @Test
   fun `test generated nullability of array types and elements in interfaces`(
-    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -57,23 +57,23 @@ class RamlArrayTypesTest {
           public val nullableArrayOfStrings: List<String>?
 
           public val nullableArrayOfNullableStrings: List<String?>?
-        
+
           public val declaredArrayOfStrings: List<String>
-        
+
           public val declaredArrayOfNullableStrings: List<String?>
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated collection interface`(
-    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -90,25 +90,25 @@ class RamlArrayTypesTest {
 
         public interface Test {
           public val implicit: List<String>
-        
+
           public val unspecified: List<String>
-        
+
           public val nonUnique: List<String>
-        
+
           public val unique: Set<String>
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated nullability of array types and elements in classes`(
-    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
@@ -131,7 +131,7 @@ class RamlArrayTypesTest {
           public val nullableArrayOfStrings: List<String>?,
           public val nullableArrayOfNullableStrings: List<String?>?,
           public val declaredArrayOfStrings: List<String>,
-          public val declaredArrayOfNullableStrings: List<String?>
+          public val declaredArrayOfNullableStrings: List<String?>,
         ) {
           public fun copy(
             arrayOfStrings: List<String>? = null,
@@ -139,7 +139,7 @@ class RamlArrayTypesTest {
             nullableArrayOfStrings: List<String>? = null,
             nullableArrayOfNullableStrings: List<String?>? = null,
             declaredArrayOfStrings: List<String>? = null,
-            declaredArrayOfNullableStrings: List<String?>? = null
+            declaredArrayOfNullableStrings: List<String?>? = null,
           ) = Test(arrayOfStrings ?: this.arrayOfStrings, arrayOfNullableStrings ?:
               this.arrayOfNullableStrings, nullableArrayOfStrings ?: this.nullableArrayOfStrings,
               nullableArrayOfNullableStrings ?: this.nullableArrayOfNullableStrings, declaredArrayOfStrings
@@ -182,18 +182,18 @@ class RamlArrayTypesTest {
           | declaredArrayOfNullableStrings='${'$'}declaredArrayOfNullableStrings')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated collection class`(
-    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-collection.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
@@ -215,13 +215,13 @@ class RamlArrayTypesTest {
           public val implicit: List<String>,
           public val unspecified: List<String>,
           public val nonUnique: List<String>,
-          public val unique: Set<String>
+          public val unique: Set<String>,
         ) {
           public fun copy(
             implicit: List<String>? = null,
             unspecified: List<String>? = null,
             nonUnique: List<String>? = null,
-            unique: Set<String>? = null
+            unique: Set<String>? = null,
           ) = Test(implicit ?: this.implicit, unspecified ?: this.unspecified, nonUnique ?: this.nonUnique,
               unique ?: this.unique)
 
@@ -255,18 +255,18 @@ class RamlArrayTypesTest {
           | unique='${'$'}unique')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated primitive class`(
-    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/arrays-primitive.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
@@ -284,7 +284,7 @@ class RamlArrayTypesTest {
 
         public class Test(
           public val binary: ByteArray,
-          public val nullableBinary: ByteArray?
+          public val nullableBinary: ByteArray?,
         ) {
           public fun copy(binary: ByteArray? = null, nullableBinary: ByteArray? = null) = Test(binary ?:
               this.binary, nullableBinary ?: this.nullableBinary)
@@ -317,12 +317,12 @@ class RamlArrayTypesTest {
           | nullableBinary='${'$'}nullableBinary')
           ""${'"'}.trimMargin()
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

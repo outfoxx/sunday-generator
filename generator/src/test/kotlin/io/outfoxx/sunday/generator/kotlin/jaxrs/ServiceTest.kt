@@ -36,7 +36,7 @@ class ServiceTest {
 
   @Test
   fun `test default media types are limited correctly`(
-    @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI
+    @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -89,7 +89,7 @@ class ServiceTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

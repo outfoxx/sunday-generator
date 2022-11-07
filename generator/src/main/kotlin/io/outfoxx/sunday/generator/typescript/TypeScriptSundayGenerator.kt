@@ -121,7 +121,7 @@ class TypeScriptSundayGenerator(
       .addProperty(
         PropertySpec.builder("requestFactory", REQUEST_FACTORY, false, Modifier.PUBLIC)
           .initializer("requestFactory")
-          .build()
+          .build(),
       )
 
     consBuilder = FunctionSpec.constructorBuilder()
@@ -140,7 +140,7 @@ class TypeScriptSundayGenerator(
       .addProperty(
         PropertySpec
           .builder("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .build()
+          .build(),
       )
 
     // Add default accept types (in priority order)
@@ -151,7 +151,7 @@ class TypeScriptSundayGenerator(
       .addProperty(
         PropertySpec
           .builder("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE))
-          .build()
+          .build(),
       )
 
     consBuilder?.let { consBuilder ->
@@ -160,15 +160,15 @@ class TypeScriptSundayGenerator(
         TypeName.anonymousType(
           listOf(
             TypeName.Anonymous.Member("defaultContentTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true),
-            TypeName.Anonymous.Member("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true)
-          )
+            TypeName.Anonymous.Member("defaultAcceptTypes", TypeName.parameterizedType(ARRAY, MEDIA_TYPE), true),
+          ),
         )
 
       consBuilder
         .addParameter(
           ParameterSpec.builder("options", optionsType, true)
             .defaultValue("undefined")
-            .build()
+            .build(),
         )
         .addStatement("this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L", mediaTypesArray(contentTypes))
         .addStatement("this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L", mediaTypesArray(acceptTypes))
@@ -191,7 +191,7 @@ class TypeScriptSundayGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName {
 
     resultBodyType = body
@@ -228,7 +228,7 @@ class TypeScriptSundayGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec.Builder {
 
     uriParameters = mutableListOf()
@@ -260,7 +260,7 @@ class TypeScriptSundayGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -276,7 +276,7 @@ class TypeScriptSundayGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -292,7 +292,7 @@ class TypeScriptSundayGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val parameterSpec = methodParameter(parameterBuilder)
@@ -308,7 +308,7 @@ class TypeScriptSundayGenerator(
     payloadSchema: Shape,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
     val request = operation.request ?: operation.requests.first()
@@ -335,7 +335,7 @@ class TypeScriptSundayGenerator(
     operation: Operation,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec {
 
     referencedProblemTypes.putAll(problemTypes)
@@ -358,13 +358,13 @@ class TypeScriptSundayGenerator(
             "%L: %L ?? %L",
             origName.quotedIfNotTypeScriptIdentifier,
             paramName,
-            param.schema?.defaultValue?.typeScriptConstant(paramType, param.schema) ?: "null"
+            param.schema?.defaultValue?.typeScriptConstant(paramType, param.schema) ?: "null",
           )
         } else if (paramName != origName || !origName.isValidTypeScriptIdentifier) {
           parametersBlock.add(
             "%L: %L",
             origName.quotedIfNotTypeScriptIdentifier,
-            paramName
+            paramName,
           )
         } else {
           parametersBlock.add("%L", paramName)
@@ -488,7 +488,7 @@ class TypeScriptSundayGenerator(
             |  }
             |},
             """.trimMargin(),
-            *typesParams.toTypedArray()
+            *typesParams.toTypedArray(),
           )
           builder.add("%]\n);\n")
         }
@@ -545,7 +545,7 @@ class TypeScriptSundayGenerator(
     operation: Operation,
     function: FunctionSpec,
     problemTypes: Map<URI, TypeName>,
-    typeBuilder: ClassSpec.Builder
+    typeBuilder: ClassSpec.Builder,
   ) {
 
     val nullifyAnn = operation.findArrayAnnotation(APIAnnotationName.Nullify, null)
@@ -572,7 +572,9 @@ class TypeScriptSundayGenerator(
           |  ));
           |
           """.trimMargin(),
-          function.name, NULLIFY_RESPONSE, *nullifyProblemTypeNames
+          function.name,
+          NULLIFY_RESPONSE,
+          *nullifyProblemTypeNames,
         )
 
     val returnType = function.returnType
@@ -594,7 +596,7 @@ class TypeScriptSundayGenerator(
         }
         .addTSDoc(function.tsDoc)
         .addCode(nullFunCodeBuilder.build())
-        .build()
+        .build(),
     )
   }
 

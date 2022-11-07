@@ -146,7 +146,7 @@ import java.nio.file.Path
 import kotlin.math.min
 
 class SwiftTypeRegistry(
-  val options: Set<Option>
+  val options: Set<Option>,
 ) : TypeRegistry {
 
   enum class Option {
@@ -251,7 +251,7 @@ class SwiftTypeRegistry(
           PropertySpec.builder("type", URL, PUBLIC)
             .addModifiers(STATIC)
             .initializer("%T(string: %S)!", URL, problemTypeDefinition.type)
-            .build()
+            .build(),
         )
         .addFunction(
           FunctionSpec.constructorBuilder()
@@ -266,17 +266,17 @@ class SwiftTypeRegistry(
                       resolveTypeReference(
                         customPropertyTypeNameStr,
                         problemTypeDefinition.source,
-                        SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
-                      )
+                        SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                      ),
                     )
-                    .build()
+                    .build(),
                 )
               }
             }
             .addParameter(
               ParameterSpec.builder("instance", URL.makeOptional())
                 .defaultValue("nil")
-                .build()
+                .build(),
             )
             .apply {
               problemTypeDefinition.custom.map {
@@ -290,7 +290,7 @@ class SwiftTypeRegistry(
               problemTypeDefinition.status,
               problemTypeDefinition.detail,
             )
-            .build()
+            .build(),
         )
         .apply {
           problemTypeDefinition.custom.map { (customPropertyName, customPropertyTypeNameStr) ->
@@ -300,11 +300,11 @@ class SwiftTypeRegistry(
                 resolveTypeReference(
                   customPropertyTypeNameStr,
                   problemTypeDefinition.source,
-                  SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
+                  SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
                 ),
-                PUBLIC
+                PUBLIC,
               )
-                .build()
+                .build(),
             )
           }
         }
@@ -324,11 +324,11 @@ class SwiftTypeRegistry(
                   DESCRIPTION_BUILDER, SelfTypeName.INSTANCE, "type", "title", "status", "detail", "instance",
                   *problemTypeDefinition.custom
                     .flatMap { listOf(it.key.swiftIdentifierName, it.key.swiftIdentifierName) }
-                    .toTypedArray()
+                    .toTypedArray(),
                 )
-                .build()
+                .build(),
             )
-            .build()
+            .build(),
         )
         .addFunction(
           FunctionSpec.constructorBuilder()
@@ -344,7 +344,7 @@ class SwiftTypeRegistry(
                   resolveTypeReference(
                     customPropertyTypeNameStr,
                     problemTypeDefinition.source,
-                    SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null)
+                    SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
                   )
                 addStatement(
                   "self.%N = try container.decode%L(%T.self, forKey: %T.%N)",
@@ -352,12 +352,12 @@ class SwiftTypeRegistry(
                   if (customPropertyTypeName.optional) "IfPresent" else "",
                   customPropertyTypeName.makeNonOptional(),
                   problemCodingKeysTypeName,
-                  customPropertyName.swiftIdentifierName
+                  customPropertyName.swiftIdentifierName,
                 )
               }
             }
             .addStatement("try super.init(from: decoder)")
-            .build()
+            .build(),
         )
         .addFunction(
           FunctionSpec.builder("encode")
@@ -372,11 +372,13 @@ class SwiftTypeRegistry(
               problemTypeDefinition.custom.forEach {
                 addStatement(
                   "try container.encode(self.%N, forKey: %T.%N)",
-                  it.key.swiftIdentifierName, problemCodingKeysTypeName, it.key.swiftIdentifierName
+                  it.key.swiftIdentifierName,
+                  problemCodingKeysTypeName,
+                  it.key.swiftIdentifierName,
                 )
               }
             }
-            .build()
+            .build(),
         )
 
     if (problemTypeDefinition.custom.isNotEmpty()) {
@@ -429,10 +431,11 @@ class SwiftTypeRegistry(
       } else {
         elementTypeName
       }
-    return if (nameStr.endsWith("?"))
+    return if (nameStr.endsWith("?")) {
       typeName.makeOptional()
-    else
+    } else {
       typeName
+    }
   }
 
   private fun resolveReferencedTypeName(shape: Shape, context: SwiftResolutionContext): TypeName =
@@ -441,7 +444,7 @@ class SwiftTypeRegistry(
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
     className: DeclaredTypeName,
-    context: SwiftResolutionContext
+    context: SwiftResolutionContext,
   ): TypeName {
 
     val propertyContext = context.copy(
@@ -483,7 +486,7 @@ class SwiftTypeRegistry(
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
           shape,
-          context
+          context,
         )
 
       shape.or.isNotEmpty() ->
@@ -587,7 +590,7 @@ class SwiftTypeRegistry(
 
   private fun defineClass(
     shape: NodeShape,
-    context: SwiftResolutionContext
+    context: SwiftResolutionContext,
   ): DeclaredTypeName {
 
     val className = typeNameOf(shape, context)
@@ -663,9 +666,9 @@ class SwiftTypeRegistry(
             .getter(
               FunctionSpec.getterBuilder()
                 .addStatement("fatalError(\"abstract type method\")")
-                .build()
+                .build(),
             )
-            .build()
+            .build(),
         )
 
         if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
@@ -692,8 +695,10 @@ class SwiftTypeRegistry(
             .throws(true)
             .addCode("let container = try decoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
             .addCode(
-              "let type = try container.decode(%T.self, forKey: %T.%N)\n", discriminatorPropertyTypeName,
-              codingKeysTypeName, discriminatorPropertyName
+              "let type = try container.decode(%T.self, forKey: %T.%N)\n",
+              discriminatorPropertyTypeName,
+              codingKeysTypeName,
+              discriminatorPropertyName,
             )
             .beginControlFlow("switch", "type")
           val refEncoderBuilder = FunctionSpec.builder("encode")
@@ -720,33 +725,41 @@ class SwiftTypeRegistry(
 
             refValueInitBuilder.addStatement(
               "case let value as %T:%Wself = .%N(value)",
-              inheritingTypeName, discriminatorCase
+              inheritingTypeName,
+              discriminatorCase,
             )
 
             if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
               refDecoderBuilder.addStatement(
                 "case .%N:%Wself = .%N(try %T(from: decoder))",
-                discriminatorCase, discriminatorCase, inheritingTypeName
+                discriminatorCase,
+                discriminatorCase,
+                inheritingTypeName,
               )
               usedDiscriminators.add(discriminatorCase)
             } else {
               refDecoderBuilder.addStatement(
                 "case %S:%Wself = .%N(try %T(from: decoder))",
-                discriminatorValue, discriminatorCase, inheritingTypeName
+                discriminatorValue,
+                discriminatorCase,
+                inheritingTypeName,
               )
               usedDiscriminators.add(discriminatorValue)
             }
 
             refEncoderBuilder.addStatement(
               "case .%N(let value):\ntry container.encode(%S, forKey: .%N)\ntry value.encode(to: encoder)",
-              discriminatorCase, discriminatorValue, discriminatorPropertyName
+              discriminatorCase,
+              discriminatorValue,
+              discriminatorPropertyName,
             )
 
             refValueBuilder.addStatement("case .%N(let value):%Wreturn value", discriminatorCase)
 
             refDescriptionBuilder.addStatement(
               "case .%N(let value):%Wreturn value.%N",
-              discriminatorCase, DESCRIPTION_PROP_NAME
+              discriminatorCase,
+              DESCRIPTION_PROP_NAME,
             )
           }
 
@@ -760,8 +773,10 @@ class SwiftTypeRegistry(
           ) {
             refDecoderBuilder.addStatement(
               "default:\nthrow %T.dataCorruptedError(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
-              DECODING_ERROR, codingKeysTypeName, discriminatorPropertyName,
-              "unsupported value for \"$discriminatorPropertyName\""
+              DECODING_ERROR,
+              codingKeysTypeName,
+              discriminatorPropertyName,
+              "unsupported value for \"$discriminatorPropertyName\"",
             )
           }
           refDecoderBuilder.endControlFlow("switch")
@@ -774,14 +789,14 @@ class SwiftTypeRegistry(
           refTypeBuilder.addProperty(
             PropertySpec.builder("value", className, PUBLIC)
               .getter(refValueBuilder.build())
-              .build()
+              .build(),
           )
 
           refDescriptionBuilder.endControlFlow("switch")
           refTypeBuilder.addProperty(
             PropertySpec.builder(DESCRIPTION_PROP_NAME, STRING, PUBLIC)
               .getter(refDescriptionBuilder.build())
-              .build()
+              .build(),
           )
 
           val refType = refTypeBuilder.build()
@@ -806,15 +821,15 @@ class SwiftTypeRegistry(
               .addStatement(
                 "return %T.%N",
                 discriminatorPropertyTypeName,
-                discriminatorValue.swiftIdentifierName
+                discriminatorValue.swiftIdentifierName,
               )
-              .build()
+              .build(),
           )
         } else {
           discriminatorBuilder.getter(
             FunctionSpec.getterBuilder()
               .addStatement("return %S", discriminatorValue)
-              .build()
+              .build(),
           )
         }
 
@@ -858,7 +873,7 @@ class SwiftTypeRegistry(
     if (localDeclaredProperties.isNotEmpty()) {
       decoderInitFunctionBuilder.addStatement(
         "let container = try decoder.container(keyedBy: %T.self)",
-        codingKeysTypeName
+        codingKeysTypeName,
       )
     }
 
@@ -936,7 +951,10 @@ class SwiftTypeRegistry(
         .addCode(decoderPropertyRef)
         .addCode(
           " = try container.decode%L(%T.self, forKey: .%N)%L%]\n",
-          coderSuffix, propertyTypeName, prop.swiftIdentifierName, decoderPost
+          coderSuffix,
+          propertyTypeName,
+          prop.swiftIdentifierName,
+          decoderPost,
         )
 
       encoderFunctionBuilder
@@ -944,7 +962,8 @@ class SwiftTypeRegistry(
         .addCode(encoderPropertyRef)
         .addCode(
           "%L, forKey: .%N)%]\n",
-          encoderPre, prop.swiftIdentifierName
+          encoderPre,
+          prop.swiftIdentifierName,
         )
     }
 
@@ -973,12 +992,16 @@ class SwiftTypeRegistry(
         val switchOn =
           if (externalDiscriminatorProperty.optional) {
             decoderInitFunctionBuilder.beginControlFlow(
-              "if", "let %N = self.%N",
-              externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
+              "if",
+              "let %N = self.%N",
+              externalDiscriminatorPropertyName,
+              externalDiscriminatorPropertyName,
             )
             encoderFunctionBuilder.beginControlFlow(
-              "if", "let %N = self.%N",
-              externalDiscriminatorPropertyName, externalDiscriminatorPropertyName
+              "if",
+              "let %N = self.%N",
+              externalDiscriminatorPropertyName,
+              externalDiscriminatorPropertyName,
             )
             CodeBlock.of("%N", externalDiscriminatorPropertyName)
           } else {
@@ -1008,23 +1031,34 @@ class SwiftTypeRegistry(
               prop.swiftIdentifierName,
               coderSuffix,
               propDerivedTypeName,
-              prop.swiftIdentifierName
+              prop.swiftIdentifierName,
             )
             encoderFunctionBuilder.addStatement(
               "case .%N:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-              discriminatorCase, coderSuffix, prop.swiftIdentifierName,
-              propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
+              discriminatorCase,
+              coderSuffix,
+              prop.swiftIdentifierName,
+              propDerivedTypeName,
+              propDerivedTypeSuffix,
+              prop.swiftIdentifierName,
             )
           } else {
             decoderInitFunctionBuilder.addStatement(
               "case %S:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
-              discriminatorValue, prop.swiftIdentifierName,
-              coderSuffix, propDerivedTypeName, prop.swiftIdentifierName
+              discriminatorValue,
+              prop.swiftIdentifierName,
+              coderSuffix,
+              propDerivedTypeName,
+              prop.swiftIdentifierName,
             )
             encoderFunctionBuilder.addStatement(
               "case %S:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-              discriminatorValue, coderSuffix, prop.swiftIdentifierName,
-              propDerivedTypeName, propDerivedTypeSuffix, prop.swiftIdentifierName
+              discriminatorValue,
+              coderSuffix,
+              prop.swiftIdentifierName,
+              propDerivedTypeName,
+              propDerivedTypeSuffix,
+              prop.swiftIdentifierName,
             )
           }
         }
@@ -1035,13 +1069,22 @@ class SwiftTypeRegistry(
         ) {
           decoderInitFunctionBuilder.addStatement(
             "default:\nthrow %T.%N(%>\nforKey: %T.%N,\nin: container,\ndebugDescription: %S%<\n)",
-            DECODING_ERROR, "dataCorruptedError", codingKeysTypeName, externalDiscriminatorPropertyName,
-            "unsupported value for \"$externalDiscriminatorPropertyName\""
+            DECODING_ERROR,
+            "dataCorruptedError",
+            codingKeysTypeName,
+            externalDiscriminatorPropertyName,
+            "unsupported value for \"$externalDiscriminatorPropertyName\"",
           )
           encoderFunctionBuilder.addStatement(
-            "default:\nthrow %T.%N(%>\n%L,\n%T(%>\ncodingPath: encoder.codingPath + [%T.%N],\ndebugDescription: %S%<\n)%<\n)",
-            ENCODING_ERROR, "invalidValue", switchOn, ENCODING_ERROR.nestedType("Context"), codingKeysTypeName,
-            externalDiscriminatorPropertyName, "unsupported value for \"$externalDiscriminatorPropertyName\""
+            "default:\n" +
+              "throw %T.%N(%>\n%L,\n%T(%>\ncodingPath: encoder.codingPath + [%T.%N],\ndebugDescription: %S%<\n)%<\n)",
+            ENCODING_ERROR,
+            "invalidValue",
+            switchOn,
+            ENCODING_ERROR.nestedType("Context"),
+            codingKeysTypeName,
+            externalDiscriminatorPropertyName,
+            "unsupported value for \"$externalDiscriminatorPropertyName\"",
           )
         }
         decoderInitFunctionBuilder.endControlFlow("switch")
@@ -1122,14 +1165,15 @@ class SwiftTypeRegistry(
               "Type" -> typeName(avalue.toString())
               else -> avalue.toString()
             }
-          } else
+          } else {
             ""
+          }
         }
 
         propertyBuilder.getter(
           FunctionSpec.getterBuilder()
             .addStatement(code, *convertedCodeParams.toTypedArray())
-            .build()
+            .build(),
         )
 
         typeBuilder.addProperty(propertyBuilder.build())
@@ -1147,26 +1191,28 @@ class SwiftTypeRegistry(
             ParameterSpec
               .builder(
                 propertyDeclaration.swiftIdentifierName,
-                propertyTypeName
+                propertyTypeName,
               )
               .apply {
                 if (isPatchable) {
                   defaultValue(".none")
                 }
               }
-              .build()
+              .build(),
           )
 
         paramConsBuilder.addStatement(
           "self.%N = %N",
-          propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
+          propertyDeclaration.swiftIdentifierName,
+          propertyDeclaration.swiftIdentifierName,
         )
 
         // Add description value
         //
         descriptionCodeBuilder.add(
           ".add(%N, named: %S)\n",
-          propertyDeclaration.swiftIdentifierName, propertyDeclaration.swiftIdentifierName
+          propertyDeclaration.swiftIdentifierName,
+          propertyDeclaration.swiftIdentifierName,
         )
       }
     }
@@ -1178,7 +1224,7 @@ class SwiftTypeRegistry(
       paramConsBuilder.addStatement(
         "super.init(%L)",
         inheritedDeclaredProperties.map { CodeBlock.of("%L: %N", it.swiftIdentifierName, it.swiftIdentifierName) }
-          .joinToCode(",%W")
+          .joinToCode(",%W"),
       )
     }
     typeBuilder.addFunction(paramConsBuilder.build())
@@ -1188,15 +1234,16 @@ class SwiftTypeRegistry(
 
     typeBuilder.addProperty(
       PropertySpec.builder(
-        DESCRIPTION_PROP_NAME, STRING,
-        *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE)
+        DESCRIPTION_PROP_NAME,
+        STRING,
+        *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE),
       )
         .getter(
           FunctionSpec.getterBuilder()
             .addCode(descriptionCodeBuilder.add(".build()%]\n").build())
-            .build()
+            .build(),
         )
-        .build()
+        .build(),
     )
 
     // Add codable methods
@@ -1234,9 +1281,9 @@ class SwiftTypeRegistry(
               CodeBlock.of(
                 "%L: %N",
                 it.swiftIdentifierName,
-                it.swiftIdentifierName
+                it.swiftIdentifierName,
               )
-            }.joinToCode(",%W")
+            }.joinToCode(",%W"),
           )
 
       typeBuilder.addFunction(fluentBuilder.build())
@@ -1261,7 +1308,7 @@ class SwiftTypeRegistry(
                   addParameter(
                     ParameterSpec.builder(propertySpec.name, propertySpec.type)
                       .defaultValue(".none")
-                      .build()
+                      .build(),
                   )
                 }
               }
@@ -1271,7 +1318,7 @@ class SwiftTypeRegistry(
                 className,
                 propertySpecs.map { CodeBlock.of("%L: %L", it.name, it.name) }.joinToCode(",%W"),
               )
-              .build()
+              .build(),
           )
           .build()
 
@@ -1318,7 +1365,7 @@ class SwiftTypeRegistry(
 
   private fun defineType(
     className: DeclaredTypeName,
-    builderBlock: (DeclaredTypeName) -> TypeSpec.Builder
+    builderBlock: (DeclaredTypeName) -> TypeSpec.Builder,
   ): TypeSpec.Builder {
 
     val builder = builderBlock(className)
@@ -1437,12 +1484,13 @@ class SwiftTypeRegistry(
     for (type in types) {
       val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
       currentClassNameHierarchy =
-        if (currentClassNameHierarchy == null)
+        if (currentClassNameHierarchy == null) {
           propertyClassNameHierarchy
-        else
+        } else {
           (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
             .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
             .map { propertyClassNameHierarchy[it] }
+        }
     }
 
     return currentClassNameHierarchy?.firstOrNull()

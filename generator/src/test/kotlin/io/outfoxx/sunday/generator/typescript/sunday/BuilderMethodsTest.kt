@@ -38,7 +38,7 @@ class BuilderMethodsTest {
   @Test
   fun `test request builder method generation `(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-builder.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-builder.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -91,14 +91,14 @@ class BuilderMethodsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test response builder method generation `(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -151,7 +151,7 @@ class BuilderMethodsTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

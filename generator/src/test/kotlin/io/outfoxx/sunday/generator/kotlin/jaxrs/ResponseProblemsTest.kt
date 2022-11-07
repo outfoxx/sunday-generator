@@ -40,7 +40,7 @@ class ResponseProblemsTest {
 
   @Test
   fun `test API problem registration in server mode when no problems referenced`(
-    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
@@ -79,13 +79,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test API problem registration in client mode when no problems referenced`(
-    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
@@ -124,13 +124,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test API problem registration in server mode`(
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
@@ -167,7 +167,7 @@ class ResponseProblemsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Response
-        
+
           public companion object {
             public fun registerProblems(mapper: ObjectMapper): Unit {
               mapper.registerSubtypes(
@@ -182,13 +182,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test API problem registration in client mode`(
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
@@ -225,7 +225,7 @@ class ResponseProblemsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Test
-        
+
           public companion object {
             public fun registerProblems(mapper: ObjectMapper): Unit {
               mapper.registerSubtypes(
@@ -240,13 +240,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -282,11 +282,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://example.com/invalid_id"
 
@@ -298,13 +298,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -340,11 +340,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://example.com/invalid_id"
 
@@ -356,13 +356,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using base uri`(
-    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -398,11 +398,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://api.example.com/api/invalid_id"
 
@@ -414,13 +414,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using absolute problem base uri`(
-    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -456,11 +456,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://errors.example.com/docs/invalid_id"
 
@@ -472,13 +472,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using relative problem base uri`(
-    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -514,11 +514,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://example.com/api/errors/invalid_id"
 
@@ -530,13 +530,13 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation locates problems in libraries`(
-    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -572,11 +572,11 @@ class ResponseProblemsTest {
           @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
-          cause: ThrowableProblem? = null
+          cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
           public override fun getCause(): Exceptional? = super.cause
-        
+
           public companion object {
             public const val TYPE: String = "http://example.com/invalid_id"
 
@@ -588,7 +588,7 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

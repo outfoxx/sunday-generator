@@ -24,5 +24,5 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 data class KotlinResolutionContext(
   override val unit: BaseUnit,
   override val shapeIndex: ShapeIndex,
-  val suggestedTypeName: ClassName?
+  val suggestedTypeName: ClassName?,
 ) : ResolutionContext

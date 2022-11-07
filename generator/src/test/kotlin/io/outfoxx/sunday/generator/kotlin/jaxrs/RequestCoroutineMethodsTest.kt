@@ -36,7 +36,7 @@ class RequestCoroutineMethodsTest {
 
   @Test
   fun `test basic coroutines method generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -57,7 +57,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -85,13 +85,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic coroutines method generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -112,7 +112,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -140,13 +140,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test basic coroutines method generation in client mode with nullify`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -167,7 +167,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -211,13 +211,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event coroutines method generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -238,7 +238,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -274,13 +274,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event coroutines method generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -301,7 +301,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -337,13 +337,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event coroutines method generation with common type in server mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -364,7 +364,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -399,13 +399,13 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event coroutines method generation with common type in client mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -426,7 +426,7 @@ class RequestCoroutineMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
-          )
+          ),
         )
       }
 
@@ -461,7 +461,7 @@ class RequestCoroutineMethodsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

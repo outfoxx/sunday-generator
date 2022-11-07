@@ -41,7 +41,7 @@ class ResponseProblemsTest {
   @Test
   fun `test API problem registration`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -99,14 +99,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test API problem registration when no problems`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -162,14 +162,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -240,14 +240,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using base uri`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -318,14 +318,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using absolute problem base uri`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -396,14 +396,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation using relative problem base uri`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -474,14 +474,14 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test problem type generation locates problems in libraries`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -552,7 +552,7 @@ class ResponseProblemsTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

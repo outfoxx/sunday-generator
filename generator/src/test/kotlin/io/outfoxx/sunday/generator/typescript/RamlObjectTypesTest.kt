@@ -42,7 +42,7 @@ class RamlObjectTypesTest {
   @Test
   fun `test generated freeform object`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-freeform.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -80,14 +80,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated nullability of property types in classes`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -130,14 +130,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test naming of types defined inline in property`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -150,7 +150,7 @@ class RamlObjectTypesTest {
   @Test
   fun `test naming of types defined inline in resource`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -161,7 +161,7 @@ class RamlObjectTypesTest {
           document,
           shapeIndex,
           typeRegistry,
-          typeScriptSundayTestOptions
+          typeScriptSundayTestOptions,
         )
       }
     val typeModSpec = findTypeMod("API@!api", builtTypes)
@@ -173,7 +173,7 @@ class RamlObjectTypesTest {
   @Test
   fun `test generated classes for object hierarchy`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -223,7 +223,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(testSpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -260,7 +260,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(test2Spec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -291,7 +291,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(emptySpec)
           .writeTo(this)
-      }
+      },
     )
 
     assertEquals(
@@ -328,14 +328,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(test3Spec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated class property with kebab or snake case names`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -378,14 +378,14 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test generated class property with kebab or snake case names and jackson decorators`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -435,7 +435,7 @@ class RamlObjectTypesTest {
       buildString {
         FileSpec.get(typeModSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

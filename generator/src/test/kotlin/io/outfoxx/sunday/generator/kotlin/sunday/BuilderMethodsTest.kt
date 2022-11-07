@@ -36,7 +36,7 @@ class BuilderMethodsTest {
 
   @Test
   fun `test request builder method generation `(
-    @ResourceUri("raml/resource-gen/req-builder.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/req-builder.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -56,7 +56,7 @@ class BuilderMethodsTest {
     assertEquals(
       """
         package io.test
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -66,7 +66,7 @@ class BuilderMethodsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(): Request = this.requestFactory.request(
             method = Method.Get,
@@ -79,13 +79,13 @@ class BuilderMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test response builder method generation `(
-    @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -105,7 +105,7 @@ class BuilderMethodsTest {
     assertEquals(
       """
         package io.test
-        
+
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
@@ -115,7 +115,7 @@ class BuilderMethodsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON)
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(): Response = this.requestFactory.response(
             method = Method.Get,
@@ -128,7 +128,7 @@ class BuilderMethodsTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

@@ -51,7 +51,7 @@ import javax.inject.Inject
 
 open class SundayGenerate
 @Inject constructor(
-  objects: ObjectFactory
+  objects: ObjectFactory,
 ) : DefaultTask() {
 
   @InputFiles
@@ -224,8 +224,8 @@ open class SundayGenerate
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),
-                serviceSuffix
-              )
+                serviceSuffix,
+              ),
             )
 
           TargetFramework.Sunday ->
@@ -237,8 +237,8 @@ open class SundayGenerate
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),
-                serviceSuffix
-              )
+                serviceSuffix,
+              ),
             )
         }
 

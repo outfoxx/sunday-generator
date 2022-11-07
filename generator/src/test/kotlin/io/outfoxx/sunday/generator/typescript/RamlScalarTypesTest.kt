@@ -37,7 +37,7 @@ class RamlScalarTypesTest {
   @Test
   fun `test type names generated for general scalar types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -95,14 +95,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for general scalar types with jackson decorators`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -173,14 +173,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for integer scalar types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -248,14 +248,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for integer scalar types with jackson decorators`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -340,14 +340,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for float scalar types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -395,14 +395,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for float scalar types with jackson decorators`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -459,14 +459,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for date & time scalar types`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
@@ -521,14 +521,14 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for date & time scalar types with jackson decorators`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
@@ -593,7 +593,7 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get(typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

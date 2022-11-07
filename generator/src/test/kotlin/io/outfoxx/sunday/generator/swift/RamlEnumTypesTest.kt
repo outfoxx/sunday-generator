@@ -36,7 +36,7 @@ class RamlEnumTypesTest {
   @Test
   fun `test names generated for enums types & values`(
     compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI,
   ) {
 
     val typeRegistry = SwiftTypeRegistry(setOf())
@@ -60,7 +60,7 @@ class RamlEnumTypesTest {
       buildString {
         FileSpec.get("", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

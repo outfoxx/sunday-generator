@@ -34,7 +34,7 @@ class RamlScalarTypesTest {
 
   @Test
   fun `test type names generated for general scalar types`(
-    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/misc.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -67,13 +67,13 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for integer scalar types`(
-    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/ints.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -109,13 +109,13 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for float scalar types`(
-    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/floats.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -141,13 +141,13 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test type names generated for date & time scalar types`(
-    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI
+    @ResourceUri("raml/type-gen/types/scalar/dates.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -177,7 +177,7 @@ class RamlScalarTypesTest {
       buildString {
         FileSpec.get("io.test", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }

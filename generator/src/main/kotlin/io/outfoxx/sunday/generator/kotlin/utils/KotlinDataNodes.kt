@@ -41,26 +41,30 @@ fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?, builder: CodeBloc
         DataTypes.Nil() -> builder.add("null")
 
         DataTypes.String() ->
-          if (value != null && shape?.values?.isNotEmpty() == true)
+          if (value != null && shape?.values?.isNotEmpty() == true) {
             builder.add("%T.%L", typeName, kotlinEnumName)
-          else if (value != null)
+          } else if (value != null) {
             builder.add("%S", value)
-          else
+          } else {
             builder.add("null")
+          }
 
         DataTypes.Date(), DataTypes.Time(), DataTypes.DateTime(), DataTypes.DateTimeOnly() ->
-          if (value != null)
+          if (value != null) {
             builder.add("%S", value)
-          else
+          } else {
             builder.add("null")
+          }
 
         DataTypes.Boolean(),
         DataTypes.Byte(), DataTypes.Integer(), DataTypes.Number(), DataTypes.Long(),
-        DataTypes.Double(), DataTypes.Float(), DataTypes.Decimal() ->
-          if (value != null)
+        DataTypes.Double(), DataTypes.Float(), DataTypes.Decimal(),
+        ->
+          if (value != null) {
             builder.add("%L", value)
-          else
+          } else {
             builder.add("null")
+          }
 
         else -> error("Unsupported DataNode/DataType")
       }

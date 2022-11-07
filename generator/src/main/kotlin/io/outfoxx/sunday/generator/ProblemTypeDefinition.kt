@@ -31,7 +31,7 @@ data class ProblemTypeDefinition(
   val detail: String,
   val custom: Map<String, String>,
   val definedIn: BaseUnit,
-  val source: ObjectNode
+  val source: ObjectNode,
 ) {
 
   constructor(code: String, fields: ObjectNode, baseURI: URI, definedIn: BaseUnit, source: ObjectNode) : this(

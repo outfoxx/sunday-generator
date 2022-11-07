@@ -163,7 +163,7 @@ abstract class TypeScriptGenerator(
             }
           }
           .addCode("}%<\n);\n")
-          .build()
+          .build(),
       )
     }
 
@@ -180,7 +180,7 @@ abstract class TypeScriptGenerator(
     endPoint: EndPoint,
     operation: Operation,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec.Builder
 
   abstract fun processResourceMethodUriParameter(
@@ -189,7 +189,7 @@ abstract class TypeScriptGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodQueryParameter(
@@ -198,7 +198,7 @@ abstract class TypeScriptGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodHeaderParameter(
@@ -207,7 +207,7 @@ abstract class TypeScriptGenerator(
     parameter: Parameter,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processResourceMethodBodyParameter(
@@ -216,7 +216,7 @@ abstract class TypeScriptGenerator(
     payloadSchema: Shape,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    parameterBuilder: ParameterSpec.Builder
+    parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec
 
   abstract fun processReturnType(
@@ -227,7 +227,7 @@ abstract class TypeScriptGenerator(
     problemTypes: Map<String, ProblemTypeDefinition>,
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
-    returnTypeName: TypeName
+    returnTypeName: TypeName,
   ): TypeName
 
   abstract fun processResourceMethodEnd(
@@ -235,7 +235,7 @@ abstract class TypeScriptGenerator(
     operation: Operation,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec
 
   open fun processServiceEnd(typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
@@ -245,7 +245,7 @@ abstract class TypeScriptGenerator(
   private fun generateClientServiceMethods(
     typeName: TypeName.Standard,
     typeBuilder: ClassSpec.Builder,
-    endPoints: List<EndPoint>
+    endPoints: List<EndPoint>,
   ) {
 
     val namedGenerator = NameGenerator.createDefaultGenerator()
@@ -288,7 +288,7 @@ abstract class TypeScriptGenerator(
             val requestBodyParameterBuilder =
               ParameterSpec.builder(
                 functionBuilderNameAllocator.newName("body", payloadSchema),
-                requestBodyParameterTypeName
+                requestBodyParameterTypeName,
               )
 
             val requestBodyParameterSpec =
@@ -298,7 +298,7 @@ abstract class TypeScriptGenerator(
                 payloadSchema,
                 typeBuilder,
                 functionBuilder,
-                requestBodyParameterBuilder
+                requestBodyParameterBuilder,
               )
 
             functionBuilder.addParameter(requestBodyParameterSpec)
@@ -322,7 +322,7 @@ abstract class TypeScriptGenerator(
                 problemTypes,
                 typeBuilder,
                 functionBuilder,
-                responseBodyTypeName
+                responseBodyTypeName,
               )
 
             if (processedResponseBodyTypeName != VOID) {
@@ -355,14 +355,21 @@ abstract class TypeScriptGenerator(
             val referencedProblemTypes =
               referencedProblemCodes
                 .map { problemCode ->
-                  val problemType = problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
+                  val problemType = problemTypes[problemCode] ?: genError(
+                    "Unknown problem code referenced: $problemCode",
+                    operation,
+                  )
                   problemCode to problemType
                 }
                 .toMap()
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(problemCode, problemTypeDefinition, shapeIndex)
+                problemTypeDefinition.type to typeRegistry.defineProblemType(
+                  problemCode,
+                  problemTypeDefinition,
+                  shapeIndex,
+                )
               }
               .toMap()
           } ?: emptyMap()
@@ -384,7 +391,7 @@ abstract class TypeScriptGenerator(
     operation: Operation,
     typeName: TypeName.Standard,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
 
     endPoint.parameters.forEach { parameter ->
@@ -406,7 +413,7 @@ abstract class TypeScriptGenerator(
       val uriParameterBuilder =
         ParameterSpec.builder(
           functionBuilderNameAllocator.newName(parameter.typeScriptIdentifierName, parameter),
-          uriParameterTypeName
+          uriParameterTypeName,
         )
 
       val uriParameterSpec =
@@ -416,7 +423,7 @@ abstract class TypeScriptGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          uriParameterBuilder,
         )
 
       functionBuilder.addParameter(uriParameterSpec)
@@ -428,7 +435,7 @@ abstract class TypeScriptGenerator(
     operation: Operation,
     typeName: TypeName.Standard,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
 
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
@@ -451,7 +458,7 @@ abstract class TypeScriptGenerator(
 
       val uriParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(parameter.typeScriptIdentifierName, parameter),
-        queryParameterTypeName
+        queryParameterTypeName,
       )
 
       val uriParameterSpec =
@@ -461,7 +468,7 @@ abstract class TypeScriptGenerator(
           parameter,
           typeBuilder,
           functionBuilder,
-          uriParameterBuilder
+          uriParameterBuilder,
         )
 
       functionBuilder.addParameter(uriParameterSpec)
@@ -473,7 +480,7 @@ abstract class TypeScriptGenerator(
     operation: Operation,
     typeName: TypeName.Standard,
     typeBuilder: ClassSpec.Builder,
-    functionBuilder: FunctionSpec.Builder
+    functionBuilder: FunctionSpec.Builder,
   ) {
     val request = operation.request ?: operation.requests.firstOrNull() ?: return
 
@@ -495,7 +502,7 @@ abstract class TypeScriptGenerator(
 
       val headerParameterBuilder = ParameterSpec.builder(
         functionBuilderNameAllocator.newName(header.typeScriptIdentifierName, header),
-        headerParameterTypeName
+        headerParameterTypeName,
       )
 
       val headerParameterSpec =
@@ -505,7 +512,7 @@ abstract class TypeScriptGenerator(
           header,
           typeBuilder,
           functionBuilder,
-          headerParameterBuilder
+          headerParameterBuilder,
         )
 
       functionBuilder.addParameter(headerParameterSpec)
@@ -529,7 +536,7 @@ abstract class TypeScriptGenerator(
           """
             Problem URI is not a valid URI; it cannot be a template.
             Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
-          """.trimIndent()
+          """.trimIndent(),
         )
       }
     }
@@ -539,7 +546,7 @@ abstract class TypeScriptGenerator(
     var problemBaseUri =
       document.api.findAnnotation(
         ProblemBaseUri,
-        null
+        null,
       )?.stringValue?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
@@ -585,10 +592,11 @@ abstract class TypeScriptGenerator(
             } ?: TypeName.STRING
 
           val defaultValue =
-            if (variable.name == "version")
+            if (variable.name == "version") {
               variable.schema?.defaultValue ?: ScalarNode(document.api.version ?: "1", DataTypes.String())
-            else
+            } else {
               variable.schema?.defaultValue
+            }
 
           URIParameter(name, variableTypeName, variable.schema, defaultValue)
         }

@@ -36,7 +36,7 @@ class ResponseEventsTest {
 
   @Test
   fun `test event source method`(
-    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -66,7 +66,7 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf()
+          public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
           public suspend fun fetchEvents(): EventSource = this.requestFactory.eventSource(
             method = Method.Get,
@@ -79,13 +79,13 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation`(
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -120,7 +120,7 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf()
+          public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
           public suspend fun fetchEventsSimple(): Flow<Test1> = this.requestFactory.eventStream(
             method = Method.Get,
@@ -146,18 +146,18 @@ class ResponseEventsTest {
             }
           )
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 
   @Test
   fun `test event stream method generation for common base events`(
-    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -191,7 +191,7 @@ class ResponseEventsTest {
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf()
+          public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
           public suspend fun fetchEventsSimple(): Flow<Base> = this.requestFactory.eventStream(
             method = Method.Get,
@@ -221,7 +221,7 @@ class ResponseEventsTest {
       buildString {
         FileSpec.get("io.test.service", typeSpec)
           .writeTo(this)
-      }
+      },
     )
   }
 }
