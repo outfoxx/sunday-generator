@@ -203,13 +203,6 @@ class KotlinJAXRSGenerator(
 
     if (defaultMediaTypes.isNotEmpty()) {
 
-      if (defaultMediaTypes.size > 1 && generationMode == Client) {
-        println(
-          "[WARN] Using multiple default media types for a JAX-RS client is not supported, " +
-            "the first value will be chosen",
-        )
-      }
-
       val prodAnn = AnnotationSpec.builder(Produces::class)
         .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
         .build()
