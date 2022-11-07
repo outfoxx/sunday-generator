@@ -1,375 +1,404 @@
+<!doctype html>
 <html>
-  <head>
+<head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>SwiftGenerator</title>
-</head><body><link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script><script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script><link href="../../../styles/style.css" rel="Stylesheet"><link href="../../../styles/logo-styles.css" rel="Stylesheet"><link href="../../../styles/jetbrains-mono.css" rel="Stylesheet"><link href="../../../styles/main.css" rel="Stylesheet"><script type="text/javascript" src="../../../scripts/clipboard.js" async></script><script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script><script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script><script type="text/javascript" src="../../../scripts/main.js" async></script>
-  
-    <div id="container">
-      <div id="leftColumn"><a href="../../../index.html">
-            <div id="logo"></div>
-          </a>
-        <div id="paneSearch"></div>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+<a href="../../../index.html">
+<span>sunday-generator</span>            </a>    </div>
+    <div>
+    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
         <div id="sideMenu"></div>
-      </div>
-      <div id="main">
-        <script type="text/javascript" src="../../../scripts/main.js"></script><div id="leftToggler"><span class="icon-toggler"></span></div>
-
-        <div class="main-content" id="content" pageids="generator::io.outfoxx.sunday.generator.swift/SwiftGenerator///PointingToDeclaration//1884250599">
-          <div class="navigation-wrapper" id="navigation-wrapper">
-            <div class="breadcrumbs"><a href="../../index.html">generator</a>/<a href="../index.html">io.outfoxx.sunday.generator.swift</a>/<a href="index.html">SwiftGenerator</a></div>
-            <div class="pull-right d-flex">
-              <div id="searchBar"></div>
-            </div>
-          </div>
-          <div class="cover ">
-            <h1 class="cover"><span>Swift</span><wbr><span><span>Generator</span></span></h1>
-            <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract class <a href="index.html">SwiftGenerator</a>(document: <span data-unresolved-link="amf.client.model.document/Document///PointingToDeclaration/">Document</span>, typeRegistry: <a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a>, options: <a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a>) : <a href="../../io.outfoxx.sunday.generator/-generator/index.html">Generator</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">Generator for Swift language framework targets</p></div></div>
-          </div>
-          <div class="tabbedcontent">
-            <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button><button class="section-tab" data-togglable="Inheritors">Inheritors</button></div>
-            <div class="tabs-section-body">
-              <h2 class="tabbedcontent">Constructors</h2>
-              <div class="table" data-togglable="Constructors"><a data-name="-2010823406%2FConstructors%2F1884250599" anchor-label="SwiftGenerator" id="-2010823406%2FConstructors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue TabbedContent">
-                    <div class=""><span class="inline-flex"><a href="-swift-generator.html">SwiftGenerator</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2010823406%2FConstructors%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">fun <a href="-swift-generator.html">SwiftGenerator</a>(document: <span data-unresolved-link="amf.client.model.document/Document///PointingToDeclaration/">Document</span>, typeRegistry: <a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a>, options: <a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a>)<span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h2 class="">Types</h2>
-              <div class="table" data-togglable="Types"><a data-name="-744110788%2FClasslikes%2F1884250599" anchor-label="URIParameter" id="-744110788%2FClasslikes%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="-u-r-i-parameter/index.html"><span><span>URIParameter</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-744110788%2FClasslikes%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">data class <a href="-u-r-i-parameter/index.html">URIParameter</a>(name: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a>, typeName: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span>, shape: <span data-unresolved-link="amf.client.model.domain/Shape///PointingToDeclaration/">Shape</span>?, defaultValue: <span data-unresolved-link="amf.client.model.domain/DataNode///PointingToDeclaration/">DataNode</span>?)<span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageids="generator::io.outfoxx.sunday.generator.swift/SwiftGenerator///PointingToDeclaration//1884250599">
+  <div class="breadcrumbs"><a href="../../index.html">generator</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.generator.swift</a><span class="delimiter">/</span><span class="current">SwiftGenerator</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Swift</span><wbr><span><span>Generator</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">SwiftGenerator</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeRegistry<span class="token operator">: </span><a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>options<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a></span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-generator/index.html">Generator</a></div><p class="paragraph">Generator for Swift language framework targets</p></div></div>
   </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h2 class="">Functions</h2>
-              <div class="table" data-togglable="Functions"><a data-name="1009509891%2FFunctions%2F1884250599" anchor-label="generateServiceType" id="1009509891%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="generate-service-type.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Type</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1009509891%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">open fun <a href="generate-service-type.html">generateServiceType</a>(serviceTypeName: <span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span>, endPoints: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a>&lt;<span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>&gt;): <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="1884390091%2FFunctions%2F1884250599" anchor-label="generateServiceTypes" id="1884390091%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="generate-service-types.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Types</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1884390091%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">open override fun <a href="generate-service-types.html">generateServiceTypes</a>()<span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="1203209009%2FFunctions%2F1884250599" anchor-label="getBaseURIInfo" id="1203209009%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="get-base-u-r-i-info.html"><span>get</span><wbr><span>Base</span><wbr><span><span>URIInfo</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1203209009%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">fun <a href="get-base-u-r-i-info.html">getBaseURIInfo</a>(): <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a>&lt;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a>, <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a>&lt;<a href="-u-r-i-parameter/index.html">SwiftGenerator.URIParameter</a>&gt;&gt;?<span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-677663820%2FFunctions%2F1884250599" anchor-label="processResourceMethodBodyParameter" id="-677663820%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-body-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Body</span><wbr><span><span>Parameter</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-677663820%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-body-parameter.html">processResourceMethodBodyParameter</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, payloadSchema: <span data-unresolved-link="amf.client.model.domain/Shape///PointingToDeclaration/">Shape</span>, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>, parameterBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="1806136851%2FFunctions%2F1884250599" anchor-label="processResourceMethodEnd" id="1806136851%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-end.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>End</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1806136851%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-end.html">processResourceMethodEnd</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, problemTypes: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a>&lt;<a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a>, <span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span>&gt;, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec///PointingToDeclaration/">FunctionSpec</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-569635727%2FFunctions%2F1884250599" anchor-label="processResourceMethodHeaderParameter" id="-569635727%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-header-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Header</span><wbr><span><span>Parameter</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-569635727%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-header-parameter.html">processResourceMethodHeaderParameter</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, parameter: <span data-unresolved-link="amf.client.model.domain/Parameter///PointingToDeclaration/">Parameter</span>, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>, parameterBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-30891776%2FFunctions%2F1884250599" anchor-label="processResourceMethodQueryParameter" id="-30891776%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-query-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Query</span><wbr><span><span>Parameter</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-30891776%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-query-parameter.html">processResourceMethodQueryParameter</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, parameter: <span data-unresolved-link="amf.client.model.domain/Parameter///PointingToDeclaration/">Parameter</span>, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>, parameterBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-1363325261%2FFunctions%2F1884250599" anchor-label="processResourceMethodStart" id="-1363325261%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-start.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>Start</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1363325261%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-start.html">processResourceMethodStart</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-2134456804%2FFunctions%2F1884250599" anchor-label="processResourceMethodUriParameter" id="-2134456804%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-resource-method-uri-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Uri</span><wbr><span><span>Parameter</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2134456804%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-resource-method-uri-parameter.html">processResourceMethodUriParameter</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, parameter: <span data-unresolved-link="amf.client.model.domain/Parameter///PointingToDeclaration/">Parameter</span>, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>, parameterBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="1085255562%2FFunctions%2F1884250599" anchor-label="processReturnType" id="1085255562%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-return-type.html"><span>process</span><wbr><span>Return</span><wbr><span><span>Type</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1085255562%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-return-type.html">processReturnType</a>(endPoint: <span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>, operation: <span data-unresolved-link="amf.client.model.domain/Operation///PointingToDeclaration/">Operation</span>, response: <span data-unresolved-link="amf.client.model.domain/Response///PointingToDeclaration/">Response</span>, body: <span data-unresolved-link="amf.client.model.domain/Shape///PointingToDeclaration/">Shape</span>?, problemTypes: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a>&lt;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a>, <a href="../../io.outfoxx.sunday.generator/-problem-type-definition/index.html">ProblemTypeDefinition</a>&gt;, typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>, functionBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span>, returnTypeName: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-1963782356%2FFunctions%2F1884250599" anchor-label="processServiceBegin" id="-1963782356%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-service-begin.html"><span>process</span><wbr><span>Service</span><wbr><span><span>Begin</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1963782356%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">abstract fun <a href="process-service-begin.html">processServiceBegin</a>(serviceTypeName: <span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span>, endPoints: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a>&lt;<span data-unresolved-link="amf.client.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span>&gt;): <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-179767469%2FFunctions%2F1884250599" anchor-label="processServiceEnd" id="-179767469%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="process-service-end.html"><span>process</span><wbr><span>Service</span><wbr><span><span>End</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-179767469%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">open fun <a href="process-service-end.html">processServiceEnd</a>(typeBuilder: <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span>): <span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-71390759%2FFunctions%2F1884250599" anchor-label="resolveTypeName" id="-71390759%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="resolve-type-name.html"><span>resolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-71390759%2FFunctions%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title"><div class="divergent-group" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="with-platform-tags"><span class="pull-right"></span></div>
-
-  <div>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace">fun <a href="resolve-type-name.html">resolveTypeName</a>(shape: <span data-unresolved-link="amf.client.model.domain/Shape///PointingToDeclaration/">Shape</span>, suggestedTypeName: <span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span>?): <span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-  </div>
-</div>
-</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h2 class="">Properties</h2>
-              <div class="table" data-togglable="Properties"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="../../io.outfoxx.sunday.generator/-generator/api.html">api</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2007237626%2FProperties%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace">val <a href="../../io.outfoxx.sunday.generator/-generator/api.html">api</a>: <span data-unresolved-link="amf.client.model.domain/WebApi///PointingToDeclaration/">WebApi</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html">defaultMediaTypes</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1052926270%2FProperties%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace">val <a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html">defaultMediaTypes</a>: <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a>&lt;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a>&gt;<span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-1572520119%2FProperties%2F1884250599" anchor-label="document" id="-1572520119%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="document.html">document</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1572520119%2FProperties%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-1572520119%2FProperties%2F1884250599" anchor-label="document" id="-1572520119%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace">val <a href="document.html">document</a>: <span data-unresolved-link="amf.client.model.document/Document///PointingToDeclaration/">Document</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-766640712%2FProperties%2F1884250599" anchor-label="options" id="-766640712%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="options.html">options</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-766640712%2FProperties%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-766640712%2FProperties%2F1884250599" anchor-label="options" id="-766640712%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace">open override val <a href="options.html">options</a>: <a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-<a data-name="-1819111731%2FProperties%2F1884250599" anchor-label="typeRegistry" id="-1819111731%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="type-registry.html">typeRegistry</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1819111731%2FProperties%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div>
-                      <div class="title">
-                        <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-1819111731%2FProperties%2F1884250599" anchor-label="typeRegistry" id="-1819111731%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace">val <a href="type-registry.html">typeRegistry</a>: <a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h2 class="">Inheritors</h2>
-              <div class="table" data-togglable="Inheritors"><a data-name="841957131%2FInheritors%2F1884250599" anchor-label="SwiftSundayGenerator" id="841957131%2FInheritors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-                <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-                  <div class="main-subrow keyValue ">
-                    <div class=""><span class="inline-flex"><a href="../-swift-sunday-generator/index.html">SwiftSundayGenerator</a><span class="anchor-wrapper"><span class="anchor-icon" pointing-to="841957131%2FInheritors%2F1884250599"></span>
-                          <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                        </span></span></div>
-                    <div></div>
-                  </div>
-                </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button><button class="section-tab" data-togglable="Inheritors">Inheritors</button></div>
+    <div class="tabs-section-body">
+      <h2 class="tabbedcontent">Constructors</h2>
+      <div class="table" data-togglable="Constructors"><a data-name="-538951137%2FConstructors%2F1884250599" anchor-label="SwiftGenerator" id="-538951137%2FConstructors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-swift-generator.html"><span>Swift</span><wbr><span><span>Generator</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-538951137%2FConstructors%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-swift-generator.html"><span class="token function">SwiftGenerator</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter ">shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter ">typeRegistry<span class="token operator">: </span><a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a></span></span><span class="token punctuation">)</span></div></div></div>
               </div>
             </div>
           </div>
         </div>
-        <div class="footer"><span class="go-to-top-icon"><a href="#content"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span></div>
+      </div>
+      <h2 class="">Types</h2>
+      <div class="table" data-togglable="Types"><a data-name="-744110788%2FClasslikes%2F1884250599" anchor-label="URIParameter" id="-744110788%2FClasslikes%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-u-r-i-parameter/index.html"><span><span>URIParameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-744110788%2FClasslikes%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-u-r-i-parameter/index.html">URIParameter</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultValue<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/DataNode///PointingToDeclaration/">DataNode</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="382277052%2FFunctions%2F1884250599" anchor-label="generateServiceType" id="382277052%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="generate-service-type.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="382277052%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="generate-service-type.html"><span class="token function">generateServiceType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1884390091%2FFunctions%2F1884250599" anchor-label="generateServiceTypes" id="1884390091%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="generate-service-types.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Types</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1884390091%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="generate-service-types.html"><span class="token function">generateServiceTypes</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1203209009%2FFunctions%2F1884250599" anchor-label="getBaseURIInfo" id="1203209009%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="get-base-u-r-i-info.html"><span>get</span><wbr><span>Base</span><wbr><span><span>URIInfo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1203209009%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-base-u-r-i-info.html"><span class="token function">getBaseURIInfo</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-u-r-i-parameter/index.html">SwiftGenerator.URIParameter</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1571367430%2FFunctions%2F1884250599" anchor-label="processResourceMethodBodyParameter" id="1571367430%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-body-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Body</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1571367430%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-body-parameter.html"><span class="token function">processResourceMethodBodyParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">payloadSchema<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1538928641%2FFunctions%2F1884250599" anchor-label="processResourceMethodEnd" id="1538928641%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-end.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>End</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1538928641%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-end.html"><span class="token function">processResourceMethodEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec///PointingToDeclaration/">FunctionSpec</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1337960256%2FFunctions%2F1884250599" anchor-label="processResourceMethodHeaderParameter" id="-1337960256%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-header-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Header</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1337960256%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-header-parameter.html"><span class="token function">processResourceMethodHeaderParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1424855471%2FFunctions%2F1884250599" anchor-label="processResourceMethodQueryParameter" id="-1424855471%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-query-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Query</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1424855471%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-query-parameter.html"><span class="token function">processResourceMethodQueryParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="197914181%2FFunctions%2F1884250599" anchor-label="processResourceMethodStart" id="197914181%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-start.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>Start</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="197914181%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-start.html"><span class="token function">processResourceMethodStart</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="618665397%2FFunctions%2F1884250599" anchor-label="processResourceMethodUriParameter" id="618665397%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-resource-method-uri-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Uri</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="618665397%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-uri-parameter.html"><span class="token function">processResourceMethodUriParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="291124849%2FFunctions%2F1884250599" anchor-label="processReturnType" id="291124849%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-return-type.html"><span>process</span><wbr><span>Return</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="291124849%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-return-type.html"><span class="token function">processReturnType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">response<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Response///PointingToDeclaration/">Response</span><span class="token punctuation">, </span></span><span class="parameter ">body<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.generator/-problem-type-definition/index.html">ProblemTypeDefinition</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/FunctionSpec.Builder///PointingToDeclaration/">FunctionSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">returnTypeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1867485133%2FFunctions%2F1884250599" anchor-label="processServiceBegin" id="-1867485133%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-service-begin.html"><span>process</span><wbr><span>Service</span><wbr><span><span>Begin</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1867485133%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-begin.html"><span class="token function">processServiceBegin</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-179767469%2FFunctions%2F1884250599" anchor-label="processServiceEnd" id="-179767469%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="process-service-end.html"><span>process</span><wbr><span>Service</span><wbr><span><span>End</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-179767469%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-end.html"><span class="token function">processServiceEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1749316035%2FFunctions%2F1884250599" anchor-label="resolveTypeName" id="-1749316035%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="resolve-type-name.html"><span>resolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1749316035%2FFunctions%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-type-name.html"><span class="token function">resolveTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">suggestedTypeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/DeclaredTypeName///PointingToDeclaration/">DeclaredTypeName</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.swiftpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Properties</h2>
+      <div class="table" data-togglable="Properties"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="../../io.outfoxx.sunday.generator/-generator/api.html"><span><span>api</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2007237626%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/api.html">api</a><span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain.api/WebApi///PointingToDeclaration/">WebApi</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html"><span>default</span><wbr><span>Media</span><wbr><span><span>Types</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1052926270%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html">defaultMediaTypes</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1572520119%2FProperties%2F1884250599" anchor-label="document" id="-1572520119%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="document.html"><span><span>document</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1572520119%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-1572520119%2FProperties%2F1884250599" anchor-label="document" id="-1572520119%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="document.html">document</a><span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-766640712%2FProperties%2F1884250599" anchor-label="options" id="-766640712%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="options.html"><span><span>options</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-766640712%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-766640712%2FProperties%2F1884250599" anchor-label="options" id="-766640712%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="options.html">options</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1490957901%2FProperties%2F1884250599" anchor-label="shapeIndex" id="-1490957901%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="shape-index.html"><span>shape</span><wbr><span><span>Index</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1490957901%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-1490957901%2FProperties%2F1884250599" anchor-label="shapeIndex" id="-1490957901%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="shape-index.html">shapeIndex</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1819111731%2FProperties%2F1884250599" anchor-label="typeRegistry" id="-1819111731%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="type-registry.html"><span>type</span><wbr><span><span>Registry</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1819111731%2FProperties%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-1819111731%2FProperties%2F1884250599" anchor-label="typeRegistry" id="-1819111731%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="type-registry.html">typeRegistry</a><span class="token operator">: </span><a href="../-swift-type-registry/index.html">SwiftTypeRegistry</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Inheritors</h2>
+      <div class="table" data-togglable="Inheritors"><a data-name="841957131%2FInheritors%2F1884250599" anchor-label="SwiftSundayGenerator" id="841957131%2FInheritors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="../-swift-sunday-generator/index.html">SwiftSundayGenerator</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="841957131%2FInheritors%2F1884250599"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div></div>
+          </div>
+        </div>
       </div>
     </div>
-  
-</body></html>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
 
+</body></html>
 
