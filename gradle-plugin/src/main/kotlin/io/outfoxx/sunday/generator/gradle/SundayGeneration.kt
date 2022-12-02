@@ -55,7 +55,7 @@ class SundayGeneration(
   val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
   val generatedAnnotation: Property<String> = objects.property(String::class.java)
-  val alwaysUseResponseReturnType: Property<Boolean> = objects.property(Boolean::class.java)
+  val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty().convention(outputDirDef)
 }

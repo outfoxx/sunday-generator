@@ -55,8 +55,8 @@ class KotlinJAXRSGenerateCommand :
     help = "Portion of the baseUri that will be used in each generated service's @Path annotation",
   ).enum<BaseUriMode> { it.name.replace("_", "-").lowercase() }
 
-  private val alwaysUseResponseReturnType by option(
-    "-always-use-response-return-type",
+  private val alwaysUseResponseReturn by option(
+    "-always-use-response-return",
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
 
@@ -70,7 +70,7 @@ class KotlinJAXRSGenerateCommand :
         reactiveResponseType,
         explicitSecurityParameters,
         baseUriPathOnly,
-        alwaysUseResponseReturnType,
+        alwaysUseResponseReturn,
         servicePackageName ?: packageName,
         problemBaseUri,
         mediaTypes.toList(),

@@ -132,7 +132,7 @@ open class SundayGenerate
 
   @Input
   @Optional
-  val alwaysUseResponseReturnType: Property<Boolean> = objects.property(Boolean::class.java)
+  val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
 
   @Input
   @Optional
@@ -223,7 +223,7 @@ open class SundayGenerate
                 reactiveResponseType.orNull,
                 explicitSecurityParameters.orNull ?: false,
                 baseUriMode.orNull,
-                alwaysUseResponseReturnType.orNull ?: false,
+                alwaysUseResponseReturn.orNull ?: false,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),

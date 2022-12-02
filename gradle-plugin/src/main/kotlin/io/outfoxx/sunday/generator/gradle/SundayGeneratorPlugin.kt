@@ -57,7 +57,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.baseUriMode.set(gen.baseUriMode)
         genTask.defaultMediaTypes.set(gen.defaultMediaTypes)
         genTask.generatedAnnotation.set(gen.generatedAnnotation)
-        genTask.alwaysUseResponseReturnType.set(gen.alwaysUseResponseReturnType)
+        genTask.alwaysUseResponseReturn.set(gen.alwaysUseResponseReturn)
         genTask.useResultResponseReturn.set(gen.useResultResponseReturn)
         genTask.outputDir.set(gen.outputDir)
       }
