@@ -1,10 +1,9 @@
-[![CI](https://github.com/outfoxx/sunday-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/outfoxx/sunday-generator/actions/workflows/ci.yml)
+Sunday 🙏 The code generator of REST
+===
 
----
-
-# Sunday 🙏 The code generator of REST
-
----
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/outfoxx/sunday-generator/CI)
+![Maven Central](https://img.shields.io/maven-central/v/io.outfoxx.sunday/generator.svg)
+![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/io.outfoxx.sunday/generator.svg)
 
 Code generator for Sunday client libraries and standard server libraries.
 
