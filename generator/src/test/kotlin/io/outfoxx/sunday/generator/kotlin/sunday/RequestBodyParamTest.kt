@@ -68,13 +68,14 @@ class RequestBodyParamTest {
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(body: Test): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(body: Test): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -119,13 +120,14 @@ class RequestBodyParamTest {
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(body: Test?): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(body: Test?): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -173,13 +175,14 @@ class RequestBodyParamTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(body: ByteArray): Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = listOf(MediaType.OctetStream),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(body: ByteArray): Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = listOf(MediaType.OctetStream),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),

@@ -74,16 +74,17 @@ class RequestQueryParamsTest {
             obj: Test,
             strReq: String,
             int: Int = 5,
-          ): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            queryParameters = mapOf(
-              "obj" to obj,
-              "str-req" to strReq,
-              "int" to int
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          ): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              queryParameters = mapOf(
+                "obj" to obj,
+                "str-req" to strReq,
+                "int" to int
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -136,18 +137,19 @@ class RequestQueryParamsTest {
             int: Int? = null,
             def1: String? = "test",
             def2: Int? = 10,
-          ): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            queryParameters = mapOf(
-              "obj" to obj,
-              "str" to str,
-              "int" to int,
-              "def1" to def1,
-              "def2" to def2
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          ): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              queryParameters = mapOf(
+                "obj" to obj,
+                "str" to str,
+                "int" to int,
+                "def1" to def1,
+                "def2" to def2
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -195,15 +197,16 @@ class RequestQueryParamsTest {
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(category: FetchTestCategoryQueryParam,
-              type: FetchTestTypeQueryParam): Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            queryParameters = mapOf(
-              "category" to category,
-              "type" to type
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+              type: FetchTestTypeQueryParam): Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              queryParameters = mapOf(
+                "category" to category,
+                "type" to type
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
 
           public enum class FetchTestCategoryQueryParam {
             Politics,

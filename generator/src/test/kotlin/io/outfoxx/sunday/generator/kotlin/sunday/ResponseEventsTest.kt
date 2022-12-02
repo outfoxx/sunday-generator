@@ -68,11 +68,12 @@ class ResponseEventsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchEvents(): EventSource = this.requestFactory.eventSource(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = listOf(MediaType.EventStream)
-          )
+          public suspend fun fetchEvents(): EventSource = this.requestFactory
+            .eventSource(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = listOf(MediaType.EventStream)
+            )
         }
 
       """.trimIndent(),
@@ -122,29 +123,31 @@ class ResponseEventsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchEventsSimple(): Flow<Test1> = this.requestFactory.eventStream(
-            method = Method.Get,
-            pathTemplate = "/test1",
-            acceptTypes = listOf(MediaType.EventStream),
-            decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
-          )
+          public suspend fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
+            .eventStream(
+              method = Method.Get,
+              pathTemplate = "/test1",
+              acceptTypes = listOf(MediaType.EventStream),
+              decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
+            )
 
-          public suspend fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory.eventStream(
-            method = Method.Get,
-            pathTemplate = "/test2",
-            acceptTypes = listOf(MediaType.EventStream),
-            decoder = { decoder, event, _, data, logger ->
-              when (event) {
-                "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
-                "test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
-                "t3" -> decoder.decode<Test3>(data, typeOf<Test3>())
-                else -> {
-                  logger.error("Unknown event type, ignoring event: event=${'$'}event")
-                  null
+          public suspend fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
+            .eventStream(
+              method = Method.Get,
+              pathTemplate = "/test2",
+              acceptTypes = listOf(MediaType.EventStream),
+              decoder = { decoder, event, _, data, logger ->
+                when (event) {
+                  "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
+                  "test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
+                  "t3" -> decoder.decode<Test3>(data, typeOf<Test3>())
+                  else -> {
+                    logger.error("Unknown event type, ignoring event: event=${'$'}event")
+                    null
+                  }
                 }
               }
-            }
-          )
+            )
         }
 
       """.trimIndent(),
@@ -193,28 +196,30 @@ class ResponseEventsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchEventsSimple(): Flow<Base> = this.requestFactory.eventStream(
-            method = Method.Get,
-            pathTemplate = "/test1",
-            acceptTypes = listOf(MediaType.EventStream),
-            decoder = { decoder, _, _, data, _ -> decoder.decode<Base>(data, typeOf<Base>()) }
-          )
+          public suspend fun fetchEventsSimple(): Flow<Base> = this.requestFactory
+            .eventStream(
+              method = Method.Get,
+              pathTemplate = "/test1",
+              acceptTypes = listOf(MediaType.EventStream),
+              decoder = { decoder, _, _, data, _ -> decoder.decode<Base>(data, typeOf<Base>()) }
+            )
 
-          public suspend fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory.eventStream(
-            method = Method.Get,
-            pathTemplate = "/test2",
-            acceptTypes = listOf(MediaType.EventStream),
-            decoder = { decoder, event, _, data, logger ->
-              when (event) {
-                "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
-                "Test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
-                else -> {
-                  logger.error("Unknown event type, ignoring event: event=${'$'}event")
-                  null
+          public suspend fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory
+            .eventStream(
+              method = Method.Get,
+              pathTemplate = "/test2",
+              acceptTypes = listOf(MediaType.EventStream),
+              decoder = { decoder, event, _, data, logger ->
+                when (event) {
+                  "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
+                  "Test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
+                  else -> {
+                    logger.error("Unknown event type, ignoring event: event=${'$'}event")
+                    null
+                  }
                 }
               }
-            }
-          )
+            )
         }
 
       """.trimIndent(),

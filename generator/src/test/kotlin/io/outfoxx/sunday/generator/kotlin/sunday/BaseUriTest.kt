@@ -72,11 +72,12 @@ class BaseUriTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): String = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): String = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
 
           public companion object {
             public fun baseURL(

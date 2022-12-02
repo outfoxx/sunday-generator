@@ -45,7 +45,7 @@ dependencies {
   api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
 
-  implementation("io.outfoxx.sunday:sunday:$sundayKtVersion") { exclude(group = "*") }
+  implementation("io.outfoxx.sunday:sunday-core:$sundayKtVersion") { exclude(group = "*") }
   implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion") { exclude(group = "*") }
   implementation("javax.validation:validation-api:$validationVersion") { exclude(group = "*") }
   implementation("org.zalando:problem:$zalandoProblemVersion") { exclude(group = "*") }
@@ -55,7 +55,7 @@ dependencies {
   //
 
   // redclare these w/o exclude for testing to work
-  testImplementation("io.outfoxx.sunday:sunday:$sundayKtVersion")
+  testImplementation("io.outfoxx.sunday:sunday-core:$sundayKtVersion")
 
   testImplementation("io.smallrye.reactive:mutiny:$mutinyVersion")
   testImplementation("io.reactivex.rxjava3:rxjava:$rxJava3Version")

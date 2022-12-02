@@ -74,20 +74,21 @@ class RequestMixedParamsTest {
             select: FetchTestSelectUriParam,
             page: FetchTestPageQueryParam,
             xType: FetchTestXTypeHeaderParam,
-          ): Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{select}",
-            pathParameters = mapOf(
-              "select" to select
-            ),
-            queryParameters = mapOf(
-              "page" to page
-            ),
-            acceptTypes = this.defaultAcceptTypes,
-            headers = mapOf(
-              "x-type" to xType
+          ): Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{select}",
+              pathParameters = mapOf(
+                "select" to select
+              ),
+              queryParameters = mapOf(
+                "page" to page
+              ),
+              acceptTypes = this.defaultAcceptTypes,
+              headers = mapOf(
+                "x-type" to xType
+              )
             )
-          )
 
           public enum class FetchTestSelectUriParam {
             All,
@@ -153,20 +154,21 @@ class RequestMixedParamsTest {
             type: FetchTestTypeUriParam,
             type_: FetchTestTypeQueryParam,
             type__: FetchTestTypeHeaderParam,
-          ): Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{type}",
-            pathParameters = mapOf(
-              "type" to type
-            ),
-            queryParameters = mapOf(
-              "type" to type_
-            ),
-            acceptTypes = this.defaultAcceptTypes,
-            headers = mapOf(
-              "type" to type__
+          ): Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{type}",
+              pathParameters = mapOf(
+                "type" to type
+              ),
+              queryParameters = mapOf(
+                "type" to type_
+              ),
+              acceptTypes = this.defaultAcceptTypes,
+              headers = mapOf(
+                "type" to type__
+              )
             )
-          )
 
           public enum class FetchTestTypeUriParam {
             All,

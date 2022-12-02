@@ -78,11 +78,12 @@ class ResponseProblemsTest {
             requestFactory.registerProblem("http://example.com/invalid_id", InvalidIdProblem::class)
             requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
           }
-          public suspend fun fetchTest(): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -127,11 +128,12 @@ class ResponseProblemsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),

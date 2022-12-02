@@ -35,7 +35,7 @@ import java.net.URI
 class RequestMethodsTest {
 
   @Test
-  fun `test request method generation in client mode`(
+  fun `test request method generation`(
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
@@ -68,58 +68,66 @@ class RequestMethodsTest {
           public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
 
-          public suspend fun putTest(body: Test): Test = this.requestFactory.result(
-            method = Method.Put,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun putTest(body: Test): Test = this.requestFactory
+            .result(
+              method = Method.Put,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
 
-          public suspend fun postTest(body: Test): Test = this.requestFactory.result(
-            method = Method.Post,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun postTest(body: Test): Test = this.requestFactory
+            .result(
+              method = Method.Post,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
 
-          public suspend fun patchTest(body: Test): Test = this.requestFactory.result(
-            method = Method.Patch,
-            pathTemplate = "/tests",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun patchTest(body: Test): Test = this.requestFactory
+            .result(
+              method = Method.Patch,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
 
-          public suspend fun deleteTest(): Unit = this.requestFactory.result(
-            method = Method.Delete,
-            pathTemplate = "/tests"
-          )
+          public suspend fun deleteTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Delete,
+              pathTemplate = "/tests"
+            )
 
-          public suspend fun headTest(): Unit = this.requestFactory.result(
-            method = Method.Head,
-            pathTemplate = "/tests"
-          )
+          public suspend fun headTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Head,
+              pathTemplate = "/tests"
+            )
 
-          public suspend fun optionsTest(): Unit = this.requestFactory.result(
-            method = Method.Options,
-            pathTemplate = "/tests"
-          )
+          public suspend fun optionsTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Options,
+              pathTemplate = "/tests"
+            )
 
-          public suspend fun patchableTest(body: PatchableTest): Test = this.requestFactory.result(
-            method = Method.Patch,
-            pathTemplate = "/tests2",
-            body = body,
-            contentTypes = this.defaultContentTypes,
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun patchableTest(body: PatchableTest): Test = this.requestFactory
+            .result(
+              method = Method.Patch,
+              pathTemplate = "/tests2",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -131,7 +139,118 @@ class RequestMethodsTest {
   }
 
   @Test
-  fun `test request method generation in client mode with nullify`(
+  fun `test request method generation with result response`(
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinSundayGenerator.Options(
+            true,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.ResultResponse
+        import kotlin.Unit
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(MediaType.JSON),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+        ) {
+          public suspend fun fetchTest(): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun putTest(body: Test): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Put,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun postTest(body: Test): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Post,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun patchTest(body: Test): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Patch,
+              pathTemplate = "/tests",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun deleteTest(): ResultResponse<Unit> = this.requestFactory
+            .resultResponse(
+              method = Method.Delete,
+              pathTemplate = "/tests"
+            )
+
+          public suspend fun headTest(): ResultResponse<Unit> = this.requestFactory
+            .resultResponse(
+              method = Method.Head,
+              pathTemplate = "/tests"
+            )
+
+          public suspend fun optionsTest(): ResultResponse<Unit> = this.requestFactory
+            .resultResponse(
+              method = Method.Options,
+              pathTemplate = "/tests"
+            )
+
+          public suspend fun patchableTest(body: PatchableTest): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Patch,
+              pathTemplate = "/tests2",
+              body = body,
+              contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test request method generation with nullify`(
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
@@ -181,14 +300,15 @@ class RequestMethodsTest {
             }
           }
 
-          public suspend fun fetchTest(limit: Int): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            queryParameters = mapOf(
-              "limit" to limit
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(limit: Int): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),

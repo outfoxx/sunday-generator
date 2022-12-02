@@ -68,11 +68,12 @@ class ResponseBodyContentTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -117,11 +118,12 @@ class ResponseBodyContentTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchTest(): ByteArray = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = listOf(MediaType.OctetStream)
-          )
+          public suspend fun fetchTest(): ByteArray = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = listOf(MediaType.OctetStream)
+            )
         }
 
       """.trimIndent(),
@@ -166,11 +168,12 @@ class ResponseBodyContentTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): FetchTestResponseBody = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): FetchTestResponseBody = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
 
           public interface FetchTestResponseBody {
             public val `value`: String
@@ -219,10 +222,11 @@ class ResponseBodyContentTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Unit = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests"
-          )
+          public suspend fun fetchTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests"
+            )
         }
 
       """.trimIndent(),
