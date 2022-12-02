@@ -1,0 +1,41 @@
+build:
+  maxIssues: 20
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreNumbers: ["-1", "0", "1", "2", "3", "4", "5"]
+  ThrowsCount:
+    max: 10
+  ReturnCount:
+    max: 10
+  MaxLineLength:
+    active: false # handled by lint
+
+complexity:
+  TooManyFunctions:
+    active: false
+  LongParameterList:
+    active: false
+  ComplexCondition:
+    threshold: 10
+  CyclomaticComplexMethod:
+    active: false
+  NestedBlockDepth:
+    threshold: 10
+  LongMethod:
+    active: false
+  LargeClass:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    ignoreOverridden: true

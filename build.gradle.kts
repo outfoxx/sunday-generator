@@ -1,41 +1,37 @@
-import com.adarshr.gradle.testlogger.TestLoggerExtension
-import com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA
+import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jmailen.gradle.kotlinter.KotlinterExtension
 
 plugins {
-  kotlin("jvm") apply false
   id("org.jetbrains.dokka")
+  id("com.github.breadmoirai.github-release")
+  id("org.sonarqube")
+
+  kotlin("jvm") apply false
   id("org.cadixdev.licenser") apply false
   id("org.jmailen.kotlinter") apply false
+  id("io.gitlab.arturbosch.detekt") apply (false)
   id("com.github.johnrengelman.shadow") apply false
-  id("com.adarshr.test-logger") apply false
-  id("com.github.breadmoirai.github-release")
 }
 
 repositories {
   mavenCentral()
 }
 
+val ignoreCheckFailures = project.findProperty("ignoreCheckFailures")?.toString()?.toBoolean() ?: false
+
+val moduleNames = listOf( "generator", "cli", "gradle-plugin")
+
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
+val kotlinVersion: String by project
+val javaVersion: String by project
+
+
 subprojects {
-
-  apply(plugin = "maven-publish")
-  apply(plugin = "java")
-  apply(plugin = "org.jetbrains.kotlin.jvm")
-  apply(plugin = "jacoco")
-  apply(plugin = "org.jetbrains.dokka")
-  apply(plugin = "org.cadixdev.licenser")
-  apply(plugin = "org.jmailen.kotlinter")
-  apply(plugin = "signing")
-  apply(plugin = "com.adarshr.test-logger")
-
-  group = "io.outfoxx.sunday"
-  version = releaseVersion
 
   repositories {
     mavenCentral()
@@ -46,6 +42,25 @@ subprojects {
       setUrl("https://jitpack.io")
     }
   }
+
+}
+
+
+configure(moduleNames.map { project(it) }) {
+
+  apply(plugin = "java-library")
+  apply(plugin = "jacoco")
+  apply(plugin = "maven-publish")
+  apply(plugin = "signing")
+
+  apply(plugin = "org.jetbrains.kotlin.jvm")
+  apply(plugin = "org.jetbrains.dokka")
+  apply(plugin = "org.cadixdev.licenser")
+  apply(plugin = "org.jmailen.kotlinter")
+  apply(plugin = "io.gitlab.arturbosch.detekt")
+
+  group = "io.outfoxx.sunday"
+  version = releaseVersion
 
   //
   // COMPILE
@@ -59,12 +74,13 @@ subprojects {
     withJavadocJar()
   }
 
-  tasks {
-
-    withType<KotlinCompile> {
+  tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
       kotlinOptions {
-        jvmTarget = "11"
+        languageVersion = kotlinVersion
+        apiVersion = kotlinVersion
       }
+      jvmTarget = javaVersion
     }
   }
 
@@ -76,46 +92,75 @@ subprojects {
     toolVersion = "0.8.7"
   }
 
-  tasks {
-    withType<Test> {
-      useJUnitPlatform()
-    }
-  }
+  tasks.named<Test>("test").configure {
 
-  configure<TestLoggerExtension> {
-    theme = MOCHA
-    slowThreshold = 4000
-  }
+    useJUnitPlatform()
 
-  //
-  // DOCS
-  //
-
-  tasks {
-    withType<DokkaTask> {
-      outputDirectory.set(file("$buildDir/javadoc/${project.version}"))
+    if (System.getenv("CI").isNullOrBlank()) {
+      testLogging {
+        events("passed", "skipped", "failed")
+      }
     }
 
-    withType<Javadoc> {
-      dependsOn(named("dokkaHtml"))
-    }
+    reports.junitXml.required.set(true)
+
+    finalizedBy("jacocoTestReport")
   }
+
 
   //
   // CHECKS
   //
 
-  configure<KotlinterExtension> {
+  configure<LicenseExtension> {
+    header.set(resources.text.fromFile(file("${rootProject.layout.projectDirectory}/HEADER.txt")))
+    include("**/*.kt")
+    ignoreFailures.set(ignoreCheckFailures)
   }
 
-  configure<LicenseExtension> {
-    setHeader(file("$rootDir/HEADER.txt"))
-    include("**/*.kt")
+  configure<DetektExtension> {
+    source = files("src/main/kotlin")
+
+    config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
+    buildUponDefaultConfig = true
+    baseline = file("src/main/detekt/detekt-baseline.xml")
+    ignoreFailures = ignoreCheckFailures
   }
+
+  tasks.withType<Detekt>().configureEach {
+    jvmTarget = javaVersion
+  }
+
+  configure<org.jmailen.gradle.kotlinter.KotlinterExtension> {
+    ignoreFailures = ignoreCheckFailures
+  }
+
+
+  //
+  // DOCS
+  //
+
+  tasks.named<DokkaTask>("dokkaHtml") {
+    failOnWarning.set(true)
+    suppressObviousFunctions.set(false)
+    outputDirectory.set(file("$buildDir/dokka/${project.version}"))
+  }
+
+  tasks.named<DokkaTask>("dokkaJavadoc") {
+    failOnWarning.set(true)
+    suppressObviousFunctions.set(false)
+    outputDirectory.set(tasks.named<Javadoc>("javadoc").get().destinationDir)
+  }
+
+  tasks.named<Javadoc>("javadoc").configure {
+    dependsOn("dokkaJavadoc")
+  }
+
 
   //
   // PUBLISHING
   //
+
 
   configure<PublishingExtension> {
     repositories {
@@ -130,21 +175,21 @@ subprojects {
         }
       }
     }
+
   }
 
   configure<SigningExtension> {
-    if (!hasProperty("signing.keyId")) {
-      val signingKeyId: String? by project
-      val signingKey: String? by project
-      val signingPassword: String? by project
-      useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-    }
+    val signingKeyId: String? by project
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
   }
 
   tasks.withType<Sign>().configureEach {
     onlyIf { !isSnapshot }
   }
 }
+
 
 //
 // DOCS
@@ -181,7 +226,43 @@ tasks {
       }
     }
   }
+
+  //
+  // ANALYSIS
+  //
+
+  sonarqube {
+    properties {
+      property("sonar.sources", "src/main")
+      property("sonar.tests", "src/test")
+      property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
+      property("sonar.kotlin.ktlint.reportPaths", "build/reports/ktlint/main-lint.xml")
+      property("sonar.junit.reportPaths", "build/test-results/test")
+      property("sonar.jacoco.reportPath", "")
+      property("sonar.jacoco.reportPaths", "")
+      property(
+        "sonar.coverage.jacoco.xmlReportPaths",
+        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
+      )
+    }
+  }
+
 }
+
+
+//
+// ANALYSIS
+//
+
+sonarqube {
+  properties {
+    property("sonar.projectName", "sunday-generator")
+    property("sonar.projectKey", "outfoxx_sunday-generator")
+    property("sonar.organization", "outfoxx")
+    property("sonar.host.url", "https://sonarcloud.io")
+  }
+}
+
 
 //
 // RELEASING
@@ -192,16 +273,21 @@ githubRelease {
   repo("sunday-generator")
   tagName(releaseVersion)
   targetCommitish("main")
-  releaseName("v$releaseVersion")
-  draft(true)
+  releaseName("🚀 v$releaseVersion")
+  draft(false)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    files("${project.rootDir}/cli/build/libs/cli-$releaseVersion-all.jar") +
-      files("${project.rootDir}/generator/build/libs/generator-$releaseVersion-all.jar") +
-      files("${project.rootDir}/gradle-plugin/build/libs/gradle-plugin-$releaseVersion.jar"),
+    moduleNames.flatMap { moduleName ->
+      val baseSuffix = if (moduleName == "gradle-plugin") "" else "-all"
+      listOf(baseSuffix, "-javadoc", "-sources").map { suffix ->
+        file("$rootDir/$moduleName/build/libs/$moduleName-$releaseVersion$suffix.jar")
+      }
+    }
   )
   overwrite(true)
-  token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+  authorization(
+    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+  )
 }
 
 tasks {
@@ -233,4 +319,5 @@ tasks {
       "githubRelease",
     )
   }
+
 }
