@@ -60,19 +60,20 @@ class BuilderMethodsTest {
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.Request
         import kotlin.collections.List
-        import okhttp3.Request
 
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Request = this.requestFactory.request(
-            method = Method.Get,
-            pathTemplate = "/test/request",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Request = this.requestFactory
+            .request(
+              method = Method.Get,
+              pathTemplate = "/test/request",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -109,19 +110,20 @@ class BuilderMethodsTest {
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.Response
         import kotlin.collections.List
-        import okhttp3.Response
 
         public class API(
           public val requestFactory: RequestFactory,
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
-          public suspend fun fetchTest(): Response = this.requestFactory.response(
-            method = Method.Get,
-            pathTemplate = "/test/response",
-            acceptTypes = this.defaultAcceptTypes
-          )
+          public suspend fun fetchTest(): Response = this.requestFactory
+            .response(
+              method = Method.Get,
+              pathTemplate = "/test/response",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),

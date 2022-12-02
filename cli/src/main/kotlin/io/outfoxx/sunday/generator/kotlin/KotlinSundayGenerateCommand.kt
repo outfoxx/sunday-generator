@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.core.client.platform.model.document.Document
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.ShapeIndex
 
@@ -25,12 +27,18 @@ class KotlinSundayGenerateCommand :
 
   override val mode = GenerationMode.Client
 
+  private val useResultResponseReturn by option(
+    "-use-result-response-return",
+    help = "Service methods will return results wrapped in a response",
+  ).flag(default = false)
+
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
     KotlinSundayGenerator(
       document,
       shapeIndex,
       typeRegistry,
-      KotlinGenerator.Options(
+      KotlinSundayGenerator.Options(
+        useResultResponseReturn,
         servicePackageName ?: packageName,
         problemBaseUri,
         mediaTypes.toList(),

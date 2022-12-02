@@ -36,9 +36,9 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
-import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
@@ -50,8 +50,6 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
-import io.outfoxx.sunday.generator.kotlin.utils.REQUEST
-import io.outfoxx.sunday.generator.kotlin.utils.RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
@@ -65,20 +63,37 @@ import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.http.Method
 import java.net.URI
+import io.outfoxx.sunday.EventSource as SundayEventSource
+import io.outfoxx.sunday.http.Method as SundayMethod
+import io.outfoxx.sunday.http.Request as SundayRequest
+import io.outfoxx.sunday.http.Response as SundayResponse
+import io.outfoxx.sunday.http.ResultResponse as SundayResultResponse
 
 class KotlinSundayGenerator(
   document: Document,
   shapeIndex: ShapeIndex,
   typeRegistry: KotlinTypeRegistry,
-  options: Options,
+  override val options: Options,
 ) : KotlinGenerator(
   document,
   shapeIndex,
   typeRegistry,
   options,
 ) {
+
+  class Options(
+    val useResultResponseReturn: Boolean,
+    defaultServicePackageName: String,
+    defaultProblemBaseUri: String,
+    defaultMediaTypes: List<String>,
+    serviceSuffix: String,
+  ) : KotlinGenerator.Options(
+    defaultServicePackageName,
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+  )
 
   init {
     require(typeRegistry.generationMode == GenerationMode.Client) {
@@ -232,13 +247,14 @@ class KotlinSundayGenerator(
     referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
 
     if (operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true) {
-      return EventSource::class.asTypeName()
+      return SundayEventSource::class.asTypeName()
     }
 
     when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
       "simple" -> {
         return FLOW.parameterizedBy(returnTypeName)
       }
+
       "discriminated" -> {
         if (body !is UnionShape) {
           genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
@@ -248,8 +264,9 @@ class KotlinSundayGenerator(
     }
 
     return when {
-      operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST
-      operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE
+      operation.findBoolAnnotation(RequestOnly, null) == true -> SundayRequest::class.asTypeName()
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> SundayResponse::class.asTypeName()
+      options.useResultResponseReturn -> SundayResultResponse::class.asTypeName().parameterizedBy(returnTypeName)
       else -> returnTypeName
     }
   }
@@ -393,7 +410,7 @@ class KotlinSundayGenerator(
 
     fun specGen(): CodeBlock {
       val builder = CodeBlock.builder()
-      builder.add("method = %T.%L", Method::class, operation.method.replaceFirstChar { it.titlecase() })
+      builder.add("method = %T.%L", SundayMethod::class, operation.method.replaceFirstChar { it.titlecase() })
       builder.add(",\n")
       builder.add("pathTemplate = %S", endPoint.path)
 
@@ -426,7 +443,7 @@ class KotlinSundayGenerator(
         builder.add("contentTypes = %L", contentTypesVal)
       }
 
-      if (resultContentTypes != null && originalReturnType != Unit::class.asTypeName()) {
+      if (resultContentTypes != null && originalReturnType != UNIT) {
         val acceptTypes =
           if (resultContentTypes != defaultMediaTypes) {
             mediaTypesArray(resultContentTypes!!)
@@ -457,7 +474,7 @@ class KotlinSundayGenerator(
 
         "simple" -> {
 
-          builder.add("return this.requestFactory.eventStream(⇥\n", originalReturnType)
+          builder.add("return this.requestFactory⇥\n.eventStream(⇥\n", originalReturnType)
           builder.add(specGen())
           builder.add(
             ",\ndecoder = { decoder, _, _, data, _ -> decoder.decode<%T>(data, %M<%T>()) }",
@@ -465,7 +482,7 @@ class KotlinSundayGenerator(
             TYPE_OF,
             originalReturnType,
           )
-          builder.add("⇤\n)")
+          builder.add("⇤\n)⇤\n")
         }
 
         "discriminated" -> {
@@ -479,7 +496,7 @@ class KotlinSundayGenerator(
             listOf(discValue, typeName, TYPE_OF, typeName)
           }
 
-          builder.add("return this.requestFactory.eventStream(⇥\n", originalReturnType)
+          builder.add("return this.requestFactory⇥\n.eventStream(⇥\n", originalReturnType)
           builder.add(specGen())
           builder.add(
             """,
@@ -495,13 +512,13 @@ class KotlinSundayGenerator(
             """.trimMargin(),
             *typesParams.toTypedArray(),
           )
-          builder.add("⇤\n)")
+          builder.add("⇤\n)⇤\n")
         }
 
         else -> {
-          builder.add("return this.requestFactory.eventSource(⇥\n")
+          builder.add("return this.requestFactory⇥\n.eventSource(⇥\n")
           builder.add(specGen())
-          builder.add("⇤\n)")
+          builder.add("⇤\n)⇤\n")
         }
       }
     } else {
@@ -509,13 +526,19 @@ class KotlinSundayGenerator(
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
-      val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
+      val factoryMethod =
+        when {
+          requestOnly -> "request"
+          responseOnly -> "response"
+          options.useResultResponseReturn -> "resultResponse"
+          else -> "result"
+        }
 
-      builder.add("return this.requestFactory.%L(⇥\n", factoryMethod)
+      builder.add("return this.requestFactory\n⇥.%L(⇥\n", factoryMethod)
 
       builder.add(specGen())
 
-      builder.add("⇤\n)\n")
+      builder.add("⇤\n)⇤\n⇤")
 
       if (!requestOnly && !responseOnly) {
         addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)

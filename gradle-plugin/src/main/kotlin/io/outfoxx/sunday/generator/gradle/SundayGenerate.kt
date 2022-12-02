@@ -22,7 +22,6 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.APIProcessor
-import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
@@ -135,6 +134,10 @@ open class SundayGenerate
   @Optional
   val alwaysUseResponseReturnType: Property<Boolean> = objects.property(Boolean::class.java)
 
+  @Input
+  @Optional
+  val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
 
@@ -233,7 +236,8 @@ open class SundayGenerate
               processed.document,
               processed.shapeIndex,
               typeRegistry,
-              KotlinGenerator.Options(
+              KotlinSundayGenerator.Options(
+                useResultResponseReturn.orNull ?: false,
                 servicePkgName,
                 problemBaseUri,
                 defaultMediaTypes.get(),

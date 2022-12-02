@@ -75,17 +75,18 @@ class RequestUriParamsTest {
             obj: Test,
             strReq: String,
             int: Int = 5,
-          ): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str-req}/{int}/{def}",
-            pathParameters = mapOf(
-              "def" to def,
-              "obj" to obj,
-              "str-req" to strReq,
-              "int" to int
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          ): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{obj}/{str-req}/{int}/{def}",
+              pathParameters = mapOf(
+                "def" to def,
+                "obj" to obj,
+                "str-req" to strReq,
+                "int" to int
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -138,17 +139,18 @@ class RequestUriParamsTest {
             str: String,
             def: String,
             int: Int,
-          ): Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str}/{int}/{def}",
-            pathParameters = mapOf(
-              "obj" to obj,
-              "str" to str,
-              "def" to def,
-              "int" to int
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          ): Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{obj}/{str}/{int}/{def}",
+              pathParameters = mapOf(
+                "obj" to obj,
+                "str" to str,
+                "def" to def,
+                "int" to int
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -202,19 +204,20 @@ class RequestUriParamsTest {
             def1: String? = "test",
             int: Int? = null,
             def: String,
-          ): Test = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
-            pathParameters = mapOf(
-              "def2" to def2,
-              "obj" to obj,
-              "str" to str,
-              "def1" to def1,
-              "int" to int,
-              "def" to def
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+          ): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
+              pathParameters = mapOf(
+                "def2" to def2,
+                "obj" to obj,
+                "str" to str,
+                "def1" to def1,
+                "int" to int,
+                "def" to def
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -262,15 +265,16 @@ class RequestUriParamsTest {
           public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
         ) {
           public suspend fun fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam):
-              Map<String, Any> = this.requestFactory.result(
-            method = Method.Get,
-            pathTemplate = "/tests/{category}/{type}",
-            pathParameters = mapOf(
-              "category" to category,
-              "type" to type
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
+              Map<String, Any> = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/{category}/{type}",
+              pathParameters = mapOf(
+                "category" to category,
+                "type" to type
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
 
           public enum class FetchTestCategoryUriParam {
             Politics,
