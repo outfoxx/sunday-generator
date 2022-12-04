@@ -16,9 +16,10 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
-import io.outfoxx.sunday.generator.Generator
+import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 
-val swiftSundayTestOptions = Generator.Options(
+val swiftSundayTestOptions = SwiftSundayGenerator.Options(
+  false,
   "http://example.com/",
   listOf("application/json"),
   "API",

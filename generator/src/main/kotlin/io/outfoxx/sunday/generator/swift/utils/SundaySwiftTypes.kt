@@ -32,5 +32,6 @@ val PROBLEM = typeName("$SUNDAY_MODULE.Problem")
 val DESCRIPTION_BUILDER = typeName("$SUNDAY_MODULE.DescriptionBuilder")
 val HTTP_METHOD = typeName("$SUNDAY_MODULE.HTTP.Method")
 val EMPTY = typeName("$SUNDAY_MODULE.Empty")
+val RESULT_RESPONSE = typeName("$SUNDAY_MODULE.ResultResponse")
 
 val DATA_RESPONSE = TupleTypeName.of("" to DATA.makeOptional(), "" to HTTP_URL_RESPONSE)
