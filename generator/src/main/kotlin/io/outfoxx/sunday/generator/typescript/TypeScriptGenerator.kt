@@ -531,7 +531,7 @@ abstract class TypeScriptGenerator(
     fun expand(template: String): URI {
       try {
         return URI(UriTemplate.expand(template, problemBaseUriParams))
-      } catch (e: URISyntaxException) {
+      } catch (ignored: URISyntaxException) {
         genError(
           """
             Problem URI is not a valid URI; it cannot be a template.
