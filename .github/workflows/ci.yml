@@ -43,12 +43,13 @@ jobs:
         job-id: jdk11-build-test
         arguments: cleanTest :cli:test :gradle-plugin:test
 
-    - name: Upload Reports
-      uses: actions/upload-artifact@v3
-      if: always()
+    - name: Report Tests
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: reports-tools
-        path: "**/build/reports/"
+        name: Tests Results (Tools)
+        path: "**/build/test-results/*/*.xml"
+        reporter: java-junit
 
 
   build-test-swift:
@@ -70,12 +71,13 @@ jobs:
     - name: Build & Test
       run: ./gradlew cleanTest :generator:test --tests "io.outfoxx.sunday.generator.swift.*"
 
-    - name: Updload Reports
-      uses: actions/upload-artifact@v3
-      if: always()
+    - name: Report Tests
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: reports-swift
-        path: "**/build/reports/"
+        name: Tests Results (Swift)
+        path: "generator/build/test-results/*/*.xml"
+        reporter: java-junit
 
 
   build-test-typescript:
@@ -98,12 +100,13 @@ jobs:
     - name: Build & Test
       run: ./gradlew cleanTest :generator:test --tests "io.outfoxx.sunday.generator.typescript.*"
 
-    - name: Updload Reports
-      uses: actions/upload-artifact@v3
-      if: always()
+    - name: Report Tests
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: reports-typescript
-        path: "**/build/reports/"
+        name: Tests Results (TypeScript)
+        path: "generator/build/test-results/*/*.xml"
+        reporter: java-junit
 
 
   build-test-kotlin:
@@ -125,12 +128,13 @@ jobs:
         job-id: jdk11-build-test
         arguments: cleanTest :generator:test --tests "io.outfoxx.sunday.generator.kotlin.*"
 
-    - name: Updload Reports
-      uses: actions/upload-artifact@v3
-      if: always()
+    - name: Report Tests
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: reports-kotlin
-        path: "**/build/reports/"
+        name: Tests Results (Kotlin)
+        path: "generator/build/test-results/*/*.xml"
+        reporter: java-junit
 
   report:
     runs-on: ubuntu-latest
@@ -150,4 +154,4 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
         job-id: jdk11-build-test
-        arguments: check sonar
+        arguments: check sonar -x test
