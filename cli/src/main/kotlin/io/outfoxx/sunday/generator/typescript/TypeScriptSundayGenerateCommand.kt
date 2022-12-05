@@ -17,18 +17,25 @@
 package io.outfoxx.sunday.generator.typescript
 
 import amf.core.client.platform.model.document.Document
-import io.outfoxx.sunday.generator.Generator
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.common.ShapeIndex
 
 open class TypeScriptSundayGenerateCommand :
   TypeScriptGenerateCommand(name = "typescript/sunday", help = "Generate TypeScript client for Sunday framework") {
+
+  val useResultResponseReturn by option(
+    "-use-result-response-return",
+    help = "Service methods will return results wrapped in a response",
+  ).flag(default = false)
 
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry) =
     TypeScriptSundayGenerator(
       document,
       shapeIndex,
       typeRegistry,
-      Generator.Options(
+      TypeScriptSundayGenerator.Options(
+        useResultResponseReturn,
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,

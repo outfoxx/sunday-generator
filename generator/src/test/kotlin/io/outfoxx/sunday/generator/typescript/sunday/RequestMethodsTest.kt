@@ -66,9 +66,9 @@ class RequestMethodsTest {
         export class API {
 
           defaultContentTypes: Array<MediaType>;
-        
+
           defaultAcceptTypes: Array<MediaType>;
-        
+
           constructor(public requestFactory: RequestFactory,
               options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
             this.defaultContentTypes =
@@ -192,6 +192,167 @@ class RequestMethodsTest {
   }
 
   @Test
+  fun `test request method generation with result response`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          TypeScriptSundayGenerator.Options(
+            true,
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {PatchableTest} from './patchable-test';
+        import {Test} from './test';
+        import {AnyType, MediaType, RequestFactory, ResultResponse} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          defaultContentTypes: Array<MediaType>;
+
+          defaultAcceptTypes: Array<MediaType>;
+
+          constructor(public requestFactory: RequestFactory,
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [MediaType.JSON];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
+          }
+
+          fetchTest(): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTestReturnType
+            );
+          }
+
+          putTest(body: Test): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'PUT',
+                  pathTemplate: '/tests',
+                  body: body,
+                  bodyType: putTestBodyType,
+                  contentTypes: this.defaultContentTypes,
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                putTestReturnType
+            );
+          }
+
+          postTest(body: Test): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'POST',
+                  pathTemplate: '/tests',
+                  body: body,
+                  bodyType: postTestBodyType,
+                  contentTypes: this.defaultContentTypes,
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                postTestReturnType
+            );
+          }
+
+          patchTest(body: Test): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'PATCH',
+                  pathTemplate: '/tests',
+                  body: body,
+                  bodyType: patchTestBodyType,
+                  contentTypes: this.defaultContentTypes,
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                patchTestReturnType
+            );
+          }
+
+          deleteTest(): Observable<ResultResponse<void>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'DELETE',
+                  pathTemplate: '/tests'
+                }
+            );
+          }
+
+          headTest(): Observable<ResultResponse<void>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'HEAD',
+                  pathTemplate: '/tests'
+                }
+            );
+          }
+
+          optionsTest(): Observable<ResultResponse<void>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'OPTIONS',
+                  pathTemplate: '/tests'
+                }
+            );
+          }
+
+          patchableTest(body: PatchableTest): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'PATCH',
+                  pathTemplate: '/tests2',
+                  body: body,
+                  bodyType: patchableTestBodyType,
+                  contentTypes: this.defaultContentTypes,
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                patchableTestReturnType
+            );
+          }
+
+        }
+
+        const fetchTestReturnType: AnyType = [Test];
+        const putTestBodyType: AnyType = [Test];
+        const putTestReturnType: AnyType = [Test];
+        const postTestBodyType: AnyType = [Test];
+        const postTestReturnType: AnyType = [Test];
+        const patchTestBodyType: AnyType = [Test];
+        const patchTestReturnType: AnyType = [Test];
+        const patchableTestBodyType: AnyType = [PatchableTest];
+        const patchableTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test request method generation with nullify`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
@@ -223,9 +384,9 @@ class RequestMethodsTest {
         export class API {
 
           defaultContentTypes: Array<MediaType>;
-        
+
           defaultAcceptTypes: Array<MediaType>;
-        
+
           constructor(public requestFactory: RequestFactory,
               options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
             this.defaultContentTypes =
@@ -235,7 +396,7 @@ class RequestMethodsTest {
             requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
             requestFactory.registerProblem('http://example.com/another_not_found', AnotherNotFoundProblem);
           }
-        
+
           fetchTestOrNull(limit: number): Observable<Test | null> {
             return this.fetchTest(limit)
               .pipe(nullifyResponse(
