@@ -28,9 +28,9 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
         .command(command, "ci")
         .start()
 
-    buildPkg.waitFor()
-
     println("### Installing NPM packages")
+
+    buildPkg.waitFor()
 
     println(buildPkg.inputStream.readAllBytes().decodeToString())
   }

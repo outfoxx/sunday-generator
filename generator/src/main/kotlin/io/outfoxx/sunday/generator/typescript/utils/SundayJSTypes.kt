@@ -30,5 +30,6 @@ val DURATION = TypeName.namedImport("Duration", SUNDAY_PKG)
 val PROBLEM = TypeName.namedImport("Problem", SUNDAY_PKG)
 val MEDIA_TYPE = TypeName.namedImport("MediaType", SUNDAY_PKG)
 val URL_TEMPLATE = TypeName.namedImport("URLTemplate", SUNDAY_PKG)
+val RESULT_RESPONSE = TypeName.namedImport("ResultResponse", SUNDAY_PKG)
 
 val NULLIFY_RESPONSE = SymbolSpec.importsName("nullifyResponse", SUNDAY_PKG)

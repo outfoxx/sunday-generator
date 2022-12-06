@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.ShapeIndex
@@ -43,6 +44,7 @@ import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.RESULT_RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
@@ -89,13 +91,24 @@ class TypeScriptSundayGenerator(
   document: Document,
   shapeIndex: ShapeIndex,
   typeRegistry: TypeScriptTypeRegistry,
-  options: Options,
+  override val options: Options,
 ) : TypeScriptGenerator(
   document,
   shapeIndex,
   typeRegistry,
   options,
 ) {
+
+  class Options(
+    val useResultResponseReturn: Boolean,
+    defaultProblemBaseUri: String,
+    defaultMediaTypes: List<String>,
+    serviceSuffix: String,
+  ) : Generator.Options(
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+  )
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var queryParameters = mutableListOf<Pair<Parameter, TypeName>>()
@@ -218,6 +231,7 @@ class TypeScriptSundayGenerator(
       when {
         operation.findBoolAnnotation(RequestOnly, null) == true -> REQUEST
         operation.findBoolAnnotation(ResponseOnly, null) == true -> RESPONSE
+        options.useResultResponseReturn -> RESULT_RESPONSE.parameterized(returnTypeName)
         else -> returnTypeName
       }
 
@@ -504,7 +518,13 @@ class TypeScriptSundayGenerator(
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
-      val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
+      val factoryMethod =
+        when {
+          requestOnly -> "request"
+          responseOnly -> "response"
+          options.useResultResponseReturn -> "resultResponse"
+          else -> "result"
+        }
 
       builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
 
