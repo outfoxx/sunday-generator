@@ -11,6 +11,7 @@ pluginManagement {
   val pluginPublishPluginVersion: String by settings
   val githubReleasePluginVersion: String by settings
   val sonarqubeVersion: String by settings
+  val nexusPublishPluginVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
@@ -23,6 +24,7 @@ pluginManagement {
     id("com.gradle.plugin-publish") version pluginPublishPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
     id("org.sonarqube") version sonarqubeVersion
+    id("io.github.gradle-nexus.publish-plugin") version nexusPublishPluginVersion
   }
 }
 
