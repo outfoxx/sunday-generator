@@ -8,6 +8,7 @@ plugins {
   id("org.jetbrains.dokka")
   id("com.github.breadmoirai.github-release")
   id("org.sonarqube")
+  id("io.github.gradle-nexus.publish-plugin")
 
   kotlin("jvm") apply false
   id("org.cadixdev.licenser") apply false
@@ -31,7 +32,10 @@ val kotlinVersion: String by project
 val javaVersion: String by project
 
 
-subprojects {
+allprojects {
+
+  group = "io.outfoxx.sunday"
+  version = releaseVersion
 
   repositories {
     mavenCentral()
@@ -58,9 +62,6 @@ configure(moduleNames.map { project(it) }) {
   apply(plugin = "org.cadixdev.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "io.gitlab.arturbosch.detekt")
-
-  group = "io.outfoxx.sunday"
-  version = releaseVersion
 
   //
   // COMPILE
@@ -158,25 +159,8 @@ configure(moduleNames.map { project(it) }) {
 
 
   //
-  // PUBLISHING
+  // SIGNING
   //
-
-
-  configure<PublishingExtension> {
-    repositories {
-      maven {
-        name = "MavenCentral"
-        val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-        val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-        url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
-        credentials {
-          username = project.findProperty("ossrhUsername")?.toString()
-          password = project.findProperty("ossrhPassword")?.toString()
-        }
-      }
-    }
-
-  }
 
   configure<SigningExtension> {
     val signingKeyId: String? by project
@@ -290,34 +274,8 @@ githubRelease {
   )
 }
 
-tasks {
-
-  register("publishMavenRelease") {
-    dependsOn(
-      ":generator:publishAllPublicationsToMavenCentralRepository",
-      ":cli:publishAllPublicationsToMavenCentralRepository",
-    )
+nexusPublishing {
+  repositories {
+    sonatype()
   }
-
-  register("publishDockerRelease") {
-    dependsOn(
-      ":cli:jib",
-    )
-  }
-
-  register("publishPluginRelease") {
-    dependsOn(
-      ":gradle-plugin:publishPlugins",
-    )
-  }
-
-  register("publishRelease") {
-    dependsOn(
-      "publishMavenRelease",
-      "publishDockerRelease",
-      "publishPluginRelease",
-      "githubRelease",
-    )
-  }
-
 }

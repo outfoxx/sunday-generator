@@ -34,10 +34,13 @@ jobs:
         uses: burrunan/gradle-cache-action@v1
         with:
           job-id: jdk11-build-test
-          arguments: publishAllPublicationsToMavenCentralRepository
+          arguments: >-
+            :generator:publishToSonatype
+            :cli:publishToSonatype
+            -x test
           properties: |
-            ossrhUsername=${{ secrets.OSSRH_USER }}
-            ossrhPassword=${{ secrets.OSSRH_PASS }}
+            sonatypeUsername=${{ secrets.OSSRH_USER }}
+            sonatypePassword=${{ secrets.OSSRH_PASS }}
 
       - name: Publish Docker
         uses: burrunan/gradle-cache-action@v1
