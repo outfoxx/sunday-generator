@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.swift
 import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.common.ShapeIndex
@@ -39,12 +40,14 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
     help = "Enable type generation option",
   ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
+    .unique()
 
   val disabledOptions by option(
     "-disable",
     help = "Disable type generation option",
   ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
     .multiple()
+    .unique()
 
   val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
 

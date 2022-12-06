@@ -26,7 +26,7 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
-class KotlinJAXRSGenerateCommand :
+open class KotlinJAXRSGenerateCommand :
   KotlinGenerateCommand(name = "kotlin/jaxrs", help = "Generate Kotlin for JAX-RS framework") {
 
   override val mode by option(
@@ -35,27 +35,27 @@ class KotlinJAXRSGenerateCommand :
   ).enum<GenerationMode> { it.name.camelCaseToKebabCase() }
     .default(GenerationMode.Client)
 
-  private val coroutineServiceMethods by option(
+  val coroutineServiceMethods by option(
     "-coroutines",
     help = "Generate suspendable service methods for coroutine support",
   ).flag()
 
-  private val reactiveResponseType by option(
+  val reactiveResponseType by option(
     "-reactive",
     help = "Generic result type for reactive service methods",
   )
 
-  private val explicitSecurityParameters by option(
+  val explicitSecurityParameters by option(
     "-explicit-security-parameters",
     help = "Include security parameters in service methods",
   ).flag(default = false)
 
-  private val baseUriPathOnly by option(
-    "-base-uri-mode",
+  val baseUriPathMode by option(
+    "-base-uri-path-mode",
     help = "Portion of the baseUri that will be used in each generated service's @Path annotation",
   ).enum<BaseUriMode> { it.name.replace("_", "-").lowercase() }
 
-  private val alwaysUseResponseReturn by option(
+  val alwaysUseResponseReturn by option(
     "-always-use-response-return",
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
@@ -69,7 +69,7 @@ class KotlinJAXRSGenerateCommand :
         coroutineServiceMethods,
         reactiveResponseType,
         explicitSecurityParameters,
-        baseUriPathOnly,
+        baseUriPathMode,
         alwaysUseResponseReturn,
         servicePackageName ?: packageName,
         problemBaseUri,

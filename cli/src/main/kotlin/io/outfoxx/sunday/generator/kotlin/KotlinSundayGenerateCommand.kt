@@ -22,12 +22,12 @@ import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.ShapeIndex
 
-class KotlinSundayGenerateCommand :
+open class KotlinSundayGenerateCommand :
   KotlinGenerateCommand(name = "kotlin/sunday", help = "Generate Kotlin client for Sunday framework") {
 
   override val mode = GenerationMode.Client
 
-  private val useResultResponseReturn by option(
+  val useResultResponseReturn by option(
     "-use-result-response-return",
     help = "Service methods will return results wrapped in a response",
   ).flag(default = false)

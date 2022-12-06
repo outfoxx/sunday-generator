@@ -20,7 +20,7 @@ import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.common.ShapeIndex
 
-class TypeScriptSundayGenerateCommand :
+open class TypeScriptSundayGenerateCommand :
   TypeScriptGenerateCommand(name = "typescript/sunday", help = "Generate TypeScript client for Sunday framework") {
 
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry) =
