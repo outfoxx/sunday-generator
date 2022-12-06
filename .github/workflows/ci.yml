@@ -18,7 +18,7 @@ jobs:
     - uses: actions/setup-java@v3
       with:
         java-version: '17'
-        distribution: oracle
+        distribution: adopt
 
     - name: Select Xcode
       run: sudo xcode-select -s /Applications/Xcode_14.1.app/Contents/Developer
