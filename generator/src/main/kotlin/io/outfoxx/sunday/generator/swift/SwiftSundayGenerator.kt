@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.common.ShapeIndex
@@ -41,6 +42,7 @@ import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
 import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.swift.utils.RESULT_RESPONSE
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.URL_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.swiftConstant
@@ -81,13 +83,24 @@ class SwiftSundayGenerator(
   document: Document,
   shapeIndex: ShapeIndex,
   typeRegistry: SwiftTypeRegistry,
-  options: Options,
+  override val options: Options,
 ) : SwiftGenerator(
   document,
   shapeIndex,
   typeRegistry,
   options,
 ) {
+
+  class Options(
+    val useResultResponseReturn: Boolean,
+    defaultProblemBaseUri: String,
+    defaultMediaTypes: List<String>,
+    serviceSuffix: String,
+  ) : Generator.Options(
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+  )
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var queryParameters = mutableListOf<Pair<Parameter, TypeName>>()
@@ -241,6 +254,7 @@ class SwiftSundayGenerator(
       "simple" -> {
         return ASYNC_STREAM.parameterizedBy(returnTypeName)
       }
+
       "discriminated" -> {
         if (body !is UnionShape) {
           genError("Discriminated (${APIAnnotationName.EventStream}) requires a union of event types", operation)
@@ -259,6 +273,7 @@ class SwiftSundayGenerator(
     return when {
       operation.findBoolAnnotation(RequestOnly, null) == true -> URL_REQUEST
       operation.findBoolAnnotation(ResponseOnly, null) == true -> DATA_RESPONSE
+      options.useResultResponseReturn -> RESULT_RESPONSE.parameterizedBy(elementReturnType)
       else -> elementReturnType
     }
   }
@@ -530,7 +545,13 @@ class SwiftSundayGenerator(
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
-      val factoryMethod = if (requestOnly) "request" else if (responseOnly) "response" else "result"
+      val factoryMethod =
+        when {
+          requestOnly -> "request"
+          responseOnly -> "response"
+          options.useResultResponseReturn -> "resultResponse"
+          else -> "result"
+        }
 
       builder.add("return try await self.requestFactory.%L(%>\n", factoryMethod)
 
@@ -593,6 +614,7 @@ class SwiftSundayGenerator(
       when {
         returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 ->
           returnType.rawType.parameterizedBy(returnType.typeArguments[0].makeOptional())
+
         else -> returnType?.makeOptional()
       }
 

@@ -17,18 +17,25 @@
 package io.outfoxx.sunday.generator.swift
 
 import amf.core.client.platform.model.document.Document
-import io.outfoxx.sunday.generator.Generator
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.common.ShapeIndex
 
-class SwiftSundayGenerateCommand :
+open class SwiftSundayGenerateCommand :
   SwiftGenerateCommand(name = "swift/sunday", help = "Generate Swift client for Sunday framework") {
+
+  val useResultResponseReturn by option(
+    "-use-result-response-return",
+    help = "Service methods will return results wrapped in a response",
+  ).flag(default = false)
 
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: SwiftTypeRegistry) =
     SwiftSundayGenerator(
       document,
       shapeIndex,
       typeRegistry,
-      Generator.Options(
+      SwiftSundayGenerator.Options(
+        useResultResponseReturn,
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,

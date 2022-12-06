@@ -25,10 +25,12 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.unique
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import java.net.URI
 import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
@@ -41,13 +43,15 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
   val mediaTypes by option(
     "-media-type",
     help = "Specify order of default media types",
-  ).multiple().unique()
+  ).multiple()
+    .unique()
 
   val outputCategories by option(
     "-category",
     help = "Add category of type to output ${GeneratedTypeCategory.values().joinToString { it.name }}",
   ).enum<GeneratedTypeCategory>()
     .multiple(GeneratedTypeCategory.values().toList())
+    .unique()
 
   val outputDirectory by option(
     "-out",
@@ -59,6 +63,7 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
     "-problem-base",
     help = "Default problem base URI",
   ).default("http://example.com/")
+    .validate { URI(it) }
 
   val files by argument(
     help = "RAML source files",
