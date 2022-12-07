@@ -2,6 +2,7 @@ Sunday 🙏 The code generator of REST
 ===
 
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/outfoxx/sunday-generator/CI)
+![Coverage](https://sonarcloud.io/api/project_badges/measure?project=outfoxx_sunday-generator&metric=coverage)
 ![Maven Central](https://img.shields.io/maven-central/v/io.outfoxx.sunday/generator.svg)
 ![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/io.outfoxx.sunday/generator.svg)
 
