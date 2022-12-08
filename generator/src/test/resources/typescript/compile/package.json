@@ -9,7 +9,7 @@
   "author": "nobody",
   "license": "outfox",
   "dependencies": {
-    "@outfoxx/sunday": "~1.1.0-beta.3",
+    "@outfoxx/sunday": "~1.1.0-beta.5",
     "@outfoxx/jackson-js": "~1.4.0"
   },
   "devDependencies": {

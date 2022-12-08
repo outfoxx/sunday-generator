@@ -524,7 +524,7 @@ class SwiftSundayGenerator(
             |  switch event {
             |  $typesTemplate
             |  default:
-            |    log.error("Unknown event type, ignoring event: event=\(event)")
+            |    log.error("Unknown event type, ignoring event: event=\(event ?? "<none>", privacy: .public)")
             |    return nil
             |  }
             |}
