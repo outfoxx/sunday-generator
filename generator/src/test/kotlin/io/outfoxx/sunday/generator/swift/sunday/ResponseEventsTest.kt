@@ -150,7 +150,7 @@ class ResponseEventsTest {
               decoder: { decoder, _, _, data, _ in try decoder.decode(Test1.self, from: data) }
             )
           }
-        
+
           public func fetchEventsDiscriminated() -> AsyncStream<Any> {
             return self.requestFactory.eventStream(
               method: .get,
@@ -167,7 +167,7 @@ class ResponseEventsTest {
                 case "test2": return try decoder.decode(Test2.self, from: data)
                 case "t3": return try decoder.decode(Test3.self, from: data)
                 default:
-                  log.error("Unknown event type, ignoring event: event=\(event)")
+                  log.error("Unknown event type, ignoring event: event=\(event ?? "<none>", privacy: .public)")
                   return nil
                 }
               }
@@ -175,7 +175,7 @@ class ResponseEventsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -253,7 +253,7 @@ class ResponseEventsTest {
                 case "Test1": return try decoder.decode(Test1.self, from: data)
                 case "Test2": return try decoder.decode(Test2.self, from: data)
                 default:
-                  log.error("Unknown event type, ignoring event: event=\(event)")
+                  log.error("Unknown event type, ignoring event: event=\(event ?? "<none>", privacy: .public)")
                   return nil
                 }
               }
