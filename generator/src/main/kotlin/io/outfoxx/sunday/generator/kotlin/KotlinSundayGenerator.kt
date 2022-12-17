@@ -392,6 +392,7 @@ class KotlinSundayGenerator(
     val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
     fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
+      val anyNullable = parameters.any { it.second.isNullable }
       val parametersBlock = CodeBlock.builder().add("%L = mapOf(⇥\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
         val (param) = parameterInfo
@@ -404,7 +405,7 @@ class KotlinSundayGenerator(
           parametersBlock.add(",\n")
         }
       }
-      parametersBlock.add("⇤\n)")
+      parametersBlock.add("⇤\n)%L", if (anyNullable) ".filterValues { it != null }" else "")
       return parametersBlock.build()
     }
 

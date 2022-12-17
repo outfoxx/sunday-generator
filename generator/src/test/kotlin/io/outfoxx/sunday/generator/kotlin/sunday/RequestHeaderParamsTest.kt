@@ -148,7 +148,7 @@ class RequestHeaderParamsTest {
                 "int" to int,
                 "def1" to def1,
                 "def2" to def2
-              )
+              ).filterValues { it != null }
             )
         }
 

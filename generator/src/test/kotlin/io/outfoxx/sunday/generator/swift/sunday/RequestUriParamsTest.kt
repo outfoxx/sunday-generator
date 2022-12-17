@@ -234,13 +234,13 @@ class RequestUriParamsTest {
               method: .get,
               pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
               pathParameters: [
-                "def2": def2 as Any,
-                "obj": obj as Any,
-                "str": str as Any,
-                "def1": def1 as Any,
-                "int": int as Any,
-                "def": def
-              ],
+                "def2": def2 as Any?,
+                "obj": obj as Any?,
+                "str": str as Any?,
+                "def1": def1 as Any?,
+                "int": int as Any?,
+                "def": def as Any?
+              ].filter { ${'$'}0.value != nil },
               queryParameters: nil,
               body: Empty.none,
               contentTypes: nil,

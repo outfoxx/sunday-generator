@@ -215,7 +215,7 @@ class RequestUriParamsTest {
                 "def1" to def1,
                 "int" to int,
                 "def" to def
-              ),
+              ).filterValues { it != null },
               acceptTypes = this.defaultAcceptTypes
             )
         }

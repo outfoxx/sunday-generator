@@ -162,12 +162,12 @@ class RequestHeaderParamsTest {
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: [
-                "obj": obj as Any,
-                "str": str as Any,
-                "int": int as Any,
-                "def1": def1 as Any,
-                "def2": def2 as Any
-              ]
+                "obj": obj as Any?,
+                "str": str as Any?,
+                "int": int as Any?,
+                "def1": def1 as Any?,
+                "def2": def2 as Any?
+              ].filter { ${'$'}0.value != nil }
             )
           }
 
