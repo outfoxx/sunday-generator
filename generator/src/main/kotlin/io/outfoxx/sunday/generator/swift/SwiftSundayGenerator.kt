@@ -612,6 +612,9 @@ class SwiftSundayGenerator(
     val returnType = function.returnType
     val returnTypeOptional =
       when {
+        returnType is ParameterizedTypeName && returnType.rawType == RESULT_RESPONSE ->
+          returnType.makeOptional()
+
         returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 ->
           returnType.rawType.parameterizedBy(returnType.typeArguments[0].makeOptional())
 

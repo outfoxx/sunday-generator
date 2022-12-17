@@ -289,21 +289,264 @@ class RequestMethodsTest {
             requestFactory.registerProblem("http://example.com/another_not_found",
                 AnotherNotFoundProblem::class)
           }
-          public suspend fun fetchTestOrNull(limit: Int): Test? = try {
-            fetchTest(limit)
+          public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
+            fetchTest1(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
           } catch(x: ThrowableProblem) {
-            when {
-              x is TestNotFoundProblem -> null
-              x is AnotherNotFoundProblem -> null
-              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+            when (x.status?.statusCode) {
+              404, 405 -> null
               else -> throw x
             }
           }
 
-          public suspend fun fetchTest(limit: Int): Test = this.requestFactory
+          public suspend fun fetchTest1(limit: Int): Test = this.requestFactory
             .result(
               method = Method.Get,
-              pathTemplate = "/tests",
+              pathTemplate = "/test1",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
+            fetchTest2(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          public suspend fun fetchTest2(limit: Int): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/test2",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
+            fetchTest3(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          }
+
+          public suspend fun fetchTest3(limit: Int): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/test3",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest4OrNull(limit: Int): Test? = try {
+            fetchTest4(limit)
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          public suspend fun fetchTest4(limit: Int): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/test4",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest5OrNull(limit: Int): Test? = try {
+            fetchTest5(limit)
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          public suspend fun fetchTest5(limit: Int): Test = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/test5",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test request method generation with nullify and result response`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinSundayGenerator.Options(
+            true,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.ResultResponse
+        import kotlin.Int
+        import kotlin.collections.List
+        import org.zalando.problem.ThrowableProblem
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+        ) {
+          init {
+            requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
+            requestFactory.registerProblem("http://example.com/another_not_found",
+                AnotherNotFoundProblem::class)
+          }
+          public suspend fun fetchTest1OrNull(limit: Int): ResultResponse<Test>? = try {
+            fetchTest1(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          public suspend fun fetchTest1(limit: Int): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/test1",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest2OrNull(limit: Int): ResultResponse<Test>? = try {
+            fetchTest2(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          public suspend fun fetchTest2(limit: Int): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/test2",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest3OrNull(limit: Int): ResultResponse<Test>? = try {
+            fetchTest3(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          }
+
+          public suspend fun fetchTest3(limit: Int): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/test3",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest4OrNull(limit: Int): ResultResponse<Test>? = try {
+            fetchTest4(limit)
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          public suspend fun fetchTest4(limit: Int): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/test4",
+              queryParameters = mapOf(
+                "limit" to limit
+              ),
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchTest5OrNull(limit: Int): ResultResponse<Test>? = try {
+            fetchTest5(limit)
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          public suspend fun fetchTest5(limit: Int): ResultResponse<Test> = this.requestFactory
+            .resultResponse(
+              method = Method.Get,
+              pathTemplate = "/test5",
               queryParameters = mapOf(
                 "limit" to limit
               ),

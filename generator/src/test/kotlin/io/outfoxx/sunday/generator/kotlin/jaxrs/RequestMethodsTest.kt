@@ -77,31 +77,31 @@ class RequestMethodsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Response
-        
+
           @PUT
           @Path(value = "/tests")
           public fun putTest(body: Test): Response
-        
+
           @POST
           @Path(value = "/tests")
           public fun postTest(body: Test, @Context uriInfo: UriInfo): Response
-        
+
           @PATCH
           @Path(value = "/tests")
           public fun patchTest(body: Test): Response
-        
+
           @DELETE
           @Path(value = "/tests")
           public fun deleteTest(): Response
-        
+
           @HEAD
           @Path(value = "/tests")
           public fun headTest(): Response
-        
+
           @OPTIONS
           @Path(value = "/tests")
           public fun optionsTest(): Response
-        
+
           @PATCH
           @Path(value = "/tests2")
           public fun patchableTest(body: PatchableTest): Response
@@ -156,19 +156,19 @@ class RequestMethodsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Test
-        
+
           @PUT
           @Path(value = "/tests")
           public fun putTest(body: Test): Test
-        
+
           @POST
           @Path(value = "/tests")
           public fun postTest(body: Test): Test
-        
+
           @PATCH
           @Path(value = "/tests")
           public fun patchTest(body: Test): Test
-        
+
           @DELETE
           @Path(value = "/tests")
           public fun deleteTest(): Unit
@@ -176,11 +176,11 @@ class RequestMethodsTest {
           @HEAD
           @Path(value = "/tests")
           public fun headTest(): Unit
-        
+
           @OPTIONS
           @Path(value = "/tests")
           public fun optionsTest(): Unit
-        
+
           @PATCH
           @Path(value = "/tests2")
           public fun patchableTest(body: PatchableTest): Test
@@ -228,20 +228,152 @@ class RequestMethodsTest {
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Test? = try {
-            fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Test? = try {
+            fetchTest1(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
           } catch(x: ThrowableProblem) {
-            when {
-              x is TestNotFoundProblem -> null
-              x is AnotherNotFoundProblem -> null
-              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+            when (x.status?.statusCode) {
+              404, 405 -> null
               else -> throw x
             }
           }
-        
+
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Test
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Test
+
+          public fun fetchTest2OrNull(limit: Int): Test? = try {
+            fetchTest2(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Test
+
+          public fun fetchTest3OrNull(limit: Int): Test? = try {
+            fetchTest3(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Test
+
+          public fun fetchTest4OrNull(limit: Int): Test? = try {
+            fetchTest4(limit)
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Test
+
+          public fun fetchTest5OrNull(limit: Int): Test? = try {
+            fetchTest5(limit)
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test request method generation in client mode with nullify and response`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            true,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Response
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Response
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Response
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Response
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Response
         }
 
       """.trimIndent(),
