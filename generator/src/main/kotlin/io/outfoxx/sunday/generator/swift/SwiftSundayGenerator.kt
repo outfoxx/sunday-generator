@@ -397,22 +397,23 @@ class SwiftSundayGenerator(
     val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
     fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
+      val anyOptional = parameters.any { it.second.optional }
       val parametersBlock = CodeBlock.builder().add("%L: [%>\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
-        val (param, paramType) = parameterInfo
+        val (param) = parameterInfo
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
         parametersBlock.add("%S: %L", origName, paramName)
-        if (paramType.optional) {
-          parametersBlock.add(" as Any")
+        if (anyOptional) {
+          parametersBlock.add(" as Any?")
         }
 
         if (idx < parameters.size - 1) {
           parametersBlock.add(",\n")
         }
       }
-      parametersBlock.add("%<\n]")
+      parametersBlock.add("%<\n]%L", if (anyOptional) ".filter { \$0.value != nil }" else "")
       return parametersBlock.build()
     }
 

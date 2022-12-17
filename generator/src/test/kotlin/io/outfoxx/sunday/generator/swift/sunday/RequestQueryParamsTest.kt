@@ -158,12 +158,12 @@ class RequestQueryParamsTest {
               pathTemplate: "/tests",
               pathParameters: nil,
               queryParameters: [
-                "obj": obj as Any,
-                "str": str as Any,
-                "int": int as Any,
-                "def1": def1 as Any,
-                "def2": def2 as Any
-              ],
+                "obj": obj as Any?,
+                "str": str as Any?,
+                "int": int as Any?,
+                "def1": def1 as Any?,
+                "def2": def2 as Any?
+              ].filter { ${'$'}0.value != nil },
               body: Empty.none,
               contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
