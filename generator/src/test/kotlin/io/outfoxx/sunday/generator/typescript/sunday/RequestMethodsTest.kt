@@ -397,31 +397,299 @@ class RequestMethodsTest {
             requestFactory.registerProblem('http://example.com/another_not_found', AnotherNotFoundProblem);
           }
 
-          fetchTestOrNull(limit: number): Observable<Test | null> {
-            return this.fetchTest(limit)
+          fetchTest1OrNull(limit: number): Observable<Test | null> {
+            return this.fetchTest1(limit)
               .pipe(nullifyResponse(
                 [404, 405],
                 [TestNotFoundProblem, AnotherNotFoundProblem]
               ));
           }
 
-          fetchTest(limit: number): Observable<Test> {
+          fetchTest1(limit: number): Observable<Test> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
-                  pathTemplate: '/tests',
+                  pathTemplate: '/test1',
                   queryParameters: {
                     limit
                   },
                   acceptTypes: this.defaultAcceptTypes
                 },
-                fetchTestReturnType
+                fetchTest1ReturnType
+            );
+          }
+
+          fetchTest2OrNull(limit: number): Observable<Test | null> {
+            return this.fetchTest2(limit)
+              .pipe(nullifyResponse(
+                [404],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest2(limit: number): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test2',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest2ReturnType
+            );
+          }
+
+          fetchTest3OrNull(limit: number): Observable<Test | null> {
+            return this.fetchTest3(limit)
+              .pipe(nullifyResponse(
+                [],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest3(limit: number): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test3',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest3ReturnType
+            );
+          }
+
+          fetchTest4OrNull(limit: number): Observable<Test | null> {
+            return this.fetchTest4(limit)
+              .pipe(nullifyResponse(
+                [404, 405],
+                []
+              ));
+          }
+
+          fetchTest4(limit: number): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test4',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest4ReturnType
+            );
+          }
+
+          fetchTest5OrNull(limit: number): Observable<Test | null> {
+            return this.fetchTest5(limit)
+              .pipe(nullifyResponse(
+                [404],
+                []
+              ));
+          }
+
+          fetchTest5(limit: number): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test5',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest5ReturnType
             );
           }
 
         }
 
-        const fetchTestReturnType: AnyType = [Test];
+        const fetchTest1ReturnType: AnyType = [Test];
+        const fetchTest2ReturnType: AnyType = [Test];
+        const fetchTest3ReturnType: AnyType = [Test];
+        const fetchTest4ReturnType: AnyType = [Test];
+        const fetchTest5ReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test request method generation with nullify and result response`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          TypeScriptSundayGenerator.Options(
+            true,
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+          ),
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {AnotherNotFoundProblem} from './another-not-found-problem';
+        import {Test} from './test';
+        import {TestNotFoundProblem} from './test-not-found-problem';
+        import {AnyType, MediaType, RequestFactory, ResultResponse, nullifyResponse} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          defaultContentTypes: Array<MediaType>;
+
+          defaultAcceptTypes: Array<MediaType>;
+
+          constructor(public requestFactory: RequestFactory,
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
+            requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
+            requestFactory.registerProblem('http://example.com/another_not_found', AnotherNotFoundProblem);
+          }
+
+          fetchTest1OrNull(limit: number): Observable<ResultResponse<Test> | null> {
+            return this.fetchTest1(limit)
+              .pipe(nullifyResponse(
+                [404, 405],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest1(limit: number): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test1',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest1ReturnType
+            );
+          }
+
+          fetchTest2OrNull(limit: number): Observable<ResultResponse<Test> | null> {
+            return this.fetchTest2(limit)
+              .pipe(nullifyResponse(
+                [404],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest2(limit: number): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test2',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest2ReturnType
+            );
+          }
+
+          fetchTest3OrNull(limit: number): Observable<ResultResponse<Test> | null> {
+            return this.fetchTest3(limit)
+              .pipe(nullifyResponse(
+                [],
+                [TestNotFoundProblem, AnotherNotFoundProblem]
+              ));
+          }
+
+          fetchTest3(limit: number): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test3',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest3ReturnType
+            );
+          }
+
+          fetchTest4OrNull(limit: number): Observable<ResultResponse<Test> | null> {
+            return this.fetchTest4(limit)
+              .pipe(nullifyResponse(
+                [404, 405],
+                []
+              ));
+          }
+
+          fetchTest4(limit: number): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test4',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest4ReturnType
+            );
+          }
+
+          fetchTest5OrNull(limit: number): Observable<ResultResponse<Test> | null> {
+            return this.fetchTest5(limit)
+              .pipe(nullifyResponse(
+                [404],
+                []
+              ));
+          }
+
+          fetchTest5(limit: number): Observable<ResultResponse<Test>> {
+            return this.requestFactory.resultResponse(
+                {
+                  method: 'GET',
+                  pathTemplate: '/test5',
+                  queryParameters: {
+                    limit
+                  },
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchTest5ReturnType
+            );
+          }
+
+        }
+
+        const fetchTest1ReturnType: AnyType = [Test];
+        const fetchTest2ReturnType: AnyType = [Test];
+        const fetchTest3ReturnType: AnyType = [Test];
+        const fetchTest4ReturnType: AnyType = [Test];
+        const fetchTest5ReturnType: AnyType = [Test];
 
       """.trimIndent(),
       buildString {

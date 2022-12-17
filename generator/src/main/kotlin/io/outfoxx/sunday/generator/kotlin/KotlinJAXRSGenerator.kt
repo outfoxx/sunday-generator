@@ -592,7 +592,7 @@ class KotlinJAXRSGenerator(
             .build(),
         )
       }
-    } else {
+    } else if (!options.alwaysUseResponseReturn) {
       addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
     }
 

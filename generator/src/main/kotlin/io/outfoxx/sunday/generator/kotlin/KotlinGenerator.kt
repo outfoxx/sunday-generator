@@ -97,6 +97,7 @@ import io.outfoxx.sunday.generator.utils.successes
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
+import io.outfoxx.sunday.http.ResultResponse
 import org.zalando.problem.ThrowableProblem
 import java.net.URI
 import java.net.URISyntaxException
@@ -674,6 +675,9 @@ abstract class KotlinGenerator(
       val returnType = function.returnType?.copy(nullable = false)
       val nullableReturnType =
         when {
+          returnType?.rawType == ResultResponse::class.asTypeName() ->
+            returnType.copy(nullable = true)
+
           returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 -> {
 
             val elementType = returnType.typeArguments[0]
@@ -728,22 +732,31 @@ abstract class KotlinGenerator(
       CodeBlock.builder()
         .beginControlFlow("return try")
         .addStatement("%L(%L)", function.name, function.parameters.joinToString { it.name })
-        .nextControlFlow("catch(x: %T)", ThrowableProblem::class.asTypeName())
-
-    codeBuilder.add("when {").indent().add("\n")
 
     problemTypeNames.forEach {
-      codeBuilder.addStatement("x is %T -> null", it)
+      codeBuilder
+        .nextControlFlow("catch(x: %T)", it)
+        .addStatement("null")
     }
 
     if (statuses.isNotEmpty()) {
-      codeBuilder
-        .addStatement("%L -> null", statuses.joinToString(" || ") { "x.status?.statusCode == $it" })
-    }
+      codeBuilder.nextControlFlow("catch(x: %T)", ThrowableProblem::class.asTypeName())
 
-    codeBuilder
-      .add("else -> throw x").unindent().add("\n")
-      .add("}").add("\n")
+      if (statuses.size == 1) {
+        codeBuilder
+          .beginControlFlow("if (x.status?.statusCode == %L)", statuses.first())
+          .addStatement("null")
+          .nextControlFlow("else")
+          .addStatement("throw x")
+          .endControlFlow()
+      } else {
+        codeBuilder
+          .add("when (x.status?.statusCode) {").indent().add("\n")
+          .add("%L -> null\n", statuses.joinToString(", "))
+          .add("else -> throw x").unindent().add("\n")
+          .add("}").add("\n")
+      }
+    }
 
     codeBuilder.endControlFlow()
 
@@ -804,7 +817,7 @@ abstract class KotlinGenerator(
 
     if (statuses.isNotEmpty()) {
       codeBuilder.addStatement(
-        "x is %T && (%L) -> %L",
+        "x is %T && ${if (statuses.size == 1) "%L" else "(%L)"} -> %L",
         ThrowableProblem::class.asTypeName(),
         statuses.joinToString(" || ") { "x.status?.statusCode == $it" },
         nullLiteral,

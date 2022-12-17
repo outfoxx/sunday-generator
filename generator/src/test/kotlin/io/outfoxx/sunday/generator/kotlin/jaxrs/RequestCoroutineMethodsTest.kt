@@ -191,20 +191,79 @@ class RequestCoroutineMethodsTest {
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public suspend fun fetchTestOrNull(limit: Int): Test? = try {
-            fetchTest(limit)
+          public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
+            fetchTest1(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
           } catch(x: ThrowableProblem) {
-            when {
-              x is TestNotFoundProblem -> null
-              x is AnotherNotFoundProblem -> null
-              x.status?.statusCode == 404 || x.status?.statusCode == 405 -> null
+            when (x.status?.statusCode) {
+              404, 405 -> null
               else -> throw x
             }
           }
 
           @GET
-          @Path(value = "/tests")
-          public suspend fun fetchTest(@QueryParam(value = "limit") limit: Int): Test
+          @Path(value = "/test1")
+          public suspend fun fetchTest1(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
+            fetchTest2(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test2")
+          public suspend fun fetchTest2(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
+            fetchTest3(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          }
+
+          @GET
+          @Path(value = "/test3")
+          public suspend fun fetchTest3(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest4OrNull(limit: Int): Test? = try {
+            fetchTest4(limit)
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test4")
+          public suspend fun fetchTest4(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest5OrNull(limit: Int): Test? = try {
+            fetchTest5(limit)
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test5")
+          public suspend fun fetchTest5(@QueryParam(value = "limit") limit: Int): Test
         }
 
       """.trimIndent(),
@@ -263,7 +322,7 @@ class RequestCoroutineMethodsTest {
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
           public suspend fun fetchEventsSimple(): Flow<Test1>
-  
+
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])

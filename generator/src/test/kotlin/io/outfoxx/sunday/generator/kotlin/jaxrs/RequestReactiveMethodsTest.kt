@@ -196,11 +196,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): CompletionStage<Test?> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): CompletionStage<Test?> = fetchTest1(limit)
             .exceptionally { x ->
               when {
                 x is TestNotFoundProblem -> null
@@ -212,8 +212,60 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
+
+          public fun fetchTest2OrNull(limit: Int): CompletionStage<Test?> = fetchTest2(limit)
+            .exceptionally { x ->
+              when {
+                x is TestNotFoundProblem -> null
+                x is AnotherNotFoundProblem -> null
+                x is ThrowableProblem && x.status?.statusCode == 404 -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
+
+          public fun fetchTest3OrNull(limit: Int): CompletionStage<Test?> = fetchTest3(limit)
+            .exceptionally { x ->
+              when {
+                x is TestNotFoundProblem -> null
+                x is AnotherNotFoundProblem -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
+
+          public fun fetchTest4OrNull(limit: Int): CompletionStage<Test?> = fetchTest4(limit)
+            .exceptionally { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
+
+          public fun fetchTest5OrNull(limit: Int): CompletionStage<Test?> = fetchTest5(limit)
+            .exceptionally { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): CompletionStage<Test>
         }
 
       """.trimIndent(),
@@ -268,11 +320,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Uni<Test?> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Uni<Test?> = fetchTest1(limit)
             .onFailure().recoverWithItem { x ->
               when {
                 x is TestNotFoundProblem -> null
@@ -284,8 +336,60 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Uni<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Uni<Test>
+
+          public fun fetchTest2OrNull(limit: Int): Uni<Test?> = fetchTest2(limit)
+            .onFailure().recoverWithItem { x ->
+              when {
+                x is TestNotFoundProblem -> null
+                x is AnotherNotFoundProblem -> null
+                x is ThrowableProblem && x.status?.statusCode == 404 -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Uni<Test>
+
+          public fun fetchTest3OrNull(limit: Int): Uni<Test?> = fetchTest3(limit)
+            .onFailure().recoverWithItem { x ->
+              when {
+                x is TestNotFoundProblem -> null
+                x is AnotherNotFoundProblem -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Uni<Test>
+
+          public fun fetchTest4OrNull(limit: Int): Uni<Test?> = fetchTest4(limit)
+            .onFailure().recoverWithItem { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Uni<Test>
+
+          public fun fetchTest5OrNull(limit: Int): Uni<Test?> = fetchTest5(limit)
+            .onFailure().recoverWithItem { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> null
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Uni<Test>
         }
 
       """.trimIndent(),
@@ -341,11 +445,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Single<Optional<Test>> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Single<Optional<Test>> = fetchTest1(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -358,8 +462,64 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Single<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest2OrNull(limit: Int): Single<Optional<Test>> = fetchTest2(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest3OrNull(limit: Int): Single<Optional<Test>> = fetchTest3(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest4OrNull(limit: Int): Single<Optional<Test>> = fetchTest4(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest5OrNull(limit: Int): Single<Optional<Test>> = fetchTest5(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Single<Test>
         }
 
       """.trimIndent(),
@@ -415,11 +575,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Observable<Optional<Test>> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Observable<Optional<Test>> = fetchTest1(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -432,8 +592,64 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Observable<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest2OrNull(limit: Int): Observable<Optional<Test>> = fetchTest2(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest3OrNull(limit: Int): Observable<Optional<Test>> = fetchTest3(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest4OrNull(limit: Int): Observable<Optional<Test>> = fetchTest4(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest5OrNull(limit: Int): Observable<Optional<Test>> = fetchTest5(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Observable<Test>
         }
 
       """.trimIndent(),
@@ -489,11 +705,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Single<Optional<Test>> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Single<Optional<Test>> = fetchTest1(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -506,8 +722,64 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Single<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest2OrNull(limit: Int): Single<Optional<Test>> = fetchTest2(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest3OrNull(limit: Int): Single<Optional<Test>> = fetchTest3(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest4OrNull(limit: Int): Single<Optional<Test>> = fetchTest4(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Single<Test>
+
+          public fun fetchTest5OrNull(limit: Int): Single<Optional<Test>> = fetchTest5(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Single<Test>
         }
 
       """.trimIndent(),
@@ -563,11 +835,11 @@ class RequestReactiveMethodsTest {
         import javax.ws.rs.QueryParam
         import kotlin.Int
         import org.zalando.problem.ThrowableProblem
-        
+
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
-          public fun fetchTestOrNull(limit: Int): Observable<Optional<Test>> = fetchTest(limit)
+          public fun fetchTest1OrNull(limit: Int): Observable<Optional<Test>> = fetchTest1(limit)
             .map { Optional.of(it) }
             .onErrorReturn { x ->
               when {
@@ -580,8 +852,64 @@ class RequestReactiveMethodsTest {
             }
 
           @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "limit") limit: Int): Observable<Test>
+          @Path(value = "/test1")
+          public fun fetchTest1(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest2OrNull(limit: Int): Observable<Optional<Test>> = fetchTest2(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test2")
+          public fun fetchTest2(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest3OrNull(limit: Int): Observable<Optional<Test>> = fetchTest3(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is TestNotFoundProblem -> Optional.empty()
+                x is AnotherNotFoundProblem -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test3")
+          public fun fetchTest3(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest4OrNull(limit: Int): Observable<Optional<Test>> = fetchTest4(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && (x.status?.statusCode == 404 || x.status?.statusCode == 405) ->
+                    Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test4")
+          public fun fetchTest4(@QueryParam(value = "limit") limit: Int): Observable<Test>
+
+          public fun fetchTest5OrNull(limit: Int): Observable<Optional<Test>> = fetchTest5(limit)
+            .map { Optional.of(it) }
+            .onErrorReturn { x ->
+              when {
+                x is ThrowableProblem && x.status?.statusCode == 404 -> Optional.empty()
+                else -> throw x
+              }
+            }
+
+          @GET
+          @Path(value = "/test5")
+          public fun fetchTest5(@QueryParam(value = "limit") limit: Int): Observable<Test>
         }
 
       """.trimIndent(),

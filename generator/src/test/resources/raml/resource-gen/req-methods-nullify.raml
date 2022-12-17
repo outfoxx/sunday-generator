@@ -25,13 +25,55 @@ types:
       value: string
 
 
-/tests:
+/test1:
   get:
-    displayName: fetchTest
+    displayName: fetchTest1
     queryParameters:
       limit: integer
     (sunday.problems): [test_not_found, another_not_found]
     (sunday.nullify): [test_not_found, another_not_found, 404, 405]
+    responses:
+      200:
+        body: Test
+
+/test2:
+  get:
+    displayName: fetchTest2
+    queryParameters:
+      limit: integer
+    (sunday.problems): [test_not_found, another_not_found]
+    (sunday.nullify): [test_not_found, another_not_found, 404]
+    responses:
+      200:
+        body: Test
+
+/test3:
+  get:
+    displayName: fetchTest3
+    queryParameters:
+      limit: integer
+    (sunday.problems): [test_not_found, another_not_found]
+    (sunday.nullify): [test_not_found, another_not_found]
+    responses:
+      200:
+        body: Test
+
+/test4:
+  get:
+    displayName: fetchTest4
+    queryParameters:
+      limit: integer
+    (sunday.nullify): [404, 405]
+    responses:
+      200:
+        body: Test
+
+/test5:
+  get:
+    displayName: fetchTest5
+    queryParameters:
+      limit: integer
+    (sunday.nullify): [404]
     responses:
       200:
         body: Test
