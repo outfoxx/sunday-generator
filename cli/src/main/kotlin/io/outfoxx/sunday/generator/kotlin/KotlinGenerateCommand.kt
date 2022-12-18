@@ -19,7 +19,6 @@ package io.outfoxx.sunday.generator.kotlin
 import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
@@ -46,7 +45,7 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
   val packageName by option(
     "-pkg",
     help = "Default package",
-  ).required()
+  )
 
   val modelPackageName by option(
     "-model-pkg",

@@ -24,7 +24,10 @@ class GenerationException(
   val file: String,
   val line: Int,
   val column: Int,
-) : Exception(message)
+) : Exception(message) {
+
+  override fun toString(): String = "$file:$line: $message"
+}
 
 fun genError(message: String, element: DomainElement? = null): Nothing {
   if (element == null) {

@@ -140,7 +140,7 @@ class KotlinJAXRSGenerator(
     val explicitSecurityParameters: Boolean,
     val baseUriMode: BaseUriMode?,
     val alwaysUseResponseReturn: Boolean,
-    defaultServicePackageName: String,
+    defaultServicePackageName: String?,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,

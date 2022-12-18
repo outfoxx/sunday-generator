@@ -84,7 +84,7 @@ class KotlinSundayGenerator(
 
   class Options(
     val useResultResponseReturn: Boolean,
-    defaultServicePackageName: String,
+    defaultServicePackageName: String?,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,

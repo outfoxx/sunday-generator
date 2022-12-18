@@ -22,6 +22,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinResolutionContext
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -42,6 +43,7 @@ fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, Ty
   val apiPackageName =
     document.encodes.findStringAnnotation(APIAnnotationName.KotlinPkg, typeRegistry.generationMode)
       ?: typeRegistry.defaultModelPackageName
+      ?: genError("No model package specified")
 
   val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
   typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))

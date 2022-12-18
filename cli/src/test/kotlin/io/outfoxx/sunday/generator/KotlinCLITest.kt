@@ -20,16 +20,20 @@ import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.containsStringIgnoringCase
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import kotlin.io.path.createTempDirectory
 
 class KotlinCLITest {
 
@@ -67,6 +71,43 @@ class KotlinCLITest {
   }
 
   @Test
+  fun `--pkg option not required when annotations present`() {
+
+    val testFile = KotlinCLITest::class.java.getResource("/test-pkgs.raml")!!.toURI()!!
+
+    val tempDir = createTempDirectory("sunday-cli").toFile()
+    tempDir.deleteOnExit()
+
+    val command = KotlinJAXRSGenerateCommand()
+    val options =
+      arrayOf(
+        "-out", tempDir.absolutePath,
+        testFile.path,
+      )
+    assertDoesNotThrow { command.parse(options) }
+  }
+
+  @Test
+  fun `--pkg option missing and no annotation, generation fails`() {
+
+    val testFile = KotlinCLITest::class.java.getResource("/test.raml")!!.toURI()!!
+
+    val tempDir = createTempDirectory("sunday-cli").toFile()
+    tempDir.deleteOnExit()
+
+    val command = KotlinJAXRSGenerateCommand()
+    val options =
+      arrayOf(
+        "-out", tempDir.absolutePath,
+        testFile.path,
+      )
+
+    val ex = assertThrows<GenerationException> { command.parse(options) }
+
+    assertThat(ex.message, containsStringIgnoringCase("no service package"))
+  }
+
+  @Test
   fun `--model-pkg option`() {
 
     val command = KotlinGenerateCommandTest()
@@ -80,6 +121,27 @@ class KotlinCLITest {
     val command = KotlinGenerateCommandTest()
     assertDoesNotThrow { command.parse(arrayOf("-service-pkg", "io.test.service", *requiredOptions)) }
     assertThat(command.servicePackageName, equalTo("io.test.service"))
+  }
+
+  @Test
+  fun `--service-pkg option and --pkg option missing, generation fails`() {
+
+    val testFile = KotlinCLITest::class.java.getResource("/test.raml")!!.toURI()!!
+
+    val tempDir = createTempDirectory("sunday-cli").toFile()
+    tempDir.deleteOnExit()
+
+    val command = KotlinJAXRSGenerateCommand()
+    val options =
+      arrayOf(
+        "-service-pkg", "io.test",
+        "-out", tempDir.absolutePath,
+        testFile.path,
+      )
+
+    val ex = assertThrows<GenerationException> { command.parse(options) }
+
+    assertThat(ex.message, containsStringIgnoringCase("no model package"))
   }
 
   @Test
@@ -116,7 +178,7 @@ class KotlinCLITest {
     val command = KotlinGenerateCommandTest()
     assertDoesNotThrow {
       command.parse(
-        arrayOf("-disable", "add-generated-annotation", "-enable", "add-generated-annotation", *requiredOptions)
+        arrayOf("-disable", "add-generated-annotation", "-enable", "add-generated-annotation", *requiredOptions),
       )
     }
     assertThat(command.options, not(hasItems(KotlinTypeRegistry.Option.AddGeneratedAnnotation)))
