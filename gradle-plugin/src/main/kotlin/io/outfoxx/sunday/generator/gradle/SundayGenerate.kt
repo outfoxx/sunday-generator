@@ -257,13 +257,6 @@ open class SundayGenerate
     typeRegistry.generateFiles(categories, outputDirFile.toPath())
   }
 
-  private fun <T> require(value: T?, message: String): T {
-    if (value == null) {
-      throw InvalidUserDataException(message)
-    }
-    return value
-  }
-
   private fun shouldClean(dir: File): Boolean {
     if (dir == project.projectDir || dir == project.rootDir || dir.absolutePath == "/") {
       return false
