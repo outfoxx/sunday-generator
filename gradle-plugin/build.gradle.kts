@@ -27,13 +27,16 @@ dependencies {
   testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
 }
 
-tasks.shadowJar.configure {
-  isZip64 = true
-  archiveClassifier.set("")
-  dependencies {
-    exclude(dependency("org.jetbrains.kotlin:.*"))
+tasks {
+  shadowJar.configure {
+    dependsOn(jar)
+    isZip64 = true
+    archiveClassifier.set("")
+    dependencies {
+      exclude(dependency("org.jetbrains.kotlin:.*"))
+    }
+    minimize()
   }
-  minimize()
 }
 
 gradlePlugin {
