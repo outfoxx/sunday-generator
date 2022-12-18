@@ -35,9 +35,12 @@ application {
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
 }
 
-tasks.shadowJar.configure {
-  archiveClassifier.set("")
-  minimize()
+tasks {
+  shadowJar.configure {
+    dependsOn(assembleDist)
+    archiveClassifier.set("")
+    minimize()
+  }
 }
 
 publishing {

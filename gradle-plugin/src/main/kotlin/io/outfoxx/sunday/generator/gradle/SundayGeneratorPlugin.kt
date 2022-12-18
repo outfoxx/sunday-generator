@@ -18,9 +18,7 @@ package io.outfoxx.sunday.generator.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.plugins.JavaPluginExtension
-import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
-import org.gradle.api.tasks.SourceTask
+import org.gradle.api.tasks.SourceSetContainer
 
 class SundayGeneratorPlugin : Plugin<Project> {
 
@@ -34,7 +32,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
       project.container(SundayGeneration::class.java) { name -> SundayGeneration(name, project.objects, project) }
     project.extensions.add("sundayGenerations", generationsContainer)
 
-    generationsContainer.all { gen ->
+    generationsContainer.configureEach { gen ->
 
       val genTask = project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
         genTask.group = "code-generation"
@@ -62,16 +60,20 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.outputDir.set(gen.outputDir)
       }
 
-      project.extensions.findByType(JavaPluginExtension::class.java)
-        ?.sourceSets?.findByName(MAIN_SOURCE_SET_NAME)?.java?.srcDir(genTask.get().outputDir)
-
-      project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
-        project.tasks.withType(SourceTask::class.java)
-          .matching { it.name == "kotlin" }
-          .configureEach { task -> task.source(genTask.get().outputDir) }
-      }
-
       allTask.dependsOn(genTask)
+    }
+
+    project.afterEvaluate {
+
+      generationsContainer.all { gen ->
+
+        val genTask = project.tasks.named("sundayGenerate_${gen.name}", SundayGenerate::class.java)
+
+        val sourceSetName = gen.targetSourceSet.get()
+
+        val sourceSets = project.extensions.getByName("sourceSets") as SourceSetContainer
+        sourceSets.getByName(sourceSetName).java.srcDir(genTask.get().outputDir)
+      }
     }
   }
 }
