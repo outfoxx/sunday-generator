@@ -116,7 +116,7 @@ abstract class KotlinGenerator(
 ) : Generator(document.api, options) {
 
   open class Options(
-    val defaultServicePackageName: String,
+    val defaultServicePackageName: String?,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
@@ -141,6 +141,7 @@ abstract class KotlinGenerator(
       val servicePackageName =
         api.findStringAnnotation(KotlinPkg, generationMode)
           ?: options.defaultServicePackageName
+          ?: genError("No service package specified, one must be specified via options or in each RAML unit")
 
       val serviceSimpleName = "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
 
@@ -620,6 +621,7 @@ abstract class KotlinGenerator(
     val documentPackageName =
       document.api.findStringAnnotation(KotlinModelPkg, generationMode)
         ?: typeRegistry.defaultModelPackageName
+        ?: genError("No model package specified, one must be specified via options or in each RAML unit")
 
     val parameters =
       server.variables

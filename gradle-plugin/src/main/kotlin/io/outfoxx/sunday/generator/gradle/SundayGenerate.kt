@@ -149,8 +149,8 @@ open class SundayGenerate
     val framework = this.framework.get()
     val mode = this.mode.get()
     val pkgName = this.pkgName.orNull
-    val modelPkgName = require(this.modelPkgName.orNull ?: pkgName, "modelPkgName or pkgName required")
-    val servicePkgName = require(this.servicePkgName.orNull ?: pkgName, "servicePkgName or pkgName required")
+    val modelPkgName = this.modelPkgName.orNull ?: pkgName
+    val servicePkgName = this.servicePkgName.orNull ?: pkgName
     val serviceSuffix = this.serviceSuffix.orNull ?: "API"
     val problemBaseUri = this.problemBaseUri.orNull ?: "http://example.com/"
     val outputDir = this.outputDir.getOrElse(defaultOutputDir)
@@ -255,13 +255,6 @@ open class SundayGenerate
     }
 
     typeRegistry.generateFiles(categories, outputDirFile.toPath())
-  }
-
-  private fun <T> require(value: T?, message: String): T {
-    if (value == null) {
-      throw InvalidUserDataException(message)
-    }
-    return value
   }
 
   private fun shouldClean(dir: File): Boolean {

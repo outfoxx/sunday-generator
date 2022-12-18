@@ -16,28 +16,17 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.domain.DomainElement
-import io.outfoxx.sunday.generator.utils.location
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.equalTo
+import org.junit.jupiter.api.Test
 
-class GenerationException(
-  message: String,
-  val file: String,
-  val line: Int,
-  val column: Int,
-) : Exception(message) {
+class GenerationExceptionTest {
 
-  override fun toString(): String = "$file:$line: $message"
-}
+  @Test
+  fun `formatted with file & line info`() {
 
-fun genError(message: String, element: DomainElement? = null): Nothing {
-  if (element == null) {
-    throw GenerationException(message, "", 0, 0)
+    val ex = GenerationException("Test message", "test.raml", 100, 10)
+
+    assertThat("$ex", equalTo("test.raml:100: Test message"))
   }
-
-  throw GenerationException(
-    message,
-    element.annotations().location,
-    element.position().start().line(),
-    element.position().start().column(),
-  )
 }

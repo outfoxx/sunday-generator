@@ -154,7 +154,7 @@ import javax.validation.constraints.Size
 import kotlin.math.min
 
 class KotlinTypeRegistry(
-  val defaultModelPackageName: String,
+  val defaultModelPackageName: String?,
   generatedAnnotationName: String?,
   val generationMode: GenerationMode,
   val options: Set<Option>,
@@ -1379,6 +1379,7 @@ class KotlinTypeRegistry(
     (unit as? CustomizableElement)?.findStringAnnotation(KotlinModelPkg, generationMode)
       ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(KotlinModelPkg, generationMode)
       ?: defaultModelPackageName
+      ?: genError("No model package specified, one must be specified via options or in each RAML unit")
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 

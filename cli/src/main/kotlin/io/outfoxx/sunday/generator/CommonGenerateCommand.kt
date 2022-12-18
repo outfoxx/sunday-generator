@@ -95,11 +95,7 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
       val generator = generatorFactory(processed.document, processed.shapeIndex)
 
-      try {
-        generator.generateServiceTypes()
-      } catch (x: GenerationException) {
-        System.err.println("${x.file}:${x.line}: ${x.message}")
-      }
+      generator.generateServiceTypes()
     }
 
     typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())

@@ -1,0 +1,25 @@
+#%RAML 1.0
+title: Test API
+mediaType: application/json
+
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.kotlinPackage): io.test
+(sunday.kotlinModelPackage): io.test
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+
+/test:
+  get:
+    displayName: fetch
+    responses:
+      200:
+        body:
+          type: Test
