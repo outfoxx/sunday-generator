@@ -26,6 +26,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 
 class SundayGeneration(
   val name: String,
@@ -58,4 +59,5 @@ class SundayGeneration(
   val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty().convention(outputDirDef)
+  val targetSourceSet: Property<String> = objects.property(String::class.java).convention(MAIN_SOURCE_SET_NAME)
 }
