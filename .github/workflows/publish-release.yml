@@ -75,6 +75,8 @@ jobs:
           build
           jib
           -x test
+        properties: |
+          releaseVersion=${{ github.ref_name }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4
