@@ -54,13 +54,13 @@ class RamlObjectTypesTest {
         
         export interface TestSpec {
 
-          map: object;
+          map: Record<string, unknown>;
 
         }
         
         export class Test implements TestSpec {
 
-          map: object;
+          map: Record<string, unknown>;
 
           constructor(init: TestSpec) {
             this.map = init.map;

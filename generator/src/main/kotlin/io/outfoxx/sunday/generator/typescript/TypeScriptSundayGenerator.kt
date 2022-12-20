@@ -420,7 +420,7 @@ class TypeScriptSundayGenerator(
           if (requestBodyTypeName != VOID) {
 
             val bodyTypePropName = "${generatedFunctionName}BodyType"
-            typeProperties[bodyTypePropName] = requestBodyTypeName.typeInitializer()
+            typeProperties[bodyTypePropName] = typeRegistry.reflectionTypeName(requestBodyTypeName).typeInitializer()
             builder.add(",\n")
             builder.add("bodyType: %L", bodyTypePropName)
           }
@@ -533,7 +533,7 @@ class TypeScriptSundayGenerator(
       if (!requestOnly && !responseOnly && originalReturnType != null && originalReturnType != VOID) {
 
         val retTypePropName = "${generatedFunctionName}ReturnType"
-        typeProperties[retTypePropName] = originalReturnType!!.typeInitializer()
+        typeProperties[retTypePropName] = typeRegistry.reflectionTypeName(originalReturnType!!).typeInitializer()
         builder.add(",\n%L", retTypePropName)
       }
 

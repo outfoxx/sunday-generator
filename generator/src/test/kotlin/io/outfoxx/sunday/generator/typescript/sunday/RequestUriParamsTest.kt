@@ -146,7 +146,8 @@ class RequestUriParamsTest {
                 options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
-          fetchTest(obj: object, str: string, def: string, int: number): Observable<object> {
+          fetchTest(obj: Record<string, unknown>, str: string, def: string,
+              int: number): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -165,7 +166,7 @@ class RequestUriParamsTest {
 
         }
 
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {
@@ -295,7 +296,7 @@ class RequestUriParamsTest {
           }
 
           fetchTest(category: API.FetchTestCategoryUriParam,
-              type: API.FetchTestTypeUriParam): Observable<object> {
+              type: API.FetchTestTypeUriParam): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -326,7 +327,7 @@ class RequestUriParamsTest {
 
         }
 
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {

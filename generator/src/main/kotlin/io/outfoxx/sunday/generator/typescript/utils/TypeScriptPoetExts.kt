@@ -41,7 +41,7 @@ fun TypeName.box() = when (this) {
   BIGINT -> BIGINT_CLASS
   STRING -> STRING_CLASS
   SYMBOL -> SYMBOL_CLASS
-  ANY, NULL, OBJECT, UNDEFINED, VOID -> OBJECT_CLASS
+  ANY, NULL, OBJECT, UNDEFINED, VOID, RECORD, UNKNOWN -> OBJECT_CLASS
   else -> this
 }
 
@@ -55,10 +55,7 @@ fun TypeName.typeInitializer(): CodeBlock {
 fun TypeName.internalTypeInitializer(builder: CodeBlock.Builder) {
   when (this) {
     is TypeName.Parameterized -> {
-      builder.add(
-        "%T, [",
-        this.rawType,
-      )
+      builder.add("%T, [", this.rawType)
       typeArgs.mapIndexed { idx, typeName ->
         typeName.internalTypeInitializer(builder)
         if (idx < typeArgs.size - 1) {

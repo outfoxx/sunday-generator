@@ -76,7 +76,7 @@ class RequestMixedParamsTest {
           }
 
           fetchTest(select: API.FetchTestSelectUriParam, page: API.FetchTestPageQueryParam,
-              xType: API.FetchTestXTypeHeaderParam): Observable<object> {
+              xType: API.FetchTestXTypeHeaderParam): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -117,7 +117,7 @@ class RequestMixedParamsTest {
 
         }
 
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {
@@ -168,7 +168,7 @@ class RequestMixedParamsTest {
           }
 
           fetchTest(type: API.FetchTestTypeUriParam, type_: API.FetchTestTypeQueryParam,
-              type__: API.FetchTestTypeHeaderParam): Observable<object> {
+              type__: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -209,7 +209,7 @@ class RequestMixedParamsTest {
 
         }
 
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {
