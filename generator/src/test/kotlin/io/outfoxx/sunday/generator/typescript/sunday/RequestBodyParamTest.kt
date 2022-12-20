@@ -211,7 +211,7 @@ class RequestBodyParamTest {
                 options?.defaultAcceptTypes ?? [MediaType.JSON];
           }
 
-          fetchTest(body: BodyInit): Observable<object> {
+          fetchTest(body: BodyInit): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -228,7 +228,7 @@ class RequestBodyParamTest {
         }
 
         const fetchTestBodyType: AnyType = [ArrayBuffer];
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {

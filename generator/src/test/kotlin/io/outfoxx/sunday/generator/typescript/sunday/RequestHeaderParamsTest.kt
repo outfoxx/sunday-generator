@@ -222,7 +222,7 @@ class RequestHeaderParamsTest {
           }
 
           fetchTest(category: API.FetchTestCategoryHeaderParam,
-              type: API.FetchTestTypeHeaderParam): Observable<object> {
+              type: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
             return this.requestFactory.result(
                 {
                   method: 'GET',
@@ -253,7 +253,7 @@ class RequestHeaderParamsTest {
 
         }
 
-        const fetchTestReturnType: AnyType = [Object];
+        const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {

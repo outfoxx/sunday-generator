@@ -69,11 +69,14 @@ import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
 import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
 import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
 import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
+import io.outfoxx.sunday.generator.typescript.utils.UNKNOWN
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.box
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nonOptional
 import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nullable
+import io.outfoxx.sunday.generator.typescript.utils.recordType
 import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
@@ -129,9 +132,7 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY_BUFFER
 import io.outfoxx.typescriptpoet.TypeName.Companion.BOOLEAN
-import io.outfoxx.typescriptpoet.TypeName.Companion.MAP
 import io.outfoxx.typescriptpoet.TypeName.Companion.NUMBER
-import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT
 import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
@@ -589,12 +590,12 @@ class TypeScriptTypeRegistry(
 
         val patternPropertyShapes = collectTypes(patternProperties.map { it.range })
 
-        val valueTypeName = nearestCommonAncestor(patternPropertyShapes, context) ?: return OBJECT
+        val valueTypeName = nearestCommonAncestor(patternPropertyShapes, context)
 
-        MAP.parameterized(STRING, valueTypeName)
+        recordType(STRING, valueTypeName ?: UNKNOWN)
       } else {
 
-        OBJECT
+        recordType(STRING, UNKNOWN)
       }
     }
 
@@ -1299,33 +1300,34 @@ class TypeScriptTypeRegistry(
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
 
-  private fun reflectionTypeName(typeName: TypeName): TypeName =
-    when (typeName) {
+  fun reflectionTypeName(typeName: TypeName): TypeName =
+
+    when (val nonOptionalTypeName = typeName.nonOptional) {
       is TypeName.Standard ->
-        if (typeBuilders[typeName.nonOptional] !is EnumSpec.Builder) {
-          typeName
-        } else {
+        if (isReflectedAsObject(nonOptionalTypeName)) {
           OBJECT_CLASS
+        } else {
+          nonOptionalTypeName
         }
 
       is TypeName.Parameterized ->
         TypeName.parameterizedType(
-          reflectionTypeName(typeName.rawType) as TypeName.Standard,
-          *typeName.typeArgs.map { reflectionTypeName(it) }.toTypedArray(),
+          reflectionTypeName(nonOptionalTypeName.rawType) as TypeName.Standard,
+          *nonOptionalTypeName.typeArgs.map { reflectionTypeName(it) }.toTypedArray(),
         )
 
       is TypeName.Union ->
-        TypeName.unionType(*typeName.typeChoices.map { reflectionTypeName(it) }.toTypedArray())
+        TypeName.unionType(*nonOptionalTypeName.typeChoices.map { reflectionTypeName(it) }.toTypedArray())
 
       is TypeName.Intersection ->
-        TypeName.intersectionType(*typeName.typeRequirements.map { reflectionTypeName(it) }.toTypedArray())
+        TypeName.intersectionType(*nonOptionalTypeName.typeRequirements.map { reflectionTypeName(it) }.toTypedArray())
 
       is TypeName.Tuple ->
-        TypeName.tupleType(*typeName.memberTypes.map { reflectionTypeName(it) }.toTypedArray())
+        TypeName.tupleType(*nonOptionalTypeName.memberTypes.map { reflectionTypeName(it) }.toTypedArray())
 
       is TypeName.Anonymous ->
         TypeName.anonymousType(
-          typeName.members.map {
+          nonOptionalTypeName.members.map {
             TypeName.Anonymous.Member(
               it.name,
               reflectionTypeName(it.type),
@@ -1337,6 +1339,9 @@ class TypeScriptTypeRegistry(
       else ->
         error("Lambda Unsupported TypeName for Rewrite")
     }
+
+  private fun isReflectedAsObject(typeName: TypeName) =
+    typeBuilders[typeName.nonOptional] is EnumSpec.Builder || typeName.box() == OBJECT_CLASS
 }
 
 private fun TypeName.Standard.sibling(name: String): TypeName.Standard =
