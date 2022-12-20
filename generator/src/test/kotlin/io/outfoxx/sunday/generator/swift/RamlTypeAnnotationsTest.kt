@@ -1004,7 +1004,230 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", testTypeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test class hierarchy generated for externally discriminated enum types`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-enum.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+
+    val parenTypeSpec = builtTypes[typeName(".Parent")]
+      ?: error("Parent type is not defined")
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Parent : Codable, CustomDebugStringConvertible {
+
+          public var type: `Type` {
+            fatalError("abstract type method")
+          }
+          public var debugDescription: String {
+            return DescriptionBuilder(Parent.self)
+                .build()
+          }
+
+          public init() {
+          }
+
+          public required init(from decoder: Decoder) throws {
+          }
+
+          public func encode(to encoder: Encoder) throws {
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", parenTypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child1TypeSpec = builtTypes[typeName(".Child1")]
+      ?: error("Child1 type is not defined")
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Child1 : Parent {
+
+          public override var type: `Type` {
+            return `Type`.child1
+          }
+          public var value: String?
+          public override var debugDescription: String {
+            return DescriptionBuilder(Child1.self)
+                .add(type, named: "type")
+                .add(value, named: "value")
+                .build()
+          }
+
+          public init(value: String?) {
+            self.value = value
+            super.init()
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.value = try container.decodeIfPresent(String.self, forKey: .value)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(self.value, forKey: .value)
+          }
+
+          public func withValue(value: String?) -> Child1 {
+            return Child1(value: value)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case value = "value"
+
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", child1TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child2TypeSpec = builtTypes[typeName(".Child2")]
+      ?: error("Child2 type is not defined")
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Child2 : Parent {
+
+          public override var type: `Type` {
+            return `Type`.child2
+          }
+          public var value: String?
+          public override var debugDescription: String {
+            return DescriptionBuilder(Child2.self)
+                .add(type, named: "type")
+                .add(value, named: "value")
+                .build()
+          }
+
+          public init(value: String?) {
+            self.value = value
+            super.init()
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.value = try container.decodeIfPresent(String.self, forKey: .value)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(self.value, forKey: .value)
+          }
+
+          public func withValue(value: String?) -> Child2 {
+            return Child2(value: value)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case value = "value"
+
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", child2TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val testTypeSpec = builtTypes[typeName(".Test")]
+      ?: error("Test type is not defined")
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Test : Codable, CustomDebugStringConvertible {
+
+          public var parent: Parent
+          public var parentType: `Type`
+          public var debugDescription: String {
+            return DescriptionBuilder(Test.self)
+                .add(parent, named: "parent")
+                .add(parentType, named: "parentType")
+                .build()
+          }
+
+          public init(parent: Parent, parentType: `Type`) {
+            self.parent = parent
+            self.parentType = parentType
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.parentType = try container.decode(`Type`.self, forKey: .parentType)
+            switch self.parentType {
+            case .child2: self.parent = try container.decode(Child2.self, forKey: .parent)
+            case .child1: self.parent = try container.decode(Child1.self, forKey: .parent)
+            }
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.parentType, forKey: .parentType)
+            switch self.parentType {
+            case .child2: try container.encode(self.parent as! Child2, forKey: .parent)
+            case .child1: try container.encode(self.parent as! Child1, forKey: .parent)
+            }
+          }
+
+          public func withParent(parent: Parent) -> Test {
+            return Test(parent: parent, parentType: parentType)
+          }
+
+          public func withParentType(parentType: `Type`) -> Test {
+            return Test(parent: parent, parentType: parentType)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case parent = "parent"
+            case parentType = "parentType"
+
+          }
+
+        }
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", testTypeSpec)

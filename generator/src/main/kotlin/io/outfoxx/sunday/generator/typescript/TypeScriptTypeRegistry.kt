@@ -801,7 +801,6 @@ class TypeScriptTypeRegistry(
               addJacksonPolymorphismOverride(
                 className,
                 declaredProperty,
-                declaredPropertyTypeName,
                 declaredPropertyBuilder,
                 externalDiscriminatorPropertyShape,
                 context,
@@ -988,12 +987,10 @@ class TypeScriptTypeRegistry(
   private fun addJacksonPolymorphismOverride(
     className: TypeName.Standard,
     valuePropertyShape: PropertyShape,
-    valuePropertyTypeName: TypeName,
     valuePropertySpec: PropertySpec.Builder,
     externalDiscriminatorPropertyShape: PropertyShape,
     context: TypeScriptResolutionContext,
   ) {
-    val valueRawPropertyTypeName = valuePropertyTypeName.nonOptional as? TypeName.Standard ?: return
     val valuePropertyTypeShape = valuePropertyShape.range as? NodeShape ?: return
 
     val externalDiscriminatorPropertyName = externalDiscriminatorPropertyShape.name?.typeScriptIdentifierName ?: return
@@ -1011,15 +1008,6 @@ class TypeScriptTypeRegistry(
         val discriminatorValue = inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
-        val classNameSymbol = valueRawPropertyTypeName.base as SymbolSpec.Imported
-        val pathCount = classNameSymbol.source.count { it == '/' }
-        val path =
-          if (pathCount > 0) {
-            (0 until pathCount).joinToString("/") { ".." }
-          } else {
-            "."
-          }
-        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
 
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
@@ -1027,14 +1015,18 @@ class TypeScriptTypeRegistry(
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
-          "{class: () => %T, name: %T.%L}" to listOf(
-            indirectTypeName,
-            externalDiscriminatorPropertyTypeName,
+          // NOTE: using nested enum types fails to initialize correctly
+          // currently. Using the string constant equivalent until the
+          // issue is resolved.
+          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
+            importFromIndex(inheritingTypeName),
+            discriminatorValue,
+            (externalDiscriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            indirectTypeName,
+            importFromIndex(inheritingTypeName),
             discriminatorValue,
           )
         }
@@ -1100,15 +1092,6 @@ class TypeScriptTypeRegistry(
           inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
-        val classNameSymbol = className.base as SymbolSpec.Imported
-        val pathCount = classNameSymbol.source.count { it == '/' }
-        val path =
-          if (pathCount > 0) {
-            (0 until pathCount).joinToString("/") { ".." }
-          } else {
-            "."
-          }
-        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
 
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
@@ -1116,14 +1099,18 @@ class TypeScriptTypeRegistry(
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
-          "{class: () => %T, name: %T.%L}" to listOf(
-            indirectTypeName,
-            discriminatorPropertyTypeName,
+          // NOTE: using nested enum types fails to initialize correctly
+          // currently. Using the string constant equivalent until the
+          // issue is resolved.
+          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
+            importFromIndex(inheritingTypeName),
+            discriminatorValue,
+            (discriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            indirectTypeName,
+            importFromIndex(inheritingTypeName),
             discriminatorValue,
           )
         }
@@ -1342,6 +1329,11 @@ class TypeScriptTypeRegistry(
 
   private fun isReflectedAsObject(typeName: TypeName) =
     typeBuilders[typeName.nonOptional] is EnumSpec.Builder || typeName.box() == OBJECT_CLASS
+
+  private fun importFromIndex(typeName: TypeName): TypeName {
+    val importedSymbol = ((typeName as? TypeName.Standard)?.base as? SymbolSpec.Imported) ?: return typeName
+    return TypeName.namedImport(importedSymbol.value, "!index")
+  }
 }
 
 private fun TypeName.Standard.sibling(name: String): TypeName.Standard =

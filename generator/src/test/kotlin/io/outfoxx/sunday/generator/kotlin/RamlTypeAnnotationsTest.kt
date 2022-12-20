@@ -492,6 +492,207 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for externally discriminated enum types`(
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-enum.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
+
+    val builtTypes = generateTypes(testUri, typeRegistry)
+
+    val parenTypeSpec = builtTypes[ClassName.bestGuess("io.test.Parent")]
+      ?: error("Parent type is not defined")
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
+        import com.fasterxml.jackson.`annotation`.JsonSubTypes
+        import kotlin.Any
+        import kotlin.Boolean
+
+        @JsonSubTypes(value = [
+          JsonSubTypes.Type(value = Child2::class),
+          JsonSubTypes.Type(value = Child1::class)
+        ])
+        public abstract class Parent {
+          @get:JsonIgnore
+          public abstract val type: Type
+
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            return true
+          }
+
+          public override fun toString() = ${'"'}""Parent()""${'"'}
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", parenTypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
+      ?: error("Child1 type is not defined")
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
+        @JsonTypeName("child-1")
+        public class Child1(
+          public val `value`: String?,
+        ) : Parent() {
+          public override val type: Type
+            get() = Type.Child1
+
+          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
+
+          public override fun hashCode(): Int {
+            var result = 31 * super.hashCode()
+            result = 31 * result + (value?.hashCode() ?: 0)
+            return result
+          }
+
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Child1
+
+            if (value != other.value) return false
+
+            return true
+          }
+
+          public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", child1TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
+      ?: error("Child2 type is not defined")
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
+        @JsonTypeName("child-2")
+        public class Child2(
+          public val `value`: String?,
+        ) : Parent() {
+          public override val type: Type
+            get() = Type.Child2
+
+          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
+
+          public override fun hashCode(): Int {
+            var result = 31 * super.hashCode()
+            result = 31 * result + (value?.hashCode() ?: 0)
+            return result
+          }
+
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Child2
+
+            if (value != other.value) return false
+
+            return true
+          }
+
+          public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", child2TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val testTypeSpec = builtTypes[ClassName.bestGuess("io.test.Test")]
+      ?: error("Test type is not defined")
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+
+        public class Test(
+          @JsonTypeInfo(
+            use = JsonTypeInfo.Id.NAME,
+            include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
+            property = "parentType",
+          )
+          public val parent: Parent,
+          public val parentType: Type,
+        ) {
+          public fun copy(parent: Parent? = null, parentType: Type? = null) = Test(parent ?: this.parent,
+              parentType ?: this.parentType)
+
+          public override fun hashCode(): Int {
+            var result = 1
+            result = 31 * result + parent.hashCode()
+            result = 31 * result + parentType.hashCode()
+            return result
+          }
+
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Test
+
+            if (parent != other.parent) return false
+            if (parentType != other.parentType) return false
+
+            return true
+          }
+
+          public override fun toString() = ""${'"'}
+          |Test(parent='${'$'}parent',
+          | parentType='${'$'}parentType')
+          ${'"'}"".trimMargin()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", testTypeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test class hierarchy generated for externally discriminated types with no discriminator property`(
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-no-property.raml") testUri: URI,
   ) {

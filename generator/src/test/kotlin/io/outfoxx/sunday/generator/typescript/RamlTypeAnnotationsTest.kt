@@ -793,6 +793,211 @@ class RamlTypeAnnotationsTest {
   }
 
   @Test
+  fun `test class hierarchy generated for externally discriminated enum types`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-external-discriminator-enum.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
+
+    val parenTypeSpec = builtTypes[TypeName.namedImport("Parent", "!parent")]
+      ?: error("Parent type is not defined")
+
+    assertEquals(
+      """
+        import {Child1, Child2} from './index';
+        import {JsonSubTypes} from '@outfoxx/jackson-js';
+
+
+        export interface ParentSpec {
+        }
+
+        @JsonSubTypes({
+          types: [
+            {class: () => Child2, name: 'child-2' /* Type.Child2 */},
+            {class: () => Child1, name: 'child-1' /* Type.Child1 */}
+          ]
+        })
+        export abstract class Parent implements ParentSpec {
+
+          toString(): string {
+            return `Parent()`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(parenTypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child1TypeSpec = builtTypes[TypeName.namedImport("Child1", "!child1")]
+      ?: error("Child1 type is not defined")
+
+    assertEquals(
+      """
+        import {Parent, ParentSpec} from './parent';
+        import {Type} from './type';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+        export interface Child1Spec extends ParentSpec {
+
+          value?: string;
+
+        }
+
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+        export class Child1 extends Parent implements Child1Spec {
+
+          @JsonProperty()
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+
+          constructor(init: Child1Spec) {
+            super();
+            this.value = init.value;
+          }
+
+          get type(): Type {
+            return Type.Child1;
+          }
+
+          copy(changes: Partial<Child1Spec>): Child1 {
+            return new Child1(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Child1(value='${'$'}{this.value}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(child1TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child2TypeSpec = builtTypes[TypeName.namedImport("Child2", "!child2")]
+      ?: error("Child2 type is not defined")
+
+    assertEquals(
+      """
+        import {Parent, ParentSpec} from './parent';
+        import {Type} from './type';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+        export interface Child2Spec extends ParentSpec {
+
+          value?: string;
+
+        }
+
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+        export class Child2 extends Parent implements Child2Spec {
+
+          @JsonProperty()
+          @JsonClassType({type: () => [String]})
+          value: string | undefined;
+
+          constructor(init: Child2Spec) {
+            super();
+            this.value = init.value;
+          }
+
+          get type(): Type {
+            return Type.Child2;
+          }
+
+          copy(changes: Partial<Child2Spec>): Child2 {
+            return new Child2(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Child2(value='${'$'}{this.value}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(child2TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val testTypeSpec = builtTypes[TypeName.namedImport("Test", "!test")]
+      ?: error("Test type is not defined")
+
+    assertEquals(
+      """
+        import {Child1, Child2} from './index';
+        import {Parent} from './parent';
+        import {Type} from './type';
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+
+
+        export interface TestSpec {
+
+          parent: Parent;
+
+          parentType: Type;
+
+        }
+
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+        export class Test implements TestSpec {
+
+          @JsonTypeInfo({
+            use: JsonTypeInfoId.NAME,
+            include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
+            property: 'parentType',
+          })
+          @JsonSubTypes({
+            types: [
+              {class: () => Child2, name: 'child-2' /* Type.Child2 */},
+              {class: () => Child1, name: 'child-1' /* Type.Child1 */}
+            ]
+          })
+          @JsonProperty({required: true})
+          @JsonClassType({type: () => [Parent]})
+          parent: Parent;
+
+          @JsonProperty({required: true})
+          @JsonClassType({type: () => [Object]})
+          parentType: Type;
+
+          constructor(init: TestSpec) {
+            this.parent = init.parent;
+            this.parentType = init.parentType;
+          }
+
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Test(parent='${'$'}{this.parent}', parentType='${'$'}{this.parentType}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(testTypeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test external discriminator must exist`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/annotations/type-external-discriminator-invalid.raml") testUri: URI,
