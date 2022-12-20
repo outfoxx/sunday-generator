@@ -203,7 +203,6 @@ class RamlDiscriminatedTypesTest {
     assertEquals(
       """
         import {Child1, Child2} from './index';
-        import {Type} from './type';
         import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
         
         
@@ -217,8 +216,8 @@ class RamlDiscriminatedTypesTest {
         })
         @JsonSubTypes({
           types: [
-            {class: () => Child1, name: Type.Child1},
-            {class: () => Child2, name: Type.Child2}
+            {class: () => Child1, name: 'Child1' /* Type.Child1 */},
+            {class: () => Child2, name: 'Child2' /* Type.Child2 */}
           ]
         })
         export abstract class Parent implements ParentSpec {

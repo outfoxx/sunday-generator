@@ -1011,15 +1011,6 @@ class TypeScriptTypeRegistry(
         val discriminatorValue = inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
-        val classNameSymbol = valueRawPropertyTypeName.base as SymbolSpec.Imported
-        val pathCount = classNameSymbol.source.count { it == '/' }
-        val path =
-          if (pathCount > 0) {
-            (0 until pathCount).joinToString("/") { ".." }
-          } else {
-            "."
-          }
-        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
 
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
@@ -1027,14 +1018,18 @@ class TypeScriptTypeRegistry(
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
-          "{class: () => %T, name: %T.%L}" to listOf(
-            indirectTypeName,
-            externalDiscriminatorPropertyTypeName,
+          // NOTE: using nested enum types fails to initialize correctly
+          // currently. Using the string constant equivalent until the
+          // issue is resolved.
+          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
+            explicitlyImported(inheritingTypeName, valueRawPropertyTypeName),
+            discriminatorValue,
+            (externalDiscriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            indirectTypeName,
+            explicitlyImported(inheritingTypeName, valueRawPropertyTypeName),
             discriminatorValue,
           )
         }
@@ -1100,15 +1095,6 @@ class TypeScriptTypeRegistry(
           inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
         val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
-        val classNameSymbol = className.base as SymbolSpec.Imported
-        val pathCount = classNameSymbol.source.count { it == '/' }
-        val path =
-          if (pathCount > 0) {
-            (0 until pathCount).joinToString("/") { ".." }
-          } else {
-            "."
-          }
-        val indirectTypeName = TypeName.namedImport(inheritingTypeName.base.value, "$path/index")
 
         if (isDiscriminatorEnum) {
           val enumDiscriminatorValue =
@@ -1116,14 +1102,18 @@ class TypeScriptTypeRegistry(
               .constants.entries
               .first { it.value?.toString() == "'$discriminatorValue'" }.key
 
-          "{class: () => %T, name: %T.%L}" to listOf(
-            indirectTypeName,
-            discriminatorPropertyTypeName,
+          // NOTE: using nested enum types fails to initialize correctly
+          // currently. Using the string constant equivalent until the
+          // issue is resolved.
+          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
+            explicitlyImported(inheritingTypeName, className),
+            discriminatorValue,
+            (discriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            indirectTypeName,
+            explicitlyImported(inheritingTypeName, className),
             discriminatorValue,
           )
         }
@@ -1342,6 +1332,19 @@ class TypeScriptTypeRegistry(
 
   private fun isReflectedAsObject(typeName: TypeName) =
     typeBuilders[typeName.nonOptional] is EnumSpec.Builder || typeName.box() == OBJECT_CLASS
+
+  private fun explicitlyImported(typeName: TypeName, fromTypeName: TypeName.Standard): TypeName {
+    val stdTypeName = typeName as? TypeName.Standard ?: return typeName
+    val classNameSymbol = fromTypeName.base as? SymbolSpec.Imported ?: return typeName
+    val pathCount = classNameSymbol.source.count { it == '/' }
+    val path =
+      if (pathCount > 0) {
+        (0 until pathCount).joinToString("/") { ".." }
+      } else {
+        "."
+      }
+    return TypeName.namedImport(stdTypeName.base.value, "$path/index")
+  }
 }
 
 private fun TypeName.Standard.sibling(name: String): TypeName.Standard =
