@@ -1,0 +1,50 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Type:
+    type: string
+    enum:
+    - child-1
+    - child-2
+
+  Parent:
+    type: object
+    discriminator: type
+    (sunday.externallyDiscriminated): true
+    properties:
+      type: Type
+
+  Child1:
+    type: Parent
+    discriminatorValue: child-1
+    properties:
+      value?: string
+
+  Child2:
+    type: Parent
+    discriminatorValue: child-2
+    properties:
+      value?: string
+
+  Test:
+    type: object
+    properties:
+      parent:
+        type: Parent
+        (sunday.externalDiscriminator): parentType
+      parentType: Type
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test
