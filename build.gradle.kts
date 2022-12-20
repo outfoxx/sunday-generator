@@ -17,10 +17,6 @@ plugins {
   id("com.github.johnrengelman.shadow") apply false
 }
 
-repositories {
-  mavenCentral()
-}
-
 val ignoreCheckFailures = project.findProperty("ignoreCheckFailures")?.toString()?.toBoolean() ?: false
 
 val moduleNames = listOf( "generator", "cli", "gradle-plugin")
