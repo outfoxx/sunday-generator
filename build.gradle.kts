@@ -254,6 +254,7 @@ githubRelease {
   tagName(releaseVersion)
   targetCommitish("main")
   releaseName("🚀 v$releaseVersion")
+  generateReleaseNotes(true)
   draft(false)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
