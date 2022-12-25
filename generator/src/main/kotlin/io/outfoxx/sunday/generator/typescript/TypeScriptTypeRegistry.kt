@@ -41,6 +41,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.Nested
 import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
 import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptImpl
 import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModelModule
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModule
 import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
@@ -114,6 +115,7 @@ import io.outfoxx.sunday.generator.utils.uniqueItems
 import io.outfoxx.sunday.generator.utils.value
 import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.sunday.generator.utils.xone
+import io.outfoxx.typescriptpoet.AnyTypeSpec
 import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
 import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.CodeBlock
@@ -152,22 +154,52 @@ class TypeScriptTypeRegistry(
     AddGenerationHeader,
   }
 
-  private val typeBuildersOrdered = LinkedHashMap<TypeName.Standard, AnyTypeSpecBuilder>()
+  private val exportedTypeBuilders = LinkedHashMap<TypeName.Standard, AnyTypeSpecBuilder>()
   private val typeBuilders = mutableMapOf<TypeName.Standard, AnyTypeSpecBuilder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
 
   override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
 
-    val builtTypes = buildTypes()
+    val fileSpecs = generateExportedTypeFiles(categories)
 
-    builtTypes
+    fileSpecs
+      .forEach { it.writeTo(outputDirectory) }
+
+    listOf(generateIndexFile(fileSpecs))
+      .forEach { it.writeTo(outputDirectory) }
+  }
+
+  fun generateExportedTypeFiles(categories: Set<GeneratedTypeCategory>) =
+    buildTypes()
       .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
       .map { (typeName, moduleSpec) ->
 
         val imported = typeName.base as SymbolSpec.Imported
         val modulePath = imported.source.replaceFirst("!", "")
 
-        val fileSpecBuilder = FileSpec.get(moduleSpec, modulePath).toBuilder()
+        modulePath to moduleSpec
+      }
+      .groupBy({ it.first }, { it.second })
+      .map { (modulePath, moduleSpecs) ->
+
+        val fileSpecBuilder =
+          if (moduleSpecs.size == 1) {
+            FileSpec.get(moduleSpecs.first(), modulePath).toBuilder()
+          } else {
+            val fileSpecBuilder = FileSpec.builder(modulePath)
+            moduleSpecs.forEach { moduleSpec ->
+              moduleSpec.members.forEach { member ->
+                when (member) {
+                  is FunctionSpec -> fileSpecBuilder.addFunction(member)
+                  is PropertySpec -> fileSpecBuilder.addProperty(member)
+                  is AnyTypeSpec -> fileSpecBuilder.addType(member)
+                  is ModuleSpec -> fileSpecBuilder.addModule(member)
+                  is CodeBlock -> fileSpecBuilder.addCode(member)
+                }
+              }
+            }
+            fileSpecBuilder
+          }
 
         if (options.contains(AddGenerationHeader)) {
           val fileName = "${fileSpecBuilder.build().modulePath}.ts"
@@ -176,21 +208,16 @@ class TypeScriptTypeRegistry(
 
         fileSpecBuilder.build()
       }
-      .forEach { it.writeTo(outputDirectory) }
 
-    listOf(generateIndexFile(builtTypes))
-      .forEach { it.writeTo(outputDirectory) }
-  }
-
-  private fun generateIndexFile(types: Map<TypeName.Standard, ModuleSpec>): FileSpec {
+  private fun generateIndexFile(files: List<FileSpec>): FileSpec {
 
     val indexBuilder = FileSpec.builder("index")
 
-    types.keys.forEach { name ->
+    files.forEach { file ->
       indexBuilder.addCode(
         CodeBlock.of(
           "export * from './%L';",
-          name.base.value.removePrefix("!").camelCaseToKebabCase(),
+          file.modulePath,
         ),
       )
     }
@@ -209,9 +236,9 @@ class TypeScriptTypeRegistry(
       }
 
     // Add nested classes to parent modules
-    typeBuildersOrdered.entries
+    exportedTypeBuilders
       .toList()
-      .sortedByDescending { it.key.simpleNames().size }
+      .sortedByDescending { it.first.simpleNames().size }
       .forEach { (typeName, typeBuilder) ->
         // Is this a nested type?
         val enclosingTypeName = typeName.enclosingTypeName() ?: return@forEach
@@ -226,7 +253,7 @@ class TypeScriptTypeRegistry(
         typeModBuilders[typeName]?.let { enclosingMod.addModule(it.build()) }
       }
 
-    return typeBuilders
+    return exportedTypeBuilders
       .filterKeys { it.isTopLevelTypeName }
       .mapValues { (typeName, typeBuilder) ->
 
@@ -282,7 +309,7 @@ class TypeScriptTypeRegistry(
 
     serviceType.tag(GeneratedTypeCategory.Service)
 
-    if (typeBuilders.putIfAbsent(typeName, serviceType) != null) {
+    if (exportedTypeBuilders.putIfAbsent(typeName, serviceType) != null) {
       genError("Service type '$typeName' is already defined")
     }
   }
@@ -296,7 +323,7 @@ class TypeScriptTypeRegistry(
     val problemTypeNameStr = "${problemCode.typeScriptTypeName}Problem"
     val problemTypeName = TypeName.namedImport(problemTypeNameStr, "!${problemTypeNameStr.camelCaseToKebabCase()}")
 
-    typeBuilders.computeIfAbsent(problemTypeName) {
+    exportedTypeBuilders.computeIfAbsent(problemTypeName) {
 
       val problemTypeBuilder =
         ClassSpec.builder(problemTypeName)
@@ -920,7 +947,7 @@ class TypeScriptTypeRegistry(
       }
     }
 
-    typeBuildersOrdered[className] = classBuilder
+    exportedTypeBuilders[className] = classBuilder
 
     inheritingTypes.forEach { inheritingType ->
       resolveReferencedTypeName(inheritingType, context)
@@ -963,7 +990,7 @@ class TypeScriptTypeRegistry(
       enumBuilder.addConstant(enum.typeScriptEnumName, CodeBlock.of("%S", enum.stringValue))
     }
 
-    typeBuildersOrdered[className] = enumBuilder
+    exportedTypeBuilders[className] = enumBuilder
 
     return className
   }
@@ -1167,12 +1194,19 @@ class TypeScriptTypeRegistry(
       return context.suggestedTypeName
     }
 
-    val modulePath = modulePathOf(shape, context)?.let { "!$it/" } ?: "!"
+    modulePathOf(shape, context)?.let { modulePath ->
+      val fullModulePath =
+        if (modulePath.endsWith(".ts"))
+          modulePath.removeSuffix(".ts")
+        else
+          "$modulePath/${shape.typeScriptTypeName.camelCaseToKebabCase()}"
+      return TypeName.namedImport(shape.typeScriptTypeName, "!$fullModulePath")
+    }
 
     val nestedAnn = shape.findAnnotation(Nested, null)
       ?: return TypeName.namedImport(
         shape.typeScriptTypeName,
-        "$modulePath${shape.typeScriptTypeName.camelCaseToKebabCase()}",
+        "!${shape.typeScriptTypeName.camelCaseToKebabCase()}",
       )
 
     val (nestedEnclosedIn, nestedName) =
@@ -1227,11 +1261,14 @@ class TypeScriptTypeRegistry(
   }
 
   private fun modulePathOf(shape: Shape, context: TypeScriptResolutionContext): String? =
-    modulePathOf(context.findDeclaringUnit(shape))
+    (shape as? CustomizableElement)?.findStringAnnotation(TypeScriptModelModule, null)
+      ?: modulePathOf(context.findDeclaringUnit(shape))
 
   private fun modulePathOf(unit: BaseUnit?): String? =
     (unit as? CustomizableElement)?.findStringAnnotation(TypeScriptModelModule, null)
       ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(TypeScriptModelModule, null)
+      ?: (unit as? CustomizableElement)?.findStringAnnotation(TypeScriptModule, null)
+      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(TypeScriptModule, null)
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
