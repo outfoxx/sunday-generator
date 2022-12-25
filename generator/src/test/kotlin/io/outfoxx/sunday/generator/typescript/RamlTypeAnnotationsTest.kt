@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
@@ -30,6 +31,7 @@ import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.InterfaceSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -70,6 +72,23 @@ class RamlTypeAnnotationsTest {
     val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
 
     assertThat(generatedTypes.keys, hasItem(TypeName.namedImport("Test", "!explicit/test")))
+  }
+
+  @Test
+  fun `test generated module for typeScriptModelModule annotation merging modules`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-ts-model-module-merged.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    generateTypes(testUri, typeRegistry, compiler)
+
+    val fileSpecModulePaths =
+      typeRegistry.generateExportedTypeFiles(categories = setOf(GeneratedTypeCategory.Model))
+        .map { it.modulePath }
+
+    assertThat(fileSpecModulePaths, contains("merged"))
   }
 
   @Test
