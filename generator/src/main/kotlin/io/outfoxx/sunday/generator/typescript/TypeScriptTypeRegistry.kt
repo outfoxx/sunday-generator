@@ -1019,14 +1019,14 @@ class TypeScriptTypeRegistry(
           // currently. Using the string constant equivalent until the
           // issue is resolved.
           "{class: () => %T, name: %S /* %L.%L */}" to listOf(
-            importFromIndex(inheritingTypeName),
+            importFromIndex(inheritingTypeName, className),
             discriminatorValue,
             (externalDiscriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            importFromIndex(inheritingTypeName),
+            importFromIndex(inheritingTypeName, className),
             discriminatorValue,
           )
         }
@@ -1103,14 +1103,14 @@ class TypeScriptTypeRegistry(
           // currently. Using the string constant equivalent until the
           // issue is resolved.
           "{class: () => %T, name: %S /* %L.%L */}" to listOf(
-            importFromIndex(inheritingTypeName),
+            importFromIndex(inheritingTypeName, className),
             discriminatorValue,
             (discriminatorPropertyTypeName as TypeName.Standard).base.value,
             enumDiscriminatorValue,
           )
         } else {
           "{class: () => %T, name: %S}" to listOf(
-            importFromIndex(inheritingTypeName),
+            importFromIndex(inheritingTypeName, className),
             discriminatorValue,
           )
         }
@@ -1330,9 +1330,13 @@ class TypeScriptTypeRegistry(
   private fun isReflectedAsObject(typeName: TypeName) =
     typeBuilders[typeName.nonOptional] is EnumSpec.Builder || typeName.box() == OBJECT_CLASS
 
-  private fun importFromIndex(typeName: TypeName): TypeName {
-    val importedSymbol = ((typeName as? TypeName.Standard)?.base as? SymbolSpec.Imported) ?: return typeName
-    return TypeName.namedImport(importedSymbol.value, "!index")
+  private fun importFromIndex(typeName: TypeName, fromTypeName: TypeName): TypeName {
+    val typeNameImport = ((typeName as? TypeName.Standard)?.base as? SymbolSpec.Imported) ?: return typeName
+    val fromTypeNameImport = (fromTypeName as? TypeName.Standard)?.base as? SymbolSpec.Imported
+    if (typeNameImport.source == fromTypeNameImport?.source) {
+      return typeName
+    }
+    return TypeName.namedImport(typeNameImport.value, "!index")
   }
 }
 
