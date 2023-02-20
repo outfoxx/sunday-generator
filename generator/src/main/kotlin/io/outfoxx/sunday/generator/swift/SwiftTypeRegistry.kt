@@ -845,11 +845,15 @@ class SwiftTypeRegistry(
       typeBuilder.addSuperType(CODABLE)
     }
 
-    if (localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
+    if (isRoot || localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
       val codingKeysBuilder =
         TypeSpec.enumBuilder(codingKeysTypeName)
           .addModifiers(FILEPRIVATE)
-          .addSuperType(STRING)
+          .apply {
+            if (localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
+              addSuperType(STRING)
+            }
+          }
           .addSuperType(CODING_KEY)
 
       if (isRoot && discriminatorProperty != null) {
@@ -870,9 +874,10 @@ class SwiftTypeRegistry(
       .addParameter("from", "decoder", DECODER)
       .throws(true)
 
-    if (localDeclaredProperties.isNotEmpty()) {
+    if (localDeclaredProperties.isNotEmpty() || isRoot) {
       decoderInitFunctionBuilder.addStatement(
-        "let container = try decoder.container(keyedBy: %T.self)",
+        "let %L = try decoder.container(keyedBy: %T.self)",
+        if (localDeclaredProperties.isNotEmpty()) "container" else "_",
         codingKeysTypeName,
       )
     }
@@ -886,6 +891,8 @@ class SwiftTypeRegistry(
     }
     if (localDeclaredProperties.isNotEmpty()) {
       encoderFunctionBuilder.addStatement("var container = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
+    } else if (isRoot) {
+      encoderFunctionBuilder.addStatement("let _ = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
     }
 
     // Unpack all properties without (externalDiscriminator) annotation
