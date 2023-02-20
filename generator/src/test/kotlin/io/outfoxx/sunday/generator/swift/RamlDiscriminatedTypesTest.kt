@@ -64,9 +64,11 @@ class RamlDiscriminatedTypesTest {
           }
 
           public required init(from decoder: Decoder) throws {
+            let _ = try decoder.container(keyedBy: CodingKeys.self)
           }
 
           public func encode(to encoder: Encoder) throws {
+            let _ = encoder.container(keyedBy: CodingKeys.self)
           }
 
           public enum AnyRef : Codable, CustomDebugStringConvertible {
@@ -303,9 +305,11 @@ class RamlDiscriminatedTypesTest {
           }
 
           public required init(from decoder: Decoder) throws {
+            let _ = try decoder.container(keyedBy: CodingKeys.self)
           }
 
           public func encode(to encoder: Encoder) throws {
+            let _ = encoder.container(keyedBy: CodingKeys.self)
           }
 
           public enum AnyRef : Codable, CustomDebugStringConvertible {
