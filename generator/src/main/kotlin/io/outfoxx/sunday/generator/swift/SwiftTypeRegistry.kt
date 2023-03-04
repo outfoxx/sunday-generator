@@ -705,7 +705,7 @@ class SwiftTypeRegistry(
             .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
             .addParameter("to", "encoder", ENCODER)
             .throws(true)
-            .addCode("var container = encoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
+            .addStatement("var container = encoder.singleValueContainer()")
             .beginControlFlow("switch", "self")
           val refValueBuilder = FunctionSpec.getterBuilder()
             .beginControlFlow("switch", "self")
@@ -748,10 +748,8 @@ class SwiftTypeRegistry(
             }
 
             refEncoderBuilder.addStatement(
-              "case .%N(let value):\ntry container.encode(%S, forKey: .%N)\ntry value.encode(to: encoder)",
+              "case .%N(let value):%Wtry container.encode(value)",
               discriminatorCase,
-              discriminatorValue,
-              discriminatorPropertyName,
             )
 
             refValueBuilder.addStatement("case .%N(let value):%Wreturn value", discriminatorCase)
@@ -889,14 +887,22 @@ class SwiftTypeRegistry(
     if (!isRoot) {
       encoderFunctionBuilder.addStatement("try super.encode(to: encoder)")
     }
-    if (localDeclaredProperties.isNotEmpty()) {
+    if (localDeclaredProperties.isNotEmpty() || (isRoot && discriminatorProperty != null)) {
       encoderFunctionBuilder.addStatement("var container = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
     } else if (isRoot) {
       encoderFunctionBuilder.addStatement("let _ = encoder.container(keyedBy: %T.self)", codingKeysTypeName)
     }
 
-    // Unpack all properties without (externalDiscriminator) annotation
+    if (isRoot && discriminatorProperty != null) {
+      encoderFunctionBuilder
+        .addStatement(
+          "try container.encode(self.%N, forKey: .%N)",
+          discriminatorProperty.swiftIdentifierName,
+          discriminatorProperty.swiftIdentifierName,
+        )
+    }
 
+    // Unpack all properties without (externalDiscriminator) annotation
     localDeclaredProperties.filterNot { it.range.hasAnnotation(ExternalDiscriminator, null) }.forEach { prop ->
       var propertyTypeName = resolvePropertyTypeName(prop, className, context)
       if (propertyTypeName == VOID) {

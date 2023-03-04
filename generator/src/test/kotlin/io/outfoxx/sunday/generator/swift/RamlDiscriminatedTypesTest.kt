@@ -68,7 +68,8 @@ class RamlDiscriminatedTypesTest {
           }
 
           public func encode(to encoder: Encoder) throws {
-            let _ = encoder.container(keyedBy: CodingKeys.self)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.type, forKey: .type)
           }
 
           public enum AnyRef : Codable, CustomDebugStringConvertible {
@@ -113,14 +114,10 @@ class RamlDiscriminatedTypesTest {
             }
 
             public func encode(to encoder: Encoder) throws {
-              var container = encoder.container(keyedBy: CodingKeys.self)
+              var container = encoder.singleValueContainer()
               switch self {
-              case .child1(let value):
-                  try container.encode("Child1", forKey: .type)
-                  try value.encode(to: encoder)
-              case .child2(let value):
-                  try container.encode("child2", forKey: .type)
-                  try value.encode(to: encoder)
+              case .child1(let value): try container.encode(value)
+              case .child2(let value): try container.encode(value)
               }
             }
 
@@ -309,7 +306,8 @@ class RamlDiscriminatedTypesTest {
           }
 
           public func encode(to encoder: Encoder) throws {
-            let _ = encoder.container(keyedBy: CodingKeys.self)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.type, forKey: .type)
           }
 
           public enum AnyRef : Codable, CustomDebugStringConvertible {
@@ -348,14 +346,10 @@ class RamlDiscriminatedTypesTest {
             }
 
             public func encode(to encoder: Encoder) throws {
-              var container = encoder.container(keyedBy: CodingKeys.self)
+              var container = encoder.singleValueContainer()
               switch self {
-              case .child1(let value):
-                  try container.encode("Child1", forKey: .type)
-                  try value.encode(to: encoder)
-              case .child2(let value):
-                  try container.encode("Child2", forKey: .type)
-                  try value.encode(to: encoder)
+              case .child1(let value): try container.encode(value)
+              case .child2(let value): try container.encode(value)
               }
             }
 
