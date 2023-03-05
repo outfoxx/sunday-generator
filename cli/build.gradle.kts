@@ -108,16 +108,22 @@ jib {
   }
   from {
     image = "openjdk:17-jdk"
-    platforms {
-      platform {
-        os = "linux"
-        architecture = "arm64"
-      }
+  }
+  containerizingMode = "packaged"
+}
+
+gradle.taskGraph.addTaskExecutionGraphListener {
+  jib.from.platforms {
+    platform {
+      os = "linux"
+      architecture = "arm64"
+    }
+    if (!it.hasTask(":cli:jibDockerBuild")) {
+      logger.warn("JIB: Enabling Multi-Platform Images")
       platform {
         os = "linux"
         architecture = "amd64"
       }
     }
   }
-  containerizingMode = "packaged"
 }
