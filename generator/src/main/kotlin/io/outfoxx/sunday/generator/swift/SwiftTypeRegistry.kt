@@ -396,6 +396,10 @@ class SwiftTypeRegistry(
       problemTypeBuilder.addType(problemCodingKeysTypeBuilder.build())
     }
 
+    if (options.contains(AddGeneratedHeader)) {
+      problemTypeBuilder.addDoc(GenerationHeaders.create("${problemTypeName.simpleName}.swift"))
+    }
+
     typeBuilders[problemTypeName] = problemTypeBuilder
 
     return problemTypeName
