@@ -123,7 +123,7 @@ class ResponseEventsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
+          public fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
             .eventStream(
               method = Method.Get,
               pathTemplate = "/test1",
@@ -131,7 +131,7 @@ class ResponseEventsTest {
               decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
             )
 
-          public suspend fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
+          public fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
             .eventStream(
               method = Method.Get,
               pathTemplate = "/test2",
@@ -196,7 +196,7 @@ class ResponseEventsTest {
           public val defaultContentTypes: List<MediaType> = listOf(),
           public val defaultAcceptTypes: List<MediaType> = listOf(),
         ) {
-          public suspend fun fetchEventsSimple(): Flow<Base> = this.requestFactory
+          public fun fetchEventsSimple(): Flow<Base> = this.requestFactory
             .eventStream(
               method = Method.Get,
               pathTemplate = "/test1",
@@ -204,7 +204,7 @@ class ResponseEventsTest {
               decoder = { decoder, _, _, data, _ -> decoder.decode<Base>(data, typeOf<Base>()) }
             )
 
-          public suspend fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory
+          public fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory
             .eventStream(
               method = Method.Get,
               pathTemplate = "/test2",

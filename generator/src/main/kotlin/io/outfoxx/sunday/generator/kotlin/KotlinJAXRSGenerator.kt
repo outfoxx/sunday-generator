@@ -261,7 +261,7 @@ class KotlinJAXRSGenerator(
       functionBuilder.addAnnotation(prodAnn)
     }
 
-    if (options.coroutineServiceMethods) {
+    if (options.coroutineServiceMethods && !operation.hasAnnotation(EventStream, generationMode)) {
       functionBuilder.addModifiers(SUSPEND)
     }
 
@@ -297,7 +297,7 @@ class KotlinJAXRSGenerator(
       }
     }
 
-    when (operation.findStringAnnotation(EventStream, null)) {
+    when (operation.findStringAnnotation(EventStream, generationMode)) {
       "simple" -> {
         return FLOW.parameterizedBy(returnTypeName)
       }
