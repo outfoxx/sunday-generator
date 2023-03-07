@@ -321,12 +321,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Test1>
+          public fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+          public fun fetchEventsDiscriminated(): Flow<Any>
         }
 
       """.trimIndent(),
@@ -384,12 +384,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Test1>
+          public fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+          public fun fetchEventsDiscriminated(): Flow<Any>
         }
 
       """.trimIndent(),
@@ -446,12 +446,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Base>
+          public fun fetchEventsSimple(): Flow<Base>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Base>
+          public fun fetchEventsDiscriminated(): Flow<Base>
         }
 
       """.trimIndent(),
@@ -508,12 +508,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Base>
+          public fun fetchEventsSimple(): Flow<Base>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Base>
+          public fun fetchEventsDiscriminated(): Flow<Base>
         }
 
       """.trimIndent(),

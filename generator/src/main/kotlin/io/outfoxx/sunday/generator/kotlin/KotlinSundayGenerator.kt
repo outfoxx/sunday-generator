@@ -278,7 +278,9 @@ class KotlinSundayGenerator(
     functionBuilder: FunSpec.Builder,
   ): FunSpec.Builder {
 
-    functionBuilder.addModifiers(KModifier.SUSPEND)
+    if (!operation.hasAnnotation(APIAnnotationName.EventStream, generationMode)) {
+      functionBuilder.addModifiers(KModifier.SUSPEND)
+    }
 
     uriParameters = mutableListOf()
     queryParameters = mutableListOf()
