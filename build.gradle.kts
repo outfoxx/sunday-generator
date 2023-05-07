@@ -259,8 +259,7 @@ githubRelease {
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
     moduleNames.flatMap { moduleName ->
-      val baseSuffix = if (moduleName == "gradle-plugin") "" else "-all"
-      listOf(baseSuffix, "-javadoc", "-sources").map { suffix ->
+      listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/$moduleName-$releaseVersion$suffix.jar")
       }
     }
