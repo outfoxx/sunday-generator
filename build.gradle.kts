@@ -1,8 +1,9 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
-import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.quiltmc.gradle.licenser.api.license.LicenseRule
+import org.quiltmc.gradle.licenser.extension.QuiltLicenserGradleExtension
 
 plugins {
   id("org.jetbrains.dokka")
@@ -11,7 +12,7 @@ plugins {
   id("io.github.gradle-nexus.publish-plugin")
 
   kotlin("jvm") apply false
-  id("org.cadixdev.licenser") apply false
+  id("org.quiltmc.gradle.licenser") apply false
   id("org.jmailen.kotlinter") apply false
   id("io.gitlab.arturbosch.detekt") apply (false)
   id("com.github.johnrengelman.shadow") apply false
@@ -55,7 +56,7 @@ configure(moduleNames.map { project(it) }) {
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
   apply(plugin = "org.jetbrains.dokka")
-  apply(plugin = "org.cadixdev.licenser")
+  apply(plugin = "org.quiltmc.gradle.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "io.gitlab.arturbosch.detekt")
 
@@ -109,10 +110,9 @@ configure(moduleNames.map { project(it) }) {
   // CHECKS
   //
 
-  configure<LicenseExtension> {
-    header.set(resources.text.fromFile(file("${rootProject.layout.projectDirectory}/HEADER.txt")))
+  configure<QuiltLicenserGradleExtension> {
+    rule(file("${rootProject.layout.projectDirectory}/HEADER.txt"))
     include("**/*.kt")
-    ignoreFailures.set(ignoreCheckFailures)
   }
 
   configure<DetektExtension> {
@@ -259,8 +259,7 @@ githubRelease {
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
     moduleNames.flatMap { moduleName ->
-      val baseSuffix = if (moduleName == "gradle-plugin") "" else "-all"
-      listOf(baseSuffix, "-javadoc", "-sources").map { suffix ->
+      listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/$moduleName-$releaseVersion$suffix.jar")
       }
     }
