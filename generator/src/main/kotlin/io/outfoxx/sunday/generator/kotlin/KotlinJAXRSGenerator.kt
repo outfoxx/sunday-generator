@@ -203,13 +203,15 @@ class KotlinJAXRSGenerator(
 
     if (defaultMediaTypes.isNotEmpty()) {
 
+      val mediaTypes = defaultMediaTypes.joinToString(",") { "\"$it\"" }
+
       val prodAnn = AnnotationSpec.builder(Produces::class)
-        .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
+        .addMember("value = [%L]", mediaTypes)
         .build()
       typeBuilder.addAnnotation(prodAnn)
 
       val consAnn = AnnotationSpec.builder(Consumes::class)
-        .addMember("value = [%S]", defaultMediaTypes.first())
+        .addMember("value = [%L]", mediaTypes)
         .build()
       typeBuilder.addAnnotation(consAnn)
     }

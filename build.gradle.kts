@@ -2,7 +2,6 @@ import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.quiltmc.gradle.licenser.api.license.LicenseRule
 import org.quiltmc.gradle.licenser.extension.QuiltLicenserGradleExtension
 
 plugins {
