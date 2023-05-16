@@ -35,7 +35,65 @@ import java.net.URI
 class ServiceTest {
 
   @Test
-  fun `test default media types are limited correctly`(
+  fun `test default media types are limited correctly (Client)`(
+    @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val options = KotlinJAXRSGenerator.Options(
+      false,
+      null,
+      false,
+      null,
+      false,
+      "io.test.service",
+      "http://example.com/",
+      listOf("application/cbor", "application/yaml"),
+      "API",
+    )
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          options,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/cbor","application/yaml","application/json"])
+        @Consumes(value = ["application/cbor"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          @Consumes(value = ["application/yaml"])
+          public fun fetchTest(body: Test): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test default media types are limited correctly (Server)`(
     @ResourceUri("raml/service-gen/svc-default-media-types.raml") testUri: URI,
   ) {
 
