@@ -77,7 +77,7 @@ class ServiceTest {
         import javax.ws.rs.core.Response
 
         @Produces(value = ["application/cbor","application/yaml","application/json"])
-        @Consumes(value = ["application/cbor"])
+        @Consumes(value = ["application/cbor","application/yaml","application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
