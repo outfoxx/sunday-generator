@@ -134,11 +134,11 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY_BUFFER
 import io.outfoxx.typescriptpoet.TypeName.Companion.BOOLEAN
+import io.outfoxx.typescriptpoet.TypeName.Companion.NULL
 import io.outfoxx.typescriptpoet.TypeName.Companion.NUMBER
 import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
-import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import io.outfoxx.typescriptpoet.tag
 import java.nio.file.Path
 import kotlin.math.min
@@ -516,7 +516,7 @@ class TypeScriptTypeRegistry(
       is UnionShape -> processUnionShape(shape, context)
       is NodeShape -> processNodeShape(shape, context)
       is FileShape -> ARRAY_BUFFER
-      is NilShape -> VOID
+      is NilShape -> NULL
       is AnyShape -> processAnyShape(shape, context)
       else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }

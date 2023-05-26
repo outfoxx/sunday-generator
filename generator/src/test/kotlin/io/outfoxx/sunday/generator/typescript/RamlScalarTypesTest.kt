@@ -57,7 +57,7 @@ class RamlScalarTypesTest {
 
           any: any;
 
-          nil: void;
+          nil: null;
 
         }
 
@@ -71,7 +71,7 @@ class RamlScalarTypesTest {
 
           any: any;
 
-          nil: void;
+          nil: null;
 
           constructor(init: TestSpec) {
             this.bool = init.bool;
@@ -124,7 +124,7 @@ class RamlScalarTypesTest {
 
           any: any;
 
-          nil: void;
+          nil: null;
 
         }
 
@@ -149,7 +149,7 @@ class RamlScalarTypesTest {
 
           @JsonProperty({required: true})
           @JsonClassType({type: () => [Object]})
-          nil: void;
+          nil: null;
 
           constructor(init: TestSpec) {
             this.bool = init.bool;
