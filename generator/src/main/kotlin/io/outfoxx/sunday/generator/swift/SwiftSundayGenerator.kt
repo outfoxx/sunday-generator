@@ -242,9 +242,17 @@ class SwiftSundayGenerator(
     resultBodyType = body
     originalReturnType = returnTypeName
 
-    val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
-    resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
-    referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
+    if (
+      operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true ||
+      operation.hasAnnotation(APIAnnotationName.EventStream, null)
+    ) {
+      resultContentTypes = listOf("text/event-stream")
+    } else {
+
+      val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
+      resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
+      referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
+    }
 
     if (operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true) {
       return EVENT_SOURCE

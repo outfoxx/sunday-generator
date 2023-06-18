@@ -261,14 +261,17 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
 
-    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
+    if (
+      mediaTypesForPayloads.isNotEmpty() &&
+      mediaTypesForPayloads != defaultMediaTypes.take(mediaTypesForPayloads.size)
+    ) {
       val prodAnn = AnnotationSpec.builder(Produces::class)
         .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
         .build()
       functionBuilder.addAnnotation(prodAnn)
     }
 
-    if (options.coroutineServiceMethods && !operation.hasAnnotation(EventStream, generationMode)) {
+    if (options.coroutineServiceMethods) {
       functionBuilder.addModifiers(SUSPEND)
     }
 
@@ -304,14 +307,34 @@ class KotlinJAXRSGenerator(
       }
     }
 
+    val elementType =
+      mediaTypesForPayloads.firstOrNull()
+        ?: defaultMediaTypes.firstOrNull()
+    val elementTypeAnnotations =
+      if (elementType != null && elementType != "text/event-stream") {
+        listOf(
+          AnnotationSpec.builder(Produces::class.asTypeName())
+            .addMember("value = [%S]", "text/event-stream")
+            .build(),
+          AnnotationSpec.builder(ClassName.bestGuess("org.jboss.resteasy.reactive.RestStreamElementType"))
+            .addMember("value = %S", elementType)
+            .build(),
+        )
+      } else {
+        listOf()
+      }
+
     when (operation.findStringAnnotation(EventStream, generationMode)) {
       "simple" -> {
+        elementTypeAnnotations.forEach { functionBuilder.addAnnotation(it) }
         return FLOW.parameterizedBy(returnTypeName)
       }
+
       "discriminated" -> {
         if (body !is UnionShape) {
           genError("Discriminated ($EventStream) requires a union of event types", operation)
         }
+        elementTypeAnnotations.forEach { functionBuilder.addAnnotation(it) }
         return FLOW.parameterizedBy(returnTypeName)
       }
     }
