@@ -31,7 +31,7 @@ types:
     responses:
       200:
         body:
-          text/event-stream:
+          application/json:
             type: Base
 /test2:
   get:
@@ -40,5 +40,5 @@ types:
     responses:
       200:
         body:
-          text/event-stream:
+          application/json:
             type: Test1 | Test2

@@ -321,12 +321,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsSimple(): Flow<Test1>
+          public suspend fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsDiscriminated(): Flow<Any>
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
         }
 
       """.trimIndent(),
@@ -384,12 +384,12 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsSimple(): Flow<Test1>
+          public suspend fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsDiscriminated(): Flow<Any>
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
         }
 
       """.trimIndent(),
@@ -439,6 +439,7 @@ class RequestCoroutineMethodsTest {
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
         import kotlinx.coroutines.flow.Flow
+        import org.jboss.resteasy.reactive.RestStreamElementType
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -446,12 +447,14 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsSimple(): Flow<Base>
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Base>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsDiscriminated(): Flow<Base>
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Base>
         }
 
       """.trimIndent(),
@@ -501,6 +504,7 @@ class RequestCoroutineMethodsTest {
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
         import kotlinx.coroutines.flow.Flow
+        import org.jboss.resteasy.reactive.RestStreamElementType
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -508,12 +512,14 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsSimple(): Flow<Base>
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Base>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public fun fetchEventsDiscriminated(): Flow<Base>
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Base>
         }
 
       """.trimIndent(),

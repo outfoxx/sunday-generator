@@ -210,9 +210,17 @@ class TypeScriptSundayGenerator(
     resultBodyType = body
     originalReturnType = returnTypeName
 
-    val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
-    resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
-    referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
+    if (
+      operation.findBoolAnnotation(EventSource, null) == true ||
+      operation.hasAnnotation(EventStream, null)
+    ) {
+      resultContentTypes = listOf("text/event-stream")
+    } else {
+
+      val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
+      resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
+      referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
+    }
 
     if (operation.findBoolAnnotation(EventSource, null) == true) {
       return EVENT_SOURCE
@@ -464,7 +472,11 @@ class TypeScriptSundayGenerator(
 
     val builder = CodeBlock.builder()
 
-    if (operation.findBoolAnnotation(EventSource, null) == true || operation.hasAnnotation(EventStream, null)) {
+    if (
+      operation.findBoolAnnotation(EventSource, null) == true ||
+      operation.hasAnnotation(EventStream, null)
+    ) {
+      resultContentTypes = listOf("text/event-stream")
 
       // Generate EventSource/Event Stream handling method
       when (operation.findStringAnnotation(EventStream, null)) {
