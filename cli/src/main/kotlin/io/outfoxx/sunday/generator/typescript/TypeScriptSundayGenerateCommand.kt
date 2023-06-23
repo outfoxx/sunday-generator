@@ -29,6 +29,11 @@ open class TypeScriptSundayGenerateCommand :
     help = "Service methods will return results wrapped in a response",
   ).flag(default = false)
 
+  val enableAbortablePromises by option(
+    "-enable-abortable-promises",
+    help = "Service methods will return promises and carry an extra final argument for an abort signal",
+  ).flag(default = false)
+
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry) =
     TypeScriptSundayGenerator(
       document,
@@ -36,6 +41,7 @@ open class TypeScriptSundayGenerateCommand :
       typeRegistry,
       TypeScriptSundayGenerator.Options(
         useResultResponseReturn,
+        enableAbortablePromises,
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,

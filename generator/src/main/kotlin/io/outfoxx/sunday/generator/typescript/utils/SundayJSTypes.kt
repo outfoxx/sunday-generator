@@ -33,3 +33,5 @@ val URL_TEMPLATE = TypeName.namedImport("URLTemplate", SUNDAY_PKG)
 val RESULT_RESPONSE = TypeName.namedImport("ResultResponse", SUNDAY_PKG)
 
 val NULLIFY_RESPONSE = SymbolSpec.importsName("nullifyResponse", SUNDAY_PKG)
+val NULLIFY_PROMISE_RESPONSE = SymbolSpec.importsName("nullifyPromiseResponse", SUNDAY_PKG)
+val PROMISE_FROM = SymbolSpec.importsName("promiseFrom", SUNDAY_PKG)

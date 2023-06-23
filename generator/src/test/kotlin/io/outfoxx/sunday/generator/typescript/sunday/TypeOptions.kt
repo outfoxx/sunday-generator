@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 
 val typeScriptSundayTestOptions = TypeScriptSundayGenerator.Options(
   false,
+  false,
   "http://example.com/",
   listOf("application/json"),
   "API",
