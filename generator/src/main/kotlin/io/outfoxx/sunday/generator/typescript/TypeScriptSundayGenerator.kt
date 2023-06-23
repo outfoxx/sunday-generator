@@ -35,12 +35,15 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
 import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_PROMISE_RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
+import io.outfoxx.sunday.generator.typescript.utils.PROMISE_FROM
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
@@ -78,6 +81,7 @@ import io.outfoxx.typescriptpoet.ParameterSpec
 import io.outfoxx.typescriptpoet.PropertySpec
 import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
+import io.outfoxx.typescriptpoet.TypeName.Companion.PROMISE
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import java.net.URI
 import kotlin.collections.component1
@@ -101,6 +105,7 @@ class TypeScriptSundayGenerator(
 
   class Options(
     val useResultResponseReturn: Boolean,
+    val enableAbortablePromises: Boolean,
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
@@ -210,17 +215,22 @@ class TypeScriptSundayGenerator(
     resultBodyType = body
     originalReturnType = returnTypeName
 
-    if (
-      operation.findBoolAnnotation(EventSource, null) == true ||
-      operation.hasAnnotation(EventStream, null)
-    ) {
-      resultContentTypes = listOf("text/event-stream")
-    } else {
+    var asyncWrapper =
+      if (
+        operation.findBoolAnnotation(EventSource, null) == true ||
+        operation.hasAnnotation(EventStream, null)
+      ) {
+        resultContentTypes = listOf("text/event-stream")
 
-      val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
-      resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
-      referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
-    }
+        OBSERVABLE
+      } else {
+
+        val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
+        resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
+        referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
+
+        if (options.enableAbortablePromises) PROMISE else OBSERVABLE
+      }
 
     if (operation.findBoolAnnotation(EventSource, null) == true) {
       return EVENT_SOURCE
@@ -243,7 +253,7 @@ class TypeScriptSundayGenerator(
         else -> returnTypeName
       }
 
-    return TypeName.parameterizedType(OBSERVABLE, remappedTypeName)
+    return TypeName.parameterizedType(asyncWrapper, remappedTypeName)
   }
 
   override fun processResourceMethodStart(
@@ -529,6 +539,11 @@ class TypeScriptSundayGenerator(
 
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
+      val userAbortablePromise = options.enableAbortablePromises && !requestOnly && !responseOnly
+
+      if (userAbortablePromise) {
+        functionBuilder.addParameter("signal", ABORT_SIGNAL, true)
+      }
 
       val factoryMethod =
         when {
@@ -538,7 +553,11 @@ class TypeScriptSundayGenerator(
           else -> "result"
         }
 
-      builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
+      if (userAbortablePromise) {
+        builder.add("%[return %Q(this.requestFactory.%L(\n", PROMISE_FROM, factoryMethod)
+      } else {
+        builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
+      }
 
       builder.add(specGen())
 
@@ -549,7 +568,11 @@ class TypeScriptSundayGenerator(
         builder.add(",\n%L", retTypePropName)
       }
 
-      builder.add("%]\n);\n")
+      if (userAbortablePromise) {
+        builder.add("%]\n), signal);\n")
+      } else {
+        builder.add("%]\n);\n")
+      }
 
       if (!requestOnly && !responseOnly) {
         addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
@@ -598,14 +621,15 @@ class TypeScriptSundayGenerator(
         .add(
           """
           |return this.%N(${function.parameters.joinToString { it.name }})
-          |  .pipe(%Q(
+          |  .%L(%Q(
           |    [${nullifyStatuses.joinToString { "$it" }}],
           |    [${nullifyProblemTypeNames.joinToString { "%T" }}]
           |  ));
           |
           """.trimMargin(),
           function.name,
-          NULLIFY_RESPONSE,
+          if (options.enableAbortablePromises) "catch" else "pipe",
+          if (options.enableAbortablePromises) NULLIFY_PROMISE_RESPONSE else NULLIFY_RESPONSE,
           *nullifyProblemTypeNames,
         )
 
@@ -614,6 +638,7 @@ class TypeScriptSundayGenerator(
       when {
         returnType is TypeName.Parameterized && returnType.typeArgs.size == 1 ->
           returnType.rawType.parameterized(returnType.typeArgs[0].nullable)
+
         else -> returnType?.nullable
       }
 
