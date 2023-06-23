@@ -60,6 +60,8 @@ class RequestMethodsTest {
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.Request
+        import io.outfoxx.sunday.http.Response
         import kotlin.Unit
         import kotlin.collections.List
 
@@ -128,6 +130,20 @@ class RequestMethodsTest {
               contentTypes = this.defaultContentTypes,
               acceptTypes = this.defaultAcceptTypes
             )
+
+          public suspend fun requestTest(): Request = this.requestFactory
+            .request(
+              method = Method.Get,
+              pathTemplate = "/request",
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun responseTest(): Response = this.requestFactory
+            .response(
+              method = Method.Get,
+              pathTemplate = "/response",
+              acceptTypes = this.defaultAcceptTypes
+            )
         }
 
       """.trimIndent(),
@@ -170,6 +186,8 @@ class RequestMethodsTest {
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
+        import io.outfoxx.sunday.http.Request
+        import io.outfoxx.sunday.http.Response
         import io.outfoxx.sunday.http.ResultResponse
         import kotlin.Unit
         import kotlin.collections.List
@@ -237,6 +255,20 @@ class RequestMethodsTest {
               pathTemplate = "/tests2",
               body = body,
               contentTypes = this.defaultContentTypes,
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun requestTest(): Request = this.requestFactory
+            .request(
+              method = Method.Get,
+              pathTemplate = "/request",
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun responseTest(): Response = this.requestFactory
+            .response(
+              method = Method.Get,
+              pathTemplate = "/response",
               acceptTypes = this.defaultAcceptTypes
             )
         }

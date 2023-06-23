@@ -171,6 +171,26 @@ class RequestMethodsTest {
             );
           }
 
+          requestTest(): Observable<Request> {
+            return this.requestFactory.request(
+                {
+                  method: 'GET',
+                  pathTemplate: '/request',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            );
+          }
+
+          responseTest(): Observable<Response> {
+            return this.requestFactory.response(
+                {
+                  method: 'GET',
+                  pathTemplate: '/response',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            );
+          }
+
         }
 
         const fetchTestReturnType: AnyType = [Test];
@@ -329,6 +349,26 @@ class RequestMethodsTest {
                   acceptTypes: this.defaultAcceptTypes
                 },
                 patchableTestReturnType
+            ), signal);
+          }
+
+          requestTest(signal?: AbortSignal): Promise<Request> {
+            return promiseFrom(this.requestFactory.request(
+                {
+                  method: 'GET',
+                  pathTemplate: '/request',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            ), signal);
+          }
+
+          responseTest(signal?: AbortSignal): Promise<Response> {
+            return promiseFrom(this.requestFactory.response(
+                {
+                  method: 'GET',
+                  pathTemplate: '/response',
+                  acceptTypes: this.defaultAcceptTypes
+                }
             ), signal);
           }
 
@@ -494,6 +534,26 @@ class RequestMethodsTest {
             );
           }
 
+          requestTest(): Observable<Request> {
+            return this.requestFactory.request(
+                {
+                  method: 'GET',
+                  pathTemplate: '/request',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            );
+          }
+
+          responseTest(): Observable<Response> {
+            return this.requestFactory.response(
+                {
+                  method: 'GET',
+                  pathTemplate: '/response',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            );
+          }
+
         }
 
         const fetchTestReturnType: AnyType = [Test];
@@ -652,6 +712,26 @@ class RequestMethodsTest {
                   acceptTypes: this.defaultAcceptTypes
                 },
                 patchableTestReturnType
+            ), signal);
+          }
+
+          requestTest(signal?: AbortSignal): Promise<Request> {
+            return promiseFrom(this.requestFactory.request(
+                {
+                  method: 'GET',
+                  pathTemplate: '/request',
+                  acceptTypes: this.defaultAcceptTypes
+                }
+            ), signal);
+          }
+
+          responseTest(signal?: AbortSignal): Promise<Response> {
+            return promiseFrom(this.requestFactory.response(
+                {
+                  method: 'GET',
+                  pathTemplate: '/response',
+                  acceptTypes: this.defaultAcceptTypes
+                }
             ), signal);
           }
 

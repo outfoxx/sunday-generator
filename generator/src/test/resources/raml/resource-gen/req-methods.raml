@@ -75,3 +75,19 @@ types:
         body:
           type: Test
     (sunday.exclude): true
+/request:
+  get:
+    displayName: requestTest
+    responses:
+      200:
+        body:
+          type: Test
+    (sunday.requestOnly): true
+/response:
+  get:
+    displayName: responseTest
+    responses:
+      200:
+        body:
+          type: Test
+    (sunday.responseOnly): true
