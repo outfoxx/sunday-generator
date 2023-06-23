@@ -539,9 +539,8 @@ class TypeScriptSundayGenerator(
 
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
-      val userAbortablePromise = options.enableAbortablePromises && !requestOnly && !responseOnly
 
-      if (userAbortablePromise) {
+      if (options.enableAbortablePromises) {
         functionBuilder.addParameter("signal", ABORT_SIGNAL, true)
       }
 
@@ -553,7 +552,7 @@ class TypeScriptSundayGenerator(
           else -> "result"
         }
 
-      if (userAbortablePromise) {
+      if (options.enableAbortablePromises) {
         builder.add("%[return %Q(this.requestFactory.%L(\n", PROMISE_FROM, factoryMethod)
       } else {
         builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
@@ -568,7 +567,7 @@ class TypeScriptSundayGenerator(
         builder.add(",\n%L", retTypePropName)
       }
 
-      if (userAbortablePromise) {
+      if (options.enableAbortablePromises) {
         builder.add("%]\n), signal);\n")
       } else {
         builder.add("%]\n);\n")

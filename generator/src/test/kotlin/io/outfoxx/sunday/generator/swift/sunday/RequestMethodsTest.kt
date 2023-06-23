@@ -57,6 +57,7 @@ class RequestMethodsTest {
 
     assertEquals(
       """
+        import Foundation
         import Sunday
 
         public class API {
@@ -179,6 +180,32 @@ class RequestMethodsTest {
             )
           }
 
+          public func requestTest() async throws -> URLRequest {
+            return try await self.requestFactory.request(
+              method: .get,
+              pathTemplate: "/request",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+          public func responseTest() async throws -> (Data?, HTTPURLResponse) {
+            return try await self.requestFactory.response(
+              method: .get,
+              pathTemplate: "/response",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
         }
 
       """.trimIndent(),
@@ -216,6 +243,7 @@ class RequestMethodsTest {
 
     assertEquals(
       """
+        import Foundation
         import Sunday
 
         public class API {
@@ -333,6 +361,32 @@ class RequestMethodsTest {
               queryParameters: nil,
               body: body,
               contentTypes: self.defaultContentTypes,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+          public func requestTest() async throws -> URLRequest {
+            return try await self.requestFactory.request(
+              method: .get,
+              pathTemplate: "/request",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
+          public func responseTest() async throws -> (Data?, HTTPURLResponse) {
+            return try await self.requestFactory.response(
+              method: .get,
+              pathTemplate: "/response",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
               acceptTypes: self.defaultAcceptTypes,
               headers: nil
             )

@@ -105,6 +105,14 @@ class RequestMethodsTest {
           @PATCH
           @Path(value = "/tests2")
           public fun patchableTest(body: PatchableTest): Response
+
+          @GET
+          @Path(value = "/request")
+          public fun requestTest(): Response
+
+          @GET
+          @Path(value = "/response")
+          public fun responseTest(): Response
         }
 
       """.trimIndent(),
@@ -184,6 +192,14 @@ class RequestMethodsTest {
           @PATCH
           @Path(value = "/tests2")
           public fun patchableTest(body: PatchableTest): Test
+
+          @GET
+          @Path(value = "/request")
+          public fun requestTest(): Test
+
+          @GET
+          @Path(value = "/response")
+          public fun responseTest(): Test
         }
 
       """.trimIndent(),
