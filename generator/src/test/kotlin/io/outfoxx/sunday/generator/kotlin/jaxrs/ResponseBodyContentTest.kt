@@ -69,6 +69,10 @@ class ResponseBodyContentTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Response
+
+          @GET
+          @Path(value = "/tests/derived")
+          public fun fetchDerivedTest(): Response
         }
 
       """.trimIndent(),
@@ -148,6 +152,7 @@ class ResponseBodyContentTest {
       """
         package io.test.service
 
+        import io.test.Base
         import io.test.Test
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
@@ -160,6 +165,10 @@ class ResponseBodyContentTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Test
+
+          @GET
+          @Path(value = "/tests/derived")
+          public fun fetchDerivedTest(): Base
         }
 
       """.trimIndent(),

@@ -57,6 +57,7 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
+        import {Base} from './base';
         import {Test} from './test';
         import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
         import {Observable} from 'rxjs';
@@ -87,9 +88,21 @@ class ResponseBodyContentTest {
             );
           }
 
+          fetchDerivedTest(): Observable<Base> {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests/derived',
+                  acceptTypes: this.defaultAcceptTypes
+                },
+                fetchDerivedTestReturnType
+            );
+          }
+
         }
 
         const fetchTestReturnType: AnyType = [Test];
+        const fetchDerivedTestReturnType: AnyType = [Base];
 
       """.trimIndent(),
       buildString {

@@ -88,6 +88,19 @@ class ResponseBodyContentTest {
             )
           }
 
+          public func fetchDerivedTest() async throws -> Base {
+            return try await (self.requestFactory.result(
+              method: .get,
+              pathTemplate: "/tests/derived",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            ) as Base.AnyRef).value
+          }
+
         }
 
       """.trimIndent(),

@@ -60,6 +60,7 @@ class ResponseBodyContentTest {
         import io.outfoxx.sunday.MediaType
         import io.outfoxx.sunday.RequestFactory
         import io.outfoxx.sunday.http.Method
+        import io.test.Base
         import io.test.Test
         import kotlin.collections.List
 
@@ -72,6 +73,13 @@ class ResponseBodyContentTest {
             .result(
               method = Method.Get,
               pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes
+            )
+
+          public suspend fun fetchDerivedTest(): Base = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests/derived",
               acceptTypes = this.defaultAcceptTypes
             )
         }

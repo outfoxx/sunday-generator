@@ -10,6 +10,17 @@ types:
     properties:
       value: string
 
+  Base:
+    type: object
+    discriminator: type
+    properties:
+      type: string
+
+  Derived:
+    type: Base
+    discriminatorValue: derived
+    properties:
+      value: string
 
 /tests:
   get:
@@ -17,3 +28,10 @@ types:
     responses:
       200:
         body: Test
+
+/tests/derived:
+  get:
+    displayName: fetchDerivedTest
+    responses:
+      200:
+        body: Base
