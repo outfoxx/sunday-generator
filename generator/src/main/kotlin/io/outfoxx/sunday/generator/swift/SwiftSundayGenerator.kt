@@ -551,6 +551,8 @@ class SwiftSundayGenerator(
       }
     } else {
 
+      val returnRefType = functionBuilder.build().returnType?.let { typeRegistry.getReferenceType(it) }
+
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
@@ -562,11 +564,19 @@ class SwiftSundayGenerator(
           else -> "result"
         }
 
-      builder.add("return try await self.requestFactory.%L(%>\n", factoryMethod)
+      if (returnRefType != null) {
+        builder.add("return try await (self.requestFactory.%L(%>\n", factoryMethod)
+      } else {
+        builder.add("return try await self.requestFactory.%L(%>\n", factoryMethod)
+      }
 
       builder.add(reqGen())
 
-      builder.add("%<\n)\n")
+      if (returnRefType != null) {
+        builder.add("%<\n) as %T).value\n", returnRefType)
+      } else {
+        builder.add("%<\n)\n")
+      }
 
       if (!requestOnly && !responseOnly) {
         addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)

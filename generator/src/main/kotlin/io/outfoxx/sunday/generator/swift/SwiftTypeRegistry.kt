@@ -848,19 +848,21 @@ class SwiftTypeRegistry(
     }
 
     if (isRoot || localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
+
       val codingKeysBuilder =
         TypeSpec.enumBuilder(codingKeysTypeName)
           .addModifiers(FILEPRIVATE)
-          .apply {
-            if (localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
-              addSuperType(STRING)
-            }
-          }
-          .addSuperType(CODING_KEY)
 
       if (isRoot && discriminatorProperty != null) {
+        codingKeysBuilder.addSuperType(STRING)
         codingKeysBuilder.addEnumCase(discriminatorProperty.swiftIdentifierName, discriminatorProperty.name!!)
       }
+
+      if (localDeclaredProperties.any { it.name != discriminatorPropertyName }) {
+        codingKeysBuilder.addSuperType(STRING)
+      }
+
+      codingKeysBuilder.addSuperType(CODING_KEY)
 
       localDeclaredProperties
         .filter { it.name != discriminatorProperty?.name }
