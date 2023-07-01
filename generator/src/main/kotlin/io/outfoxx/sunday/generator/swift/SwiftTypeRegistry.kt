@@ -1497,11 +1497,11 @@ class SwiftTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun nearestCommonAncestor(types: List<Shape>, context: SwiftResolutionContext): DeclaredTypeName? {
+  private fun nearestCommonAncestor(types: List<Shape>, context: SwiftResolutionContext): TypeName? {
 
-    var currentClassNameHierarchy: List<DeclaredTypeName>? = null
+    var currentClassNameHierarchy: List<TypeName>? = null
     for (type in types) {
-      val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
+      val propertyClassNameHierarchy = classNameHierarchy(type, context)
       currentClassNameHierarchy =
         if (currentClassNameHierarchy == null) {
           propertyClassNameHierarchy
@@ -1515,14 +1515,13 @@ class SwiftTypeRegistry(
     return currentClassNameHierarchy?.firstOrNull()
   }
 
-  private fun classNameHierarchy(shape: Shape, context: SwiftResolutionContext): List<DeclaredTypeName>? {
+  private fun classNameHierarchy(shape: Shape, context: SwiftResolutionContext): List<TypeName> {
 
-    val names = mutableListOf<DeclaredTypeName>()
+    val names = mutableListOf<TypeName>()
 
     var current: Shape? = shape
     while (current != null) {
-      val currentClass = resolveReferencedTypeName(current, context) as? DeclaredTypeName ?: return null
-      names.add(currentClass)
+      names.add(resolveReferencedTypeName(current, context))
       current = context.findSuperShapeOrNull(current)
     }
 

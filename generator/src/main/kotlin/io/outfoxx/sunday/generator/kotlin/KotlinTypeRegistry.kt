@@ -1383,14 +1383,14 @@ class KotlinTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun nearestCommonAncestor(types: List<Shape>, context: KotlinResolutionContext): ClassName? {
+  private fun nearestCommonAncestor(types: List<Shape>, context: KotlinResolutionContext): TypeName? {
 
     // TODO(https://github.com/outfoxx/sunday-generator/issues/45):
     // Support JVM hierarchy for known JVM types.
 
-    var currentClassNameHierarchy: List<ClassName>? = null
+    var currentClassNameHierarchy: List<TypeName>? = null
     for (type in types) {
-      val propertyClassNameHierarchy = classNameHierarchy(type, context) ?: break
+      val propertyClassNameHierarchy = classNameHierarchy(type, context)
       currentClassNameHierarchy =
         if (currentClassNameHierarchy == null) {
           propertyClassNameHierarchy
@@ -1404,14 +1404,13 @@ class KotlinTypeRegistry(
     return currentClassNameHierarchy?.firstOrNull()
   }
 
-  private fun classNameHierarchy(shape: Shape, context: KotlinResolutionContext): List<ClassName>? {
+  private fun classNameHierarchy(shape: Shape, context: KotlinResolutionContext): List<TypeName> {
 
-    val names = mutableListOf<ClassName>()
+    val names = mutableListOf<TypeName>()
 
     var current: Shape? = shape
     while (current != null) {
-      val currentClass = resolveReferencedTypeName(current, context) as? ClassName ?: return null
-      names.add(currentClass)
+      names.add(resolveReferencedTypeName(current, context))
       current = context.findSuperShapeOrNull(current)
     }
 
