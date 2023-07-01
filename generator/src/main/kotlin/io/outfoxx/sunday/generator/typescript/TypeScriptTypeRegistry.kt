@@ -1296,8 +1296,7 @@ class TypeScriptTypeRegistry(
 
     var current: Shape? = shape
     while (current != null) {
-      val currentClass = resolveReferencedTypeName(current, context)
-      names.add(currentClass)
+      names.add(resolveReferencedTypeName(current, context))
       current = context.findSuperShapeOrNull(current)
     }
 
