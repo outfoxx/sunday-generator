@@ -259,16 +259,24 @@ class SwiftTypeRegistry(
             .apply {
               // Add all custom properties to constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+                val parameterTypeName =
+                  resolveTypeReference(
+                    customPropertyTypeNameStr,
+                    problemTypeDefinition.source,
+                    SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                  )
+
                 addParameter(
                   ParameterSpec
                     .builder(
                       customPropertyName.swiftIdentifierName,
-                      resolveTypeReference(
-                        customPropertyTypeNameStr,
-                        problemTypeDefinition.source,
-                        SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-                      ),
+                      parameterTypeName,
                     )
+                    .apply {
+                      if (parameterTypeName.optional) {
+                        defaultValue("nil")
+                      }
+                    }
                     .build(),
                 )
               }
@@ -1140,7 +1148,11 @@ class SwiftTypeRegistry(
       } else {
         paramType.makeOptional()
       }
-      paramConsBuilder.addParameter(it.swiftIdentifierName, paramType)
+      paramConsBuilder.addParameter(
+        ParameterSpec.builder(it.swiftIdentifierName, paramType)
+          .apply { if (it.optional && paramType.optional) defaultValue("nil") }
+          .build()
+      )
     }
 
     // Description builder
@@ -1215,6 +1227,8 @@ class SwiftTypeRegistry(
               .apply {
                 if (isPatchable) {
                   defaultValue(".none")
+                } else if (propertyDeclaration.optional && propertyTypeName.optional) {
+                  defaultValue("nil")
                 }
               }
               .build(),

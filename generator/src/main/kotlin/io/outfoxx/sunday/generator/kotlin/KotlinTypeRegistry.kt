@@ -121,6 +121,7 @@ import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.nullable
 import io.outfoxx.sunday.generator.utils.nullableType
+import io.outfoxx.sunday.generator.utils.optional
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.patternProperties
@@ -265,17 +266,22 @@ class KotlinTypeRegistry(
             .apply {
               // Add all custom properties to constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+                val parameterTypeName =
+                  resolveTypeReference(
+                    customPropertyTypeNameStr,
+                    problemTypeDefinition.source,
+                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                  )
                 addParameter(
                   ParameterSpec
                     .builder(
                       customPropertyName.kotlinIdentifierName,
-                      resolveTypeReference(
-                        customPropertyTypeNameStr,
-                        problemTypeDefinition.source,
-                        KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-                      ),
+                      parameterTypeName,
                     )
                     .apply {
+                      if (parameterTypeName.isNullable) {
+                        defaultValue("null")
+                      }
                       if (customPropertyName.kotlinIdentifierName != customPropertyName) {
                         addAnnotation(
                           AnnotationSpec.builder(JsonProperty::class)
@@ -685,13 +691,15 @@ class KotlinTypeRegistry(
         if (isPatchable || inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
           paramConsBuilder = FunSpec.constructorBuilder()
           inheritedProperties.forEach { inheritedProperty ->
+            val paramTypeName = resolvePropertyTypeName(inheritedProperty, className, context)
 
             paramConsBuilder.addParameter(
               ParameterSpec
                 .builder(
                   inheritedProperty.kotlinIdentifierName,
-                  resolvePropertyTypeName(inheritedProperty, className, context),
+                  paramTypeName,
                 )
+                .apply { if (inheritedProperty.optional && paramTypeName.isNullable) defaultValue("null") }
                 .build(),
             )
 
@@ -873,6 +881,8 @@ class KotlinTypeRegistry(
                 .apply {
                   if (isPatchable) {
                     defaultValue("%T.none()", PATCH_OP)
+                  } else if (declaredProperty.optional && declaredPropertyTypeName.isNullable) {
+                    defaultValue("null")
                   }
                 }
                 .build(),

@@ -274,7 +274,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -469,7 +469,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -772,7 +772,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -823,7 +823,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", parenTypeSpec)
@@ -851,7 +851,7 @@ class RamlTypeAnnotationsTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -879,7 +879,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", child1TypeSpec)
@@ -907,7 +907,7 @@ class RamlTypeAnnotationsTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -935,7 +935,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", child2TypeSpec)
@@ -980,7 +980,7 @@ class RamlTypeAnnotationsTest {
                 )
             }
           }
-        
+
           public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.parentType, forKey: .parentType)
@@ -1093,7 +1093,7 @@ class RamlTypeAnnotationsTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -1149,7 +1149,7 @@ class RamlTypeAnnotationsTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -1350,17 +1350,17 @@ class RamlTypeAnnotationsTest {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
-        
+
           public func withNullable(nullable: PatchOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
-        
+
           public func withOptional(optional: UpdateOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
           }
-        
+
           public func withNullableOptional(nullableOptional: PatchOp<String>?) -> Test {
             return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional)
@@ -1378,7 +1378,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
         extension AnyPatchOp where Value == Test {
 
           public static func merge(

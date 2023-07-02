@@ -166,9 +166,9 @@ class ProblemTypesTest {
           }
 
           public init(
-            optionalString: String?,
+            optionalString: String? = nil,
             arrayOfStrings: [String],
-            optionalArrayOfStrings: [String]?,
+            optionalArrayOfStrings: [String]? = nil,
             instance: URL? = nil
           ) {
             self.optionalString = optionalString

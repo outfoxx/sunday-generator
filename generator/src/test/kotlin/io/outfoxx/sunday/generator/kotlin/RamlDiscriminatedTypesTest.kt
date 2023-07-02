@@ -191,7 +191,7 @@ class RamlDiscriminatedTypesTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?,
+          public val `value`: String? = null,
           public val value1: Int,
         ) : Parent() {
           public override val type: String
@@ -247,7 +247,7 @@ class RamlDiscriminatedTypesTest {
 
         @JsonTypeName("child2")
         public class Child2(
-          public val `value`: String?,
+          public val `value`: String? = null,
           public val value2: Int,
         ) : Parent() {
           public override val type: String
@@ -438,7 +438,7 @@ class RamlDiscriminatedTypesTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: Type
             get() = Type.Child1
@@ -487,7 +487,7 @@ class RamlDiscriminatedTypesTest {
 
         @JsonTypeName("Child2")
         public class Child2(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: Type
             get() = Type.Child2

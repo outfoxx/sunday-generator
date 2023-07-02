@@ -116,7 +116,7 @@ class RamlObjectTypesTest {
 
         public class Test(
           public val fromNilUnion: String?,
-          public val notRequired: String?,
+          public val notRequired: String? = null,
         ) {
           public fun copy(fromNilUnion: String? = null, notRequired: String? = null) = Test(fromNilUnion ?:
               this.fromNilUnion, notRequired ?: this.notRequired)

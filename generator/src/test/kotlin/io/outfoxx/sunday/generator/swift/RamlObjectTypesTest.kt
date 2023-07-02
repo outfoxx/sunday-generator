@@ -84,7 +84,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -120,7 +120,7 @@ class RamlObjectTypesTest {
                 .build()
           }
 
-          public init(fromNilUnion: String?, notRequired: String?) {
+          public init(fromNilUnion: String?, notRequired: String? = nil) {
             self.fromNilUnion = fromNilUnion
             self.notRequired = notRequired
           }
@@ -153,7 +153,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", testTypeSpec)
@@ -167,9 +167,9 @@ class RamlObjectTypesTest {
       """
         import PotentCodables
         import Sunday
-        
+
         public class Test2 : Codable, CustomDebugStringConvertible {
-        
+
           public var optionalObject: [String : Any]?
           public var nillableObject: [String : Any]?
           public var debugDescription: String {
@@ -178,41 +178,41 @@ class RamlObjectTypesTest {
                 .add(nillableObject, named: "nillableObject")
                 .build()
           }
-        
-          public init(optionalObject: [String : Any]?, nillableObject: [String : Any]?) {
+
+          public init(optionalObject: [String : Any]? = nil, nillableObject: [String : Any]?) {
             self.optionalObject = optionalObject
             self.nillableObject = nillableObject
           }
-        
+
           public required init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.optionalObject = try container.decodeIfPresent([String : AnyValue].self, forKey: .optionalObject)?.mapValues { ${'$'}0.unwrapped as Any }
             self.nillableObject = try container.decodeIfPresent([String : AnyValue].self, forKey: .nillableObject)?.mapValues { ${'$'}0.unwrapped as Any }
           }
-        
+
           public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(self.optionalObject?.mapValues { try AnyValue.wrapped(${'$'}0) }, forKey: .optionalObject)
             try container.encodeIfPresent(self.nillableObject?.mapValues { try AnyValue.wrapped(${'$'}0) }, forKey: .nillableObject)
           }
-        
+
           public func withOptionalObject(optionalObject: [String : Any]?) -> Test2 {
             return Test2(optionalObject: optionalObject, nillableObject: nillableObject)
           }
-        
+
           public func withNillableObject(nillableObject: [String : Any]?) -> Test2 {
             return Test2(optionalObject: optionalObject, nillableObject: nillableObject)
           }
-        
+
           fileprivate enum CodingKeys : String, CodingKey {
-        
+
             case optionalObject = "optionalObject"
             case nillableObject = "nillableObject"
-        
+
           }
-        
+
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", test2TypeSpec)
@@ -313,7 +313,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", testSpec)
@@ -526,7 +526,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", rootSpec)
@@ -623,9 +623,9 @@ class RamlObjectTypesTest {
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
-        
+
             case value2 = "value2"
-        
+
           }
 
         }
@@ -696,7 +696,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)

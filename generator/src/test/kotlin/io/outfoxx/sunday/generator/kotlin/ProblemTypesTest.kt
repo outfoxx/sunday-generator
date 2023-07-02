@@ -127,9 +127,9 @@ class ProblemTypesTest {
         import org.zalando.problem.ThrowableProblem
 
         public class TestResolverProblem(
-          public val optionalString: String?,
+          public val optionalString: String? = null,
           public val arrayOfStrings: List<String>,
-          public val optionalArrayOfStrings: List<String>?,
+          public val optionalArrayOfStrings: List<String>? = null,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
@@ -350,9 +350,9 @@ class ProblemTypesTest {
           date = "${typeRegistry.generationTimestamp}",
         )
         public class TestResolverProblem(
-          public val optionalString: String?,
+          public val optionalString: String? = null,
           public val arrayOfStrings: List<String>,
-          public val optionalArrayOfStrings: List<String>?,
+          public val optionalArrayOfStrings: List<String>? = null,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
