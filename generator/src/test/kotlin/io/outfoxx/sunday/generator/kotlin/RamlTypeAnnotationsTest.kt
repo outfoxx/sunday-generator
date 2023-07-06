@@ -350,7 +350,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: String
             get() = "Child1"
@@ -399,7 +399,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child2")
         public class Child2(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: String
             get() = "child2"
@@ -552,7 +552,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child-1")
         public class Child1(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: Type
             get() = Type.Child1
@@ -601,7 +601,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child-2")
         public class Child2(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public override val type: Type
             get() = Type.Child2
@@ -738,7 +738,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("Child1")
         public class Child1(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public fun copy(`value`: String? = null) = Child1(value ?: this.value)
 
@@ -784,7 +784,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonTypeName("child2")
         public class Child2(
-          public val `value`: String?,
+          public val `value`: String? = null,
         ) : Parent() {
           public fun copy(`value`: String? = null) = Child2(value ?: this.value)
 

@@ -130,7 +130,7 @@ class RamlDiscriminatedTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", parenTypeSpec)
@@ -160,7 +160,7 @@ class RamlDiscriminatedTypesTest {
                 .build()
           }
 
-          public init(value: String?, value1: Int) {
+          public init(value: String? = nil, value1: Int) {
             self.value = value
             self.value1 = value1
             super.init()
@@ -196,7 +196,7 @@ class RamlDiscriminatedTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", child1TypeSpec)
@@ -226,7 +226,7 @@ class RamlDiscriminatedTypesTest {
                 .build()
           }
 
-          public init(value: String?, value2: Int) {
+          public init(value: String? = nil, value2: Int) {
             self.value = value
             self.value2 = value2
             super.init()
@@ -262,7 +262,7 @@ class RamlDiscriminatedTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", child2TypeSpec)
@@ -362,7 +362,7 @@ class RamlDiscriminatedTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", parenTypeSpec)
@@ -390,7 +390,7 @@ class RamlDiscriminatedTypesTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -446,7 +446,7 @@ class RamlDiscriminatedTypesTest {
                 .build()
           }
 
-          public init(value: String?) {
+          public init(value: String? = nil) {
             self.value = value
             super.init()
           }
@@ -474,7 +474,7 @@ class RamlDiscriminatedTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", child2TypeSpec)
