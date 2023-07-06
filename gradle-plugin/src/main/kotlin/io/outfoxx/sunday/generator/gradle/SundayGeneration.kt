@@ -58,6 +58,7 @@ class SundayGeneration(
   val generatedAnnotation: Property<String> = objects.property(String::class.java)
   val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
+  val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty().convention(outputDirDef)
   val targetSourceSet: Property<String> = objects.property(String::class.java).convention(MAIN_SOURCE_SET_NAME)
 }

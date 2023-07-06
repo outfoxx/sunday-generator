@@ -38,6 +38,7 @@ import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
@@ -55,13 +56,16 @@ import io.outfoxx.sunday.generator.APIAnnotationName.ServiceName
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
+import io.outfoxx.sunday.generator.common.HttpStatus.NO_CONTENT
 import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.kotlin.utils.RESULT_RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE3
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE3
+import io.outfoxx.sunday.generator.kotlin.utils.THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.UNI
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -97,13 +101,10 @@ import io.outfoxx.sunday.generator.utils.successes
 import io.outfoxx.sunday.generator.utils.url
 import io.outfoxx.sunday.generator.utils.variables
 import io.outfoxx.sunday.generator.utils.version
-import io.outfoxx.sunday.http.ResultResponse
-import org.zalando.problem.ThrowableProblem
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.Optional
 import java.util.concurrent.CompletionStage
-import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
  * Generator for Kotlin language framework targets
@@ -260,7 +261,7 @@ abstract class KotlinGenerator(
 
         var functionBuilder =
           FunSpec.builder(operationName)
-            .returns(Unit::class)
+            .returns(UNIT)
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())
 
@@ -316,7 +317,7 @@ abstract class KotlinGenerator(
         operation.successes.forEach { response ->
 
           val responseBodyType = response.payloads.firstOrNull()?.schema
-          if (response.statusCode != NO_CONTENT.statusCode.toString() && responseBodyType != null) {
+          if (response.statusCode != "${NO_CONTENT.code}" && responseBodyType != null) {
 
             val responseBodyTypeNameContext =
               KotlinResolutionContext(
@@ -633,7 +634,7 @@ abstract class KotlinGenerator(
             variable.schema?.let {
               val suggestedName = "${variable.name?.kotlinTypeName}URIParameter"
               resolveTypeName(it, ClassName(documentPackageName, suggestedName))
-            } ?: String::class.asTypeName()
+            } ?: STRING
 
           val defaultValue =
             if (variable.name == "version") {
@@ -677,7 +678,7 @@ abstract class KotlinGenerator(
       val returnType = function.returnType?.copy(nullable = false)
       val nullableReturnType =
         when {
-          returnType?.rawType == ResultResponse::class.asTypeName() ->
+          returnType?.rawType == RESULT_RESPONSE ->
             returnType.copy(nullable = true)
 
           returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 -> {
@@ -742,7 +743,7 @@ abstract class KotlinGenerator(
     }
 
     if (statuses.isNotEmpty()) {
-      codeBuilder.nextControlFlow("catch(x: %T)", ThrowableProblem::class.asTypeName())
+      codeBuilder.nextControlFlow("catch(x: %T)", THROWABLE_PROBLEM)
 
       if (statuses.size == 1) {
         codeBuilder
@@ -820,7 +821,7 @@ abstract class KotlinGenerator(
     if (statuses.isNotEmpty()) {
       codeBuilder.addStatement(
         "x is %T && ${if (statuses.size == 1) "%L" else "(%L)"} -> %L",
-        ThrowableProblem::class.asTypeName(),
+        THROWABLE_PROBLEM,
         statuses.joinToString(" || ") { "x.status?.statusCode == $it" },
         nullLiteral,
       )

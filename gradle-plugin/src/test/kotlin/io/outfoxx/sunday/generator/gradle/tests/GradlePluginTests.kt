@@ -72,7 +72,7 @@ class GradlePluginTests {
       }
 
       sundayGenerations {
-        client { 
+        client {
           framework.set(Sunday)
           mode.set(Client)
           modelPkgName.set('io.outfoxx.test.client.model')
@@ -92,7 +92,7 @@ class GradlePluginTests {
         implementation "javax.validation:validation-api:1.1.0.Final"
         implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
       }
-      
+
       compileKotlin {
         kotlinOptions {
           jvmTarget = "11"

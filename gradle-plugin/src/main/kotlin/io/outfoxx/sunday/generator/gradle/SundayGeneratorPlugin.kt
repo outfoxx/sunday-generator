@@ -57,6 +57,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         genTask.generatedAnnotation.set(gen.generatedAnnotation)
         genTask.alwaysUseResponseReturn.set(gen.alwaysUseResponseReturn)
         genTask.useResultResponseReturn.set(gen.useResultResponseReturn)
+        genTask.useJakartaPackages.set(gen.useJakartaPackages)
         genTask.outputDir.set(gen.outputDir)
       }
 

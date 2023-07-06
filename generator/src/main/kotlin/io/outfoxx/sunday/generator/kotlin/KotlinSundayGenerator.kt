@@ -29,6 +29,7 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.KModifier.PUBLIC
+import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
@@ -37,11 +38,7 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
-import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
-import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.RequestFactory
-import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
@@ -50,6 +47,14 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
+import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
+import io.outfoxx.sunday.generator.kotlin.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_EVENT_SOURCE
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_METHOD
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_REQUEST
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESPONSE
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESULT_RESPONSE
+import io.outfoxx.sunday.generator.kotlin.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.utils.discriminatorValue
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
@@ -64,11 +69,6 @@ import io.outfoxx.sunday.generator.utils.payloads
 import io.outfoxx.sunday.generator.utils.request
 import io.outfoxx.sunday.generator.utils.requests
 import java.net.URI
-import io.outfoxx.sunday.EventSource as SundayEventSource
-import io.outfoxx.sunday.http.Method as SundayMethod
-import io.outfoxx.sunday.http.Request as SundayRequest
-import io.outfoxx.sunday.http.Response as SundayResponse
-import io.outfoxx.sunday.http.ResultResponse as SundayResultResponse
 
 class KotlinSundayGenerator(
   document: Document,
@@ -129,7 +129,7 @@ class KotlinSundayGenerator(
         .apply { typeRegistry.addGeneratedTo(this, false) }
         .addFunction(
           FunSpec.builder("baseURL")
-            .returns(URITemplate::class)
+            .returns(URI_TEMPLATE)
             .apply {
               baseURLParameters.forEach { param ->
                 val paramTypeName =
@@ -145,7 +145,7 @@ class KotlinSundayGenerator(
                 )
               }
             }
-            .addCode("return %T(⇥\n", URITemplate::class)
+            .addCode("return %T(⇥\n", URI_TEMPLATE)
             .addCode("%S,\nmapOf(", baseURL)
             .apply {
               baseURLParameters.forEachIndexed { idx, param ->
@@ -167,13 +167,13 @@ class KotlinSundayGenerator(
 
     serviceTypeBuilder
       .addProperty(
-        PropertySpec.builder("requestFactory", RequestFactory::class, PUBLIC)
+        PropertySpec.builder("requestFactory", REQUEST_FACTORY, PUBLIC)
           .initializer("requestFactory")
           .build(),
       )
 
     consBuilder = FunSpec.constructorBuilder()
-      .addParameter("requestFactory", RequestFactory::class)
+      .addParameter("requestFactory", REQUEST_FACTORY)
 
     return serviceTypeBuilder
   }
@@ -187,7 +187,7 @@ class KotlinSundayGenerator(
     typeBuilder
       .addProperty(
         PropertySpec
-          .builder("defaultContentTypes", List::class.parameterizedBy(MediaType::class))
+          .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
           .initializer("defaultContentTypes")
           .build(),
       )
@@ -199,7 +199,7 @@ class KotlinSundayGenerator(
     typeBuilder
       .addProperty(
         PropertySpec
-          .builder("defaultAcceptTypes", List::class.parameterizedBy(MediaType::class))
+          .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
           .initializer("defaultAcceptTypes")
           .build(),
       )
@@ -208,12 +208,12 @@ class KotlinSundayGenerator(
 
       consBuilder
         .addParameter(
-          ParameterSpec.builder("defaultContentTypes", List::class.parameterizedBy(MediaType::class))
+          ParameterSpec.builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
             .defaultValue("%L", mediaTypesArray(contentTypes))
             .build(),
         )
         .addParameter(
-          ParameterSpec.builder("defaultAcceptTypes", List::class.parameterizedBy(MediaType::class))
+          ParameterSpec.builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
             .defaultValue("%L", mediaTypesArray(acceptTypes))
             .build(),
         )
@@ -254,7 +254,7 @@ class KotlinSundayGenerator(
     }
 
     if (operation.findBoolAnnotation(APIAnnotationName.EventSource, null) == true) {
-      return SundayEventSource::class.asTypeName()
+      return SUNDAY_EVENT_SOURCE
     }
 
     when (operation.findStringAnnotation(APIAnnotationName.EventStream, null)) {
@@ -271,9 +271,9 @@ class KotlinSundayGenerator(
     }
 
     return when {
-      operation.findBoolAnnotation(RequestOnly, null) == true -> SundayRequest::class.asTypeName()
-      operation.findBoolAnnotation(ResponseOnly, null) == true -> SundayResponse::class.asTypeName()
-      options.useResultResponseReturn -> SundayResultResponse::class.asTypeName().parameterizedBy(returnTypeName)
+      operation.findBoolAnnotation(RequestOnly, null) == true -> SUNDAY_REQUEST
+      operation.findBoolAnnotation(ResponseOnly, null) == true -> SUNDAY_RESPONSE
+      options.useResultResponseReturn -> SUNDAY_RESULT_RESPONSE.parameterizedBy(returnTypeName)
       else -> returnTypeName
     }
   }
@@ -420,7 +420,7 @@ class KotlinSundayGenerator(
 
     fun specGen(): CodeBlock {
       val builder = CodeBlock.builder()
-      builder.add("method = %T.%L", SundayMethod::class, operation.method.replaceFirstChar { it.titlecase() })
+      builder.add("method = %T.%L", SUNDAY_METHOD, operation.method.replaceFirstChar { it.titlecase() })
       builder.add(",\n")
       builder.add("pathTemplate = %S", endPoint.path)
 
@@ -570,19 +570,19 @@ class KotlinSundayGenerator(
 
   private fun mediaType(value: String) =
     when (value) {
-      "text/plain" -> CodeBlock.of("%T.Plain", MediaType::class)
-      "text/html" -> CodeBlock.of("%T.HTML", MediaType::class)
-      "application/json" -> CodeBlock.of("%T.JSON", MediaType::class)
-      "application/yaml" -> CodeBlock.of("%T.YAML", MediaType::class)
-      "application/cbor" -> CodeBlock.of("%T.CBOR", MediaType::class)
-      "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MediaType::class)
-      "text/event-stream" -> CodeBlock.of("%T.EventStream", MediaType::class)
-      "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormUrlEncoded", MediaType::class)
-      "application/problem+json" -> CodeBlock.of("%T.Problem", MediaType::class)
-      "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MediaType::class)
-      "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MediaType::class)
-      "application/json-patch+json" -> CodeBlock.of("%T.JsonPatch", MediaType::class)
-      "application/merge-patch+json" -> CodeBlock.of("%T.MergePatch", MediaType::class)
+      "text/plain" -> CodeBlock.of("%T.Plain", MEDIA_TYPE)
+      "text/html" -> CodeBlock.of("%T.HTML", MEDIA_TYPE)
+      "application/json" -> CodeBlock.of("%T.JSON", MEDIA_TYPE)
+      "application/yaml" -> CodeBlock.of("%T.YAML", MEDIA_TYPE)
+      "application/cbor" -> CodeBlock.of("%T.CBOR", MEDIA_TYPE)
+      "application/octet-stream" -> CodeBlock.of("%T.OctetStream", MEDIA_TYPE)
+      "text/event-stream" -> CodeBlock.of("%T.EventStream", MEDIA_TYPE)
+      "application/x-www-form-urlencoded" -> CodeBlock.of("%T.WWWFormUrlEncoded", MEDIA_TYPE)
+      "application/problem+json" -> CodeBlock.of("%T.Problem", MEDIA_TYPE)
+      "application/x-x509-ca-cert" -> CodeBlock.of("%T.X509CACert", MEDIA_TYPE)
+      "application/x-x509-user-cert" -> CodeBlock.of("%T.X509UserCert", MEDIA_TYPE)
+      "application/json-patch+json" -> CodeBlock.of("%T.JsonPatch", MEDIA_TYPE)
+      "application/merge-patch+json" -> CodeBlock.of("%T.MergePatch", MEDIA_TYPE)
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
 }

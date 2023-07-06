@@ -138,6 +138,10 @@ open class SundayGenerate
   @Optional
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
 
+  @Input
+  @Optional
+  val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
 
@@ -182,6 +186,9 @@ open class SundayGenerate
     }
     if (disableValidationConstraints.getOrElse(false)) {
       options.remove(ValidationConstraints)
+    }
+    if (!useJakartaPackages.getOrElse(false)) {
+      options.remove(KotlinTypeRegistry.Option.UseJakartaPackages)
     }
 
     val typeRegistry = KotlinTypeRegistry(modelPkgName, generatedAnnotation.orNull, mode, options)

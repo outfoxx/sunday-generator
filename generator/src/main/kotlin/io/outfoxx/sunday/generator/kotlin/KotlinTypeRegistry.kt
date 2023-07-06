@@ -35,13 +35,6 @@ import amf.shapes.client.platform.model.domain.NilShape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.ScalarShape
 import amf.shapes.client.platform.model.domain.UnionShape
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
@@ -82,6 +75,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
+import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
@@ -89,6 +83,30 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementMod
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.BeanValidationTypes
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_CREATOR
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_IGNORE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_INCLUDE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_NON_EMPTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES_TYPE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH_SET_OP
+import io.outfoxx.sunday.generator.kotlin.utils.UPDATE_OP
+import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBLEM
+import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
+import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
+import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.isArray
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -132,10 +150,6 @@ import io.outfoxx.sunday.generator.utils.uniqueItems
 import io.outfoxx.sunday.generator.utils.value
 import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.sunday.generator.utils.xone
-import org.zalando.problem.AbstractThrowableProblem
-import org.zalando.problem.Exceptional
-import org.zalando.problem.Status
-import org.zalando.problem.ThrowableProblem
 import java.math.BigDecimal
 import java.net.URI
 import java.nio.file.Path
@@ -145,13 +159,6 @@ import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import javax.annotation.processing.Generated
-import javax.validation.Valid
-import javax.validation.constraints.DecimalMax
-import javax.validation.constraints.DecimalMin
-import javax.validation.constraints.Max
-import javax.validation.constraints.Min
-import javax.validation.constraints.Pattern
-import javax.validation.constraints.Size
 import kotlin.math.min
 
 class KotlinTypeRegistry(
@@ -167,12 +174,18 @@ class KotlinTypeRegistry(
     JacksonAnnotations,
     AddGeneratedAnnotation,
     SuppressPublicApiWarnings,
+    UseJakartaPackages,
   }
 
   val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)!!
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
+  private val beanValidationTypes = if (options.contains(Option.UseJakartaPackages)) {
+    BeanValidationTypes.JAKARTA
+  } else {
+    BeanValidationTypes.JAVAX
+  }
 
   override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
 
@@ -244,7 +257,7 @@ class KotlinTypeRegistry(
         .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .addGenerated(true)
         .addSuppress()
-        .superclass(AbstractThrowableProblem::class.asTypeName())
+        .superclass(ZALANDO_ABSTRACT_THROWABLE_PROBLEM)
         .addType(
           TypeSpec.companionObjectBuilder()
             .addGenerated(false)
@@ -284,7 +297,7 @@ class KotlinTypeRegistry(
                       }
                       if (customPropertyName.kotlinIdentifierName != customPropertyName) {
                         addAnnotation(
-                          AnnotationSpec.builder(JsonProperty::class)
+                          AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
                             .addMember("value = %S", customPropertyName)
                             .build(),
                         )
@@ -300,13 +313,13 @@ class KotlinTypeRegistry(
                 .build(),
             )
             .addParameter(
-              ParameterSpec.builder("cause", ThrowableProblem::class.asTypeName().copy(nullable = true))
+              ParameterSpec.builder("cause", ZALANDO_THROWABLE_PROBLEM.copy(nullable = true))
                 .defaultValue("null")
                 .build(),
             )
             .apply {
               if (options.contains(JacksonAnnotations)) {
-                addAnnotation(JsonCreator::class)
+                addAnnotation(JACKSON_JSON_CREATOR)
               }
             }
             .build(),
@@ -315,8 +328,8 @@ class KotlinTypeRegistry(
         .addSuperclassConstructorParameter("%S", problemTypeDefinition.title)
         .addSuperclassConstructorParameter(
           "%T.%L",
-          Status::class.asTypeName(),
-          Status.valueOf(problemTypeDefinition.status).name,
+          ZALANDO_STATUS,
+          HttpStatus.valueOf(problemTypeDefinition.status).name,
         )
         .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
         .addSuperclassConstructorParameter("instance")
@@ -341,7 +354,7 @@ class KotlinTypeRegistry(
         }
         .addFunction(
           FunSpec.builder("getCause")
-            .returns(Exceptional::class.asTypeName().copy(nullable = true))
+            .returns(ZALANDO_EXCEPTIONAL.copy(nullable = true))
             .addModifiers(KModifier.OVERRIDE)
             .addCode("return super.cause")
             .build(),
@@ -349,7 +362,7 @@ class KotlinTypeRegistry(
 
     if (options.contains(JacksonAnnotations)) {
       problemTypeBuilder.addAnnotation(
-        AnnotationSpec.builder(JsonTypeName::class)
+        AnnotationSpec.builder(JACKSON_JSON_TYPENAME)
           .addMember("%T.TYPE", problemTypeName)
           .build(),
       )
@@ -587,8 +600,8 @@ class KotlinTypeRegistry(
       typeBuilder
         .addSuperinterface(PATCH)
         .addAnnotation(
-          AnnotationSpec.builder(JsonInclude::class)
-            .addMember("%T.%L", JsonInclude.Include::class, JsonInclude.Include.NON_EMPTY.name)
+          AnnotationSpec.builder(JACKSON_JSON_INCLUDE)
+            .addMember("%T.%L", JACKSON_JSON_INCLUDE_INCLUDE, JACKSON_JSON_INCLUDE_NON_EMPTY)
             .build(),
         )
     }
@@ -631,7 +644,7 @@ class KotlinTypeRegistry(
 
             if (shape.findBoolAnnotation(ExternallyDiscriminated, generationMode) == true) {
               discriminatorBuilder.addAnnotation(
-                AnnotationSpec.builder(JsonIgnore::class)
+                AnnotationSpec.builder(JACKSON_JSON_IGNORE)
                   .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
                   .build(),
               )
@@ -831,7 +844,7 @@ class KotlinTypeRegistry(
           if (implAnn != null) {
 
             declaredPropertyBuilder.addAnnotation(
-              AnnotationSpec.builder(JsonIgnore::class)
+              AnnotationSpec.builder(JACKSON_JSON_IGNORE)
                 .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
                 .build(),
             )
@@ -867,7 +880,7 @@ class KotlinTypeRegistry(
             if (declaredProperty.kotlinIdentifierName != declaredProperty.name) {
               declaredPropertyBuilder
                 .addAnnotation(
-                  AnnotationSpec.builder(JsonProperty::class)
+                  AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
                     .addMember("value = %S", declaredProperty.name())
                     .build(),
                 )
@@ -1068,7 +1081,7 @@ class KotlinTypeRegistry(
           if (subTypeName != null) {
 
             typeBuilder.addAnnotation(
-              AnnotationSpec.builder(JsonTypeName::class)
+              AnnotationSpec.builder(JACKSON_JSON_TYPENAME)
                 .addMember("%S", subTypeName)
                 .build(),
             )
@@ -1104,7 +1117,7 @@ class KotlinTypeRegistry(
         val enumType =
           TypeSpec.anonymousClassBuilder()
             .addAnnotation(
-              AnnotationSpec.builder(JsonProperty::class)
+              AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
                 .addMember("value = %S", enum.scalarValue!!)
                 .build(),
             )
@@ -1166,11 +1179,11 @@ class KotlinTypeRegistry(
             // Apply min/max (if set)
             var sizeBuilder: AnnotationSpec.Builder? = null
             if (use.maxLength != null && use.maxLength != Integer.MAX_VALUE) {
-              sizeBuilder = AnnotationSpec.builder(Size::class)
+              sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
               sizeBuilder.addMember("max = %L", use.maxLength().toString())
             }
             if (use.minLength != null && use.minLength != 0) {
-              sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(Size::class)
+              sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
               sizeBuilder.addMember("min = %L", use.minLength().toString())
             }
             sizeBuilder?.let {
@@ -1180,7 +1193,7 @@ class KotlinTypeRegistry(
             // Apply pattern (if set)
             if (!use.pattern.isNullOrBlank() && use.pattern != ".*") {
               applicator.invoke(
-                AnnotationSpec.builder(Pattern::class)
+                AnnotationSpec.builder(beanValidationTypes.pattern)
                   .addMember("regexp = %P", use.pattern())
                   .build(),
               )
@@ -1192,7 +1205,7 @@ class KotlinTypeRegistry(
             // Apply max (if set)
             if (use.maximum != null) {
               applicator.invoke(
-                AnnotationSpec.builder(Max::class)
+                AnnotationSpec.builder(beanValidationTypes.max)
                   .addMember("value = %L", use.maximum!!.toLong())
                   .build(),
               )
@@ -1201,7 +1214,7 @@ class KotlinTypeRegistry(
             // Apply min (if set)
             if (use.minimum != null) {
               applicator.invoke(
-                AnnotationSpec.builder(Min::class)
+                AnnotationSpec.builder(beanValidationTypes.min)
                   .addMember("value = %L", use.minimum!!.toLong())
                   .build(),
               )
@@ -1213,7 +1226,7 @@ class KotlinTypeRegistry(
             // Apply max (if set)
             if (use.maximum != null) {
               applicator.invoke(
-                AnnotationSpec.builder(DecimalMax::class)
+                AnnotationSpec.builder(beanValidationTypes.decimalMax)
                   .addMember("value = %S", use.maximum!!.toBigDecimal())
                   .build(),
               )
@@ -1221,7 +1234,7 @@ class KotlinTypeRegistry(
             // Apply min (if set)
             if (use.minimum != null) {
               applicator.invoke(
-                AnnotationSpec.builder(DecimalMin::class)
+                AnnotationSpec.builder(beanValidationTypes.decimalMin)
                   .addMember("value = %S", use.minimum!!.toBigDecimal())
                   .build(),
               )
@@ -1235,13 +1248,13 @@ class KotlinTypeRegistry(
         // Apply max (if set)
         var sizeBuilder: AnnotationSpec.Builder? = null
         if (use.maxItems != null && use.maxItems != Integer.MAX_VALUE) {
-          sizeBuilder = AnnotationSpec.builder(Size::class)
+          sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
           sizeBuilder.addMember("max = %L", use.maxItems().toString())
         }
 
         // Apply min (if set)
         if (use.minItems != null && use.minItems != 0) {
-          sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(Size::class)
+          sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
           sizeBuilder.addMember("min = %L", use.minItems().toString())
         }
         sizeBuilder?.let {
@@ -1254,7 +1267,7 @@ class KotlinTypeRegistry(
         // Apply @Valid for nested types
         if (typeName != ANY) {
           applicator.invoke(
-            AnnotationSpec.builder(Valid::class)
+            AnnotationSpec.builder(beanValidationTypes.valid)
               .build(),
           )
         }
@@ -1268,9 +1281,9 @@ class KotlinTypeRegistry(
   ) {
 
     propertySpec.addAnnotation(
-      AnnotationSpec.builder(JsonTypeInfo::class)
-        .addMember("use = %T.%L", JsonTypeInfo.Id::class, "NAME")
-        .addMember("include = %T.%L", JsonTypeInfo.As::class, "EXTERNAL_PROPERTY")
+      AnnotationSpec.builder(JACKSON_JSON_TYPEINFO)
+        .addMember("use = %T.%L", JACKSON_JSON_TYPEINFO_ID, JACKSON_JSON_TYPEINFO_ID_NAME)
+        .addMember("include = %T.%L", JACKSON_JSON_TYPEINFO_AS, JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY)
         .addMember("property = %S", externalDiscriminatorPropertyName)
         .build(),
     )
@@ -1287,7 +1300,7 @@ class KotlinTypeRegistry(
       .map { inheritingType ->
 
         "%T(value = %T::class)" to listOf(
-          JsonSubTypes.Type::class,
+          JACKSON_JSON_SUBTYPES_TYPE,
           resolveReferencedTypeName(inheritingType, context),
         )
       }
@@ -1299,16 +1312,16 @@ class KotlinTypeRegistry(
         val discriminator = shape.discriminator ?: genError("Missing required discriminator", shape)
 
         classBuilder.addAnnotation(
-          AnnotationSpec.builder(JsonTypeInfo::class)
-            .addMember("use = %T.%L", JsonTypeInfo.Id::class, "NAME")
-            .addMember("include = %T.%L", JsonTypeInfo.As::class, "EXISTING_PROPERTY")
+          AnnotationSpec.builder(JACKSON_JSON_TYPEINFO)
+            .addMember("use = %T.%L", JACKSON_JSON_TYPEINFO_ID, JACKSON_JSON_TYPEINFO_ID_NAME)
+            .addMember("include = %T.%L", JACKSON_JSON_TYPEINFO_AS, JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY)
             .addMember("property = %S", discriminator)
             .build(),
         )
       }
 
       classBuilder.addAnnotation(
-        AnnotationSpec.builder(JsonSubTypes::class)
+        AnnotationSpec.builder(JACKSON_JSON_SUBTYPES)
           .addMember(
             CodeBlock.builder()
               .add("value = [")
@@ -1479,13 +1492,4 @@ class KotlinTypeRegistry(
   private val NodeShape.supportsDiscrimination: Boolean
     get() =
       !discriminator.isNullOrEmpty() || findBoolAnnotation(ExternallyDiscriminated, null) == true
-
-  companion object {
-
-    val PATCH_OP = ClassName("io.outfoxx.sunday.json.patch", "PatchOp")
-    val PATCH_SET_OP = PATCH_OP.nestedClass("Set")
-    val UPDATE_OP = ClassName("io.outfoxx.sunday.json.patch", "UpdateOp")
-
-    val PATCH = ClassName("io.outfoxx.sunday.json.patch", "Patch")
-  }
 }

@@ -73,7 +73,7 @@ class RamlDeclaredTypesTest {
         public interface Test : Test {
           public val value2: String
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
