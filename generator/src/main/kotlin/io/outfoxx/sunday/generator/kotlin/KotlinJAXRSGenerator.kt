@@ -27,8 +27,6 @@ import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import com.damnhandy.uri.template.UriTemplate
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
@@ -39,7 +37,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
-import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
@@ -48,10 +45,14 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SSE
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.HttpStatus.CREATED
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
+import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
+import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
+import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.api
@@ -82,26 +83,6 @@ import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
 import java.net.URI
 import java.net.URL
-import javax.ws.rs.Consumes
-import javax.ws.rs.DELETE
-import javax.ws.rs.DefaultValue
-import javax.ws.rs.GET
-import javax.ws.rs.HEAD
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.OPTIONS
-import javax.ws.rs.PATCH
-import javax.ws.rs.POST
-import javax.ws.rs.PUT
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
-import javax.ws.rs.QueryParam
-import javax.ws.rs.container.AsyncResponse
-import javax.ws.rs.container.Suspended
-import javax.ws.rs.core.Context
-import javax.ws.rs.core.Response.Status.CREATED
-import javax.ws.rs.core.UriInfo
-import javax.ws.rs.sse.SseEventSource
 import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.collections.associate
@@ -157,6 +138,11 @@ class KotlinJAXRSGenerator(
     }
   }
 
+  private val jaxRsTypes =
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages))
+      JaxRsTypes.JAKARTA
+    else
+      JaxRsTypes.JAVAX
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
   private val reactiveResponseType = options.reactiveResponseType?.let { ClassName.bestGuess(it) }
@@ -195,7 +181,7 @@ class KotlinJAXRSGenerator(
         }
 
       typeBuilder.addAnnotation(
-        AnnotationSpec.builder(Path::class)
+        AnnotationSpec.builder(jaxRsTypes.path)
           .addMember("value = %S", finalBaseURL)
           .build(),
       )
@@ -203,7 +189,7 @@ class KotlinJAXRSGenerator(
 
     if (defaultMediaTypes.isNotEmpty()) {
 
-      val prodAnn = AnnotationSpec.builder(Produces::class)
+      val prodAnn = AnnotationSpec.builder(jaxRsTypes.produces)
         .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
         .build()
       typeBuilder.addAnnotation(prodAnn)
@@ -215,7 +201,7 @@ class KotlinJAXRSGenerator(
           defaultMediaTypes.joinToString(",") { "\"$it\"" }
         }
 
-      val consAnn = AnnotationSpec.builder(Consumes::class)
+      val consAnn = AnnotationSpec.builder(jaxRsTypes.consumes)
         .addMember("value = [%L]", consumesMediaTypes)
         .build()
       typeBuilder.addAnnotation(consAnn)
@@ -232,7 +218,7 @@ class KotlinJAXRSGenerator(
           .apply { typeRegistry.addGeneratedTo(this, false) }
           .addFunction(
             FunSpec.builder("registerProblems")
-              .addParameter("mapper", ObjectMapper::class)
+              .addParameter("mapper", OBJECT_MAPPER)
               .addCode(
                 "mapper.registerSubtypes(⇥\n" +
                   referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" } +
@@ -265,7 +251,7 @@ class KotlinJAXRSGenerator(
       mediaTypesForPayloads.isNotEmpty() &&
       mediaTypesForPayloads != defaultMediaTypes.take(mediaTypesForPayloads.size)
     ) {
-      val prodAnn = AnnotationSpec.builder(Produces::class)
+      val prodAnn = AnnotationSpec.builder(jaxRsTypes.produces)
         .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
         .build()
       functionBuilder.addAnnotation(prodAnn)
@@ -282,7 +268,7 @@ class KotlinJAXRSGenerator(
     if (reactive && reactiveResponseType != null && !isSSE && !isFlow) {
 
       return if (generationMode == Server || options.alwaysUseResponseReturn) {
-        reactiveResponseType.parameterizedBy(javax.ws.rs.core.Response::class.asTypeName())
+        reactiveResponseType.parameterizedBy(jaxRsTypes.response)
       } else {
         reactiveResponseType.parameterizedBy(returnTypeName)
       }
@@ -301,7 +287,7 @@ class KotlinJAXRSGenerator(
       }
 
       return if (generationMode == Client) {
-        return SseEventSource::class.asTypeName()
+        return jaxRsTypes.sseEventSource
       } else {
         UNIT
       }
@@ -313,7 +299,7 @@ class KotlinJAXRSGenerator(
     val elementTypeAnnotations =
       if (elementType != null && elementType != "text/event-stream") {
         listOf(
-          AnnotationSpec.builder(Produces::class.asTypeName())
+          AnnotationSpec.builder(jaxRsTypes.produces)
             .addMember("value = [%S]", "text/event-stream")
             .build(),
           AnnotationSpec.builder(ClassName.bestGuess("org.jboss.resteasy.reactive.RestStreamElementType"))
@@ -340,7 +326,7 @@ class KotlinJAXRSGenerator(
     }
 
     return if (generationMode == Server || options.alwaysUseResponseReturn) {
-      javax.ws.rs.core.Response::class.asTypeName()
+      jaxRsTypes.response
     } else {
       returnTypeName
     }
@@ -417,7 +403,7 @@ class KotlinJAXRSGenerator(
             "${scheme.name.kotlinIdentifierName}${headerName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }}"
           val parameterBuilder = methodParameter(header, ParameterSpec.builder(headerParamName, headerTypeName))
           parameterBuilder.addAnnotation(
-            AnnotationSpec.builder(HeaderParam::class)
+            AnnotationSpec.builder(jaxRsTypes.headerParam)
               .addMember("value = %S", headerName)
               .build(),
           )
@@ -441,11 +427,11 @@ class KotlinJAXRSGenerator(
     functionBuilder.addModifiers(KModifier.ABSTRACT)
 
     // Add @GET, @POST, @PUT, @DELETE to resource method
-    val httpMethodAnnClass = httpMethod(operation.method)
+    val httpMethodAnnClass = jaxRsTypes.httpMethod(operation.method)
     functionBuilder.addAnnotation(httpMethodAnnClass)
 
     // Add @Path
-    val pathAnn = AnnotationSpec.builder(javax.ws.rs.Path::class)
+    val pathAnn = AnnotationSpec.builder(jaxRsTypes.path)
       .addMember("value = %S", endPoint.path)
       .build()
     functionBuilder.addAnnotation(pathAnn)
@@ -473,7 +459,7 @@ class KotlinJAXRSGenerator(
           .addAnnotations(builtParameter.annotations)
           .addModifiers(builtParameter.modifiers)
       newParameter.addAnnotation(
-        AnnotationSpec.builder(DefaultValue::class)
+        AnnotationSpec.builder(jaxRsTypes.defaultvalue)
           .addMember("value = %S", defaultValue)
           .build(),
       )
@@ -494,7 +480,7 @@ class KotlinJAXRSGenerator(
 
     // Add @PathParam to URI parameters
     parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(PathParam::class)
+      AnnotationSpec.builder(jaxRsTypes.pathParam)
         .addMember("value = %S", parameter.name())
         .build(),
     )
@@ -513,7 +499,7 @@ class KotlinJAXRSGenerator(
 
     // Add @QueryParam to URI parameters
     parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(QueryParam::class)
+      AnnotationSpec.builder(jaxRsTypes.queryParam)
         .addMember("value = %S", parameter.name())
         .build(),
     )
@@ -532,7 +518,7 @@ class KotlinJAXRSGenerator(
 
     // Add @HeaderParam to URI parameters
     parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(HeaderParam::class)
+      AnnotationSpec.builder(jaxRsTypes.headerParam)
         .addMember("value = %S", parameter.name())
         .build(),
     )
@@ -558,7 +544,7 @@ class KotlinJAXRSGenerator(
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
 
     if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
-      val consAnn = AnnotationSpec.builder(Consumes::class)
+      val consAnn = AnnotationSpec.builder(jaxRsTypes.consumes)
         .addMember("value = [%S]", mediaTypesForPayloads.first())
         .build()
       functionBuilder.addAnnotation(consAnn)
@@ -569,8 +555,9 @@ class KotlinJAXRSGenerator(
     return when {
       isJsonBodyRequested -> {
         val orig = parameterBuilder.build()
-        ParameterSpec.builder(orig.name, JsonNode::class.java).build()
+        ParameterSpec.builder(orig.name, JSON_NODE).build()
       }
+
       else -> {
         // Finalize
         parameterBuilder.build()
@@ -592,8 +579,8 @@ class KotlinJAXRSGenerator(
       // Add async response parameter to asynchronous methods
       if (operation.findBoolAnnotation(Asynchronous, generationMode) == true) {
         functionBuilder.addParameter(
-          ParameterSpec.builder("asyncResponse", AsyncResponse::class)
-            .addAnnotation(Suspended::class)
+          ParameterSpec.builder("asyncResponse", jaxRsTypes.asyncResponse)
+            .addAnnotation(jaxRsTypes.suspended)
             .build(),
         )
       }
@@ -602,23 +589,23 @@ class KotlinJAXRSGenerator(
       if (operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods) {
 
         functionBuilder.addParameter(
-          ParameterSpec.builder("sse", javax.ws.rs.sse.Sse::class)
-            .addAnnotation(Context::class)
+          ParameterSpec.builder("sse", jaxRsTypes.sse)
+            .addAnnotation(jaxRsTypes.context)
             .build(),
         )
 
         functionBuilder.addParameter(
-          ParameterSpec.builder("sseEvents", javax.ws.rs.sse.SseEventSink::class)
-            .addAnnotation(Context::class)
+          ParameterSpec.builder("sseEvents", jaxRsTypes.sseEventSink)
+            .addAnnotation(jaxRsTypes.context)
             .build(),
         )
       }
 
       // Add UriInfo parameter to CREATED methods
-      if (operation.successes.firstOrNull()?.statusCode == CREATED.statusCode.toString()) {
+      if (operation.successes.firstOrNull()?.statusCode == "${CREATED.code}") {
         functionBuilder.addParameter(
-          ParameterSpec.builder("uriInfo", UriInfo::class)
-            .addAnnotation(Context::class)
+          ParameterSpec.builder("uriInfo", jaxRsTypes.uriInfo)
+            .addAnnotation(jaxRsTypes.context)
             .build(),
         )
       }
@@ -629,16 +616,4 @@ class KotlinJAXRSGenerator(
     // Finalize
     return functionBuilder.build()
   }
-
-  private fun httpMethod(methodName: String) =
-    when (methodName.uppercase()) {
-      "DELETE" -> DELETE::class
-      "GET" -> GET::class
-      "HEAD" -> HEAD::class
-      "OPTIONS" -> OPTIONS::class
-      "POST" -> POST::class
-      "PUT" -> PUT::class
-      "PATCH" -> PATCH::class
-      else -> genError("Invalid HTTP method: $methodName")
-    }
 }

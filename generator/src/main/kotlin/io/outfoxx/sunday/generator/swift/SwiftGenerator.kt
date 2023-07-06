@@ -41,6 +41,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModelModule
 import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModule
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.common.HttpStatus.NO_CONTENT
 import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
@@ -89,7 +90,6 @@ import io.outfoxx.swiftpoet.TypeSpec
 import io.outfoxx.swiftpoet.VOID
 import java.net.URI
 import java.net.URISyntaxException
-import javax.ws.rs.core.Response.Status.NO_CONTENT
 
 /**
  * Generator for Swift language framework targets
@@ -277,7 +277,7 @@ abstract class SwiftGenerator(
         operation.successes.forEach { response ->
 
           val responseBodyType = response.payloads.firstOrNull()?.schema
-          if (response.statusCode != NO_CONTENT.statusCode.toString() && responseBodyType != null) {
+          if (response.statusCode != "${NO_CONTENT.code}" && responseBodyType != null) {
 
             val responseBodyTypeNameContext =
               SwiftResolutionContext(

@@ -62,7 +62,7 @@ class RamlScalarTypesTest {
 
           public val nil: Unit
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
@@ -101,10 +101,10 @@ class RamlScalarTypesTest {
           public val int: Int
 
           public val long: Long
-        
+
           public val none: Int
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
@@ -125,7 +125,7 @@ class RamlScalarTypesTest {
     assertEquals(
       """
         package io.test
-        
+
         import kotlin.Double
         import kotlin.Float
 
@@ -133,10 +133,10 @@ class RamlScalarTypesTest {
           public val float: Float
 
           public val double: Double
-        
+
           public val none: Double
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
@@ -165,14 +165,14 @@ class RamlScalarTypesTest {
 
         public interface Test {
           public val dateOnly: LocalDate
-        
+
           public val timeOnly: LocalTime
-        
+
           public val dateTimeOnly: LocalDateTime
-        
+
           public val dateTime: OffsetDateTime
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)

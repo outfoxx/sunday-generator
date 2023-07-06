@@ -10,16 +10,8 @@ val amfClientVersion: String by project
 val kotlinPoetVersion: String by project
 val typeScriptPoetVersion: String by project
 val swiftPoetVersion: String by project
-val jacksonVersion: String by project
 
-val sundayKtVersion: String by project
 val kotlinCoroutinesVersion: String by project
-val jaxrsVersion: String by project
-val validationVersion: String by project
-val zalandoProblemVersion: String by project
-val mutinyVersion: String by project
-val rxJava3Version: String by project
-val rxJava2Version: String by project
 
 val junitVersion: String by project
 val hamcrestVersion: String by project
@@ -28,6 +20,21 @@ val dockerJavaVersion: String by project
 
 val jcolorVersion: String by project
 val jimfsVersion: String by project
+
+// Test runtime deps
+val jakartaJaxrsVersion: String by project
+val javaxJaxrsVersion: String by project
+
+val sundayKtVersion: String by project
+
+val jacksonVersion: String by project
+
+val validationVersion: String by project
+val zalandoProblemVersion: String by project
+val mutinyVersion: String by project
+val rxJava3Version: String by project
+val rxJava2Version: String by project
+
 
 configurations.compileClasspath {
   resolutionStrategy {
@@ -39,27 +46,25 @@ dependencies {
 
   api("com.github.amlorg:amf-api-contract_2.12:$amfClientVersion")
 
-  api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-
   api("com.squareup:kotlinpoet:$kotlinPoetVersion")
   api("io.outfoxx:typescriptpoet:$typeScriptPoetVersion")
   api("io.outfoxx:swiftpoet:$swiftPoetVersion")
-
-  implementation("io.outfoxx.sunday:sunday-core:$sundayKtVersion") { exclude(group = "*") }
-  implementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$jaxrsVersion") { exclude(group = "*") }
-  implementation("javax.validation:validation-api:$validationVersion") { exclude(group = "*") }
-  implementation("org.zalando:problem:$zalandoProblemVersion") { exclude(group = "*") }
 
   //
   // TESTING
   //
 
-  // redclare these w/o exclude for testing to work
+  // START: generated code dependencies
+  testImplementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
   testImplementation("io.outfoxx.sunday:sunday-core:$sundayKtVersion")
-
+  testImplementation("org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec:$javaxJaxrsVersion")
+  testImplementation("jakarta.ws.rs:jakarta.ws.rs-api:$jakartaJaxrsVersion")
+  testImplementation("javax.validation:validation-api:$validationVersion")
+  testImplementation("org.zalando:problem:$zalandoProblemVersion")
   testImplementation("io.smallrye.reactive:mutiny:$mutinyVersion")
   testImplementation("io.reactivex.rxjava3:rxjava:$rxJava3Version")
   testImplementation("io.reactivex.rxjava2:rxjava:$rxJava2Version")
+  // END: generated code dependencies
 
   testImplementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
 
