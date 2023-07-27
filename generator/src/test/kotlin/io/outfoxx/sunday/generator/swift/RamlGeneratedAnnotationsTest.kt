@@ -22,21 +22,18 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.nio.file.Files
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
+@SwiftTest
 @DisplayName("[Swift] [RAML] Generated Annotations Test")
 class RamlGeneratedAnnotationsTest {
 

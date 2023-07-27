@@ -17,21 +17,19 @@
 package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
+import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [RAML] Request Header Params Test")
 class RequestHeaderParamsTest {
 
@@ -65,9 +63,9 @@ class RequestHeaderParamsTest {
         export class API {
 
           defaultContentTypes: Array<MediaType>;
-        
+
           defaultAcceptTypes: Array<MediaType>;
-        
+
           constructor(public requestFactory: RequestFactory,
               options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
             this.defaultContentTypes =
@@ -134,9 +132,9 @@ class RequestHeaderParamsTest {
         export class API {
 
           defaultContentTypes: Array<MediaType>;
-        
+
           defaultAcceptTypes: Array<MediaType>;
-        
+
           constructor(public requestFactory: RequestFactory,
               options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
             this.defaultContentTypes =
@@ -210,9 +208,9 @@ class RequestHeaderParamsTest {
         export class API {
 
           defaultContentTypes: Array<MediaType>;
-        
+
           defaultAcceptTypes: Array<MediaType>;
-        
+
           constructor(public requestFactory: RequestFactory,
               options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
             this.defaultContentTypes =

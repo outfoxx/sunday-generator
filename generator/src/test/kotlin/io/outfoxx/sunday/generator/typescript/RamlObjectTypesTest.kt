@@ -23,19 +23,16 @@ import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Object Types Test")
 class RamlObjectTypesTest {
 
@@ -51,13 +48,13 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
 
           map: Record<string, unknown>;
 
         }
-        
+
         export class Test implements TestSpec {
 
           map: Record<string, unknown>;
@@ -75,7 +72,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -96,7 +93,7 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
 
           fromNilUnion: string | null;
@@ -194,7 +191,7 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
 
           value: string;
@@ -208,7 +205,7 @@ class RamlObjectTypesTest {
           constructor(init: TestSpec) {
             this.value = init.value;
           }
-        
+
           copy(changes: Partial<TestSpec>): Test {
             return new Test(Object.assign({}, this, changes));
           }
@@ -218,7 +215,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(testSpec)
@@ -255,7 +252,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(test2Spec)
@@ -373,7 +370,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -430,7 +427,7 @@ class RamlObjectTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)

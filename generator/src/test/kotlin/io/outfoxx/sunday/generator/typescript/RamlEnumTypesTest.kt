@@ -20,17 +20,14 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.Jack
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Enum Types Test")
 class RamlEnumTypesTest {
 
@@ -48,7 +45,7 @@ class RamlEnumTypesTest {
 
     assertEquals(
       """
-        
+
         export enum TestEnum {
           None = 'none',
           Some = 'some',
@@ -66,52 +63,52 @@ class RamlEnumTypesTest {
     )
 
     assertEquals(
-      """       
+      """
         import {TestEnum} from './test-enum';
         import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-        
-        
+
+
         export interface TestSpec {
-        
+
           enumVal: TestEnum;
-        
+
           setVal: Set<TestEnum>;
-        
+
           arrayVal: Array<TestEnum>;
-        
+
         }
-        
+
         @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Test implements TestSpec {
-        
+
           @JsonProperty({required: true})
           @JsonClassType({type: () => [Object]})
           enumVal: TestEnum;
-        
+
           @JsonProperty({required: true})
           @JsonClassType({type: () => [Set, [Object]]})
           setVal: Set<TestEnum>;
-        
+
           @JsonProperty({required: true})
           @JsonClassType({type: () => [Array, [Object]]})
           arrayVal: Array<TestEnum>;
-        
+
           constructor(init: TestSpec) {
             this.enumVal = init.enumVal;
             this.setVal = init.setVal;
             this.arrayVal = init.arrayVal;
           }
-        
+
           copy(changes: Partial<TestSpec>): Test {
             return new Test(Object.assign({}, this, changes));
           }
-        
+
           toString(): string {
             return `Test(enumVal='${'$'}{this.enumVal}', setVal='${'$'}{this.setVal}', arrayVal='${'$'}{this.arrayVal}')`;
           }
-        
+
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(usageTypeModSpec)

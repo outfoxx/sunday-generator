@@ -19,18 +19,17 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Response Body Content Test")
 class ResponseBodyContentTest {
 
@@ -260,7 +259,7 @@ class ResponseBodyContentTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): FetchTestResponseBody
-        
+
           public interface FetchTestResponseBody {
             public val `value`: String
           }
@@ -310,7 +309,7 @@ class ResponseBodyContentTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(): Response
-        
+
           public interface FetchTestResponseBody {
             public val `value`: String
           }

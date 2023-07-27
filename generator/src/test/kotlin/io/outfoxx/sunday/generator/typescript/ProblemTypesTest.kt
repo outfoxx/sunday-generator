@@ -20,17 +20,14 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.Jack
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Problem Types Test")
 class ProblemTypesTest {
 
@@ -68,7 +65,7 @@ class ProblemTypesTest {
           }
 
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")
@@ -137,7 +134,7 @@ class ProblemTypesTest {
           }
 
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(testResolverModSpec, "test-resolver-problem")
@@ -184,7 +181,7 @@ class ProblemTypesTest {
           }
 
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")

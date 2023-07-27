@@ -92,6 +92,10 @@ configure(moduleNames.map { project(it) }) {
   tasks.named<Test>("test").configure {
 
     useJUnitPlatform()
+    systemProperty("junit.jupiter.execution.parallel.enabled", "true")
+    systemProperty("junit.jupiter.execution.parallel.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
+    systemProperty("junit.jupiter.execution.parallel.config.dynamic.factor", "3")
 
     if (System.getenv("CI").isNullOrBlank()) {
       testLogging {

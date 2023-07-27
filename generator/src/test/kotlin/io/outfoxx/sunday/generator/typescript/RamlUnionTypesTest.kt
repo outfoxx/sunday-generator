@@ -19,17 +19,14 @@ package io.outfoxx.sunday.generator.typescript
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Union Types Test")
 class RamlUnionTypesTest {
 
@@ -45,7 +42,7 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
 
           any: number | string;
@@ -79,7 +76,7 @@ class RamlUnionTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -126,7 +123,7 @@ class RamlUnionTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -176,7 +173,7 @@ class RamlUnionTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(child1TypeModSpec, "test/lib/child1")
@@ -205,7 +202,7 @@ class RamlUnionTypesTest {
             super(init);
             this.childValue = init.childValue;
           }
-        
+
           copy(changes: Partial<Child2Spec>): Child2 {
             return new Child2(Object.assign({}, this, changes));
           }
@@ -215,7 +212,7 @@ class RamlUnionTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(child2TypeModSpec, "test/lib/child2")
@@ -255,7 +252,7 @@ class RamlUnionTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(testTypeModSpec)

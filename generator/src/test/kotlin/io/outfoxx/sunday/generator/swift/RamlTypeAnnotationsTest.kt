@@ -20,9 +20,7 @@ import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.tag
@@ -31,10 +29,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
+@SwiftTest
 @DisplayName("[Swift] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
 

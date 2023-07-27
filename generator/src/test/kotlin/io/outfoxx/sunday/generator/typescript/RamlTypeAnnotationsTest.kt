@@ -24,9 +24,7 @@ import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.InterfaceSpec
 import io.outfoxx.typescriptpoet.TypeName
@@ -38,10 +36,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Type Annotations Test")
 class RamlTypeAnnotationsTest {
 
@@ -123,7 +120,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        
+
         export interface GroupSpec {
 
           value: string;
@@ -191,11 +188,11 @@ class RamlTypeAnnotationsTest {
                 super(init);
                 this.subMemberValue = init.subMemberValue;
               }
-        
+
               copy(changes: Partial<SubSpec>): Sub {
                 return new Sub(Object.assign({}, this, changes));
               }
-        
+
               toString(): string {
                 return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
               }
@@ -230,7 +227,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -251,7 +248,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        
+
         export interface GroupSpec {
 
           value: string;
@@ -319,11 +316,11 @@ class RamlTypeAnnotationsTest {
                 super(init);
                 this.subMemberValue = init.subMemberValue;
               }
-        
+
               copy(changes: Partial<SubSpec>): Sub {
                 return new Sub(Object.assign({}, this, changes));
               }
-        
+
               toString(): string {
                 return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
               }
@@ -358,7 +355,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -379,7 +376,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        
+
         export interface RootSpec {
 
           value: string;
@@ -429,27 +426,27 @@ class RamlTypeAnnotationsTest {
             }
 
           }
-        
+
           export namespace Group {
 
             export interface MemberSpec {
-  
+
               memberValue: string;
-  
+
             }
-  
+
             export class Member implements MemberSpec {
-  
+
               memberValue: string;
 
               constructor(init: MemberSpec) {
                 this.memberValue = init.memberValue;
               }
-  
+
               copy(changes: Partial<MemberSpec>): Member {
                 return new Member(Object.assign({}, this, changes));
               }
-  
+
               toString(): string {
                 return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
               }
@@ -459,7 +456,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeSpec)
@@ -480,7 +477,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        
+
         export interface RootSpec {
 
           value: string;
@@ -530,27 +527,27 @@ class RamlTypeAnnotationsTest {
             }
 
           }
-        
+
           export namespace Group {
 
             export interface MemberSpec {
-  
+
               memberValue: string;
-  
+
             }
-  
+
             export class Member implements MemberSpec {
-  
+
               memberValue: string;
 
               constructor(init: MemberSpec) {
                 this.memberValue = init.memberValue;
               }
-  
+
               copy(changes: Partial<MemberSpec>): Member {
                 return new Member(Object.assign({}, this, changes));
               }
-  
+
               toString(): string {
                 return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
               }
@@ -560,7 +557,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeSpec)
@@ -600,7 +597,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeSpec)
@@ -669,7 +666,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Child1 extends Parent implements Child1Spec {
-        
+
           @JsonProperty()
           @JsonClassType({type: () => [String]})
           value: string | undefined;
@@ -692,7 +689,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(child1TypeSpec)
@@ -717,7 +714,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Child2 extends Parent implements Child2Spec {
-        
+
           @JsonProperty()
           @JsonClassType({type: () => [String]})
           value: string | undefined;
@@ -768,7 +765,7 @@ class RamlTypeAnnotationsTest {
 
         @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
         export class Test implements TestSpec {
-        
+
           @JsonTypeInfo({
             use: JsonTypeInfoId.NAME,
             include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
@@ -783,11 +780,11 @@ class RamlTypeAnnotationsTest {
           @JsonProperty({required: true})
           @JsonClassType({type: () => [Parent]})
           parent: Parent;
-        
+
           @JsonProperty({required: true})
           @JsonClassType({type: () => [String]})
           parentType: string;
-        
+
           constructor(init: TestSpec) {
             this.parent = init.parent;
             this.parentType = init.parentType;
@@ -802,7 +799,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(testTypeSpec)
@@ -1044,7 +1041,7 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
 
           string: string;
@@ -1054,7 +1051,7 @@ class RamlTypeAnnotationsTest {
           bool: boolean;
 
           nullable: string | null;
-        
+
           optional?: string;
 
           nullableOptional?: string | null;
@@ -1070,9 +1067,9 @@ class RamlTypeAnnotationsTest {
           bool: boolean;
 
           nullable: string | null;
-        
+
           optional: string | undefined;
-        
+
           nullableOptional: string | null | undefined;
 
           constructor(init: TestSpec) {
@@ -1093,7 +1090,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeSpec)
@@ -1126,7 +1123,7 @@ class RamlTypeAnnotationsTest {
           bool: boolean;
 
           nullable: string | null;
-        
+
           optional?: string;
 
           nullableOptional?: string | null;
@@ -1152,11 +1149,11 @@ class RamlTypeAnnotationsTest {
           @JsonProperty({required: true})
           @JsonClassType({type: () => [String]})
           nullable: string | null;
-        
+
           @JsonProperty()
           @JsonClassType({type: () => [String]})
           optional: string | undefined;
-        
+
           @JsonProperty()
           @JsonClassType({type: () => [String]})
           nullableOptional: string | null | undefined;
@@ -1179,7 +1176,7 @@ class RamlTypeAnnotationsTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeSpec)

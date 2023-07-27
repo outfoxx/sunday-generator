@@ -20,15 +20,13 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@KotlinTest
 @DisplayName("[Kotlin] [RAML] Union Types Test")
 class RamlUnionTypesTest {
 
@@ -52,10 +50,10 @@ class RamlUnionTypesTest {
           public val any: Any
 
           public val duplicate: String
-        
+
           public val nullable: String?
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
@@ -80,7 +78,7 @@ class RamlUnionTypesTest {
         public interface Test {
           public val `value`: Base
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
@@ -107,7 +105,7 @@ class RamlUnionTypesTest {
         public interface Test {
           public val `value`: Any
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
