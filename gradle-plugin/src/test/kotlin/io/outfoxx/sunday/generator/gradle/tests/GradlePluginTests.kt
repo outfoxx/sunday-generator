@@ -54,7 +54,7 @@ class GradlePluginTests {
       import static io.outfoxx.sunday.generator.GenerationMode.*
 
       plugins {
-        id 'org.jetbrains.kotlin.jvm' version '1.5.31'
+        id 'org.jetbrains.kotlin.jvm' version '1.8.20'
         id 'io.outfoxx.sunday-generator'
       }
 
@@ -98,6 +98,11 @@ class GradlePluginTests {
           jvmTarget = "11"
           suppressWarnings = true
         }
+      }
+
+      java {
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
       }
     """.trimIndent()
 
