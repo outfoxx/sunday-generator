@@ -40,19 +40,15 @@ tasks {
 }
 
 gradlePlugin {
+  website = "https://outfoxx.github.io/sunday"
+  vcsUrl = "https://github.com/outfoxx/sunday-generator"
   plugins {
-    register("sunday") {
+    create("sunday") {
       id = "io.outfoxx.sunday-generator"
       implementationClass = "io.outfoxx.sunday.generator.gradle.SundayGeneratorPlugin"
       displayName = "Sunday Generator - Gradle Plugin"
       description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
+      tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
     }
   }
-}
-
-pluginBundle {
-  website = "https://outfoxx.github.io/sunday"
-  vcsUrl = "https://github.com/outfoxx/sunday-generator"
-  tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
-  description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
 }
