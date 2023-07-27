@@ -37,6 +37,9 @@
     <div>2.0.0-SNAPSHOT
     </div>
     <div class="pull-right d-flex">
+        <div class="filter-section" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":generator:dokkaHtmlPartial/main">jvm</button>
+        </div>
         <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
         <div id="searchBar"></div>
     </div>
@@ -46,389 +49,373 @@
         <div id="sideMenu"></div>
     </div>
     <div id="main">
-<div class="main-content" id="content" pageids="generator::io.outfoxx.sunday.generator.kotlin/KotlinGenerator///PointingToDeclaration//1884250599">
+<div class="main-content" data-page-type="classlike" id="content" pageids="generator::io.outfoxx.sunday.generator.kotlin/KotlinGenerator///PointingToDeclaration//1884250599">
   <div class="breadcrumbs"><a href="../../index.html">generator</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.generator.kotlin</a><span class="delimiter">/</span><span class="current">KotlinGenerator</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Kotlin</span><wbr><span><span>Generator</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">KotlinGenerator</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeRegistry<span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>options<span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-generator/index.html">Generator</a></div><p class="paragraph">Generator for Kotlin language framework targets</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">KotlinGenerator</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeRegistry<span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>options<span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-generator/index.html">Generator</a></div><p class="paragraph">Generator for Kotlin language framework targets</p><h4 class="">Inheritors</h4><div class="table"><div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-kotlin-j-a-x-r-s-generator/index.html">KotlinJAXRSGenerator</a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-kotlin-sunday-generator/index.html">KotlinSundayGenerator</a></div></span></div><div></div></div></div></div></div></div>
   </div>
   <div class="tabbedcontent">
-    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button><button class="section-tab" data-togglable="Inheritors">Inheritors</button></div>
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
     <div class="tabs-section-body">
-      <h2 class="tabbedcontent">Constructors</h2>
-      <div class="table" data-togglable="Constructors"><a data-name="-1400437591%2FConstructors%2F1884250599" anchor-label="KotlinGenerator" id="-1400437591%2FConstructors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue TabbedContent">
-            <div class=""><span class="inline-flex">
-                <div><a href="-kotlin-generator.html"><span>Kotlin</span><wbr><span><span>Generator</span></span></a></div>
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="">Constructors</h2>
+        <div class="table"><a data-name="-1400437591%2FConstructors%2F1884250599" anchor-label="KotlinGenerator" id="-1400437591%2FConstructors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-togglable="CONSTRUCTOR" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-kotlin-generator.html"><span>Kotlin</span><wbr><span><span>Generator</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1400437591%2FConstructors%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-kotlin-generator.html"><span class="token function">KotlinGenerator</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter ">shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter ">typeRegistry<span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></span></span><span class="token punctuation">)</span></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">document<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span><span class="token punctuation">, </span></span><span class="parameter ">shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a><span class="token punctuation">, </span></span><span class="parameter ">typeRegistry<span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <h2 class="">Types</h2>
-      <div class="table" data-togglable="Types"><a data-name="-1642378301%2FClasslikes%2F1884250599" anchor-label="Options" id="-1642378301%2FClasslikes%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="-options/index.html"><span><span>Options</span></span></a></div>
+      <div data-togglable="TYPE">
+        <h2 class="">Types</h2>
+        <div class="table"><a data-name="-1642378301%2FClasslikes%2F1884250599" anchor-label="Options" id="-1642378301%2FClasslikes%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-options/index.html"><span><span>Options</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1642378301%2FClasslikes%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-options/index.html">Options</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>defaultServicePackageName<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultProblemBaseUri<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultMediaTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>serviceSuffix<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-options/index.html">Options</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>defaultServicePackageName<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultProblemBaseUri<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultMediaTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>serviceSuffix<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-generator/-options/index.html">Generator.Options</a></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="1934417092%2FClasslikes%2F1884250599" anchor-label="URIParameter" id="1934417092%2FClasslikes%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="-u-r-i-parameter/index.html"><span><span>URIParameter</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-r-i-parameter/index.html"><span><span>URIParameter</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1934417092%2FClasslikes%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-u-r-i-parameter/index.html">URIParameter</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultValue<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/DataNode///PointingToDeclaration/">DataNode</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-u-r-i-parameter/index.html">URIParameter</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>typeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>defaultValue<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/DataNode///PointingToDeclaration/">DataNode</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <h2 class="">Functions</h2>
-      <div class="table" data-togglable="Functions"><a data-name="403343548%2FFunctions%2F1884250599" anchor-label="addNullifyMethod" id="403343548%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="add-nullify-method.html"><span>add</span><wbr><span>Nullify</span><wbr><span><span>Method</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="403343548%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="add-nullify-method.html"><span class="token function">addNullifyMethod</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">function<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec///PointingToDeclaration/">FunSpec</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">copyAnnotaitons<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span></span></span><span class="token punctuation">)</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-1027889386%2FFunctions%2F1884250599" anchor-label="generateServiceType" id="-1027889386%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="generate-service-type.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1027889386%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="generate-service-type.html"><span class="token function">generateServiceType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="1665962579%2FFunctions%2F1884250599" anchor-label="generateServiceTypes" id="1665962579%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="generate-service-types.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Types</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1665962579%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="generate-service-types.html"><span class="token function">generateServiceTypes</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-1711875911%2FFunctions%2F1884250599" anchor-label="getBaseURIInfo" id="-1711875911%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="get-base-u-r-i-info.html"><span>get</span><wbr><span>Base</span><wbr><span><span>URIInfo</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1711875911%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-base-u-r-i-info.html"><span class="token function">getBaseURIInfo</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-u-r-i-parameter/index.html">KotlinGenerator.URIParameter</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="1621916689%2FFunctions%2F1884250599" anchor-label="processResourceMethodBodyParameter" id="1621916689%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-body-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Body</span><wbr><span><span>Parameter</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1621916689%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-body-parameter.html"><span class="token function">processResourceMethodBodyParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">payloadSchema<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="900121400%2FFunctions%2F1884250599" anchor-label="processResourceMethodEnd" id="900121400%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-end.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>End</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="900121400%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-end.html"><span class="token function">processResourceMethodEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec///PointingToDeclaration/">FunSpec</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="1157846491%2FFunctions%2F1884250599" anchor-label="processResourceMethodHeaderParameter" id="1157846491%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-header-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Header</span><wbr><span><span>Parameter</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1157846491%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-header-parameter.html"><span class="token function">processResourceMethodHeaderParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="583020252%2FFunctions%2F1884250599" anchor-label="processResourceMethodQueryParameter" id="583020252%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-query-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Query</span><wbr><span><span>Parameter</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="583020252%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-query-parameter.html"><span class="token function">processResourceMethodQueryParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-1583346856%2FFunctions%2F1884250599" anchor-label="processResourceMethodStart" id="-1583346856%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-start.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>Start</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1583346856%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-start.html"><span class="token function">processResourceMethodStart</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-22445504%2FFunctions%2F1884250599" anchor-label="processResourceMethodUriParameter" id="-22445504%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-resource-method-uri-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Uri</span><wbr><span><span>Parameter</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-22445504%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-uri-parameter.html"><span class="token function">processResourceMethodUriParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="310579974%2FFunctions%2F1884250599" anchor-label="processReturnType" id="310579974%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-return-type.html"><span>process</span><wbr><span>Return</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="310579974%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-return-type.html"><span class="token function">processReturnType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">response<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Response///PointingToDeclaration/">Response</span><span class="token punctuation">, </span></span><span class="parameter ">body<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.generator/-problem-type-definition/index.html">ProblemTypeDefinition</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">returnTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-748104435%2FFunctions%2F1884250599" anchor-label="processServiceBegin" id="-748104435%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-service-begin.html"><span>process</span><wbr><span>Service</span><wbr><span><span>Begin</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-748104435%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-begin.html"><span class="token function">processServiceBegin</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="-1653150591%2FFunctions%2F1884250599" anchor-label="processServiceEnd" id="-1653150591%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="process-service-end.html"><span>process</span><wbr><span>Service</span><wbr><span><span>End</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1653150591%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-end.html"><span class="token function">processServiceEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-<a data-name="1706803095%2FFunctions%2F1884250599" anchor-label="resolveTypeName" id="1706803095%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="resolve-type-name.html"><span>resolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1706803095%2FFunctions%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-type-name.html"><span class="token function">resolveTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">suggestedTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <h2 class="">Properties</h2>
-      <div class="table" data-togglable="Properties"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="../../io.outfoxx.sunday.generator/-generator/api.html"><span><span>api</span></span></a></div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../io.outfoxx.sunday.generator/-generator/api.html"><span><span>api</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2007237626%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="2007237626%2FProperties%2F1884250599" anchor-label="api" id="2007237626%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/api.html">api</a><span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain.api/WebApi///PointingToDeclaration/">WebApi</span></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/api.html">api</a><span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain.api/WebApi///PointingToDeclaration/">WebApi</span></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html"><span>default</span><wbr><span>Media</span><wbr><span><span>Types</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html"><span>default</span><wbr><span>Media</span><wbr><span><span>Types</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1052926270%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="1052926270%2FProperties%2F1884250599" anchor-label="defaultMediaTypes" id="1052926270%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html">defaultMediaTypes</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="../../io.outfoxx.sunday.generator/-generator/default-media-types.html">defaultMediaTypes</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="368401105%2FProperties%2F1884250599" anchor-label="document" id="368401105%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="document.html"><span><span>document</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="document.html"><span><span>document</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="368401105%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="368401105%2FProperties%2F1884250599" anchor-label="document" id="368401105%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="document.html">document</a><span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="document.html">document</a><span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.document/Document///PointingToDeclaration/">Document</span></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="1374179632%2FProperties%2F1884250599" anchor-label="options" id="1374179632%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="options.html"><span><span>options</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="options.html"><span><span>options</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1374179632%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="1374179632%2FProperties%2F1884250599" anchor-label="options" id="1374179632%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="options.html">options</a><span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="options.html">options</a><span class="token operator">: </span><a href="-options/index.html">KotlinGenerator.Options</a></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="-281468101%2FProperties%2F1884250599" anchor-label="shapeIndex" id="-281468101%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="shape-index.html"><span>shape</span><wbr><span><span>Index</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="shape-index.html"><span>shape</span><wbr><span><span>Index</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-281468101%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="-281468101%2FProperties%2F1884250599" anchor-label="shapeIndex" id="-281468101%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="shape-index.html">shapeIndex</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="shape-index.html">shapeIndex</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a></div></div></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 <a data-name="859416149%2FProperties%2F1884250599" anchor-label="typeRegistry" id="859416149%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="type-registry.html"><span>type</span><wbr><span><span>Registry</span></span></a></div>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-registry.html"><span>type</span><wbr><span><span>Registry</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="859416149%2FProperties%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div>
-              <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><a data-name="859416149%2FProperties%2F1884250599" anchor-label="typeRegistry" id="859416149%2FProperties%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="type-registry.html">typeRegistry</a><span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a></div></div></div>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="type-registry.html">typeRegistry</a><span class="token operator">: </span><a href="../-kotlin-type-registry/index.html">KotlinTypeRegistry</a></div></div></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <h2 class="">Inheritors</h2>
-      <div class="table" data-togglable="Inheritors"><a data-name="967788555%2FInheritors%2F1884250599" anchor-label="KotlinJAXRSGenerator" id="967788555%2FInheritors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="../-kotlin-j-a-x-r-s-generator/index.html">KotlinJAXRSGenerator</a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="967788555%2FInheritors%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div></div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="403343548%2FFunctions%2F1884250599" anchor-label="addNullifyMethod" id="403343548%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="add-nullify-method.html"><span>add</span><wbr><span>Nullify</span><wbr><span><span>Method</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="403343548%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="add-nullify-method.html"><span class="token function">addNullifyMethod</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">function<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec///PointingToDeclaration/">FunSpec</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">copyAnnotaitons<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-<a data-name="817369219%2FInheritors%2F1884250599" anchor-label="KotlinSundayGenerator" id="817369219%2FInheritors%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
-        <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
-          <div class="main-subrow keyValue ">
-            <div class=""><span class="inline-flex">
-                <div><a href="../-kotlin-sunday-generator/index.html">KotlinSundayGenerator</a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="817369219%2FInheritors%2F1884250599"></span>
-                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                </span></span></div>
-            <div></div>
+<a data-name="-1027889386%2FFunctions%2F1884250599" anchor-label="generateServiceType" id="-1027889386%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="generate-service-type.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1027889386%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="generate-service-type.html"><span class="token function">generateServiceType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1665962579%2FFunctions%2F1884250599" anchor-label="generateServiceTypes" id="1665962579%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="generate-service-types.html"><span>generate</span><wbr><span>Service</span><wbr><span><span>Types</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1665962579%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="generate-service-types.html"><span class="token function">generateServiceTypes</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1711875911%2FFunctions%2F1884250599" anchor-label="getBaseURIInfo" id="-1711875911%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="get-base-u-r-i-info.html"><span>get</span><wbr><span>Base</span><wbr><span><span>URIInfo</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1711875911%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-base-u-r-i-info.html"><span class="token function">getBaseURIInfo</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-u-r-i-parameter/index.html">KotlinGenerator.URIParameter</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1621916689%2FFunctions%2F1884250599" anchor-label="processResourceMethodBodyParameter" id="1621916689%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-body-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Body</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1621916689%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-body-parameter.html"><span class="token function">processResourceMethodBodyParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">payloadSchema<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="900121400%2FFunctions%2F1884250599" anchor-label="processResourceMethodEnd" id="900121400%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-end.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>End</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="900121400%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-end.html"><span class="token function">processResourceMethodEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">URI</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec///PointingToDeclaration/">FunSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1157846491%2FFunctions%2F1884250599" anchor-label="processResourceMethodHeaderParameter" id="1157846491%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-header-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Header</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1157846491%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-header-parameter.html"><span class="token function">processResourceMethodHeaderParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="583020252%2FFunctions%2F1884250599" anchor-label="processResourceMethodQueryParameter" id="583020252%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-query-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Query</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="583020252%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-query-parameter.html"><span class="token function">processResourceMethodQueryParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1583346856%2FFunctions%2F1884250599" anchor-label="processResourceMethodStart" id="-1583346856%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-start.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span><span>Start</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1583346856%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-start.html"><span class="token function">processResourceMethodStart</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-22445504%2FFunctions%2F1884250599" anchor-label="processResourceMethodUriParameter" id="-22445504%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-resource-method-uri-parameter.html"><span>process</span><wbr><span>Resource</span><wbr><span>Method</span><wbr><span>Uri</span><wbr><span><span>Parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-22445504%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-resource-method-uri-parameter.html"><span class="token function">processResourceMethodUriParameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">parameter<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">parameterBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec.Builder///PointingToDeclaration/">ParameterSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ParameterSpec///PointingToDeclaration/">ParameterSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="310579974%2FFunctions%2F1884250599" anchor-label="processReturnType" id="310579974%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-return-type.html"><span>process</span><wbr><span>Return</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="310579974%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-return-type.html"><span class="token function">processReturnType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">endPoint<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token punctuation">, </span></span><span class="parameter ">operation<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">, </span></span><span class="parameter ">response<span class="token operator">: </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Response///PointingToDeclaration/">Response</span><span class="token punctuation">, </span></span><span class="parameter ">body<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">problemTypes<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.generator/-problem-type-definition/index.html">ProblemTypeDefinition</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">functionBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/FunSpec.Builder///PointingToDeclaration/">FunSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">returnTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-748104435%2FFunctions%2F1884250599" anchor-label="processServiceBegin" id="-748104435%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-service-begin.html"><span>process</span><wbr><span>Service</span><wbr><span><span>Begin</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-748104435%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-begin.html"><span class="token function">processServiceBegin</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">endPoints<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/EndPoint///PointingToDeclaration/">EndPoint</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1653150591%2FFunctions%2F1884250599" anchor-label="processServiceEnd" id="-1653150591%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="process-service-end.html"><span>process</span><wbr><span>Service</span><wbr><span><span>End</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1653150591%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="process-service-end.html"><span class="token function">processServiceEnd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeBuilder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1706803095%2FFunctions%2F1884250599" anchor-label="resolveTypeName" id="1706803095%2FFunctions%2F1884250599" data-filterable-set=":generator:dokkaHtmlPartial/main"></a>
+          <div class="table-row" data-filterable-current=":generator:dokkaHtmlPartial/main" data-filterable-set=":generator:dokkaHtmlPartial/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="resolve-type-name.html"><span>resolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1706803095%2FFunctions%2F1884250599"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="resolve-type-name.html"><span class="token function">resolveTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">suggestedTypeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -440,6 +427,6 @@
       </div>
     </div>
 </div>
-
-</body></html>
+</body>
+</html>
 
