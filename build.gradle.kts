@@ -214,8 +214,8 @@ tasks {
     properties {
       property("sonar.sources", "src/main")
       property("sonar.tests", "src/test")
-      property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
-      property("sonar.kotlin.ktlint.reportPaths", "build/reports/ktlint/main-lint.xml")
+      property("sonar.kotlin.detekt.reportPaths", "${projectDir}/build/reports/detekt/detekt.xml")
+      property("sonar.kotlin.ktlint.reportPaths", "${projectDir}/build/reports/ktlint/main-lint.xml")
       property("sonar.junit.reportPaths", "build/test-results/test")
       property("sonar.jacoco.reportPath", "")
       property("sonar.jacoco.reportPaths", "")

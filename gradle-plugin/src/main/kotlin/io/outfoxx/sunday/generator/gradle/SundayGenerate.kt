@@ -29,34 +29,39 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import org.gradle.api.DefaultTask
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.FileTree
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.util.PatternSet
 import java.io.File
-import java.nio.file.Files
 import java.util.EnumSet
 import javax.inject.Inject
 
+@CacheableTask
 open class SundayGenerate
 @Inject constructor(
   objects: ObjectFactory,
-) : DefaultTask() {
+) : SourceTask() {
 
   @InputFiles
-  val source: Property<FileCollection> = objects.property(FileCollection::class.java)
+  @PathSensitive(PathSensitivity.RELATIVE)
+  override fun getSource(): FileTree = super.getSource()
 
   @InputFiles
+  @PathSensitive(PathSensitivity.RELATIVE)
   @Optional
   val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
 
@@ -68,206 +73,186 @@ open class SundayGenerate
 
   @Input
   @Optional
-  val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
+  val generateModel: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
   @Input
   @Optional
-  val generateService: Property<Boolean> = objects.property(Boolean::class.java)
+  val generateService: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
   @Input
   @Optional
-  val pkgName: Property<String> = objects.property(String::class.java)
+  val pkgName: Property<String> = objects.property(String::class.java).convention("com.example")
 
   @Input
   @Optional
-  val modelPkgName: Property<String> = objects.property(String::class.java)
+  val modelPkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
 
   @Input
   @Optional
-  val servicePkgName: Property<String> = objects.property(String::class.java)
+  val servicePkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
 
   @Input
   @Optional
-  val serviceSuffix: Property<String> = objects.property(String::class.java)
+  val serviceSuffix: Property<String> = objects.property(String::class.java).convention("API")
 
   @Input
   @Optional
-  val problemBaseUri: Property<String> = objects.property(String::class.java)
+  val problemBaseUri: Property<String> = objects.property(String::class.java).convention("http://example.com/")
 
   @Input
   @Optional
-  val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
+  val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
+  val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java)
+  val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val coroutines: Property<Boolean> = objects.property(Boolean::class.java)
+  val coroutines: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val reactiveResponseType: Property<String> = objects.property(String::class.java)
+  val reactiveResponseType: Property<String> = objects.property(String::class.java).convention(null as String?)
 
   @Input
   @Optional
-  val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java)
+  val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)
+  val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java).convention(null as BaseUriMode?)
 
   @Input
   @Optional
-  val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
+  val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf())
 
   @Input
   @Optional
-  val generatedAnnotation: Property<String> = objects.property(String::class.java)
+  val generatedAnnotation: Property<String> = objects.property(String::class.java).convention(null as String?)
 
   @Input
   @Optional
-  val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
+  val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
+  val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
   @Optional
-  val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)
+  val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
+    .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
+
+  private val apiProcessor = APIProcessor()
 
   @TaskAction
   fun generate() {
+    println("Includes: ${includes.orNull?.files ?: "none"}")
 
-    val defaultOutputDir = project.layout.buildDirectory.get()
-
-    val framework = this.framework.get()
     val mode = this.mode.get()
-    val pkgName = this.pkgName.orNull
-    val modelPkgName = this.modelPkgName.orNull ?: pkgName
-    val servicePkgName = this.servicePkgName.orNull ?: pkgName
-    val serviceSuffix = this.serviceSuffix.orNull ?: "API"
-    val problemBaseUri = this.problemBaseUri.orNull ?: "http://example.com/"
-    val outputDir = this.outputDir.getOrElse(defaultOutputDir)
-    val outputDirFile = outputDir.asFile
-    val generateModel = this.generateModel.getOrElse(true)
-    val generateService = this.generateService.getOrElse(true)
+    val outputDirFile = outputDir.get().asFile
 
     val categories = EnumSet.noneOf(GeneratedTypeCategory::class.java)
-    if (generateModel) {
+    if (generateModel.get()) {
       categories.add(GeneratedTypeCategory.Model)
     }
-    if (generateService) {
+    if (generateService.get()) {
       categories.add(GeneratedTypeCategory.Service)
     }
 
-    Files.createDirectories(outputDir.asFile.toPath())
-
-    if (shouldClean(outputDirFile)) {
-      val filter = PatternSet().include("**/*.kt")
-      project.delete(outputDir.asFileTree.matching(filter))
-    }
-
     val options = EnumSet.allOf(KotlinTypeRegistry.Option::class.java)
-    if (disableJacksonAnnotations.getOrElse(false)) {
+    if (disableJacksonAnnotations.get()) {
       options.remove(JacksonAnnotations)
     }
-    if (disableModelImplementations.getOrElse(false)) {
+    if (disableModelImplementations.get()) {
       options.remove(ImplementModel)
     }
-    if (disableValidationConstraints.getOrElse(false)) {
+    if (disableValidationConstraints.get()) {
       options.remove(ValidationConstraints)
     }
-    if (!useJakartaPackages.getOrElse(false)) {
+    if (!useJakartaPackages.get()) {
       options.remove(KotlinTypeRegistry.Option.UseJakartaPackages)
     }
 
-    val typeRegistry = KotlinTypeRegistry(modelPkgName, generatedAnnotation.orNull, mode, options)
+    val typeRegistry = KotlinTypeRegistry(modelPkgName.get(), generatedAnnotation.orNull, mode, options)
 
-    val apiProcessor = APIProcessor()
-
-    source.get().forEach { file ->
-
-      if (file.isDirectory || file.extension == "git") {
-        return
+    source
+      .filter { it.extension == "raml" && it.isFile }
+      .forEach { file ->
+        processFile(file, typeRegistry)
       }
-
-      val processed = apiProcessor.process(file.toURI())
-
-      processed.validationLog.forEach {
-        val level =
-          when (it.level) {
-            APIProcessor.Result.Level.Error -> LogLevel.ERROR
-            APIProcessor.Result.Level.Warning -> LogLevel.WARN
-            APIProcessor.Result.Level.Info -> LogLevel.INFO
-          }
-        val errorFile = File(it.file).relativeToOrSelf(project.rootDir)
-        logger.log(level, "$errorFile:${it.line}: ${it.message}")
-      }
-
-      if (!processed.isValid) {
-        throw InvalidUserDataException("$file is invalid")
-      }
-
-      val generator =
-        when (framework) {
-          TargetFramework.JAXRS ->
-            KotlinJAXRSGenerator(
-              processed.document,
-              processed.shapeIndex,
-              typeRegistry,
-              KotlinJAXRSGenerator.Options(
-                coroutines.orNull ?: false,
-                reactiveResponseType.orNull,
-                explicitSecurityParameters.orNull ?: false,
-                baseUriMode.orNull,
-                alwaysUseResponseReturn.orNull ?: false,
-                servicePkgName,
-                problemBaseUri,
-                defaultMediaTypes.get(),
-                serviceSuffix,
-              ),
-            )
-
-          TargetFramework.Sunday ->
-            KotlinSundayGenerator(
-              processed.document,
-              processed.shapeIndex,
-              typeRegistry,
-              KotlinSundayGenerator.Options(
-                useResultResponseReturn.orNull ?: false,
-                servicePkgName,
-                problemBaseUri,
-                defaultMediaTypes.get(),
-                serviceSuffix,
-              ),
-            )
-        }
-
-      try {
-        generator.generateServiceTypes()
-      } catch (x: GenerationException) {
-        logger.error("${x.file}:${x.line}: ${x.message}")
-        throw InvalidUserDataException("$file is invalid")
-      }
-    }
 
     typeRegistry.generateFiles(categories, outputDirFile.toPath())
   }
 
-  private fun shouldClean(dir: File): Boolean {
-    if (dir == project.projectDir || dir == project.rootDir || dir.absolutePath == "/") {
-      return false
+  private fun processFile(file: File, typeRegistry: KotlinTypeRegistry) {
+
+    val processed = apiProcessor.process(file.toURI())
+
+    processed.validationLog.forEach {
+      val level =
+        when (it.level) {
+          APIProcessor.Result.Level.Error -> LogLevel.ERROR
+          APIProcessor.Result.Level.Warning -> LogLevel.WARN
+          APIProcessor.Result.Level.Info -> LogLevel.INFO
+        }
+      val errorFile = File(it.file).relativeToOrSelf(project.rootDir)
+      logger.log(level, "$errorFile:${it.line}: ${it.message}")
     }
-    return true
+
+    if (!processed.isValid) {
+      throw InvalidUserDataException("$file is invalid")
+    }
+
+    val generator =
+      when (framework.get()) {
+        TargetFramework.JAXRS ->
+          KotlinJAXRSGenerator(
+            processed.document,
+            processed.shapeIndex,
+            typeRegistry,
+            KotlinJAXRSGenerator.Options(
+              coroutines.get(),
+              reactiveResponseType.orNull,
+              explicitSecurityParameters.get(),
+              baseUriMode.orNull,
+              alwaysUseResponseReturn.get(),
+              servicePkgName.get(),
+              problemBaseUri.get(),
+              defaultMediaTypes.get(),
+              serviceSuffix.get(),
+            ),
+          )
+
+        TargetFramework.Sunday ->
+          KotlinSundayGenerator(
+            processed.document,
+            processed.shapeIndex,
+            typeRegistry,
+            KotlinSundayGenerator.Options(
+              useResultResponseReturn.orNull ?: false,
+              servicePkgName.get(),
+              problemBaseUri.get(),
+              defaultMediaTypes.get(),
+              serviceSuffix.get(),
+            ),
+          )
+      }
+
+    try {
+
+      generator.generateServiceTypes()
+    } catch (x: GenerationException) {
+      logger.error("${x.file}:${x.line}: ${x.message}")
+      throw InvalidUserDataException("$file is invalid")
+    }
   }
 }

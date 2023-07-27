@@ -85,7 +85,7 @@ interface ResolutionContext {
   fun findDeclaringUnit(element: DomainElement) =
     unit.allUnits.first { it.location == element.annotations.location }
 
-  fun findImportingUnit(element: DomainElement, allUnits: List<BaseUnit>): BaseUnit? {
+  fun findImportingUnit(element: DomainElement, allUnits: Set<BaseUnit>): BaseUnit? {
     if (this !is ExternalFragment) return null
 
     val importingUnitLocation = element.id.split("#", limit = 2).first()
