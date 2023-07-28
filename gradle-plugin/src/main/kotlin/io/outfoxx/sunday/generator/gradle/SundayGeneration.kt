@@ -34,10 +34,10 @@ class SundayGeneration(
   project: Project,
 ) {
 
-  private val sourceDef = project.fileTree("src/main/sunday") { it.include("**/*.raml") }
-  private val outputDirDef = project.layout.buildDirectory.dir("generated/sources/sunday/$name")
+  val source: Property<FileCollection> =
+    objects.property(FileCollection::class.java)
+      .convention(project.fileTree("src/main/sunday") { it.include("**/*.raml") })
 
-  val source: Property<FileCollection> = objects.property(FileCollection::class.java).convention(sourceDef)
   val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
   var framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   var mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
@@ -59,6 +59,9 @@ class SundayGeneration(
   val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)
-  val outputDir: Property<Directory> = objects.directoryProperty().convention(outputDirDef)
-  val targetSourceSet: Property<String> = objects.property(String::class.java).convention(MAIN_SOURCE_SET_NAME)
+  val outputDir: Property<Directory> = objects.directoryProperty()
+
+  val targetSourceSet: Property<String> =
+    objects.property(String::class.java)
+      .convention(MAIN_SOURCE_SET_NAME)
 }

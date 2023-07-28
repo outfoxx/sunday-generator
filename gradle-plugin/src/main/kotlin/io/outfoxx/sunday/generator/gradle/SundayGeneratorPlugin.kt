@@ -24,7 +24,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
   override fun apply(project: Project) {
 
-    val allTask = project.task("sundayGenerateAll") {
+    val allTask = project.tasks.register("sundayGenerateAll") {
       it.group = "code-generation"
     }
 
@@ -36,32 +36,32 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       val genTask = project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
         genTask.group = "code-generation"
-        genTask.source.set(gen.source)
-        genTask.includes.set(gen.includes)
-        genTask.framework.set(gen.framework)
-        genTask.mode.set(gen.mode)
-        genTask.generateModel.set(gen.generateModel)
-        genTask.generateService.set(gen.generateService)
-        genTask.pkgName.set(gen.pkgName)
-        genTask.servicePkgName.set(gen.servicePkgName)
-        genTask.serviceSuffix.set(gen.serviceSuffix)
-        genTask.modelPkgName.set(gen.modelPkgName)
-        genTask.disableValidationConstraints.set(gen.disableValidationConstraints)
-        genTask.disableJacksonAnnotations.set(gen.disableJacksonAnnotations)
-        genTask.disableModelImplementations.set(gen.disableModelImplementations)
-        genTask.coroutines.set(gen.coroutines)
-        genTask.reactiveResponseType.set(gen.reactiveResponseType)
-        genTask.explicitSecurityParameters.set(gen.explicitSecurityParameters)
-        genTask.baseUriMode.set(gen.baseUriMode)
-        genTask.defaultMediaTypes.set(gen.defaultMediaTypes)
-        genTask.generatedAnnotation.set(gen.generatedAnnotation)
-        genTask.alwaysUseResponseReturn.set(gen.alwaysUseResponseReturn)
-        genTask.useResultResponseReturn.set(gen.useResultResponseReturn)
-        genTask.useJakartaPackages.set(gen.useJakartaPackages)
-        genTask.outputDir.set(gen.outputDir)
+        gen.source.takeIf { it.isPresent }?.let { genTask.source(gen.source) }
+        gen.includes.takeIf { it.isPresent }?.let { genTask.includes.set(it) }
+        gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
+        gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
+        gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
+        gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
+        gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
+        gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }
+        gen.serviceSuffix.takeIf { it.isPresent }?.let { genTask.serviceSuffix.set(it) }
+        gen.modelPkgName.takeIf { it.isPresent }?.let { genTask.modelPkgName.set(it) }
+        gen.disableValidationConstraints.takeIf { it.isPresent }?.let { genTask.disableValidationConstraints.set(it) }
+        gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
+        gen.disableModelImplementations.takeIf { it.isPresent }?.let { genTask.disableModelImplementations.set(it) }
+        gen.coroutines.takeIf { it.isPresent }?.let { genTask.coroutines.set(it) }
+        gen.reactiveResponseType.takeIf { it.isPresent }?.let { genTask.reactiveResponseType.set(it) }
+        gen.explicitSecurityParameters.takeIf { it.isPresent }?.let { genTask.explicitSecurityParameters.set(it) }
+        gen.baseUriMode.takeIf { it.isPresent }?.let { genTask.baseUriMode.set(it) }
+        gen.defaultMediaTypes.takeIf { it.isPresent }?.let { genTask.defaultMediaTypes.set(it) }
+        gen.generatedAnnotation.takeIf { it.isPresent }?.let { genTask.generatedAnnotation.set(it) }
+        gen.alwaysUseResponseReturn.takeIf { it.isPresent }?.let { genTask.alwaysUseResponseReturn.set(it) }
+        gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
+        gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
+        gen.outputDir.takeIf { it.isPresent }?.let { genTask.outputDir.set(it) }
       }
 
-      allTask.dependsOn(genTask)
+      allTask.configure { it.dependsOn(genTask) }
     }
 
     project.afterEvaluate {
@@ -73,7 +73,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         val sourceSetName = gen.targetSourceSet.get()
 
         val sourceSets = project.extensions.getByName("sourceSets") as SourceSetContainer
-        sourceSets.getByName(sourceSetName).java.srcDir(genTask.get().outputDir)
+        sourceSets.getByName(sourceSetName).java.srcDir(genTask)
       }
     }
   }

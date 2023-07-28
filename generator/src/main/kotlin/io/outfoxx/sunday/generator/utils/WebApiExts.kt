@@ -110,7 +110,7 @@ val EncodesModel.encodes: DomainElement get() = this.encodes()
 val Annotable.annotations: Annotations get() = this.annotations()
 
 //
-val BaseUnit.allUnits: List<BaseUnit> get() = references.flatMap { it.allUnits }.plus(this)
+val BaseUnit.allUnits: Set<BaseUnit> get() = references.flatMap { it.allUnits }.plus(this).toSet()
 
 //
 val Document.api: WebApi get() = this.encodes as WebApi
