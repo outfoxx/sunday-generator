@@ -19,17 +19,14 @@ package io.outfoxx.sunday.generator.typescript
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Array Types Test")
 class RamlArrayTypesTest {
 
@@ -45,23 +42,23 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
-      
+
           arrayOfStrings: Array<string>;
-      
+
           arrayOfNullableStrings: Array<string | null>;
-      
+
           nullableArrayOfStrings: Array<string> | null;
-      
+
           nullableArrayOfNullableStrings: Array<string | null> | null;
-      
+
           declaredArrayOfStrings: Array<string>;
-      
+
           declaredArrayOfNullableStrings: Array<string | null>;
-      
+
         }
-      
+
         export class Test implements TestSpec {
 
           arrayOfStrings: Array<string>;
@@ -88,13 +85,13 @@ class RamlArrayTypesTest {
           copy(changes: Partial<TestSpec>): Test {
             return new Test(Object.assign({}, this, changes));
           }
-      
+
           toString(): string {
             return `Test(arrayOfStrings='${'$'}{this.arrayOfStrings}', arrayOfNullableStrings='${'$'}{this.arrayOfNullableStrings}', nullableArrayOfStrings='${'$'}{this.nullableArrayOfStrings}', nullableArrayOfNullableStrings='${'$'}{this.nullableArrayOfNullableStrings}', declaredArrayOfStrings='${'$'}{this.declaredArrayOfStrings}', declaredArrayOfNullableStrings='${'$'}{this.declaredArrayOfNullableStrings}')`;
           }
-      
+
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -115,19 +112,19 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-        
+
         export interface TestSpec {
-      
+
           implicit: Array<string>;
-      
+
           unspecified: Array<string>;
-      
+
           nonUnique: Array<string>;
-      
+
           unique: Set<string>;
-      
+
         }
-      
+
         export class Test implements TestSpec {
 
           implicit: Array<string>;
@@ -148,13 +145,13 @@ class RamlArrayTypesTest {
           copy(changes: Partial<TestSpec>): Test {
             return new Test(Object.assign({}, this, changes));
           }
-      
+
           toString(): string {
             return `Test(implicit='${'$'}{this.implicit}', unspecified='${'$'}{this.unspecified}', nonUnique='${'$'}{this.nonUnique}', unique='${'$'}{this.unique}')`;
           }
-      
+
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
@@ -175,15 +172,15 @@ class RamlArrayTypesTest {
 
     assertEquals(
       """
-      
+
         export interface TestSpec {
-      
+
           binary: ArrayBuffer;
-      
+
           nullableBinary: ArrayBuffer | null;
-      
+
         }
-      
+
         export class Test implements TestSpec {
 
           binary: ArrayBuffer;
@@ -198,13 +195,13 @@ class RamlArrayTypesTest {
           copy(changes: Partial<TestSpec>): Test {
             return new Test(Object.assign({}, this, changes));
           }
-      
+
           toString(): string {
             return `Test(binary='${'$'}{this.binary}', nullableBinary='${'$'}{this.nullableBinary}')`;
           }
-      
+
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)

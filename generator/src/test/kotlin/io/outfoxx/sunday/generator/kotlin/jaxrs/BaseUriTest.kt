@@ -21,19 +21,18 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class)
+@KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Base URI Test")
 class BaseUriTest {
 
@@ -59,13 +58,13 @@ class BaseUriTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
         import kotlin.String
-        
+
         @Path(value = "http://master.sbx.example.com/api/1")
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -108,13 +107,13 @@ class BaseUriTest {
     assertEquals(
       """
         package io.test.service
-        
+
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
         import javax.ws.rs.core.Response
-        
+
         @Path(value = "/api/1")
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])

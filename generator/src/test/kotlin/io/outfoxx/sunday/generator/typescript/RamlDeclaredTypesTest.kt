@@ -21,19 +21,16 @@ import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class)
+@TypeScriptTest
 @DisplayName("[TypeScript] [RAML] Declared Types Test")
 class RamlDeclaredTypesTest {
 
@@ -68,14 +65,14 @@ class RamlDeclaredTypesTest {
     assertEquals(
       """
         import {Test as Test_, TestSpec as TestSpec_} from './test/client/test';
-        
-        
+
+
         export interface TestSpec extends TestSpec_ {
 
           value2: string;
 
         }
-        
+
         export class Test extends Test_ implements TestSpec {
 
           value2: string;
@@ -94,7 +91,7 @@ class RamlDeclaredTypesTest {
           }
 
         }
-      
+
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)

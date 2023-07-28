@@ -19,17 +19,14 @@ package io.outfoxx.sunday.generator.swift
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
-import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
-@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class)
+@SwiftTest
 @DisplayName("[Swift] [RAML] Array Types Test")
 class RamlArrayTypesTest {
 
@@ -162,7 +159,7 @@ class RamlArrayTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
@@ -254,7 +251,7 @@ class RamlArrayTypesTest {
           }
 
         }
-        
+
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
