@@ -161,7 +161,7 @@ configure(moduleNames.map { project(it) }) {
   tasks.named<DokkaTask>("dokkaJavadoc") {
     failOnWarning.set(true)
     suppressObviousFunctions.set(false)
-    outputDirectory.set(tasks.named<Javadoc>("javadoc").get().destinationDir)
+    outputDirectory.set(layout.dir(tasks.named<Javadoc>("javadoc").map { it.destinationDir!! }))
   }
 
   tasks.named<Javadoc>("javadoc").configure {
