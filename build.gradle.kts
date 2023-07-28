@@ -104,6 +104,18 @@ configure(moduleNames.map { project(it) }) {
     finalizedBy("jacocoTestReport")
   }
 
+  //
+  // ANALYSIS
+  //
+
+  sonar {
+    properties {
+      property(
+        "sonar.coverage.jacoco.xmlReportPaths",
+        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
+      )
+    }
+  }
 
   //
   // CHECKS
@@ -206,26 +218,6 @@ tasks {
     }
   }
 
-  //
-  // ANALYSIS
-  //
-
-  sonarqube {
-    properties {
-      property("sonar.sources", "src/main")
-      property("sonar.tests", "src/test")
-      property("sonar.kotlin.detekt.reportPaths", "${projectDir}/build/reports/detekt/detekt.xml")
-      property("sonar.kotlin.ktlint.reportPaths", "${projectDir}/build/reports/ktlint/main-lint.xml")
-      property("sonar.junit.reportPaths", "build/test-results/test")
-      property("sonar.jacoco.reportPath", "")
-      property("sonar.jacoco.reportPaths", "")
-      property(
-        "sonar.coverage.jacoco.xmlReportPaths",
-        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
-      )
-    }
-  }
-
 }
 
 
@@ -233,7 +225,7 @@ tasks {
 // ANALYSIS
 //
 
-sonarqube {
+sonar {
   properties {
     property("sonar.projectName", "sunday-generator")
     property("sonar.projectKey", "outfoxx_sunday-generator")
