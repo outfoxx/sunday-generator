@@ -155,7 +155,8 @@ open class SundayGenerate
 
   @TaskAction
   fun generate() {
-    println("Includes: ${includes.orNull?.files ?: "none"}")
+    logger.debug("Source: {}", source.files.joinToString())
+    logger.debug("Includes: {}", includes.orNull?.files?.joinToString() ?: "none")
 
     val mode = this.mode.get()
     val outputDirFile = outputDir.get().asFile
