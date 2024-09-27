@@ -246,7 +246,7 @@ class KotlinJAXRSGenerator(
       functionBuilder.addModifiers(SUSPEND)
     }
 
-    val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods
+    val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true
     val isFlow = operation.hasAnnotation(EventStream, generationMode) && options.coroutineServiceMethods
 
     val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveDefault
@@ -263,7 +263,7 @@ class KotlinJAXRSGenerator(
       return UNIT
     }
 
-    if (isSSE) {
+    if (isSSE && !isFlow) {
 
       // Ensure SSE "messages" are resolved and therefore defined
       if (body is UnionShape) {
@@ -298,7 +298,13 @@ class KotlinJAXRSGenerator(
     when (operation.findStringAnnotation(EventStream, generationMode)) {
       "simple" -> {
         elementTypeAnnotations.forEach { functionBuilder.addAnnotation(it) }
-        return FLOW.parameterizedBy(returnTypeName)
+        return FLOW.parameterizedBy(
+          when {
+            isSSE && generationMode == Client -> jaxRsTypes.sseInboundEvent
+            isSSE && generationMode == Server -> jaxRsTypes.sseOutboundEvent
+            else -> returnTypeName
+          }
+        )
       }
 
       "discriminated" -> {

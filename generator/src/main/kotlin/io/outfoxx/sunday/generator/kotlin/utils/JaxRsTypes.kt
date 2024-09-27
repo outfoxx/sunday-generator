@@ -43,6 +43,8 @@ class JaxRsTypes(basePackage: String) {
   val sse = ClassName.bestGuess("$basePackage.ws.rs.sse.Sse")
   val sseEventSink = ClassName.bestGuess("$basePackage.ws.rs.sse.SseEventSink")
   val sseEventSource = ClassName.bestGuess("$basePackage.ws.rs.sse.SseEventSource")
+  val sseInboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.InboundSseEvent")
+  val sseOutboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.OutboundSseEvent")
 
   fun httpMethod(methodName: String) =
     when (methodName.uppercase()) {

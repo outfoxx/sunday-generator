@@ -284,7 +284,7 @@ class RequestCoroutineMethodsTest {
 
   @Test
   fun `test event coroutines method generation in server mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
@@ -320,6 +320,7 @@ class RequestCoroutineMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.sse.OutboundSseEvent
         import kotlin.Any
         import kotlinx.coroutines.flow.Flow
 
@@ -335,6 +336,11 @@ class RequestCoroutineMethodsTest {
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
           public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
         }
 
       """.trimIndent(),
@@ -347,7 +353,7 @@ class RequestCoroutineMethodsTest {
 
   @Test
   fun `test event coroutines method generation in client mode`(
-    @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
@@ -383,6 +389,7 @@ class RequestCoroutineMethodsTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
+        import javax.ws.rs.sse.InboundSseEvent
         import kotlin.Any
         import kotlinx.coroutines.flow.Flow
 
@@ -398,6 +405,11 @@ class RequestCoroutineMethodsTest {
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
           public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
         }
 
       """.trimIndent(),

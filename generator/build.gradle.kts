@@ -82,6 +82,12 @@ dependencies {
   testImplementation("com.google.jimfs:jimfs:$jimfsVersion")
 }
 
+tasks {
+  javadoc {
+    include("io/outfoxx/**")
+  }
+}
+
 publishing {
   publications {
     create<MavenPublication>("generator") {

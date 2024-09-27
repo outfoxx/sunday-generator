@@ -1,0 +1,57 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Test1:
+    type: object
+    properties:
+      type: string
+      value: string
+
+  Test2:
+    type: object
+    discriminatorValue: test2
+    properties:
+      value: string
+
+  Test3:
+    type: object
+    discriminatorValue: t3
+    properties:
+      value: string
+
+/test1:
+  get:
+    displayName: fetchEventsSimple
+    (sunday.eventStream): simple
+    responses:
+      200:
+        body:
+          text/event-stream:
+            type: Test1
+
+/test2:
+  get:
+    displayName: fetchEventsDiscriminated
+    (sunday.eventStream): discriminated
+    responses:
+      200:
+        body:
+          text/event-stream:
+            type: Test1 | Test2 | Test3
+
+/test3:
+  get:
+    displayName: fetchEventsSimpleSse
+    (sunday.eventStream): simple
+    (sunday.sse): true
+    responses:
+      200:
+        body:
+          text/event-stream:
+            type: Test1
