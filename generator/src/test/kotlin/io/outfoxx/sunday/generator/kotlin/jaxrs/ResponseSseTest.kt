@@ -61,6 +61,7 @@ class ResponseSseTest {
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
         import javax.ws.rs.core.Context
+        import javax.ws.rs.core.Response
         import javax.ws.rs.sse.Sse
         import javax.ws.rs.sse.SseEventSink
         import kotlin.Unit
@@ -71,6 +72,14 @@ class ResponseSseTest {
           @GET
           @Path(value = "/tests")
           public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+
+          @GET
+          @Path(value = "/tests/server")
+          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+
+          @GET
+          @Path(value = "/tests/client")
+          public fun fetchEventsClient(): Response
         }
 
       """.trimIndent(),
@@ -104,6 +113,7 @@ class ResponseSseTest {
       """
         package io.test.service
 
+        import io.test.Test
         import javax.ws.rs.Consumes
         import javax.ws.rs.GET
         import javax.ws.rs.Path
@@ -116,6 +126,14 @@ class ResponseSseTest {
           @GET
           @Path(value = "/tests")
           public fun fetchEvents(): SseEventSource
+
+          @GET
+          @Path(value = "/tests/server")
+          public fun fetchEventsServer(): Test
+
+          @GET
+          @Path(value = "/tests/client")
+          public fun fetchEventsClient(): SseEventSource
         }
 
       """.trimIndent(),
