@@ -20,3 +20,21 @@ types:
     responses:
       200:
         body: Test
+
+/tests/server:
+  get:
+    displayName: fetchEventsServer
+    (sunday.sse:server): true
+    responses:
+      200:
+        body: Test
+
+
+/tests/client:
+  get:
+    displayName: fetchEventsClient
+    (sunday.sse:client): true
+    responses:
+      200:
+        body: Test
+

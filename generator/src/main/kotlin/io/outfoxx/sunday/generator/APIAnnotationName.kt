@@ -65,7 +65,7 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   // JAX-RS
   Asynchronous("asynchronous", false),
   Reactive("reactive", false),
-  SSE("sse", false),
+  SSE("sse", true),
   JsonBody("jsonBody", true),
 
   ;
