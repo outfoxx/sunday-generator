@@ -557,4 +557,69 @@ class RamlObjectTypesTest {
       },
     )
   }
+
+  @Test
+  fun `test generated class with recursive property`(
+    @ResourceUri("raml/type-gen/types/obj-recursive.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.collections.List
+
+        public class Test(
+          public val parent: Test?,
+          public val other: Test? = null,
+          public val children: List<Test>,
+        ) {
+          public fun copy(
+            parent: Test? = null,
+            other: Test? = null,
+            children: List<Test>? = null,
+          ) = Test(parent ?: this.parent, other ?: this.other, children ?: this.children)
+
+          public override fun hashCode(): Int {
+            var result = 1
+            result = 31 * result + (parent?.hashCode() ?: 0)
+            result = 31 * result + (other?.hashCode() ?: 0)
+            result = 31 * result + children.hashCode()
+            return result
+          }
+
+          public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Test
+
+            if (parent != other.parent) return false
+            if (other != other.other) return false
+            if (children != other.children) return false
+
+            return true
+          }
+
+          public override fun toString() = ""${'"'}
+          |Test(parent='${'$'}parent',
+          | other='${'$'}other',
+          | children='${'$'}children')
+          ""${'"'}.trimMargin()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }
