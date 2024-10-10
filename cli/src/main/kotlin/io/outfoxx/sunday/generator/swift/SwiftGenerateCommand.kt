@@ -24,6 +24,7 @@ import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
+import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.DefaultIdentifiableTypes
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
@@ -32,6 +33,7 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
 
     val defaultOptions = setOf(
       AddGeneratedHeader,
+      DefaultIdentifiableTypes,
     )
   }
 
