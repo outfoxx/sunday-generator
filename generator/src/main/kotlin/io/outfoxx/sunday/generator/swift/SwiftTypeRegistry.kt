@@ -151,6 +151,7 @@ class SwiftTypeRegistry(
 
   enum class Option {
     AddGeneratedHeader,
+    DefaultIdentifiableTypes,
   }
 
   private val typeBuilders = mutableMapOf<DeclaredTypeName, TypeSpec.Builder>()
@@ -1358,6 +1359,13 @@ class SwiftTypeRegistry(
       typeBuilder.associatedExtensions.add(patchOpExt)
     }
 
+    if (
+      options.contains(Option.DefaultIdentifiableTypes) &&
+      localDeclaredProperties.any { it.name == IDENTIFIABLE_ID_PROP_NAME }
+    ) {
+      typeBuilder.addSuperType(IDENTIFIABLE)
+    }
+
     codingKeysType?.let { typeBuilder.addType(it) }
 
     inheritingTypes.forEach { inheritingType ->
@@ -1564,6 +1572,7 @@ class SwiftTypeRegistry(
 
   companion object {
 
+    private const val IDENTIFIABLE_ID_PROP_NAME = "id"
     private const val DESCRIPTION_PROP_NAME = "debugDescription"
     private const val ANY_REF_NAME = "AnyRef"
     private const val CODING_KEYS_NAME = "CodingKeys"
@@ -1572,6 +1581,8 @@ class SwiftTypeRegistry(
     private val ANY_PATCH_OP = typeName("$SUNDAY_MODULE.AnyPatchOp")
     private val UPDATE_OP = typeName("$SUNDAY_MODULE.UpdateOp")
     private val PATCH_OP = typeName("$SUNDAY_MODULE.PatchOp")
+
+    private val IDENTIFIABLE = typeName("Swift.Identifiable")
   }
 }
 

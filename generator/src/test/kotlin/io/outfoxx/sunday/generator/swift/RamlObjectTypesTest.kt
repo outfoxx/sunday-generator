@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.DefaultIdentifiableTypes
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
@@ -778,6 +779,102 @@ class RamlObjectTypesTest {
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test default identifiable generation`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/types/obj-with-id.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf(SwiftTypeRegistry.Option.DefaultIdentifiableTypes))
+
+    val types = generateTypes(testUri, typeRegistry, compiler)
+    val typeSpec = findType("Test", types)
+    val typeSpec2 = findType("Test2", types)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Test : Codable, CustomDebugStringConvertible, Identifiable {
+
+          public var id: String
+          public var debugDescription: String {
+            return DescriptionBuilder(Test.self)
+                .add(id, named: "id")
+                .build()
+          }
+
+          public init(id: String) {
+            self.id = id
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try container.decode(String.self, forKey: .id)
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.id, forKey: .id)
+          }
+
+          public func withId(id: String) -> Test {
+            return Test(id: id)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case id = "id"
+
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      },
+    )
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Test2 : Test {
+
+          public override var debugDescription: String {
+            return DescriptionBuilder(Test2.self)
+                .add(id, named: "id")
+                .build()
+          }
+
+          public override init(id: String) {
+            super.init(id: id)
+          }
+
+          public required init(from decoder: Decoder) throws {
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+          }
+
+          public override func withId(id: String) -> Test2 {
+            return Test2(id: id)
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec2)
           .writeTo(this)
       },
     )
