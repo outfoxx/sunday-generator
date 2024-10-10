@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.common
 
 import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.domain.RecursiveShape
 import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import io.outfoxx.sunday.generator.utils.ShapeVisitor
@@ -27,6 +28,7 @@ import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.properties
 import io.outfoxx.sunday.generator.utils.range
+import io.outfoxx.sunday.generator.utils.value
 
 class ShapeIndex(
   private val inheritedMap: Map<String, Set<String>>,
@@ -76,7 +78,12 @@ class ShapeIndex(
       if (shape is NodeShape) {
         orderOfProperties[shapeId] = shape.nonPatternProperties.mapNotNull { it.name }
 
-        shape.properties.forEach { add(dereference(it.range)) }
+        shape.properties.forEach {
+          val dref = dereference(it.range)
+          if (dref.id != shapeId) {
+            add(dref)
+          }
+        }
       }
 
       inheritedMap.getOrPut(shapeId) { mutableSetOf() }
@@ -135,6 +142,9 @@ class ShapeIndex(
   }
 
   fun findReferenceTargetId(shape: Shape): String? {
+    if (shape is RecursiveShape) {
+      return shape.fixpoint().value
+    }
     return referenceMap[shape.id]
   }
 

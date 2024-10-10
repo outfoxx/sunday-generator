@@ -435,4 +435,68 @@ class RamlObjectTypesTest {
       },
     )
   }
+
+  @Test
+  fun `test generated class with recursive property`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/types/obj-recursive.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+        export interface TestSpec {
+
+          parent: Test | null;
+
+          other?: Test;
+
+          children: Array<Test>;
+
+        }
+
+        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+        export class Test implements TestSpec {
+
+          @JsonProperty({required: true})
+          @JsonClassType({type: () => [Test]})
+          parent: Test | null;
+
+          @JsonProperty()
+          @JsonClassType({type: () => [Test]})
+          other: Test | undefined;
+
+          @JsonProperty({required: true})
+          @JsonClassType({type: () => [Array, [Test]]})
+          children: Array<Test>;
+
+          constructor(init: TestSpec) {
+            this.parent = init.parent;
+            this.other = init.other;
+            this.children = init.children;
+          }
+
+          copy(changes: Partial<TestSpec>): Test {
+            return new Test(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Test(parent='${'$'}{this.parent}', other='${'$'}{this.other}', children='${'$'}{this.children}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeModSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }
