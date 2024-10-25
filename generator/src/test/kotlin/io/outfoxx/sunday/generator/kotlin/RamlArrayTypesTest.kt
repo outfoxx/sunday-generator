@@ -138,13 +138,13 @@ class RamlArrayTypesTest {
             nullableArrayOfNullableStrings: List<String?>? = null,
             declaredArrayOfStrings: List<String>? = null,
             declaredArrayOfNullableStrings: List<String?>? = null,
-          ) = Test(arrayOfStrings ?: this.arrayOfStrings, arrayOfNullableStrings ?:
+          ): Test = Test(arrayOfStrings ?: this.arrayOfStrings, arrayOfNullableStrings ?:
               this.arrayOfNullableStrings, nullableArrayOfStrings ?: this.nullableArrayOfStrings,
               nullableArrayOfNullableStrings ?: this.nullableArrayOfNullableStrings, declaredArrayOfStrings
               ?: this.declaredArrayOfStrings, declaredArrayOfNullableStrings ?:
               this.declaredArrayOfNullableStrings)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + arrayOfStrings.hashCode()
             result = 31 * result + arrayOfNullableStrings.hashCode()
@@ -155,7 +155,7 @@ class RamlArrayTypesTest {
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -171,7 +171,7 @@ class RamlArrayTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(arrayOfStrings='${'$'}arrayOfStrings',
           | arrayOfNullableStrings='${'$'}arrayOfNullableStrings',
           | nullableArrayOfStrings='${'$'}nullableArrayOfStrings',
@@ -220,10 +220,10 @@ class RamlArrayTypesTest {
             unspecified: List<String>? = null,
             nonUnique: List<String>? = null,
             unique: Set<String>? = null,
-          ) = Test(implicit ?: this.implicit, unspecified ?: this.unspecified, nonUnique ?: this.nonUnique,
-              unique ?: this.unique)
+          ): Test = Test(implicit ?: this.implicit, unspecified ?: this.unspecified, nonUnique ?:
+              this.nonUnique, unique ?: this.unique)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + implicit.hashCode()
             result = 31 * result + unspecified.hashCode()
@@ -232,7 +232,7 @@ class RamlArrayTypesTest {
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -246,7 +246,7 @@ class RamlArrayTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(implicit='${'$'}implicit',
           | unspecified='${'$'}unspecified',
           | nonUnique='${'$'}nonUnique',
@@ -279,22 +279,23 @@ class RamlArrayTypesTest {
         import kotlin.Boolean
         import kotlin.ByteArray
         import kotlin.Int
+        import kotlin.String
 
         public class Test(
           public val binary: ByteArray,
           public val nullableBinary: ByteArray?,
         ) {
-          public fun copy(binary: ByteArray? = null, nullableBinary: ByteArray? = null) = Test(binary ?:
-              this.binary, nullableBinary ?: this.nullableBinary)
+          public fun copy(binary: ByteArray? = null, nullableBinary: ByteArray? = null): Test = Test(binary
+              ?: this.binary, nullableBinary ?: this.nullableBinary)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + binary.contentHashCode()
             result = 31 * result + (nullableBinary?.contentHashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -310,7 +311,7 @@ class RamlArrayTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(binary='${'$'}binary',
           | nullableBinary='${'$'}nullableBinary')
           ""${'"'}.trimMargin()

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
+import com.github.ajalt.clikt.core.parse
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
 import org.hamcrest.MatcherAssert.assertThat

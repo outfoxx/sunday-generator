@@ -1,0 +1,84 @@
+[versions]
+# @keep language version
+javaLanguage = "21"
+# @keep language version
+kotlinLanguage = "1.9"
+##
+amfClient = "5.4.0"
+clikt = "5.0.1"
+dockerJava = "3.4.0"
+dokka = "1.9.0"
+# @pin
+githubRelease = "2.4.1"
+hamcrest = "3.0"
+jackson = "2.18.0"
+jakartaJaxrs = "4.0.0"
+javaxJaxrs = "2.0.2.Final"
+jcolor = "5.5.1"
+jib = "3.4.4"
+jimfs = "1.3.0"
+junit = "5.11.3"
+kotlin = "2.0.20"
+kotlinCompileTesting = "1.6.0"
+kotlinPoet = "1.18.1"
+licenser = "1.2.0"
+mutiny = "2.6.2"
+nexusPublish = "2.0.0"
+pluginPublish = "1.3.0"
+rxJava2 = "2.2.21"
+rxJava3 = "3.1.9"
+shadow = "8.3.3"
+slf4j = "2.1.0-alpha1"
+sonarqube = "5.1.0.4882"
+sundayKt = "1.0.0-beta.24"
+swiftPoet = "1.6.5"
+typeScriptPoet = "1.1.2"
+validation = "2.0.1.Final"
+versionCatalogUpdatePlugin = "0.8.5"
+versions = "0.51.0"
+zalandoProblem = "0.27.1"
+# @pin jacoco plugin tool version
+jacocoTool = "0.8.12"
+
+[plugins]
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+githubRelease = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+licenser = { id = "dev.yumi.gradle.licenser", version.ref = "licenser" }
+nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }
+pluginPublish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdatePlugin" }
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
+
+[libraries]
+amfClient = { module = "com.github.amlorg:amf-api-contract_2.12", version.ref = "amfClient" }
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+cliktMarkdown = { module = "com.github.ajalt.clikt:clikt-markdown", version.ref = "clikt" }
+dockerJava = { module = "com.github.docker-java:docker-java-core", version.ref = "dockerJava" }
+dockerJavaTransport = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "dockerJava" }
+hamcrest = { module = "org.hamcrest:hamcrest-library", version.ref = "hamcrest" }
+jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jakartaJaxrs = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakartaJaxrs" }
+javaxJaxrs = { module = "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec", version.ref = "javaxJaxrs" }
+jcolor = { module = "com.diogonunes:JColor", version.ref = "jcolor" }
+jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
+junit = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junitEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junitParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+kotlinCompileTesting = { module = "com.github.tschuchortdev:kotlin-compile-testing", version.ref = "kotlinCompileTesting" }
+kotlinPoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinPoet" }
+mutiny = { module = "io.smallrye.reactive:mutiny", version.ref = "mutiny" }
+rxJava2 = { module = "io.reactivex.rxjava2:rxjava", version.ref = "rxJava2" }
+rxJava3 = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxJava3" }
+slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+sundayKt = { module = "io.outfoxx.sunday:sunday-core", version.ref = "sundayKt" }
+swiftPoet = { module = "io.outfoxx:swiftpoet", version.ref = "swiftPoet" }
+typeScriptPoet = { module = "io.outfoxx:typescriptpoet", version.ref = "typeScriptPoet" }
+validation = { module = "javax.validation:validation-api", version.ref = "validation" }
+zalandoProblem = { module = "org.zalando:problem", version.ref = "zalandoProblem" }
+
+[bundles]
+clikt = ["clikt", "cliktMarkdown"]

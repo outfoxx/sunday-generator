@@ -157,14 +157,14 @@ class RamlDiscriminatedTypesTest {
         public abstract class Parent {
           public abstract val type: String
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             return true
           }
 
-          public override fun toString() = ${'"'}""Parent()""${'"'}
+          override fun toString(): String = ${'"'}""Parent()""${'"'}
         }
 
       """.trimIndent(),
@@ -192,20 +192,20 @@ class RamlDiscriminatedTypesTest {
           public val `value`: String? = null,
           public val value1: Int,
         ) : Parent() {
-          public override val type: String
+          override val type: String
             get() = "Child1"
 
-          public fun copy(`value`: String? = null, value1: Int? = null) = Child1(value ?: this.value, value1
-              ?: this.value1)
+          public fun copy(`value`: String? = null, value1: Int? = null): Child1 = Child1(value ?:
+              this.value, value1 ?: this.value1)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             result = 31 * result + value1.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -217,7 +217,7 @@ class RamlDiscriminatedTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Child1(value='${'$'}value',
           | value1='${'$'}value1')
           ""${'"'}.trimMargin()
@@ -248,20 +248,20 @@ class RamlDiscriminatedTypesTest {
           public val `value`: String? = null,
           public val value2: Int,
         ) : Parent() {
-          public override val type: String
+          override val type: String
             get() = "child2"
 
-          public fun copy(`value`: String? = null, value2: Int? = null) = Child2(value ?: this.value, value2
-              ?: this.value2)
+          public fun copy(`value`: String? = null, value2: Int? = null): Child2 = Child2(value ?:
+              this.value, value2 ?: this.value2)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             result = 31 * result + value2.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -273,7 +273,7 @@ class RamlDiscriminatedTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Child2(value='${'$'}value',
           | value2='${'$'}value2')
           ""${'"'}.trimMargin()
@@ -391,6 +391,7 @@ class RamlDiscriminatedTypesTest {
         import com.fasterxml.jackson.`annotation`.JsonTypeInfo
         import kotlin.Any
         import kotlin.Boolean
+        import kotlin.String
 
         @JsonTypeInfo(
           use = JsonTypeInfo.Id.NAME,
@@ -404,14 +405,14 @@ class RamlDiscriminatedTypesTest {
         public abstract class Parent {
           public abstract val type: Type
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             return true
           }
 
-          public override fun toString() = ${'"'}""Parent()""${'"'}
+          override fun toString(): String = ${'"'}""Parent()""${'"'}
         }
 
       """.trimIndent(),
@@ -438,18 +439,18 @@ class RamlDiscriminatedTypesTest {
         public class Child1(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: Type
+          override val type: Type
             get() = Type.Child1
 
-          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -460,7 +461,7 @@ class RamlDiscriminatedTypesTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -487,18 +488,18 @@ class RamlDiscriminatedTypesTest {
         public class Child2(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: Type
+          override val type: Type
             get() = Type.Child2
 
-          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -509,7 +510,7 @@ class RamlDiscriminatedTypesTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),

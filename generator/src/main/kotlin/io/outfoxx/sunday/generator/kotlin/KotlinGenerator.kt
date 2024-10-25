@@ -669,16 +669,16 @@ abstract class KotlinGenerator(
           .toSet()
 
       val nullifyFunctionCodeBlock =
-        if (supportedReactiveReturnTypes.contains(function.returnType?.rawType?.copy(nullable = false))) {
+        if (supportedReactiveReturnTypes.contains(function.returnType.rawType.copy(nullable = false))) {
           createReactiveNullifyMethodCode(function, nullifyStatuses, nullifyProblemTypeNames)
         } else {
           createNullifyMethodCode(function, nullifyStatuses, nullifyProblemTypeNames)
         }
 
-      val returnType = function.returnType?.copy(nullable = false)
+      val returnType = function.returnType.copy(nullable = false)
       val nullableReturnType =
         when {
-          returnType?.rawType == RESULT_RESPONSE ->
+          returnType.rawType == RESULT_RESPONSE ->
             returnType.copy(nullable = true)
 
           returnType is ParameterizedTypeName && returnType.typeArguments.size == 1 -> {
@@ -695,7 +695,7 @@ abstract class KotlinGenerator(
             returnType.rawType.parameterizedBy(nullableElementType)
           }
 
-          else -> returnType?.copy(nullable = true)
+          else -> returnType.copy(nullable = true)
         }
 
       typeBuilder.addFunction(
@@ -714,7 +714,7 @@ abstract class KotlinGenerator(
             if (copyAnnotaitons) {
               addAnnotations(function.annotations)
             }
-            nullableReturnType?.let {
+            nullableReturnType.let {
               returns(it)
             }
           }
@@ -790,7 +790,7 @@ abstract class KotlinGenerator(
       .indent().add("\n")
 
     val nullLiteral =
-      when (function.returnType?.rawType?.copy(nullable = false)) {
+      when (function.returnType.rawType.copy(nullable = false)) {
 
         CompletionStage::class.asTypeName() -> {
           codeBuilder.add(".exceptionally { x ->").indent().add("\n")

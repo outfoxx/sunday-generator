@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator
 
 import amf.core.client.platform.model.document.Document
+import com.github.ajalt.clikt.core.parse
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerator

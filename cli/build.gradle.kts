@@ -1,52 +1,52 @@
-import com.github.jengelman.gradle.plugins.shadow.ShadowExtension
 
 plugins {
   application
-  id("com.google.cloud.tools.jib")
-  id("com.github.johnrengelman.shadow")
+  alias(libs.plugins.jib)
+  alias(libs.plugins.shadow)
 }
-
-val cliktVersion: String by project
-val slf4jVersion: String by project
-
-val junitVersion: String by project
-val hamcrestVersion: String by project
 
 dependencies {
 
   implementation(project(path = ":generator"))
 
-  implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
-  implementation("org.slf4j:slf4j-jdk14:$slf4jVersion")
+  implementation(libs.bundles.clikt)
+  implementation(libs.slf4j)
 
   //
   // TESTING
   //
 
-  testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+  testImplementation(libs.junit)
+  testImplementation(libs.junitParams)
+  testRuntimeOnly(libs.junitEngine)
 
-  testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
+  testImplementation(libs.hamcrest)
 }
 
 application {
   applicationName = "sunday-generator"
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  applicationDefaultJvmArgs = listOf("--add-opens", "java.base/java.lang=ALL-UNNAMED")
 }
 
 tasks {
   shadowJar.configure {
+    manifest {
+      attributes["Implementation-Title"] = "Sunday Generator"
+      attributes["Implementation-Version"] = project.version
+    }
     dependsOn(assembleDist)
     archiveClassifier.set("")
-    minimize()
+    minimize {
+      exclude(dependency("com.github.ajalt.clikt:.*:.*"))
+    }
   }
 }
 
 publishing {
   publications {
     create<MavenPublication>("cli") {
-      the<ShadowExtension>().component(this)
+      components.named("shadow")
       artifact(tasks.named("sourcesJar"))
       artifact(tasks.named("javadocJar"))
 
@@ -107,7 +107,7 @@ jib {
     }
   }
   from {
-    image = "openjdk:17-jdk"
+    image = "eclipse-temurin:21-jre-noble"
   }
   containerizingMode = "packaged"
 }

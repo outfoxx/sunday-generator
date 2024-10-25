@@ -159,7 +159,7 @@ class KotlinJAXRSGenerator(
 
           Options.BaseUriMode.PATH_ONLY ->
             try {
-              URL(expandedBaseURL).path
+              URI(expandedBaseURL).path
             } catch (ignored: Throwable) {
               expandedBaseURL.replace("//", "").dropWhile { it != '/' }
             }

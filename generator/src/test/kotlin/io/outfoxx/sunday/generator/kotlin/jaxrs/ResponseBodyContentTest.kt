@@ -350,14 +350,13 @@ class ResponseBodyContentTest {
         import javax.ws.rs.GET
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
-        import kotlin.Unit
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Unit
+          public fun fetchTest()
         }
 
       """.trimIndent(),

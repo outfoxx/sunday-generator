@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
+import com.github.ajalt.clikt.core.parse
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerateCommand
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo

@@ -64,18 +64,17 @@ class ResponseSseTest {
         import javax.ws.rs.core.Response
         import javax.ws.rs.sse.Sse
         import javax.ws.rs.sse.SseEventSink
-        import kotlin.Unit
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
           @Path(value = "/tests/server")
-          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
           @Path(value = "/tests/client")

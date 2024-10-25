@@ -1379,12 +1379,12 @@ class RamlTypeAnnotationsTest {
         extension AnyPatchOp where Value == Test {
 
           public static func merge(
-            string: Sunday.UpdateOp<Swift.String>? = .none,
-            int: Sunday.UpdateOp<Swift.Int>? = .none,
-            bool: Sunday.UpdateOp<Swift.Bool>? = .none,
-            nullable: Sunday.PatchOp<Swift.String>? = .none,
-            optional: Sunday.UpdateOp<Swift.String>? = .none,
-            nullableOptional: Sunday.PatchOp<Swift.String>? = .none
+            string: UpdateOp<String>? = .none,
+            int: UpdateOp<Int>? = .none,
+            bool: UpdateOp<Bool>? = .none,
+            nullable: PatchOp<String>? = .none,
+            optional: UpdateOp<String>? = .none,
+            nullableOptional: PatchOp<String>? = .none
           ) -> Self {
             Self.merge(Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
                 nullableOptional: nullableOptional))

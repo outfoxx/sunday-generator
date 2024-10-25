@@ -1,20 +1,20 @@
-import io.gitlab.arturbosch.detekt.Detekt
-import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+import dev.yumi.gradle.licenser.YumiLicenserGradleExtension
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.quiltmc.gradle.licenser.extension.QuiltLicenserGradleExtension
 
 plugins {
-  id("org.jetbrains.dokka")
-  id("com.github.breadmoirai.github-release")
-  id("org.sonarqube")
-  id("io.github.gradle-nexus.publish-plugin")
+  alias(libs.plugins.versions)
+  alias(libs.plugins.versionCatalogUpdate)
+  alias(libs.plugins.dokka)
+  alias(libs.plugins.githubRelease)
+  alias(libs.plugins.sonarqube)
+  alias(libs.plugins.nexusPublish)
 
-  kotlin("jvm") apply false
-  id("org.quiltmc.gradle.licenser") apply false
-  id("org.jmailen.kotlinter") apply false
-  id("io.gitlab.arturbosch.detekt") apply (false)
-  id("com.github.johnrengelman.shadow") apply false
+  alias(libs.plugins.kotlin) apply false
+  alias(libs.plugins.licenser) apply false
+  alias(libs.plugins.shadow) apply false
 }
 
 val ignoreCheckFailures = project.findProperty("ignoreCheckFailures")?.toString()?.toBoolean() ?: false
@@ -24,8 +24,8 @@ val moduleNames = listOf( "generator", "cli", "gradle-plugin")
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
-val kotlinVersion: String by project
-val javaVersion: String by project
+val javaVersion = libs.versions.javaLanguage.get()
+val kotlinVersion = libs.versions.kotlinLanguage.get()
 
 
 allprojects {
@@ -55,29 +55,25 @@ configure(moduleNames.map { project(it) }) {
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
   apply(plugin = "org.jetbrains.dokka")
-  apply(plugin = "org.quiltmc.gradle.licenser")
-  apply(plugin = "org.jmailen.kotlinter")
-  apply(plugin = "io.gitlab.arturbosch.detekt")
+  apply(plugin = "dev.yumi.gradle.licenser")
 
   //
   // COMPILE
   //
 
   configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    targetCompatibility = JavaVersion.toVersion(javaVersion)
 
     withSourcesJar()
     withJavadocJar()
   }
 
   tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-      kotlinOptions {
-        languageVersion = kotlinVersion
-        apiVersion = kotlinVersion
-      }
-      jvmTarget = javaVersion
+    compilerOptions{
+      apiVersion.set(KotlinVersion.fromVersion(kotlinVersion))
+      languageVersion.set(KotlinVersion.fromVersion(kotlinVersion))
+      jvmTarget.set(JvmTarget.fromTarget(javaVersion))
     }
   }
 
@@ -86,7 +82,7 @@ configure(moduleNames.map { project(it) }) {
   //
 
   configure<JacocoPluginExtension> {
-    toolVersion = "0.8.8"
+    toolVersion = rootProject.libs.versions.jacocoTool.get()
   }
 
   tasks.named<Test>("test").configure {
@@ -125,26 +121,9 @@ configure(moduleNames.map { project(it) }) {
   // CHECKS
   //
 
-  configure<QuiltLicenserGradleExtension> {
+  configure<YumiLicenserGradleExtension> {
     rule(file("${rootProject.layout.projectDirectory}/HEADER.txt"))
     include("**/*.kt")
-  }
-
-  configure<DetektExtension> {
-    source = files("src/main/kotlin")
-
-    config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
-    buildUponDefaultConfig = true
-    baseline = file("src/main/detekt/detekt-baseline.xml")
-    ignoreFailures = ignoreCheckFailures
-  }
-
-  tasks.withType<Detekt>().configureEach {
-    jvmTarget = javaVersion
-  }
-
-  configure<org.jmailen.gradle.kotlinter.KotlinterExtension> {
-    ignoreFailures = ignoreCheckFailures
   }
 
 
@@ -155,7 +134,7 @@ configure(moduleNames.map { project(it) }) {
   tasks.named<DokkaTask>("dokkaHtml") {
     failOnWarning.set(true)
     suppressObviousFunctions.set(false)
-    outputDirectory.set(file("$buildDir/dokka/${project.version}"))
+    outputDirectory.set(file("${layout.buildDirectory}/dokka/${project.version}"))
   }
 
   tasks.named<DokkaTask>("dokkaJavadoc") {
@@ -192,8 +171,8 @@ configure(moduleNames.map { project(it) }) {
 
 tasks {
   dokkaHtmlMultiModule.configure {
-    val docDir = buildDir.resolve("dokka")
-    val relDocDir = docDir.resolve(releaseVersion)
+    val docDir = layout.buildDirectory.dir("dokka")
+    val relDocDir = docDir.map { it.dir(releaseVersion) }
     outputDirectory.set(relDocDir)
     doLast {
       // Copy versioned sunday.raml
@@ -207,7 +186,7 @@ tasks {
       // and add docs in "current" directory
       if (releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())) {
         copy {
-          into(docDir.resolve("current"))
+          into(docDir.map { it.dir("current") })
           from(relDocDir) {
             include("**")
           }

@@ -20,7 +20,6 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
-import org.jetbrains.kotlin.incremental.mkdirsOrThrow
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -242,7 +241,7 @@ class GradlePluginTests {
     copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
 
     val includes = testProjectDir.resolve("src/main/sunday-includes")
-    includes.mkdirsOrThrow()
+    includes.mkdirs()
 
     val include = includes.resolve("include.raml")
     include.writeText(
