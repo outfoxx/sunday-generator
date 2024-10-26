@@ -17,142 +17,213 @@
 package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
-import io.outfoxx.sunday.generator.genError
 
-class JaxRsTypes(basePackage: String, name: String) {
-
-  val consumes = ClassName.bestGuess("$basePackage.ws.rs.Consumes")
-  val delete = ClassName.bestGuess("$basePackage.ws.rs.DELETE")
-  val defaultvalue = ClassName.bestGuess("$basePackage.ws.rs.DefaultValue")
-  val get = ClassName.bestGuess("$basePackage.ws.rs.GET")
-  val head = ClassName.bestGuess("$basePackage.ws.rs.HEAD")
-  val headerParam = ClassName.bestGuess("$basePackage.ws.rs.HeaderParam")
-  val options = ClassName.bestGuess("$basePackage.ws.rs.OPTIONS")
-  val patch = ClassName.bestGuess("$basePackage.ws.rs.PATCH")
-  val post = ClassName.bestGuess("$basePackage.ws.rs.POST")
-  val put = ClassName.bestGuess("$basePackage.ws.rs.PUT")
-  val path = ClassName.bestGuess("$basePackage.ws.rs.Path")
-  val pathParam = ClassName.bestGuess("$basePackage.ws.rs.PathParam")
-  val produces = ClassName.bestGuess("$basePackage.ws.rs.Produces")
-  val queryParam = ClassName.bestGuess("$basePackage.ws.rs.QueryParam")
-  val response = ClassName.bestGuess("$basePackage.ws.rs.core.Response")
-  val asyncResponse = ClassName.bestGuess("$basePackage.ws.rs.container.AsyncResponse")
-  val suspended = ClassName.bestGuess("$basePackage.ws.rs.container.Suspended")
-  val context = ClassName.bestGuess("$basePackage.ws.rs.core.Context")
-  val uriInfo = ClassName.bestGuess("$basePackage.ws.rs.core.UriInfo")
-  val sse = ClassName.bestGuess("$basePackage.ws.rs.sse.Sse")
-  val sseEventSink = ClassName.bestGuess("$basePackage.ws.rs.sse.SseEventSink")
-  val sseEventSource = ClassName.bestGuess("$basePackage.ws.rs.sse.SseEventSource")
-  val sseInboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.InboundSseEvent")
-  val sseOutboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.OutboundSseEvent")
-
-  // Quarkus-specific annotations
-  val restPath = ClassName.bestGuess("org.jboss.resteasy.reactive.RestPath")
-  val restQuery = ClassName.bestGuess("org.jboss.resteasy.reactive.RestQuery")
-  val restForm = ClassName.bestGuess("org.jboss.resteasy.reactive.RestForm")
-  val restHeader = ClassName.bestGuess("org.jboss.resteasy.reactive.RestHeader")
-  val restMatrix = ClassName.bestGuess("org.jboss.resteasy.reactive.RestMatrix")
-  val restCookie = ClassName.bestGuess("org.jboss.resteasy.reactive.RestCookie")
-  val separator = ClassName.bestGuess("org.jboss.resteasy.reactive.RestQuery.Separator")
-  val restStreamElementType = ClassName.bestGuess("org.jboss.resteasy.reactive.RestStreamElementType")
-  val responseStatus = ClassName.bestGuess("org.jboss.resteasy.reactive.ResponseStatus")
-  val responseHeader = ClassName.bestGuess("org.jboss.resteasy.reactive.ResponseHeader")
-  val cache = ClassName.bestGuess("org.jboss.resteasy.reactive.Cache")
-  val dateFormat = ClassName.bestGuess("org.jboss.resteasy.reactive.DateFormat")
-
-  fun httpMethod(methodName: String) =
-    when (methodName.uppercase()) {
-      "DELETE" -> delete
-      "GET" -> get
-      "HEAD" -> head
-      "OPTIONS" -> options
-      "POST" -> post
-      "PUT" -> put
-      "PATCH" -> patch
-      else -> genError("Unsupported HTTP method: $methodName")
-    }
+interface JaxRsTypes {
 
   companion object {
+    val JAVAX = StdJaxRsTypes("javax.ws.rs")
+    val JAKARTA = StdJaxRsTypes("jakarta.ws.rs")
+    val QUARKUS = Quarkus()
+  }
 
-    private val JAVAX_NAMES = mapOf(
-      "consumes" to "javax.ws.rs.Consumes",
-      "delete" to "javax.ws.rs.DELETE",
-      "defaultvalue" to "javax.ws.rs.DefaultValue",
-      "get" to "javax.ws.rs.GET",
-      "head" to "javax.ws.rs.HEAD",
-      "headerParam" to "javax.ws.rs.HeaderParam",
-      "options" to "javax.ws.rs.OPTIONS",
-      "patch" to "javax.ws.rs.PATCH",
-      "post" to "javax.ws.rs.POST",
-      "put" to "javax.ws.rs.PUT",
-      "path" to "javax.ws.rs.Path",
-      "pathParam" to "javax.ws.rs.PathParam",
-      "produces" to "javax.ws.rs.Produces",
-      "queryParam" to "javax.ws.rs.QueryParam",
-      "response" to "javax.ws.rs.core.Response",
-      "asyncResponse" to "javax.ws.rs.container.AsyncResponse",
-      "suspended" to "javax.ws.rs.container.Suspended",
-      "context" to "javax.ws.rs.core.Context",
-      "uriInfo" to "javax.ws.rs.core.UriInfo",
-      "sse" to "javax.ws.rs.sse.Sse",
-      "sseEventSink" to "javax.ws.rs.sse.SseEventSink",
-      "sseEventSource" to "javax.ws.rs.sse.SseEventSource",
-      "sseInboundEvent" to "javax.ws.rs.sse.InboundSseEvent",
-      "sseOutboundEvent" to "javax.ws.rs.sse.OutboundSseEvent"
-    )
+  enum class Method {
+    HEAD,
+    OPTIONS,
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+  }
 
-    private val JAKARTA_NAMES = mapOf(
-      "consumes" to "jakarta.ws.rs.Consumes",
-      "delete" to "jakarta.ws.rs.DELETE",
-      "defaultvalue" to "jakarta.ws.rs.DefaultValue",
-      "get" to "jakarta.ws.rs.GET",
-      "head" to "jakarta.ws.rs.HEAD",
-      "headerParam" to "jakarta.ws.rs.HeaderParam",
-      "options" to "jakarta.ws.rs.OPTIONS",
-      "patch" to "jakarta.ws.rs.PATCH",
-      "post" to "jakarta.ws.rs.POST",
-      "put" to "jakarta.ws.rs.PUT",
-      "path" to "jakarta.ws.rs.Path",
-      "pathParam" to "jakarta.ws.rs.PathParam",
-      "produces" to "jakarta.ws.rs.Produces",
-      "queryParam" to "jakarta.ws.rs.QueryParam",
-      "response" to "jakarta.ws.rs.core.Response",
-      "asyncResponse" to "jakarta.ws.rs.container.AsyncResponse",
-      "suspended" to "jakarta.ws.rs.container.Suspended",
-      "context" to "jakarta.ws.rs.core.Context",
-      "uriInfo" to "jakarta.ws.rs.core.UriInfo",
-      "sse" to "jakarta.ws.rs.sse.Sse",
-      "sseEventSink" to "jakarta.ws.rs.sse.SseEventSink",
-      "sseEventSource" to "jakarta.ws.rs.sse.SseEventSource",
-      "sseInboundEvent" to "jakarta.ws.rs.sse.InboundSseEvent",
-      "sseOutboundEvent" to "jakarta.ws.rs.sse.OutboundSseEvent"
-    )
+  enum class ParamType {
+    PATH,
+    QUERY,
+    HEADER,
+    COOKIE,
+    FORM,
+    MATRIX,
+  }
 
-    private val QUARKUS_NAMES = mapOf(
-      "restPath" to "org.jboss.resteasy.reactive.RestPath",
-      "restQuery" to "org.jboss.resteasy.reactive.RestQuery",
-      "restForm" to "org.jboss.resteasy.reactive.RestForm",
-      "restHeader" to "org.jboss.resteasy.reactive.RestHeader",
-      "restMatrix" to "org.jboss.resteasy.reactive.RestMatrix",
-      "restCookie" to "org.jboss.resteasy.reactive.RestCookie",
-      "separator" to "org.jboss.resteasy.reactive.RestQuery.Separator",
-      "restStreamElementType" to "org.jboss.resteasy.reactive.RestStreamElementType",
-      "responseStatus" to "org.jboss.resteasy.reactive.ResponseStatus",
-      "responseHeader" to "org.jboss.resteasy.reactive.ResponseHeader",
-      "cache" to "org.jboss.resteasy.reactive.Cache",
-      "dateFormat" to "org.jboss.resteasy.reactive.DateFormat"
-    )
+  // Path Annotations
+  val path: ClassName
 
-    val JAVAX = JaxRsTypes("javax", "JAVAX")
-    val JAKARTA = JaxRsTypes("jakarta", "JAKARTA")
-    val QUARKUS = JaxRsTypes("org.jboss.resteasy.reactive", "QUARKUS")
+  // HTTP Method Annotations
+  val head: ClassName
+  val options: ClassName
+  val get: ClassName
+  val post: ClassName
+  val put: ClassName
+  val patch: ClassName
+  val delete: ClassName
+  val defaultValue: ClassName
 
-    fun select(quarkus: Boolean, useJakarta: Boolean): JaxRsTypes {
-      return when {
-        quarkus -> QUARKUS
-        useJakarta -> JAKARTA
-        else -> JAVAX
-      }
+  // ContentType Annotations
+  val consumes: ClassName
+  val produces: ClassName
+
+  // Parameter Annotations
+  val pathParam: ClassName
+  val queryParam: ClassName
+  val headerParam: ClassName
+  val cookieParam: ClassName
+  val formParam: ClassName
+  val matrixParam: ClassName
+
+  val suspended: ClassName
+
+  // Parameter Types (Transparently Injected)
+  val asyncResponse: ClassName
+
+  // Response Types
+  val response: ClassName
+  val sseEventSource: ClassName
+
+  // Injection Annotations
+  val context: ClassName
+
+  // Injectable Types
+  val uriInfo: ClassName
+  val sse: ClassName
+  val sseEventSink: ClassName
+
+  // Related Types (SSE)
+
+  // Related Types (SSE)
+  val sseInboundEvent: ClassName
+  val sseOutboundEvent: ClassName
+
+  val separator: ClassName? get() = null
+  val sseElementType: ClassName? get() = null
+  val responseStatus: ClassName? get() = null
+  val responseHeader: ClassName? get() = null
+  val cache: ClassName? get() = null
+  val dateFormat: ClassName? get() = null
+
+  fun httpMethod(method: String): ClassName? =
+    try {
+      httpMethod(Method.valueOf(method))
+    } catch (e: IllegalArgumentException) {
+      null
     }
+
+  fun httpMethod(method: Method): ClassName =
+    when (method) {
+      Method.HEAD -> head
+      Method.OPTIONS -> options
+      Method.GET -> get
+      Method.POST -> post
+      Method.PUT -> put
+      Method.PATCH -> patch
+      Method.DELETE -> delete
+    }
+
+  fun paramAnnotation(type: ParamType): ClassName =
+    when (type) {
+      ParamType.PATH -> pathParam
+      ParamType.QUERY -> queryParam
+      ParamType.HEADER -> headerParam
+      ParamType.COOKIE -> cookieParam
+      ParamType.FORM -> formParam
+      ParamType.MATRIX -> matrixParam
+    }
+
+  val isNameRequiredForParameters: Boolean
+
+  class StdJaxRsTypes(basePkg: String) : JaxRsTypes {
+
+    override val isNameRequiredForParameters: Boolean = true
+
+    override val path = ClassName(basePkg, "Path")
+
+    override val head = ClassName(basePkg, "HEAD")
+    override val options = ClassName(basePkg, "OPTIONS")
+    override val get = ClassName(basePkg, "GET")
+    override val post = ClassName(basePkg, "POST")
+    override val put = ClassName(basePkg, "PUT")
+    override val patch = ClassName(basePkg, "PATCH")
+    override val delete = ClassName(basePkg, "DELETE")
+
+    override val consumes = ClassName(basePkg, "Consumes")
+    override val produces = ClassName(basePkg, "Produces")
+
+    override val pathParam = ClassName(basePkg, "PathParam")
+    override val queryParam = ClassName(basePkg, "QueryParam")
+    override val headerParam = ClassName(basePkg, "HeaderParam")
+    override val cookieParam = ClassName(basePkg, "CookieParam")
+    override val formParam = ClassName(basePkg, "FormParam")
+    override val matrixParam = ClassName(basePkg, "MatrixParam")
+    override val defaultValue = ClassName(basePkg, "DefaultValue")
+
+    override val suspended = ClassName("$basePkg.container", "Suspended")
+
+    override val asyncResponse = ClassName("$basePkg.container", "AsyncResponse")
+
+    override val response = ClassName.bestGuess("$basePkg.Response")
+    override val sseEventSource = ClassName("$basePkg.sse", "SseEventSource")
+
+    override val context = ClassName("$basePkg.core", "Context")
+
+    override val uriInfo = ClassName("$basePkg.core", "UriInfo")
+    override val sse = ClassName("$basePkg.sse", "Sse")
+    override val sseEventSink = ClassName("$basePkg.sse", "SseEventSink")
+
+    override val sseInboundEvent = ClassName("$basePkg.sse", "InboundSseEvent")
+    override val sseOutboundEvent = ClassName("$basePkg.sse", "OutboundSseEvent")
+  }
+
+  class Quarkus(basePkg: String = RESTEASY) : JaxRsTypes {
+
+    companion object {
+      const val RESTEASY = "org.jboss.resteasy.reactive"
+      const val REST = "io.quarkus.rest"
+      const val MUTINY = "io.smallrye.mutiny"
+    }
+
+    override val isNameRequiredForParameters: Boolean = false
+
+    override val path = JAKARTA.path
+
+    override val head = JAKARTA.head
+    override val get = JAKARTA.get
+    override val post = JAKARTA.post
+    override val put = JAKARTA.put
+    override val patch = JAKARTA.patch
+    override val delete = JAKARTA.delete
+    override val options = JAKARTA.options
+
+    override val consumes = JAKARTA.consumes
+    override val produces = JAKARTA.produces
+
+    override val pathParam = ClassName(basePkg, "RestPath")
+    override val queryParam = ClassName(basePkg, "RestQuery")
+    override val headerParam = ClassName(basePkg, "RestHeader")
+    override val cookieParam = ClassName(basePkg, "RestCookie")
+    override val formParam = ClassName(basePkg, "RestForm")
+    override val matrixParam = ClassName(basePkg, "RestMatrix")
+    override val defaultValue = JAKARTA.defaultValue
+
+    override val suspended = JAKARTA.suspended
+
+    override val asyncResponse = JAKARTA.asyncResponse
+
+    override val response = ClassName(basePkg, "RestResponse")
+    override val sseEventSource = JAKARTA.sseEventSource
+
+    override val context = JAKARTA.context
+
+    override val uriInfo = JAKARTA.uriInfo
+    override val sse = JAKARTA.sse
+    override val sseEventSink = JAKARTA.sseEventSink
+
+    override val sseInboundEvent = JAKARTA.sseInboundEvent
+    override val sseOutboundEvent = JAKARTA.sseOutboundEvent
+
+    override val separator = ClassName(basePkg, "Separator")
+    override val sseElementType = ClassName(basePkg, "RestStreamElementType")
+    override val responseStatus = ClassName(basePkg, "ResponseStatus")
+    override val responseHeader = ClassName(basePkg, "ResponseHeader")
+    override val cache = ClassName(basePkg, "Cache")
+    override val dateFormat = ClassName(basePkg, "DateFormat")
   }
 }

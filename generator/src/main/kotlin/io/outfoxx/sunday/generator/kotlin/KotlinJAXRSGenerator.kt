@@ -124,7 +124,7 @@ class KotlinJAXRSGenerator(
     }
   }
 
-  private val jaxRsTypes =
+  private val jaxRsTypes: JaxRsTypes =
     if (options.quarkus) {
       JaxRsTypes.QUARKUS
     } else if (typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages)) {
@@ -423,6 +423,8 @@ class KotlinJAXRSGenerator(
 
     // Add @GET, @POST, @PUT, @DELETE to resource method
     val httpMethodAnnClass = jaxRsTypes.httpMethod(operation.method)
+      ?: genError("Unsupported HTTP method", operation)
+
     functionBuilder.addAnnotation(httpMethodAnnClass)
 
     // Add @Path
@@ -454,7 +456,7 @@ class KotlinJAXRSGenerator(
           .addAnnotations(builtParameter.annotations)
           .addModifiers(builtParameter.modifiers)
       newParameter.addAnnotation(
-        AnnotationSpec.builder(jaxRsTypes.defaultvalue)
+        AnnotationSpec.builder(jaxRsTypes.defaultValue)
           .addMember("value = %S", defaultValue)
           .build(),
       )
