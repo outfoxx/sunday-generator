@@ -16,6 +16,5 @@ io.outfoxx.sunday.generator.swift.utils
 io.outfoxx.sunday.generator.typescript
 io.outfoxx.sunday.generator.typescript.utils
 io.outfoxx.sunday.generator.utils
-org.jboss.resteasy.reactive
 module:gradle-plugin
 io.outfoxx.sunday.generator.gradle
