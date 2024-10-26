@@ -28,4 +28,5 @@ fun main(args: Array<String>) =
     .subcommands(KotlinJAXRSGenerateCommand(), KotlinSundayGenerateCommand())
     .subcommands(SwiftSundayGenerateCommand())
     .subcommands(TypeScriptSundayGenerateCommand())
+    .versionOption()
     .main(args)
