@@ -273,9 +273,9 @@ class RamlTypeAnnotationsTest {
           public val className: String
             get() = LocalDateTime::class.qualifiedName + "-value-" + "-literal"
 
-          public fun copy() = Test()
+          public fun copy(): Test = Test()
 
-          public override fun toString() = ${'"'}""Test()""${'"'}
+          override fun toString(): String = ${'"'}""Test()""${'"'}
         }
 
       """.trimIndent(),
@@ -316,14 +316,14 @@ class RamlTypeAnnotationsTest {
           @get:JsonIgnore
           public abstract val type: String
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             return true
           }
 
-          public override fun toString() = ${'"'}""Parent()""${'"'}
+          override fun toString(): String = ${'"'}""Parent()""${'"'}
         }
 
       """.trimIndent(),
@@ -350,18 +350,18 @@ class RamlTypeAnnotationsTest {
         public class Child1(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: String
+          override val type: String
             get() = "Child1"
 
-          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -372,7 +372,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -399,18 +399,18 @@ class RamlTypeAnnotationsTest {
         public class Child2(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: String
+          override val type: String
             get() = "child2"
 
-          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -421,7 +421,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -453,17 +453,17 @@ class RamlTypeAnnotationsTest {
           public val parent: Parent,
           public val parentType: String,
         ) {
-          public fun copy(parent: Parent? = null, parentType: String? = null) = Test(parent ?: this.parent,
-              parentType ?: this.parentType)
+          public fun copy(parent: Parent? = null, parentType: String? = null): Test = Test(parent ?:
+              this.parent, parentType ?: this.parentType)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -475,7 +475,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(parent='${'$'}parent',
           | parentType='${'$'}parentType')
           ${'"'}"".trimMargin()
@@ -509,6 +509,7 @@ class RamlTypeAnnotationsTest {
         import com.fasterxml.jackson.`annotation`.JsonSubTypes
         import kotlin.Any
         import kotlin.Boolean
+        import kotlin.String
 
         @JsonSubTypes(value = [
           JsonSubTypes.Type(value = Child2::class),
@@ -518,14 +519,14 @@ class RamlTypeAnnotationsTest {
           @get:JsonIgnore
           public abstract val type: Type
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             return true
           }
 
-          public override fun toString() = ${'"'}""Parent()""${'"'}
+          override fun toString(): String = ${'"'}""Parent()""${'"'}
         }
 
       """.trimIndent(),
@@ -552,18 +553,18 @@ class RamlTypeAnnotationsTest {
         public class Child1(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: Type
+          override val type: Type
             get() = Type.Child1
 
-          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -574,7 +575,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -601,18 +602,18 @@ class RamlTypeAnnotationsTest {
         public class Child2(
           public val `value`: String? = null,
         ) : Parent() {
-          public override val type: Type
+          override val type: Type
             get() = Type.Child2
 
-          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -623,7 +624,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -644,6 +645,7 @@ class RamlTypeAnnotationsTest {
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
+        import kotlin.String
 
         public class Test(
           @JsonTypeInfo(
@@ -654,17 +656,17 @@ class RamlTypeAnnotationsTest {
           public val parent: Parent,
           public val parentType: Type,
         ) {
-          public fun copy(parent: Parent? = null, parentType: Type? = null) = Test(parent ?: this.parent,
-              parentType ?: this.parentType)
+          public fun copy(parent: Parent? = null, parentType: Type? = null): Test = Test(parent ?:
+              this.parent, parentType ?: this.parentType)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -676,7 +678,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(parent='${'$'}parent',
           | parentType='${'$'}parentType')
           ${'"'}"".trimMargin()
@@ -738,15 +740,15 @@ class RamlTypeAnnotationsTest {
         public class Child1(
           public val `value`: String? = null,
         ) : Parent() {
-          public fun copy(`value`: String? = null) = Child1(value ?: this.value)
+          public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -757,7 +759,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child1(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -784,15 +786,15 @@ class RamlTypeAnnotationsTest {
         public class Child2(
           public val `value`: String? = null,
         ) : Parent() {
-          public fun copy(`value`: String? = null) = Child2(value ?: this.value)
+          public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + (value?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -803,7 +805,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Child2(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -835,17 +837,17 @@ class RamlTypeAnnotationsTest {
           public val parent: Parent,
           public val parentType: String,
         ) {
-          public fun copy(parent: Parent? = null, parentType: String? = null) = Test(parent ?: this.parent,
-              parentType ?: this.parentType)
+          public fun copy(parent: Parent? = null, parentType: String? = null): Test = Test(parent ?:
+              this.parent, parentType ?: this.parentType)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + parent.hashCode()
             result = 31 * result + parentType.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -857,7 +859,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(parent='${'$'}parent',
           | parentType='${'$'}parentType')
           ${'"'}"".trimMargin()
@@ -918,7 +920,7 @@ class RamlTypeAnnotationsTest {
           public var optional: UpdateOp<String> = PatchOp.none(),
           public var nullableOptional: PatchOp<String> = PatchOp.none(),
         ) : Patch {
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + string.hashCode()
             result = 31 * result + int.hashCode()
@@ -929,7 +931,7 @@ class RamlTypeAnnotationsTest {
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -945,7 +947,7 @@ class RamlTypeAnnotationsTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(string='${'$'}string',
           | int='${'$'}int',
           | bool='${'$'}bool',
@@ -961,7 +963,7 @@ class RamlTypeAnnotationsTest {
               return PatchOp.Set(patch)
             }
 
-            public inline fun patch(`init`: Test.() -> Unit) = merge(init).value
+            public inline fun patch(`init`: Test.() -> Unit): Test = merge(init).value
           }
         }
 

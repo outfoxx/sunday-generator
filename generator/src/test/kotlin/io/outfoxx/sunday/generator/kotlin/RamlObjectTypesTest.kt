@@ -116,17 +116,17 @@ class RamlObjectTypesTest {
           public val fromNilUnion: String?,
           public val notRequired: String? = null,
         ) {
-          public fun copy(fromNilUnion: String? = null, notRequired: String? = null) = Test(fromNilUnion ?:
-              this.fromNilUnion, notRequired ?: this.notRequired)
+          public fun copy(fromNilUnion: String? = null, notRequired: String? = null): Test =
+              Test(fromNilUnion ?: this.fromNilUnion, notRequired ?: this.notRequired)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + (fromNilUnion?.hashCode() ?: 0)
             result = 31 * result + (notRequired?.hashCode() ?: 0)
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -138,7 +138,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(fromNilUnion='${'$'}fromNilUnion',
           | notRequired='${'$'}notRequired')
           ""${'"'}.trimMargin()
@@ -307,13 +307,13 @@ class RamlObjectTypesTest {
         public open class Test(
           public val `value`: String,
         ) {
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + value.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -324,7 +324,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""Test(value='${'$'}value')""${'"'}
+          override fun toString(): String = ${'"'}""Test(value='${'$'}value')""${'"'}
         }
 
       """.trimIndent(),
@@ -347,13 +347,13 @@ class RamlObjectTypesTest {
           `value`: String,
           public val value2: String,
         ) : Test(value) {
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + value2.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -365,7 +365,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""
+          override fun toString(): String = ${'"'}""
           |Test2(value='${'$'}value',
           | value2='${'$'}value2')
           ""${'"'}.trimMargin()
@@ -390,7 +390,7 @@ class RamlObjectTypesTest {
           `value`: String,
           value2: String,
         ) : Test2(value, value2) {
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -401,7 +401,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ${'"'}""
+          override fun toString(): String = ${'"'}""
           |Empty(value='${'$'}value',
           | value2='${'$'}value2')
           ""${'"'}.trimMargin()
@@ -432,15 +432,15 @@ class RamlObjectTypesTest {
             `value`: String? = null,
             value2: String? = null,
             value3: String? = null,
-          ) = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
+          ): Test3 = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 31 * super.hashCode()
             result = 31 * result + value3.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -453,7 +453,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test3(value='${'$'}value',
           | value2='${'$'}value2',
           | value3='${'$'}value3')
@@ -522,17 +522,17 @@ class RamlObjectTypesTest {
           @JsonProperty(value = "another_value")
           public val anotherValue: String,
         ) {
-          public fun copy(someValue: String? = null, anotherValue: String? = null) = Test(someValue ?:
+          public fun copy(someValue: String? = null, anotherValue: String? = null): Test = Test(someValue ?:
               this.someValue, anotherValue ?: this.anotherValue)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + someValue.hashCode()
             result = 31 * result + anotherValue.hashCode()
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -544,7 +544,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(someValue='${'$'}someValue',
           | anotherValue='${'$'}anotherValue')
           ""${'"'}.trimMargin()
@@ -574,6 +574,7 @@ class RamlObjectTypesTest {
         import kotlin.Any
         import kotlin.Boolean
         import kotlin.Int
+        import kotlin.String
         import kotlin.collections.List
 
         public class Test(
@@ -585,9 +586,9 @@ class RamlObjectTypesTest {
             parent: Test? = null,
             other: Test? = null,
             children: List<Test>? = null,
-          ) = Test(parent ?: this.parent, other ?: this.other, children ?: this.children)
+          ): Test = Test(parent ?: this.parent, other ?: this.other, children ?: this.children)
 
-          public override fun hashCode(): Int {
+          override fun hashCode(): Int {
             var result = 1
             result = 31 * result + (parent?.hashCode() ?: 0)
             result = 31 * result + (other?.hashCode() ?: 0)
@@ -595,7 +596,7 @@ class RamlObjectTypesTest {
             return result
           }
 
-          public override fun equals(other: Any?): Boolean {
+          override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
@@ -608,7 +609,7 @@ class RamlObjectTypesTest {
             return true
           }
 
-          public override fun toString() = ""${'"'}
+          override fun toString(): String = ""${'"'}
           |Test(parent='${'$'}parent',
           | other='${'$'}other',
           | children='${'$'}children')

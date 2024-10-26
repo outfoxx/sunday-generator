@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator
 
 import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.default
@@ -33,7 +34,9 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import java.net.URI
 import kotlin.system.exitProcess
 
-abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(name = name, help = help) {
+abstract class CommonGenerateCommand(name: String, val help: String) : CliktCommand(name = name) {
+
+  override fun help(context: Context): String = help
 
   val serviceSuffix by option(
     "-service-suffix",
@@ -48,9 +51,9 @@ abstract class CommonGenerateCommand(name: String, help: String) : CliktCommand(
 
   val outputCategories by option(
     "-category",
-    help = "Add category of type to output ${GeneratedTypeCategory.values().joinToString { it.name }}",
+    help = "Add category of type to output ${GeneratedTypeCategory.entries.joinToString { it.name }}",
   ).enum<GeneratedTypeCategory>()
-    .multiple(GeneratedTypeCategory.values().toList())
+    .multiple(GeneratedTypeCategory.entries)
     .unique()
 
   val outputDirectory by option(

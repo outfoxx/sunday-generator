@@ -155,7 +155,6 @@ class RequestMethodsTest {
         import javax.ws.rs.PUT
         import javax.ws.rs.Path
         import javax.ws.rs.Produces
-        import kotlin.Unit
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -178,15 +177,15 @@ class RequestMethodsTest {
 
           @DELETE
           @Path(value = "/tests")
-          public fun deleteTest(): Unit
+          public fun deleteTest()
 
           @HEAD
           @Path(value = "/tests")
-          public fun headTest(): Unit
+          public fun headTest()
 
           @OPTIONS
           @Path(value = "/tests")
-          public fun optionsTest(): Unit
+          public fun optionsTest()
 
           @PATCH
           @Path(value = "/tests2")

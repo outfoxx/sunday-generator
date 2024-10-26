@@ -184,7 +184,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
-          public override fun getCause(): Exceptional? = super.cause
+          override fun getCause(): Exceptional? = super.cause
 
           public companion object {
             public const val TYPE: String = "http://example.com/invalid_id"
@@ -242,7 +242,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
-          public override fun getCause(): Exceptional? = super.cause
+          override fun getCause(): Exceptional? = super.cause
 
           public companion object {
             public const val TYPE: String = "http://api.example.com/api/invalid_id"
@@ -300,7 +300,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
-          public override fun getCause(): Exceptional? = super.cause
+          override fun getCause(): Exceptional? = super.cause
 
           public companion object {
             public const val TYPE: String = "http://errors.example.com/docs/invalid_id"
@@ -358,7 +358,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
-          public override fun getCause(): Exceptional? = super.cause
+          override fun getCause(): Exceptional? = super.cause
 
           public companion object {
             public const val TYPE: String = "http://example.com/api/errors/invalid_id"
@@ -416,7 +416,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
-          public override fun getCause(): Exceptional? = super.cause
+          override fun getCause(): Exceptional? = super.cause
 
           public companion object {
             public const val TYPE: String = "http://example.com/invalid_id"

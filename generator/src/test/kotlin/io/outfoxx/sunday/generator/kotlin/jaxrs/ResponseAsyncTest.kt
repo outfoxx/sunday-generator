@@ -62,14 +62,13 @@ class ResponseAsyncTest {
         import javax.ws.rs.Produces
         import javax.ws.rs.container.AsyncResponse
         import javax.ws.rs.container.Suspended
-        import kotlin.Unit
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@Suspended asyncResponse: AsyncResponse): Unit
+          public fun fetchTest(@Suspended asyncResponse: AsyncResponse)
         }
 
       """.trimIndent(),

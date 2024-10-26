@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalCompilerApi::class)
+
 package io.outfoxx.sunday.generator.kotlin.tools
 
 import com.squareup.kotlinpoet.ClassName
@@ -22,6 +24,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.test.utils.Compilation
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.io.ByteArrayOutputStream
 
 fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {

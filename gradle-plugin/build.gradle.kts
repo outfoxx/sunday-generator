@@ -1,12 +1,7 @@
-
 plugins {
-  id("com.gradle.plugin-publish")
-  id("com.github.johnrengelman.shadow")
+  alias(libs.plugins.pluginPublish)
+  alias(libs.plugins.shadow)
 }
-
-val junitVersion: String by project
-val hamcrestVersion: String by project
-val kotlinCompileTestingVersion: String by project
 
 dependencies {
 
@@ -18,13 +13,13 @@ dependencies {
   // TESTING
   //
 
-  testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+  testImplementation(libs.junit)
+  testImplementation(libs.junitParams)
+  testRuntimeOnly(libs.junitEngine)
 
-  testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
+  testImplementation(libs.hamcrest)
 
-  testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
+  testImplementation(libs.kotlinCompileTesting)
 }
 
 tasks {

@@ -938,6 +938,7 @@ class KotlinTypeRegistry(
 
           val copyBuilder =
             FunSpec.builder("copy")
+              .returns(className)
               .addCode("return %T(", className)
 
           val copyArgs =
@@ -993,6 +994,7 @@ class KotlinTypeRegistry(
 
         typeBuilder.addFunction(
           FunSpec.builder("toString")
+            .returns(STRING)
             .addModifiers(KModifier.OVERRIDE)
             .addStatement("return %P", toStringTemplate)
             .build(),
@@ -1043,6 +1045,7 @@ class KotlinTypeRegistry(
           // Add patch method to companion object
           .addFunction(
             FunSpec.builder("patch")
+              .returns(className)
               .addModifiers(KModifier.INLINE)
               .addParameter("init", initLambdaTypeName)
               .addStatement("return merge(init).value")

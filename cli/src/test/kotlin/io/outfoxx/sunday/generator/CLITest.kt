@@ -17,11 +17,11 @@
 package io.outfoxx.sunday.generator
 
 import amf.core.client.platform.model.document.Document
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.testing.test
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.contains
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.io.path.toPath
@@ -102,5 +102,21 @@ class CLITest {
     val command = GenerateCommandTest()
     assertDoesNotThrow { command.parse(arrayOf("-problem-base", "http://example.com/docs", *requiredOptions)) }
     assertThat(command.problemBaseUri, equalTo("http://example.com/docs"))
+  }
+
+  @Test
+  fun `--version option`() {
+
+    val command = GenerateCommandTest()
+    val result = assertDoesNotThrow { command.versionOption().test(arrayOf("--version", *requiredOptions)) }
+    assertThat(result.stdout, containsString("Sunday - Generator   ver. unknown"))
+  }
+
+  @Test
+  fun `--help option`() {
+
+    val command = GenerateCommand()
+    val result = assertDoesNotThrow { command.test(arrayOf("--help")) }
+    assertThat(result.stdout, containsString("RAML definitions"))
   }
 }
