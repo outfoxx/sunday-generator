@@ -46,6 +46,7 @@ class RequestExplicitSecurityParamsTest {
         "http://example.com/",
         listOf("application/json"),
         "API",
+        false,
       )
   }
 
@@ -88,6 +89,66 @@ class RequestExplicitSecurityParamsTest {
           @Path(value = "/tests/{id}")
           public fun fetchTest(@HeaderParam(value = "Authorization") bearerAuthorization: String,
               @PathParam(value = "id") id: String): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test explicit security parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            true,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.String
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests/{id}")
+          public fun fetchTest(@RestHeader(value = "Authorization") bearerAuthorization: String, @RestPath
+              id: String): RestResponse<String>
         }
 
       """.trimIndent(),

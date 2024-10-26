@@ -60,6 +60,16 @@ open class KotlinJAXRSGenerateCommand :
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
 
+  val quarkus by option(
+    "-quarkus",
+    help = """
+      Enable Quarkus-specific types:
+        * `@RestPath`, `@RestQuery`, `@RestHeader` annotations (implied parameter names)
+        * `RestResponse<T>` return type
+        * `Uni<T>` return type for reactive methods
+      """.trimIndent(),
+  ).flag(default = false)
+
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
     KotlinJAXRSGenerator(
       document,
@@ -75,6 +85,7 @@ open class KotlinJAXRSGenerateCommand :
         problemBaseUri,
         mediaTypes.toList(),
         serviceSuffix,
+        quarkus,
       ),
     )
 }

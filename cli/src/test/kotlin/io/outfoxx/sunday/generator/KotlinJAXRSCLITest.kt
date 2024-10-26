@@ -107,4 +107,16 @@ class KotlinJAXRSCLITest {
     assertDoesNotThrow { command2.parse(arrayOf("-base-uri-path-mode", "full", *requiredOptions)) }
     assertThat(command2.baseUriPathMode, equalTo(BaseUriMode.FULL))
   }
+
+  @Test
+  fun `--quarkus flag`() {
+
+    val commandWithTrue = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { commandWithTrue.parse(arrayOf("-quarkus", *requiredOptions)) }
+    assertThat(commandWithTrue.quarkus, equalTo(true))
+
+    val commandWithFalse = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { commandWithFalse.parse(requiredOptions) }
+    assertThat(commandWithFalse.quarkus, equalTo(false))
+  }
 }

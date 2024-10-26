@@ -230,6 +230,7 @@ open class SundayGenerate
               problemBaseUri.get(),
               defaultMediaTypes.get(),
               serviceSuffix.get(),
+              false,
             ),
           )
 

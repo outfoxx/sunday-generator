@@ -255,4 +255,273 @@ class RequestQueryParamsTest {
       },
     )
   }
+
+  @Test
+  fun `test basic query parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Int
+        import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestQuery obj: Test,
+            @RestQuery strReq: String,
+            @RestQuery @DefaultValue(value = "5") int: Int,
+          ): RestResponse<Test>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test basic query parameter generation with validation constraints and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import javax.validation.Valid
+        import kotlin.Int
+        import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestQuery @Valid obj: Test,
+            @RestQuery strReq: String,
+            @RestQuery @DefaultValue(value = "5") int: Int,
+          ): RestResponse<Test>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test optional query parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Int
+        import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestQuery obj: Test?,
+            @RestQuery str: String?,
+            @RestQuery int: Int?,
+            @RestQuery @DefaultValue(value = "test") def1: String,
+            @RestQuery @DefaultValue(value = "10") def2: Int,
+          ): RestResponse<Test>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of multiple query parameters with inline type definitions and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.Map
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestQuery category: FetchTestCategoryQueryParam, @RestQuery
+              type: FetchTestTypeQueryParam): RestResponse<Map<String, Any>>
+
+          public enum class FetchTestCategoryQueryParam {
+            Politics,
+            Science,
+          }
+
+          public enum class FetchTestTypeQueryParam {
+            All,
+            Limited,
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

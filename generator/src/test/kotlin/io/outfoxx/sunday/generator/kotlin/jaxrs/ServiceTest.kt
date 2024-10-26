@@ -50,6 +50,7 @@ class ServiceTest {
       "http://example.com/",
       listOf("application/cbor", "application/yaml"),
       "API",
+      false,
     )
 
     val builtTypes =
@@ -80,7 +81,6 @@ class ServiceTest {
           @GET
           @Path(value = "/tests")
           @Consumes(value = ["application/yaml"])
-          @Produces(value = ["application/json","application/yaml","application/cbor"])
           public fun fetchTest(body: Test): Test
         }
 
@@ -109,6 +109,7 @@ class ServiceTest {
       "http://example.com/",
       listOf("application/cbor", "application/yaml"),
       "API",
+      false,
     )
 
     val builtTypes =
@@ -140,7 +141,6 @@ class ServiceTest {
           @GET
           @Path(value = "/tests")
           @Consumes(value = ["application/yaml"])
-          @Produces(value = ["application/json","application/yaml","application/cbor"])
           public fun fetchTest(body: Test): Response
         }
 
