@@ -56,31 +56,28 @@ class SwiftCLITest {
 
   @ParameterizedTest
   @EnumSource(SwiftTypeRegistry.Option::class)
-  fun `--enable options`(option: SwiftTypeRegistry.Option) {
+  fun `enable type registry options`(option: SwiftTypeRegistry.Option) {
 
     val command = SwiftGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-enable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.enabledOptions, hasItems(option))
+    assertDoesNotThrow { command.parse(arrayOf("-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
     assertThat(command.options, hasItems(option))
   }
 
   @ParameterizedTest
   @EnumSource(SwiftTypeRegistry.Option::class)
-  fun `--disable options`(option: SwiftTypeRegistry.Option) {
+  fun `disable type registry options`(option: SwiftTypeRegistry.Option) {
 
     val command = SwiftGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-disable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.disabledOptions, hasItems(option))
+    assertDoesNotThrow { command.parse(arrayOf("-no-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
     assertThat(command.options, not(hasItems(option)))
   }
 
   @Test
-  fun `--enable & --disable option`() {
-
+  fun `enable & disable a type registry option`() {
+    val option = SwiftTypeRegistry.Option.AddGeneratedHeader
+    val optionName = option.name.camelCaseToKebabCase()
     val command = SwiftGenerateCommandTest()
-    assertDoesNotThrow {
-      command.parse(arrayOf("-disable", "add-generated-header", "-enable", "add-generated-header", *requiredOptions))
-    }
-    assertThat(command.options, not(hasItems(SwiftTypeRegistry.Option.AddGeneratedHeader)))
+    assertDoesNotThrow { command.parse(arrayOf("-$optionName", "-no-$optionName", *requiredOptions)) }
+    assertThat(command.options, not(hasItems(option)))
   }
 }

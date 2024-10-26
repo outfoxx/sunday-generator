@@ -17,38 +17,20 @@
 package io.outfoxx.sunday.generator.typescript
 
 import amf.core.client.platform.model.document.Document
-import com.github.ajalt.clikt.parameters.options.multiple
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.flags
+import io.outfoxx.sunday.generator.grouped
+import io.outfoxx.sunday.generator.provideDelegate
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
 
-  companion object {
-
-    val defaultOptions = setOf(
-      JacksonDecorators,
-      AddGenerationHeader,
-    )
-  }
-
-  val enabledOptions by option(
-    "-enable",
-    help = "Enable type generation option",
-  ).enum<TypeScriptTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-
-  val disabledOptions by option(
-    "-disable",
-    help = "Disable type generation option",
-  ).enum<TypeScriptTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-
-  val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
+  val options by flags<TypeScriptTypeRegistry.Option> {
+    AddGenerationHeader to "Add generation header to generated files".default(true)
+    JacksonDecorators to "Add Jackson decorators".default(true)
+  }.grouped("Model Generation Options")
 
   override val typeRegistry: TypeScriptTypeRegistry by lazy {
     TypeScriptTypeRegistry(options)
