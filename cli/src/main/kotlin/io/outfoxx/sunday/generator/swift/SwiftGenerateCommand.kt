@@ -17,41 +17,20 @@
 package io.outfoxx.sunday.generator.swift
 
 import amf.core.client.platform.model.document.Document
-import com.github.ajalt.clikt.parameters.options.multiple
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.unique
-import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.flags
+import io.outfoxx.sunday.generator.grouped
+import io.outfoxx.sunday.generator.provideDelegate
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.DefaultIdentifiableTypes
-import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
 
-  companion object {
-
-    val defaultOptions = setOf(
-      AddGeneratedHeader,
-      DefaultIdentifiableTypes,
-    )
-  }
-
-  val enabledOptions by option(
-    "-enable",
-    help = "Enable type generation option",
-  ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-    .unique()
-
-  val disabledOptions by option(
-    "-disable",
-    help = "Disable type generation option",
-  ).enum<SwiftTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-    .unique()
-
-  val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
+  val options by flags<SwiftTypeRegistry.Option> {
+    AddGeneratedHeader to "Add generated header to generated files".default(true)
+    DefaultIdentifiableTypes to "Conform any types with an `id` parameter to `Identifiable`".default(true)
+  }.grouped("Model Generation Options")
 
   override val typeRegistry: SwiftTypeRegistry by lazy {
     SwiftTypeRegistry(options)

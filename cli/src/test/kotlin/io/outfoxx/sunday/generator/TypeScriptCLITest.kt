@@ -56,31 +56,28 @@ class TypeScriptCLITest {
 
   @ParameterizedTest
   @EnumSource(TypeScriptTypeRegistry.Option::class)
-  fun `--enable options`(option: TypeScriptTypeRegistry.Option) {
+  fun `enable type registry options`(option: TypeScriptTypeRegistry.Option) {
 
     val command = TypeScriptGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-enable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.enabledOptions, hasItems(option))
+    assertDoesNotThrow { command.parse(arrayOf("-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
     assertThat(command.options, hasItems(option))
   }
 
   @ParameterizedTest
   @EnumSource(TypeScriptTypeRegistry.Option::class)
-  fun `--disable options`(option: TypeScriptTypeRegistry.Option) {
+  fun `disable type registry options`(option: TypeScriptTypeRegistry.Option) {
 
     val command = TypeScriptGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-disable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.disabledOptions, hasItems(option))
+    assertDoesNotThrow { command.parse(arrayOf("-no-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
     assertThat(command.options, not(hasItems(option)))
   }
 
   @Test
-  fun `--enable & --disable option`() {
-
+  fun `enable & disable type registry option`() {
+    val option = TypeScriptTypeRegistry.Option.AddGenerationHeader
+    val optionName = option.name.camelCaseToKebabCase()
     val command = TypeScriptGenerateCommandTest()
-    assertDoesNotThrow {
-      command.parse(arrayOf("-disable", "add-generation-header", "-enable", "add-generation-header", *requiredOptions))
-    }
-    assertThat(command.options, not(hasItems(TypeScriptTypeRegistry.Option.AddGenerationHeader)))
+    assertDoesNotThrow { command.parse(arrayOf("-$optionName", "-no-$optionName", *requiredOptions)) }
+    assertThat(command.options, not(hasItems(option)))
   }
 }

@@ -25,10 +25,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsStringIgnoringCase
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.hasItems
-import org.hamcrest.Matchers.not
+import org.hamcrest.Matchers.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -146,42 +143,46 @@ class KotlinCLITest {
   }
 
   @Test
-  fun `--generated-annotation option`() {
+  fun `--generated-annotation option (implies AddGeneratedAnnotation)`() {
 
     val command = KotlinGenerateCommandTest()
     assertDoesNotThrow { command.parse(arrayOf("-generated-annotation", "io.test.Generated", *requiredOptions)) }
     assertThat(command.generatedAnnotationName, equalTo("io.test.Generated"))
+    assertThat(command.allRegistryOptions(), hasItems(KotlinTypeRegistry.Option.AddGeneratedAnnotation))
   }
 
   @ParameterizedTest
   @EnumSource(KotlinTypeRegistry.Option::class)
-  fun `--enable options`(option: KotlinTypeRegistry.Option) {
+  fun `enable type registry options`(option: KotlinTypeRegistry.Option) {
+    // Skip implied options
+    if (option in KotlinGenerateCommand.impliedRegistryOptions) {
+      return
+    }
 
     val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-enable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.enabledOptions, hasItems(option))
-    assertThat(command.options, hasItems(option))
+    assertDoesNotThrow { command.parse(arrayOf("-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
+    assertThat(command.allRegistryOptions(), hasItems(option))
   }
 
   @ParameterizedTest
   @EnumSource(KotlinTypeRegistry.Option::class)
-  fun `--disable options`(option: KotlinTypeRegistry.Option) {
+  fun `disable type registry options`(option: KotlinTypeRegistry.Option) {
+    // Skip implied options
+    if (option in KotlinGenerateCommand.impliedRegistryOptions) {
+      return
+    }
 
     val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow { command.parse(arrayOf("-disable", option.name.camelCaseToKebabCase(), *requiredOptions)) }
-    assertThat(command.disabledOptions, hasItems(option))
-    assertThat(command.options, not(hasItems(option)))
+    assertDoesNotThrow { command.parse(arrayOf("-no-${option.name.camelCaseToKebabCase()}", *requiredOptions)) }
+    assertThat(command.allRegistryOptions(), not(hasItems(option)))
   }
 
   @Test
-  fun `--enable & --disable option`() {
-
+  fun `enable & disable a type registry option`() {
+    val option = KotlinTypeRegistry.Option.UseJakartaPackages
+    val optionName = option.name.camelCaseToKebabCase()
     val command = KotlinGenerateCommandTest()
-    assertDoesNotThrow {
-      command.parse(
-        arrayOf("-disable", "add-generated-annotation", "-enable", "add-generated-annotation", *requiredOptions),
-      )
-    }
-    assertThat(command.options, not(hasItems(KotlinTypeRegistry.Option.AddGeneratedAnnotation)))
+    assertDoesNotThrow { command.parse(arrayOf("-$optionName", "-no-$optionName", *requiredOptions)) }
+    assertThat(command.allRegistryOptions(), not(hasItems(option)))
   }
 }

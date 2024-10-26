@@ -18,11 +18,13 @@ package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
-import com.github.ajalt.clikt.core.installMordantMarkdown
+import com.github.ajalt.clikt.output.MordantMarkdownHelpFormatter
 
-class GenerateCommand : CliktCommand(name = "sunday-generate") {
+class GenerateCommand : CliktCommand(name = "sunday") {
   init {
-    installMordantMarkdown()
+    configureContext {
+      helpFormatter = { MordantMarkdownHelpFormatter(it, showDefaultValues = true, showRequiredTag = true) }
+    }
   }
   override fun help(context: Context) = "Generate types and/or services from RAML definitions"
   override val printHelpOnEmptyArgs = true

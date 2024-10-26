@@ -17,29 +17,15 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.core.client.platform.model.document.Document
-import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.unique
-import com.github.ajalt.clikt.parameters.types.enum
-import io.outfoxx.sunday.generator.CommonGenerateCommand
-import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.*
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
 
 abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
 
   companion object {
-
-    val defaultOptions = setOf(
-      ImplementModel,
-      JacksonAnnotations,
-      ValidationConstraints,
-      AddGeneratedAnnotation,
-    )
+    val impliedRegistryOptions = setOf(AddGeneratedAnnotation)
   }
 
   val packageName by option(
@@ -57,33 +43,35 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
     help = "Default service package, if not specified '-pkg' is used",
   )
 
-  val enabledOptions by option(
-    "-enable",
-    help = "Enable type generation option",
-  ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-    .unique()
-
-  val disabledOptions by option(
-    "-disable",
-    help = "Disable type generation option",
-  ).enum<KotlinTypeRegistry.Option> { it.name.camelCaseToKebabCase() }
-    .multiple()
-    .unique()
+  val registryOptions by flags<KotlinTypeRegistry.Option> {
+    ImplementModel to "Generate classes for model types, instead of interfaces".default(true)
+    JacksonAnnotations to "Add Jackson annotations to model classes".default(true)
+    ValidationConstraints to "Add validation constraints to model classes".default(true)
+    SuppressPublicApiWarnings to "Suppress warnings for Kotlin Public API style code".default(false)
+    UseJakartaPackages to "Use Jakarta EE package name instead of Java EE package name".default(false)
+  }.grouped("Model Generation Options")
 
   val generatedAnnotationName by option(
     "-generated-annotation",
     help = "Fully qualified name of generated source annotation",
   )
 
-  val options get() = defaultOptions.plus(enabledOptions).minus(disabledOptions)
+  private fun implyRegistryOptions(): Set<KotlinTypeRegistry.Option> {
+    val options = mutableSetOf<KotlinTypeRegistry.Option>()
+    if (generatedAnnotationName != null) {
+      options += AddGeneratedAnnotation
+    }
+    return options.toSet()
+  }
+
+  fun allRegistryOptions() = registryOptions + implyRegistryOptions()
 
   override val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
       modelPackageName ?: packageName,
       generatedAnnotationName,
       mode,
-      options,
+      allRegistryOptions(),
     )
   }
 
