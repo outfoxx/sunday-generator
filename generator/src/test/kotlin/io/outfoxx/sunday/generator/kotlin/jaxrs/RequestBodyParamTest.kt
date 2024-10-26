@@ -364,29 +364,18 @@ class RequestBodyParamTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestPath body: Test): Response
+          public fun fetchTest(body: Test): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -433,37 +422,26 @@ class RequestBodyParamTest {
 
         import com.fasterxml.jackson.databind.JsonNode
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestPath body: JsonNode): Response
+          public fun fetchTest(body: JsonNode): RestResponse<Test>
 
           @GET
           @Path(value = "/tests-client")
-          public fun fetchTestClient(@RestPath body: Test): Response
+          public fun fetchTestClient(body: Test): RestResponse<Test>
 
           @GET
           @Path(value = "/tests-server")
-          public fun fetchTestServer(@RestPath body: JsonNode): Response
+          public fun fetchTestServer(body: JsonNode): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -510,36 +488,25 @@ class RequestBodyParamTest {
 
         import com.fasterxml.jackson.databind.JsonNode
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestPath body: JsonNode): Test
+          public fun fetchTest(body: JsonNode): Test
 
           @GET
           @Path(value = "/tests-client")
-          public fun fetchTestClient(@RestPath body: JsonNode): Test
+          public fun fetchTestClient(body: JsonNode): Test
 
           @GET
           @Path(value = "/tests-server")
-          public fun fetchTestServer(@RestPath body: Test): Test
+          public fun fetchTestServer(body: Test): Test
         }
 
       """.trimIndent(),
@@ -585,30 +552,19 @@ class RequestBodyParamTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestPath @Valid body: Test): Response
+          public fun fetchTest(@Valid body: Test): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -654,29 +610,18 @@ class RequestBodyParamTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestPath body: Test?): Response
+          public fun fetchTest(body: Test?): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -721,23 +666,15 @@ class RequestBodyParamTest {
       """
         package io.test.service
 
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Any
         import kotlin.ByteArray
+        import kotlin.String
+        import kotlin.collections.Map
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -745,7 +682,7 @@ class RequestBodyParamTest {
           @GET
           @Path(value = "/tests")
           @Consumes(value = ["application/octet-stream"])
-          public fun fetchTest(@RestPath body: ByteArray): Response
+          public fun fetchTest(body: ByteArray): RestResponse<Map<String, Any>>
         }
 
       """.trimIndent(),

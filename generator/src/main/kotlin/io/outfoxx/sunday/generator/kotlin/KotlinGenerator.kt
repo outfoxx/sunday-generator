@@ -654,7 +654,7 @@ abstract class KotlinGenerator(
     function: FunSpec,
     problemTypes: Map<URI, TypeName>,
     typeBuilder: TypeSpec.Builder,
-    copyAnnotaitons: Boolean = false,
+    copyAnnotations: Boolean = false,
   ) {
 
     val nullifyAnn = operation.findArrayAnnotation(Nullify, null)
@@ -711,7 +711,7 @@ abstract class KotlinGenerator(
             },
           )
           .apply {
-            if (copyAnnotaitons) {
+            if (copyAnnotations) {
               addAnnotations(function.annotations)
             }
             nullableReturnType.let {

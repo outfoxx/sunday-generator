@@ -293,15 +293,15 @@ class RequestHeaderParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestHeader
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -312,7 +312,7 @@ class RequestHeaderParamsTest {
             @RestHeader(value = "obj") obj: Test,
             @RestHeader(value = "str-req") strReq: String,
             @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -358,15 +358,15 @@ class RequestHeaderParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestHeader
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -379,7 +379,7 @@ class RequestHeaderParamsTest {
             @RestHeader(value = "int") int: Int?,
             @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
             @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -425,16 +425,16 @@ class RequestHeaderParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestHeader
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -447,7 +447,7 @@ class RequestHeaderParamsTest {
             @RestHeader(value = "int") int: Int?,
             @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
             @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -492,12 +492,15 @@ class RequestHeaderParamsTest {
       """
         package io.test.service
 
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.Map
         import org.jboss.resteasy.reactive.RestHeader
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -505,7 +508,7 @@ class RequestHeaderParamsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
-              @RestHeader(value = "type") type: FetchTestTypeHeaderParam): Response
+              @RestHeader(value = "type") type: FetchTestTypeHeaderParam): RestResponse<Map<String, Any>>
 
           public enum class FetchTestCategoryHeaderParam {
             Politics,

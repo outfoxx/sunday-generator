@@ -28,4 +28,5 @@ val kotlinJAXRSTestOptions = KotlinJAXRSGenerator.Options(
   "http://example.com/",
   listOf("application/json"),
   "API",
+  false,
 )

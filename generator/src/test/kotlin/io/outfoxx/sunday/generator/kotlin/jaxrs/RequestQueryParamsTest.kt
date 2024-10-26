@@ -291,15 +291,15 @@ class RequestQueryParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestQuery
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -307,10 +307,10 @@ class RequestQueryParamsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(
-            @RestQuery(value = "obj") obj: Test,
-            @RestQuery(value = "str-req") strReq: String,
-            @RestQuery(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
+            @RestQuery obj: Test,
+            @RestQuery strReq: String,
+            @RestQuery @DefaultValue(value = "5") int: Int,
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -356,16 +356,16 @@ class RequestQueryParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestQuery
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -373,10 +373,10 @@ class RequestQueryParamsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(
-            @RestQuery(value = "obj") @Valid obj: Test,
-            @RestQuery(value = "str-req") strReq: String,
-            @RestQuery(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
+            @RestQuery @Valid obj: Test,
+            @RestQuery strReq: String,
+            @RestQuery @DefaultValue(value = "5") int: Int,
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -422,15 +422,15 @@ class RequestQueryParamsTest {
         package io.test.service
 
         import io.test.Test
-        import org.jboss.resteasy.reactive.RestQuery
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DefaultValue
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
         import kotlin.Int
         import kotlin.String
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -438,12 +438,12 @@ class RequestQueryParamsTest {
           @GET
           @Path(value = "/tests")
           public fun fetchTest(
-            @RestQuery(value = "obj") obj: Test?,
-            @RestQuery(value = "str") str: String?,
-            @RestQuery(value = "int") int: Int?,
-            @RestQuery(value = "def1") @DefaultValue(value = "test") def1: String,
-            @RestQuery(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
+            @RestQuery obj: Test?,
+            @RestQuery str: String?,
+            @RestQuery int: Int?,
+            @RestQuery @DefaultValue(value = "test") def1: String,
+            @RestQuery @DefaultValue(value = "10") def2: Int,
+          ): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -488,20 +488,23 @@ class RequestQueryParamsTest {
       """
         package io.test.service
 
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.Map
         import org.jboss.resteasy.reactive.RestQuery
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(@RestQuery(value = "category") category: FetchTestCategoryQueryParam,
-              @RestQuery(value = "type") type: FetchTestTypeQueryParam): Response
+          public fun fetchTest(@RestQuery category: FetchTestCategoryQueryParam, @RestQuery
+              type: FetchTestTypeQueryParam): RestResponse<Map<String, Any>>
 
           public enum class FetchTestCategoryQueryParam {
             Politics,

@@ -62,7 +62,12 @@ open class KotlinJAXRSGenerateCommand :
 
   val quarkus by option(
     "-quarkus",
-    help = "Enable Quarkus-specific features",
+    help = """
+      Enable Quarkus-specific types:
+        * `@RestPath`, `@RestQuery`, `@RestHeader` annotations (implied parameter names)
+        * `RestResponse<T>` return type
+        * `Uni<T>` return type for reactive methods
+      """.trimIndent(),
   ).flag(default = false)
 
   override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =

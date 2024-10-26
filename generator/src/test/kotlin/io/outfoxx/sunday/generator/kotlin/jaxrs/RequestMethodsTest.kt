@@ -348,6 +348,7 @@ class RequestMethodsTest {
             "http://example.com/",
             listOf("application/json"),
             "API",
+            false,
           ),
         )
       }
@@ -432,73 +433,63 @@ class RequestMethodsTest {
       """
         package io.test
 
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DELETE
-        import javax.ws.rs.GET
-        import javax.ws.rs.HEAD
-        import javax.ws.rs.OPTIONS
-        import javax.ws.rs.PATCH
-        import javax.ws.rs.POST
-        import javax.ws.rs.PUT
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Context
-        import javax.ws.rs.core.Response
-        import javax.ws.rs.core.UriInfo
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DELETE
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.HEAD
+        import jakarta.ws.rs.OPTIONS
+        import jakarta.ws.rs.PATCH
+        import jakarta.ws.rs.POST
+        import jakarta.ws.rs.PUT
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import jakarta.ws.rs.core.Context
+        import jakarta.ws.rs.core.UriInfo
+        import kotlin.Unit
+        import org.jboss.resteasy.reactive.RestResponse
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
-          public fun fetchTest(): Response
+          public fun fetchTest(): RestResponse<Test>
 
           @PUT
           @Path(value = "/tests")
-          public fun putTest(body: Test): Response
+          public fun putTest(body: Test): RestResponse<Test>
 
           @POST
           @Path(value = "/tests")
-          public fun postTest(body: Test, @Context uriInfo: UriInfo): Response
+          public fun postTest(body: Test, @Context uriInfo: UriInfo): RestResponse<Test>
 
           @PATCH
           @Path(value = "/tests")
-          public fun patchTest(body: Test): Response
+          public fun patchTest(body: Test): RestResponse<Test>
 
           @DELETE
           @Path(value = "/tests")
-          public fun deleteTest(): Response
+          public fun deleteTest(): RestResponse<Unit>
 
           @HEAD
           @Path(value = "/tests")
-          public fun headTest(): Response
+          public fun headTest(): RestResponse<Unit>
 
           @OPTIONS
           @Path(value = "/tests")
-          public fun optionsTest(): Response
+          public fun optionsTest(): RestResponse<Unit>
 
           @PATCH
           @Path(value = "/tests2")
-          public fun patchableTest(body: PatchableTest): Response
+          public fun patchableTest(body: PatchableTest): RestResponse<Test>
 
           @GET
           @Path(value = "/request")
-          public fun requestTest(): Response
+          public fun requestTest(): RestResponse<Test>
 
           @GET
           @Path(value = "/response")
-          public fun responseTest(): Response
+          public fun responseTest(): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -543,28 +534,16 @@ class RequestMethodsTest {
       """
         package io.test
 
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestForm
-        import org.jboss.resteasy.reactive.RestMatrix
-        import org.jboss.resteasy.reactive.RestCookie
-        import org.jboss.resteasy.reactive.RestStreamElementType
-        import org.jboss.resteasy.reactive.ResponseStatus
-        import org.jboss.resteasy.reactive.ResponseHeader
-        import org.jboss.resteasy.reactive.Cache
-        import org.jboss.resteasy.reactive.DateFormat
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DELETE
-        import javax.ws.rs.GET
-        import javax.ws.rs.HEAD
-        import javax.ws.rs.OPTIONS
-        import javax.ws.rs.PATCH
-        import javax.ws.rs.POST
-        import javax.ws.rs.PUT
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import kotlin.Unit
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DELETE
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.HEAD
+        import jakarta.ws.rs.OPTIONS
+        import jakarta.ws.rs.PATCH
+        import jakarta.ws.rs.POST
+        import jakarta.ws.rs.PUT
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
@@ -587,15 +566,15 @@ class RequestMethodsTest {
 
           @DELETE
           @Path(value = "/tests")
-          public fun deleteTest(): Unit
+          public fun deleteTest()
 
           @HEAD
           @Path(value = "/tests")
-          public fun headTest(): Unit
+          public fun headTest()
 
           @OPTIONS
           @Path(value = "/tests")
-          public fun optionsTest(): Unit
+          public fun optionsTest()
 
           @PATCH
           @Path(value = "/tests2")

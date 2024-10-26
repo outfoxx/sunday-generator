@@ -70,10 +70,12 @@ class ResponseSseTest {
         public interface API {
           @GET
           @Path(value = "/tests")
+          @Produces(value = ["text/event-stream"])
           public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
           @Path(value = "/tests/server")
+          @Produces(value = ["text/event-stream"])
           public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
@@ -124,6 +126,7 @@ class ResponseSseTest {
         public interface API {
           @GET
           @Path(value = "/tests")
+          @Produces(value = ["text/event-stream"])
           public fun fetchEvents(): SseEventSource
 
           @GET
@@ -132,6 +135,7 @@ class ResponseSseTest {
 
           @GET
           @Path(value = "/tests/client")
+          @Produces(value = ["text/event-stream"])
           public fun fetchEventsClient(): SseEventSource
         }
 
@@ -177,34 +181,35 @@ class ResponseSseTest {
       """
         package io.test.service
 
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import jakarta.ws.rs.core.Context
+        import jakarta.ws.rs.sse.Sse
+        import jakarta.ws.rs.sse.SseEventSink
+        import org.jboss.resteasy.reactive.RestResponse
         import org.jboss.resteasy.reactive.RestStreamElementType
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Context
-        import javax.ws.rs.core.Response
-        import javax.ws.rs.sse.Sse
-        import javax.ws.rs.sse.SseEventSink
-        import kotlin.Unit
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
+          @Produces(value = ["text/event-stream"])
           @RestStreamElementType(value = "application/json")
-          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
           @Path(value = "/tests/server")
+          @Produces(value = ["text/event-stream"])
           @RestStreamElementType(value = "application/json")
-          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
           @GET
           @Path(value = "/tests/client")
-          @RestStreamElementType(value = "application/json")
-          public fun fetchEventsClient(): Response
+          public fun fetchEventsClient(): RestResponse<Test>
         }
 
       """.trimIndent(),
@@ -250,28 +255,29 @@ class ResponseSseTest {
         package io.test.service
 
         import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import jakarta.ws.rs.sse.SseEventSource
         import org.jboss.resteasy.reactive.RestStreamElementType
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.sse.SseEventSource
 
         @Produces(value = ["application/json"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
           @Path(value = "/tests")
+          @Produces(value = ["text/event-stream"])
           @RestStreamElementType(value = "application/json")
           public fun fetchEvents(): SseEventSource
 
           @GET
           @Path(value = "/tests/server")
-          @RestStreamElementType(value = "application/json")
           public fun fetchEventsServer(): Test
 
           @GET
           @Path(value = "/tests/client")
+          @Produces(value = ["text/event-stream"])
           @RestStreamElementType(value = "application/json")
           public fun fetchEventsClient(): SseEventSource
         }

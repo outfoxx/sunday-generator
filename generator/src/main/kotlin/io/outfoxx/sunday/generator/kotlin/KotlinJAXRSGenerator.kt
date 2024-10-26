@@ -49,12 +49,7 @@ import io.outfoxx.sunday.generator.common.HttpStatus.CREATED
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.utils.FLOW
-import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
-import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
-import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.*
 import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
@@ -82,7 +77,6 @@ import io.outfoxx.sunday.generator.utils.security
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
 import java.net.URI
-import java.net.URL
 import kotlin.collections.set
 
 /**
@@ -110,7 +104,7 @@ class KotlinJAXRSGenerator(
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
-    val quarkus: Boolean, // P8249
+    val quarkus: Boolean,
   ) : KotlinGenerator.Options(
     defaultServicePackageName,
     defaultProblemBaseUri,
@@ -134,7 +128,12 @@ class KotlinJAXRSGenerator(
     }
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
-  private val reactiveResponseType = options.reactiveResponseType?.let { ClassName.bestGuess(it) }
+  private val reactiveResponseType =
+    if (options.quarkus) {
+      UNI
+    } else {
+      options.reactiveResponseType?.let { ClassName.bestGuess(it) }
+    }
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
@@ -236,10 +235,7 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
 
-    if (
-      mediaTypesForPayloads.isNotEmpty() &&
-      mediaTypesForPayloads != defaultMediaTypes.take(mediaTypesForPayloads.size)
-    ) {
+    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
       val prodAnn = AnnotationSpec.builder(jaxRsTypes.produces)
         .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
         .build()
@@ -257,7 +253,7 @@ class KotlinJAXRSGenerator(
     if (reactive && reactiveResponseType != null && !isSSE && !isFlow) {
 
       return if (generationMode == Server || options.alwaysUseResponseReturn) {
-        reactiveResponseType.parameterizedBy(jaxRsTypes.response)
+        reactiveResponseType.parameterizedBy(jaxRsTypes.responseType(returnTypeName))
       } else {
         reactiveResponseType.parameterizedBy(returnTypeName)
       }
@@ -267,7 +263,33 @@ class KotlinJAXRSGenerator(
       return UNIT
     }
 
+    fun addSseElementTypeAnnotation() {
+      if (mediaTypesForPayloads.size > 1) {
+        genError("Multiple media types not supported for Server-Sent Events", operation)
+      }
+      val elementType = mediaTypesForPayloads.firstOrNull() ?: defaultMediaTypes.firstOrNull()
+      if (elementType == "text/event-stream" && elementType != defaultMediaTypes.firstOrNull()) {
+        return
+      }
+      functionBuilder.addAnnotation(
+        AnnotationSpec.builder(jaxRsTypes.produces)
+          .addMember("value = [%S]", "text/event-stream")
+          .build(),
+      )
+      elementType?.let {
+        jaxRsTypes.sseElementType?.let { ann ->
+          functionBuilder.addAnnotation(
+            AnnotationSpec.builder(ann)
+              .addMember("value = %S", elementType)
+              .build(),
+          )
+        }
+      }
+    }
+
     if (isSSE && !isFlow) {
+
+      addSseElementTypeAnnotation()
 
       // Ensure SSE "messages" are resolved and therefore defined
       if (body is UnionShape) {
@@ -282,32 +304,15 @@ class KotlinJAXRSGenerator(
       }
     }
 
-    val elementType =
-      mediaTypesForPayloads.firstOrNull()
-        ?: defaultMediaTypes.firstOrNull()
-    val elementTypeAnnotations =
-      if (elementType != null && elementType != "text/event-stream") {
-        listOf(
-          AnnotationSpec.builder(jaxRsTypes.produces)
-            .addMember("value = [%S]", "text/event-stream")
-            .build(),
-          AnnotationSpec.builder(ClassName.bestGuess("org.jboss.resteasy.reactive.RestStreamElementType"))
-            .addMember("value = %S", elementType)
-            .build(),
-        )
-      } else {
-        listOf()
-      }
-
     when (operation.findStringAnnotation(EventStream, generationMode)) {
       "simple" -> {
-        elementTypeAnnotations.forEach { functionBuilder.addAnnotation(it) }
+        addSseElementTypeAnnotation()
         return FLOW.parameterizedBy(
           when {
             isSSE && generationMode == Client -> jaxRsTypes.sseInboundEvent
             isSSE && generationMode == Server -> jaxRsTypes.sseOutboundEvent
             else -> returnTypeName
-          }
+          },
         )
       }
 
@@ -315,13 +320,13 @@ class KotlinJAXRSGenerator(
         if (body !is UnionShape) {
           genError("Discriminated ($EventStream) requires a union of event types", operation)
         }
-        elementTypeAnnotations.forEach { functionBuilder.addAnnotation(it) }
+        addSseElementTypeAnnotation()
         return FLOW.parameterizedBy(returnTypeName)
       }
     }
 
     return if (generationMode == Server || options.alwaysUseResponseReturn) {
-      jaxRsTypes.response
+      jaxRsTypes.responseType(returnTypeName)
     } else {
       returnTypeName
     }
@@ -466,6 +471,21 @@ class KotlinJAXRSGenerator(
     return parameterBuilder
   }
 
+  private fun ParameterSpec.Builder.annotateParameter(
+    parameter: Parameter,
+    parameterType: JaxRsTypes.ParamType,
+    requireName: Boolean = false,
+  ) =
+    addAnnotation(
+      AnnotationSpec.builder(jaxRsTypes.paramAnnotation(parameterType))
+        .apply {
+          if (requireName || jaxRsTypes.isNameRequiredForParameters) {
+            addMember("value = %S", parameter.name())
+          }
+        }
+        .build(),
+    )
+
   override fun processResourceMethodUriParameter(
     endPoint: EndPoint,
     operation: Operation,
@@ -476,11 +496,7 @@ class KotlinJAXRSGenerator(
   ): ParameterSpec {
 
     // Add @PathParam to URI parameters
-    parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(jaxRsTypes.pathParam)
-        .addMember("value = %S", parameter.name())
-        .build(),
-    )
+    parameterBuilder.annotateParameter(parameter, JaxRsTypes.ParamType.PATH)
 
     return methodParameter(parameter, parameterBuilder).build()
   }
@@ -495,11 +511,7 @@ class KotlinJAXRSGenerator(
   ): ParameterSpec {
 
     // Add @QueryParam to URI parameters
-    parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(jaxRsTypes.queryParam)
-        .addMember("value = %S", parameter.name())
-        .build(),
-    )
+    parameterBuilder.annotateParameter(parameter, JaxRsTypes.ParamType.QUERY)
 
     return methodParameter(parameter, parameterBuilder).build()
   }
@@ -514,11 +526,7 @@ class KotlinJAXRSGenerator(
   ): ParameterSpec {
 
     // Add @HeaderParam to URI parameters
-    parameterBuilder.addAnnotation(
-      AnnotationSpec.builder(jaxRsTypes.headerParam)
-        .addMember("value = %S", parameter.name())
-        .build(),
-    )
+    parameterBuilder.annotateParameter(parameter, JaxRsTypes.ParamType.HEADER, true)
 
     return methodParameter(parameter, parameterBuilder).build()
   }

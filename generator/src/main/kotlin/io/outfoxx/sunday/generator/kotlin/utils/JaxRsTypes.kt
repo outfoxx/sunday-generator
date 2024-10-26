@@ -17,13 +17,15 @@
 package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeName
 
 interface JaxRsTypes {
 
   companion object {
     val JAVAX = StdJaxRsTypes("javax.ws.rs")
     val JAKARTA = StdJaxRsTypes("jakarta.ws.rs")
-    val QUARKUS = Quarkus()
+    val QUARKUS = Quarkus(base = JAKARTA)
   }
 
   enum class Method {
@@ -76,7 +78,7 @@ interface JaxRsTypes {
   val asyncResponse: ClassName
 
   // Response Types
-  val response: ClassName
+  val rawResponse: ClassName
   val sseEventSource: ClassName
 
   // Injection Annotations
@@ -102,7 +104,7 @@ interface JaxRsTypes {
 
   fun httpMethod(method: String): ClassName? =
     try {
-      httpMethod(Method.valueOf(method))
+      httpMethod(Method.valueOf(method.uppercase()))
     } catch (e: IllegalArgumentException) {
       null
     }
@@ -127,6 +129,9 @@ interface JaxRsTypes {
       ParamType.FORM -> formParam
       ParamType.MATRIX -> matrixParam
     }
+
+  fun responseType(resultType: TypeName): TypeName =
+    rawResponse.parameterizedBy(resultType)
 
   val isNameRequiredForParameters: Boolean
 
@@ -159,7 +164,7 @@ interface JaxRsTypes {
 
     override val asyncResponse = ClassName("$basePkg.container", "AsyncResponse")
 
-    override val response = ClassName.bestGuess("$basePkg.Response")
+    override val rawResponse = ClassName.bestGuess("$basePkg.core.Response")
     override val sseEventSource = ClassName("$basePkg.sse", "SseEventSource")
 
     override val context = ClassName("$basePkg.core", "Context")
@@ -170,9 +175,11 @@ interface JaxRsTypes {
 
     override val sseInboundEvent = ClassName("$basePkg.sse", "InboundSseEvent")
     override val sseOutboundEvent = ClassName("$basePkg.sse", "OutboundSseEvent")
+
+    override fun responseType(resultType: TypeName) = rawResponse
   }
 
-  class Quarkus(basePkg: String = RESTEASY) : JaxRsTypes {
+  class Quarkus(pkg: String = RESTEASY, base: JaxRsTypes) : JaxRsTypes {
 
     companion object {
       const val RESTEASY = "org.jboss.resteasy.reactive"
@@ -182,48 +189,48 @@ interface JaxRsTypes {
 
     override val isNameRequiredForParameters: Boolean = false
 
-    override val path = JAKARTA.path
+    override val path = base.path
 
-    override val head = JAKARTA.head
-    override val get = JAKARTA.get
-    override val post = JAKARTA.post
-    override val put = JAKARTA.put
-    override val patch = JAKARTA.patch
-    override val delete = JAKARTA.delete
-    override val options = JAKARTA.options
+    override val head = base.head
+    override val get = base.get
+    override val post = base.post
+    override val put = base.put
+    override val patch = base.patch
+    override val delete = base.delete
+    override val options = base.options
 
-    override val consumes = JAKARTA.consumes
-    override val produces = JAKARTA.produces
+    override val consumes = base.consumes
+    override val produces = base.produces
 
-    override val pathParam = ClassName(basePkg, "RestPath")
-    override val queryParam = ClassName(basePkg, "RestQuery")
-    override val headerParam = ClassName(basePkg, "RestHeader")
-    override val cookieParam = ClassName(basePkg, "RestCookie")
-    override val formParam = ClassName(basePkg, "RestForm")
-    override val matrixParam = ClassName(basePkg, "RestMatrix")
-    override val defaultValue = JAKARTA.defaultValue
+    override val pathParam = ClassName(pkg, "RestPath")
+    override val queryParam = ClassName(pkg, "RestQuery")
+    override val headerParam = ClassName(pkg, "RestHeader")
+    override val cookieParam = ClassName(pkg, "RestCookie")
+    override val formParam = ClassName(pkg, "RestForm")
+    override val matrixParam = ClassName(pkg, "RestMatrix")
+    override val defaultValue = base.defaultValue
 
-    override val suspended = JAKARTA.suspended
+    override val suspended = base.suspended
 
-    override val asyncResponse = JAKARTA.asyncResponse
+    override val asyncResponse = base.asyncResponse
 
-    override val response = ClassName(basePkg, "RestResponse")
-    override val sseEventSource = JAKARTA.sseEventSource
+    override val rawResponse = ClassName(pkg, "RestResponse")
+    override val sseEventSource = base.sseEventSource
 
-    override val context = JAKARTA.context
+    override val context = base.context
 
-    override val uriInfo = JAKARTA.uriInfo
-    override val sse = JAKARTA.sse
-    override val sseEventSink = JAKARTA.sseEventSink
+    override val uriInfo = base.uriInfo
+    override val sse = base.sse
+    override val sseEventSink = base.sseEventSink
 
-    override val sseInboundEvent = JAKARTA.sseInboundEvent
-    override val sseOutboundEvent = JAKARTA.sseOutboundEvent
+    override val sseInboundEvent = base.sseInboundEvent
+    override val sseOutboundEvent = base.sseOutboundEvent
 
-    override val separator = ClassName(basePkg, "Separator")
-    override val sseElementType = ClassName(basePkg, "RestStreamElementType")
-    override val responseStatus = ClassName(basePkg, "ResponseStatus")
-    override val responseHeader = ClassName(basePkg, "ResponseHeader")
-    override val cache = ClassName(basePkg, "Cache")
-    override val dateFormat = ClassName(basePkg, "DateFormat")
+    override val separator = ClassName(pkg, "Separator")
+    override val sseElementType = ClassName(pkg, "RestStreamElementType")
+    override val responseStatus = ClassName(pkg, "ResponseStatus")
+    override val responseHeader = ClassName(pkg, "ResponseHeader")
+    override val cache = ClassName(pkg, "Cache")
+    override val dateFormat = ClassName(pkg, "DateFormat")
   }
 }
