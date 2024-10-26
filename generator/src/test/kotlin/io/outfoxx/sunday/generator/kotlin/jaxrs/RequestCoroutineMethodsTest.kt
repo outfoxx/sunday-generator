@@ -549,4 +549,569 @@ class RequestCoroutineMethodsTest {
       },
     )
   }
+
+  @Test
+  fun `test basic coroutines method generation in server mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun fetchTest(): Response
+
+          @GET
+          @Path(value = "/tests/derived")
+          public suspend fun fetchDerivedTest(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test basic coroutines method generation in client mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Base
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun fetchTest(): Test
+
+          @GET
+          @Path(value = "/tests/derived")
+          public suspend fun fetchDerivedTest(): Base
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test basic coroutines method generation in client mode with nullify and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.AnotherNotFoundProblem
+        import io.test.Test
+        import io.test.TestNotFoundProblem
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.QueryParam
+        import kotlin.Int
+        import org.zalando.problem.ThrowableProblem
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
+            fetchTest1(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test1")
+          public suspend fun fetchTest1(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
+            fetchTest2(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test2")
+          public suspend fun fetchTest2(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
+            fetchTest3(limit)
+          } catch(x: TestNotFoundProblem) {
+            null
+          } catch(x: AnotherNotFoundProblem) {
+            null
+          }
+
+          @GET
+          @Path(value = "/test3")
+          public suspend fun fetchTest3(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest4OrNull(limit: Int): Test? = try {
+            fetchTest4(limit)
+          } catch(x: ThrowableProblem) {
+            when (x.status?.statusCode) {
+              404, 405 -> null
+              else -> throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test4")
+          public suspend fun fetchTest4(@QueryParam(value = "limit") limit: Int): Test
+
+          public suspend fun fetchTest5OrNull(limit: Int): Test? = try {
+            fetchTest5(limit)
+          } catch(x: ThrowableProblem) {
+            if (x.status?.statusCode == 404) {
+              null
+            } else {
+              throw x
+            }
+          }
+
+          @GET
+          @Path(value = "/test5")
+          public suspend fun fetchTest5(@QueryParam(value = "limit") limit: Int): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation in server mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.sse.OutboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation in client mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.sse.InboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation with common type in server mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Base
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Base>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Base>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation with common type in client mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Base
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsSimple(): Flow<Base>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          @RestStreamElementType(value = "application/json")
+          public suspend fun fetchEventsDiscriminated(): Flow<Base>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

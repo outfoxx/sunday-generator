@@ -328,4 +328,431 @@ class RequestBodyParamTest {
       },
     )
   }
+
+  @Test
+  fun `test basic body parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestPath body: Test): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test body parameter generation with json override (server mode) and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.JsonNode
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestPath body: JsonNode): Response
+
+          @GET
+          @Path(value = "/tests-client")
+          public fun fetchTestClient(@RestPath body: Test): Response
+
+          @GET
+          @Path(value = "/tests-server")
+          public fun fetchTestServer(@RestPath body: JsonNode): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test body parameter generation with json override (client mode) and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param-json-override.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import com.fasterxml.jackson.databind.JsonNode
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestPath body: JsonNode): Test
+
+          @GET
+          @Path(value = "/tests-client")
+          public fun fetchTestClient(@RestPath body: JsonNode): Test
+
+          @GET
+          @Path(value = "/tests-server")
+          public fun fetchTestServer(@RestPath body: Test): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test basic body parameter generation with validation constraints and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.validation.Valid
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestPath @Valid body: Test): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test optional body parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestPath body: Test?): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of body parameter with explicit content type and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.ByteArray
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          @Consumes(value = ["application/octet-stream"])
+          public fun fetchTest(@RestPath body: ByteArray): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

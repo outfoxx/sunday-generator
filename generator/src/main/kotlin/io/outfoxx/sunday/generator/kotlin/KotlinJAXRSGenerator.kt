@@ -110,6 +110,7 @@ class KotlinJAXRSGenerator(
     defaultProblemBaseUri: String,
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
+    val quarkus: Boolean, // P8249
   ) : KotlinGenerator.Options(
     defaultServicePackageName,
     defaultProblemBaseUri,
@@ -124,10 +125,13 @@ class KotlinJAXRSGenerator(
   }
 
   private val jaxRsTypes =
-    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages))
+    if (options.quarkus) {
+      JaxRsTypes.QUARKUS
+    } else if (typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages)) {
       JaxRsTypes.JAKARTA
-    else
+    } else {
       JaxRsTypes.JAVAX
+    }
   private val referencedProblemTypes = mutableMapOf<URI, TypeName>()
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
   private val reactiveResponseType = options.reactiveResponseType?.let { ClassName.bestGuess(it) }

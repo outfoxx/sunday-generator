@@ -19,7 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.utils
 import com.squareup.kotlinpoet.ClassName
 import io.outfoxx.sunday.generator.genError
 
-class JaxRsTypes(basePackage: String) {
+class JaxRsTypes(basePackage: String, name: String) {
 
   val consumes = ClassName.bestGuess("$basePackage.ws.rs.Consumes")
   val delete = ClassName.bestGuess("$basePackage.ws.rs.DELETE")
@@ -46,6 +46,20 @@ class JaxRsTypes(basePackage: String) {
   val sseInboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.InboundSseEvent")
   val sseOutboundEvent = ClassName.bestGuess("$basePackage.ws.rs.sse.OutboundSseEvent")
 
+  // Quarkus-specific annotations
+  val restPath = ClassName.bestGuess("org.jboss.resteasy.reactive.RestPath")
+  val restQuery = ClassName.bestGuess("org.jboss.resteasy.reactive.RestQuery")
+  val restForm = ClassName.bestGuess("org.jboss.resteasy.reactive.RestForm")
+  val restHeader = ClassName.bestGuess("org.jboss.resteasy.reactive.RestHeader")
+  val restMatrix = ClassName.bestGuess("org.jboss.resteasy.reactive.RestMatrix")
+  val restCookie = ClassName.bestGuess("org.jboss.resteasy.reactive.RestCookie")
+  val separator = ClassName.bestGuess("org.jboss.resteasy.reactive.RestQuery.Separator")
+  val restStreamElementType = ClassName.bestGuess("org.jboss.resteasy.reactive.RestStreamElementType")
+  val responseStatus = ClassName.bestGuess("org.jboss.resteasy.reactive.ResponseStatus")
+  val responseHeader = ClassName.bestGuess("org.jboss.resteasy.reactive.ResponseHeader")
+  val cache = ClassName.bestGuess("org.jboss.resteasy.reactive.Cache")
+  val dateFormat = ClassName.bestGuess("org.jboss.resteasy.reactive.DateFormat")
+
   fun httpMethod(methodName: String) =
     when (methodName.uppercase()) {
       "DELETE" -> delete
@@ -60,7 +74,85 @@ class JaxRsTypes(basePackage: String) {
 
   companion object {
 
-    val JAVAX = JaxRsTypes("javax")
-    val JAKARTA = JaxRsTypes("jakarta")
+    private val JAVAX_NAMES = mapOf(
+      "consumes" to "javax.ws.rs.Consumes",
+      "delete" to "javax.ws.rs.DELETE",
+      "defaultvalue" to "javax.ws.rs.DefaultValue",
+      "get" to "javax.ws.rs.GET",
+      "head" to "javax.ws.rs.HEAD",
+      "headerParam" to "javax.ws.rs.HeaderParam",
+      "options" to "javax.ws.rs.OPTIONS",
+      "patch" to "javax.ws.rs.PATCH",
+      "post" to "javax.ws.rs.POST",
+      "put" to "javax.ws.rs.PUT",
+      "path" to "javax.ws.rs.Path",
+      "pathParam" to "javax.ws.rs.PathParam",
+      "produces" to "javax.ws.rs.Produces",
+      "queryParam" to "javax.ws.rs.QueryParam",
+      "response" to "javax.ws.rs.core.Response",
+      "asyncResponse" to "javax.ws.rs.container.AsyncResponse",
+      "suspended" to "javax.ws.rs.container.Suspended",
+      "context" to "javax.ws.rs.core.Context",
+      "uriInfo" to "javax.ws.rs.core.UriInfo",
+      "sse" to "javax.ws.rs.sse.Sse",
+      "sseEventSink" to "javax.ws.rs.sse.SseEventSink",
+      "sseEventSource" to "javax.ws.rs.sse.SseEventSource",
+      "sseInboundEvent" to "javax.ws.rs.sse.InboundSseEvent",
+      "sseOutboundEvent" to "javax.ws.rs.sse.OutboundSseEvent"
+    )
+
+    private val JAKARTA_NAMES = mapOf(
+      "consumes" to "jakarta.ws.rs.Consumes",
+      "delete" to "jakarta.ws.rs.DELETE",
+      "defaultvalue" to "jakarta.ws.rs.DefaultValue",
+      "get" to "jakarta.ws.rs.GET",
+      "head" to "jakarta.ws.rs.HEAD",
+      "headerParam" to "jakarta.ws.rs.HeaderParam",
+      "options" to "jakarta.ws.rs.OPTIONS",
+      "patch" to "jakarta.ws.rs.PATCH",
+      "post" to "jakarta.ws.rs.POST",
+      "put" to "jakarta.ws.rs.PUT",
+      "path" to "jakarta.ws.rs.Path",
+      "pathParam" to "jakarta.ws.rs.PathParam",
+      "produces" to "jakarta.ws.rs.Produces",
+      "queryParam" to "jakarta.ws.rs.QueryParam",
+      "response" to "jakarta.ws.rs.core.Response",
+      "asyncResponse" to "jakarta.ws.rs.container.AsyncResponse",
+      "suspended" to "jakarta.ws.rs.container.Suspended",
+      "context" to "jakarta.ws.rs.core.Context",
+      "uriInfo" to "jakarta.ws.rs.core.UriInfo",
+      "sse" to "jakarta.ws.rs.sse.Sse",
+      "sseEventSink" to "jakarta.ws.rs.sse.SseEventSink",
+      "sseEventSource" to "jakarta.ws.rs.sse.SseEventSource",
+      "sseInboundEvent" to "jakarta.ws.rs.sse.InboundSseEvent",
+      "sseOutboundEvent" to "jakarta.ws.rs.sse.OutboundSseEvent"
+    )
+
+    private val QUARKUS_NAMES = mapOf(
+      "restPath" to "org.jboss.resteasy.reactive.RestPath",
+      "restQuery" to "org.jboss.resteasy.reactive.RestQuery",
+      "restForm" to "org.jboss.resteasy.reactive.RestForm",
+      "restHeader" to "org.jboss.resteasy.reactive.RestHeader",
+      "restMatrix" to "org.jboss.resteasy.reactive.RestMatrix",
+      "restCookie" to "org.jboss.resteasy.reactive.RestCookie",
+      "separator" to "org.jboss.resteasy.reactive.RestQuery.Separator",
+      "restStreamElementType" to "org.jboss.resteasy.reactive.RestStreamElementType",
+      "responseStatus" to "org.jboss.resteasy.reactive.ResponseStatus",
+      "responseHeader" to "org.jboss.resteasy.reactive.ResponseHeader",
+      "cache" to "org.jboss.resteasy.reactive.Cache",
+      "dateFormat" to "org.jboss.resteasy.reactive.DateFormat"
+    )
+
+    val JAVAX = JaxRsTypes("javax", "JAVAX")
+    val JAKARTA = JaxRsTypes("jakarta", "JAKARTA")
+    val QUARKUS = JaxRsTypes("org.jboss.resteasy.reactive", "QUARKUS")
+
+    fun select(quarkus: Boolean, useJakarta: Boolean): JaxRsTypes {
+      return when {
+        quarkus -> QUARKUS
+        useJakarta -> JAKARTA
+        else -> JAVAX
+      }
+    }
   }
 }

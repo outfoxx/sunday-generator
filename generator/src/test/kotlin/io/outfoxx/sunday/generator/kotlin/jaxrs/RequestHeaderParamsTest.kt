@@ -257,4 +257,272 @@ class RequestHeaderParamsTest {
       },
     )
   }
+
+  @Test
+  fun `test basic header parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestHeader
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestHeader(value = "obj") obj: Test,
+            @RestHeader(value = "str-req") strReq: String,
+            @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
+          ): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test optional header parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestHeader
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestHeader(value = "obj") obj: Test?,
+            @RestHeader(value = "str") str: String?,
+            @RestHeader(value = "int") int: Int?,
+            @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
+            @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
+          ): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test optional header parameter generation with validation constraints and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestHeader
+        import javax.validation.Valid
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DefaultValue
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.Int
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(
+            @RestHeader(value = "obj") @Valid obj: Test?,
+            @RestHeader(value = "str") str: String?,
+            @RestHeader(value = "int") int: Int?,
+            @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
+            @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
+          ): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of multiple header parameters with inline type definitions and quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import org.jboss.resteasy.reactive.RestHeader
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
+              @RestHeader(value = "type") type: FetchTestTypeHeaderParam): Response
+
+          public enum class FetchTestCategoryHeaderParam {
+            Politics,
+            Science,
+          }
+
+          public enum class FetchTestTypeHeaderParam {
+            All,
+            Limited,
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

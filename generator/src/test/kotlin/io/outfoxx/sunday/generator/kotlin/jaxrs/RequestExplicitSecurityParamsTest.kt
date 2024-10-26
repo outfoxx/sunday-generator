@@ -97,4 +97,64 @@ class RequestExplicitSecurityParamsTest {
       },
     )
   }
+
+  @Test
+  fun `test explicit security parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            true,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import org.jboss.resteasy.reactive.RestHeader
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.PathParam
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.String
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests/{id}")
+          public fun fetchTest(@RestHeader(value = "Authorization") bearerAuthorization: String,
+              @PathParam(value = "id") id: String): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

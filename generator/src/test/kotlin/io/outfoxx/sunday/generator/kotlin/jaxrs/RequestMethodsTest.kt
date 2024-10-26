@@ -397,4 +397,224 @@ class RequestMethodsTest {
       },
     )
   }
+
+  @Test
+  fun `test request method generation in server mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DELETE
+        import javax.ws.rs.GET
+        import javax.ws.rs.HEAD
+        import javax.ws.rs.OPTIONS
+        import javax.ws.rs.PATCH
+        import javax.ws.rs.POST
+        import javax.ws.rs.PUT
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Context
+        import javax.ws.rs.core.Response
+        import javax.ws.rs.core.UriInfo
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Response
+
+          @PUT
+          @Path(value = "/tests")
+          public fun putTest(body: Test): Response
+
+          @POST
+          @Path(value = "/tests")
+          public fun postTest(body: Test, @Context uriInfo: UriInfo): Response
+
+          @PATCH
+          @Path(value = "/tests")
+          public fun patchTest(body: Test): Response
+
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): Response
+
+          @HEAD
+          @Path(value = "/tests")
+          public fun headTest(): Response
+
+          @OPTIONS
+          @Path(value = "/tests")
+          public fun optionsTest(): Response
+
+          @PATCH
+          @Path(value = "/tests2")
+          public fun patchableTest(body: PatchableTest): Response
+
+          @GET
+          @Path(value = "/request")
+          public fun requestTest(): Response
+
+          @GET
+          @Path(value = "/response")
+          public fun responseTest(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test request method generation in client mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import org.jboss.resteasy.reactive.RestPath
+        import org.jboss.resteasy.reactive.RestQuery
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestForm
+        import org.jboss.resteasy.reactive.RestMatrix
+        import org.jboss.resteasy.reactive.RestCookie
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import org.jboss.resteasy.reactive.ResponseStatus
+        import org.jboss.resteasy.reactive.ResponseHeader
+        import org.jboss.resteasy.reactive.Cache
+        import org.jboss.resteasy.reactive.DateFormat
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.DELETE
+        import javax.ws.rs.GET
+        import javax.ws.rs.HEAD
+        import javax.ws.rs.OPTIONS
+        import javax.ws.rs.PATCH
+        import javax.ws.rs.POST
+        import javax.ws.rs.PUT
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun fetchTest(): Test
+
+          @PUT
+          @Path(value = "/tests")
+          public fun putTest(body: Test): Test
+
+          @POST
+          @Path(value = "/tests")
+          public fun postTest(body: Test): Test
+
+          @PATCH
+          @Path(value = "/tests")
+          public fun patchTest(body: Test): Test
+
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): Unit
+
+          @HEAD
+          @Path(value = "/tests")
+          public fun headTest(): Unit
+
+          @OPTIONS
+          @Path(value = "/tests")
+          public fun optionsTest(): Unit
+
+          @PATCH
+          @Path(value = "/tests2")
+          public fun patchableTest(body: PatchableTest): Test
+
+          @GET
+          @Path(value = "/request")
+          public fun requestTest(): Test
+
+          @GET
+          @Path(value = "/response")
+          public fun responseTest(): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

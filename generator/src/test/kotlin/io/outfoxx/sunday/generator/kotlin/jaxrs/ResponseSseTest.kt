@@ -142,4 +142,145 @@ class ResponseSseTest {
       },
     )
   }
+
+  @Test
+  fun `test basic sse method generation in server mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Context
+        import javax.ws.rs.core.Response
+        import javax.ws.rs.sse.Sse
+        import javax.ws.rs.sse.SseEventSink
+        import kotlin.Unit
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+
+          @GET
+          @Path(value = "/tests/server")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink): Unit
+
+          @GET
+          @Path(value = "/tests/client")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEventsClient(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test basic sse method generation in client mode with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import org.jboss.resteasy.reactive.RestStreamElementType
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.sse.SseEventSource
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEvents(): SseEventSource
+
+          @GET
+          @Path(value = "/tests/server")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEventsServer(): Test
+
+          @GET
+          @Path(value = "/tests/client")
+          @RestStreamElementType(value = "application/json")
+          public fun fetchEventsClient(): SseEventSource
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }
