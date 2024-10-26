@@ -20,7 +20,7 @@ import amf.apicontract.client.platform.RAMLConfiguration
 import amf.core.client.common.transform.PipelineId
 import amf.core.client.common.validation.SeverityLevels
 import amf.core.client.platform.model.document.Document
-import amf.core.client.platform.validation.AMFValidationReport
+import amf.core.client.platform.validation.AMFValidationResult
 import io.outfoxx.sunday.generator.utils.LocalResourceLoader
 import java.net.URI
 import java.util.concurrent.ExecutionException
@@ -30,7 +30,7 @@ open class APIProcessor {
   data class Result(
     val document: Document,
     val shapeIndex: ShapeIndex,
-    private val validationReport: AMFValidationReport,
+    private val validationResults: List<AMFValidationResult>,
   ) {
 
     enum class Level {
@@ -43,16 +43,15 @@ open class APIProcessor {
       val level: Level,
       val file: String,
       val line: Int,
+      val colum: Int,
       val message: String,
     )
 
     val isValid: Boolean
-      get() =
-        validationReport.conforms() &&
-          validationReport.results().none { it.severityLevel() == SeverityLevels.VIOLATION() }
+      get() = validationResults.none { it.severityLevel() == SeverityLevels.VIOLATION() }
 
     val validationLog: List<Entry>
-      get() = validationReport.results().map {
+      get() = validationResults.map {
         val level =
           when (it.severityLevel()) {
             SeverityLevels.VIOLATION() -> Level.Error
@@ -62,8 +61,9 @@ open class APIProcessor {
           }
         val file = it.location()?.orElse("unknown")!!
         val line = it.position().start().line()
+        val column = it.position().start().column()
         val message = it.message()
-        Entry(level, file, line, message)
+        Entry(level, file, line, column, message)
       }
   }
 
@@ -74,9 +74,10 @@ open class APIProcessor {
         .withResourceLoader(LocalResourceLoader)
         .baseUnitClient()
 
-    val unresolvedDocument =
+    val (unresolvedDocument, validationResults) =
       try {
-        ramlClient.parseDocument(uri.toString()).get().document()
+        val result = ramlClient.parseDocument(uri.toString()).get()
+        result.document() to result.results()
       } catch (x: ExecutionException) {
         throw x.cause ?: x
       }
@@ -87,6 +88,6 @@ open class APIProcessor {
 
     val resolvedDocument = ramlClient.transform(unresolvedDocument, PipelineId.Cache()).baseUnit() as Document
 
-    return Result(resolvedDocument, shapeIndex, validationReport)
+    return Result(resolvedDocument, shapeIndex, validationResults + validationReport.results())
   }
 }
