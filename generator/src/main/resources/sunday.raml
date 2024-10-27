@@ -64,6 +64,21 @@ types:
   Nullify:
     type: (string | number)[]
 
+  JaxrsContextType:
+    type: string
+    enum: [
+      uriInfo,
+      request,
+      headers,
+      securityContext,
+      application,
+      configuration,
+      resourceContext,
+      providers,
+      sseEventSink,
+      sse,
+    ]
+
 annotationTypes:
 
   name:
@@ -227,4 +242,9 @@ annotationTypes:
     allowedTargets: [Method]
   jsonBody:server:
     type: boolean
+    allowedTargets: [Method]
+
+  jaxrsContext:
+    type: JaxrsContextType[]
+    uniqueItems: true
     allowedTargets: [Method]

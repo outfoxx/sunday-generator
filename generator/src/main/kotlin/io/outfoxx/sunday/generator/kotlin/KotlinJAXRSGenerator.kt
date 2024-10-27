@@ -42,11 +42,14 @@ import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
 import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
+import io.outfoxx.sunday.generator.APIAnnotationName.JaxrsContext
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.HttpStatus.CREATED
+import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.common.SimpleNameGenerator
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.*
@@ -55,6 +58,7 @@ import io.outfoxx.sunday.generator.utils.defaultValueStr
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.findBoolAnnotation
 import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
 import io.outfoxx.sunday.generator.utils.flattened
 import io.outfoxx.sunday.generator.utils.hasAnnotation
 import io.outfoxx.sunday.generator.utils.headers
@@ -76,6 +80,7 @@ import io.outfoxx.sunday.generator.utils.schemes
 import io.outfoxx.sunday.generator.utils.security
 import io.outfoxx.sunday.generator.utils.statusCode
 import io.outfoxx.sunday.generator.utils.successes
+import io.outfoxx.sunday.generator.utils.stringValue
 import java.net.URI
 import kotlin.collections.set
 
@@ -613,6 +618,40 @@ class KotlinJAXRSGenerator(
             .addAnnotation(jaxRsTypes.context)
             .build(),
         )
+      }
+
+      // Add JAX-RS context parameters based on jaxrsContext annotation
+      val existingParameters = functionBuilder.parameters
+      val existingParameterTypes = existingParameters.map { it.type }
+      val existingParameterNames = existingParameters.map { it.name }
+
+      fun getUniqueContextParameterName(contextValue: String): String {
+        var name = contextValue
+        var i = 1
+        while (existingParameterNames.contains(name)) {
+          name = "$contextValue$i"
+          i++
+        }
+        return name
+      }
+
+      val requestedContextValues =
+        operation.findArrayAnnotation(JaxrsContext, generationMode)
+          ?.mapNotNull { it.stringValue }
+          ?.distinct()
+          ?: emptyList()
+
+      requestedContextValues.forEach { contextValue ->
+        val contextType = jaxRsTypes.contextType(contextValue)
+          ?: genError("Unsupported JAX-RS context type '$contextValue'", operation)
+        if (!existingParameterTypes.contains(contextType)) {
+          val contextParameterName = getUniqueContextParameterName(contextValue)
+          functionBuilder.addParameter(
+            ParameterSpec.builder(contextParameterName, contextType)
+              .addAnnotation(jaxRsTypes.context)
+              .build(),
+          )
+        }
       }
     } else if (!options.alwaysUseResponseReturn) {
       addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
