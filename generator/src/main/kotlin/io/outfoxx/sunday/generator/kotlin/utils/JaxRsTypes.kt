@@ -47,6 +47,19 @@ interface JaxRsTypes {
     MATRIX,
   }
 
+  enum class ContextType(val annotationName: String) {
+    URI_INFO("uriInfo"),
+    REQUEST("request"),
+    HTTP_HEADERS("headers"),
+    SECURITY_CONTEXT("securityContext"),
+    APPLICATION("application"),
+    CONFIGURATION("configuration"),
+    RESOURCE_CONTEXT("resourceContext"),
+    PROVIDERS("providers"),
+    SSE("sse"),
+    SSE_EVENT_SINK("sseEventSink"),
+  }
+
   // Path Annotations
   val path: ClassName
 
@@ -86,6 +99,13 @@ interface JaxRsTypes {
 
   // Injectable Types
   val uriInfo: ClassName
+  val request: ClassName
+  val httpHeaders: ClassName
+  val securityContext: ClassName
+  val application: ClassName
+  val configuration: ClassName
+  val resourceContext: ClassName
+  val providers: ClassName
   val sse: ClassName
   val sseEventSink: ClassName
 
@@ -133,6 +153,25 @@ interface JaxRsTypes {
   fun responseType(resultType: TypeName): TypeName =
     rawResponse.parameterizedBy(resultType)
 
+  fun contextType(type: ContextType): ClassName =
+    when (type) {
+      ContextType.URI_INFO -> uriInfo
+      ContextType.REQUEST -> request
+      ContextType.HTTP_HEADERS -> httpHeaders
+      ContextType.SECURITY_CONTEXT -> securityContext
+      ContextType.APPLICATION -> application
+      ContextType.CONFIGURATION -> configuration
+      ContextType.RESOURCE_CONTEXT -> resourceContext
+      ContextType.PROVIDERS -> providers
+      ContextType.SSE -> sse
+      ContextType.SSE_EVENT_SINK -> sseEventSink
+    }
+
+  fun contextType(type: String): ClassName? =
+    ContextType.entries
+      .firstOrNull { it.annotationName == type }
+      ?.let { contextType(it) }
+
   val isNameRequiredForParameters: Boolean
 
   class StdJaxRsTypes(basePkg: String) : JaxRsTypes {
@@ -170,6 +209,13 @@ interface JaxRsTypes {
     override val context = ClassName("$basePkg.core", "Context")
 
     override val uriInfo = ClassName("$basePkg.core", "UriInfo")
+    override val request = ClassName("$basePkg.core", "Request")
+    override val httpHeaders = ClassName("$basePkg.core", "HttpHeaders")
+    override val securityContext = ClassName("$basePkg.core", "SecurityContext")
+    override val application = ClassName("$basePkg.core", "Application")
+    override val configuration = ClassName("$basePkg.core", "Configuration")
+    override val resourceContext = ClassName("$basePkg.container", "ResourceContext")
+    override val providers = ClassName("$basePkg.ext", "Providers")
     override val sse = ClassName("$basePkg.sse", "Sse")
     override val sseEventSink = ClassName("$basePkg.sse", "SseEventSink")
 
@@ -220,6 +266,13 @@ interface JaxRsTypes {
     override val context = base.context
 
     override val uriInfo = base.uriInfo
+    override val request = base.request
+    override val httpHeaders = base.httpHeaders
+    override val securityContext = base.securityContext
+    override val application = base.application
+    override val configuration = base.configuration
+    override val resourceContext = base.resourceContext
+    override val providers = base.providers
     override val sse = base.sse
     override val sseEventSink = base.sseEventSink
 

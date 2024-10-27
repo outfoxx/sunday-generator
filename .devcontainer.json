@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "test": "./gradlew check",
+    "build": "./gradlew build -x test"
+  }
+}

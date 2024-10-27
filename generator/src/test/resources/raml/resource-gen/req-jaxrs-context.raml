@@ -1,0 +1,104 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+/tests/1:
+  get:
+    displayName: withUriInfo
+    (sunday.jaxrsContext): [uriInfo]
+    responses:
+      200:
+        body: any
+
+/tests/2:
+  get:
+    displayName: withRequest
+    (sunday.jaxrsContext): [request]
+    responses:
+      200:
+        body: any
+
+/tests/3:
+  get:
+    displayName: withHeaders
+    (sunday.jaxrsContext): [headers]
+    responses:
+      200:
+        body: any
+
+/tests/4:
+  get:
+    displayName: withSecurityContext
+    (sunday.jaxrsContext): [securityContext]
+    responses:
+      200:
+        body: any
+
+/tests/5:
+  get:
+    displayName: withApplication
+    (sunday.jaxrsContext): [application]
+    responses:
+      200:
+        body: any
+
+/tests/6:
+  get:
+    displayName: withConfig
+    (sunday.jaxrsContext): [configuration]
+    responses:
+      200:
+        body: any
+
+/tests/7:
+  get:
+    displayName: withResourceContext
+    (sunday.jaxrsContext): [resourceContext]
+    responses:
+      200:
+        body: any
+
+
+/tests/8:
+  get:
+    displayName: withProviders
+    (sunday.jaxrsContext): [providers]
+    responses:
+      200:
+        body: any
+
+/tests/9:
+  get:
+    displayName: withSseEventSink
+    (sunday.jaxrsContext): [sseEventSink]
+    responses:
+      200:
+        body: any
+
+/tests/10:
+  get:
+    displayName: withSse
+    (sunday.jaxrsContext): [sse]
+    responses:
+      200:
+        body: any
+
+/tests/11:
+  get:
+    displayName: withUriInfoAndRequest
+    (sunday.jaxrsContext): [uriInfo, request]
+    responses:
+      200:
+        body: any
+
+/tests/12:
+  post:
+    displayName: withRepeatOfUriInfoAddedBy201
+    (sunday.jaxrsContext): [request, uriInfo]
+    responses:
+      201:
+        body: any
+

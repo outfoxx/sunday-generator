@@ -68,6 +68,8 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
   SSE("sse", true),
   JsonBody("jsonBody", true),
 
+  JaxrsContext("jaxrsContext", false),
+
   ;
 
   fun matches(test: String, generationMode: GenerationMode? = null) =
