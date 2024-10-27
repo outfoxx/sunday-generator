@@ -953,10 +953,10 @@ class SwiftTypeRegistry(
 
         decoderPost = "${if (isOptional) "?" else ""}.value"
       } else if (refCollection != propertyTypeName) {
-
+        val mapper = if (refCollection.makeNonOptional() == DICTIONARY) "mapValues" else "map"
         propertyTypeName = refCollection
-        decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.value }"
-        encoderPre = "${if (isOptional) "?" else ""}.mapValues { ${refElement.name}(value: $0) }"
+        decoderPost = "${if (isOptional) "?" else ""}.$mapper { $0.value }"
+        encoderPre = "${if (isOptional) "?" else ""}.$mapper { ${refElement.name}(value: $0) }"
       } else if (propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL) {
 
         propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
