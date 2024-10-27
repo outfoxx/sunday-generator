@@ -147,6 +147,10 @@ open class SundayGenerate
   @Optional
   val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+  @Input
+  @Optional
+  val quarkus: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
     .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
@@ -230,7 +234,7 @@ open class SundayGenerate
               problemBaseUri.get(),
               defaultMediaTypes.get(),
               serviceSuffix.get(),
-              false,
+              quarkus.get(),
             ),
           )
 

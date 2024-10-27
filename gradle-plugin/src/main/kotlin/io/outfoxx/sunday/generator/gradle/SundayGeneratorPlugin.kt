@@ -58,6 +58,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         gen.alwaysUseResponseReturn.takeIf { it.isPresent }?.let { genTask.alwaysUseResponseReturn.set(it) }
         gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
         gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
+        gen.quarkus.takeIf { it.isPresent }?.let { genTask.quarkus.set(it) }
         gen.outputDir.takeIf { it.isPresent }?.let { genTask.outputDir.set(it) }
       }
 
