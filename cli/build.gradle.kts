@@ -3,6 +3,7 @@ plugins {
   application
   alias(libs.plugins.jib)
   alias(libs.plugins.shadow)
+  alias(libs.plugins.graalNative)
 }
 
 dependencies {
@@ -41,6 +42,24 @@ tasks {
       exclude(dependency("com.github.ajalt.clikt:.*:.*"))
     }
   }
+}
+
+graalvmNative {
+  binaries.all {
+    resources.autodetect()
+  }
+  binaries {
+    named("main") {
+      imageName = "sunday"
+      sharedLibrary = false
+    }
+  }
+}
+tasks.generateResourcesConfigFile {
+  dependsOn(tasks.shadowJar)
+}
+tasks.nativeCompile {
+  classpathJar = tasks.shadowJar.flatMap { it.archiveFile }
 }
 
 publishing {

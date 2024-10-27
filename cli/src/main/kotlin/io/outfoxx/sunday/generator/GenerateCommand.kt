@@ -19,9 +19,11 @@ package io.outfoxx.sunday.generator
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.output.MordantMarkdownHelpFormatter
+import io.outfoxx.sunday.generator.utils.LocalSundayDefinitionResoureceLoader
 
 class GenerateCommand : CliktCommand(name = "sunday") {
   init {
+    LocalSundayDefinitionResoureceLoader.check()
     configureContext {
       helpFormatter = { MordantMarkdownHelpFormatter(it, showDefaultValues = true, showRequiredTag = true) }
     }
