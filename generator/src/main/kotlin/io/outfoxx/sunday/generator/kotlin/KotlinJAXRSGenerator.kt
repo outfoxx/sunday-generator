@@ -24,19 +24,11 @@ import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.apicontract.client.platform.model.domain.security.SecurityScheme
 import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.domain.Shape
-import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import com.damnhandy.uri.template.UriTemplate
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.KModifier.SUSPEND
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.UNIT
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
 import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
@@ -47,9 +39,7 @@ import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.HttpStatus.CREATED
-import io.outfoxx.sunday.generator.common.NameGenerator
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.common.SimpleNameGenerator
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.*
@@ -123,6 +113,10 @@ class KotlinJAXRSGenerator(
     }
   }
 
+  companion object {
+    private const val SSE_CONTENT_TYPE = "text/event-stream"
+  }
+
   private val jaxRsTypes: JaxRsTypes =
     if (options.quarkus) {
       JaxRsTypes.QUARKUS
@@ -139,6 +133,9 @@ class KotlinJAXRSGenerator(
     } else {
       options.reactiveResponseType?.let { ClassName.bestGuess(it) }
     }
+
+  private fun isOverridingDefaultMediaTypes(mediaTypes: List<String>) =
+    mediaTypes.isNotEmpty() && !mediaTypes.equalsInAnyOrder(defaultMediaTypes)
 
   override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
 
@@ -173,31 +170,21 @@ class KotlinJAXRSGenerator(
             }
         }
 
-      typeBuilder.addAnnotation(
-        AnnotationSpec.builder(jaxRsTypes.path)
-          .addMember("value = %S", finalBaseURL)
-          .build(),
-      )
+      typeBuilder.addAnnotation(jaxRsTypes.path, finalBaseURL)
     }
 
     if (defaultMediaTypes.isNotEmpty()) {
 
-      val prodAnn = AnnotationSpec.builder(jaxRsTypes.produces)
-        .addMember("value = [%L]", defaultMediaTypes.joinToString(",") { "\"$it\"" })
-        .build()
-      typeBuilder.addAnnotation(prodAnn)
+      typeBuilder.addAnnotation(jaxRsTypes.produces, defaultMediaTypes)
 
       val consumesMediaTypes =
         if (generationMode == Client) {
-          "\"${defaultMediaTypes.first()}\""
+          defaultMediaTypes.take(1)
         } else {
-          defaultMediaTypes.joinToString(",") { "\"$it\"" }
+          defaultMediaTypes
         }
 
-      val consAnn = AnnotationSpec.builder(jaxRsTypes.consumes)
-        .addMember("value = [%L]", consumesMediaTypes)
-        .build()
-      typeBuilder.addAnnotation(consAnn)
+      typeBuilder.addAnnotation(jaxRsTypes.consumes, consumesMediaTypes)
     }
 
     return typeBuilder
@@ -240,13 +227,6 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
 
-    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
-      val prodAnn = AnnotationSpec.builder(jaxRsTypes.produces)
-        .addMember("value = [%L]", mediaTypesForPayloads.joinToString(",") { "\"$it\"" })
-        .build()
-      functionBuilder.addAnnotation(prodAnn)
-    }
-
     if (options.coroutineServiceMethods) {
       functionBuilder.addModifiers(SUSPEND)
     }
@@ -268,50 +248,50 @@ class KotlinJAXRSGenerator(
       return UNIT
     }
 
-    fun addSseElementTypeAnnotation() {
-      if (mediaTypesForPayloads.size > 1) {
-        genError("Multiple media types not supported for Server-Sent Events", operation)
-      }
-      val elementType = mediaTypesForPayloads.firstOrNull() ?: defaultMediaTypes.firstOrNull()
-      if (elementType == "text/event-stream" && elementType != defaultMediaTypes.firstOrNull()) {
-        return
-      }
-      functionBuilder.addAnnotation(
-        AnnotationSpec.builder(jaxRsTypes.produces)
-          .addMember("value = [%S]", "text/event-stream")
-          .build(),
-      )
-      elementType?.let {
-        jaxRsTypes.sseElementType?.let { ann ->
-          functionBuilder.addAnnotation(
-            AnnotationSpec.builder(ann)
-              .addMember("value = %S", elementType)
-              .build(),
-          )
-        }
-      }
-    }
-
     if (isSSE && !isFlow) {
-
-      addSseElementTypeAnnotation()
-
-      // Ensure SSE "messages" are resolved and therefore defined
-      if (body is UnionShape) {
-        val types = body.flattened.filterIsInstance<NodeShape>()
-        types.forEach { resolveTypeName(it, null) }
-      }
-
-      return if (generationMode == Client) {
-        return jaxRsTypes.sseEventSource
-      } else {
-        UNIT
-      }
+      return functionBuilder.asSSE(operation, body, mediaTypesForPayloads)
     }
 
-    when (operation.findStringAnnotation(EventStream, generationMode)) {
+    operation.findStringAnnotation(EventStream, generationMode)?.let { type ->
+      return functionBuilder.asEventStream(type, operation, body, returnTypeName, isSSE, mediaTypesForPayloads)
+    }
+
+    if (isOverridingDefaultMediaTypes(mediaTypesForPayloads)) {
+      functionBuilder.addAnnotation(jaxRsTypes.produces, mediaTypesForPayloads)
+    }
+
+    return if (generationMode == Server || options.alwaysUseResponseReturn) {
+      jaxRsTypes.responseType(returnTypeName)
+    } else {
+      returnTypeName
+    }
+  }
+
+  private fun FunSpec.Builder.asSSE(operation: Operation, body: Shape?, mediaTypesForPayloads: List<String>): TypeName {
+
+    addSseElementTypeAnnotation(mediaTypesForPayloads, operation)
+
+    // Ensure SSE "messages" are resolved and therefore defined
+    referenceTypeUsage(body)
+
+    return if (generationMode == Client) {
+      return jaxRsTypes.sseEventSource
+    } else {
+      UNIT
+    }
+  }
+
+  private fun FunSpec.Builder.asEventStream(
+    type: String,
+    operation: Operation,
+    body: Shape?,
+    returnTypeName: TypeName,
+    isSSE: Boolean,
+    mediaTypesForPayloads: List<String>,
+  ): TypeName {
+    when (type) {
       "simple" -> {
-        addSseElementTypeAnnotation()
+        addSseElementTypeAnnotation(mediaTypesForPayloads, operation)
         return FLOW.parameterizedBy(
           when {
             isSSE && generationMode == Client -> jaxRsTypes.sseInboundEvent
@@ -325,15 +305,28 @@ class KotlinJAXRSGenerator(
         if (body !is UnionShape) {
           genError("Discriminated ($EventStream) requires a union of event types", operation)
         }
-        addSseElementTypeAnnotation()
+        addSseElementTypeAnnotation(mediaTypesForPayloads, operation)
         return FLOW.parameterizedBy(returnTypeName)
       }
-    }
 
-    return if (generationMode == Server || options.alwaysUseResponseReturn) {
-      jaxRsTypes.responseType(returnTypeName)
-    } else {
-      returnTypeName
+      else -> {
+        genError("Unsupported event stream type '$type'", operation)
+      }
+    }
+  }
+
+  private fun FunSpec.Builder.addSseElementTypeAnnotation(mediaTypesForPayloads: List<String>, operation: Operation) {
+    val elementTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
+    if (elementTypes.size > 1) {
+      genError("Multiple media types not supported for Server-Sent Events", operation)
+    }
+    addAnnotation(jaxRsTypes.produces, listOf(SSE_CONTENT_TYPE))
+    jaxRsTypes.sseElementType?.let { ann ->
+      elementTypes
+        .firstOrNull { it != SSE_CONTENT_TYPE }
+        ?.let { elementType ->
+          addAnnotation(ann, elementType)
+        }
     }
   }
 
@@ -407,11 +400,7 @@ class KotlinJAXRSGenerator(
           val headerParamName =
             "${scheme.name.kotlinIdentifierName}${headerName.kotlinIdentifierName.replaceFirstChar { it.titlecase() }}"
           val parameterBuilder = methodParameter(header, ParameterSpec.builder(headerParamName, headerTypeName))
-          parameterBuilder.addAnnotation(
-            AnnotationSpec.builder(jaxRsTypes.headerParam)
-              .addMember("value = %S", headerName)
-              .build(),
-          )
+          parameterBuilder.addAnnotation(jaxRsTypes.headerParam, headerName)
           functionBuilder.addParameter(parameterBuilder.build())
         }
 
@@ -438,10 +427,7 @@ class KotlinJAXRSGenerator(
     functionBuilder.addAnnotation(httpMethodAnnClass)
 
     // Add @Path
-    val pathAnn = AnnotationSpec.builder(jaxRsTypes.path)
-      .addMember("value = %S", endPoint.path)
-      .build()
-    functionBuilder.addAnnotation(pathAnn)
+    functionBuilder.addAnnotation(jaxRsTypes.path, endPoint.path)
 
     return functionBuilder
   }
@@ -553,11 +539,8 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = request.payloads.mapNotNull { it.mediaType }
 
-    if (mediaTypesForPayloads.isNotEmpty() && !mediaTypesForPayloads.equalsInAnyOrder(defaultMediaTypes)) {
-      val consAnn = AnnotationSpec.builder(jaxRsTypes.consumes)
-        .addMember("value = [%S]", mediaTypesForPayloads.first())
-        .build()
-      functionBuilder.addAnnotation(consAnn)
+    if (isOverridingDefaultMediaTypes(mediaTypesForPayloads)) {
+      functionBuilder.addAnnotation(jaxRsTypes.consumes, mediaTypesForPayloads)
     }
 
     val isJsonBodyRequested = operation.findBoolAnnotation(JsonBody, generationMode) == true
@@ -660,4 +643,13 @@ class KotlinJAXRSGenerator(
     // Finalize
     return functionBuilder.build()
   }
+
+  private fun referenceTypeUsage(shape: Shape?) {
+    shape ?: return
+    when (shape) {
+      is UnionShape -> shape.flattened.forEach { resolveTypeName(it, null) }
+      else -> resolveTypeName(shape, null)
+    }
+  }
+
 }
