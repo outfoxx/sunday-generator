@@ -1,0 +1,55 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+- application/yaml
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value1: string
+      value2: integer
+
+
+/tests/1:
+  get:
+    displayName: fetchTest1
+    responses:
+      200:
+        body:
+          application/yaml:
+            type: Test
+/tests/2s:
+  get:
+    displayName: fetchTest2Same
+    responses:
+      200:
+        body:
+          application/yaml:
+            type: Test
+          application/json:
+            type: Test
+/tests/2d:
+  get:
+    displayName: fetchTest2Different
+    responses:
+      200:
+        body:
+          application/yaml:
+            type: Test
+          application/cbor:
+            type: Test
+/tests/3:
+  get:
+    displayName: fetchTest3
+    responses:
+      200:
+        body:
+          application/yaml:
+            type: Test
+          application/json:
+            type: Test
+          application/cbor:
+            type: Test
