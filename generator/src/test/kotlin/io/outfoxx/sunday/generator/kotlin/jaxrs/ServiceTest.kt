@@ -151,4 +151,77 @@ class ServiceTest {
       },
     )
   }
+
+  @Test
+  fun `test default media types are overridden correctly (Server)`(
+    @ResourceUri("raml/service-gen/svc-override-multiple-media-types.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val options = KotlinJAXRSGenerator.Options(
+      false,
+      null,
+      false,
+      null,
+      false,
+      "io.test.service",
+      "http://example.com/",
+      listOf("application/json", "application/yaml"),
+      "API",
+      false,
+    )
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          options,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+
+        @Produces(value = ["application/json","application/yaml"])
+        @Consumes(value = ["application/json","application/yaml"])
+        public interface API {
+          @GET
+          @Path(value = "/tests/1")
+          @Produces(value = ["application/yaml"])
+          public fun fetchTest1(): Response
+
+          @GET
+          @Path(value = "/tests/2s")
+          public fun fetchTest2Same(): Response
+
+          @GET
+          @Path(value = "/tests/2d")
+          @Produces(value = ["application/yaml","application/cbor"])
+          public fun fetchTest2Different(): Response
+
+          @GET
+          @Path(value = "/tests/3")
+          @Produces(value = ["application/yaml","application/json","application/cbor"])
+          public fun fetchTest3(): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }
