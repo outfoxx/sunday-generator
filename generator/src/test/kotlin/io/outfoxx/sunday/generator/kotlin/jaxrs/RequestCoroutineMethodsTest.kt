@@ -356,6 +356,76 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  fun `test event coroutines method generation in server mode with multiple default types`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            false,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.sse.OutboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json", "application/yaml"])
+        @Consumes(value = ["application/json", "application/yaml"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test event coroutines method generation in client mode`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -399,6 +469,76 @@ class RequestCoroutineMethodsTest {
         import kotlinx.coroutines.flow.Flow
 
         @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation in client mode with multiple default types`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            false,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.sse.InboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json", "application/yaml"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET
@@ -876,6 +1016,76 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  fun `test event coroutines method generation in server mode with quarkus option enabled and multiple defaults types`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import jakarta.ws.rs.sse.OutboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json", "application/yaml"])
+        @Consumes(value = ["application/json", "application/yaml"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test event coroutines method generation in client mode with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -919,6 +1129,76 @@ class RequestCoroutineMethodsTest {
         import kotlinx.coroutines.flow.Flow
 
         @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/test1")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimple(): Flow<Test1>
+
+          @GET
+          @Path(value = "/test2")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+
+          @GET
+          @Path(value = "/test3")
+          @Produces(value = ["text/event-stream"])
+          public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test event coroutines method generation in client mode with quarkus option enabled and multiple defaults types`(
+    @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            true,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test1
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.GET
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import jakarta.ws.rs.sse.InboundSseEvent
+        import kotlin.Any
+        import kotlinx.coroutines.flow.Flow
+
+        @Produces(value = ["application/json", "application/yaml"])
         @Consumes(value = ["application/json"])
         public interface API {
           @GET

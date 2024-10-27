@@ -16,28 +16,35 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
-import com.squareup.kotlinpoet.ARRAY
-import com.squareup.kotlinpoet.BOOLEAN_ARRAY
-import com.squareup.kotlinpoet.BYTE_ARRAY
-import com.squareup.kotlinpoet.CHAR_ARRAY
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.DOUBLE_ARRAY
-import com.squareup.kotlinpoet.FLOAT_ARRAY
-import com.squareup.kotlinpoet.INT_ARRAY
-import com.squareup.kotlinpoet.LONG_ARRAY
-import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.SHORT_ARRAY
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.U_BYTE_ARRAY
-import com.squareup.kotlinpoet.U_INT_ARRAY
-import com.squareup.kotlinpoet.U_LONG_ARRAY
-import com.squareup.kotlinpoet.U_SHORT_ARRAY
-import com.squareup.kotlinpoet.asTypeName
 
 /**
  * Extension methods for KotlinPoet classes/types
  */
+
+
+fun <T : Annotatable.Builder<T>> Annotatable.Builder<T>.addAnnotation(
+  annotation: ClassName,
+  listValue: List<String>,
+) {
+  addAnnotation(
+    AnnotationSpec.builder(annotation)
+      .addMember("value = [${listValue.joinToString(", ") { "%S" }}]", *listValue.toTypedArray())
+      .build(),
+  )
+}
+
+fun <T : Annotatable.Builder<T>> Annotatable.Builder<T>.addAnnotation(
+  annotation: ClassName,
+  value: String,
+) {
+  addAnnotation(
+    AnnotationSpec.builder(annotation)
+      .addMember("value = %S", value)
+      .build(),
+  )
+}
 
 fun TypeName.immutable(): TypeName {
   return when (this) {
