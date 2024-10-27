@@ -17,21 +17,34 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.versionOption
+import com.github.ajalt.clikt.core.PrintMessage
+import com.github.ajalt.clikt.parameters.options.eagerOption
+import com.github.ajalt.clikt.parameters.transform.theme
 
-fun CliktCommand.versionOption() = apply {
-  versionOption(
-    versionString,
-    message = {
+fun CliktCommand.versionOption() =
+  eagerOption(setOf("--version"), help = "Show version information and exit") {
+    throw PrintMessage(
       """
 
-        Sunday - Generator   ver. $versionString
+        ${theme.style("warning")("Sunday")} ${theme.style("info")("- Generator")}  ver. ${
+        theme.style("danger")(
+          versionString
+        )
+      }
 
-        Supports: Kotlin (Sunday & JAX-RS), Swift (Sunday), TypeScript (Sunday)
-      """.trimIndent()
-    },
-  )
-}
+        ${theme.style("warning")("Supports")}:
+
+        * ${theme.style("warning")("Kotlin")}
+          JAX-RS ${theme.style("muted")("Client, Server")}
+
+        * ${theme.style("warning")("Swift")}
+          Sunday ${theme.style("muted")("Client")}
+
+        * ${theme.style("warning")("TypeScript")}
+          Sunday ${theme.style("muted")("Client")}
+      """.trimIndent(),
+    )
+  }
 
 val versionString: String
   get() = GenerateCommand::class.java.`package`.implementationVersion ?: "unknown"

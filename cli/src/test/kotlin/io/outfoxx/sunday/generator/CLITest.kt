@@ -109,7 +109,9 @@ class CLITest {
 
     val command = GenerateCommandTest()
     val result = assertDoesNotThrow { command.versionOption().test(arrayOf("--version", *requiredOptions)) }
-    assertThat(result.stdout, containsString("Sunday - Generator   ver. unknown"))
+    assertThat(result.stdout, containsString("Sunday - Generator"))
+    assertThat(result.stdout, containsString("ver. unknown"))
+    assertThat(result.stdout, containsString("Supports:"))
   }
 
   @Test
