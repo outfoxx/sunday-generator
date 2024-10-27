@@ -10,6 +10,7 @@ dockerJava = "3.4.0"
 dokka = "1.9.0"
 # @pin
 githubRelease = "2.4.1"
+graalNative = "0.10.3"
 hamcrest = "3.0"
 jackson = "2.18.0"
 jakartaJaxrs = "4.0.0"
@@ -44,6 +45,7 @@ jacocoTool = "0.8.12"
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 githubRelease = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
+graalNative = { id = "org.graalvm.buildtools.native", version.ref = "graalNative" }
 jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 licenser = { id = "dev.yumi.gradle.licenser", version.ref = "licenser" }

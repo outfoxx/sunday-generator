@@ -21,7 +21,18 @@ import amf.core.client.platform.resource.HttpResourceLoader
 import amf.core.client.platform.resource.ResourceLoader
 import java.util.concurrent.CompletableFuture
 
-object LocalResourceLoader : ResourceLoader {
+object LocalSundayDefinitionResoureceLoader : ResourceLoader {
+
+  private val sundayRAML: ByteArray
+  init {
+    val content = LocalSundayDefinitionResoureceLoader::class.java.getResource("/sunday.raml")
+      ?: throw IllegalStateException("Could not find sunday.raml resource")
+    sundayRAML = content.readBytes()
+  }
+
+  fun check() {
+    check(sundayRAML.isNotEmpty()) { "Could not find sunday.raml resource" }
+  }
 
   private val httpLoader = HttpResourceLoader()
 
@@ -30,12 +41,7 @@ object LocalResourceLoader : ResourceLoader {
   }
 
   override fun fetch(resource: String): CompletableFuture<Content> {
-    val bytes = LocalResourceLoader::class.java.getResource("/sunday.raml")?.openStream()?.readAllBytes()
-    return if (bytes != null) {
-      val content = Content(String(bytes, Charsets.UTF_8), resource)
-      CompletableFuture.completedFuture(content)
-    } else {
-      return httpLoader.fetch(resource)
-    }
+    val content = Content(String(sundayRAML, Charsets.UTF_8), resource)
+    return CompletableFuture.completedFuture(content)
   }
 }

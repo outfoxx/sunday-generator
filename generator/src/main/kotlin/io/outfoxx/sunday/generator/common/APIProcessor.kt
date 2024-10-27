@@ -21,7 +21,7 @@ import amf.core.client.common.transform.PipelineId
 import amf.core.client.common.validation.SeverityLevels
 import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.validation.AMFValidationResult
-import io.outfoxx.sunday.generator.utils.LocalResourceLoader
+import io.outfoxx.sunday.generator.utils.LocalSundayDefinitionResoureceLoader
 import java.net.URI
 import java.util.concurrent.ExecutionException
 
@@ -71,7 +71,7 @@ open class APIProcessor {
 
     val ramlClient =
       RAMLConfiguration.RAML10()
-        .withResourceLoader(LocalResourceLoader)
+        .withResourceLoader(LocalSundayDefinitionResoureceLoader)
         .baseUnitClient()
 
     val (unresolvedDocument, validationResults) =
