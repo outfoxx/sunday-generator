@@ -21,11 +21,11 @@ import amf.core.client.platform.resource.HttpResourceLoader
 import amf.core.client.platform.resource.ResourceLoader
 import java.util.concurrent.CompletableFuture
 
-object LocalSundayDefinitionResoureceLoader : ResourceLoader {
+object LocalSundayDefinitionResourceLoader : ResourceLoader {
 
   private val sundayRAML: ByteArray
   init {
-    val content = LocalSundayDefinitionResoureceLoader::class.java.getResource("/sunday.raml")
+    val content = LocalSundayDefinitionResourceLoader::class.java.getResource("/sunday.raml")
       ?: throw IllegalStateException("Could not find sunday.raml resource")
     sundayRAML = content.readBytes()
   }
