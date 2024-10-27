@@ -65,7 +65,7 @@ tasks.nativeCompile {
 publishing {
   publications {
     create<MavenPublication>("cli") {
-      components.named("shadow")
+      artifact(tasks.named("shadowJar"))
       artifact(tasks.named("sourcesJar"))
       artifact(tasks.named("javadocJar"))
 
