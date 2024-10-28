@@ -1,3 +1,5 @@
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 plugins {
   application
@@ -30,12 +32,20 @@ application {
   applicationDefaultJvmArgs = listOf("--add-opens", "java.base/java.lang=ALL-UNNAMED")
 }
 
+val releaseVersion: String by project
+
+fun Manifest.updateAttributes() {
+  val title = "Sunday Generator"
+  val version = releaseVersion
+  val build = System.getenv("GIT_COMMIT_SHA") ?: OffsetDateTime.now(ZoneOffset.UTC).toString()
+  attributes["Implementation-Title"] = title
+  attributes["Implementation-Version"] = version
+  attributes["Implementation-Build"] = build
+}
+
 tasks {
   shadowJar.configure {
-    manifest {
-      attributes["Implementation-Title"] = "Sunday Generator"
-      attributes["Implementation-Version"] = project.version
-    }
+    manifest { updateAttributes() }
     dependsOn(assembleDist)
     archiveClassifier.set("")
     minimize {

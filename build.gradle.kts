@@ -1,4 +1,5 @@
 import dev.yumi.gradle.licenser.YumiLicenserGradleExtension
+import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -19,7 +20,7 @@ plugins {
 
 val ignoreCheckFailures = project.findProperty("ignoreCheckFailures")?.toString()?.toBoolean() ?: false
 
-val moduleNames = listOf( "generator", "cli", "gradle-plugin")
+val moduleNames = listOf("generator", "cli", "gradle-plugin")
 
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
@@ -70,7 +71,7 @@ configure(moduleNames.map { project(it) }) {
   }
 
   tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions{
+    compilerOptions {
       apiVersion.set(KotlinVersion.fromVersion(kotlinVersion))
       languageVersion.set(KotlinVersion.fromVersion(kotlinVersion))
       jvmTarget.set(JvmTarget.fromTarget(javaVersion))
@@ -182,6 +183,23 @@ tasks {
           include("sunday.raml")
         }
       }
+      // Copy JBang script
+      copy {
+        into(relDocDir)
+        from("scripts") {
+          if (isSnapshot) {
+            include("sunday-snapshot")
+            rename("sunday-snapshot", "sunday")
+          } else {
+            include("sunday")
+          }
+        }
+        filter<ReplaceTokens>(
+          "tokens" to mapOf("env.VER" to releaseVersion),
+          "beginToken" to "\${",
+          "endToken" to "}"
+        )
+      }
       // For major.minor.patch releases, add sunday.raml as current
       // and add docs in "current" directory
       if (releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())) {
@@ -223,6 +241,18 @@ sonar {
 //
 
 githubRelease {
+  copy {
+    into(layout.buildDirectory.dir("scripts"))
+    from("scripts") {
+      include("sunday")
+    }
+    filter<ReplaceTokens>(
+      "tokens" to mapOf("env.VER" to releaseVersion),
+      "beginToken" to "\${",
+      "endToken" to "}"
+    )
+  }
+
   owner("outfoxx")
   repo("sunday-generator")
   tagName(releaseVersion)
@@ -236,11 +266,11 @@ githubRelease {
       listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/$moduleName-$releaseVersion$suffix.jar")
       }
-    }
+    } + layout.buildDirectory.dir("scripts").get().file("sunday"),
   )
   overwrite(true)
   authorization(
-    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")),
   )
 }
 
