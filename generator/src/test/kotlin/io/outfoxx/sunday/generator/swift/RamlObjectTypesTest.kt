@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.DefaultIdentifiableTypes
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
@@ -24,6 +23,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -779,6 +779,116 @@ class RamlObjectTypesTest {
       """.trimIndent(),
       buildString {
         FileSpec.get("", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generated class with recursion down to a complex leaf`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/types/obj-recursive-complex-leaf.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val typeSpecs = generateTypes(testUri, typeRegistry, compiler)
+    val typeSpec = findType("Node", typeSpecs)
+
+    assertNotNull(typeSpec)
+    assertNotNull(findType("NodeType", typeSpecs))
+    assertNotNull(findType("NodeList", typeSpecs))
+    assertNotNull(findType("NodeValue", typeSpecs))
+    assertNotNull(findType("NodeMap", typeSpecs))
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Node : Codable, CustomDebugStringConvertible {
+
+          public var type: NodeType {
+            fatalError("abstract type method")
+          }
+          public var debugDescription: String {
+            return DescriptionBuilder(Node.self)
+                .build()
+          }
+
+          public init() {
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let _ = try decoder.container(keyedBy: Node.CodingKeys.self)
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: Node.CodingKeys.self)
+            try container.encode(self.type, forKey: .type)
+          }
+
+          public enum AnyRef : Codable, CustomDebugStringConvertible {
+
+            case list(NodeList)
+            case value(NodeValue)
+            case map(NodeMap)
+
+            public var value: Node {
+              switch self {
+              case .list(let value): return value
+              case .value(let value): return value
+              case .map(let value): return value
+              }
+            }
+            public var debugDescription: String {
+              switch self {
+              case .list(let value): return value.debugDescription
+              case .value(let value): return value.debugDescription
+              case .map(let value): return value.debugDescription
+              }
+            }
+
+            public init(value: Node) {
+              switch value {
+              case let value as NodeList: self = .list(value)
+              case let value as NodeValue: self = .value(value)
+              case let value as NodeMap: self = .map(value)
+              default: fatalError("Invalid value type")
+              }
+            }
+
+            public init(from decoder: Decoder) throws {
+              let container = try decoder.container(keyedBy: Node.CodingKeys.self)
+              let type = try container.decode(NodeType.self, forKey: Node.CodingKeys.type)
+              switch type {
+              case .list: self = .list(try NodeList(from: decoder))
+              case .value: self = .value(try NodeValue(from: decoder))
+              case .map: self = .map(try NodeMap(from: decoder))
+              }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+              var container = encoder.singleValueContainer()
+              switch self {
+              case .list(let value): try container.encode(value)
+              case .value(let value): try container.encode(value)
+              case .map(let value): try container.encode(value)
+              }
+            }
+
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case type = "type"
+
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
           .writeTo(this)
       },
     )

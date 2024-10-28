@@ -1,0 +1,49 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Node:
+    type: object
+    discriminator: type
+    properties:
+      type: Node-Type
+
+  Node-Type:
+    type: string
+    enum: [value, list, map]
+
+  Node-Value:
+    type: Node
+    discriminatorValue: value
+    properties:
+      value: any?
+      enhancers: string[]
+
+  Node-List:
+    type: Node
+    discriminatorValue: list
+    properties:
+      items:
+        type: array
+        items: Node
+
+  Node-Map:
+    type: Node
+    discriminatorValue: map
+    properties:
+      properties:
+        properties:
+          //: Node
+
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Node

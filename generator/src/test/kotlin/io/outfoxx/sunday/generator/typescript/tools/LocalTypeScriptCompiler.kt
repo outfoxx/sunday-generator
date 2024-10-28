@@ -26,6 +26,7 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(command, "ci")
+        .redirectErrorStream(true)
         .start()
 
     println("### Installing NPM packages")

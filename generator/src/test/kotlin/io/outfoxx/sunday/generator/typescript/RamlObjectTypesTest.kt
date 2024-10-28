@@ -18,15 +18,12 @@ package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
-import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
-import io.outfoxx.sunday.generator.typescript.tools.findNestedType
-import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
-import io.outfoxx.sunday.generator.typescript.tools.generate
-import io.outfoxx.sunday.generator.typescript.tools.generateTypes
+import io.outfoxx.sunday.generator.typescript.tools.*
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -495,6 +492,60 @@ class RamlObjectTypesTest {
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generated class with recursion down to a complex leaf`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/types/obj-recursive-complex-leaf.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+
+    val typeSpecs = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
+    val typeSpec = findTypeMod("Node@!node", typeSpecs)
+
+    assertNotNull(typeSpec)
+    assertNotNull(findTypeMod("NodeType@!node-type", typeSpecs))
+    assertNotNull(findTypeMod("NodeValue@!node-value", typeSpecs))
+    assertNotNull(findTypeMod("NodeList@!node-list", typeSpecs))
+    assertNotNull(findTypeMod("NodeMap@!node-map", typeSpecs))
+
+    assertEquals(
+      """
+        import {NodeList, NodeMap, NodeValue} from './index';
+        import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+
+
+        export interface NodeSpec {
+        }
+
+        @JsonTypeInfo({
+          use: JsonTypeInfoId.NAME,
+          include: JsonTypeInfoAs.PROPERTY,
+          property: 'type',
+        })
+        @JsonSubTypes({
+          types: [
+            {class: () => NodeList, name: 'list' /* NodeType.List */},
+            {class: () => NodeValue, name: 'value' /* NodeType.Value */},
+            {class: () => NodeMap, name: 'map' /* NodeType.Map */}
+          ]
+        })
+        export abstract class Node implements NodeSpec {
+
+          toString(): string {
+            return `Node()`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
           .writeTo(this)
       },
     )

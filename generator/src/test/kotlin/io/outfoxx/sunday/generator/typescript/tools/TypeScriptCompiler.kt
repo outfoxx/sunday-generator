@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -27,29 +28,26 @@ abstract class TypeScriptCompiler(val workDir: Path) : Closeable {
 
     fun create(workDir: Path): TypeScriptCompiler {
 
-      val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
-
-      return if (forceDocker) {
+      fun useDocker(message: String) = run {
+        println("### $message, using Docker")
         DockerTypeScriptCompiler(workDir)
+      }
+
+      fun useLocal(path: String) = run {
+        println("### Local '$path' found at $path")
+        LocalTypeScriptCompiler(path, workDir)
+      }
+
+      val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
+      if (forceDocker) {
+        return useDocker("Forced Docker usage")
+      }
+
+      val (npmExists, npmPath) = ShellProcess.execute("command", "-v", "npm")
+      return if (npmExists) {
+        useLocal(npmPath.trim())
       } else {
-
-        val checkNpm =
-          ProcessBuilder()
-            .command("/bin/sh", "command", "-v", "npm")
-            .start()
-
-        val result = checkNpm.waitFor()
-
-        val command =
-          if (result == 0) {
-            checkNpm.inputStream.readAllBytes().decodeToString().trim()
-          } else {
-            "npm"
-          }
-
-        println("### Using Local 'npm' with command '$command'")
-
-        LocalTypeScriptCompiler(command, workDir)
+        useDocker("Local 'npm' not found")
       }
     }
   }

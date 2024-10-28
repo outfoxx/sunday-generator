@@ -50,26 +50,7 @@ import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
-import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
-import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY
-import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY_OPTIONAL
-import io.outfoxx.sunday.generator.swift.utils.CODABLE
-import io.outfoxx.sunday.generator.swift.utils.CODING_KEY
-import io.outfoxx.sunday.generator.swift.utils.CUSTOM_STRING_CONVERTIBLE
-import io.outfoxx.sunday.generator.swift.utils.DATE
-import io.outfoxx.sunday.generator.swift.utils.DECIMAL
-import io.outfoxx.sunday.generator.swift.utils.DECODER
-import io.outfoxx.sunday.generator.swift.utils.DECODING_ERROR
-import io.outfoxx.sunday.generator.swift.utils.DESCRIPTION_BUILDER
-import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
-import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
-import io.outfoxx.sunday.generator.swift.utils.ENCODER
-import io.outfoxx.sunday.generator.swift.utils.ENCODING_ERROR
-import io.outfoxx.sunday.generator.swift.utils.PROBLEM
-import io.outfoxx.sunday.generator.swift.utils.URL
-import io.outfoxx.sunday.generator.swift.utils.swiftEnumName
-import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
-import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
+import io.outfoxx.sunday.generator.swift.utils.*
 import io.outfoxx.sunday.generator.utils.anyOf
 import io.outfoxx.sunday.generator.utils.dataType
 import io.outfoxx.sunday.generator.utils.discriminator
@@ -953,7 +934,7 @@ class SwiftTypeRegistry(
 
         decoderPost = "${if (isOptional) "?" else ""}.value"
       } else if (refCollection != propertyTypeName) {
-        val mapper = if (refCollection.makeNonOptional() == DICTIONARY) "mapValues" else "map"
+        val mapper = if (refCollection.concreteType() == DICTIONARY) "mapValues" else "map"
         propertyTypeName = refCollection
         decoderPost = "${if (isOptional) "?" else ""}.$mapper { $0.value }"
         encoderPre = "${if (isOptional) "?" else ""}.$mapper { ${refElement.name}(value: $0) }"
