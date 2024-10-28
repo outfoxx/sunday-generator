@@ -1,0 +1,15 @@
+///usr/bin/env jbang "$0" "$@" ; exit $?
+//JAVA 21
+//REPOS https://oss.sonatype.org/content/repositories/snapshots
+//DEPS io.outfoxx.sunday:cli:2.0.0-SNAPSHOT
+
+import io.outfoxx.sunday.generator.MainKt;
+import io.outfoxx.sunday.generator.VersionKt;
+
+class sunday {
+
+    public static void main(String... args) {
+        System.out.println("Sunday CLI (SNAPSHOT) - " + VersionKt.getVersionString());
+        MainKt.main(args);
+    }
+}
