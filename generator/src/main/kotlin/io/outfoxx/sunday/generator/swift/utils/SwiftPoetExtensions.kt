@@ -16,9 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.utils
 
-import io.outfoxx.swiftpoet.ARRAY
-import io.outfoxx.swiftpoet.TypeName
-import io.outfoxx.swiftpoet.parameterizedBy
+import io.outfoxx.swiftpoet.*
 
 /**
  * Extension methods for SwiftPoet classes/types
@@ -27,3 +25,10 @@ import io.outfoxx.swiftpoet.parameterizedBy
 fun TypeName.array(): TypeName {
   return ARRAY.parameterizedBy(this)
 }
+
+fun TypeName.concreteType(): TypeName =
+  when (val unwrapped = makeNonOptional().makeNonImplicit()) {
+    is ParameterizedTypeName -> unwrapped.rawType.makeNonOptional().makeNonImplicit()
+    is GenericQualifiedTypeName -> unwrapped.type.makeNonOptional().makeNonImplicit()
+    else -> unwrapped
+  }

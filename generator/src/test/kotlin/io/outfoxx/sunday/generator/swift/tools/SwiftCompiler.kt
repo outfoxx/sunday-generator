@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.io.Closeable
 import java.nio.file.Path
 import kotlin.text.RegexOption.IGNORE_CASE
@@ -26,30 +27,30 @@ abstract class SwiftCompiler(val workDir: Path) : Closeable {
 
     fun create(workDir: Path): SwiftCompiler {
 
-      val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
-      val isMac = System.getProperty("os.name")?.matches("""^mac ?os.*""".toRegex(IGNORE_CASE)) ?: false
-
-      return if (forceDocker || !isMac) {
+      fun useDocker(message: String) = run {
+        println("### $message, using Docker")
         DockerSwiftCompiler(workDir)
-      } else {
+      }
 
-        val checkSwift =
-          ProcessBuilder()
-            .command("/bin/sh", "command", "-v", "swift")
-            .start()
-
-        val result = checkSwift.waitFor()
-
-        val command =
-          if (result == 0) {
-            checkSwift.inputStream.readAllBytes().decodeToString().trim()
-          } else {
-            "swift"
-          }
-
+      fun useLocal(command: String) = run {
         println("### Using Local 'swift' with command '$command'")
-
         LocalSwiftCompiler(command, workDir)
+      }
+
+      val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
+      if (forceDocker) {
+        return useDocker("Forced Docker usage")
+      }
+      val isMac = System.getProperty("os.name")?.matches("""^mac ?os.*""".toRegex(IGNORE_CASE)) ?: false
+      if (!isMac) {
+        return useDocker("Not running on macOS")
+      }
+
+      val (swiftExists, swiftPath) = ShellProcess.execute("command", "-v", "swift")
+      return if (swiftExists) {
+        useLocal(swiftPath.trim())
+      } else {
+        useDocker("Local 'swift' not found")
       }
     }
   }

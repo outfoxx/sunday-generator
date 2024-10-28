@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -614,6 +615,62 @@ class RamlObjectTypesTest {
           | other='${'$'}other',
           | children='${'$'}children')
           ""${'"'}.trimMargin()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generated class with recursion down to a complex leaf`(
+    @ResourceUri("raml/type-gen/types/obj-recursive-complex-leaf.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
+
+    val typeSpecs = generateTypes(testUri, typeRegistry)
+    val typeSpec = findType("io.test.Node", typeSpecs)
+
+    assertNotNull(typeSpec)
+    assertNotNull(findType("io.test.NodeType", typeSpecs))
+    assertNotNull(findType("io.test.NodeValue", typeSpecs))
+    assertNotNull(findType("io.test.NodeList", typeSpecs))
+    assertNotNull(findType("io.test.NodeMap", typeSpecs))
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+
+        public open class Node(
+          public val type: NodeType,
+        ) {
+          override fun hashCode(): Int {
+            var result = 1
+            result = 31 * result + type.hashCode()
+            return result
+          }
+
+          override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Node
+
+            if (type != other.type) return false
+
+            return true
+          }
+
+          override fun toString(): String = ""${'"'}Node(type='${'$'}type')""${'"'}
         }
 
       """.trimIndent(),
