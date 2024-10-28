@@ -27,8 +27,15 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    - name: Git Short SHA
+      run: |
+        calculatedSha=$(git rev-parse --short ${{ github.sha }})
+        echo "GIT_COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
     - name: Build Artifacts & Documentation
       run: ./gradlew build dokkaHtmlMultiModule -x test
+      env:
+        GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHORT_SHA }}
 
     - name: Publish Maven Artifacts (Snapshot)
       run: >-

@@ -20,6 +20,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.eagerOption
 import com.github.ajalt.clikt.parameters.transform.theme
+import java.util.jar.JarFile
 
 fun CliktCommand.versionOption() =
   eagerOption(setOf("--version"), help = "Show version information and exit") {
@@ -28,7 +29,7 @@ fun CliktCommand.versionOption() =
 
         ${theme.style("warning")("Sunday")} ${theme.style("info")("- Generator")}  ver. ${
         theme.style("danger")(
-          versionString
+          versionString,
         )
       }
 
@@ -47,4 +48,30 @@ fun CliktCommand.versionOption() =
   }
 
 val versionString: String
-  get() = GenerateCommand::class.java.`package`.implementationVersion ?: "unknown"
+  get() {
+    val version = GenerateCommand::class.java.`package`.implementationVersion ?: "unknown"
+    val commit = readImplBuild()
+    return if (commit != null) {
+      "$version (build: $commit)"
+    } else {
+      version
+    }
+  }
+
+fun readImplBuild(): String? =
+  try {
+    val classPath = GenerateCommand::class.java.protectionDomain.codeSource.location.path
+    JarFile(classPath).use { jarFile ->
+
+      val manifest = jarFile.manifest
+      val mainAttributes = manifest.mainAttributes
+
+      return try {
+        mainAttributes.getValue("Implementation-Build").ifBlank { null }
+      } catch (e: Exception) {
+        null
+      }
+    }
+  } catch (e: Exception) {
+    null
+  }
