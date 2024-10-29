@@ -917,42 +917,54 @@ class SwiftTypeRegistry(
         }
 
       val decoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
-      var decoderPost = ""
+      val decoderPost = CodeBlock.builder()
 
       var encoderPropertyRef = CodeBlock.of("self.%N", prop.swiftIdentifierName)
-      var encoderPre = ""
+      val encoderPre = CodeBlock.builder()
 
       val isLeaf = context.hasNoInheriting(prop.range)
       val (refCollection, refElement) = replaceCollectionValueTypesWithReferenceTypes(propertyTypeName)
 
-      if (!isLeaf) {
-        propertyTypeName = if (isOptional) {
-          (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME).makeOptional()
-        } else {
-          (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
+      when {
+        !isLeaf -> {
+          propertyTypeName = if (isOptional) {
+            (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME).makeOptional()
+          } else {
+            (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
+          }
+
+          decoderPost.add("${if (isOptional) "?" else ""}.value")
         }
 
-        decoderPost = "${if (isOptional) "?" else ""}.value"
-      } else if (refCollection != propertyTypeName) {
-        val mapper = if (refCollection.concreteType() == DICTIONARY) "mapValues" else "map"
-        propertyTypeName = refCollection
-        decoderPost = "${if (isOptional) "?" else ""}.$mapper { $0.value }"
-        encoderPre = "${if (isOptional) "?" else ""}.$mapper { ${refElement.name}(value: $0) }"
-      } else if (propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL) {
+        refCollection != propertyTypeName -> {
 
-        propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
-        decoderPost = "${if (isOptional) "?" else ""}.mapValues { $0.unwrapped as Any }"
-        encoderPre = "${if (isOptional) "?" else ""}.mapValues { try AnyValue.wrapped($0) }"
-      } else if (propertyTypeName == ARRAY_ANY || propertyTypeName == ARRAY_ANY_OPTIONAL) {
+          val mapper = if (refCollection.concreteType() == DICTIONARY) "mapValues" else "map"
 
-        propertyTypeName = ARRAY.parameterizedBy(ANY_VALUE)
-        decoderPost = "${if (isOptional) "?" else ""}.map { $0.unwrapped }"
-        encoderPre = "${if (isOptional) "?" else ""}.map { try AnyValue.wrapped($0) }"
-      } else if (propertyTypeName.unwrapOptional() == ANY) {
+          propertyTypeName = refCollection
+          decoderPost.add("${if (isOptional) "?" else ""}.$mapper { $0.value }")
+          encoderPre.add("${if (isOptional) "?" else ""}.$mapper { %T(value: $0) }", refElement)
+        }
 
-        propertyTypeName = ANY_VALUE
-        decoderPost = "${if (isOptional) "?" else ""}.unwrapped"
-        encoderPropertyRef = CodeBlock.of("%T.wrapped(%N)", ANY_VALUE, prop.swiftIdentifierName)
+        propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL -> {
+
+          propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+          decoderPost.add("${if (isOptional) "?" else ""}.mapValues { $0.unwrapped as Any }")
+          encoderPre.add("${if (isOptional) "?" else ""}.mapValues { try %T.wrapped($0) }", ANY_VALUE)
+        }
+
+        propertyTypeName == ARRAY_ANY || propertyTypeName == ARRAY_ANY_OPTIONAL -> {
+
+          propertyTypeName = ARRAY.parameterizedBy(ANY_VALUE)
+          decoderPost.add("${if (isOptional) "?" else ""}.map { $0.unwrapped }")
+          encoderPre.add("${if (isOptional) "?" else ""}.map { try %T.wrapped($0) }", ANY_VALUE)
+        }
+
+        propertyTypeName.unwrapOptional() == ANY -> {
+
+          propertyTypeName = ANY_VALUE
+          decoderPost.add("${if (isOptional) "?" else ""}.unwrapped")
+          encoderPropertyRef = CodeBlock.of("%T.wrapped(%N)", ANY_VALUE, prop.swiftIdentifierName)
+        }
       }
 
       decoderInitFunctionBuilder
@@ -963,7 +975,7 @@ class SwiftTypeRegistry(
           coderSuffix,
           propertyTypeName,
           prop.swiftIdentifierName,
-          decoderPost,
+          decoderPost.build(),
         )
 
       encoderFunctionBuilder
@@ -971,7 +983,7 @@ class SwiftTypeRegistry(
         .addCode(encoderPropertyRef)
         .addCode(
           "%L, forKey: .%N)%]\n",
-          encoderPre,
+          encoderPre.build(),
           prop.swiftIdentifierName,
         )
     }
@@ -1131,9 +1143,9 @@ class SwiftTypeRegistry(
         paramType.makeOptional()
       }
       paramConsBuilder.addParameter(
-        ParameterSpec.builder(it.swiftIdentifierName, paramType)
-          .apply { if (it.optional && paramType.optional) defaultValue("nil") }
-          .build()
+          ParameterSpec.builder(it.swiftIdentifierName, paramType)
+              .apply { if (it.optional && paramType.optional) defaultValue("nil") }
+              .build(),
       )
     }
 
