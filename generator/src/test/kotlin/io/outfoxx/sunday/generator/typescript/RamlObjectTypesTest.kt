@@ -50,14 +50,19 @@ class RamlObjectTypesTest {
 
           map: Record<string, unknown>;
 
+          array: Array<unknown>;
+
         }
 
         export class Test implements TestSpec {
 
           map: Record<string, unknown>;
 
+          array: Array<unknown>;
+
           constructor(init: TestSpec) {
             this.map = init.map;
+            this.array = init.array;
           }
 
           copy(changes: Partial<TestSpec>): Test {
@@ -65,7 +70,7 @@ class RamlObjectTypesTest {
           }
 
           toString(): string {
-            return `Test(map='${'$'}{this.map}')`;
+            return `Test(map='${'$'}{this.map}', array='${'$'}{this.array}')`;
           }
 
         }

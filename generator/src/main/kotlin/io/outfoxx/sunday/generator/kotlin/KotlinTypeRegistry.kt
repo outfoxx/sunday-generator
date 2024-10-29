@@ -512,8 +512,13 @@ class KotlinTypeRegistry(
 
   private fun processArrayShape(shape: ArrayShape, context: KotlinResolutionContext): TypeName {
 
-    val elementType = resolveReferencedTypeName(shape.items!!, context)
-
+    val elementType =
+      shape.items
+        ?.let { itemsShape ->
+          resolveReferencedTypeName(itemsShape, context)
+        }
+        ?: ANY
+    
     val collectionType =
       if (shape.uniqueItems == true) {
         SET

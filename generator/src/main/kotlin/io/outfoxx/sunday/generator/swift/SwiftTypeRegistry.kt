@@ -538,7 +538,12 @@ class SwiftTypeRegistry(
 
   private fun processArrayShape(shape: ArrayShape, context: SwiftResolutionContext): TypeName {
 
-    val elementType = resolveReferencedTypeName(shape.items!!, context)
+    val elementType =
+      shape.items
+        ?.let { itemsShape ->
+          resolveReferencedTypeName(itemsShape, context)
+        }
+        ?: ANY
 
     val collectionType =
       if (shape.uniqueItems == true) {
@@ -948,7 +953,7 @@ class SwiftTypeRegistry(
         propertyTypeName == DICTIONARY_STRING_ANY || propertyTypeName == DICTIONARY_STRING_ANY_OPTIONAL -> {
 
           propertyTypeName = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
-          decoderPost.add("${if (isOptional) "?" else ""}.mapValues { $0.unwrapped as Any }")
+          decoderPost.add("${if (isOptional) "?" else ""}.mapValues { $0.unwrapped }")
           encoderPre.add("${if (isOptional) "?" else ""}.mapValues { try %T.wrapped($0) }", ANY_VALUE)
         }
 
