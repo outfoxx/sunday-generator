@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
+import com.github.difflib.text.DiffRowGenerator
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
@@ -51,10 +52,13 @@ class RamlObjectTypesTest {
 
         import kotlin.Any
         import kotlin.String
+        import kotlin.collections.List
         import kotlin.collections.Map
 
         public interface Test {
           public val map: Map<String, Any>
+
+          public val array: List<Any>
         }
 
       """.trimIndent(),

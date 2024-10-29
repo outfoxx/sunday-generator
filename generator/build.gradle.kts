@@ -34,6 +34,8 @@ dependencies {
   testRuntimeOnly(libs.junitEngine)
 
   testImplementation(libs.hamcrest)
+  testImplementation(libs.diffutils)
+  testImplementation(libs.cliktMarkdown)
 
   testImplementation(libs.dockerJava)
   testImplementation(libs.dockerJavaTransport)

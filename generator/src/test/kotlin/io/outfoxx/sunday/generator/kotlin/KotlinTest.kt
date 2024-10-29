@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
+import io.outfoxx.sunday.test.extensions.DiffingExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
@@ -24,5 +25,5 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @Execution(ExecutionMode.CONCURRENT)
 @ResourceLock("Kotlin")
-@ExtendWith(ResourceExtension::class)
+@ExtendWith(ResourceExtension::class, DiffingExtension::class)
 annotation class KotlinTest

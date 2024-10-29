@@ -584,7 +584,12 @@ class TypeScriptTypeRegistry(
 
   private fun processArrayShape(shape: ArrayShape, context: TypeScriptResolutionContext): TypeName {
 
-    val elementType = resolveReferencedTypeName(shape.items!!, context)
+    val elementType =
+      shape.items
+        ?.let { itemsShape ->
+          resolveReferencedTypeName(itemsShape, context)
+        }
+        ?: UNKNOWN
 
     val collectionType =
       if (shape.uniqueItems == true) {
