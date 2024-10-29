@@ -6,6 +6,7 @@ kotlinLanguage = "1.9"
 ##
 amfClient = "5.4.0"
 clikt = "5.0.1"
+diffutils = "4.12"
 dockerJava = "3.4.0"
 dokka = "1.9.0"
 # @pin
@@ -60,6 +61,7 @@ versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 amfClient = { module = "com.github.amlorg:amf-api-contract_2.12", version.ref = "amfClient" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 cliktMarkdown = { module = "com.github.ajalt.clikt:clikt-markdown", version.ref = "clikt" }
+diffutils = { module = "io.github.java-diff-utils:java-diff-utils", version.ref = "diffutils" }
 dockerJava = { module = "com.github.docker-java:docker-java-core", version.ref = "dockerJava" }
 dockerJavaTransport = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "dockerJava" }
 hamcrest = { module = "org.hamcrest:hamcrest-library", version.ref = "hamcrest" }

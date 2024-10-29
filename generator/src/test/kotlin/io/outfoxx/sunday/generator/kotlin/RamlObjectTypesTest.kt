@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
+import com.github.difflib.text.DiffRowGenerator
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
