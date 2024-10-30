@@ -1,0 +1,12 @@
+///usr/bin/env jbang "$0" "$@" ; exit $?
+//JAVA 21
+//DEPS io.outfoxx.sunday:cli:1.2.3
+
+import io.outfoxx.sunday.generator.MainKt;
+
+public class sunday {
+
+    public static void main(String... args) {
+        MainKt.main(args);
+    }
+}
