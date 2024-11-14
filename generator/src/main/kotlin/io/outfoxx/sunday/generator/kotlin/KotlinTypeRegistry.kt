@@ -518,7 +518,7 @@ class KotlinTypeRegistry(
           resolveReferencedTypeName(itemsShape, context)
         }
         ?: ANY
-    
+
     val collectionType =
       if (shape.uniqueItems == true) {
         SET
@@ -612,7 +612,7 @@ class KotlinTypeRegistry(
     }
 
     var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
-    var declaredProperties = context.findProperties(shape)
+    var declaredProperties = context.findProperties(shape).filter { dec -> dec.name !in inheritedProperties.map { it.name } }
 
     val inheritingTypes = context.findInheritingShapes(shape)
 

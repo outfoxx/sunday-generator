@@ -91,7 +91,8 @@ class RamlObjectTypesTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
+    val types = generateTypes(testUri, typeRegistry, compiler)
+    val typeModSpec = findTypeMod("Test@!test", types)
 
     assertEquals(
       """
@@ -128,6 +129,59 @@ class RamlObjectTypesTest {
       """.trimIndent(),
       buildString {
         FileSpec.get(typeModSpec)
+          .writeTo(this)
+      },
+    )
+
+    val typeModSpec2 = findTypeMod("Test2@!test2", types)
+
+    assertEquals(
+      """
+        import {Parent} from './parent';
+
+
+        export interface Test2Spec {
+
+          optionalObject?: Record<string, unknown>;
+
+          nillableObject: Record<string, unknown> | null;
+
+          optionalHierarchy?: Parent;
+
+          nillableHierarchy: Parent | null;
+
+        }
+
+        export class Test2 implements Test2Spec {
+
+          optionalObject: Record<string, unknown> | undefined;
+
+          nillableObject: Record<string, unknown> | null;
+
+          optionalHierarchy: Parent | undefined;
+
+          nillableHierarchy: Parent | null;
+
+          constructor(init: Test2Spec) {
+            this.optionalObject = init.optionalObject;
+            this.nillableObject = init.nillableObject;
+            this.optionalHierarchy = init.optionalHierarchy;
+            this.nillableHierarchy = init.nillableHierarchy;
+          }
+
+          copy(changes: Partial<Test2Spec>): Test2 {
+            return new Test2(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Test2(optionalObject='${"$"}{this.optionalObject}', nillableObject='${"$"}{this.nillableObject}', optionalHierarchy='${"$"}{this.optionalHierarchy}', nillableHierarchy='${"$"}{this.nillableHierarchy}')`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeModSpec2)
           .writeTo(this)
       },
     )

@@ -326,6 +326,7 @@ val Shape.ifShape: Shape? get() = this.ifShape()
 val Shape.thenShape: Shape? get() = this.thenShape()
 val Shape.elseShape: Shape? get() = this.elseShape()
 val Shape.inlined: Boolean get() = this.annotations.inlinedElement()
+val Shape.nonNullableType: Shape get() = if (this is UnionShape) this.nullableType else this
 
 //
 val ShapeExtension.definedBy: PropertyShape get() = this.definedBy()
