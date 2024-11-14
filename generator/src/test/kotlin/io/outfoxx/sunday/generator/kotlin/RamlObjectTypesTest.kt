@@ -77,7 +77,8 @@ class RamlObjectTypesTest {
     val typeRegistryOptions = setOf<Option>()
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, typeRegistryOptions)
 
-    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+    val types = generateTypes(testUri, typeRegistry)
+    val typeSpec = findType("io.test.Test", types)
 
     assertEquals(
       """
@@ -97,6 +98,34 @@ class RamlObjectTypesTest {
           .writeTo(this)
       },
     )
+
+
+    val typeSpec2 = findType("io.test.Test2", types)
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.Map
+
+        public interface Test2 {
+          public val optionalObject: Map<String, Any>?
+
+          public val nillableObject: Map<String, Any>?
+
+          public val optionalHierarchy: Parent?
+
+          public val nillableHierarchy: Parent?
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec2)
+          .writeTo(this)
+      },
+    )
   }
 
   @Test
@@ -106,7 +135,8 @@ class RamlObjectTypesTest {
 
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
 
-    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+    val types = generateTypes(testUri, typeRegistry)
+    val typeSpec = findType("io.test.Test", types)
 
     assertEquals(
       """
@@ -152,6 +182,70 @@ class RamlObjectTypesTest {
       """.trimIndent(),
       buildString {
         FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val typeSpec2 = findType("io.test.Test2", types)
+
+    assertEquals(
+      """
+        package io.test
+
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+        import kotlin.collections.Map
+
+        public class Test2(
+          public val optionalObject: Map<String, Any>? = null,
+          public val nillableObject: Map<String, Any>?,
+          public val optionalHierarchy: Parent? = null,
+          public val nillableHierarchy: Parent?,
+        ) {
+          public fun copy(
+            optionalObject: Map<String, Any>? = null,
+            nillableObject: Map<String, Any>? = null,
+            optionalHierarchy: Parent? = null,
+            nillableHierarchy: Parent? = null,
+          ): Test2 = Test2(optionalObject ?: this.optionalObject, nillableObject ?: this.nillableObject,
+              optionalHierarchy ?: this.optionalHierarchy, nillableHierarchy ?: this.nillableHierarchy)
+
+          override fun hashCode(): Int {
+            var result = 1
+            result = 31 * result + (optionalObject?.hashCode() ?: 0)
+            result = 31 * result + (nillableObject?.hashCode() ?: 0)
+            result = 31 * result + (optionalHierarchy?.hashCode() ?: 0)
+            result = 31 * result + (nillableHierarchy?.hashCode() ?: 0)
+            return result
+          }
+
+          override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Test2
+
+            if (optionalObject != other.optionalObject) return false
+            if (nillableObject != other.nillableObject) return false
+            if (optionalHierarchy != other.optionalHierarchy) return false
+            if (nillableHierarchy != other.nillableHierarchy) return false
+
+            return true
+          }
+
+          override fun toString(): String = ""${'"'}
+          |Test2(optionalObject='${"$"}optionalObject',
+          | nillableObject='${"$"}nillableObject',
+          | optionalHierarchy='${"$"}optionalHierarchy',
+          | nillableHierarchy='${"$"}nillableHierarchy')
+          ""${'"'}.trimMargin()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec2)
           .writeTo(this)
       },
     )

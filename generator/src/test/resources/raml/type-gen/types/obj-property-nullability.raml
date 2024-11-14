@@ -18,6 +18,29 @@ types:
     properties:
       optionalObject?: object
       nillableObject: object?
+      optionalHierarchy?: Parent
+      nillableHierarchy: Parent?
+
+  Parent:
+    type: object
+    discriminator: type
+    properties:
+      type: string
+      value: string
+
+  Child1:
+    type: Parent
+    discriminatorValue: child1
+    properties:
+      type: string
+      childValue: string
+
+  Child2:
+    type: Parent
+    discriminatorValue: child2
+    properties:
+      type: string
+      childValue: string
 
 /tests/{id}:
 

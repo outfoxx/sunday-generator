@@ -933,7 +933,7 @@ class SwiftTypeRegistry(
       when {
         !isLeaf -> {
           propertyTypeName = if (isOptional) {
-            (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME).makeOptional()
+            (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME)
           } else {
             (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
           }

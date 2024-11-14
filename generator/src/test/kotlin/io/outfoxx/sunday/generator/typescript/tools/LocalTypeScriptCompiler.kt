@@ -16,9 +16,12 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.nio.file.Path
 
 class LocalTypeScriptCompiler(private val command: String, workDir: Path) : TypeScriptCompiler(workDir) {
+
+  val env = ShellProcess.loadExtraEnvironment()
 
   init {
 
@@ -26,6 +29,9 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(command, "ci")
+        .apply {
+          environment().putAll(env)
+        }
         .redirectErrorStream(true)
         .start()
 
@@ -42,6 +48,9 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(command, "run", "build")
+        .apply {
+          environment().putAll(env)
+        }
         .redirectErrorStream(true)
         .start()
 

@@ -25,13 +25,7 @@ import amf.core.client.platform.model.domain.PropertyShape
 import amf.core.client.platform.model.domain.Shape
 import amf.core.internal.annotations.Aliases
 import amf.shapes.client.platform.model.domain.NodeShape
-import io.outfoxx.sunday.generator.utils.allUnits
-import io.outfoxx.sunday.generator.utils.annotations
-import io.outfoxx.sunday.generator.utils.declares
-import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.location
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.nonPatternProperties
+import io.outfoxx.sunday.generator.utils.*
 import scala.collection.JavaConverters
 
 interface ResolutionContext {
@@ -39,13 +33,13 @@ interface ResolutionContext {
   val unit: BaseUnit
   val shapeIndex: ShapeIndex
 
-  fun hasInherited(shape: Shape): Boolean = shapeIndex.hasInherited(shape)
+  fun hasInherited(shape: Shape): Boolean = shapeIndex.hasInherited(shape.nonNullableType)
 
-  fun hasNoInherited(shape: Shape): Boolean = shapeIndex.hasNoInherited(shape)
+  fun hasNoInherited(shape: Shape): Boolean = shapeIndex.hasNoInherited(shape.nonNullableType)
 
-  fun hasNoInheriting(shape: Shape): Boolean = shapeIndex.hasNoInheriting(shape)
+  fun hasNoInheriting(shape: Shape): Boolean = shapeIndex.hasNoInheriting(shape.nonNullableType)
 
-  fun findRootShape(shape: Shape): Shape = findSuperShapeOrNull(shape)?.let(this::findRootShape) ?: shape
+  fun findRootShape(shape: Shape): Shape = findSuperShapeOrNull(shape.nonNullableType)?.let(this::findRootShape) ?: shape
 
   fun findSuperShapeOrNull(shape: Shape): Shape? {
     val superShapeId = shapeIndex.findSuperShapeIdOrNull(shape) ?: return null
