@@ -21,135 +21,18 @@ package io.outfoxx.sunday.generator.kotlin
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.ArrayNode
-import amf.core.client.platform.model.domain.CustomizableElement
-import amf.core.client.platform.model.domain.DomainElement
-import amf.core.client.platform.model.domain.ObjectNode
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import amf.shapes.client.platform.model.domain.AnyShape
-import amf.shapes.client.platform.model.domain.ArrayShape
-import amf.shapes.client.platform.model.domain.FileShape
-import amf.shapes.client.platform.model.domain.NilShape
-import amf.shapes.client.platform.model.domain.NodeShape
-import amf.shapes.client.platform.model.domain.ScalarShape
-import amf.shapes.client.platform.model.domain.UnionShape
-import com.squareup.kotlinpoet.ANY
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.BOOLEAN
-import com.squareup.kotlinpoet.BYTE
-import com.squareup.kotlinpoet.BYTE_ARRAY
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.DOUBLE
-import com.squareup.kotlinpoet.FLOAT
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.INT
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.LIST
-import com.squareup.kotlinpoet.LONG
-import com.squareup.kotlinpoet.LambdaTypeName
-import com.squareup.kotlinpoet.MAP
-import com.squareup.kotlinpoet.ParameterSpec
+import amf.core.client.platform.model.domain.*
+import amf.shapes.client.platform.model.domain.*
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.SET
-import com.squareup.kotlinpoet.SHORT
-import com.squareup.kotlinpoet.STRING
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.UNIT
-import com.squareup.kotlinpoet.asTypeName
-import com.squareup.kotlinpoet.tag
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
-import io.outfoxx.sunday.generator.APIAnnotationName.KotlinImpl
-import io.outfoxx.sunday.generator.APIAnnotationName.KotlinModelPkg
-import io.outfoxx.sunday.generator.APIAnnotationName.KotlinType
-import io.outfoxx.sunday.generator.APIAnnotationName.Nested
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
-import io.outfoxx.sunday.generator.GeneratedTypeCategory
-import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.TypeRegistry
+import io.outfoxx.sunday.generator.*
+import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
-import io.outfoxx.sunday.generator.kotlin.utils.BeanValidationTypes
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_CREATOR
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_IGNORE
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_INCLUDE
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_NON_EMPTY
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_PROPERTY
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES_TYPE
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
-import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
-import io.outfoxx.sunday.generator.kotlin.utils.PATCH
-import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
-import io.outfoxx.sunday.generator.kotlin.utils.PATCH_SET_OP
-import io.outfoxx.sunday.generator.kotlin.utils.UPDATE_OP
-import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBLEM
-import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
-import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
-import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
-import io.outfoxx.sunday.generator.kotlin.utils.isArray
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
-import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.dataType
-import io.outfoxx.sunday.generator.utils.discriminator
-import io.outfoxx.sunday.generator.utils.discriminatorMapping
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.encodes
-import io.outfoxx.sunday.generator.utils.findAnnotation
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.format
-import io.outfoxx.sunday.generator.utils.get
-import io.outfoxx.sunday.generator.utils.getValue
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.items
-import io.outfoxx.sunday.generator.utils.makesNullable
-import io.outfoxx.sunday.generator.utils.maxItems
-import io.outfoxx.sunday.generator.utils.maxLength
-import io.outfoxx.sunday.generator.utils.maximum
-import io.outfoxx.sunday.generator.utils.minCount
-import io.outfoxx.sunday.generator.utils.minItems
-import io.outfoxx.sunday.generator.utils.minLength
-import io.outfoxx.sunday.generator.utils.minimum
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.nonPatternProperties
-import io.outfoxx.sunday.generator.utils.nullable
-import io.outfoxx.sunday.generator.utils.nullableType
-import io.outfoxx.sunday.generator.utils.optional
-import io.outfoxx.sunday.generator.utils.or
-import io.outfoxx.sunday.generator.utils.pattern
-import io.outfoxx.sunday.generator.utils.patternProperties
-import io.outfoxx.sunday.generator.utils.range
-import io.outfoxx.sunday.generator.utils.scalarValue
-import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-import io.outfoxx.sunday.generator.utils.uniqueItems
-import io.outfoxx.sunday.generator.utils.value
-import io.outfoxx.sunday.generator.utils.values
-import io.outfoxx.sunday.generator.utils.xone
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
+import io.outfoxx.sunday.generator.kotlin.utils.*
+import io.outfoxx.sunday.generator.utils.*
 import java.math.BigDecimal
 import java.net.URI
 import java.nio.file.Path
@@ -213,11 +96,11 @@ class KotlinTypeRegistry(
     return typeBuilders.mapValues { it.value.build() }
   }
 
-  fun resolveTypeName(shape: Shape, context: KotlinResolutionContext): TypeName {
+  fun resolveTypeName(shapeRef: Shape, context: KotlinResolutionContext): TypeName {
 
-    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
+    val shape = context.dereference(shapeRef)
 
-    var typeName = typeNameMappings[shape.id]
+    var typeName = typeNameMappings[shape.uniqueId]
     if (typeName == null) {
 
       typeName = generateTypeName(shape, context)
@@ -1349,7 +1232,7 @@ class KotlinTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: KotlinResolutionContext): ClassName {
 
-    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+    if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
     }
 

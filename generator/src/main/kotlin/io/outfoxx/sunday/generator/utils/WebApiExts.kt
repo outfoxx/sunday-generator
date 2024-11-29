@@ -18,21 +18,7 @@
 
 package io.outfoxx.sunday.generator.utils
 
-import amf.apicontract.client.platform.model.domain.Callback
-import amf.apicontract.client.platform.model.domain.CorrelationId
-import amf.apicontract.client.platform.model.domain.Encoding
-import amf.apicontract.client.platform.model.domain.EndPoint
-import amf.apicontract.client.platform.model.domain.License
-import amf.apicontract.client.platform.model.domain.Message
-import amf.apicontract.client.platform.model.domain.Operation
-import amf.apicontract.client.platform.model.domain.Organization
-import amf.apicontract.client.platform.model.domain.Parameter
-import amf.apicontract.client.platform.model.domain.Payload
-import amf.apicontract.client.platform.model.domain.Request
-import amf.apicontract.client.platform.model.domain.Response
-import amf.apicontract.client.platform.model.domain.Server
-import amf.apicontract.client.platform.model.domain.Tag
-import amf.apicontract.client.platform.model.domain.TemplatedLink
+import amf.apicontract.client.platform.model.domain.*
 import amf.apicontract.client.platform.model.domain.api.WebApi
 import amf.apicontract.client.platform.model.domain.bindings.ChannelBindings
 import amf.apicontract.client.platform.model.domain.bindings.MessageBindings
@@ -42,49 +28,23 @@ import amf.apicontract.client.platform.model.domain.security.ParametrizedSecurit
 import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.apicontract.client.platform.model.domain.security.SecurityScheme
 import amf.apicontract.client.platform.model.domain.security.Settings
-import amf.core.client.platform.model.Annotable
-import amf.core.client.platform.model.Annotations
-import amf.core.client.platform.model.BoolField
-import amf.core.client.platform.model.DataTypes
-import amf.core.client.platform.model.DoubleField
-import amf.core.client.platform.model.IntField
-import amf.core.client.platform.model.StrField
+import amf.core.client.platform.model.*
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.DeclaresModel
 import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.ArrayNode
-import amf.core.client.platform.model.domain.CustomDomainProperty
-import amf.core.client.platform.model.domain.CustomizableElement
-import amf.core.client.platform.model.domain.DataNode
-import amf.core.client.platform.model.domain.DomainElement
-import amf.core.client.platform.model.domain.DomainExtension
-import amf.core.client.platform.model.domain.Linkable
-import amf.core.client.platform.model.domain.NamedDomainElement
-import amf.core.client.platform.model.domain.ObjectNode
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import amf.core.client.platform.model.domain.ShapeExtension
-import amf.shapes.client.platform.model.domain.AnyShape
-import amf.shapes.client.platform.model.domain.ArrayShape
-import amf.shapes.client.platform.model.domain.CreativeWork
-import amf.shapes.client.platform.model.domain.DataArrangeShape
-import amf.shapes.client.platform.model.domain.Example
-import amf.shapes.client.platform.model.domain.IriTemplateMapping
-import amf.shapes.client.platform.model.domain.NilShape
-import amf.shapes.client.platform.model.domain.NodeShape
-import amf.shapes.client.platform.model.domain.PropertyDependencies
-import amf.shapes.client.platform.model.domain.ScalarShape
-import amf.shapes.client.platform.model.domain.UnionShape
-import amf.shapes.client.platform.model.domain.XMLSerializer
+import amf.core.client.platform.model.domain.*
+import amf.core.internal.annotations.DeclaredElement
+import amf.core.internal.metamodel.domain.`ShapeModel$`
+import amf.shapes.client.platform.model.domain.*
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GenerationMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
-import java.util.Base64
+import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 val BoolField.value: Boolean? get() = option().orElse(null) as Boolean?
 val IntField.value: Int? get() = option().orElse(null) as Int?
@@ -93,6 +53,7 @@ val StrField.value: String? get() = this.value()
 
 //
 val Annotations.location: String get() = this.location().get()
+val Annotations.fragmentName: String? get() = this.fragmentName().getOrNull()
 
 //
 val BaseUnit.id: String get() = this.id()
@@ -328,6 +289,35 @@ val Shape.elseShape: Shape? get() = this.elseShape()
 val Shape.inlined: Boolean get() = this.annotations.inlinedElement()
 val Shape.nonNullableType: Shape get() = if (this is UnionShape) this.nullableType else this
 
+val Shape.isNameExplicit: Boolean get() =
+  hasExplicitName() || annotations._internal().contains(DeclaredElement::class.java)
+
+val Shape.location: String?
+  get() =
+    _internal().fields()[`ShapeModel$`.`MODULE$`.Name()]
+      ?.let { name ->
+        val nameLocation = name.location()
+        if (nameLocation.isDefined) {
+          nameLocation.get()
+            .ifBlank { null }
+        } else {
+          null
+        }
+      }
+      ?: annotations.location().orElse(null)
+
+val Shape.uniqueId: String
+  get() =
+    location
+      ?.let { location ->
+        annotations.fragmentName
+          ?.let { fragmentName ->
+            "$location#$fragmentName/$name"
+          }
+          ?: "$location/$name"
+      }
+      ?: id
+
 //
 val ShapeExtension.definedBy: PropertyShape get() = this.definedBy()
 val ShapeExtension.extension: DataNode? get() = this.extension()
@@ -372,11 +362,13 @@ val NodeShape.propertyNames: Shape? get() = this.propertyNames()
 
 val NodeShape.properties: List<PropertyShape> get() = this.properties()
 
-val NodeShape.nonPatternProperties: List<PropertyShape> get() =
-  this.properties().filter { it.patternName == null }
+val NodeShape.nonPatternProperties: List<PropertyShape>
+  get() =
+    this.properties().filter { it.patternName == null }
 
-val NodeShape.patternProperties: List<PropertyShape> get() =
-  this.properties().filterNot { it.patternName == null }
+val NodeShape.patternProperties: List<PropertyShape>
+  get() =
+    this.properties().filterNot { it.patternName == null }
 
 //
 val DataArrangeShape.minItems: Int? get() = this.minItems().value
@@ -405,56 +397,60 @@ val PropertyShape.nullable: Boolean get() = (range as? UnionShape)?.makesNullabl
 val PropertyShape.isInherited: Boolean get() = annotations.inheritanceProvenance().isPresent
 
 //
-val DataNode.anyValue: Any? get() =
-  when (this) {
-    is ScalarNode ->
-      when (dataType().value()) {
-        DataTypes.String() -> value().value
-        DataTypes.Boolean() -> value().value?.toBoolean()
-        DataTypes.Integer() -> value().value?.toInt()
-        DataTypes.Long() -> value().value?.toLong()
-        DataTypes.Float() -> value().value?.toFloat()
-        DataTypes.Double() -> value().value?.toDouble()
-        DataTypes.Number() -> value().value?.toBigDecimal()
-        DataTypes.Decimal() -> value().value?.toBigDecimal()
+val DataNode.anyValue: Any?
+  get() =
+    when (this) {
+      is ScalarNode ->
+        when (dataType().value()) {
+          DataTypes.String() -> value().value
+          DataTypes.Boolean() -> value().value?.toBoolean()
+          DataTypes.Integer() -> value().value?.toInt()
+          DataTypes.Long() -> value().value?.toLong()
+          DataTypes.Float() -> value().value?.toFloat()
+          DataTypes.Double() -> value().value?.toDouble()
+          DataTypes.Number() -> value().value?.toBigDecimal()
+          DataTypes.Decimal() -> value().value?.toBigDecimal()
 //        DataTypes.Duration() -> value().value?.let { Duration.parse(it) }
-        DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
-        DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
-        DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
-        DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
-        DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
-        else -> error("unsupported scalar node data type")
-      }
-    is ArrayNode -> arrayValue!!
-    is ObjectNode -> objectValue!!
-    else -> error("unsupported data node")
-  }
+          DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
+          DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
+          DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
+          DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
+          DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
+          else -> error("unsupported scalar node data type")
+        }
+
+      is ArrayNode -> arrayValue!!
+      is ObjectNode -> objectValue!!
+      else -> error("unsupported data node")
+    }
 
 val DataNode.stringValue: String? get() = anyValue as? String
 val DataNode.numberValue: Number? get() = anyValue as? Number
 val DataNode.rawScalarValue: String? get() = (this as? ScalarNode)?.value
-val DataNode.scalarValue: Any? get() = (this as? ScalarNode)?.value?.let {
-  when (dataType().value()) {
-    DataTypes.String() -> value().value
-    DataTypes.Boolean() -> value().value?.toBoolean()
-    DataTypes.Integer() -> value().value?.toInt()
-    DataTypes.Long() -> value().value?.toLong()
-    DataTypes.Float() -> value().value?.toFloat()
-    DataTypes.Double() -> value().value?.toDouble()
-    DataTypes.Number() -> value().value?.toBigDecimal()
-    DataTypes.Decimal() -> value().value?.toBigDecimal()
+val DataNode.scalarValue: Any?
+  get() = (this as? ScalarNode)?.value?.let {
+    when (dataType().value()) {
+      DataTypes.String() -> value().value
+      DataTypes.Boolean() -> value().value?.toBoolean()
+      DataTypes.Integer() -> value().value?.toInt()
+      DataTypes.Long() -> value().value?.toLong()
+      DataTypes.Float() -> value().value?.toFloat()
+      DataTypes.Double() -> value().value?.toDouble()
+      DataTypes.Number() -> value().value?.toBigDecimal()
+      DataTypes.Decimal() -> value().value?.toBigDecimal()
 //    DataTypes.Duration() -> value().value?.let { Duration.parse(it) }
-    DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
-    DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
-    DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
-    DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
-    DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
-    else -> error("unsupported scalar node data type")
+      DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
+      DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
+      DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
+      DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
+      DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
+      else -> error("unsupported scalar node data type")
+    }
   }
-}
 val DataNode.arrayValue: List<Any?>? get() = (this as? ArrayNode)?.members()?.map { it.anyValue }
-val DataNode.objectValue: Map<String, Any?>? get() =
-  (this as? ObjectNode)?.properties()?.mapValues { it.value.anyValue }
+val DataNode.objectValue: Map<String, Any?>?
+  get() =
+    (this as? ObjectNode)?.properties()?.mapValues { it.value.anyValue }
 
 //
 val ScalarNode.value: String? get() = this.value().value

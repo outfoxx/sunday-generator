@@ -21,28 +21,9 @@ package io.outfoxx.sunday.generator.typescript
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.ArrayNode
-import amf.core.client.platform.model.domain.CustomizableElement
-import amf.core.client.platform.model.domain.DomainElement
-import amf.core.client.platform.model.domain.ObjectNode
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import amf.shapes.client.platform.model.domain.AnyShape
-import amf.shapes.client.platform.model.domain.ArrayShape
-import amf.shapes.client.platform.model.domain.FileShape
-import amf.shapes.client.platform.model.domain.NilShape
-import amf.shapes.client.platform.model.domain.NodeShape
-import amf.shapes.client.platform.model.domain.ScalarShape
-import amf.shapes.client.platform.model.domain.UnionShape
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
-import io.outfoxx.sunday.generator.APIAnnotationName.Nested
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
-import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptImpl
-import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModelModule
-import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModule
-import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
+import amf.core.client.platform.model.domain.*
+import amf.shapes.client.platform.model.domain.*
+import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
@@ -52,84 +33,9 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR
-import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR_MODE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.JSON_PROPERTY
-import io.outfoxx.sunday.generator.typescript.utils.JSON_SUB_TYPES
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_AS
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_ID
-import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_NAME
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
-import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
-import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
-import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
-import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
-import io.outfoxx.sunday.generator.typescript.utils.UNKNOWN
-import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.box
-import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
-import io.outfoxx.sunday.generator.typescript.utils.nonOptional
-import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
-import io.outfoxx.sunday.generator.typescript.utils.nullable
-import io.outfoxx.sunday.generator.typescript.utils.recordType
-import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
-import io.outfoxx.sunday.generator.typescript.utils.undefinable
-import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
-import io.outfoxx.sunday.generator.utils.dataType
-import io.outfoxx.sunday.generator.utils.discriminator
-import io.outfoxx.sunday.generator.utils.discriminatorMapping
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.encodes
-import io.outfoxx.sunday.generator.utils.findAnnotation
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.format
-import io.outfoxx.sunday.generator.utils.get
-import io.outfoxx.sunday.generator.utils.getValue
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.items
-import io.outfoxx.sunday.generator.utils.makesNullable
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.nonPatternProperties
-import io.outfoxx.sunday.generator.utils.nullableType
-import io.outfoxx.sunday.generator.utils.optional
-import io.outfoxx.sunday.generator.utils.or
-import io.outfoxx.sunday.generator.utils.patternProperties
-import io.outfoxx.sunday.generator.utils.range
-import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.stringValue
-import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-import io.outfoxx.sunday.generator.utils.uniqueItems
-import io.outfoxx.sunday.generator.utils.value
-import io.outfoxx.sunday.generator.utils.values
-import io.outfoxx.sunday.generator.utils.xone
-import io.outfoxx.typescriptpoet.AnyTypeSpec
-import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
-import io.outfoxx.typescriptpoet.ClassSpec
-import io.outfoxx.typescriptpoet.CodeBlock
-import io.outfoxx.typescriptpoet.DecoratorSpec
-import io.outfoxx.typescriptpoet.EnumSpec
-import io.outfoxx.typescriptpoet.FileSpec
-import io.outfoxx.typescriptpoet.FunctionSpec
-import io.outfoxx.typescriptpoet.InterfaceSpec
-import io.outfoxx.typescriptpoet.Modifier
-import io.outfoxx.typescriptpoet.ModuleSpec
-import io.outfoxx.typescriptpoet.ParameterSpec
-import io.outfoxx.typescriptpoet.PropertySpec
-import io.outfoxx.typescriptpoet.SymbolSpec
-import io.outfoxx.typescriptpoet.TypeName
+import io.outfoxx.sunday.generator.typescript.utils.*
+import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.typescriptpoet.*
 import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY_BUFFER
@@ -139,7 +45,6 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.NUMBER
 import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
-import io.outfoxx.typescriptpoet.tag
 import java.nio.file.Path
 import kotlin.math.min
 
@@ -288,11 +193,11 @@ class TypeScriptTypeRegistry(
       }
   }
 
-  fun resolveTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName {
+  fun resolveTypeName(shapeRef: Shape, context: TypeScriptResolutionContext): TypeName {
 
-    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
+    val shape = context.dereference(shapeRef)
 
-    var typeName = typeNameMappings[shape.id]
+    var typeName = typeNameMappings[shape.uniqueId]
     if (typeName == null) {
 
       typeName = generateTypeName(shape, context)
@@ -1195,7 +1100,7 @@ class TypeScriptTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: TypeScriptResolutionContext): TypeName.Standard {
 
-    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+    if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
     }
 

@@ -17,24 +17,31 @@
 package io.outfoxx.sunday.generator.common
 
 import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.domain.PropertyShape
 import amf.core.client.platform.model.domain.RecursiveShape
 import amf.core.client.platform.model.domain.Shape
+import amf.core.client.scala.errorhandling.DefaultErrorHandler
+import amf.core.internal.annotations.DeclaredElement
 import amf.shapes.client.platform.model.domain.NodeShape
-import io.outfoxx.sunday.generator.utils.ShapeVisitor
-import io.outfoxx.sunday.generator.utils.id
+import io.outfoxx.sunday.generator.utils.annotations
 import io.outfoxx.sunday.generator.utils.inherits
-import io.outfoxx.sunday.generator.utils.linkTarget
-import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nonPatternProperties
-import io.outfoxx.sunday.generator.utils.properties
-import io.outfoxx.sunday.generator.utils.range
-import io.outfoxx.sunday.generator.utils.value
+import io.outfoxx.sunday.generator.utils.uniqueId
+import scala.Option
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.filter
+import kotlin.collections.firstOrNull
+import kotlin.collections.isNotEmpty
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.jvm.optionals.getOrNull
+import amf.core.client.scala.model.domain.Shape as InternalShape
 
 class ShapeIndex(
-  private val inheritedMap: Map<String, Set<String>>,
-  private val inheritingMap: Map<String, Set<String>>,
-  private val orderOfProperties: Map<String, List<String>>,
-  private val referenceMap: Map<String, String>,
+  private val referenceMap: Map<String, Shape>,
 ) {
 
   companion object {
@@ -42,113 +49,74 @@ class ShapeIndex(
     fun builder() = Builder()
   }
 
-  class Builder : ShapeVisitor() {
+  class Builder {
 
-    private val inheritedMap = mutableMapOf<String, MutableSet<String>>()
-    private val inheritingMap = mutableMapOf<String, MutableSet<String>>()
-    private val orderOfProperties = mutableMapOf<String, List<String>>()
-    private val referenceMap = mutableMapOf<String, String>()
+    private val referenceMap = mutableMapOf<String, Shape>()
 
     fun index(baseUnit: BaseUnit): Builder {
-      visit(baseUnit)
+      baseUnit._internal().transform(
+        { it is InternalShape },
+        { internalShape, _ ->
+          val shape = baseUnit.findById(internalShape.id()).get() as Shape
+          if (shape is RecursiveShape) {
+            val internalTarget = shape._internal().fixpointTarget().get()
+            val clientTarget = baseUnit.findById(internalTarget.id()).get() as Shape
+            referenceMap[shape.uniqueId] = clientTarget
+          } else if (shape.hasExplicitName() || shape._internal().annotations().contains(DeclaredElement::class.java)) {
+            referenceMap[shape.uniqueId] = shape
+          }
+          Option.apply(internalShape)
+        },
+        DefaultErrorHandler()
+      )
       return this
     }
 
-    fun build() = ShapeIndex(inheritedMap, inheritingMap, orderOfProperties, referenceMap)
+    fun build() = ShapeIndex(referenceMap)
+  }
 
-    override fun visit(shape: Shape?) {
-      add(shape)
-    }
+  fun hasInherited(shape: Shape): Boolean =
+    findInherited(shape).isNotEmpty()
 
-    private fun add(shape: Shape?) {
-      shape ?: return
+  fun hasNoInherited(shape: Shape): Boolean =
+    findInherited(shape).isEmpty()
 
-      // Mark and ignore soft links...
-      if (
-        !shape.hasExplicitName() &&
-        shape.inherits.size == 1 &&
-        (shape !is NodeShape || shape.properties.isEmpty())
-      ) {
-        storeReference(shape, dereference(shape.inherits.single()))
-        return
-      }
+  fun findSuperShapeOrNull(shape: Shape): Shape? =
+    findInherited(shape).firstOrNull()
 
-      val shapeId = shape.id
+  fun findInherited(shape: Shape): List<Shape> =
+    resolve(shape).inherits.map { resolve(it) }
 
-      if (shape is NodeShape) {
-        orderOfProperties[shapeId] = shape.nonPatternProperties.mapNotNull { it.name }
+  fun hasInheriting(shape: Shape): Boolean =
+    findInheriting(shape).isNotEmpty()
 
-        shape.properties.forEach {
-          val dref = dereference(it.range)
-          if (dref.id != shapeId) {
-            add(dref)
-          }
-        }
-      }
+  fun hasNoInheriting(shape: Shape): Boolean =
+    findInheriting(shape).isEmpty()
 
-      inheritedMap.getOrPut(shapeId) { mutableSetOf() }
-      inheritingMap.getOrPut(shapeId) { mutableSetOf() }
-
-      shape.inherits().forEach { inheritedNode ->
-        val inheritedNodeId = dereference(inheritedNode).id
-        inheritedMap.getOrPut(shapeId) { mutableSetOf() }.add(inheritedNodeId)
-        inheritingMap.getOrPut(inheritedNodeId) { mutableSetOf() }.add(shapeId)
-      }
-    }
-
-    private fun dereference(shape: Shape): Shape =
-      when {
-        shape.linkTarget != null -> dereference(storeReference(shape, shape.linkTarget as Shape))
-
-        else -> shape
-      }
-
-    private fun storeReference(source: Shape, target: Shape): Shape {
-      referenceMap[source.id] = target.id
-      return target
+  fun findInheriting(shape: Shape): List<Shape> {
+    val opt = resolve(shape).annotations._internal().find(Inheriting::class.java)
+    return if (opt.isDefined) {
+      opt.get().shapes.map { resolve(it) }
+    } else {
+      listOf()
     }
   }
 
-  fun hasInherited(shape: Shape): Boolean {
-    return inheritedMap[resolveIfReference(shape)]?.isNotEmpty() ?: false
-  }
+  fun findOrderedProperties(shape: NodeShape): List<PropertyShape> =
+    resolveAs(shape).nonPatternProperties
+      .filter { it.annotations.inheritanceProvenance().getOrNull() == shape.uniqueId }
 
-  fun hasNoInherited(shape: Shape): Boolean {
-    return !hasInherited(shape)
-  }
+  private inline fun <reified T : Shape> resolveAs(shape: T): T =
+    resolve(shape) as T
 
-  fun findInheritedIds(shape: Shape): Set<String> {
-    return inheritedMap[resolveIfReference(shape)] ?: setOf()
-  }
-
-  fun findSuperShapeIdOrNull(shape: Shape): String? {
-    return findInheritedIds(shape).firstOrNull()
-  }
-
-  fun hasInheriting(shape: Shape): Boolean {
-    return inheritingMap[resolveIfReference(shape)]?.isNotEmpty() ?: false
-  }
-
-  fun hasNoInheriting(shape: Shape): Boolean {
-    return !hasInheriting(shape)
-  }
-
-  fun findInheritingIds(shape: Shape): Set<String> {
-    return inheritingMap[resolveIfReference(shape)] ?: setOf()
-  }
-
-  fun findOrderOrProperties(shape: NodeShape): List<String> {
-    return orderOfProperties[resolveIfReference(shape)] ?: emptyList()
-  }
-
-  fun findReferenceTargetId(shape: Shape): String? {
-    if (shape is RecursiveShape) {
-      return shape.fixpoint().value
+  fun resolve(shape: Shape): Shape =
+    if (shape.hasExplicitName() || shape._internal().annotations().contains(DeclaredElement::class.java)) {
+      referenceMap[shape.uniqueId]
+        ?: shape
+    } else {
+      shape.inherits.firstOrNull()
+        ?.let { referenceMap[it.uniqueId] }
+        ?: referenceMap[shape.uniqueId]
+        ?: shape
     }
-    return referenceMap[shape.id]
-  }
-
-  fun resolveIfReference(shape: Shape): String {
-    return findReferenceTargetId(shape) ?: shape.id
-  }
 }

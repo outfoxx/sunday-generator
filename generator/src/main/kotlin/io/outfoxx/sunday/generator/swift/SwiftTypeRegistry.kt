@@ -21,69 +21,16 @@ package io.outfoxx.sunday.generator.swift
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.ArrayNode
-import amf.core.client.platform.model.domain.CustomizableElement
-import amf.core.client.platform.model.domain.DomainElement
-import amf.core.client.platform.model.domain.ObjectNode
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import amf.shapes.client.platform.model.domain.AnyShape
-import amf.shapes.client.platform.model.domain.ArrayShape
-import amf.shapes.client.platform.model.domain.FileShape
-import amf.shapes.client.platform.model.domain.NilShape
-import amf.shapes.client.platform.model.domain.NodeShape
-import amf.shapes.client.platform.model.domain.ScalarShape
-import amf.shapes.client.platform.model.domain.UnionShape
-import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
-import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
-import io.outfoxx.sunday.generator.APIAnnotationName.Nested
-import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
-import io.outfoxx.sunday.generator.APIAnnotationName.SwiftImpl
-import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
-import io.outfoxx.sunday.generator.GeneratedTypeCategory
-import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.TypeRegistry
+import amf.core.client.platform.model.domain.*
+import amf.shapes.client.platform.model.domain.*
+import io.outfoxx.sunday.generator.*
+import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.utils.*
-import io.outfoxx.sunday.generator.utils.anyOf
-import io.outfoxx.sunday.generator.utils.dataType
-import io.outfoxx.sunday.generator.utils.discriminator
-import io.outfoxx.sunday.generator.utils.discriminatorMapping
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.encodes
-import io.outfoxx.sunday.generator.utils.findAnnotation
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.format
-import io.outfoxx.sunday.generator.utils.get
-import io.outfoxx.sunday.generator.utils.getValue
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.id
-import io.outfoxx.sunday.generator.utils.items
-import io.outfoxx.sunday.generator.utils.makesNullable
-import io.outfoxx.sunday.generator.utils.minCount
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.nonPatternProperties
-import io.outfoxx.sunday.generator.utils.nullable
-import io.outfoxx.sunday.generator.utils.nullableType
-import io.outfoxx.sunday.generator.utils.optional
-import io.outfoxx.sunday.generator.utils.or
-import io.outfoxx.sunday.generator.utils.patternProperties
-import io.outfoxx.sunday.generator.utils.range
-import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.stringValue
-import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-import io.outfoxx.sunday.generator.utils.uniqueItems
-import io.outfoxx.sunday.generator.utils.value
-import io.outfoxx.sunday.generator.utils.values
-import io.outfoxx.sunday.generator.utils.xone
+import io.outfoxx.sunday.generator.utils.*
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.ARRAY
 import io.outfoxx.swiftpoet.BOOL
@@ -103,11 +50,7 @@ import io.outfoxx.swiftpoet.INT16
 import io.outfoxx.swiftpoet.INT32
 import io.outfoxx.swiftpoet.INT64
 import io.outfoxx.swiftpoet.INT8
-import io.outfoxx.swiftpoet.Modifier.FILEPRIVATE
-import io.outfoxx.swiftpoet.Modifier.OVERRIDE
-import io.outfoxx.swiftpoet.Modifier.PUBLIC
-import io.outfoxx.swiftpoet.Modifier.REQUIRED
-import io.outfoxx.swiftpoet.Modifier.STATIC
+import io.outfoxx.swiftpoet.Modifier.*
 import io.outfoxx.swiftpoet.ParameterSpec
 import io.outfoxx.swiftpoet.ParameterizedTypeName
 import io.outfoxx.swiftpoet.PropertySpec
@@ -179,11 +122,11 @@ class SwiftTypeRegistry(
     return typeBuilders.mapValues { it.value.build() }
   }
 
-  fun resolveTypeName(shape: Shape, context: SwiftResolutionContext): TypeName {
+  fun resolveTypeName(shapeRef: Shape, context: SwiftResolutionContext): TypeName {
 
-    context.getReferenceTarget(shape)?.let { return resolveTypeName(it, context) }
+    val shape = context.dereference(shapeRef)
 
-    var typeName = typeNameMappings[shape.id]
+    var typeName = typeNameMappings[shape.uniqueId]
     if (typeName == null) {
 
       typeName = generateTypeName(shape, context)
@@ -1148,9 +1091,9 @@ class SwiftTypeRegistry(
         paramType.makeOptional()
       }
       paramConsBuilder.addParameter(
-          ParameterSpec.builder(it.swiftIdentifierName, paramType)
-              .apply { if (it.optional && paramType.optional) defaultValue("nil") }
-              .build(),
+        ParameterSpec.builder(it.swiftIdentifierName, paramType)
+          .apply { if (it.optional && paramType.optional) defaultValue("nil") }
+          .build(),
       )
     }
 
@@ -1428,7 +1371,7 @@ class SwiftTypeRegistry(
 
   private fun typeNameOf(shape: Shape, context: SwiftResolutionContext): DeclaredTypeName {
 
-    if (!shape.hasExplicitName() && context.suggestedTypeName != null) {
+    if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
     }
 
@@ -1500,16 +1443,19 @@ class SwiftTypeRegistry(
         val refValueType = referenceTypes[valueType] ?: valueType
         DICTIONARY.parameterizedBy(baseTypeName.typeArguments[0], refValueType) to refValueType
       }
+
       ARRAY -> {
         val valueType = baseTypeName.typeArguments[0]
         val refValueType = referenceTypes[valueType] ?: valueType
         ARRAY.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
       }
+
       SET -> {
         val valueType = baseTypeName.typeArguments[0]
         val refValueType = referenceTypes[valueType] ?: valueType
         SET.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
       }
+
       else -> typeName to typeName
     }
     return (if (typeName.optional) mappedTypeName.makeOptional() else mappedTypeName) to elementRefTypeName
