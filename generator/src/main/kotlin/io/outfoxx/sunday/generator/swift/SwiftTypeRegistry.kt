@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.utils.*
 import io.outfoxx.sunday.generator.utils.*
@@ -1274,8 +1275,16 @@ class SwiftTypeRegistry(
 
     if (isPatchable) {
 
-      val typeSpec = typeBuilder.build()
-      val propertySpecs = typeSpec.propertySpecs.filter { it.name != DESCRIPTION_PROP_NAME }
+      val properties =
+        (inheritedDeclaredProperties + localDeclaredProperties)
+          .associate { property ->
+            val propertyTypeName = resolvePropertyTypeName(property, className, context)
+              .run {
+                val base = if (property.nullable) PATCH_OP else UPDATE_OP
+                base.parameterizedBy(makeNonOptional()).makeOptional()
+              }
+            property.swiftIdentifierName to propertyTypeName
+          }
 
       val patchOpExt =
         ExtensionSpec.builder(ANY_PATCH_OP)
@@ -1285,9 +1294,9 @@ class SwiftTypeRegistry(
               .addModifiers(PUBLIC, STATIC)
               .returns(SelfTypeName.INSTANCE)
               .apply {
-                for (propertySpec in propertySpecs) {
+                for ((propertyName, propertyTypeName) in properties) {
                   addParameter(
-                    ParameterSpec.builder(propertySpec.name, propertySpec.type)
+                    ParameterSpec.builder(propertyName, propertyTypeName)
                       .defaultValue(".none")
                       .build(),
                   )
@@ -1297,7 +1306,7 @@ class SwiftTypeRegistry(
                 "%T.merge(%T(%L))",
                 SelfTypeName.INSTANCE,
                 className,
-                propertySpecs.map { CodeBlock.of("%L: %L", it.name, it.name) }.joinToCode(",%W"),
+                properties.keys.map { CodeBlock.of("%L: %L", it, it) }.joinToCode(",%W"),
               )
               .build(),
           )

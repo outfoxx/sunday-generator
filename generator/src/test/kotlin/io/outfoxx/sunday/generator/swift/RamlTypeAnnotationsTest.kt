@@ -1404,4 +1404,196 @@ class RamlTypeAnnotationsTest {
       },
     )
   }
+
+  @Test
+  fun `test discriminated patchable class generation`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-patchable-disc.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
+    val testTypeTypeSpec = findType("TestType", generatedTypes)
+    val testTypeSpec = findType("Test", generatedTypes)
+    val childTypeSpec = findType("Child", generatedTypes)
+
+    assertEquals(
+      """
+        public enum TestType : String, CaseIterable, Codable {
+
+          case child = "child"
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.builder("", testTypeTypeSpec.name)
+          .addType(testTypeTypeSpec)
+          .apply {
+            testTypeTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }
+          .build()
+          .writeTo(this)
+      },
+    )
+    assertEquals(
+      """
+        import Sunday
+
+        public class Test : Codable, CustomDebugStringConvertible {
+
+          public var type: TestType {
+            fatalError("abstract type method")
+          }
+          public var debugDescription: String {
+            return DescriptionBuilder(Test.self)
+                .build()
+          }
+
+          public init() {
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let _ = try decoder.container(keyedBy: CodingKeys.self)
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.type, forKey: .type)
+          }
+
+          public enum AnyRef : Codable, CustomDebugStringConvertible {
+
+            case child(Child)
+
+            public var value: Test {
+              switch self {
+              case .child(let value): return value
+              }
+            }
+            public var debugDescription: String {
+              switch self {
+              case .child(let value): return value.debugDescription
+              }
+            }
+
+            public init(value: Test) {
+              switch value {
+              case let value as Child: self = .child(value)
+              default: fatalError("Invalid value type")
+              }
+            }
+
+            public init(from decoder: Decoder) throws {
+              let container = try decoder.container(keyedBy: CodingKeys.self)
+              let type = try container.decode(TestType.self, forKey: CodingKeys.type)
+              switch type {
+              case .child: self = .child(try Child(from: decoder))
+              }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+              var container = encoder.singleValueContainer()
+              switch self {
+              case .child(let value): try container.encode(value)
+              }
+            }
+
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case type = "type"
+
+          }
+
+        }
+
+        extension AnyPatchOp where Value == Test {
+
+          public static func merge() -> Self {
+            Self.merge(Test())
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.builder("", testTypeSpec.name)
+          .addType(testTypeSpec)
+          .apply {
+            testTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }
+          .build()
+          .writeTo(this)
+      },
+    )
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class Child : Test {
+
+          public override var type: TestType {
+            return TestType.child
+          }
+          public var child: UpdateOp<String>?
+          public override var debugDescription: String {
+            return DescriptionBuilder(Child.self)
+                .add(type, named: "type")
+                .add(child, named: "child")
+                .build()
+          }
+
+          public init(child: UpdateOp<String>? = .none) {
+            self.child = child
+            super.init()
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.child = try container.decodeIfExists(String.self, forKey: .child)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfExists(self.child, forKey: .child)
+          }
+
+          public func withChild(child: UpdateOp<String>?) -> Child {
+            return Child(child: child)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case child = "child"
+
+          }
+
+        }
+
+        extension AnyPatchOp where Value == Child {
+
+          public static func merge(child: UpdateOp<String>? = .none) -> Self {
+            Self.merge(Child(child: child))
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.builder("", childTypeSpec.name)
+          .addType(childTypeSpec)
+          .apply {
+            childTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }
+          .build()
+          .writeTo(this)
+      },
+    )
+  }
 }
