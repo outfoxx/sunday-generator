@@ -561,7 +561,7 @@ class SwiftTypeRegistry(
     }
 
     val isRoot = superShape == null
-    val isPatchable = shape.findBoolAnnotation(Patchable, null) == true
+    val isPatchable = shape.isPatchable(context)
 
     val codingKeysTypeName = className.nestedType(CODING_KEYS_NAME)
     var codingKeysType: TypeSpec? = null
@@ -1084,12 +1084,17 @@ class SwiftTypeRegistry(
       .addModifiers(*if (!isRoot && localDeclaredProperties.isEmpty()) arrayOf(PUBLIC, OVERRIDE) else arrayOf(PUBLIC))
 
     inheritedDeclaredProperties.forEach {
-      var paramType = resolvePropertyTypeName(it, className, context)
-      paramType = if (it.required) {
-        paramType.makeNonOptional()
-      } else {
-        paramType.makeOptional()
-      }
+      val paramType = resolvePropertyTypeName(it, className, context)
+        .run {
+          if (isPatchable) {
+            val base = if (it.nullable) PATCH_OP else UPDATE_OP
+            base.parameterizedBy(makeNonOptional()).makeOptional()
+          } else if (it.required) {
+            this.makeNonOptional()
+          } else {
+            this.makeOptional()
+          }
+        }
       paramConsBuilder.addParameter(
         ParameterSpec.builder(it.swiftIdentifierName, paramType)
           .apply { if (it.optional && paramType.optional) defaultValue("nil") }
@@ -1513,6 +1518,10 @@ class SwiftTypeRegistry(
       val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
       mapping.templateVariable().value()!! to refElement.id
     }.toMap()
+
+  private fun Shape.isPatchable(context: SwiftResolutionContext): Boolean =
+    findBoolAnnotation(Patchable, null) == true ||
+      context.findSuperShapeOrNull(this)?.isPatchable(context) == true
 
   companion object {
 
