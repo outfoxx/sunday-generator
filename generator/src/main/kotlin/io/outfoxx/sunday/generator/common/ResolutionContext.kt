@@ -42,33 +42,15 @@ interface ResolutionContext {
   fun findRootShape(shape: Shape): Shape = findSuperShapeOrNull(shape.nonNullableType)?.let(this::findRootShape) ?: shape
 
   fun findSuperShapeOrNull(shape: Shape): Shape? {
-    val superShapeId = shapeIndex.findSuperShapeIdOrNull(shape) ?: return null
-    return unit.allUnits.firstNotNullOf {
-      val found = it.findById(superShapeId)
-      found.orElse(null)
-    } as Shape
+    return shapeIndex.findSuperShapeOrNull(shape)
   }
 
   fun findInheritingShapes(shape: Shape): List<Shape> {
-    return shapeIndex.findInheritingIds(shape).mapNotNull { inheritingId ->
-      unit.allUnits.firstNotNullOfOrNull {
-        val found = it.findById(inheritingId)
-        found.orElse(null)
-      } as Shape?
-    }
+    return shapeIndex.findInheriting(shape.nonNullableType)
   }
 
-  fun findProperties(shape: NodeShape): List<PropertyShape> {
-
-    val orderedProperties = mutableListOf<PropertyShape>()
-
-    shapeIndex.findOrderOrProperties(shape).forEach { propertyName ->
-      val property = shape.nonPatternProperties.first { it.name == propertyName }
-      orderedProperties.add(property)
-    }
-
-    return orderedProperties
-  }
+  fun findProperties(shape: NodeShape): List<PropertyShape> =
+    shapeIndex.findOrderedProperties(shape)
 
   fun findAllProperties(shape: NodeShape): List<PropertyShape> {
     val superShape = findSuperShapeOrNull(shape) as NodeShape?
@@ -92,19 +74,8 @@ interface ResolutionContext {
       ?: findImportingUnit(source, unit.allUnits)?.resolveRef(name)
   }
 
-  fun getReferenceTarget(shape: Shape): Shape? {
-    val refTargetId = shapeIndex.findReferenceTargetId(shape) ?: return null
-    unit.allUnits.forEach { unit ->
-      if (unit is DeclaresModel) {
-        unit.declares.forEach { declared ->
-          if (declared is Shape && declared.id == refTargetId) {
-            return declared
-          }
-        }
-      }
-    }
-    return null
-  }
+  fun dereference(shape: Shape): Shape =
+    shapeIndex.resolve(shape)
 }
 
 private val ELEMENT_REF_REGEX = """(?:([^.]+)\.)?([\w-_.]+)""".toRegex()

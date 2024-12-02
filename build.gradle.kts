@@ -94,10 +94,8 @@ configure(moduleNames.map { project(it) }) {
     systemProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
     systemProperty("junit.jupiter.execution.parallel.config.dynamic.factor", "3")
 
-    if (System.getenv("CI").isNullOrBlank()) {
-      testLogging {
-        events("passed", "skipped", "failed")
-      }
+    testLogging {
+      events("passed", "skipped", "failed")
     }
 
     reports.junitXml.required.set(true)
