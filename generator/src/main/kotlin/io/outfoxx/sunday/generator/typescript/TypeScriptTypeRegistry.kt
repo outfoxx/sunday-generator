@@ -582,6 +582,7 @@ class TypeScriptTypeRegistry(
 
     var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
     var declaredProperties = context.findProperties(shape)
+      .filter { prop -> prop.name !in inheritedProperties.map { it.name } }
 
     val inheritingTypes = context.findInheritingShapes(shape).map { it as NodeShape }
 
