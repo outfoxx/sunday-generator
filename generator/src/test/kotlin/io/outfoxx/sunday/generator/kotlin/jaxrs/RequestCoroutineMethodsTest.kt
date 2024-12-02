@@ -47,7 +47,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -107,7 +108,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -168,7 +170,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -299,7 +302,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -334,17 +338,17 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Test1>
+          public fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+          public fun fetchEventsDiscriminated(): Flow<Any>
 
           @GET
           @Path(value = "/test3")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
+          public fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
         }
 
       """.trimIndent(),
@@ -369,7 +373,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -439,7 +444,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -509,7 +515,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -579,7 +586,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -642,7 +650,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -705,7 +714,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -767,7 +777,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -828,7 +839,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -959,7 +971,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -1029,7 +1042,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -1099,7 +1113,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -1169,7 +1184,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -1239,7 +1255,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,
@@ -1305,7 +1322,8 @@ class RequestCoroutineMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            true,
+            coroutineFlowMethods = true,
+            coroutineServiceMethods = true,
             null,
             false,
             null,

@@ -53,7 +53,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -114,7 +115,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -177,7 +179,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -239,7 +242,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -301,7 +305,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -364,7 +369,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -489,7 +495,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -614,7 +621,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             CompletionStage::class.qualifiedName,
             false,
             null,
@@ -690,7 +698,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             UNI.canonicalName,
             false,
             null,
@@ -815,7 +824,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             RXSINGLE3.canonicalName,
             false,
             null,
@@ -946,7 +956,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             RXOBSERVABLE3.canonicalName,
             false,
             null,
@@ -1077,7 +1088,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             RXSINGLE2.canonicalName,
             false,
             null,
@@ -1208,7 +1220,8 @@ class RequestReactiveMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             RXOBSERVABLE2.canonicalName,
             false,
             null,

@@ -117,6 +117,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val flowCoroutines: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
+  @Input
+  @Optional
   val reactiveResponseType: Property<String> = objects.property(String::class.java).convention(null as String?)
 
   @Input
@@ -225,6 +229,7 @@ open class SundayGenerate
             processed.shapeIndex,
             typeRegistry,
             KotlinJAXRSGenerator.Options(
+              flowCoroutines.get(),
               coroutines.get(),
               reactiveResponseType.orNull,
               explicitSecurityParameters.get(),

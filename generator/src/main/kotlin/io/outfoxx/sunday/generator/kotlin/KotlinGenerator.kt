@@ -352,6 +352,18 @@ abstract class KotlinGenerator(
             }
           }
         }
+        if (operation.successes.isEmpty()) {
+          processReturnType(
+            endPoint,
+            operation,
+            Response(),
+            null,
+            problemTypes,
+            typeBuilder,
+            functionBuilder,
+            UNIT,
+          )
+        }
 
         operation.failures.forEach { response ->
 

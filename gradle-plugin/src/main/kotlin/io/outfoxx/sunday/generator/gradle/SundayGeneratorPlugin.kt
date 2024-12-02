@@ -50,6 +50,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
         gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
         gen.disableModelImplementations.takeIf { it.isPresent }?.let { genTask.disableModelImplementations.set(it) }
         gen.coroutines.takeIf { it.isPresent }?.let { genTask.coroutines.set(it) }
+        gen.flowCoroutines.takeIf { it.isPresent }?.let { genTask.flowCoroutines.set(it) }
         gen.reactiveResponseType.takeIf { it.isPresent }?.let { genTask.reactiveResponseType.set(it) }
         gen.explicitSecurityParameters.takeIf { it.isPresent }?.let { genTask.explicitSecurityParameters.set(it) }
         gen.baseUriMode.takeIf { it.isPresent }?.let { genTask.baseUriMode.set(it) }
