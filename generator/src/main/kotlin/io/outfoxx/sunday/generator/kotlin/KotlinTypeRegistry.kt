@@ -929,7 +929,7 @@ class KotlinTypeRegistry(
       }
     }
 
-    if (isPatchable && options.contains(ImplementModel)) {
+    if (isPatchable && options.contains(ImplementModel) && !typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
 
       val initLambdaTypeName = LambdaTypeName.get(className, listOf(), UNIT)
 

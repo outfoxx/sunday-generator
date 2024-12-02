@@ -28,10 +28,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnot
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -1034,6 +1031,121 @@ class RamlTypeAnnotationsTest {
           | nullableOptional='${'$'}nullableOptional',
           | child='${'$'}child')
           ""${'"'}.trimMargin()
+
+          public companion object {
+            public inline fun merge(`init`: Child.() -> Unit): PatchOp.Set<Child> {
+              val patch = Child()
+              patch.init()
+              return PatchOp.Set(patch)
+            }
+
+            public inline fun patch(`init`: Child.() -> Unit): Child = merge(init).value
+          }
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec2)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test discriminated patchable class generation`(
+    @ResourceUri("raml/type-gen/annotations/type-patchable-disc.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ImplementModel, JacksonAnnotations))
+
+    val generatedTypes = generateTypes(testUri, typeRegistry)
+    val typeSpec = findType("io.test.Test", generatedTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonInclude
+        import com.fasterxml.jackson.`annotation`.JsonSubTypes
+        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+        import io.outfoxx.sunday.json.patch.Patch
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.String
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        @JsonTypeInfo(
+          use = JsonTypeInfo.Id.NAME,
+          include = JsonTypeInfo.As.EXISTING_PROPERTY,
+          property = "type",
+        )
+        @JsonSubTypes(value = [
+          JsonSubTypes.Type(value = Child::class)
+        ])
+        public abstract class Test() : Patch {
+          public abstract val type: TestType
+
+          override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            return true
+          }
+
+          override fun toString(): String = ""${'"'}Test()""${'"'}
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val typeSpec2 = findType("io.test.Child", generatedTypes)
+
+    assertEquals(
+      """
+        package io.test
+
+        import com.fasterxml.jackson.`annotation`.JsonInclude
+        import com.fasterxml.jackson.`annotation`.JsonTypeName
+        import io.outfoxx.sunday.json.patch.Patch
+        import io.outfoxx.sunday.json.patch.PatchOp
+        import io.outfoxx.sunday.json.patch.UpdateOp
+        import kotlin.Any
+        import kotlin.Boolean
+        import kotlin.Int
+        import kotlin.String
+        import kotlin.Unit
+
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        @JsonTypeName("child")
+        public class Child(
+          public var child: UpdateOp<String> = PatchOp.none(),
+        ) : Test(),
+            Patch {
+          override val type: TestType
+            get() = TestType.Child
+
+          override fun hashCode(): Int {
+            var result = 31 * super.hashCode()
+            result = 31 * result + child.hashCode()
+            return result
+          }
+
+          override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Child
+
+            if (child != other.child) return false
+
+            return true
+          }
+
+          override fun toString(): String = ""${'"'}Child(child='${'$'}child')""${'"'}
 
           public companion object {
             public inline fun merge(`init`: Child.() -> Unit): PatchOp.Set<Child> {

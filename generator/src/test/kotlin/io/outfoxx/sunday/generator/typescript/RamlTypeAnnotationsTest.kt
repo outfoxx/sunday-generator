@@ -1184,4 +1184,50 @@ class RamlTypeAnnotationsTest {
       },
     )
   }
+
+  @Test
+  fun `test discriminated patchable class generation with Jackson`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-patchable-disc.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler, includeIndex = true))
+
+    assertEquals(
+      """
+        import {Child} from './index';
+        import {JsonInclude, JsonIncludeType, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+
+
+        export interface TestSpec {
+        }
+
+        @JsonInclude({value: JsonIncludeType.ALWAYS})
+        @JsonTypeInfo({
+          use: JsonTypeInfoId.NAME,
+          include: JsonTypeInfoAs.PROPERTY,
+          property: 'type',
+        })
+        @JsonSubTypes({
+          types: [
+            {class: () => Child, name: 'child' /* TestType.Child */}
+          ]
+        })
+        export abstract class Test implements TestSpec {
+
+          toString(): string {
+            return `Test()`;
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }
