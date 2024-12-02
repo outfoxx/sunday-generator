@@ -482,7 +482,7 @@ class KotlinTypeRegistry(
       }
     }
 
-    val isPatchable = shape.findBoolAnnotation(Patchable, generationMode) == true
+    val isPatchable = shape.isPatchable(context)
 
     if (isPatchable) {
       typeBuilder
@@ -495,7 +495,8 @@ class KotlinTypeRegistry(
     }
 
     var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
-    var declaredProperties = context.findProperties(shape).filter { dec -> dec.name !in inheritedProperties.map { it.name } }
+    var declaredProperties =
+      context.findProperties(shape).filter { dec -> dec.name !in inheritedProperties.map { it.name } }
 
     val inheritingTypes = context.findInheritingShapes(shape)
 
@@ -592,7 +593,16 @@ class KotlinTypeRegistry(
         if (isPatchable || inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
           paramConsBuilder = FunSpec.constructorBuilder()
           inheritedProperties.forEach { inheritedProperty ->
-            val paramTypeName = resolvePropertyTypeName(inheritedProperty, className, context)
+            val paramTypeName =
+              resolvePropertyTypeName(inheritedProperty, className, context)
+                .run {
+                  if (isPatchable) {
+                    val base = if (inheritedProperty.nullable) PATCH_OP else UPDATE_OP
+                    base.parameterizedBy(copy(nullable = false))
+                  } else {
+                    this
+                  }
+                }
 
             paramConsBuilder.addParameter(
               ParameterSpec
@@ -600,7 +610,13 @@ class KotlinTypeRegistry(
                   inheritedProperty.kotlinIdentifierName,
                   paramTypeName,
                 )
-                .apply { if (inheritedProperty.optional && paramTypeName.isNullable) defaultValue("null") }
+                .apply {
+                  if (isPatchable) {
+                    defaultValue("%T.none()", PATCH_OP)
+                  } else {
+                    if (inheritedProperty.optional && paramTypeName.isNullable) defaultValue("null")
+                  }
+                }
                 .build(),
             )
 
@@ -1383,4 +1399,8 @@ class KotlinTypeRegistry(
   private val NodeShape.supportsDiscrimination: Boolean
     get() =
       !discriminator.isNullOrEmpty() || findBoolAnnotation(ExternallyDiscriminated, null) == true
+
+  private fun Shape.isPatchable(context: KotlinResolutionContext): Boolean =
+    findBoolAnnotation(Patchable, null) == true ||
+      context.findSuperShapeOrNull(this)?.isPatchable(context) == true
 }
