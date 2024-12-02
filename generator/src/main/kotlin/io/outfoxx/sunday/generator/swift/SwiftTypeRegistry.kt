@@ -28,7 +28,6 @@ import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.utils.*
 import io.outfoxx.sunday.generator.utils.*
