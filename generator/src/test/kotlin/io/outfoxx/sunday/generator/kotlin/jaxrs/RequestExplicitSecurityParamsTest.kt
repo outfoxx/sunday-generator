@@ -37,7 +37,8 @@ class RequestExplicitSecurityParamsTest {
 
     val kotlinJAXRSTestOptions =
       KotlinJAXRSGenerator.Options(
-        false,
+        coroutineFlowMethods = false,
+        coroutineServiceMethods = false,
         null,
         true,
         null,
@@ -113,7 +114,8 @@ class RequestExplicitSecurityParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             true,
             null,

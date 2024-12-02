@@ -339,7 +339,8 @@ class RequestMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -413,7 +414,8 @@ class RequestMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -514,7 +516,8 @@ class RequestMethodsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,

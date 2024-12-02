@@ -338,6 +338,18 @@ abstract class TypeScriptGenerator(
             }
           }
         }
+        if (operation.successes.isEmpty()) {
+          processReturnType(
+            endPoint,
+            operation,
+            Response(),
+            null,
+            problemTypes,
+            typeBuilder,
+            functionBuilder,
+            VOID,
+          )
+        }
 
         operation.failures.forEach { response ->
 

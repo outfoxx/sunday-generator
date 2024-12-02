@@ -41,7 +41,8 @@ class ServiceTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
 
     val options = KotlinJAXRSGenerator.Options(
-      false,
+      coroutineFlowMethods = false,
+      coroutineServiceMethods = false,
       null,
       false,
       null,
@@ -100,7 +101,8 @@ class ServiceTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val options = KotlinJAXRSGenerator.Options(
-      false,
+      coroutineFlowMethods = false,
+      coroutineServiceMethods = false,
       null,
       false,
       null,
@@ -160,7 +162,8 @@ class ServiceTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val options = KotlinJAXRSGenerator.Options(
-      false,
+      coroutineFlowMethods = false,
+      coroutineServiceMethods = false,
       null,
       false,
       null,

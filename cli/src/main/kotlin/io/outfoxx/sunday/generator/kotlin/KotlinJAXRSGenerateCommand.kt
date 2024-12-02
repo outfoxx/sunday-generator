@@ -40,6 +40,11 @@ open class KotlinJAXRSGenerateCommand :
     help = "Generate suspendable service methods for coroutine support",
   ).flag()
 
+  val coroutineFlowMethods by option(
+    "-flow-coroutines",
+    help = "Generate suspendable flow service methods for coroutine support",
+  ).flag(default = false)
+
   val reactiveResponseType by option(
     "-reactive",
     help = "Generic result type for reactive service methods",
@@ -76,6 +81,7 @@ open class KotlinJAXRSGenerateCommand :
       shapeIndex,
       typeRegistry,
       KotlinJAXRSGenerator.Options(
+        coroutineFlowMethods,
         coroutineServiceMethods,
         reactiveResponseType,
         explicitSecurityParameters,

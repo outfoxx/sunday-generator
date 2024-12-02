@@ -322,4 +322,62 @@ class ResponseBodyContentTest {
       },
     )
   }
+
+  @Test
+  fun `test generation of no response`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {MediaType, RequestFactory} from '@outfoxx/sunday';
+
+
+        export class API {
+
+          defaultContentTypes: Array<MediaType>;
+
+          defaultAcceptTypes: Array<MediaType>;
+
+          constructor(public requestFactory: RequestFactory,
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
+          }
+
+          startTest() {
+            return this.requestFactory.result(
+                {
+                  method: 'GET',
+                  pathTemplate: '/tests'
+                }
+            );
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

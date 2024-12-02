@@ -328,7 +328,8 @@ class RequestUriParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -394,7 +395,8 @@ class RequestUriParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -461,7 +463,8 @@ class RequestUriParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -527,7 +530,8 @@ class RequestUriParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -595,7 +599,8 @@ class RequestUriParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,

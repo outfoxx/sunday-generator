@@ -343,7 +343,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -400,7 +401,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -466,7 +468,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -531,7 +534,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -589,7 +593,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -646,7 +651,8 @@ class RequestBodyParamTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,

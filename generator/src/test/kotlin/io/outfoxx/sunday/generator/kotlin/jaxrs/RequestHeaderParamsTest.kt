@@ -272,7 +272,8 @@ class RequestHeaderParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -337,7 +338,8 @@ class RequestHeaderParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -404,7 +406,8 @@ class RequestHeaderParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,
@@ -472,7 +475,8 @@ class RequestHeaderParamsTest {
           shapeIndex,
           typeRegistry,
           KotlinJAXRSGenerator.Options(
-            false,
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
             null,
             false,
             null,

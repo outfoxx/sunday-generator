@@ -51,6 +51,7 @@ class SundayGeneration(
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
   val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java)
   val coroutines: Property<Boolean> = objects.property(Boolean::class.java)
+  val flowCoroutines: Property<Boolean> = objects.property(Boolean::class.java)
   val reactiveResponseType: Property<String> = objects.property(String::class.java)
   val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java)
   val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)

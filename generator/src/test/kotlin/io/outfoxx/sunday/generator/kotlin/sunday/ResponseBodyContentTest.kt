@@ -243,4 +243,102 @@ class ResponseBodyContentTest {
       },
     )
   }
+
+  @Test
+  fun `test generation of no response in client mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import kotlin.Unit
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+        ) {
+          public suspend fun startTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests"
+            )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of no response in server mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import kotlin.Unit
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+        ) {
+          public suspend fun startTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Get,
+              pathTemplate = "/tests"
+            )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

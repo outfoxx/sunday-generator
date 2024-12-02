@@ -411,4 +411,92 @@ class ResponseBodyContentTest {
       },
     )
   }
+
+  @Test
+  fun `test generation of no response in client mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun startTest()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of no response in server mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public fun startTest()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

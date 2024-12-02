@@ -65,6 +65,18 @@ class KotlinJAXRSCLITest {
   }
 
   @Test
+  fun `--flow-coroutines flag`() {
+
+    val commandWithTrue = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { commandWithTrue.parse(arrayOf("-flow-coroutines", *requiredOptions)) }
+    assertThat(commandWithTrue.coroutineFlowMethods, equalTo(true))
+
+    val commandWithFalse = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { commandWithFalse.parse(requiredOptions) }
+    assertThat(commandWithFalse.coroutineServiceMethods, equalTo(false))
+  }
+
+  @Test
   fun `--reactive flag`() {
 
     val command = KotlinJAXRSGenerateCommandTest()

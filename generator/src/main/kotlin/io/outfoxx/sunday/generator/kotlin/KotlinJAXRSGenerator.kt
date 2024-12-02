@@ -90,6 +90,7 @@ class KotlinJAXRSGenerator(
 ) {
 
   class Options(
+    val coroutineFlowMethods: Boolean,
     val coroutineServiceMethods: Boolean,
     val reactiveResponseType: String?,
     val explicitSecurityParameters: Boolean,
@@ -227,12 +228,12 @@ class KotlinJAXRSGenerator(
 
     val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
 
-    if (options.coroutineServiceMethods) {
-      functionBuilder.addModifiers(SUSPEND)
-    }
-
     val isSSE = operation.findBoolAnnotation(SSE, generationMode) == true
     val isFlow = operation.hasAnnotation(EventStream, generationMode) && options.coroutineServiceMethods
+
+    if ((isFlow && options.coroutineFlowMethods) || (!isFlow && options.coroutineServiceMethods)) {
+      functionBuilder.addModifiers(SUSPEND)
+    }
 
     val reactive = operation.findBoolAnnotation(Reactive, generationMode) ?: reactiveDefault
     if (reactive && reactiveResponseType != null && !isSSE && !isFlow) {

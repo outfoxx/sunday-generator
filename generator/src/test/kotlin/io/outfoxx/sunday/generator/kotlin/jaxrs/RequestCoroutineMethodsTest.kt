@@ -33,6 +33,51 @@ import java.net.URI
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Coroutine Methods Test")
 class RequestCoroutineMethodsTest {
 
+  val coroutineOptions =
+    KotlinJAXRSGenerator.Options(
+      coroutineFlowMethods = false,
+      coroutineServiceMethods = true,
+      null,
+      false,
+      null,
+      false,
+      "io.test.service",
+      "http://example.com/",
+      listOf("application/json"),
+      "API",
+      quarkus = false,
+    )
+
+  val coroutineWithFlowOptions =
+    KotlinJAXRSGenerator.Options(
+      coroutineFlowMethods = true,
+      coroutineServiceMethods = true,
+      null,
+      false,
+      null,
+      false,
+      "io.test.service",
+      "http://example.com/",
+      listOf("application/json"),
+      "API",
+      quarkus = false,
+    )
+
+  val coroutineWithQuarkusOptions =
+    KotlinJAXRSGenerator.Options(
+      coroutineFlowMethods = true,
+      coroutineServiceMethods = true,
+      null,
+      false,
+      null,
+      false,
+      "io.test.service",
+      "http://example.com/",
+      listOf("application/json"),
+      "API",
+      quarkus = true,
+    )
+
   @Test
   fun `test basic coroutines method generation in server mode`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
@@ -46,18 +91,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineOptions,
         )
       }
 
@@ -106,18 +140,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineOptions,
         )
       }
 
@@ -167,18 +190,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineOptions,
         )
       }
 
@@ -298,18 +310,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineOptions,
         )
       }
 
@@ -334,17 +335,17 @@ class RequestCoroutineMethodsTest {
           @GET
           @Path(value = "/test1")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimple(): Flow<Test1>
+          public fun fetchEventsSimple(): Flow<Test1>
 
           @GET
           @Path(value = "/test2")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsDiscriminated(): Flow<Any>
+          public fun fetchEventsDiscriminated(): Flow<Any>
 
           @GET
           @Path(value = "/test3")
           @Produces(value = ["text/event-stream"])
-          public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
+          public fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
         }
 
       """.trimIndent(),
@@ -368,18 +369,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineWithFlowOptions,
         )
       }
 
@@ -438,18 +428,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineWithFlowOptions,
         )
       }
 
@@ -508,18 +487,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineWithFlowOptions,
         )
       }
 
@@ -578,18 +546,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineWithFlowOptions,
         )
       }
 
@@ -641,18 +598,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
+          coroutineWithFlowOptions,
         )
       }
 
@@ -704,18 +650,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -766,18 +701,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -827,18 +751,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -958,18 +871,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1028,18 +930,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1098,18 +989,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1168,18 +1048,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1238,18 +1107,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1304,18 +1162,7 @@ class RequestCoroutineMethodsTest {
           document,
           shapeIndex,
           typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            true,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
+          coroutineWithQuarkusOptions,
         )
       }
 
@@ -1347,6 +1194,95 @@ class RequestCoroutineMethodsTest {
           @Produces(value = ["text/event-stream"])
           @RestStreamElementType(value = "application/json")
           public suspend fun fetchEventsDiscriminated(): Flow<Base>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+
+  @Test
+  fun `test generation of coroutine with no response in client mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          coroutineOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun startTest()
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test generation of coroutine with no response in server mode`(
+    @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          coroutineOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.GET
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @GET
+          @Path(value = "/tests")
+          public suspend fun startTest()
         }
 
       """.trimIndent(),
