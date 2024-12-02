@@ -572,6 +572,7 @@ class SwiftTypeRegistry(
     var inheritedDeclaredProperties = originalInheritedDeclaredProperties
 
     val originalLocalProperties = context.findProperties(shape)
+      .filter { prop -> prop.name !in originalInheritedProperties.map { it.name } }
     var localProperties = originalLocalProperties
     val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var localDeclaredProperties = originalLocalDeclaredProperties
