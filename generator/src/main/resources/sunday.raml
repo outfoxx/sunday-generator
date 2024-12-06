@@ -87,7 +87,7 @@ annotationTypes:
 
   group:
     type: string
-    allowedTargets: [Resource]
+    allowedTargets: [Resource, ResourceType]
 
   kotlinPackage:
     type: string
@@ -177,28 +177,28 @@ annotationTypes:
 
   asynchronous:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   reactive:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   sse:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   sse:client:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   sse:server:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   eventSource:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   eventStream:
     type: string
     enum: [simple, discriminated]
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   problemBaseUri:
     type: string
@@ -211,40 +211,40 @@ annotationTypes:
     allowedTargets: [API, Extension, Library, Overlay]
   problems:
     type: ResponseProblemCodes
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   requestOnly:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   responseOnly:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   nullify:
     type: Nullify
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   exclude:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   exclude:client:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   exclude:server:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   jsonBody:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   jsonBody:client:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
   jsonBody:server:
     type: boolean
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
 
   jaxrsContext:
     type: JaxrsContextType[]
     uniqueItems: true
-    allowedTargets: [Method]
+    allowedTargets: [Method, Trait]
