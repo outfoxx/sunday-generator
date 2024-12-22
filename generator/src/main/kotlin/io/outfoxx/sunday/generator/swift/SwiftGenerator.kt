@@ -169,7 +169,7 @@ abstract class SwiftGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec
+  ): ParameterSpec?
 
   abstract fun processResourceMethodBodyParameter(
     endPoint: EndPoint,
@@ -529,8 +529,11 @@ abstract class SwiftGenerator(
           functionBuilder,
           headerParameterBuilder,
         )
-
-      functionBuilder.addParameter(headerParameterSpec)
+      if (headerParameterSpec != null) {
+        functionBuilder.addParameter(headerParameterSpec)
+      } else if (headerParameterTypeName == headerParameterTypeNameContext.suggestedTypeName) {
+        typeRegistry.unresolveTypeName(headerParameterTypeName)
+      }
     }
   }
 

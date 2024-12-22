@@ -112,6 +112,74 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  fun `test constant header parameter generation`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+
+    assertEquals(
+      """
+        import {Test} from './test';
+        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+        import {Observable} from 'rxjs';
+
+
+        export class API {
+
+          defaultContentTypes: Array<MediaType>;
+
+          defaultAcceptTypes: Array<MediaType>;
+
+          constructor(public requestFactory: RequestFactory,
+              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+            this.defaultContentTypes =
+                options?.defaultContentTypes ?? [];
+            this.defaultAcceptTypes =
+                options?.defaultAcceptTypes ?? [MediaType.JSON];
+          }
+
+          putTest(xCustom: string): Observable<Test> {
+            return this.requestFactory.result(
+                {
+                  method: 'PUT',
+                  pathTemplate: '/tests',
+                  acceptTypes: this.defaultAcceptTypes,
+                  headers: {
+                    Expect: '100-continue',
+                    'x-custom': xCustom
+                  }
+                },
+                putTestReturnType
+            );
+          }
+
+        }
+
+        const putTestReturnType: AnyType = [Test];
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get(typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test optional header parameter generation`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,

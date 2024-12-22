@@ -25,61 +25,16 @@ import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
-import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
-import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
-import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
-import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
-import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
-import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
-import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_PROMISE_RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
-import io.outfoxx.sunday.generator.typescript.utils.PROMISE_FROM
-import io.outfoxx.sunday.generator.typescript.utils.REQUEST
-import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
-import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.RESULT_RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.isOptional
-import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
-import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.nullable
-import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
-import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
-import io.outfoxx.sunday.generator.utils.allowEmptyValue
-import io.outfoxx.sunday.generator.utils.defaultValue
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.findArrayAnnotation
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.mediaType
-import io.outfoxx.sunday.generator.utils.method
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.path
-import io.outfoxx.sunday.generator.utils.payloads
-import io.outfoxx.sunday.generator.utils.request
-import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.generator.utils.schema
-import io.outfoxx.typescriptpoet.ClassSpec
-import io.outfoxx.typescriptpoet.CodeBlock
+import io.outfoxx.sunday.generator.typescript.utils.*
+import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.typescriptpoet.*
 import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
-import io.outfoxx.typescriptpoet.FunctionSpec
-import io.outfoxx.typescriptpoet.Modifier
-import io.outfoxx.typescriptpoet.NameAllocator
-import io.outfoxx.typescriptpoet.ParameterSpec
-import io.outfoxx.typescriptpoet.PropertySpec
-import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.PROMISE
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
@@ -326,13 +281,15 @@ class TypeScriptSundayGenerator(
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec {
+  ): ParameterSpec? {
+
+    val isConstant = parameter.required == true && parameter.schema?.values?.size == 1
 
     val parameterSpec = methodParameter(parameterBuilder)
 
     headerParameters.add(parameter to parameterSpec.type)
 
-    return parameterSpec
+    return if (!isConstant) parameterSpec else null
   }
 
   override fun processResourceMethodBodyParameter(
@@ -386,21 +343,34 @@ class TypeScriptSundayGenerator(
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
-        if (paramType.isOptional && (param.schema?.defaultValue != null || param.allowEmptyValue == true)) {
-          parametersBlock.add(
-            "%L: %L ?? %L",
-            origName.quotedIfNotTypeScriptIdentifier,
-            paramName,
-            param.schema?.defaultValue?.typeScriptConstant(paramType, param.schema) ?: "null",
-          )
-        } else if (paramName != origName || !origName.isValidTypeScriptIdentifier) {
-          parametersBlock.add(
-            "%L: %L",
-            origName.quotedIfNotTypeScriptIdentifier,
-            paramName,
-          )
-        } else {
-          parametersBlock.add("%L", paramName)
+        when {
+          paramName !in functionBuilder.build().parameters.map { it.name } -> {
+            val schema = param.schema ?: genError("Constant parameter has no schema", param)
+            val value = schema.values.firstOrNull() ?: genError("Constant parameter has no value", param)
+            val scalarValue = value.scalarValue?.toString() ?: genError("Constant parameter has no scalar value", param)
+            parametersBlock.add("%L: %S", origName.quotedIfNotTypeScriptIdentifier, scalarValue)
+          }
+
+          paramType.isOptional && (param.schema?.defaultValue != null || param.allowEmptyValue == true) -> {
+            parametersBlock.add(
+              "%L: %L ?? %L",
+              origName.quotedIfNotTypeScriptIdentifier,
+              paramName,
+              param.schema?.defaultValue?.typeScriptConstant(paramType, param.schema) ?: "null",
+            )
+          }
+
+          paramName != origName || !origName.isValidTypeScriptIdentifier -> {
+            parametersBlock.add(
+              "%L: %L",
+              origName.quotedIfNotTypeScriptIdentifier,
+              paramName,
+            )
+          }
+
+          else -> {
+            parametersBlock.add("%L", paramName)
+          }
         }
 
         if (idx < parameters.size - 1) {

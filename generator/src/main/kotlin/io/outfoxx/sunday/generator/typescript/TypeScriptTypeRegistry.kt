@@ -208,6 +208,11 @@ class TypeScriptTypeRegistry(
     return typeName
   }
 
+  fun unresolveTypeName(typeName: TypeName) {
+    typeBuilders.remove(typeName)
+    exportedTypeBuilders.remove(typeName)
+  }
+
   fun addServiceType(typeName: TypeName.Standard, serviceType: ClassSpec.Builder) {
 
     serviceType.addModifiers(Modifier.EXPORT)

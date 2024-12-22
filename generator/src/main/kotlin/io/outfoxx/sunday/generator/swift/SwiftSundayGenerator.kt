@@ -25,58 +25,17 @@ import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
-import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
-import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
-import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
-import io.outfoxx.sunday.generator.swift.utils.DATA_RESPONSE
-import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
-import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
-import io.outfoxx.sunday.generator.swift.utils.EMPTY
-import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
-import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
-import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
-import io.outfoxx.sunday.generator.swift.utils.RESULT_RESPONSE
-import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
-import io.outfoxx.sunday.generator.swift.utils.URL_REQUEST
-import io.outfoxx.sunday.generator.swift.utils.swiftConstant
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.findArrayAnnotation
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.mediaType
-import io.outfoxx.sunday.generator.utils.method
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.path
-import io.outfoxx.sunday.generator.utils.payloads
-import io.outfoxx.sunday.generator.utils.request
-import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.swiftpoet.ANY
-import io.outfoxx.swiftpoet.CodeBlock
-import io.outfoxx.swiftpoet.DATA
-import io.outfoxx.swiftpoet.DICTIONARY
-import io.outfoxx.swiftpoet.DeclaredTypeName
-import io.outfoxx.swiftpoet.FunctionSpec
+import io.outfoxx.sunday.generator.swift.utils.*
+import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.swiftpoet.*
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.STATIC
-import io.outfoxx.swiftpoet.NameAllocator
-import io.outfoxx.swiftpoet.ParameterSpec
-import io.outfoxx.swiftpoet.ParameterizedTypeName
-import io.outfoxx.swiftpoet.PropertySpec
-import io.outfoxx.swiftpoet.STRING
-import io.outfoxx.swiftpoet.TypeName
-import io.outfoxx.swiftpoet.TypeSpec
-import io.outfoxx.swiftpoet.VOID
-import io.outfoxx.swiftpoet.joinToCode
-import io.outfoxx.swiftpoet.parameterizedBy
 import java.net.URI
 
 class SwiftSundayGenerator(
@@ -356,13 +315,15 @@ class SwiftSundayGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec {
+  ): ParameterSpec? {
+
+    val isConstant = parameter.required == true && parameter.schema?.values?.size == 1
 
     val parameterSpec = methodParameter(parameterBuilder)
 
     headerParameters.add(parameter to parameterSpec.type)
 
-    return parameterSpec
+    return if (!isConstant) parameterSpec else null
   }
 
   override fun processResourceMethodBodyParameter(
@@ -413,7 +374,17 @@ class SwiftSundayGenerator(
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
-        parametersBlock.add("%S: %L", origName, paramName)
+        val (paramValue, argType) =
+          if (paramName !in functionBuilder.build().parameters.map { it.parameterName }) {
+            val schema = param.schema ?: genError("Constant parameter has no schema", param)
+            val value = schema.values.firstOrNull() ?: genError("Constant parameter has no value", param)
+            val scalarValue = value.scalarValue?.toString() ?: genError("Constant parameter has no scalar value", param)
+            scalarValue to "S"
+          } else {
+            paramName to "N"
+          }
+
+        parametersBlock.add("%S: %$argType", origName, paramValue)
         if (anyOptional) {
           parametersBlock.add(" as Any?")
         }

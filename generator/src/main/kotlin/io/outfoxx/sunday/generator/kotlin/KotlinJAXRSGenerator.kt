@@ -43,34 +43,7 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.*
-import io.outfoxx.sunday.generator.utils.api
-import io.outfoxx.sunday.generator.utils.defaultValueStr
-import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.findArrayAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.headers
-import io.outfoxx.sunday.generator.utils.mediaType
-import io.outfoxx.sunday.generator.utils.method
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.parameterName
-import io.outfoxx.sunday.generator.utils.parent
-import io.outfoxx.sunday.generator.utils.path
-import io.outfoxx.sunday.generator.utils.payloads
-import io.outfoxx.sunday.generator.utils.queryParameters
-import io.outfoxx.sunday.generator.utils.request
-import io.outfoxx.sunday.generator.utils.requests
-import io.outfoxx.sunday.generator.utils.required
-import io.outfoxx.sunday.generator.utils.scalarValue
-import io.outfoxx.sunday.generator.utils.schema
-import io.outfoxx.sunday.generator.utils.scheme
-import io.outfoxx.sunday.generator.utils.schemes
-import io.outfoxx.sunday.generator.utils.security
-import io.outfoxx.sunday.generator.utils.statusCode
-import io.outfoxx.sunday.generator.utils.successes
-import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.*
 import java.net.URI
 import kotlin.collections.set
 
@@ -515,7 +488,23 @@ class KotlinJAXRSGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec {
+  ): ParameterSpec? {
+
+    val isConstant = parameter.required == true && parameter.schema?.values?.size == 1
+    if (isConstant) {
+      val clientHeaderParam = jaxRsTypes.clientHeaderParam
+      if (generationMode == Client && clientHeaderParam != null) {
+        functionBuilder.addAnnotation(
+          AnnotationSpec.builder(clientHeaderParam)
+            .addMember("name = %S", parameter.name())
+            .addMember("value = %S", parameter.schema?.values?.first()?.scalarValue?.toString() ?: "")
+            .build(),
+        )
+        return null
+      } else if (generationMode == Server) {
+        return null
+      }
+    }
 
     // Add @HeaderParam to URI parameters
     parameterBuilder.annotateParameter(parameter, JaxRsTypes.ParamType.HEADER, true)

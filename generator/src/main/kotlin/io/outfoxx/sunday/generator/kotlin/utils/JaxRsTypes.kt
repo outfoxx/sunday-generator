@@ -110,8 +110,6 @@ interface JaxRsTypes {
   val sseEventSink: ClassName
 
   // Related Types (SSE)
-
-  // Related Types (SSE)
   val sseInboundEvent: ClassName
   val sseOutboundEvent: ClassName
 
@@ -121,6 +119,9 @@ interface JaxRsTypes {
   val responseHeader: ClassName? get() = null
   val cache: ClassName? get() = null
   val dateFormat: ClassName? get() = null
+
+  // Client Only
+  val clientHeaderParam: ClassName? get() = null
 
   fun httpMethod(method: String): ClassName? =
     try {
@@ -285,5 +286,7 @@ interface JaxRsTypes {
     override val responseHeader = ClassName(pkg, "ResponseHeader")
     override val cache = ClassName(pkg, "Cache")
     override val dateFormat = ClassName(pkg, "DateFormat")
+
+    override val clientHeaderParam = ClassName("org.eclipse.microprofile.rest.client.annotation", "ClientHeaderParam")
   }
 }

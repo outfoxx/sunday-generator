@@ -208,7 +208,7 @@ abstract class TypeScriptGenerator(
     typeBuilder: ClassSpec.Builder,
     functionBuilder: FunctionSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec
+  ): ParameterSpec?
 
   abstract fun processResourceMethodBodyParameter(
     endPoint: EndPoint,
@@ -527,7 +527,11 @@ abstract class TypeScriptGenerator(
           headerParameterBuilder,
         )
 
-      functionBuilder.addParameter(headerParameterSpec)
+      if (headerParameterSpec != null) {
+        functionBuilder.addParameter(headerParameterSpec)
+      } else if (headerParameterTypeName == headerParameterSuggestedTypeName) {
+        typeRegistry.unresolveTypeName(headerParameterTypeName)
+      }
     }
   }
 

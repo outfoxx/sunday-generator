@@ -197,7 +197,7 @@ abstract class KotlinGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec
+  ): ParameterSpec?
 
   abstract fun processResourceMethodBodyParameter(
     endPoint: EndPoint,
@@ -569,8 +569,11 @@ abstract class KotlinGenerator(
           functionBuilder,
           headerParameterBuilder,
         )
-
-      functionBuilder.addParameter(headerParameterSpec)
+      if (headerParameterSpec != null) {
+        functionBuilder.addParameter(headerParameterSpec)
+      } else if (headerParameterTypeName == headerParameterTypeNameContext.suggestedTypeName) {
+        typeRegistry.unresolveTypeName(headerParameterTypeName)
+      }
     }
   }
 

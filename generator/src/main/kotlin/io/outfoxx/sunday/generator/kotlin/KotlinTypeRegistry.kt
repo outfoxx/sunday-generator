@@ -111,6 +111,10 @@ class KotlinTypeRegistry(
     return typeName
   }
 
+  fun unresolveTypeName(typeName: TypeName) {
+    typeBuilders.remove(typeName)
+  }
+
   fun addServiceType(className: ClassName, serviceType: TypeSpec.Builder) {
 
     serviceType
