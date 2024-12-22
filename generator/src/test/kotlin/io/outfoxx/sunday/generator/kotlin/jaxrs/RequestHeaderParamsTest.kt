@@ -59,6 +59,7 @@ class RequestHeaderParamsTest {
 
         import io.test.Test
         import javax.ws.rs.Consumes
+        import javax.ws.rs.DELETE
         import javax.ws.rs.DefaultValue
         import javax.ws.rs.GET
         import javax.ws.rs.HeaderParam
@@ -78,6 +79,10 @@ class RequestHeaderParamsTest {
             @HeaderParam(value = "str-req") strReq: String,
             @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int,
           ): Response
+
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): Response
         }
 
       """.trimIndent(),
@@ -295,12 +300,14 @@ class RequestHeaderParamsTest {
 
         import io.test.Test
         import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.DELETE
         import jakarta.ws.rs.DefaultValue
         import jakarta.ws.rs.GET
         import jakarta.ws.rs.Path
         import jakarta.ws.rs.Produces
         import kotlin.Int
         import kotlin.String
+        import kotlin.Unit
         import org.jboss.resteasy.reactive.RestHeader
         import org.jboss.resteasy.reactive.RestResponse
 
@@ -314,6 +321,10 @@ class RequestHeaderParamsTest {
             @RestHeader(value = "str-req") strReq: String,
             @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
           ): RestResponse<Test>
+
+          @DELETE
+          @Path(value = "/tests")
+          public fun deleteTest(): RestResponse<Unit>
         }
 
       """.trimIndent(),

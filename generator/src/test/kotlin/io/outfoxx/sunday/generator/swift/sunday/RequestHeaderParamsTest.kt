@@ -94,6 +94,19 @@ class RequestHeaderParamsTest {
             )
           }
 
+          public func deleteTest() async throws {
+            return try await self.requestFactory.result(
+              method: .delete,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: nil
+            )
+          }
+
         }
 
       """.trimIndent(),

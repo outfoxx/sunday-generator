@@ -62,6 +62,7 @@ class RequestHeaderParamsTest {
         import io.test.Test
         import kotlin.Int
         import kotlin.String
+        import kotlin.Unit
         import kotlin.collections.List
 
         public class API(
@@ -83,6 +84,12 @@ class RequestHeaderParamsTest {
                 "str-req" to strReq,
                 "int" to int
               )
+            )
+
+          public suspend fun deleteTest(): Unit = this.requestFactory
+            .result(
+              method = Method.Delete,
+              pathTemplate = "/tests"
             )
         }
 
