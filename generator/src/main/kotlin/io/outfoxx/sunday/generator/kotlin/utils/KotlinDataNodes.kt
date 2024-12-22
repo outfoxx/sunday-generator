@@ -42,7 +42,7 @@ fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?, builder: CodeBloc
 
         DataTypes.String() ->
           if (value != null && shape?.values?.isNotEmpty() == true) {
-            builder.add("%T.%L", typeName, kotlinEnumName)
+            builder.add("%T.%N", typeName, kotlinEnumName)
           } else if (value != null) {
             builder.add("%S", value)
           } else {

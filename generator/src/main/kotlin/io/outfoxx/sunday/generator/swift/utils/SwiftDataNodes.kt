@@ -42,7 +42,7 @@ fun DataNode.swiftConstant(typeName: TypeName, shape: Shape?, builder: CodeBlock
 
         DataTypes.String() ->
           if (value != null && shape?.values?.isNotEmpty() == true) {
-            builder.add("%T.%L", typeName, swiftIdentifierName)
+            builder.add("%T.%N", typeName, swiftIdentifierName)
           } else if (value != null) {
             builder.add("%S", value)
           } else {
