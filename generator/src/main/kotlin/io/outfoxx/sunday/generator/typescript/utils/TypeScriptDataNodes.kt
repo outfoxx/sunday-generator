@@ -42,7 +42,7 @@ fun DataNode.typeScriptConstant(typeName: TypeName, shape: Shape?, builder: Code
 
         DataTypes.String() ->
           if (value != null && shape?.values?.isNotEmpty() == true) {
-            builder.add("%T.%L", typeName, typeScriptEnumName)
+            builder.add("%T.%N", typeName, typeScriptEnumName)
           } else if (value != null) {
             builder.add("%S", value)
           } else {
