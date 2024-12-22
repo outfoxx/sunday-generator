@@ -90,6 +90,15 @@ class RequestHeaderParamsTest {
             );
           }
 
+          deleteTest(): Observable<void> {
+            return this.requestFactory.result(
+                {
+                  method: 'DELETE',
+                  pathTemplate: '/tests'
+                }
+            );
+          }
+
         }
 
         const fetchTestReturnType: AnyType = [Test];

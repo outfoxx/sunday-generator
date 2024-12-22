@@ -265,6 +265,7 @@ class TypeScriptSundayGenerator(
 
     uriParameters = mutableListOf()
     queryParameters = mutableListOf()
+    headerParameters = mutableListOf()
     originalReturnType = null
     requestBodyParameter = null
     requestBodyType = null
