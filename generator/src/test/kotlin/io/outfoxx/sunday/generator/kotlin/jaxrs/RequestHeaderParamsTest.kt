@@ -336,6 +336,130 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  fun `test constant header parameter generation with quarkus option enabled`(
+    @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.PUT
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.String
+        import org.jboss.resteasy.reactive.RestHeader
+        import org.jboss.resteasy.reactive.RestResponse
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @PUT
+          @Path(value = "/tests")
+          public fun putTest(@RestHeader(value = "x-custom") xCustom: String): RestResponse<Test>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test constant header parameter generation with quarkus option enabled in client mode`(
+    @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          KotlinJAXRSGenerator.Options(
+            coroutineFlowMethods = false,
+            coroutineServiceMethods = false,
+            null,
+            false,
+            null,
+            false,
+            "io.test.service",
+            "http://example.com/",
+            listOf("application/json"),
+            "API",
+            quarkus = true,
+          ),
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Test
+        import jakarta.ws.rs.Consumes
+        import jakarta.ws.rs.PUT
+        import jakarta.ws.rs.Path
+        import jakarta.ws.rs.Produces
+        import kotlin.String
+        import org.eclipse.microprofile.rest.client.`annotation`.ClientHeaderParam
+        import org.jboss.resteasy.reactive.RestHeader
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @PUT
+          @Path(value = "/tests")
+          @ClientHeaderParam(
+            name = "Expect",
+            value = "100-continue",
+          )
+          public fun putTest(@RestHeader(value = "x-custom") xCustom: String): Test
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test optional header parameter generation with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {

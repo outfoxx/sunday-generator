@@ -102,6 +102,61 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  fun `test constant header parameter generation`(
+    @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.outfoxx.sunday.MediaType
+        import io.outfoxx.sunday.RequestFactory
+        import io.outfoxx.sunday.http.Method
+        import io.test.Test
+        import kotlin.String
+        import kotlin.collections.List
+
+        public class API(
+          public val requestFactory: RequestFactory,
+          public val defaultContentTypes: List<MediaType> = listOf(),
+          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+        ) {
+          public suspend fun putTest(xCustom: String): Test = this.requestFactory
+            .result(
+              method = Method.Put,
+              pathTemplate = "/tests",
+              acceptTypes = this.defaultAcceptTypes,
+              headers = mapOf(
+                "Expect" to "100-continue",
+                "x-custom" to xCustom
+              )
+            )
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test optional header parameter generation`(
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {

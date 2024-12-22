@@ -137,6 +137,11 @@ class SwiftTypeRegistry(
     return typeName
   }
 
+  fun unresolveTypeName(typeName: TypeName) {
+
+    typeBuilders.remove(typeName)
+  }
+
   fun getReferenceType(className: TypeName): TypeName? = referenceTypes[className]
 
   fun addServiceType(className: DeclaredTypeName, serviceType: TypeSpec.Builder) {

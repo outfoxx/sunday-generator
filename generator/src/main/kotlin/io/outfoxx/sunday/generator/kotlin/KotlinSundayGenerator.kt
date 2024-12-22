@@ -24,25 +24,14 @@ import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.KModifier.PUBLIC
-import com.squareup.kotlinpoet.LIST
-import com.squareup.kotlinpoet.MemberName
-import com.squareup.kotlinpoet.NameAllocator
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.UNIT
-import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
@@ -56,18 +45,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESULT_RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
-import io.outfoxx.sunday.generator.utils.discriminatorValue
-import io.outfoxx.sunday.generator.utils.findBoolAnnotation
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
-import io.outfoxx.sunday.generator.utils.flattened
-import io.outfoxx.sunday.generator.utils.hasAnnotation
-import io.outfoxx.sunday.generator.utils.mediaType
-import io.outfoxx.sunday.generator.utils.method
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.path
-import io.outfoxx.sunday.generator.utils.payloads
-import io.outfoxx.sunday.generator.utils.request
-import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.*
 import java.net.URI
 
 class KotlinSundayGenerator(
@@ -352,13 +330,15 @@ class KotlinSundayGenerator(
     typeBuilder: TypeSpec.Builder,
     functionBuilder: FunSpec.Builder,
     parameterBuilder: ParameterSpec.Builder,
-  ): ParameterSpec {
+  ): ParameterSpec? {
+
+    val isConstant = parameter.required == true && parameter.schema?.values?.size == 1
 
     val parameterSpec = methodParameter(parameterBuilder)
 
     headerParameters.add(parameter to parameterSpec.type)
 
-    return parameterSpec
+    return if (!isConstant) parameterSpec else null
   }
 
   override fun processResourceMethodBodyParameter(
@@ -409,7 +389,17 @@ class KotlinSundayGenerator(
         val origName = param.name!!
         val paramName = functionBuilderNameAllocator[param]
 
-        parametersBlock.add("%S to %L", origName, paramName)
+        val (paramValue, argType) =
+          if (paramName !in functionBuilder.parameters.map { it.name }) {
+            val schema = param.schema ?: genError("Constant parameter has no schema", param)
+            val value = schema.values.firstOrNull() ?: genError("Constant parameter has no value", param)
+            val scalarValue = value.scalarValue?.toString() ?: genError("Constant parameter has no scalar value", param)
+            scalarValue to "S"
+          } else {
+            paramName to "N"
+          }
+
+        parametersBlock.add("%S to %$argType", origName, paramValue)
 
         if (idx < parameters.size - 1) {
           parametersBlock.add(",\n")

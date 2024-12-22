@@ -118,6 +118,72 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  fun `test constant header parameter generation`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        SwiftSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          swiftSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findType("API", builtTypes)
+
+    assertEquals(
+      """
+        import Sunday
+
+        public class API {
+
+          public let requestFactory: RequestFactory
+          public let defaultContentTypes: [MediaType]
+          public let defaultAcceptTypes: [MediaType]
+
+          public init(
+            requestFactory: RequestFactory,
+            defaultContentTypes: [MediaType] = [],
+            defaultAcceptTypes: [MediaType] = [.json]
+          ) {
+            self.requestFactory = requestFactory
+            self.defaultContentTypes = defaultContentTypes
+            self.defaultAcceptTypes = defaultAcceptTypes
+          }
+
+          public func putTest(xCustom: String) async throws -> Test {
+            return try await self.requestFactory.result(
+              method: .put,
+              pathTemplate: "/tests",
+              pathParameters: nil,
+              queryParameters: nil,
+              body: Empty.none,
+              contentTypes: nil,
+              acceptTypes: self.defaultAcceptTypes,
+              headers: [
+                "Expect": "100-continue",
+                "x-custom": xCustom
+              ]
+            )
+          }
+
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test optional header parameter generation`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
