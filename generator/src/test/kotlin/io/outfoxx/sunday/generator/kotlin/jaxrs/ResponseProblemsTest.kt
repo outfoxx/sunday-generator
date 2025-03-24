@@ -267,6 +267,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -282,6 +283,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -325,6 +327,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -340,6 +343,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -383,6 +387,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -398,6 +403,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -441,6 +447,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -456,6 +463,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -499,6 +507,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -514,6 +523,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -557,6 +567,7 @@ class ResponseProblemsTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -572,6 +583,7 @@ class ResponseProblemsTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {

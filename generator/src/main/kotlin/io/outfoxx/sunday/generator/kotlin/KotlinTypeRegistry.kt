@@ -241,6 +241,10 @@ class KotlinTypeRegistry(
         }
         .addFunction(
           FunSpec.builder("getCause")
+            .addAnnotation(
+              AnnotationSpec.builder(JACKSON_JSON_IGNORE)
+                .build()
+            )
             .returns(ZALANDO_EXCEPTIONAL.copy(nullable = true))
             .addModifiers(KModifier.OVERRIDE)
             .addCode("return super.cause")
