@@ -46,6 +46,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import kotlin.String
@@ -61,6 +62,7 @@ class ProblemTypesTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -82,6 +84,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import java.net.URI
         import kotlin.String
         import org.zalando.problem.AbstractThrowableProblem
@@ -95,6 +98,7 @@ class ProblemTypesTest {
         ) : AbstractThrowableProblem(TYPE_URI, "Account Not Found", Status.NOT_FOUND,
             "The requested account does not exist or you do not have permission to access it.", instance,
             cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -116,6 +120,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import java.net.URI
         import kotlin.String
         import kotlin.collections.List
@@ -132,6 +137,7 @@ class ProblemTypesTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
             "Tests the resolveTypeReference function implementation.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -164,6 +170,7 @@ class ProblemTypesTest {
         package io.test.service
 
         import com.fasterxml.jackson.`annotation`.JsonCreator
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import com.fasterxml.jackson.`annotation`.JsonTypeName
         import io.test.InvalidIdProblem
@@ -182,6 +189,7 @@ class ProblemTypesTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -204,6 +212,7 @@ class ProblemTypesTest {
         package io.test.service
 
         import com.fasterxml.jackson.`annotation`.JsonCreator
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonTypeName
         import io.test.AccountNotFoundProblem
         import java.net.URI
@@ -220,6 +229,7 @@ class ProblemTypesTest {
         ) : AbstractThrowableProblem(TYPE_URI, "Account Not Found", Status.NOT_FOUND,
             "The requested account does not exist or you do not have permission to access it.", instance,
             cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           public companion object {
@@ -252,6 +262,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import com.fasterxml.jackson.`annotation`.JsonProperty
         import java.net.URI
         import javax.`annotation`.processing.Generated
@@ -272,6 +283,7 @@ class ProblemTypesTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
             "The id contains one or more invalid characters.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           @Generated
@@ -294,6 +306,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import java.net.URI
         import javax.`annotation`.processing.Generated
         import kotlin.String
@@ -312,6 +325,7 @@ class ProblemTypesTest {
         ) : AbstractThrowableProblem(TYPE_URI, "Account Not Found", Status.NOT_FOUND,
             "The requested account does not exist or you do not have permission to access it.", instance,
             cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           @Generated
@@ -334,6 +348,7 @@ class ProblemTypesTest {
       """
         package io.test.service
 
+        import com.fasterxml.jackson.`annotation`.JsonIgnore
         import java.net.URI
         import javax.`annotation`.processing.Generated
         import kotlin.String
@@ -355,6 +370,7 @@ class ProblemTypesTest {
           cause: ThrowableProblem? = null,
         ) : AbstractThrowableProblem(TYPE_URI, "Test Resolve Type Reference", Status.INTERNAL_SERVER_ERROR,
             "Tests the resolveTypeReference function implementation.", instance, cause) {
+          @JsonIgnore
           override fun getCause(): Exceptional? = super.cause
 
           @Generated
