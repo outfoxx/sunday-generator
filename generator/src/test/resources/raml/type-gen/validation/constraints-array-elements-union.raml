@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Code:
+    type: string
+    minLength: 2
+    maxLength: 5
+    pattern: "^[A-Z]+$"
+
+  NullableCode:
+    type: Code | nil
+
+  Test:
+    type: object
+    properties:
+      codes:
+        type: array
+        items: NullableCode
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

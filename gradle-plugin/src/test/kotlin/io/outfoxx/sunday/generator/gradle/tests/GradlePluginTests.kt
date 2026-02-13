@@ -18,12 +18,15 @@ package io.outfoxx.sunday.generator.gradle.tests
 
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.not
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.io.FileNotFoundException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
@@ -81,7 +84,7 @@ class GradlePluginTests {
     dependencies {
       implementation "io.outfoxx.sunday:sunday-core:1.0.0-beta.23"
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
-      implementation "javax.validation:validation-api:1.1.0.Final"
+      implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
     }
 
@@ -319,6 +322,50 @@ class GradlePluginTests {
       val kotlinTask = result.task(":compileKotlin")
       assertThat(kotlinTask?.outcome, equalTo(clientOutcome))
     }
+  }
+
+  @Test
+  fun `disable container element validation applies use-site constraints`() {
+
+    copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
+    copy("/validation-constraints.raml", testProjectDir.resolve("src/main/sunday"))
+
+    buildFile.writeText(
+      dualTestBuildFile +
+        "\n" +
+        """
+        sundayGenerations {
+          client {
+            disableContainerElementValid.set(true)
+          }
+        }
+        """.trimIndent(),
+    )
+
+    val result = GradleRunner.create()
+      .withProjectDir(testProjectDir)
+      .withPluginClasspath()
+      .withArguments("build", "--stacktrace", "--debug")
+      .withDebug(true)
+      .build()
+
+    val genClientTask = result.task(":sundayGenerate_client")
+    assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+
+    val outputDir = testProjectDir.resolve("build/generated/sources/sunday/sundayGenerate_client")
+    val modelPath =
+      Files.walk(outputDir.toPath()).use { paths ->
+        paths
+          .filter { path -> path.fileName.toString() == "ValidationTest.kt" }
+          .findFirst()
+          .orElseThrow { FileNotFoundException("ValidationTest.kt not found under $outputDir") }
+      }
+
+    val source = modelPath.toFile().readText()
+    assertThat(source, containsString("@Size("))
+    assertThat(source, containsString("@Pattern("))
+    assertThat(source, containsString("public val codes: List<String>"))
+    assertThat(source, not(containsString("List<@Size")))
   }
 
   private fun copy(src: String, dstDir: File) {
