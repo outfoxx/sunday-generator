@@ -100,7 +100,7 @@ fun TypeName.withTypeArgument(index: Int, typeName: TypeName): TypeName {
     this.typeArguments.mapIndexed { argIndex, argument ->
       if (argIndex == index) typeName else argument
     }
-  return (this.rawType as ClassName)
+  return this.rawType
     .parameterizedBy(*newArguments.toTypedArray())
     .copy(nullable = this.isNullable, annotations = this.annotations)
 }
@@ -117,7 +117,7 @@ fun TypeName.withAnnotatedTypeArgument(index: Int, annotation: AnnotationSpec): 
         argument
       }
     }
-  return (this.rawType as ClassName)
+  return this.rawType
     .parameterizedBy(*newArguments.toTypedArray())
     .copy(nullable = this.isNullable, annotations = this.annotations)
 }
