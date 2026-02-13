@@ -1104,75 +1104,7 @@ class KotlinTypeRegistry(
     when (use) {
 
       is ScalarShape -> {
-
-        when (use.dataType) {
-          "http://www.w3.org/2001/XMLSchema#string" -> {
-
-            // Apply min/max (if set)
-            var sizeBuilder: AnnotationSpec.Builder? = null
-            if (use.maxLength != null && use.maxLength != Integer.MAX_VALUE) {
-              sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
-              sizeBuilder.addMember("max = %L", use.maxLength().toString())
-            }
-            if (use.minLength != null && use.minLength != 0) {
-              sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
-              sizeBuilder.addMember("min = %L", use.minLength().toString())
-            }
-            sizeBuilder?.let {
-              applicator.invoke(it.build())
-            }
-
-            // Apply pattern (if set)
-            if (!use.pattern.isNullOrBlank() && use.pattern != ".*") {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.pattern)
-                  .addMember("regexp = %P", use.pattern())
-                  .build(),
-              )
-            }
-          }
-
-          "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
-
-            // Apply max (if set)
-            if (use.maximum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.max)
-                  .addMember("value = %L", use.maximum!!.toLong())
-                  .build(),
-              )
-            }
-
-            // Apply min (if set)
-            if (use.minimum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.min)
-                  .addMember("value = %L", use.minimum!!.toLong())
-                  .build(),
-              )
-            }
-          }
-
-          "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
-
-            // Apply max (if set)
-            if (use.maximum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.decimalMax)
-                  .addMember("value = %S", use.maximum!!.toBigDecimal())
-                  .build(),
-              )
-            }
-            // Apply min (if set)
-            if (use.minimum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.decimalMin)
-                  .addMember("value = %S", use.minimum!!.toBigDecimal())
-                  .build(),
-              )
-            }
-          }
-        }
+        scalarConstraintAnnotations(use).forEach { applicator.invoke(it) }
       }
 
       is ArrayShape -> {
@@ -1193,9 +1125,11 @@ class KotlinTypeRegistry(
           applicator.invoke(it.build())
         }
 
+        val itemScalarAnnotations = scalarConstraintAnnotationsForElement(use.items)
         if (options.contains(ContainerElementValid)) {
           return applyContainerElementValid(use, typeName)
         }
+        itemScalarAnnotations.forEach { applicator.invoke(it) }
       }
 
       is NodeShape -> {
@@ -1229,46 +1163,153 @@ class KotlinTypeRegistry(
         }
 
         val cascadeShapes = valueShapes.filter { shouldCascade(it) }
-        if (cascadeShapes.isEmpty()) {
-          return typeName
-        }
-
         val valueType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(1) ?: return typeName
         if (valueType == ANY) {
           return typeName
         }
         val cascadeShape = cascadeShapes.singleOrNull()
-        val updatedValueType =
+        var updatedValueType =
           if (cascadeShape != null) {
             applyContainerElementValid(cascadeShape, valueType)
           } else {
             valueType
           }
 
-        typeName
-          .withTypeArgument(1, updatedValueType)
-          .withAnnotatedTypeArgument(1, validAnnotation)
+        var updatedTypeName =
+          if (updatedValueType != valueType) {
+            typeName.withTypeArgument(1, updatedValueType)
+          } else {
+            typeName
+          }
+
+        val scalarAnnotations = scalarConstraintAnnotationsForSingleValue(nodeShape)
+        scalarAnnotations.forEach { annotation ->
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(1, annotation)
+        }
+
+        if (cascadeShapes.isNotEmpty()) {
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(1, validAnnotation)
+        }
+
+        updatedTypeName
       }
 
       typeName.isCollectionLike -> {
         val arrayShape = use as? ArrayShape ?: return typeName
         val itemShape = arrayShape.items ?: return typeName
-        if (!shouldCascade(itemShape)) {
-          return typeName
-        }
-
         val elementType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(0) ?: return typeName
         if (elementType == ANY) {
           return typeName
         }
-        val updatedElementType = applyContainerElementValid(itemShape, elementType)
-        typeName
-          .withTypeArgument(0, updatedElementType)
-          .withAnnotatedTypeArgument(0, validAnnotation)
+        var updatedElementType =
+          if (shouldCascade(itemShape)) {
+            applyContainerElementValid(itemShape, elementType)
+          } else {
+            elementType
+          }
+        var updatedTypeName =
+          if (updatedElementType != elementType) {
+            typeName.withTypeArgument(0, updatedElementType)
+          } else {
+            typeName
+          }
+
+        val scalarAnnotations = scalarConstraintAnnotationsForElement(itemShape)
+        scalarAnnotations.forEach { annotation ->
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(0, annotation)
+        }
+
+        if (shouldCascade(itemShape)) {
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(0, validAnnotation)
+        }
+
+        updatedTypeName
       }
 
       else -> typeName
     }
+  }
+
+  private fun scalarConstraintAnnotationsForElement(shape: Shape?): List<AnnotationSpec> {
+    val scalarShape = when (shape) {
+      is ScalarShape -> shape
+      is UnionShape -> {
+        val nonNil = shape.anyOf.filterNot { it is NilShape }
+        val scalar = nonNil.filterIsInstance<ScalarShape>()
+        if (scalar.size == 1 && nonNil.size == 1) scalar.single() else null
+      }
+      else -> null
+    }
+    return if (scalarShape != null) scalarConstraintAnnotations(scalarShape) else emptyList()
+  }
+
+  private fun scalarConstraintAnnotationsForSingleValue(shape: NodeShape): List<AnnotationSpec> {
+    val valueShape = shape.patternProperties.map { it.range }.singleOrNull() ?: return emptyList()
+    return scalarConstraintAnnotationsForElement(valueShape)
+  }
+
+  private fun scalarConstraintAnnotations(shape: Shape): List<AnnotationSpec> {
+    val scalar = shape as? ScalarShape ?: return emptyList()
+    val annotations = mutableListOf<AnnotationSpec>()
+
+    when (scalar.dataType) {
+      "http://www.w3.org/2001/XMLSchema#string" -> {
+        var sizeBuilder: AnnotationSpec.Builder? = null
+        if (scalar.maxLength != null && scalar.maxLength != Integer.MAX_VALUE) {
+          sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
+          sizeBuilder.addMember("max = %L", scalar.maxLength().toString())
+        }
+        if (scalar.minLength != null && scalar.minLength != 0) {
+          sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
+          sizeBuilder.addMember("min = %L", scalar.minLength().toString())
+        }
+        sizeBuilder?.let { annotations.add(it.build()) }
+
+        if (!scalar.pattern.isNullOrBlank() && scalar.pattern != ".*") {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.pattern)
+              .addMember("regexp = %P", scalar.pattern())
+              .build(),
+          )
+        }
+      }
+
+      "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
+        if (scalar.maximum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.max)
+              .addMember("value = %L", scalar.maximum!!.toLong())
+              .build(),
+          )
+        }
+        if (scalar.minimum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.min)
+              .addMember("value = %L", scalar.minimum!!.toLong())
+              .build(),
+          )
+        }
+      }
+
+      "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
+        if (scalar.maximum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.decimalMax)
+              .addMember("value = %S", scalar.maximum!!.toBigDecimal())
+              .build(),
+          )
+        }
+        if (scalar.minimum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.decimalMin)
+              .addMember("value = %S", scalar.minimum!!.toBigDecimal())
+              .build(),
+          )
+        }
+      }
+    }
+
+    return annotations
   }
 
   private fun shouldCascade(use: Shape?): Boolean =
