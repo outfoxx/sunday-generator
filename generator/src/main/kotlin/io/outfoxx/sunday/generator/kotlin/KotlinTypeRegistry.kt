@@ -186,6 +186,7 @@ class KotlinTypeRegistry(
                       if (customPropertyName.kotlinIdentifierName != customPropertyName) {
                         addAnnotation(
                           AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+                            .useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM)
                             .addMember("value = %S", customPropertyName)
                             .build(),
                         )
@@ -793,7 +794,11 @@ class KotlinTypeRegistry(
                 .build(),
             )
           } else {
-            validationAnnotations.forEach { declaredPropertyBuilder.addAnnotation(it) }
+            validationAnnotations.forEach { annotation ->
+              declaredPropertyBuilder.addAnnotation(
+                annotation.toBuilder().useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM).build(),
+              )
+            }
 
             declaredPropertyBuilder.initializer(declaredProperty.kotlinIdentifierName)
 
@@ -801,6 +806,7 @@ class KotlinTypeRegistry(
               declaredPropertyBuilder
                 .addAnnotation(
                   AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+                    .useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM)
                     .addMember("value = %S", declaredProperty.name())
                     .build(),
                 )
