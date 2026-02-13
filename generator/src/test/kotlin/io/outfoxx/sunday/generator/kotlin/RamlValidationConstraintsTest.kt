@@ -212,4 +212,87 @@ class RamlValidationConstraintsTest {
       },
     )
   }
+
+  @Test
+  fun `test container element validation annotations`(
+    @ResourceUri("raml/type-gen/validation/constraints-container-valid.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.Valid
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Map
+
+        public interface Test {
+          @get:Valid
+          public val child: Child
+
+          public val children: List<@Valid Child>
+
+          public val childMap: Map<String, Any>
+
+          public val names: List<String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test container element validation annotations disabled`(
+    @ResourceUri("raml/type-gen/validation/constraints-container-valid.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.Valid
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Map
+
+        public interface Test {
+          @get:Valid
+          public val child: Child
+
+          public val children: List<Child>
+
+          @get:Valid
+          public val childMap: Map<String, Any>
+
+          public val names: List<String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

@@ -237,6 +237,60 @@ class RequestBodyParamTest {
   }
 
   @Test
+  fun `test container element validation for body parameter`(
+    @ResourceUri("raml/resource-gen/req-body-param-container-valid.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.service.API", builtTypes)
+
+    assertEquals(
+      """
+        package io.test.service
+
+        import io.test.Child
+        import javax.validation.Valid
+        import javax.ws.rs.Consumes
+        import javax.ws.rs.POST
+        import javax.ws.rs.Path
+        import javax.ws.rs.Produces
+        import javax.ws.rs.core.Response
+        import kotlin.collections.List
+
+        @Produces(value = ["application/json"])
+        @Consumes(value = ["application/json"])
+        public interface API {
+          @POST
+          @Path(value = "/tests")
+          public fun fetchTest(body: List<@Valid Child>): Response
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
   fun `test optional body parameter generation`(
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {

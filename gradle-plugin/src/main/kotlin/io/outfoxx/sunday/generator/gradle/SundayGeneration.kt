@@ -48,6 +48,7 @@ class SundayGeneration(
   val serviceSuffix: Property<String> = objects.property(String::class.java)
   val modelPkgName: Property<String> = objects.property(String::class.java)
   val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
+  val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java)
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
   val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java)
   val coroutines: Property<Boolean> = objects.property(Boolean::class.java)

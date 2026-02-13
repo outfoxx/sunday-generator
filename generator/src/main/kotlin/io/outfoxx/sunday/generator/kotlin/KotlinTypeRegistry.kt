@@ -54,6 +54,7 @@ class KotlinTypeRegistry(
   enum class Option {
     ImplementModel,
     ValidationConstraints,
+    ContainerElementValid,
     JacksonAnnotations,
     AddGeneratedAnnotation,
     SuppressPublicApiWarnings,
@@ -729,8 +730,19 @@ class KotlinTypeRegistry(
                 }
               }
 
+          val implAnn = declaredProperty.range.findAnnotation(KotlinImpl, generationMode) as? ObjectNode
+          val validationAnnotations = mutableListOf<AnnotationSpec>()
+          val validatedTypeName =
+            if (implAnn == null) {
+              applyUseSiteAnnotations(declaredProperty, declaredPropertyTypeName) {
+                validationAnnotations.add(it)
+              }
+            } else {
+              declaredPropertyTypeName
+            }
+
           val declaredPropertyBuilder =
-            PropertySpec.builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+            PropertySpec.builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
 
           if (isPatchable) {
             declaredPropertyBuilder
@@ -752,7 +764,6 @@ class KotlinTypeRegistry(
             }
           }
 
-          val implAnn = declaredProperty.range.findAnnotation(KotlinImpl, generationMode) as? ObjectNode
           if (implAnn != null) {
 
             declaredPropertyBuilder.addAnnotation(
@@ -782,10 +793,7 @@ class KotlinTypeRegistry(
                 .build(),
             )
           } else {
-
-            applyUseSiteAnnotations(declaredProperty, declaredPropertyTypeName) {
-              declaredPropertyBuilder.addAnnotation(it)
-            }
+            validationAnnotations.forEach { declaredPropertyBuilder.addAnnotation(it) }
 
             declaredPropertyBuilder.initializer(declaredProperty.kotlinIdentifierName)
 
@@ -802,11 +810,11 @@ class KotlinTypeRegistry(
             //
             paramConsBuilder?.addParameter(
               ParameterSpec
-                .builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+                .builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
                 .apply {
                   if (isPatchable) {
                     defaultValue("%T.none()", PATCH_OP)
-                  } else if (declaredProperty.optional && declaredPropertyTypeName.isNullable) {
+                  } else if (declaredProperty.optional && validatedTypeName.isNullable) {
                     defaultValue("null")
                   }
                 }
@@ -918,17 +926,20 @@ class KotlinTypeRegistry(
         declaredProperties.forEach { declaredProperty ->
 
           val propertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
+          val validationAnnotations = mutableListOf<AnnotationSpec>()
+          val validatedTypeName =
+            applyUseSiteAnnotations(declaredProperty, propertyTypeName) {
+              validationAnnotations.add(it)
+            }
 
           // Add public field
           //
-          val propertyBuilder = PropertySpec.builder(declaredProperty.kotlinIdentifierName, propertyTypeName)
+          val propertyBuilder = PropertySpec.builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
 
-          applyUseSiteAnnotations(declaredProperty, propertyTypeName) {
-
-            val getAnn = it.toBuilder()
+          validationAnnotations.forEach { annotation ->
+            val getAnn = annotation.toBuilder()
               .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
               .build()
-
             propertyBuilder.addAnnotation(getAnn)
           }
 
@@ -1072,17 +1083,23 @@ class KotlinTypeRegistry(
     return builder
   }
 
-  fun applyUseSiteAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit) {
+  fun applyUseSiteAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit): TypeName {
 
     if (options.contains(ValidationConstraints)) {
-      when (use) {
+      return when (use) {
         is PropertyShape -> applyUseSiteValidationAnnotations(use.range, typeName, applicator)
         else -> applyUseSiteValidationAnnotations(use, typeName, applicator)
       }
     }
+
+    return typeName
   }
 
-  private fun applyUseSiteValidationAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit) {
+  private fun applyUseSiteValidationAnnotations(
+    use: Shape,
+    typeName: TypeName,
+    applicator: (AnnotationSpec) -> Unit,
+  ): TypeName {
 
     when (use) {
 
@@ -1175,12 +1192,20 @@ class KotlinTypeRegistry(
         sizeBuilder?.let {
           applicator.invoke(it.build())
         }
+
+        if (options.contains(ContainerElementValid)) {
+          return applyContainerElementValid(use, typeName)
+        }
       }
 
       is NodeShape -> {
 
         // Apply @Valid for nested types
         if (typeName != ANY) {
+          if (options.contains(ContainerElementValid) && typeName.isMapLike) {
+            return applyContainerElementValid(use, typeName)
+          }
+
           applicator.invoke(
             AnnotationSpec.builder(beanValidationTypes.valid)
               .build(),
@@ -1188,7 +1213,71 @@ class KotlinTypeRegistry(
         }
       }
     }
+
+    return typeName
   }
+
+  private fun applyContainerElementValid(use: Shape, typeName: TypeName): TypeName {
+    val validAnnotation = AnnotationSpec.builder(beanValidationTypes.valid).build()
+
+    return when {
+      typeName.isMapLike -> {
+        val nodeShape = use as? NodeShape ?: return typeName
+        val valueShapes = collectTypes(nodeShape.patternProperties.map { it.range })
+        if (valueShapes.isEmpty()) {
+          return typeName
+        }
+
+        val cascadeShapes = valueShapes.filter { shouldCascade(it) }
+        if (cascadeShapes.isEmpty()) {
+          return typeName
+        }
+
+        val valueType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(1) ?: return typeName
+        if (valueType == ANY) {
+          return typeName
+        }
+        val cascadeShape = cascadeShapes.singleOrNull()
+        val updatedValueType =
+          if (cascadeShape != null) {
+            applyContainerElementValid(cascadeShape, valueType)
+          } else {
+            valueType
+          }
+
+        typeName
+          .withTypeArgument(1, updatedValueType)
+          .withAnnotatedTypeArgument(1, validAnnotation)
+      }
+
+      typeName.isCollectionLike -> {
+        val arrayShape = use as? ArrayShape ?: return typeName
+        val itemShape = arrayShape.items ?: return typeName
+        if (!shouldCascade(itemShape)) {
+          return typeName
+        }
+
+        val elementType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(0) ?: return typeName
+        if (elementType == ANY) {
+          return typeName
+        }
+        val updatedElementType = applyContainerElementValid(itemShape, elementType)
+        typeName
+          .withTypeArgument(0, updatedElementType)
+          .withAnnotatedTypeArgument(0, validAnnotation)
+      }
+
+      else -> typeName
+    }
+  }
+
+  private fun shouldCascade(use: Shape?): Boolean =
+    when (use) {
+      is NodeShape -> true
+      is ArrayShape -> shouldCascade(use.items)
+      is UnionShape -> use.anyOf.any { shouldCascade(it) }
+      else -> false
+    }
 
   private fun addJacksonPolymorphismOverride(
     propertySpec: PropertySpec.Builder,

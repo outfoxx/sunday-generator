@@ -412,19 +412,32 @@ class KotlinJAXRSGenerator(
   ): ParameterSpec.Builder {
 
     val builtParameter = parameterBuilder.build()
+    val validationAnnotations = mutableListOf<AnnotationSpec>()
+    val validatedType =
+      typeRegistry.applyUseSiteAnnotations(parameterShape.schema!!, builtParameter.type) {
+        validationAnnotations.add(it)
+      }
+    val validatedBuilder =
+      if (validatedType != builtParameter.type) {
+        ParameterSpec.builder(builtParameter.name, validatedType)
+          .addKdoc(builtParameter.kdoc)
+          .addAnnotations(builtParameter.annotations)
+          .addModifiers(builtParameter.modifiers)
+      } else {
+        parameterBuilder
+      }
 
-    typeRegistry.applyUseSiteAnnotations(parameterShape.schema!!, builtParameter.type) {
-      parameterBuilder.addAnnotation(it)
-    }
+    validationAnnotations.forEach { validatedBuilder.addAnnotation(it) }
 
     // Add @DefaultValue (if provided)
     val defaultValue = parameterShape.schema?.defaultValueStr
     if (defaultValue != null) {
+      val updatedParameter = validatedBuilder.build()
       val newParameter =
-        ParameterSpec.builder(builtParameter.name, builtParameter.type.copy(nullable = false))
-          .addKdoc(builtParameter.kdoc)
-          .addAnnotations(builtParameter.annotations)
-          .addModifiers(builtParameter.modifiers)
+        ParameterSpec.builder(updatedParameter.name, updatedParameter.type.copy(nullable = false))
+          .addKdoc(updatedParameter.kdoc)
+          .addAnnotations(updatedParameter.annotations)
+          .addModifiers(updatedParameter.modifiers)
       newParameter.addAnnotation(
         AnnotationSpec.builder(jaxRsTypes.defaultValue)
           .addMember("value = %S", defaultValue)
@@ -433,7 +446,7 @@ class KotlinJAXRSGenerator(
       return newParameter
     }
 
-    return parameterBuilder
+    return validatedBuilder
   }
 
   private fun ParameterSpec.Builder.annotateParameter(
@@ -521,9 +534,23 @@ class KotlinJAXRSGenerator(
     parameterBuilder: ParameterSpec.Builder,
   ): ParameterSpec {
 
-    typeRegistry.applyUseSiteAnnotations(payloadSchema, parameterBuilder.build().type) {
-      parameterBuilder.addAnnotation(it)
-    }
+    val builtParameter = parameterBuilder.build()
+    val validationAnnotations = mutableListOf<AnnotationSpec>()
+    val validatedType =
+      typeRegistry.applyUseSiteAnnotations(payloadSchema, builtParameter.type) {
+        validationAnnotations.add(it)
+      }
+    val validatedBuilder =
+      if (validatedType != builtParameter.type) {
+        ParameterSpec.builder(builtParameter.name, validatedType)
+          .addKdoc(builtParameter.kdoc)
+          .addAnnotations(builtParameter.annotations)
+          .addModifiers(builtParameter.modifiers)
+      } else {
+        parameterBuilder
+      }
+
+    validationAnnotations.forEach { validatedBuilder.addAnnotation(it) }
 
     val request = operation.request ?: operation.requests.first()
 
@@ -537,13 +564,13 @@ class KotlinJAXRSGenerator(
 
     return when {
       isJsonBodyRequested -> {
-        val orig = parameterBuilder.build()
+        val orig = validatedBuilder.build()
         ParameterSpec.builder(orig.name, JSON_NODE).build()
       }
 
       else -> {
         // Finalize
-        parameterBuilder.build()
+        validatedBuilder.build()
       }
     }
   }

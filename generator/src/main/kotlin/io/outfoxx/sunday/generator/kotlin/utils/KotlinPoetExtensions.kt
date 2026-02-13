@@ -78,6 +78,50 @@ val TypeName.isMutableCollection: Boolean
     else -> false
   }
 
+val TypeName.isMapLike: Boolean
+  get() = when (this.rawType) {
+    Map::class.asTypeName(),
+    MutableMap::class.asTypeName(),
+    -> true
+    else -> false
+  }
+
+val TypeName.isCollectionLike: Boolean
+  get() {
+    val rawType = this.rawType
+    return (rawType.isImmutableCollection || rawType.isMutableCollection) && !rawType.isMapLike
+  }
+
+fun TypeName.withTypeArgument(index: Int, typeName: TypeName): TypeName {
+  if (this !is ParameterizedTypeName || index !in this.typeArguments.indices) {
+    return this
+  }
+  val newArguments =
+    this.typeArguments.mapIndexed { argIndex, argument ->
+      if (argIndex == index) typeName else argument
+    }
+  return (this.rawType as ClassName)
+    .parameterizedBy(*newArguments.toTypedArray())
+    .copy(nullable = this.isNullable, annotations = this.annotations)
+}
+
+fun TypeName.withAnnotatedTypeArgument(index: Int, annotation: AnnotationSpec): TypeName {
+  if (this !is ParameterizedTypeName || index !in this.typeArguments.indices) {
+    return this
+  }
+  val newArguments =
+    this.typeArguments.mapIndexed { argIndex, argument ->
+      if (argIndex == index) {
+        argument.copy(annotations = argument.annotations + annotation)
+      } else {
+        argument
+      }
+    }
+  return (this.rawType as ClassName)
+    .parameterizedBy(*newArguments.toTypedArray())
+    .copy(nullable = this.isNullable, annotations = this.annotations)
+}
+
 fun TypeName.mutable(): TypeName {
   return when (this) {
     List::class.asTypeName() -> MutableList::class.asTypeName()
