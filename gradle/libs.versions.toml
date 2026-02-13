@@ -25,7 +25,6 @@ kotlinCompileTesting = "1.6.0"
 kotlinPoet = "1.18.1"
 licenser = "1.2.0"
 mutiny = "2.6.2"
-nexusPublish = "2.0.0"
 pluginPublish = "1.3.0"
 quarkus-rest="3.15.1"
 rxJava2 = "2.2.21"
@@ -36,6 +35,7 @@ sonarqube = "5.1.0.4882"
 sundayKt = "1.0.0-beta.24"
 swiftPoet = "1.6.6"
 typeScriptPoet = "1.1.2"
+vanniktechMavenPublish = "0.34.0"
 validation = "2.0.1.Final"
 versionCatalogUpdatePlugin = "0.8.5"
 versions = "0.51.0"
@@ -50,10 +50,10 @@ graalNative = { id = "org.graalvm.buildtools.native", version.ref = "graalNative
 jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 licenser = { id = "dev.yumi.gradle.licenser", version.ref = "licenser" }
-nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }
 pluginPublish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish" }
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdatePlugin" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 

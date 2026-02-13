@@ -11,7 +11,7 @@ plugins {
   alias(libs.plugins.dokka)
   alias(libs.plugins.githubRelease)
   alias(libs.plugins.sonarqube)
-  alias(libs.plugins.nexusPublish)
+  alias(libs.plugins.vanniktechMavenPublish) apply false
 
   alias(libs.plugins.kotlin) apply false
   alias(libs.plugins.licenser) apply false
@@ -53,6 +53,9 @@ configure(moduleNames.map { project(it) }) {
   apply(plugin = "jacoco")
   apply(plugin = "maven-publish")
   apply(plugin = "signing")
+  if (name != "gradle-plugin") {
+    apply(plugin = "com.vanniktech.maven.publish")
+  }
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
   apply(plugin = "org.jetbrains.dokka")
@@ -155,11 +158,24 @@ configure(moduleNames.map { project(it) }) {
     val signingKeyId: String? by project
     val signingKey: String? by project
     val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    val signingInMemoryKeyId: String? by project
+    val signingInMemoryKey: String? by project
+    val signingInMemoryKeyPassword: String? by project
+    useInMemoryPgpKeys(
+      signingInMemoryKeyId ?: signingKeyId,
+      signingInMemoryKey ?: signingKey,
+      signingInMemoryKeyPassword ?: signingPassword,
+    )
   }
 
   tasks.withType<Sign>().configureEach {
     onlyIf { !isSnapshot }
+  }
+
+  if (name != "gradle-plugin") {
+    mavenPublishing {
+      publishToMavenCentral(automaticRelease = true)
+    }
   }
 }
 
@@ -270,10 +286,4 @@ githubRelease {
   authorization(
     "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")),
   )
-}
-
-nexusPublishing {
-  repositories {
-    sonatype()
-  }
 }
