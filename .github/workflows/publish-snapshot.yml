@@ -40,10 +40,11 @@ jobs:
     - name: Publish Maven Artifacts (Snapshot)
       run: >-
         ./gradlew
-        -PsonatypeUsername=${{ secrets.OSSRH_TOKEN_USER }} -PsonatypePassword=${{ secrets.OSSRH_TOKEN_PASS }}
-        :generator:publishToSonatype
-        :cli:publishToSonatype
+        publishToMavenCentral
         -x test
+      env:
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
 
     - name: Publish Docker
       run: >-
