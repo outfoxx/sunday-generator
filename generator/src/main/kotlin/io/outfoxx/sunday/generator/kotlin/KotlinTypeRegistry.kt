@@ -796,7 +796,7 @@ class KotlinTypeRegistry(
           } else {
             validationAnnotations.forEach { annotation ->
               declaredPropertyBuilder.addAnnotation(
-                annotation.toBuilder().useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM).build(),
+                annotation.toBuilder().useSiteTarget(AnnotationSpec.UseSiteTarget.FIELD).build(),
               )
             }
 
