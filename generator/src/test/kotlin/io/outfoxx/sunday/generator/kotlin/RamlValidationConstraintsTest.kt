@@ -212,4 +212,230 @@ class RamlValidationConstraintsTest {
       },
     )
   }
+
+  @Test
+  fun `test container element validation annotations`(
+    @ResourceUri("raml/type-gen/validation/constraints-container-valid.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.Valid
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Map
+
+        public interface Test {
+          @get:Valid
+          public val child: Child
+
+          public val children: List<@Valid Child>
+
+          public val childMap: Map<String, Any>
+
+          public val names: List<String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test container element validation annotations disabled`(
+    @ResourceUri("raml/type-gen/validation/constraints-container-valid.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.Valid
+        import kotlin.Any
+        import kotlin.String
+        import kotlin.collections.List
+        import kotlin.collections.Map
+
+        public interface Test {
+          @get:Valid
+          public val child: Child
+
+          public val children: List<Child>
+
+          @get:Valid
+          public val childMap: Map<String, Any>
+
+          public val names: List<String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test array element scalar constraints with container element validation`(
+    @ResourceUri("raml/type-gen/validation/constraints-array-elements.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.constraints.Pattern
+        import javax.validation.constraints.Size
+        import kotlin.String
+        import kotlin.collections.List
+
+        public interface Test {
+          public val codes: List<@Size(max = 5, min = 2) @Pattern(regexp = ${'"'}""^[A-Z]+$""${'"'}) String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test array element scalar constraints with container element validation disabled`(
+    @ResourceUri("raml/type-gen/validation/constraints-array-elements.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = KotlinTypeRegistry("io.test", null, Server, setOf(ValidationConstraints))
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.constraints.Pattern
+        import javax.validation.constraints.Size
+        import kotlin.String
+        import kotlin.collections.List
+
+        public interface Test {
+          @get:Size(
+            max = 5,
+            min = 2,
+          )
+          @get:Pattern(regexp = ${'"'}""^[A-Z]+$""${'"'})
+          public val codes: List<String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test array element scalar constraints with nullable union`(
+    @ResourceUri("raml/type-gen/validation/constraints-array-elements-union.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.constraints.Pattern
+        import javax.validation.constraints.Size
+        import kotlin.String
+        import kotlin.collections.List
+
+        public interface Test {
+          public val codes: List<@Size(max = 5, min = 2) @Pattern(regexp = ${'"'}""^[A-Z]+$""${'"'}) String?>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test map value scalar constraints with container element validation`(
+    @ResourceUri("raml/type-gen/validation/constraints-map-values.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        Server,
+        setOf(ValidationConstraints, KotlinTypeRegistry.Option.ContainerElementValid),
+      )
+
+    val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
+
+    assertEquals(
+      """
+        package io.test
+
+        import javax.validation.constraints.Pattern
+        import javax.validation.constraints.Size
+        import kotlin.String
+        import kotlin.collections.Map
+
+        public interface Test {
+          public val labels: Map<String, @Size(max = 5, min = 2) @Pattern(regexp = ${'"'}""^[a-z]+$""${'"'}) String>
+        }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec.get("io.test", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
 }

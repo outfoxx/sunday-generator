@@ -54,6 +54,7 @@ class KotlinTypeRegistry(
   enum class Option {
     ImplementModel,
     ValidationConstraints,
+    ContainerElementValid,
     JacksonAnnotations,
     AddGeneratedAnnotation,
     SuppressPublicApiWarnings,
@@ -729,8 +730,19 @@ class KotlinTypeRegistry(
                 }
               }
 
+          val implAnn = declaredProperty.range.findAnnotation(KotlinImpl, generationMode) as? ObjectNode
+          val validationAnnotations = mutableListOf<AnnotationSpec>()
+          val validatedTypeName =
+            if (implAnn == null) {
+              applyUseSiteAnnotations(declaredProperty, declaredPropertyTypeName) {
+                validationAnnotations.add(it)
+              }
+            } else {
+              declaredPropertyTypeName
+            }
+
           val declaredPropertyBuilder =
-            PropertySpec.builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+            PropertySpec.builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
 
           if (isPatchable) {
             declaredPropertyBuilder
@@ -752,7 +764,6 @@ class KotlinTypeRegistry(
             }
           }
 
-          val implAnn = declaredProperty.range.findAnnotation(KotlinImpl, generationMode) as? ObjectNode
           if (implAnn != null) {
 
             declaredPropertyBuilder.addAnnotation(
@@ -782,10 +793,7 @@ class KotlinTypeRegistry(
                 .build(),
             )
           } else {
-
-            applyUseSiteAnnotations(declaredProperty, declaredPropertyTypeName) {
-              declaredPropertyBuilder.addAnnotation(it)
-            }
+            validationAnnotations.forEach { declaredPropertyBuilder.addAnnotation(it) }
 
             declaredPropertyBuilder.initializer(declaredProperty.kotlinIdentifierName)
 
@@ -802,11 +810,11 @@ class KotlinTypeRegistry(
             //
             paramConsBuilder?.addParameter(
               ParameterSpec
-                .builder(declaredProperty.kotlinIdentifierName, declaredPropertyTypeName)
+                .builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
                 .apply {
                   if (isPatchable) {
                     defaultValue("%T.none()", PATCH_OP)
-                  } else if (declaredProperty.optional && declaredPropertyTypeName.isNullable) {
+                  } else if (declaredProperty.optional && validatedTypeName.isNullable) {
                     defaultValue("null")
                   }
                 }
@@ -918,17 +926,20 @@ class KotlinTypeRegistry(
         declaredProperties.forEach { declaredProperty ->
 
           val propertyTypeName = resolvePropertyTypeName(declaredProperty, className, context)
+          val validationAnnotations = mutableListOf<AnnotationSpec>()
+          val validatedTypeName =
+            applyUseSiteAnnotations(declaredProperty, propertyTypeName) {
+              validationAnnotations.add(it)
+            }
 
           // Add public field
           //
-          val propertyBuilder = PropertySpec.builder(declaredProperty.kotlinIdentifierName, propertyTypeName)
+          val propertyBuilder = PropertySpec.builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
 
-          applyUseSiteAnnotations(declaredProperty, propertyTypeName) {
-
-            val getAnn = it.toBuilder()
+          validationAnnotations.forEach { annotation ->
+            val getAnn = annotation.toBuilder()
               .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
               .build()
-
             propertyBuilder.addAnnotation(getAnn)
           }
 
@@ -1072,90 +1083,28 @@ class KotlinTypeRegistry(
     return builder
   }
 
-  fun applyUseSiteAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit) {
+  fun applyUseSiteAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit): TypeName {
 
     if (options.contains(ValidationConstraints)) {
-      when (use) {
+      return when (use) {
         is PropertyShape -> applyUseSiteValidationAnnotations(use.range, typeName, applicator)
         else -> applyUseSiteValidationAnnotations(use, typeName, applicator)
       }
     }
+
+    return typeName
   }
 
-  private fun applyUseSiteValidationAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit) {
+  private fun applyUseSiteValidationAnnotations(
+    use: Shape,
+    typeName: TypeName,
+    applicator: (AnnotationSpec) -> Unit,
+  ): TypeName {
 
     when (use) {
 
       is ScalarShape -> {
-
-        when (use.dataType) {
-          "http://www.w3.org/2001/XMLSchema#string" -> {
-
-            // Apply min/max (if set)
-            var sizeBuilder: AnnotationSpec.Builder? = null
-            if (use.maxLength != null && use.maxLength != Integer.MAX_VALUE) {
-              sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
-              sizeBuilder.addMember("max = %L", use.maxLength().toString())
-            }
-            if (use.minLength != null && use.minLength != 0) {
-              sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
-              sizeBuilder.addMember("min = %L", use.minLength().toString())
-            }
-            sizeBuilder?.let {
-              applicator.invoke(it.build())
-            }
-
-            // Apply pattern (if set)
-            if (!use.pattern.isNullOrBlank() && use.pattern != ".*") {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.pattern)
-                  .addMember("regexp = %P", use.pattern())
-                  .build(),
-              )
-            }
-          }
-
-          "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
-
-            // Apply max (if set)
-            if (use.maximum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.max)
-                  .addMember("value = %L", use.maximum!!.toLong())
-                  .build(),
-              )
-            }
-
-            // Apply min (if set)
-            if (use.minimum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.min)
-                  .addMember("value = %L", use.minimum!!.toLong())
-                  .build(),
-              )
-            }
-          }
-
-          "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
-
-            // Apply max (if set)
-            if (use.maximum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.decimalMax)
-                  .addMember("value = %S", use.maximum!!.toBigDecimal())
-                  .build(),
-              )
-            }
-            // Apply min (if set)
-            if (use.minimum != null) {
-              applicator.invoke(
-                AnnotationSpec.builder(beanValidationTypes.decimalMin)
-                  .addMember("value = %S", use.minimum!!.toBigDecimal())
-                  .build(),
-              )
-            }
-          }
-        }
+        scalarConstraintAnnotations(use).forEach { applicator.invoke(it) }
       }
 
       is ArrayShape -> {
@@ -1175,12 +1124,22 @@ class KotlinTypeRegistry(
         sizeBuilder?.let {
           applicator.invoke(it.build())
         }
+
+        val itemScalarAnnotations = scalarConstraintAnnotationsForElement(use.items)
+        if (options.contains(ContainerElementValid)) {
+          return applyContainerElementValid(use, typeName)
+        }
+        itemScalarAnnotations.forEach { applicator.invoke(it) }
       }
 
       is NodeShape -> {
 
         // Apply @Valid for nested types
         if (typeName != ANY) {
+          if (options.contains(ContainerElementValid) && typeName.isMapLike) {
+            return applyContainerElementValid(use, typeName)
+          }
+
           applicator.invoke(
             AnnotationSpec.builder(beanValidationTypes.valid)
               .build(),
@@ -1188,7 +1147,178 @@ class KotlinTypeRegistry(
         }
       }
     }
+
+    return typeName
   }
+
+  private fun applyContainerElementValid(use: Shape, typeName: TypeName): TypeName {
+    val validAnnotation = AnnotationSpec.builder(beanValidationTypes.valid).build()
+
+    return when {
+      typeName.isMapLike -> {
+        val nodeShape = use as? NodeShape ?: return typeName
+        val valueShapes = collectTypes(nodeShape.patternProperties.map { it.range })
+        if (valueShapes.isEmpty()) {
+          return typeName
+        }
+
+        val cascadeShapes = valueShapes.filter { shouldCascade(it) }
+        val valueType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(1) ?: return typeName
+        if (valueType == ANY) {
+          return typeName
+        }
+        val cascadeShape = cascadeShapes.singleOrNull()
+        var updatedValueType =
+          if (cascadeShape != null) {
+            applyContainerElementValid(cascadeShape, valueType)
+          } else {
+            valueType
+          }
+
+        var updatedTypeName =
+          if (updatedValueType != valueType) {
+            typeName.withTypeArgument(1, updatedValueType)
+          } else {
+            typeName
+          }
+
+        val scalarAnnotations = scalarConstraintAnnotationsForSingleValue(nodeShape)
+        scalarAnnotations.forEach { annotation ->
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(1, annotation)
+        }
+
+        if (cascadeShapes.isNotEmpty()) {
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(1, validAnnotation)
+        }
+
+        updatedTypeName
+      }
+
+      typeName.isCollectionLike -> {
+        val arrayShape = use as? ArrayShape ?: return typeName
+        val itemShape = arrayShape.items ?: return typeName
+        val elementType = (typeName as? ParameterizedTypeName)?.typeArguments?.getOrNull(0) ?: return typeName
+        if (elementType == ANY) {
+          return typeName
+        }
+        var updatedElementType =
+          if (shouldCascade(itemShape)) {
+            applyContainerElementValid(itemShape, elementType)
+          } else {
+            elementType
+          }
+        var updatedTypeName =
+          if (updatedElementType != elementType) {
+            typeName.withTypeArgument(0, updatedElementType)
+          } else {
+            typeName
+          }
+
+        val scalarAnnotations = scalarConstraintAnnotationsForElement(itemShape)
+        scalarAnnotations.forEach { annotation ->
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(0, annotation)
+        }
+
+        if (shouldCascade(itemShape)) {
+          updatedTypeName = updatedTypeName.withAnnotatedTypeArgument(0, validAnnotation)
+        }
+
+        updatedTypeName
+      }
+
+      else -> typeName
+    }
+  }
+
+  private fun scalarConstraintAnnotationsForElement(shape: Shape?): List<AnnotationSpec> {
+    val scalarShape = when (shape) {
+      is ScalarShape -> shape
+      is UnionShape -> {
+        val nonNil = shape.anyOf.filterNot { it is NilShape }
+        val scalar = nonNil.filterIsInstance<ScalarShape>()
+        if (scalar.size == 1 && nonNil.size == 1) scalar.single() else null
+      }
+      else -> null
+    }
+    return if (scalarShape != null) scalarConstraintAnnotations(scalarShape) else emptyList()
+  }
+
+  private fun scalarConstraintAnnotationsForSingleValue(shape: NodeShape): List<AnnotationSpec> {
+    val valueShape = shape.patternProperties.map { it.range }.singleOrNull() ?: return emptyList()
+    return scalarConstraintAnnotationsForElement(valueShape)
+  }
+
+  private fun scalarConstraintAnnotations(shape: Shape): List<AnnotationSpec> {
+    val scalar = shape as? ScalarShape ?: return emptyList()
+    val annotations = mutableListOf<AnnotationSpec>()
+
+    when (scalar.dataType) {
+      "http://www.w3.org/2001/XMLSchema#string" -> {
+        var sizeBuilder: AnnotationSpec.Builder? = null
+        if (scalar.maxLength != null && scalar.maxLength != Integer.MAX_VALUE) {
+          sizeBuilder = AnnotationSpec.builder(beanValidationTypes.size)
+          sizeBuilder.addMember("max = %L", scalar.maxLength().toString())
+        }
+        if (scalar.minLength != null && scalar.minLength != 0) {
+          sizeBuilder = sizeBuilder ?: AnnotationSpec.builder(beanValidationTypes.size)
+          sizeBuilder.addMember("min = %L", scalar.minLength().toString())
+        }
+        sizeBuilder?.let { annotations.add(it.build()) }
+
+        if (!scalar.pattern.isNullOrBlank() && scalar.pattern != ".*") {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.pattern)
+              .addMember("regexp = %P", scalar.pattern())
+              .build(),
+          )
+        }
+      }
+
+      "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
+        if (scalar.maximum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.max)
+              .addMember("value = %L", scalar.maximum!!.toLong())
+              .build(),
+          )
+        }
+        if (scalar.minimum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.min)
+              .addMember("value = %L", scalar.minimum!!.toLong())
+              .build(),
+          )
+        }
+      }
+
+      "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
+        if (scalar.maximum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.decimalMax)
+              .addMember("value = %S", scalar.maximum!!.toBigDecimal())
+              .build(),
+          )
+        }
+        if (scalar.minimum != null) {
+          annotations.add(
+            AnnotationSpec.builder(beanValidationTypes.decimalMin)
+              .addMember("value = %S", scalar.minimum!!.toBigDecimal())
+              .build(),
+          )
+        }
+      }
+    }
+
+    return annotations
+  }
+
+  private fun shouldCascade(use: Shape?): Boolean =
+    when (use) {
+      is NodeShape -> true
+      is ArrayShape -> shouldCascade(use.items)
+      is UnionShape -> use.anyOf.any { shouldCascade(it) }
+      else -> false
+    }
 
   private fun addJacksonPolymorphismOverride(
     propertySpec: PropertySpec.Builder,

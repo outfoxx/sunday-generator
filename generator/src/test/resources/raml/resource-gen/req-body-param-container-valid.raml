@@ -1,0 +1,24 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Child:
+    type: object
+    properties:
+      name: string
+
+  ChildList:
+    type: array
+    items: Child
+
+/tests:
+
+  post:
+    displayName: fetchTest
+    body: ChildList
+    responses:
+      200:
+        body: ChildList

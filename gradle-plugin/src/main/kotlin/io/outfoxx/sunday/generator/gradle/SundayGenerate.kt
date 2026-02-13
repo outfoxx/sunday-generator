@@ -105,6 +105,10 @@ open class SundayGenerate
 
   @Input
   @Optional
+  val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
+  @Input
+  @Optional
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
   @Input
@@ -186,6 +190,9 @@ open class SundayGenerate
     }
     if (disableValidationConstraints.get()) {
       options.remove(ValidationConstraints)
+    }
+    if (disableContainerElementValid.get()) {
+      options.remove(KotlinTypeRegistry.Option.ContainerElementValid)
     }
     if (!useJakartaPackages.get()) {
       options.remove(KotlinTypeRegistry.Option.UseJakartaPackages)

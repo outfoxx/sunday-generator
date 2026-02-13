@@ -1,0 +1,28 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Child:
+    type: object
+    properties:
+      name: string
+
+  Test:
+    type: object
+    properties:
+      child: Child
+      children: Child[]
+      childMap:
+        type: object
+        additionalProperties: true
+      names: string[]
+
+/tests:
+
+  get:
+    responses:
+      200:
+        body: Test
