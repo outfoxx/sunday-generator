@@ -56,7 +56,7 @@ class ProblemTypesTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @JsonProperty(value = "offending_id")
+          @param:JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -183,7 +183,7 @@ class ProblemTypesTest {
 
         @JsonTypeName(InvalidIdProblem.TYPE)
         public class InvalidIdProblem @JsonCreator constructor(
-          @JsonProperty(value = "offending_id")
+          @param:JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -277,7 +277,7 @@ class ProblemTypesTest {
           date = "${typeRegistry.generationTimestamp}",
         )
         public class InvalidIdProblem(
-          @JsonProperty(value = "offending_id")
+          @param:JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,

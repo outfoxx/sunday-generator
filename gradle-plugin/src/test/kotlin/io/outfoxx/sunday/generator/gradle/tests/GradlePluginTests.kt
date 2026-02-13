@@ -362,8 +362,8 @@ class GradlePluginTests {
       }
 
     val source = modelPath.toFile().readText()
-    assertThat(source, containsString("@Size("))
-    assertThat(source, containsString("@Pattern("))
+    assertThat(source, containsString("@field:Size("))
+    assertThat(source, containsString("@field:Pattern("))
     assertThat(source, containsString("public val codes: List<String>"))
     assertThat(source, not(containsString("List<@Size")))
   }

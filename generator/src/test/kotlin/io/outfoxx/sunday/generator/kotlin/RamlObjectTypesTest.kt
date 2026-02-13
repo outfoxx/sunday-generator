@@ -616,9 +616,9 @@ class RamlObjectTypesTest {
         import kotlin.String
 
         public class Test(
-          @JsonProperty(value = "some-value")
+          @param:JsonProperty(value = "some-value")
           public val someValue: String,
-          @JsonProperty(value = "another_value")
+          @param:JsonProperty(value = "another_value")
           public val anotherValue: String,
         ) {
           public fun copy(someValue: String? = null, anotherValue: String? = null): Test = Test(someValue ?:
