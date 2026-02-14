@@ -1,0 +1,26 @@
+#%RAML 1.0
+title: Inherited Inline Enum Regression
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+  Base:
+    type: object
+    properties:
+      priority:
+        type: string
+        enum: [ normal, high ]
+
+  Child:
+    type: Base
+    properties:
+      childValue: string
+
+/tests:
+  get:
+    responses:
+      200:
+        body:
+          type: Child
