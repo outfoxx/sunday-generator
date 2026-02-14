@@ -77,7 +77,6 @@ publishing {
     create<MavenPublication>("cli") {
       artifact(tasks.named("shadowJar"))
       artifact(tasks.named("sourcesJar"))
-      artifact(tasks.named("javadocJar"))
 
       pom {
 
