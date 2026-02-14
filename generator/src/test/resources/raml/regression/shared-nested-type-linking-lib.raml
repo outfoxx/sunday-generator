@@ -1,0 +1,26 @@
+#%RAML 1.0 Library
+usage: Shared nested type linking regression library
+uses:
+  sun: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sun.kotlinModelPackage): io.test
+
+types:
+  Message:
+    type: object
+    properties:
+      priority?: Message-Priority
+
+  Message-Priority:
+    (sun.nested):
+      enclosedIn: Message
+      name: Priority
+    type: string
+    enum: [ normal, interactive ]
+
+  MessageSendParams:
+    type: object
+    properties:
+      priority?:
+        type: Message-Priority
+        default: normal

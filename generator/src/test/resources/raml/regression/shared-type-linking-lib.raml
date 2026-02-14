@@ -1,0 +1,11 @@
+#%RAML 1.0 Library
+usage: Shared type linking regression library
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.kotlinModelPackage): io.test
+
+types:
+  Shared-Priority:
+    type: string
+    enum: [ normal, high ]
