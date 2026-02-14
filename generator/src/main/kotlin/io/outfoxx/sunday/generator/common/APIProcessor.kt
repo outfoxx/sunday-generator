@@ -189,11 +189,10 @@ class InheritanceTransformationStep(
     }
   }
 
-  private fun findOriginal(element: InternalDomainElement): InternalDomainElement {
+  private fun findOriginal(element: InternalDomainElement): InternalDomainElement? {
     return originalElements[element.id()]
       ?: originalElements[element.sourceId()]
       ?: originalElements[element.uniqueId()]
-      ?: error("Original element not found: ${element.id()}")
   }
 
   override fun transform(
@@ -295,12 +294,15 @@ class InheritanceTransformationStep(
   private fun resolveOriginalPropertyNames(node: amf.shapes.client.scala.model.domain.NodeShape): List<String> {
     val originalElement = findOriginal(node)
     val originalShape =
-      originalElement as? InternalNodeShape
-        ?: error("Original element not a NodeShape: ${originalElement.id()}")
-    val originalPropertyNames =
-      originalShape.properties().asList
-        .map { it.name().value() }
-    return originalPropertyNames
+      when (originalElement) {
+        is InternalNodeShape -> originalElement
+        is InternalPropertyShape -> originalElement.range() as? InternalNodeShape
+        else -> null
+      }
+
+    val sourceShape = originalShape ?: node
+    return sourceShape.properties().asList
+      .map { it.name().value() }
   }
 
   private fun fixInheriting(shape: InternalNodeShape): InternalNodeShape {

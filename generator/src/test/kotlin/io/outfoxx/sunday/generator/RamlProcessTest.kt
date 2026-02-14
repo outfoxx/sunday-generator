@@ -76,4 +76,14 @@ class RamlProcessTest {
     assertThat(getOperation, notNullValue())
     assertThat(getOperation?.customDomainProperties?.map { it.name }, hasItem("test-ann"))
   }
+
+  @Test
+  fun `process handles external discriminator on nested parameters in library`(
+    @ResourceUri("raml/regression/external-discriminator-library.raml") testUri: URI,
+  ) {
+    val result = TestAPIProcessing.process(testUri)
+
+    assertThat(result.isValid, equalTo(true))
+    assertThat(result.validationLog, empty())
+  }
 }

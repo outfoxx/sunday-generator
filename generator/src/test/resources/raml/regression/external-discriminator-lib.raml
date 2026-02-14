@@ -1,0 +1,46 @@
+#%RAML 1.0 Library
+usage: Regression library for external discriminator handling
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.kotlinModelPackage): io.test
+
+# Simplified from cloud-common TenantPushService.
+# Purpose: external discriminator on a nested type defined in a library
+# referenced from a property.
+
+types:
+
+  Container:
+    type: object
+    properties:
+      service:
+        type: Service
+        (sunday.externalDiscriminator): type
+      type: ServiceType
+
+  ServiceType:
+    type: string
+    enum: [ a, b ]
+
+  Service:
+    (sunday.externallyDiscriminated): true
+    type: object
+
+  Service-A:
+    (sunday.nested):
+      enclosedIn: Service
+      name: A
+    type: Service
+    discriminatorValue: a
+    properties:
+      aValue: string
+
+  Service-B:
+    (sunday.nested):
+      enclosedIn: Service
+      name: B
+    type: Service
+    discriminatorValue: b
+    properties:
+      bValue: string
