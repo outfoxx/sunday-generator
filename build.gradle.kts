@@ -1,8 +1,8 @@
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import dev.yumi.gradle.licenser.YumiLicenserGradleExtension
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.tasks.GenerateModuleMetadata
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -152,17 +152,14 @@ configure(moduleNames.map { project(it) }) {
     dependsOn("dokkaJavadoc")
   }
 
-  plugins.withId("org.jetbrains.dokka") {
-    tasks.withType<Jar>()
-      .matching { it.name == "dokkaJavadocJar" }
-      .configureEach {
-        val jarTask = this
-        extensions.configure<PublishingExtension> {
-          publications.withType<MavenPublication>().configureEach {
-            artifact(jarTask)
-          }
-        }
-      }
+  plugins.withId("com.vanniktech.maven.publish") {
+    val dokkaJavadocJarTasks = tasks.matching { it.name == "dokkaJavadocJar" }
+    tasks.withType<PublishToMavenRepository>().configureEach {
+      dependsOn(dokkaJavadocJarTasks)
+    }
+    tasks.withType<GenerateModuleMetadata>().configureEach {
+      dependsOn(dokkaJavadocJarTasks)
+    }
   }
 
 
