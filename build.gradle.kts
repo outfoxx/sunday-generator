@@ -1,3 +1,4 @@
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import dev.yumi.gradle.licenser.YumiLicenserGradleExtension
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.dokka.gradle.DokkaTask
@@ -173,7 +174,7 @@ configure(moduleNames.map { project(it) }) {
   }
 
   if (name != "gradle-plugin") {
-    mavenPublishing {
+    extensions.configure<MavenPublishBaseExtension> {
       publishToMavenCentral(automaticRelease = true)
     }
   }
