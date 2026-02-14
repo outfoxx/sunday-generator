@@ -1,0 +1,12 @@
+#%RAML 1.0
+title: External Discriminator Regression
+uses:
+  lib: external-discriminator-lib.raml
+
+/title:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: lib.Container
