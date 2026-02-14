@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnot
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -59,5 +60,41 @@ class RamlRegressionTest {
 
     val paramsType = findType("io.test.Container.Parameters", types)
     assertTrue(paramsType.propertySpecs.any { it.name == "version" })
+  }
+
+  @Test
+  fun `test shared type linking uses declared enum`(
+    @ResourceUri("raml/regression/shared-type-linking.raml") testUri: URI,
+  ) {
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
+
+    val types = generateTypes(testUri, typeRegistry)
+
+    val sharedEnum = ClassName("io.test", "SharedPriority")
+    val nestedInA = ClassName("io.test", "A", "Priority")
+    val nestedInB = ClassName("io.test", "B", "Priority")
+
+    assertTrue(types.containsKey(sharedEnum))
+    assertFalse(types.containsKey(nestedInA))
+    assertFalse(types.containsKey(nestedInB))
+  }
+
+  @Test
+  fun `test shared nested type linking uses declared enum`(
+    @ResourceUri("raml/regression/shared-nested-type-linking.raml") testUri: URI,
+  ) {
+    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ImplementModel))
+
+    val types = generateTypes(testUri, typeRegistry)
+
+    val messagePriority = ClassName("io.test", "Message", "Priority")
+    val sendParamsPriority = ClassName("io.test", "MessageSendParams", "Priority")
+
+    assertTrue(types.containsKey(messagePriority))
+    assertFalse(types.containsKey(sendParamsPriority))
+
+    val sendParamsType = findType("io.test.MessageSendParams", types)
+    val priorityProperty = sendParamsType.propertySpecs.first { it.name == "priority" }
+    assertEquals(messagePriority.copy(nullable = true), priorityProperty.type)
   }
 }

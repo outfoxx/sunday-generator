@@ -17,18 +17,25 @@
 package io.outfoxx.sunday.generator.common
 
 import amf.core.client.platform.model.document.BaseUnit
+import amf.core.client.platform.model.domain.Linkable
 import amf.core.client.platform.model.domain.PropertyShape
 import amf.core.client.platform.model.domain.RecursiveShape
 import amf.core.client.platform.model.domain.Shape
 import amf.core.client.scala.errorhandling.DefaultErrorHandler
+import amf.core.internal.annotations.InheritedShapes
+import amf.core.internal.annotations.ResolvedLinkTargetAnnotation
 import amf.core.internal.annotations.DeclaredElement
 import amf.shapes.client.platform.model.domain.NodeShape
 import io.outfoxx.sunday.generator.utils.annotations
 import io.outfoxx.sunday.generator.utils.id
 import io.outfoxx.sunday.generator.utils.inherits
+import io.outfoxx.sunday.generator.utils.linkTarget
+import io.outfoxx.sunday.generator.utils.name
 import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.uniqueId
 import scala.Option
+import scala.collection.JavaConverters
+import scala.collection.Seq
 import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.collections.filter
@@ -44,6 +51,11 @@ import amf.core.client.scala.model.domain.Shape as InternalShape
 class ShapeIndex(
   private val referenceMap: Map<String, Shape>,
 ) {
+
+  private val referenceMapById = referenceMap.values.associateBy { it.id }
+  private val referenceMapByName =
+    referenceMap.values.mapNotNull { shape -> shape.name?.let { it to shape } }
+      .groupBy({ it.first }, { it.second })
 
   companion object {
 
@@ -121,14 +133,70 @@ class ShapeIndex(
   private inline fun <reified T : Shape> resolveAs(shape: T): T =
     resolve(shape) as T
 
-  fun resolve(shape: Shape): Shape =
-    if (shape.hasExplicitName() || shape._internal().annotations().contains(DeclaredElement::class.java)) {
+  fun resolve(shape: Shape): Shape {
+    val linkTargetShape = (shape as? Linkable)?.linkTarget as? Shape
+    if (linkTargetShape != null) {
+      return resolve(linkTargetShape)
+    }
+
+    return if (shape.hasExplicitName() || shape._internal().annotations().contains(DeclaredElement::class.java)) {
       referenceMap[shape.uniqueId]
+        ?: referenceMapById[shape.id]
         ?: shape
     } else {
-      shape.inherits.firstOrNull()
-        ?.let { referenceMap[it.uniqueId] }
-        ?: referenceMap[shape.uniqueId]
-        ?: shape
+      val resolvedLinkTargetId = shape.resolvedLinkTargetIds().firstOrNull()
+      if (resolvedLinkTargetId != null) {
+        referenceMapById[resolvedLinkTargetId]
+          ?: referenceMap[resolvedLinkTargetId]
+          ?: shape
+      } else {
+        val inheritedIds = shape.inheritedShapeIds()
+        val inheritedIdMatch =
+          inheritedIds.firstNotNullOfOrNull { id ->
+            referenceMapById[id]
+              ?: referenceMap[id]
+              ?: run {
+                val name = id.substringAfterLast('/')
+                referenceMapByName[name]?.singleOrNull()
+              }
+          }
+
+        val nameMatch =
+          shape.name?.let { name ->
+            val candidates = referenceMapByName[name].orEmpty()
+            val baseId = shape.id.substringBefore("#")
+            candidates.firstOrNull { it.id.substringBefore("#") == baseId }
+              ?: candidates.singleOrNull()
+          }
+
+        val inheritedResolved = shape.inherits.firstOrNull()
+          ?.takeIf { it != shape }
+          ?.let { resolve(it) }
+
+        inheritedIdMatch
+          ?: nameMatch
+          ?: inheritedResolved
+          ?: referenceMapById[shape.id]
+          ?: referenceMap[shape.uniqueId]
+          ?: shape
+      }
     }
+  }
 }
+
+private fun <T> Seq<T>.asList(): List<T> = JavaConverters.seqAsJavaList(this)
+
+private fun Shape.resolvedLinkTargetIds(): List<String> =
+  _internal().annotations().serializables().asList()
+    .filterIsInstance<ResolvedLinkTargetAnnotation>()
+    .map { it.linkTargetId() }
+
+private fun Shape.inheritedShapeIds(): List<String> =
+  _internal().annotations().find(InheritedShapes::class.java)
+    .let { opt ->
+      if (opt.isDefined) {
+        opt.get().baseIds().asList()
+      } else {
+        emptyList()
+      }
+    }
