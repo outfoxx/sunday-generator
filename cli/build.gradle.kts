@@ -1,5 +1,6 @@
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
   application
@@ -33,6 +34,7 @@ application {
 }
 
 val releaseVersion: String by project
+val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
 fun Manifest.updateAttributes() {
   val title = "Sunday Generator"
@@ -72,58 +74,73 @@ tasks.nativeCompile {
   classpathJar = tasks.shadowJar.flatMap { it.archiveFile }
 }
 
-publishing {
-  publications {
-    create<MavenPublication>("cli") {
-      artifact(tasks.named("shadowJar"))
-      artifact(tasks.named("sourcesJar"))
+mavenPublishing {
+  publishToMavenCentral(automaticRelease = true)
+  if (!isSnapshot) {
+    signAllPublications()
+  }
 
-      pom {
+  coordinates(
+    groupId = "io.outfoxx.sunday",
+    artifactId = "cli",
+    version = releaseVersion,
+  )
 
-        name.set("Sunday Generator - CLI")
-        description.set(
-          "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
-        )
-        url.set("https://outfoxx.github.io/sunday-generator")
+  pom {
 
-        organization {
-          name.set("Outfox, Inc.")
-          url.set("https://outfoxx.io")
-        }
+    name.set("Sunday Generator - CLI")
+    description.set(
+      "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
+    )
+    url.set("https://outfoxx.github.io/sunday-generator")
 
-        issueManagement {
-          system.set("GitHub")
-          url.set("https://github.com/outfoxx/sunday-generator/issues")
-        }
+    organization {
+      name.set("Outfox, Inc.")
+      url.set("https://outfoxx.io")
+    }
 
-        licenses {
-          license {
-            name.set("Apache License 2.0")
-            url.set("https://raw.githubusercontent.com/outfoxx/sunday-generator/main/LICENSE.txt")
-            distribution.set("repo")
-          }
-        }
+    issueManagement {
+      system.set("GitHub")
+      url.set("https://github.com/outfoxx/sunday-generator/issues")
+    }
 
-        scm {
-          url.set("https://github.com/outfoxx/sunday-generator")
-          connection.set("scm:https://github.com/outfoxx/sunday-generator.git")
-          developerConnection.set("scm:git@github.com:outfoxx/sunday-generator.git")
-        }
+    licenses {
+      license {
+        name.set("Apache License 2.0")
+        url.set("https://raw.githubusercontent.com/outfoxx/sunday-generator/main/LICENSE.txt")
+        distribution.set("repo")
+      }
+    }
 
-        developers {
-          developer {
-            id.set("kdubb")
-            name.set("Kevin Wooten")
-            email.set("kevin@outfoxx.io")
-          }
-        }
+    scm {
+      url.set("https://github.com/outfoxx/sunday-generator")
+      connection.set("scm:https://github.com/outfoxx/sunday-generator.git")
+      developerConnection.set("scm:git@github.com:outfoxx/sunday-generator.git")
+    }
+
+    developers {
+      developer {
+        id.set("kdubb")
+        name.set("Kevin Wooten")
+        email.set("kevin@outfoxx.io")
       }
     }
   }
+
+  configureBasedOnAppliedPlugins()
 }
 
-signing {
-  sign(publishing.publications.named("cli").get())
+publishing {
+  publications.withType<MavenPublication>().configureEach {
+    if (name != "maven") {
+      return@configureEach
+    }
+    val plainJarArtifacts = artifacts.filter { it.classifier == null && it.extension == "jar" }
+    plainJarArtifacts.forEach { artifacts.remove(it) }
+    artifact(tasks.named("shadowJar")) {
+      classifier = null
+    }
+  }
 }
 
 jib {

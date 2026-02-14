@@ -2,6 +2,9 @@ plugins {
   `java-library`
 }
 
+val releaseVersion: String by project
+val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
+
 dependencies {
 
   api(libs.amfClient)
@@ -51,56 +54,58 @@ tasks {
   }
 }
 
-publishing {
-  publications {
-    create<MavenPublication>("generator") {
+mavenPublishing {
+  publishToMavenCentral(automaticRelease = true)
+  if (!isSnapshot) {
+    signAllPublications()
+  }
 
-      from(components["java"])
+  coordinates(
+    groupId = "io.outfoxx.sunday",
+    artifactId = "generator",
+    version = releaseVersion,
+  )
 
-      pom {
+  pom {
 
-        name.set("Sunday Generator")
-        description.set(
-          "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
-        )
-        url.set("https://outfoxx.github.io/sunday-generator")
+    name.set("Sunday Generator")
+    description.set(
+      "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.",
+    )
+    url.set("https://outfoxx.github.io/sunday-generator")
 
-        organization {
-          name.set("Outfox, Inc.")
-          url.set("https://outfoxx.io")
-        }
+    organization {
+      name.set("Outfox, Inc.")
+      url.set("https://outfoxx.io")
+    }
 
-        issueManagement {
-          system.set("GitHub")
-          url.set("https://github.com/outfoxx/sunday-generator/issues")
-        }
+    issueManagement {
+      system.set("GitHub")
+      url.set("https://github.com/outfoxx/sunday-generator/issues")
+    }
 
-        licenses {
-          license {
-            name.set("Apache License 2.0")
-            url.set("https://raw.githubusercontent.com/outfoxx/sunday-generator/main/LICENSE.txt")
-            distribution.set("repo")
-          }
-        }
+    licenses {
+      license {
+        name.set("Apache License 2.0")
+        url.set("https://raw.githubusercontent.com/outfoxx/sunday-generator/main/LICENSE.txt")
+        distribution.set("repo")
+      }
+    }
 
-        scm {
-          url.set("https://github.com/outfoxx/sunday-generator")
-          connection.set("scm:https://github.com/outfoxx/sunday-generator.git")
-          developerConnection.set("scm:git@github.com:outfoxx/sunday-generator.git")
-        }
+    scm {
+      url.set("https://github.com/outfoxx/sunday-generator")
+      connection.set("scm:https://github.com/outfoxx/sunday-generator.git")
+      developerConnection.set("scm:git@github.com:outfoxx/sunday-generator.git")
+    }
 
-        developers {
-          developer {
-            id.set("kdubb")
-            name.set("Kevin Wooten")
-            email.set("kevin@outfoxx.io")
-          }
-        }
+    developers {
+      developer {
+        id.set("kdubb")
+        name.set("Kevin Wooten")
+        email.set("kevin@outfoxx.io")
       }
     }
   }
-}
 
-signing {
-  sign(publishing.publications.named("generator").get())
+  configureBasedOnAppliedPlugins()
 }
