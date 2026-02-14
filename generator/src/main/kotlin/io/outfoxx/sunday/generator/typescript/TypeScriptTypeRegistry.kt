@@ -197,12 +197,13 @@ class TypeScriptTypeRegistry(
 
     val shape = context.dereference(shapeRef)
 
-    var typeName = typeNameMappings[shape.uniqueId]
+    val shapeKey = if (shape.isNameExplicit) shape.uniqueId else shape.id
+    var typeName = typeNameMappings[shapeKey]
     if (typeName == null) {
 
       typeName = generateTypeName(shape, context)
 
-      typeNameMappings[shape.id] = typeName
+      typeNameMappings[shapeKey] = typeName
     }
 
     return typeName

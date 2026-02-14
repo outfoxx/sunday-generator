@@ -24,6 +24,7 @@ import amf.core.client.scala.errorhandling.DefaultErrorHandler
 import amf.core.internal.annotations.DeclaredElement
 import amf.shapes.client.platform.model.domain.NodeShape
 import io.outfoxx.sunday.generator.utils.annotations
+import io.outfoxx.sunday.generator.utils.id
 import io.outfoxx.sunday.generator.utils.inherits
 import io.outfoxx.sunday.generator.utils.nonPatternProperties
 import io.outfoxx.sunday.generator.utils.uniqueId
@@ -102,9 +103,20 @@ class ShapeIndex(
     }
   }
 
-  fun findOrderedProperties(shape: NodeShape): List<PropertyShape> =
-    resolveAs(shape).nonPatternProperties
-      .filter { it.annotations.inheritanceProvenance().getOrNull() == shape.uniqueId }
+  fun findOrderedProperties(shape: NodeShape): List<PropertyShape> {
+    val resolved = resolveAs(shape)
+    val properties = resolved.nonPatternProperties
+    if (hasNoInherited(shape)) {
+      return properties
+    }
+    return properties.filter {
+      val provenance = it.annotations.inheritanceProvenance().getOrNull()
+      provenance == shape.uniqueId ||
+        provenance == shape.id ||
+        provenance == resolved.uniqueId ||
+        provenance == resolved.id
+    }
+  }
 
   private inline fun <reified T : Shape> resolveAs(shape: T): T =
     resolve(shape) as T

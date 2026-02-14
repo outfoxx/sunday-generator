@@ -1,0 +1,44 @@
+#%RAML 1.0
+title: External Discriminator Base Properties Regression
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+  Container:
+    type: object
+    properties:
+      type: ParamType
+      parameters?:
+        type: Container-Parameters
+        (sunday.externalDiscriminator): type
+
+  ParamType:
+    type: string
+    enum: [ a ]
+
+  Container-Parameters:
+    (sunday.nested):
+      enclosedIn: Container
+      name: Parameters
+    (sunday.externallyDiscriminated): true
+    type: object
+    properties:
+      version?: integer
+
+  Container-AParameters:
+    (sunday.nested):
+      enclosedIn: Container
+      name: AParameters
+    type: Container-Parameters
+    discriminatorValue: a
+    properties:
+      value: string
+
+/tests:
+  get:
+    responses:
+      200:
+        body:
+          type: Container
