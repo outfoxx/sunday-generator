@@ -135,7 +135,7 @@ configure(moduleNames.map { project(it) }) {
   tasks.named<DokkaTask>("dokkaHtml") {
     failOnWarning.set(true)
     suppressObviousFunctions.set(false)
-    outputDirectory.set(file("${layout.buildDirectory}/dokka/${project.version}"))
+    outputDirectory.set(layout.buildDirectory.dir("dokka/${project.version}"))
   }
 
   tasks.named<DokkaTask>("dokkaJavadoc") {
