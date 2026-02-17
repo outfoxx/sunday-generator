@@ -20,13 +20,26 @@ import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
-import io.outfoxx.sunday.generator.*
+import io.outfoxx.sunday.generator.CommonGenerateCommand
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
+import io.outfoxx.sunday.generator.flags
+import io.outfoxx.sunday.generator.grouped
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ContainerElementValid
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.UseJakartaPackages
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.provideDelegate
 
-abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
+abstract class KotlinGenerateCommand(
+  name: String,
+  help: String,
+) : CommonGenerateCommand(name = name, help = help) {
 
   companion object {
     val impliedRegistryOptions = setOf(AddGeneratedAnnotation)
@@ -100,8 +113,10 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
 
   abstract val mode: GenerationMode
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
-    generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+  ) = generatorFactory(document, shapeIndex, typeRegistry)
 
   abstract fun generatorFactory(
     document: Document,

@@ -21,9 +21,28 @@ package io.outfoxx.sunday.generator.typescript
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.*
-import amf.shapes.client.platform.model.domain.*
-import io.outfoxx.sunday.generator.APIAnnotationName.*
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
+import io.outfoxx.sunday.generator.APIAnnotationName.Nested
+import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptImpl
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModelModule
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptModule
+import io.outfoxx.sunday.generator.APIAnnotationName.TypeScriptType
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.TypeRegistry
@@ -33,9 +52,86 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.typescript.utils.*
-import io.outfoxx.sunday.generator.utils.*
-import io.outfoxx.typescriptpoet.*
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CLASS_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR
+import io.outfoxx.sunday.generator.typescript.utils.JSON_CREATOR_MODE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_IGNORE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_INCLUDE_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.JSON_PROPERTY
+import io.outfoxx.sunday.generator.typescript.utils.JSON_SUB_TYPES
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_AS
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_INFO_ID
+import io.outfoxx.sunday.generator.typescript.utils.JSON_TYPE_NAME
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
+import io.outfoxx.sunday.generator.typescript.utils.LOCAL_TIME
+import io.outfoxx.sunday.generator.typescript.utils.OFFSET_DATETIME
+import io.outfoxx.sunday.generator.typescript.utils.PARTIAL
+import io.outfoxx.sunday.generator.typescript.utils.PROBLEM
+import io.outfoxx.sunday.generator.typescript.utils.UNKNOWN
+import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.box
+import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.nonOptional
+import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.nullable
+import io.outfoxx.sunday.generator.typescript.utils.recordType
+import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptEnumName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptIdentifierName
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptTypeName
+import io.outfoxx.sunday.generator.typescript.utils.undefinable
+import io.outfoxx.sunday.generator.utils.anyOf
+import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
+import io.outfoxx.sunday.generator.utils.dataType
+import io.outfoxx.sunday.generator.utils.discriminator
+import io.outfoxx.sunday.generator.utils.discriminatorMapping
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.encodes
+import io.outfoxx.sunday.generator.utils.findAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.format
+import io.outfoxx.sunday.generator.utils.get
+import io.outfoxx.sunday.generator.utils.getValue
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.id
+import io.outfoxx.sunday.generator.utils.isNameExplicit
+import io.outfoxx.sunday.generator.utils.items
+import io.outfoxx.sunday.generator.utils.makesNullable
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
+import io.outfoxx.sunday.generator.utils.nullableType
+import io.outfoxx.sunday.generator.utils.optional
+import io.outfoxx.sunday.generator.utils.or
+import io.outfoxx.sunday.generator.utils.patternProperties
+import io.outfoxx.sunday.generator.utils.range
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import io.outfoxx.sunday.generator.utils.uniqueId
+import io.outfoxx.sunday.generator.utils.uniqueItems
+import io.outfoxx.sunday.generator.utils.value
+import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.sunday.generator.utils.xone
+import io.outfoxx.typescriptpoet.AnyTypeSpec
+import io.outfoxx.typescriptpoet.AnyTypeSpecBuilder
+import io.outfoxx.typescriptpoet.ClassSpec
+import io.outfoxx.typescriptpoet.CodeBlock
+import io.outfoxx.typescriptpoet.DecoratorSpec
+import io.outfoxx.typescriptpoet.EnumSpec
+import io.outfoxx.typescriptpoet.FileSpec
+import io.outfoxx.typescriptpoet.FunctionSpec
+import io.outfoxx.typescriptpoet.InterfaceSpec
+import io.outfoxx.typescriptpoet.Modifier
+import io.outfoxx.typescriptpoet.ModuleSpec
+import io.outfoxx.typescriptpoet.ParameterSpec
+import io.outfoxx.typescriptpoet.PropertySpec
+import io.outfoxx.typescriptpoet.SymbolSpec
+import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ANY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY_BUFFER
@@ -45,6 +141,7 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.NUMBER
 import io.outfoxx.typescriptpoet.TypeName.Companion.OBJECT_CLASS
 import io.outfoxx.typescriptpoet.TypeName.Companion.SET
 import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
+import io.outfoxx.typescriptpoet.tag
 import java.nio.file.Path
 import kotlin.math.min
 
@@ -52,7 +149,9 @@ class TypeScriptTypeRegistry(
   private val options: Set<Option>,
 ) : TypeRegistry {
 
-  data class SpecificationInterface(val value: InterfaceSpec.Builder)
+  data class SpecificationInterface(
+    val value: InterfaceSpec.Builder,
+  )
 
   enum class Option {
     JacksonDecorators,
@@ -63,7 +162,10 @@ class TypeScriptTypeRegistry(
   private val typeBuilders = mutableMapOf<TypeName.Standard, AnyTypeSpecBuilder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
 
-  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+  override fun generateFiles(
+    categories: Set<GeneratedTypeCategory>,
+    outputDirectory: Path,
+  ) {
 
     val fileSpecs = generateExportedTypeFiles(categories)
 
@@ -83,8 +185,7 @@ class TypeScriptTypeRegistry(
         val modulePath = imported.source.replaceFirst("!", "")
 
         modulePath to moduleSpec
-      }
-      .groupBy({ it.first }, { it.second })
+      }.groupBy({ it.first }, { it.second })
       .map { (modulePath, moduleSpecs) ->
 
         val fileSpecBuilder =
@@ -136,7 +237,8 @@ class TypeScriptTypeRegistry(
 
     fun getTypeModBuilder(typeName: TypeName.Standard) =
       typeModBuilders.computeIfAbsent(typeName) {
-        ModuleSpec.builder(typeName.simpleName(), ModuleSpec.Kind.NAMESPACE)
+        ModuleSpec
+          .builder(typeName.simpleName(), ModuleSpec.Kind.NAMESPACE)
           .addModifier(Modifier.EXPORT)
       }
 
@@ -193,7 +295,10 @@ class TypeScriptTypeRegistry(
       }
   }
 
-  fun resolveTypeName(shapeRef: Shape, context: TypeScriptResolutionContext): TypeName {
+  fun resolveTypeName(
+    shapeRef: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName {
 
     val shape = context.dereference(shapeRef)
 
@@ -214,7 +319,10 @@ class TypeScriptTypeRegistry(
     exportedTypeBuilders.remove(typeName)
   }
 
-  fun addServiceType(typeName: TypeName.Standard, serviceType: ClassSpec.Builder) {
+  fun addServiceType(
+    typeName: TypeName.Standard,
+    serviceType: ClassSpec.Builder,
+  ) {
 
     serviceType.addModifiers(Modifier.EXPORT)
 
@@ -237,19 +345,22 @@ class TypeScriptTypeRegistry(
     exportedTypeBuilders.computeIfAbsent(problemTypeName) {
 
       val problemTypeBuilder =
-        ClassSpec.builder(problemTypeName)
+        ClassSpec
+          .builder(problemTypeName)
           .tag(GeneratedTypeCategory.Model)
           .addModifiers(Modifier.EXPORT)
           .superClass(PROBLEM)
           .addProperty(
-            PropertySpec.builder("TYPE", STRING)
+            PropertySpec
+              .builder("TYPE", STRING)
               .addModifiers(Modifier.STATIC)
               .initializer("%S", problemTypeDefinition.type)
               .build(),
           )
 
       val problemTypeConsBuilder =
-        FunctionSpec.constructorBuilder()
+        FunctionSpec
+          .constructorBuilder()
           .addCode(
             """
             |super({
@@ -270,11 +381,12 @@ class TypeScriptTypeRegistry(
       // Add all custom properties
       problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
 
-        val customPropertyTypeName = resolveTypeReference(
-          customPropertyTypeNameStr,
-          problemTypeDefinition.source,
-          TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-        )
+        val customPropertyTypeName =
+          resolveTypeReference(
+            customPropertyTypeNameStr,
+            problemTypeDefinition.source,
+            TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+          )
         problemTypeBuilder.addProperty(
           PropertySpec
             .builder(customPropertyName.typeScriptIdentifierName, customPropertyTypeName)
@@ -283,31 +395,31 @@ class TypeScriptTypeRegistry(
 
                 if (customPropertyName != customPropertyName.typeScriptIdentifierName) {
                   addDecorator(
-                    DecoratorSpec.builder(JSON_PROPERTY)
+                    DecoratorSpec
+                      .builder(JSON_PROPERTY)
                       .addJsonPropertyInit(
                         customPropertyName,
                         customPropertyName.typeScriptIdentifierName,
                         customPropertyTypeName.isUndefinable,
-                      )
-                      .build(),
+                      ).build(),
                   )
                 }
 
                 addDecorator(
-                  DecoratorSpec.builder(JSON_CLASS_TYPE)
+                  DecoratorSpec
+                    .builder(JSON_CLASS_TYPE)
                     .addParameter(
                       null,
-                      CodeBlock.builder()
+                      CodeBlock
+                        .builder()
                         .add("{type: () => ")
                         .add(reflectionTypeName(customPropertyTypeName).typeInitializer())
                         .add("}")
                         .build(),
-                    )
-                    .build(),
+                    ).build(),
                 )
               }
-            }
-            .build(),
+            }.build(),
         )
 
         problemTypeConsBuilder
@@ -315,8 +427,7 @@ class TypeScriptTypeRegistry(
             "this.%L = %L",
             customPropertyName.typeScriptIdentifierName,
             customPropertyName.typeScriptIdentifierName,
-          )
-          .addParameter(
+          ).addParameter(
             ParameterSpec
               .builder(
                 customPropertyName.typeScriptIdentifierName,
@@ -325,20 +436,21 @@ class TypeScriptTypeRegistry(
                   problemTypeDefinition.source,
                   TypeScriptResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
                 ),
-              )
-              .build(),
+              ).build(),
           )
       }
 
       problemTypeConsBuilder.addParameter(
-        ParameterSpec.builder("instance", TypeName.unionType(STRING, URL_TYPE).undefinable)
+        ParameterSpec
+          .builder("instance", TypeName.unionType(STRING, URL_TYPE).undefinable)
           .defaultValue("undefined")
           .build(),
       )
 
       if (options.contains(JacksonDecorators)) {
         problemTypeBuilder.addDecorator(
-          DecoratorSpec.builder(JSON_TYPE_NAME)
+          DecoratorSpec
+            .builder(JSON_TYPE_NAME)
             .addParameter(null, "{value: %T.TYPE}", problemTypeName)
             .build(),
         )
@@ -371,8 +483,9 @@ class TypeScriptTypeRegistry(
         "datetime-only" -> LOCAL_DATETIME
         "datetime" -> OFFSET_DATETIME
         else -> {
-          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
-            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          val (element, unit) =
+            context.resolveRef(elementTypeNameStr, source)
+              ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
           resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
@@ -391,8 +504,10 @@ class TypeScriptTypeRegistry(
     }
   }
 
-  private fun resolveReferencedTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName =
-    resolveTypeName(shape, context.copy(suggestedTypeName = null))
+  private fun resolveReferencedTypeName(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName = resolveTypeName(shape, context.copy(suggestedTypeName = null))
 
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
@@ -410,7 +525,10 @@ class TypeScriptTypeRegistry(
     }
   }
 
-  private fun generateTypeName(shape: Shape, context: TypeScriptResolutionContext): TypeName {
+  private fun generateTypeName(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName {
 
     val typeScriptTypeAnn = shape.findStringAnnotation(TypeScriptType, null)
     if (typeScriptTypeAnn != null) {
@@ -420,7 +538,10 @@ class TypeScriptTypeRegistry(
     return processShape(shape, context)
   }
 
-  private fun processShape(shape: Shape, context: TypeScriptResolutionContext): TypeName =
+  private fun processShape(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName =
     when (shape) {
       is ScalarShape -> processScalarShape(shape, context)
       is ArrayShape -> processArrayShape(shape, context)
@@ -432,7 +553,10 @@ class TypeScriptTypeRegistry(
       else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }
 
-  private fun processAnyShape(shape: AnyShape, context: TypeScriptResolutionContext): TypeName =
+  private fun processAnyShape(
+    shape: AnyShape,
+    context: TypeScriptResolutionContext,
+  ): TypeName =
     when {
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
@@ -449,7 +573,10 @@ class TypeScriptTypeRegistry(
       else -> ANY
     }
 
-  private fun processScalarShape(shape: ScalarShape, context: TypeScriptResolutionContext): TypeName =
+  private fun processScalarShape(
+    shape: ScalarShape,
+    context: TypeScriptResolutionContext,
+  ): TypeName =
     when (shape.dataType) {
       DataTypes.String() ->
 
@@ -493,7 +620,10 @@ class TypeScriptTypeRegistry(
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
-  private fun processArrayShape(shape: ArrayShape, context: TypeScriptResolutionContext): TypeName {
+  private fun processArrayShape(
+    shape: ArrayShape,
+    context: TypeScriptResolutionContext,
+  ): TypeName {
 
     val elementType =
       shape.items
@@ -512,7 +642,10 @@ class TypeScriptTypeRegistry(
     return TypeName.parameterizedType(collectionType, elementType)
   }
 
-  private fun processUnionShape(shape: UnionShape, context: TypeScriptResolutionContext): TypeName =
+  private fun processUnionShape(
+    shape: UnionShape,
+    context: TypeScriptResolutionContext,
+  ): TypeName =
     if (shape.makesNullable) {
       resolveReferencedTypeName(shape.nullableType, context).nullable
     } else {
@@ -520,7 +653,10 @@ class TypeScriptTypeRegistry(
         ?: TypeName.unionType(*shape.anyOf.map { resolveReferencedTypeName(it, context) }.toTypedArray())
     }
 
-  private fun processNodeShape(shape: NodeShape, context: TypeScriptResolutionContext): TypeName {
+  private fun processNodeShape(
+    shape: NodeShape,
+    context: TypeScriptResolutionContext,
+  ): TypeName {
 
     if (
       shape.nonPatternProperties.isEmpty() &&
@@ -564,7 +700,8 @@ class TypeScriptTypeRegistry(
 
     val classBuilder =
       defineType(className) { name ->
-        ClassSpec.builder(name.simpleName())
+        ClassSpec
+          .builder(name.simpleName())
           .tag(GeneratedTypeCategory.Model)
           .tag(DefinitionLocation(shape))
           .addModifiers(Modifier.EXPORT)
@@ -572,7 +709,8 @@ class TypeScriptTypeRegistry(
 
     val ifaceName = className.sibling("Spec")
     val ifaceBuilder =
-      InterfaceSpec.builder(ifaceName.simpleName())
+      InterfaceSpec
+        .builder(ifaceName.simpleName())
         .tag(DefinitionLocation(shape))
         .addModifiers(Modifier.EXPORT)
 
@@ -587,8 +725,10 @@ class TypeScriptTypeRegistry(
     }
 
     var inheritedProperties = superShape?.let(context::findAllProperties) ?: emptyList()
-    var declaredProperties = context.findProperties(shape)
-      .filter { prop -> prop.name !in inheritedProperties.map { it.name } }
+    var declaredProperties =
+      context
+        .findProperties(shape)
+        .filter { prop -> prop.name !in inheritedProperties.map { it.name } }
 
     val inheritingTypes = context.findInheritingShapes(shape).map { it as NodeShape }
 
@@ -617,7 +757,8 @@ class TypeScriptTypeRegistry(
           if (context.hasNoInheriting(shape)) {
 
             val discriminatorBuilder =
-              FunctionSpec.builder(discriminatorProperty.typeScriptIdentifierName)
+              FunctionSpec
+                .builder(discriminatorProperty.typeScriptIdentifierName)
                 .addModifiers(Modifier.GET)
                 .returns(discriminatorPropertyTypeName)
 
@@ -630,8 +771,7 @@ class TypeScriptTypeRegistry(
                   "return %T.%L",
                   discriminatorPropertyTypeName,
                   discriminatorValue.toUpperCamelCase(),
-                )
-                .build()
+                ).build()
             } else {
               discriminatorBuilder
                 .addStatement("return %S", discriminatorValue)
@@ -694,29 +834,32 @@ class TypeScriptTypeRegistry(
         if (implAnn != null) {
 
           val declaredPropertyGetterBuilder =
-            FunctionSpec.builder(declaredProperty.typeScriptIdentifierName)
+            FunctionSpec
+              .builder(declaredProperty.typeScriptIdentifierName)
               .addModifiers(Modifier.GET)
               .returns(declaredPropertyTypeName)
               .addDecorator(
-                DecoratorSpec.builder(JSON_IGNORE)
+                DecoratorSpec
+                  .builder(JSON_IGNORE)
                   .asFactory()
                   .build(),
               )
 
           val code = implAnn.getValue("code") ?: ""
           val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
-          val convertedCodeParams = codeParams.map { codeParam ->
-            val atype = codeParam.getValue("type")
-            val avalue = codeParam.getValue("value")
-            if (atype != null && avalue != null) {
-              when (atype) {
-                "Type" -> TypeName.standard(avalue)
-                else -> avalue
+          val convertedCodeParams =
+            codeParams.map { codeParam ->
+              val atype = codeParam.getValue("type")
+              val avalue = codeParam.getValue("value")
+              if (atype != null && avalue != null) {
+                when (atype) {
+                  "Type" -> TypeName.standard(avalue)
+                  else -> avalue
+                }
+              } else {
+                ""
               }
-            } else {
-              ""
             }
-          }
 
           declaredPropertyGetterBuilder
             .addStatement(code, *convertedCodeParams.toTypedArray())
@@ -755,25 +898,25 @@ class TypeScriptTypeRegistry(
           if (options.contains(JacksonDecorators)) {
             declaredPropertyBuilder
               .addDecorator(
-                DecoratorSpec.builder(JSON_PROPERTY)
+                DecoratorSpec
+                  .builder(JSON_PROPERTY)
                   .addJsonPropertyInit(
                     declaredProperty.name!!,
                     declaredProperty.typeScriptIdentifierName,
                     declaredProperty.required,
-                  )
-                  .build(),
-              )
-              .addDecorator(
-                DecoratorSpec.builder(JSON_CLASS_TYPE)
+                  ).build(),
+              ).addDecorator(
+                DecoratorSpec
+                  .builder(JSON_CLASS_TYPE)
                   .addParameter(
                     null,
-                    CodeBlock.builder()
+                    CodeBlock
+                      .builder()
                       .add("{type: () => ")
                       .add(reflectionTypeName(declaredPropertyTypeName).typeInitializer())
                       .add("}")
                       .build(),
-                  )
-                  .build(),
+                  ).build(),
               )
           }
 
@@ -795,7 +938,8 @@ class TypeScriptTypeRegistry(
       //
       if (inheritedProperties.isNotEmpty() || definedProperties.isNotEmpty()) {
         classBuilder.addFunction(
-          FunctionSpec.builder("copy")
+          FunctionSpec
+            .builder("copy")
             .returns(className)
             .addParameter("changes", PARTIAL.parameterized(ifaceName))
             .addStatement("return new %T(Object.assign({}, this, changes))", className)
@@ -809,7 +953,8 @@ class TypeScriptTypeRegistry(
 
         if (options.contains(JacksonDecorators)) {
           classBuilder.addDecorator(
-            DecoratorSpec.builder(JSON_CREATOR)
+            DecoratorSpec
+              .builder(JSON_CREATOR)
               .addParameter(null, "{ mode: %Q.PROPERTIES_OBJECT }", JSON_CREATOR_MODE)
               .build(),
           )
@@ -818,9 +963,11 @@ class TypeScriptTypeRegistry(
         val classSpec = classBuilder.build()
 
         val consBuilder =
-          FunctionSpec.constructorBuilder()
+          FunctionSpec
+            .constructorBuilder()
             .addParameter(
-              ParameterSpec.builder("init", ifaceName)
+              ParameterSpec
+                .builder("init", ifaceName)
                 .build(),
             )
 
@@ -838,14 +985,16 @@ class TypeScriptTypeRegistry(
 
       // Finish toString method
       val toStringTemplate =
-        CodeBlock.of(
-          "%N(%L)",
-          className,
-          toStringCode.joinToString(", "),
-        ).toString()
+        CodeBlock
+          .of(
+            "%N(%L)",
+            className,
+            toStringCode.joinToString(", "),
+          ).toString()
 
       classBuilder.addFunction(
-        FunctionSpec.builder("toString")
+        FunctionSpec
+          .builder("toString")
           .returns(STRING)
           .addStatement("return %P", toStringTemplate)
           .build(),
@@ -857,7 +1006,8 @@ class TypeScriptTypeRegistry(
       if (options.contains(JacksonDecorators)) {
         classBuilder
           .addDecorator(
-            DecoratorSpec.builder(JSON_INCLUDE)
+            DecoratorSpec
+              .builder(JSON_INCLUDE)
               .addParameter(null, "{value: %Q.ALWAYS}", JSON_INCLUDE_TYPE)
               .build(),
           )
@@ -882,7 +1032,10 @@ class TypeScriptTypeRegistry(
     return className
   }
 
-  private fun defineEnum(shape: Shape, context: TypeScriptResolutionContext): TypeName {
+  private fun defineEnum(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName {
 
     val className = typeNameOf(shape, context)
 
@@ -896,10 +1049,12 @@ class TypeScriptTypeRegistry(
       }
     }
 
-    val enumBuilder = defineType(className) { name ->
-      EnumSpec.builder(name.simpleName())
-        .addModifiers(Modifier.EXPORT)
-    } as EnumSpec.Builder
+    val enumBuilder =
+      defineType(className) { name ->
+        EnumSpec
+          .builder(name.simpleName())
+          .addModifiers(Modifier.EXPORT)
+      } as EnumSpec.Builder
 
     enumBuilder.tag(DefinitionLocation(shape))
 
@@ -945,59 +1100,64 @@ class TypeScriptTypeRegistry(
     val inheritingTypes = context.findInheritingShapes(valuePropertyTypeShape).map { it as NodeShape }
     val discriminatorMappings = buildDiscriminatorMappings(valuePropertyTypeShape, context)
 
-    val subTypes = inheritingTypes
-      .map { inheritingType ->
+    val subTypes =
+      inheritingTypes
+        .map { inheritingType ->
 
-        val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
-        val discriminatorValue = inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
+          val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
+          val discriminatorValue = inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
-        val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
+          val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
 
-        if (isDiscriminatorEnum) {
-          val enumDiscriminatorValue =
-            (typeBuilders[externalDiscriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
-              .constants.entries
-              .first { it.value?.toString() == "'$discriminatorValue'" }.key
+          if (isDiscriminatorEnum) {
+            val enumDiscriminatorValue =
+              (typeBuilders[externalDiscriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
+                .constants.entries
+                .first { it.value?.toString() == "'$discriminatorValue'" }
+                .key
 
-          // NOTE: using nested enum types fails to initialize correctly
-          // currently. Using the string constant equivalent until the
-          // issue is resolved.
-          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
-            importFromIndex(inheritingTypeName, className),
-            discriminatorValue,
-            (externalDiscriminatorPropertyTypeName as TypeName.Standard).base.value,
-            enumDiscriminatorValue,
-          )
-        } else {
-          "{class: () => %T, name: %S}" to listOf(
-            importFromIndex(inheritingTypeName, className),
-            discriminatorValue,
-          )
+            // NOTE: using nested enum types fails to initialize correctly
+            // currently. Using the string constant equivalent until the
+            // issue is resolved.
+            "{class: () => %T, name: %S /* %L.%L */}" to
+              listOf(
+                importFromIndex(inheritingTypeName, className),
+                discriminatorValue,
+                (externalDiscriminatorPropertyTypeName as TypeName.Standard).base.value,
+                enumDiscriminatorValue,
+              )
+          } else {
+            "{class: () => %T, name: %S}" to
+              listOf(
+                importFromIndex(inheritingTypeName, className),
+                discriminatorValue,
+              )
+          }
         }
-      }
 
     valuePropertySpec.addDecorator(
-      DecoratorSpec.builder(JSON_TYPE_INFO)
+      DecoratorSpec
+        .builder(JSON_TYPE_INFO)
         .addParameter(
           null,
           """
-            {
-              use: %Q.%L,
-              include: %Q.%L,
-              property: %S,
-            }
+          {
+            use: %Q.%L,
+            include: %Q.%L,
+            property: %S,
+          }
           """.trimIndent(),
           JSON_TYPE_INFO_ID,
           "NAME",
           JSON_TYPE_INFO_AS,
           "EXTERNAL_PROPERTY",
           externalDiscriminatorPropertyName,
-        )
-        .build(),
+        ).build(),
     )
 
     valuePropertySpec.addDecorator(
-      DecoratorSpec.builder(JSON_SUB_TYPES)
+      DecoratorSpec
+        .builder(JSON_SUB_TYPES)
         .addParameter(
           null,
           """
@@ -1008,8 +1168,7 @@ class TypeScriptTypeRegistry(
             |}
           """.trimMargin(),
           *subTypes.map { it.second }.flatten().toTypedArray(),
-        )
-        .build(),
+        ).build(),
     )
   }
 
@@ -1028,37 +1187,41 @@ class TypeScriptTypeRegistry(
 
     val discriminatorMappings = buildDiscriminatorMappings(shape, context)
 
-    val subTypes = inheritingTypes
-      .map { inheritingType ->
+    val subTypes =
+      inheritingTypes
+        .map { inheritingType ->
 
-        val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
-        val discriminatorValue =
-          inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
+          val mappedDiscriminator = discriminatorMappings.entries.find { it.value == inheritingType.id }?.key
+          val discriminatorValue =
+            inheritingType.discriminatorValue ?: mappedDiscriminator ?: inheritingType.name
 
-        val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
+          val inheritingTypeName = resolveReferencedTypeName(inheritingType, context) as TypeName.Standard
 
-        if (isDiscriminatorEnum) {
-          val enumDiscriminatorValue =
-            (typeBuilders[discriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
-              .constants.entries
-              .first { it.value?.toString() == "'$discriminatorValue'" }.key
+          if (isDiscriminatorEnum) {
+            val enumDiscriminatorValue =
+              (typeBuilders[discriminatorPropertyTypeName.nonOptional] as EnumSpec.Builder)
+                .constants.entries
+                .first { it.value?.toString() == "'$discriminatorValue'" }
+                .key
 
-          // NOTE: using nested enum types fails to initialize correctly
-          // currently. Using the string constant equivalent until the
-          // issue is resolved.
-          "{class: () => %T, name: %S /* %L.%L */}" to listOf(
-            importFromIndex(inheritingTypeName, className),
-            discriminatorValue,
-            (discriminatorPropertyTypeName as TypeName.Standard).base.value,
-            enumDiscriminatorValue,
-          )
-        } else {
-          "{class: () => %T, name: %S}" to listOf(
-            importFromIndex(inheritingTypeName, className),
-            discriminatorValue,
-          )
+            // NOTE: using nested enum types fails to initialize correctly
+            // currently. Using the string constant equivalent until the
+            // issue is resolved.
+            "{class: () => %T, name: %S /* %L.%L */}" to
+              listOf(
+                importFromIndex(inheritingTypeName, className),
+                discriminatorValue,
+                (discriminatorPropertyTypeName as TypeName.Standard).base.value,
+                enumDiscriminatorValue,
+              )
+          } else {
+            "{class: () => %T, name: %S}" to
+              listOf(
+                importFromIndex(inheritingTypeName, className),
+                discriminatorValue,
+              )
+          }
         }
-      }
 
     if (subTypes.isNotEmpty()) {
 
@@ -1067,28 +1230,29 @@ class TypeScriptTypeRegistry(
         val discriminator = shape.discriminator ?: genError("Missing required discriminator", shape)
 
         classBuilder.addDecorator(
-          DecoratorSpec.builder(JSON_TYPE_INFO)
+          DecoratorSpec
+            .builder(JSON_TYPE_INFO)
             .addParameter(
               null,
               """
-                {
-                  use: %Q.%L,
-                  include: %Q.%L,
-                  property: %S,
-                }
+              {
+                use: %Q.%L,
+                include: %Q.%L,
+                property: %S,
+              }
               """.trimIndent(),
               JSON_TYPE_INFO_ID,
               "NAME",
               JSON_TYPE_INFO_AS,
               "PROPERTY",
               discriminator,
-            )
-            .build(),
+            ).build(),
         )
       }
 
       classBuilder.addDecorator(
-        DecoratorSpec.builder(JSON_SUB_TYPES)
+        DecoratorSpec
+          .builder(JSON_SUB_TYPES)
           .addParameter(
             null,
             """
@@ -1099,13 +1263,15 @@ class TypeScriptTypeRegistry(
             |}
             """.trimMargin(),
             *subTypes.map { it.second }.flatten().toTypedArray(),
-          )
-          .build(),
+          ).build(),
       )
     }
   }
 
-  private fun typeNameOf(shape: Shape, context: TypeScriptResolutionContext): TypeName.Standard {
+  private fun typeNameOf(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): TypeName.Standard {
 
     if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
@@ -1113,18 +1279,20 @@ class TypeScriptTypeRegistry(
 
     modulePathOf(shape, context)?.let { modulePath ->
       val fullModulePath =
-        if (modulePath.endsWith(".ts"))
+        if (modulePath.endsWith(".ts")) {
           modulePath.removeSuffix(".ts")
-        else
+        } else {
           "$modulePath/${shape.typeScriptTypeName.camelCaseToKebabCase()}"
+        }
       return TypeName.namedImport(shape.typeScriptTypeName, "!$fullModulePath")
     }
 
-    val nestedAnn = shape.findAnnotation(Nested, null)
-      ?: return TypeName.namedImport(
-        shape.typeScriptTypeName,
-        "!${shape.typeScriptTypeName.camelCaseToKebabCase()}",
-      )
+    val nestedAnn =
+      shape.findAnnotation(Nested, null)
+        ?: return TypeName.namedImport(
+          shape.typeScriptTypeName,
+          "!${shape.typeScriptTypeName.camelCaseToKebabCase()}",
+        )
 
     val (nestedEnclosedIn, nestedName) =
       when {
@@ -1147,11 +1315,13 @@ class TypeScriptTypeRegistry(
 
         nestedAnn is ObjectNode -> {
 
-          val enclosedIn = nestedAnn.getValue("enclosedIn")
-            ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
+          val enclosedIn =
+            nestedAnn.getValue("enclosedIn")
+              ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
 
-          val name = nestedAnn.getValue("name")
-            ?: genError("Nested annotation is missing name", nestedAnn)
+          val name =
+            nestedAnn.getValue("name")
+              ?: genError("Nested annotation is missing name", nestedAnn)
 
           enclosedIn to name
         }
@@ -1163,8 +1333,9 @@ class TypeScriptTypeRegistry(
           )
       }
 
-    val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
-      ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+    val (nestedEnclosingType, nestedEnclosingTypeUnit) =
+      context.resolveRef(nestedEnclosedIn, shape)
+        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
@@ -1177,7 +1348,10 @@ class TypeScriptTypeRegistry(
     return nestedEnclosingTypeName.nested(nestedName)
   }
 
-  private fun modulePathOf(shape: Shape, context: TypeScriptResolutionContext): String? =
+  private fun modulePathOf(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): String? =
     (shape as? CustomizableElement)?.findStringAnnotation(TypeScriptModelModule, null)
       ?: modulePathOf(context.findDeclaringUnit(shape))
 
@@ -1189,7 +1363,10 @@ class TypeScriptTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun nearestCommonAncestor(types: List<Shape>, context: TypeScriptResolutionContext): TypeName? {
+  private fun nearestCommonAncestor(
+    types: List<Shape>,
+    context: TypeScriptResolutionContext,
+  ): TypeName? {
 
     var currentClassNameHierarchy: List<TypeName>? = null
     for (type in types) {
@@ -1207,7 +1384,10 @@ class TypeScriptTypeRegistry(
     return currentClassNameHierarchy?.firstOrNull()
   }
 
-  private fun classNameHierarchy(shape: Shape, context: TypeScriptResolutionContext): List<TypeName> {
+  private fun classNameHierarchy(
+    shape: Shape,
+    context: TypeScriptResolutionContext,
+  ): List<TypeName> {
 
     val names = mutableListOf<TypeName>()
 
@@ -1220,13 +1400,19 @@ class TypeScriptTypeRegistry(
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: NodeShape, context: TypeScriptResolutionContext): String? =
+  private fun findDiscriminatorPropertyName(
+    shape: NodeShape,
+    context: TypeScriptResolutionContext,
+  ): String? =
     when {
       !shape.discriminator.isNullOrEmpty() -> shape.discriminator
       else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: TypeScriptResolutionContext): String? =
+  private fun findDiscriminatorPropertyValue(
+    shape: NodeShape,
+    context: TypeScriptResolutionContext,
+  ): String? =
     if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
@@ -1234,11 +1420,15 @@ class TypeScriptTypeRegistry(
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 
-  private fun buildDiscriminatorMappings(shape: NodeShape, context: TypeScriptResolutionContext): Map<String, String> =
-    shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
-      mapping.templateVariable().value()!! to refElement.id
-    }.toMap()
+  private fun buildDiscriminatorMappings(
+    shape: NodeShape,
+    context: TypeScriptResolutionContext,
+  ): Map<String, String> =
+    shape.discriminatorMapping
+      .mapNotNull { mapping ->
+        val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
+        mapping.templateVariable().value()!! to refElement.id
+      }.toMap()
 
   fun reflectionTypeName(typeName: TypeName): TypeName =
 
@@ -1283,7 +1473,10 @@ class TypeScriptTypeRegistry(
   private fun isReflectedAsObject(typeName: TypeName) =
     typeBuilders[typeName.nonOptional] is EnumSpec.Builder || typeName.box() == OBJECT_CLASS
 
-  private fun importFromIndex(typeName: TypeName, fromTypeName: TypeName): TypeName {
+  private fun importFromIndex(
+    typeName: TypeName,
+    fromTypeName: TypeName,
+  ): TypeName {
     val typeNameImport = ((typeName as? TypeName.Standard)?.base as? SymbolSpec.Imported) ?: return typeName
     val fromTypeNameImport = (fromTypeName as? TypeName.Standard)?.base as? SymbolSpec.Imported
     if (typeNameImport.source == fromTypeNameImport?.source) {

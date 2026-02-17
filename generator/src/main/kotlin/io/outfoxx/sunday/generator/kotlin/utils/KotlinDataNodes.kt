@@ -27,13 +27,20 @@ import com.squareup.kotlinpoet.TypeName
 import io.outfoxx.sunday.generator.utils.value
 import io.outfoxx.sunday.generator.utils.values
 
-fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?): CodeBlock {
+fun DataNode.kotlinConstant(
+  typeName: TypeName,
+  shape: Shape?,
+): CodeBlock {
   val builder = CodeBlock.builder()
   kotlinConstant(typeName, shape, builder)
   return builder.build()
 }
 
-fun DataNode.kotlinConstant(typeName: TypeName, shape: Shape?, builder: CodeBlock.Builder) {
+fun DataNode.kotlinConstant(
+  typeName: TypeName,
+  shape: Shape?,
+  builder: CodeBlock.Builder,
+) {
   when (this) {
     is ScalarNode ->
       when (dataType().value()) {

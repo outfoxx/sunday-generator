@@ -55,56 +55,57 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
-        import {Base} from './base';
-        import {Test} from './test';
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {Base} from './base';
+      import {Test} from './test';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          fetchTest(): Observable<Test> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
-                },
-                fetchTestReturnType
-            );
-          }
-
-          fetchDerivedTest(): Observable<Base> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests/derived',
-                  acceptTypes: this.defaultAcceptTypes
-                },
-                fetchDerivedTestReturnType
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
 
-        const fetchTestReturnType: AnyType = [Test];
-        const fetchDerivedTestReturnType: AnyType = [Base];
+        fetchTest(): Observable<Test> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: this.defaultAcceptTypes
+              },
+              fetchTestReturnType
+          );
+        }
+
+        fetchDerivedTest(): Observable<Base> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests/derived',
+                acceptTypes: this.defaultAcceptTypes
+              },
+              fetchDerivedTestReturnType
+          );
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [Test];
+      const fetchDerivedTestReturnType: AnyType = [Base];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -132,42 +133,43 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [];
-          }
-
-          fetchTest(): Observable<ArrayBuffer> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: [MediaType.OctetStream]
-                },
-                fetchTestReturnType
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [];
         }
 
-        const fetchTestReturnType: AnyType = [ArrayBuffer];
+        fetchTest(): Observable<ArrayBuffer> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: [MediaType.OctetStream]
+              },
+              fetchTestReturnType
+          );
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [ArrayBuffer];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -195,70 +197,71 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
+        }
+
+        fetchTest(): Observable<API.FetchTestResponseBody> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: this.defaultAcceptTypes
+              },
+              fetchTestReturnType
+          );
+        }
+
+      }
+
+      export namespace API {
+
+        export interface FetchTestResponseBodySpec {
+
+          value: string;
+
+        }
+
+        export class FetchTestResponseBody implements FetchTestResponseBodySpec {
+
+          value: string;
+
+          constructor(init: FetchTestResponseBodySpec) {
+            this.value = init.value;
           }
 
-          fetchTest(): Observable<API.FetchTestResponseBody> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
-                },
-                fetchTestReturnType
-            );
+          copy(changes: Partial<FetchTestResponseBodySpec>): FetchTestResponseBody {
+            return new FetchTestResponseBody(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `API.FetchTestResponseBody(value='${'$'}{this.value}')`;
           }
 
         }
 
-        export namespace API {
+      }
 
-          export interface FetchTestResponseBodySpec {
-
-            value: string;
-
-          }
-
-          export class FetchTestResponseBody implements FetchTestResponseBodySpec {
-
-            value: string;
-
-            constructor(init: FetchTestResponseBodySpec) {
-              this.value = init.value;
-            }
-
-            copy(changes: Partial<FetchTestResponseBodySpec>): FetchTestResponseBody {
-              return new FetchTestResponseBody(Object.assign({}, this, changes));
-            }
-
-            toString(): string {
-              return `API.FetchTestResponseBody(value='${'$'}{this.value}')`;
-            }
-
-          }
-
-        }
-
-        const fetchTestReturnType: AnyType = [API.FetchTestResponseBody];
+      const fetchTestReturnType: AnyType = [API.FetchTestResponseBody];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -286,38 +289,39 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          fetchTest(): Observable<void> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests'
-                }
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
+
+        fetchTest(): Observable<void> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests'
+              }
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -345,37 +349,38 @@ class ResponseBodyContentTest {
 
     assertEquals(
       """
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          startTest() {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests'
-                }
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
+
+        startTest() {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests'
+              }
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

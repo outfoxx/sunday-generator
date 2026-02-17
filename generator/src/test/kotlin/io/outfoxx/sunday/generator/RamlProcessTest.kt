@@ -67,11 +67,14 @@ class RamlProcessTest {
     assertThat(result.isValid, equalTo(true))
     assertThat(result.validationLog, empty())
     assertThat(
-      result.document.api.endPoints.map { it.path },
+      result.document.api.endPoints
+        .map { it.path },
       containsInAnyOrder("/test", "/test/{id}", "/test2", "/test2/{id}"),
     )
 
-    val testIdEndPoint = result.document.api.endPoints.first { it.path == "/test/{id}" }
+    val testIdEndPoint =
+      result.document.api.endPoints
+        .first { it.path == "/test/{id}" }
     val getOperation = testIdEndPoint.operations.firstOrNull { it.method == "get" }
     assertThat(getOperation, notNullValue())
     assertThat(getOperation?.customDomainProperties?.map { it.name }, hasItem("test-ann"))

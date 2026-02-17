@@ -32,8 +32,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
 
-fun findType(name: String, types: Map<DeclaredTypeName, TypeSpec>): TypeSpec =
-  types[DeclaredTypeName.typeName(".$name")] ?: fail("Type '$name' not defined")
+fun findType(
+  name: String,
+  types: Map<DeclaredTypeName, TypeSpec>,
+): TypeSpec = types[DeclaredTypeName.typeName(".$name")] ?: fail("Type '$name' not defined")
 
 fun generateTypes(
   uri: URI,
@@ -56,7 +58,8 @@ fun generateTypes(
   }
 
   val builtTypes =
-    typeRegistry.buildTypes()
+    typeRegistry
+      .buildTypes()
       .filter { it.key.enclosingTypeName() == null }
 
   assertTrue(compileTypes(compiler, builtTypes))
@@ -78,7 +81,8 @@ fun generate(
   generator.generateServiceTypes()
 
   val builtTypes =
-    typeRegistry.buildTypes()
+    typeRegistry
+      .buildTypes()
       .filter { it.key.enclosingTypeName() == null }
 
   assertTrue(compileTypes(compiler, builtTypes))

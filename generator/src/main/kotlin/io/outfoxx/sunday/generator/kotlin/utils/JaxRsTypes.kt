@@ -47,7 +47,9 @@ interface JaxRsTypes {
     MATRIX,
   }
 
-  enum class ContextType(val annotationName: String) {
+  enum class ContextType(
+    val annotationName: String,
+  ) {
     URI_INFO("uriInfo"),
     REQUEST("request"),
     HTTP_HEADERS("headers"),
@@ -151,8 +153,7 @@ interface JaxRsTypes {
       ParamType.MATRIX -> matrixParam
     }
 
-  fun responseType(resultType: TypeName): TypeName =
-    rawResponse.parameterizedBy(resultType)
+  fun responseType(resultType: TypeName): TypeName = rawResponse.parameterizedBy(resultType)
 
   fun contextType(type: ContextType): ClassName =
     when (type) {
@@ -175,7 +176,9 @@ interface JaxRsTypes {
 
   val isNameRequiredForParameters: Boolean
 
-  class StdJaxRsTypes(basePkg: String) : JaxRsTypes {
+  class StdJaxRsTypes(
+    basePkg: String,
+  ) : JaxRsTypes {
 
     override val isNameRequiredForParameters: Boolean = true
 
@@ -226,7 +229,10 @@ interface JaxRsTypes {
     override fun responseType(resultType: TypeName) = rawResponse
   }
 
-  class Quarkus(pkg: String = RESTEASY, base: JaxRsTypes) : JaxRsTypes {
+  class Quarkus(
+    pkg: String = RESTEASY,
+    base: JaxRsTypes,
+  ) : JaxRsTypes {
 
     companion object {
       const val RESTEASY = "org.jboss.resteasy.reactive"

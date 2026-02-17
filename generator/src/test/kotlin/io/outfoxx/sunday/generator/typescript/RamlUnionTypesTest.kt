@@ -43,43 +43,44 @@ class RamlUnionTypesTest {
     assertEquals(
       """
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          any: number | string;
+        any: number | string;
 
-          duplicate: string;
+        duplicate: string;
 
-          nullable: string | null;
+        nullable: string | null;
 
+      }
+
+      export class Test implements TestSpec {
+
+        any: number | string;
+
+        duplicate: string;
+
+        nullable: string | null;
+
+        constructor(init: TestSpec) {
+          this.any = init.any;
+          this.duplicate = init.duplicate;
+          this.nullable = init.nullable;
         }
 
-        export class Test implements TestSpec {
-
-          any: number | string;
-
-          duplicate: string;
-
-          nullable: string | null;
-
-          constructor(init: TestSpec) {
-            this.any = init.any;
-            this.duplicate = init.duplicate;
-            this.nullable = init.nullable;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(any='${'$'}{this.any}', duplicate='${'$'}{this.duplicate}', nullable='${'$'}{this.nullable}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(any='${'$'}{this.any}', duplicate='${'$'}{this.duplicate}', nullable='${'$'}{this.nullable}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
+        FileSpec
+          .get(typeModSpec)
           .writeTo(this)
       },
     )
@@ -97,36 +98,37 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Base} from './base';
+      import {Base} from './base';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          value: Base;
+        value: Base;
 
+      }
+
+      export class Test implements TestSpec {
+
+        value: Base;
+
+        constructor(init: TestSpec) {
+          this.value = init.value;
         }
 
-        export class Test implements TestSpec {
-
-          value: Base;
-
-          constructor(init: TestSpec) {
-            this.value = init.value;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(value='${'$'}{this.value}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(value='${'$'}{this.value}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
+        FileSpec
+          .get(typeModSpec)
           .writeTo(this)
       },
     )
@@ -146,37 +148,38 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Base, BaseSpec} from './base';
+      import {Base, BaseSpec} from './base';
 
 
-        export interface Child1Spec extends BaseSpec {
+      export interface Child1Spec extends BaseSpec {
 
-          childValue: string;
+        childValue: string;
 
+      }
+
+      export class Child1 extends Base implements Child1Spec {
+
+        childValue: string;
+
+        constructor(init: Child1Spec) {
+          super(init);
+          this.childValue = init.childValue;
         }
 
-        export class Child1 extends Base implements Child1Spec {
-
-          childValue: string;
-
-          constructor(init: Child1Spec) {
-            super(init);
-            this.childValue = init.childValue;
-          }
-
-          copy(changes: Partial<Child1Spec>): Child1 {
-            return new Child1(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child1(value='${'$'}{this.value}', childValue='${'$'}{this.childValue}')`;
-          }
-
+        copy(changes: Partial<Child1Spec>): Child1 {
+          return new Child1(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Child1(value='${'$'}{this.value}', childValue='${'$'}{this.childValue}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child1TypeModSpec, "test/lib/child1")
+        FileSpec
+          .get(child1TypeModSpec, "test/lib/child1")
           .writeTo(this)
       },
     )
@@ -185,37 +188,38 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Base, BaseSpec} from '../../base';
+      import {Base, BaseSpec} from '../../base';
 
 
-        export interface Child2Spec extends BaseSpec {
+      export interface Child2Spec extends BaseSpec {
 
-          childValue: string;
+        childValue: string;
 
+      }
+
+      export class Child2 extends Base implements Child2Spec {
+
+        childValue: string;
+
+        constructor(init: Child2Spec) {
+          super(init);
+          this.childValue = init.childValue;
         }
 
-        export class Child2 extends Base implements Child2Spec {
-
-          childValue: string;
-
-          constructor(init: Child2Spec) {
-            super(init);
-            this.childValue = init.childValue;
-          }
-
-          copy(changes: Partial<Child2Spec>): Child2 {
-            return new Child2(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child2(value='${'$'}{this.value}', childValue='${'$'}{this.childValue}')`;
-          }
-
+        copy(changes: Partial<Child2Spec>): Child2 {
+          return new Child2(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Child2(value='${'$'}{this.value}', childValue='${'$'}{this.childValue}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child2TypeModSpec, "test/lib/child2")
+        FileSpec
+          .get(child2TypeModSpec, "test/lib/child2")
           .writeTo(this)
       },
     )
@@ -224,38 +228,39 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import {Child1} from './test/lib/child1';
-        import {Child2} from './test/lib/child2';
-        import {Test as Test_, TestSpec as TestSpec_} from './test/lib/test';
+      import {Child1} from './test/lib/child1';
+      import {Child2} from './test/lib/child2';
+      import {Test as Test_, TestSpec as TestSpec_} from './test/lib/test';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          value: Child1 | Child2;
+        value: Child1 | Child2;
 
+      }
+
+      export class Test implements TestSpec_ {
+
+        value: Child1 | Child2;
+
+        constructor(init: TestSpec_) {
+          this.value = init.value;
         }
 
-        export class Test implements TestSpec_ {
-
-          value: Child1 | Child2;
-
-          constructor(init: TestSpec_) {
-            this.value = init.value;
-          }
-
-          copy(changes: Partial<TestSpec_>): Test_ {
-            return new Test_(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(value='${'$'}{this.value}')`;
-          }
-
+        copy(changes: Partial<TestSpec_>): Test_ {
+          return new Test_(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(value='${'$'}{this.value}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(testTypeModSpec)
+        FileSpec
+          .get(testTypeModSpec)
           .writeTo(this)
       },
     )

@@ -29,16 +29,19 @@ open class SwiftSundayGenerateCommand :
     help = "Service methods will return results wrapped in a response",
   ).flag(default = false)
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: SwiftTypeRegistry) =
-    SwiftSundayGenerator(
-      document,
-      shapeIndex,
-      typeRegistry,
-      SwiftSundayGenerator.Options(
-        useResultResponseReturn,
-        problemBaseUri,
-        mediaTypes.toList(),
-        serviceSuffix,
-      ),
-    )
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: SwiftTypeRegistry,
+  ) = SwiftSundayGenerator(
+    document,
+    shapeIndex,
+    typeRegistry,
+    SwiftSundayGenerator.Options(
+      useResultResponseReturn,
+      problemBaseUri,
+      mediaTypes.toList(),
+      serviceSuffix,
+    ),
+  )
 }

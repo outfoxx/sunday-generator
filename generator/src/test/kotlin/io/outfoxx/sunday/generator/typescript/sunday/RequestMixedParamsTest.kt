@@ -55,71 +55,72 @@ class RequestMixedParamsTest {
 
     assertEquals(
       """
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
+        }
 
-          fetchTest(select: API.FetchTestSelectUriParam, page: API.FetchTestPageQueryParam,
-              xType: API.FetchTestXTypeHeaderParam): Observable<Record<string, unknown>> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests/{select}',
-                  pathParameters: {
-                    select
-                  },
-                  queryParameters: {
-                    page
-                  },
-                  acceptTypes: this.defaultAcceptTypes,
-                  headers: {
-                    'x-type': xType
-                  }
+        fetchTest(select: API.FetchTestSelectUriParam, page: API.FetchTestPageQueryParam,
+            xType: API.FetchTestXTypeHeaderParam): Observable<Record<string, unknown>> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests/{select}',
+                pathParameters: {
+                  select
                 },
-                fetchTestReturnType
-            );
-          }
-
+                queryParameters: {
+                  page
+                },
+                acceptTypes: this.defaultAcceptTypes,
+                headers: {
+                  'x-type': xType
+                }
+              },
+              fetchTestReturnType
+          );
         }
 
-        export namespace API {
+      }
 
-          export enum FetchTestSelectUriParam {
-            All = 'all',
-            Limited = 'limited'
-          }
+      export namespace API {
 
-          export enum FetchTestPageQueryParam {
-            All = 'all',
-            Limited = 'limited'
-          }
-
-          export enum FetchTestXTypeHeaderParam {
-            All = 'all',
-            Limited = 'limited'
-          }
-
+        export enum FetchTestSelectUriParam {
+          All = 'all',
+          Limited = 'limited'
         }
 
-        const fetchTestReturnType: AnyType = [Object, [String, Object]];
+        export enum FetchTestPageQueryParam {
+          All = 'all',
+          Limited = 'limited'
+        }
+
+        export enum FetchTestXTypeHeaderParam {
+          All = 'all',
+          Limited = 'limited'
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -147,71 +148,72 @@ class RequestMixedParamsTest {
 
     assertEquals(
       """
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
+        }
 
-          fetchTest(type: API.FetchTestTypeUriParam, type_: API.FetchTestTypeQueryParam,
-              type__: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests/{type}',
-                  pathParameters: {
-                    type
-                  },
-                  queryParameters: {
-                    type: type_
-                  },
-                  acceptTypes: this.defaultAcceptTypes,
-                  headers: {
-                    type: type__
-                  }
+        fetchTest(type: API.FetchTestTypeUriParam, type_: API.FetchTestTypeQueryParam,
+            type__: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests/{type}',
+                pathParameters: {
+                  type
                 },
-                fetchTestReturnType
-            );
-          }
-
+                queryParameters: {
+                  type: type_
+                },
+                acceptTypes: this.defaultAcceptTypes,
+                headers: {
+                  type: type__
+                }
+              },
+              fetchTestReturnType
+          );
         }
 
-        export namespace API {
+      }
 
-          export enum FetchTestTypeUriParam {
-            All = 'all',
-            Limited = 'limited'
-          }
+      export namespace API {
 
-          export enum FetchTestTypeQueryParam {
-            All = 'all',
-            Limited = 'limited'
-          }
-
-          export enum FetchTestTypeHeaderParam {
-            All = 'all',
-            Limited = 'limited'
-          }
-
+        export enum FetchTestTypeUriParam {
+          All = 'all',
+          Limited = 'limited'
         }
 
-        const fetchTestReturnType: AnyType = [Object, [String, Object]];
+        export enum FetchTestTypeQueryParam {
+          All = 'all',
+          Limited = 'limited'
+        }
+
+        export enum FetchTestTypeHeaderParam {
+          All = 'all',
+          Limited = 'limited'
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [Object, [String, Object]];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

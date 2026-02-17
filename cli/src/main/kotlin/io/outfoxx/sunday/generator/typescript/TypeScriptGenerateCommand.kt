@@ -25,7 +25,10 @@ import io.outfoxx.sunday.generator.provideDelegate
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 
-abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
+abstract class TypeScriptGenerateCommand(
+  name: String,
+  help: String,
+) : CommonGenerateCommand(name = name, help = help) {
 
   val options by flags<TypeScriptTypeRegistry.Option> {
     AddGenerationHeader to "Add generation header to generated files".default(true)
@@ -36,8 +39,10 @@ abstract class TypeScriptGenerateCommand(name: String, help: String) : CommonGen
     TypeScriptTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
-    generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+  ) = generatorFactory(document, shapeIndex, typeRegistry)
 
   abstract fun generatorFactory(
     document: Document,

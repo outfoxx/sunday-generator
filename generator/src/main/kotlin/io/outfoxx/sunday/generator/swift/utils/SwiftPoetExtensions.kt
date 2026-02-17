@@ -16,15 +16,17 @@
 
 package io.outfoxx.sunday.generator.swift.utils
 
-import io.outfoxx.swiftpoet.*
+import io.outfoxx.swiftpoet.ARRAY
+import io.outfoxx.swiftpoet.GenericQualifiedTypeName
+import io.outfoxx.swiftpoet.ParameterizedTypeName
+import io.outfoxx.swiftpoet.TypeName
+import io.outfoxx.swiftpoet.parameterizedBy
 
 /**
  * Extension methods for SwiftPoet classes/types
  */
 
-fun TypeName.array(): TypeName {
-  return ARRAY.parameterizedBy(this)
-}
+fun TypeName.array(): TypeName = ARRAY.parameterizedBy(this)
 
 fun TypeName.concreteType(): TypeName =
   when (val unwrapped = makeNonOptional().makeNonImplicit()) {

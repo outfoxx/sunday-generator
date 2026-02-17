@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
-enum class ProblemField(val jsonName: String) {
+enum class ProblemField(
+  val jsonName: String,
+) {
   TYPE("type"),
   TITLE("title"),
   STATUS("status"),

@@ -18,10 +18,11 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 
-val typeScriptSundayTestOptions = TypeScriptSundayGenerator.Options(
-  false,
-  false,
-  "http://example.com/",
-  listOf("application/json"),
-  "API",
-)
+val typeScriptSundayTestOptions =
+  TypeScriptSundayGenerator.Options(
+    false,
+    false,
+    "http://example.com/",
+    listOf("application/json"),
+    "API",
+  )

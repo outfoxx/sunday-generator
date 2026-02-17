@@ -20,7 +20,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class LocalSwiftCompiler(private val command: String, workDir: Path) : SwiftCompiler(workDir) {
+class LocalSwiftCompiler(
+  private val command: String,
+  workDir: Path,
+) : SwiftCompiler(workDir) {
 
   private val swiftBuildDir: Path
 
@@ -55,8 +58,7 @@ class LocalSwiftCompiler(private val command: String, workDir: Path) : SwiftComp
           "${swiftBuildDir.resolve("build")}",
           "--cache-path",
           "${swiftBuildDir.resolve("cache")}",
-        )
-        .redirectErrorStream(true)
+        ).redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()

@@ -72,29 +72,30 @@ class RequestExplicitSecurityParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
-        import javax.ws.rs.Path
-        import javax.ws.rs.PathParam
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.String
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.HeaderParam
+      import javax.ws.rs.Path
+      import javax.ws.rs.PathParam
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests/{id}")
-          public fun fetchTest(@HeaderParam(value = "Authorization") bearerAuthorization: String,
-              @PathParam(value = "id") id: String): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests/{id}")
+        public fun fetchTest(@HeaderParam(value = "Authorization") bearerAuthorization: String,
+            @PathParam(value = "id") id: String): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -133,29 +134,30 @@ class RequestExplicitSecurityParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestPath
-        import org.jboss.resteasy.reactive.RestResponse
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestPath
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests/{id}")
-          public fun fetchTest(@RestHeader(value = "Authorization") bearerAuthorization: String, @RestPath
-              id: String): RestResponse<String>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests/{id}")
+        public fun fetchTest(@RestHeader(value = "Authorization") bearerAuthorization: String, @RestPath
+            id: String): RestResponse<String>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

@@ -55,38 +55,39 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [];
-          }
-
-          fetchEvents(): EventSource {
-            return this.requestFactory.eventSource(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: [MediaType.EventStream]
-                }
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [];
         }
+
+        fetchEvents(): EventSource {
+          return this.requestFactory.eventSource(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: [MediaType.EventStream]
+              }
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -114,63 +115,64 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        import {Test1} from './test1';
-        import {Test2} from './test2';
-        import {Test3} from './test3';
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {Test1} from './test1';
+      import {Test2} from './test2';
+      import {Test3} from './test3';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [];
-          }
-
-          fetchEventsSimple(): Observable<Test1> {
-            return this.requestFactory.eventStream<Test1>(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test1',
-                  acceptTypes: [MediaType.EventStream]
-                },
-                (decoder, event, id, data) => decoder.decodeText(data, [Test1])
-            );
-          }
-
-          fetchEventsDiscriminated(): Observable<Test1 | Test2 | Test3> {
-            return this.requestFactory.eventStream<Test1 | Test2 | Test3>(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test2',
-                  acceptTypes: [MediaType.EventStream]
-                },
-                (decoder, event, id, data, logger) => {
-                  switch (event) {
-                  case 'Test1': return decoder.decodeText(data, [Test1]);
-                  case 'test2': return decoder.decodeText(data, [Test2]);
-                  case 't3': return decoder.decodeText(data, [Test3]);
-                  default:
-                    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
-                    return undefined;
-                  }
-                },
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [];
         }
+
+        fetchEventsSimple(): Observable<Test1> {
+          return this.requestFactory.eventStream<Test1>(
+              {
+                method: 'GET',
+                pathTemplate: '/test1',
+                acceptTypes: [MediaType.EventStream]
+              },
+              (decoder, event, id, data) => decoder.decodeText(data, [Test1])
+          );
+        }
+
+        fetchEventsDiscriminated(): Observable<Test1 | Test2 | Test3> {
+          return this.requestFactory.eventStream<Test1 | Test2 | Test3>(
+              {
+                method: 'GET',
+                pathTemplate: '/test2',
+                acceptTypes: [MediaType.EventStream]
+              },
+              (decoder, event, id, data, logger) => {
+                switch (event) {
+                case 'Test1': return decoder.decodeText(data, [Test1]);
+                case 'test2': return decoder.decodeText(data, [Test2]);
+                case 't3': return decoder.decodeText(data, [Test3]);
+                default:
+                  logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+                  return undefined;
+                }
+              },
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -198,62 +200,63 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        import {Base} from './base';
-        import {Test1} from './test1';
-        import {Test2} from './test2';
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {Base} from './base';
+      import {Test1} from './test1';
+      import {Test2} from './test2';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [];
-          }
-
-          fetchEventsSimple(): Observable<Base> {
-            return this.requestFactory.eventStream<Base>(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test1',
-                  acceptTypes: [MediaType.EventStream]
-                },
-                (decoder, event, id, data) => decoder.decodeText(data, [Base])
-            );
-          }
-
-          fetchEventsDiscriminated(): Observable<Base> {
-            return this.requestFactory.eventStream<Base>(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test2',
-                  acceptTypes: [MediaType.EventStream]
-                },
-                (decoder, event, id, data, logger) => {
-                  switch (event) {
-                  case 'Test1': return decoder.decodeText(data, [Test1]);
-                  case 'Test2': return decoder.decodeText(data, [Test2]);
-                  default:
-                    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
-                    return undefined;
-                  }
-                },
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [];
         }
+
+        fetchEventsSimple(): Observable<Base> {
+          return this.requestFactory.eventStream<Base>(
+              {
+                method: 'GET',
+                pathTemplate: '/test1',
+                acceptTypes: [MediaType.EventStream]
+              },
+              (decoder, event, id, data) => decoder.decodeText(data, [Base])
+          );
+        }
+
+        fetchEventsDiscriminated(): Observable<Base> {
+          return this.requestFactory.eventStream<Base>(
+              {
+                method: 'GET',
+                pathTemplate: '/test2',
+                acceptTypes: [MediaType.EventStream]
+              },
+              (decoder, event, id, data, logger) => {
+                switch (event) {
+                case 'Test1': return decoder.decodeText(data, [Test1]);
+                case 'Test2': return decoder.decodeText(data, [Test2]);
+                default:
+                  logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+                  return undefined;
+                }
+              },
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

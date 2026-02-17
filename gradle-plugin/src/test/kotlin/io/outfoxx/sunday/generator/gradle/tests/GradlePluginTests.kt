@@ -130,12 +130,14 @@ class GradlePluginTests {
 
     buildFile.writeText(dualTestBuildFile)
 
-    val result = GradleRunner.create()
-      .withProjectDir(testProjectDir)
-      .withPluginClasspath()
-      .withArguments("build", "--stacktrace", "--debug")
-      .withDebug(true)
-      .build()
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("build", "--stacktrace", "--debug")
+        .withDebug(true)
+        .build()
 
     val genClientTask = result.task(":sundayGenerate_client")
     assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
@@ -173,13 +175,15 @@ class GradlePluginTests {
         testProjectDir.resolve("build").deleteRecursively()
       }
 
-      val result = GradleRunner.create()
-        .withProjectDir(testProjectDir)
-        .withPluginClasspath()
-        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-        .withDebug(true)
-        .forwardOutput()
-        .build()
+      val result =
+        GradleRunner
+          .create()
+          .withProjectDir(testProjectDir)
+          .withPluginClasspath()
+          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
+          .withDebug(true)
+          .forwardOutput()
+          .build()
 
       val genClientTask = result.task(":sundayGenerate_client")
       assertThat(genClientTask?.outcome, equalTo(outcome))
@@ -219,13 +223,15 @@ class GradlePluginTests {
       // Change contents of test.raml to force regeneration
       testProjectDir.resolve("src/main/sunday/test.raml").toPath().appendText("\n# Added comment\n")
 
-      val result = GradleRunner.create()
-        .withProjectDir(testProjectDir)
-        .withPluginClasspath()
-        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-        .withDebug(true)
-        .forwardOutput()
-        .build()
+      val result =
+        GradleRunner
+          .create()
+          .withProjectDir(testProjectDir)
+          .withPluginClasspath()
+          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
+          .withDebug(true)
+          .forwardOutput()
+          .build()
 
       val genClientTask = result.task(":sundayGenerate_client")
       assertThat(genClientTask?.outcome, equalTo(outcome))
@@ -305,13 +311,15 @@ class GradlePluginTests {
         )
       }
 
-      val result = GradleRunner.create()
-        .withProjectDir(testProjectDir)
-        .withPluginClasspath()
-        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-        .withDebug(true)
-        .forwardOutput()
-        .build()
+      val result =
+        GradleRunner
+          .create()
+          .withProjectDir(testProjectDir)
+          .withPluginClasspath()
+          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
+          .withDebug(true)
+          .forwardOutput()
+          .build()
 
       val genClientTask = result.task(":sundayGenerate_client")
       assertThat(genClientTask?.outcome, equalTo(clientOutcome))
@@ -342,12 +350,14 @@ class GradlePluginTests {
         """.trimIndent(),
     )
 
-    val result = GradleRunner.create()
-      .withProjectDir(testProjectDir)
-      .withPluginClasspath()
-      .withArguments("build", "--stacktrace", "--debug")
-      .withDebug(true)
-      .build()
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("build", "--stacktrace", "--debug")
+        .withDebug(true)
+        .build()
 
     val genClientTask = result.task(":sundayGenerate_client")
     assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
@@ -368,7 +378,10 @@ class GradlePluginTests {
     assertThat(source, not(containsString("List<@Size")))
   }
 
-  private fun copy(src: String, dstDir: File) {
+  private fun copy(
+    src: String,
+    dstDir: File,
+  ) {
     dstDir.mkdirs()
 
     val srcPath = Paths.get(GradlePluginTests::class.java.getResource(src)?.toURI() ?: error("Resource not found"))

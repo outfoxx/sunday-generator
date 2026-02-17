@@ -44,31 +44,32 @@ class ProblemTypesTest {
     val invalidIdTypeModSpec = findTypeMod("InvalidIdProblem@!invalid-id-problem", builtTypes)
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/invalid_id';
+        static TYPE: string = 'http://example.com/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")
+        FileSpec
+          .get(invalidIdTypeModSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -76,28 +77,29 @@ class ProblemTypesTest {
     val accountNotFoundTypeModSpec = findTypeMod("AccountNotFoundProblem@!account-not-found-problem", builtTypes)
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class AccountNotFoundProblem extends Problem {
+      export class AccountNotFoundProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/account_not_found';
+        static TYPE: string = 'http://example.com/account_not_found';
 
-          constructor(instance: string | URL | undefined = undefined) {
-            super({
-              type: AccountNotFoundProblem.TYPE,
-              title: 'Account Not Found',
-              status: 404,
-              detail: 'The requested account does not exist or you do not have permission to access it.',
-              instance
-            });
-          }
-
+        constructor(instance: string | URL | undefined = undefined) {
+          super({
+            type: AccountNotFoundProblem.TYPE,
+            title: 'Account Not Found',
+            status: 404,
+            detail: 'The requested account does not exist or you do not have permission to access it.',
+            instance
+          });
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(accountNotFoundTypeModSpec, "account-not-found-problem")
+        FileSpec
+          .get(accountNotFoundTypeModSpec, "account-not-found-problem")
           .writeTo(this)
       },
     )
@@ -105,39 +107,40 @@ class ProblemTypesTest {
     val testResolverModSpec = findTypeMod("TestResolverProblem@!test-resolver-problem", builtTypes)
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class TestResolverProblem extends Problem {
+      export class TestResolverProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/test_resolver';
+        static TYPE: string = 'http://example.com/test_resolver';
 
-          optionalString: string | null;
+        optionalString: string | null;
 
-          arrayOfStrings: Array<string>;
+        arrayOfStrings: Array<string>;
 
-          optionalArrayOfStrings: Array<string> | null;
+        optionalArrayOfStrings: Array<string> | null;
 
-          constructor(optionalString: string | null, arrayOfStrings: Array<string>,
-              optionalArrayOfStrings: Array<string> | null,
-              instance: string | URL | undefined = undefined) {
-            super({
-              type: TestResolverProblem.TYPE,
-              title: 'Test Resolve Type Reference',
-              status: 500,
-              detail: 'Tests the resolveTypeReference function implementation.',
-              instance
-            });
-            this.optionalString = optionalString;
-            this.arrayOfStrings = arrayOfStrings;
-            this.optionalArrayOfStrings = optionalArrayOfStrings;
-          }
-
+        constructor(optionalString: string | null, arrayOfStrings: Array<string>,
+            optionalArrayOfStrings: Array<string> | null,
+            instance: string | URL | undefined = undefined) {
+          super({
+            type: TestResolverProblem.TYPE,
+            title: 'Test Resolve Type Reference',
+            status: 500,
+            detail: 'Tests the resolveTypeReference function implementation.',
+            instance
+          });
+          this.optionalString = optionalString;
+          this.arrayOfStrings = arrayOfStrings;
+          this.optionalArrayOfStrings = optionalArrayOfStrings;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(testResolverModSpec, "test-resolver-problem")
+        FileSpec
+          .get(testResolverModSpec, "test-resolver-problem")
           .writeTo(this)
       },
     )
@@ -156,35 +159,36 @@ class ProblemTypesTest {
     val invalidIdTypeModSpec = findTypeMod("InvalidIdProblem@!invalid-id-problem", builtTypes)
     assertEquals(
       """
-        import {JsonClassType, JsonProperty, JsonTypeName} from '@outfoxx/jackson-js';
-        import {Problem} from '@outfoxx/sunday';
+      import {JsonClassType, JsonProperty, JsonTypeName} from '@outfoxx/jackson-js';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        @JsonTypeName({value: InvalidIdProblem.TYPE})
-        export class InvalidIdProblem extends Problem {
+      @JsonTypeName({value: InvalidIdProblem.TYPE})
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/invalid_id';
+        static TYPE: string = 'http://example.com/invalid_id';
 
-          @JsonProperty({value: 'offending_id'})
-          @JsonClassType({type: () => [String]})
-          offendingId: string;
+        @JsonProperty({value: 'offending_id'})
+        @JsonClassType({type: () => [String]})
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(invalidIdTypeModSpec, "invalid-id-problem")
+        FileSpec
+          .get(invalidIdTypeModSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -192,30 +196,31 @@ class ProblemTypesTest {
     val accountNotFoundTypeModSpec = findTypeMod("AccountNotFoundProblem@!account-not-found-problem", builtTypes)
     assertEquals(
       """
-        import {JsonTypeName} from '@outfoxx/jackson-js';
-        import {Problem} from '@outfoxx/sunday';
+      import {JsonTypeName} from '@outfoxx/jackson-js';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        @JsonTypeName({value: AccountNotFoundProblem.TYPE})
-        export class AccountNotFoundProblem extends Problem {
+      @JsonTypeName({value: AccountNotFoundProblem.TYPE})
+      export class AccountNotFoundProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/account_not_found';
+        static TYPE: string = 'http://example.com/account_not_found';
 
-          constructor(instance: string | URL | undefined = undefined) {
-            super({
-              type: AccountNotFoundProblem.TYPE,
-              title: 'Account Not Found',
-              status: 404,
-              detail: 'The requested account does not exist or you do not have permission to access it.',
-              instance
-            });
-          }
-
+        constructor(instance: string | URL | undefined = undefined) {
+          super({
+            type: AccountNotFoundProblem.TYPE,
+            title: 'Account Not Found',
+            status: 404,
+            detail: 'The requested account does not exist or you do not have permission to access it.',
+            instance
+          });
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(accountNotFoundTypeModSpec, "account-not-found-problem")
+        FileSpec
+          .get(accountNotFoundTypeModSpec, "account-not-found-problem")
           .writeTo(this)
       },
     )

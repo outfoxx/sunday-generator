@@ -40,17 +40,20 @@ open class KotlinSundayGenerateCommand :
       problemLibrary
     }
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
-    KotlinSundayGenerator(
-      document,
-      shapeIndex,
-      typeRegistry,
-      KotlinSundayGenerator.Options(
-        useResultResponseReturn,
-        servicePackageName ?: packageName,
-        problemBaseUri,
-        mediaTypes.toList(),
-        serviceSuffix,
-      ),
-    )
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: KotlinTypeRegistry,
+  ) = KotlinSundayGenerator(
+    document,
+    shapeIndex,
+    typeRegistry,
+    KotlinSundayGenerator.Options(
+      useResultResponseReturn,
+      servicePackageName ?: packageName,
+      problemBaseUri,
+      mediaTypes.toList(),
+      serviceSuffix,
+    ),
+  )
 }

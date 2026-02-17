@@ -47,12 +47,12 @@ fun String.toUppercaseInitialWordOrAbbreviation(): String {
 fun String.toUpperCamelCase(): String =
   split('-', '_', '.').joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
 
-fun String.toLowerCamelCase(): String =
-  toUpperCamelCase().replaceFirstChar { it.lowercase() }
+fun String.toLowerCamelCase(): String = toUpperCamelCase().replaceFirstChar { it.lowercase() }
 
 val camelRegex = """(?<=[a-zA-Z])[A-Z]""".toRegex()
 
 fun String.camelCaseToKebabCase() =
-  camelRegex.replace(this) { "-${it.value}" }
+  camelRegex
+    .replace(this) { "-${it.value}" }
     .lowercase()
     .replace("a-p-i", "api")

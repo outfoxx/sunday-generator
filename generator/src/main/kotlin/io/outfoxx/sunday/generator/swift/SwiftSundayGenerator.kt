@@ -25,17 +25,62 @@ import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.*
+import io.outfoxx.sunday.generator.APIAnnotationName.Nullify
+import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations.groupNullifyIntoStatusesAndProblems
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.swift.utils.*
-import io.outfoxx.sunday.generator.utils.*
-import io.outfoxx.swiftpoet.*
+import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
+import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
+import io.outfoxx.sunday.generator.swift.utils.DATA_RESPONSE
+import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
+import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
+import io.outfoxx.sunday.generator.swift.utils.EMPTY
+import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
+import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
+import io.outfoxx.sunday.generator.swift.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.swift.utils.RESULT_RESPONSE
+import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
+import io.outfoxx.sunday.generator.swift.utils.URL_REQUEST
+import io.outfoxx.sunday.generator.swift.utils.swiftConstant
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.mediaType
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.scalarValue
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.swiftpoet.ANY
+import io.outfoxx.swiftpoet.CodeBlock
+import io.outfoxx.swiftpoet.DATA
+import io.outfoxx.swiftpoet.DICTIONARY
+import io.outfoxx.swiftpoet.DeclaredTypeName
+import io.outfoxx.swiftpoet.FunctionSpec
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.STATIC
+import io.outfoxx.swiftpoet.NameAllocator
+import io.outfoxx.swiftpoet.ParameterSpec
+import io.outfoxx.swiftpoet.ParameterizedTypeName
+import io.outfoxx.swiftpoet.PropertySpec
+import io.outfoxx.swiftpoet.STRING
+import io.outfoxx.swiftpoet.TypeName
+import io.outfoxx.swiftpoet.TypeSpec
+import io.outfoxx.swiftpoet.VOID
+import io.outfoxx.swiftpoet.joinToCode
+import io.outfoxx.swiftpoet.parameterizedBy
 import java.net.URI
 
 class SwiftSundayGenerator(
@@ -44,11 +89,11 @@ class SwiftSundayGenerator(
   typeRegistry: SwiftTypeRegistry,
   override val options: Options,
 ) : SwiftGenerator(
-  document,
-  shapeIndex,
-  typeRegistry,
-  options,
-) {
+    document,
+    shapeIndex,
+    typeRegistry,
+    options,
+  ) {
 
   class Options(
     val useResultResponseReturn: Boolean,
@@ -56,10 +101,10 @@ class SwiftSundayGenerator(
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
   ) : Generator.Options(
-    defaultProblemBaseUri,
-    defaultMediaTypes,
-    serviceSuffix,
-  )
+      defaultProblemBaseUri,
+      defaultMediaTypes,
+      serviceSuffix,
+    )
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var queryParameters = mutableListOf<Pair<Parameter, TypeName>>()
@@ -76,7 +121,10 @@ class SwiftSundayGenerator(
   private var referencedAcceptTypes = mutableSetOf<String>()
   private var referencedProblemTypes = mutableMapOf<URI, TypeName>()
 
-  override fun processServiceBegin(serviceTypeName: DeclaredTypeName, endPoints: List<EndPoint>): TypeSpec.Builder {
+  override fun processServiceBegin(
+    serviceTypeName: DeclaredTypeName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder {
 
     val serviceTypeBuilder = TypeSpec.classBuilder(serviceTypeName)
 
@@ -84,24 +132,24 @@ class SwiftSundayGenerator(
     getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
 
       serviceTypeBuilder.addFunction(
-        FunctionSpec.builder("baseURL")
+        FunctionSpec
+          .builder("baseURL")
           .addModifiers(PUBLIC, STATIC)
           .returns(URI_TEMPLATE)
           .apply {
             baseURLParameters.forEach { param ->
               val paramTypeName = if (param.defaultValue != null) param.typeName.makeNonOptional() else param.typeName
               addParameter(
-                ParameterSpec.builder(param.name, paramTypeName)
+                ParameterSpec
+                  .builder(param.name, paramTypeName)
                   .apply {
                     if (param.defaultValue != null) {
                       defaultValue(param.defaultValue.swiftConstant(paramTypeName, param.shape))
                     }
-                  }
-                  .build(),
+                  }.build(),
               )
             }
-          }
-          .addCode("return %T(%>\n", URI_TEMPLATE)
+          }.addCode("return %T(%>\n", URI_TEMPLATE)
           .addCode("format: %S,\nparameters: [%>\n", baseURL)
           .apply {
             if (baseURLParameters.isEmpty()) {
@@ -115,8 +163,7 @@ class SwiftSundayGenerator(
                 addCode(",\n")
               }
             }
-          }
-          .addCode("%<\n]%<\n)\n")
+          }.addCode("%<\n]%<\n)\n")
           .build(),
       )
     }
@@ -126,10 +173,12 @@ class SwiftSundayGenerator(
 
     serviceTypeBuilder.addProperty("requestFactory", REQUEST_FACTORY, PUBLIC)
 
-    consBuilder = FunctionSpec.constructorBuilder()
-      .addModifiers(PUBLIC)
-      .addParameter("requestFactory", REQUEST_FACTORY)
-      .addStatement("self.requestFactory = requestFactory")
+    consBuilder =
+      FunctionSpec
+        .constructorBuilder()
+        .addModifiers(PUBLIC)
+        .addParameter("requestFactory", REQUEST_FACTORY)
+        .addStatement("self.requestFactory = requestFactory")
 
     return serviceTypeBuilder
   }
@@ -164,17 +213,17 @@ class SwiftSundayGenerator(
 
       consBuilder
         .addParameter(
-          ParameterSpec.builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
+          ParameterSpec
+            .builder("defaultContentTypes", MEDIA_TYPE_ARRAY)
             .defaultValue("%L", mediaTypesArray(contentTypes))
             .build(),
-        )
-        .addStatement("self.defaultContentTypes = defaultContentTypes")
+        ).addStatement("self.defaultContentTypes = defaultContentTypes")
         .addParameter(
-          ParameterSpec.builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
+          ParameterSpec
+            .builder("defaultAcceptTypes", MEDIA_TYPE_ARRAY)
             .defaultValue("%L", mediaTypesArray(acceptTypes))
             .build(),
-        )
-        .addStatement("self.defaultAcceptTypes = defaultAcceptTypes")
+        ).addStatement("self.defaultAcceptTypes = defaultAcceptTypes")
         .build()
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
@@ -366,7 +415,10 @@ class SwiftSundayGenerator(
 
     val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-    fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
+    fun parametersGen(
+      fieldName: String,
+      parameters: List<Pair<Parameter, TypeName>>,
+    ): CodeBlock {
       val anyOptional = parameters.any { it.second.optional }
       val parametersBlock = CodeBlock.builder().add("%L: [%>\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
@@ -488,14 +540,15 @@ class SwiftSundayGenerator(
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n  ") { "case %S: return try decoder.decode(%T.self, from: data)" }
-          val typesParams = types.flatMap { type ->
-            val typeName = resolveTypeName(type, null)
-            val discValue =
-              type.discriminatorValue
-                ?: (typeName as? DeclaredTypeName)?.simpleName
-                ?: "$typeName"
-            listOf(discValue, typeName)
-          }
+          val typesParams =
+            types.flatMap { type ->
+              val typeName = resolveTypeName(type, null)
+              val discValue =
+                type.discriminatorValue
+                  ?: (typeName as? DeclaredTypeName)?.simpleName
+                  ?: "$typeName"
+              listOf(discValue, typeName)
+            }
 
           builder.add("return self.requestFactory.eventStream(%>\n", originalReturnType)
           builder.add(reqGen())
@@ -585,7 +638,8 @@ class SwiftSundayGenerator(
         .toTypedArray()
 
     val nullFunCodeBuilder =
-      CodeBlock.builder()
+      CodeBlock
+        .builder()
         .add(
           """
           |return try await nilifyResponse(
@@ -613,15 +667,15 @@ class SwiftSundayGenerator(
       }
 
     typeBuilder.addFunction(
-      FunctionSpec.builder("${function.name}OrNil")
+      FunctionSpec
+        .builder("${function.name}OrNil")
         .addModifiers(function.modifiers)
         .addTypeVariables(function.typeVariables)
         .addParameters(function.parameters)
         .apply {
           function.attributes.forEach { addAttribute(it) }
           returnTypeOptional?.let { returns(it) }
-        }
-        .async(true)
+        }.async(true)
         .throws(true)
         .addDoc(function.doc)
         .addCode(nullFunCodeBuilder.build())
@@ -629,13 +683,14 @@ class SwiftSundayGenerator(
     )
   }
 
-  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock {
-    return mediaTypesArray(*mimeTypes.toTypedArray())
-  }
+  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock = mediaTypesArray(*mimeTypes.toTypedArray())
 
-  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock {
-    return mimeTypes.distinct().map { mediaType(it) }.joinToCode(prefix = "[", suffix = "]")
-  }
+  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock =
+    mimeTypes
+      .distinct()
+      .map {
+        mediaType(it)
+      }.joinToCode(prefix = "[", suffix = "]")
 
   private fun mediaType(value: String) =
     when (value) {

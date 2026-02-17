@@ -101,7 +101,12 @@ abstract class SwiftGenerator(
   override val options: Options,
 ) : Generator(document.api, options) {
 
-  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
+  data class URIParameter(
+    val name: String,
+    val typeName: TypeName,
+    val shape: Shape?,
+    val defaultValue: DataNode?,
+  )
 
   override fun generateServiceTypes() {
 
@@ -126,7 +131,10 @@ abstract class SwiftGenerator(
     }
   }
 
-  open fun generateServiceType(serviceTypeName: DeclaredTypeName, endPoints: List<EndPoint>): TypeSpec.Builder {
+  open fun generateServiceType(
+    serviceTypeName: DeclaredTypeName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder {
 
     val serviceTypeBuilder = processServiceBegin(serviceTypeName, endPoints)
 
@@ -135,7 +143,10 @@ abstract class SwiftGenerator(
     return processServiceEnd(serviceTypeBuilder)
   }
 
-  abstract fun processServiceBegin(serviceTypeName: DeclaredTypeName, endPoints: List<EndPoint>): TypeSpec.Builder
+  abstract fun processServiceBegin(
+    serviceTypeName: DeclaredTypeName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder
 
   abstract fun processResourceMethodStart(
     endPoint: EndPoint,
@@ -199,9 +210,7 @@ abstract class SwiftGenerator(
     functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec
 
-  open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder {
-    return typeBuilder
-  }
+  open fun processServiceEnd(typeBuilder: TypeSpec.Builder): TypeSpec.Builder = typeBuilder
 
   private fun generateClientServiceMethods(
     typeName: DeclaredTypeName,
@@ -219,7 +228,8 @@ abstract class SwiftGenerator(
         val operationName = nameGenerator.generate(endPoint, operation)
 
         var functionBuilder =
-          FunctionSpec.builder(operationName)
+          FunctionSpec
+            .builder(operationName)
             .addModifiers(PUBLIC)
             .returns(VOID)
 
@@ -344,18 +354,17 @@ abstract class SwiftGenerator(
                   val problemType =
                     problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
                   problemCode to problemType
-                }
-                .toMap()
+                }.toMap()
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(
-                  problemCode,
-                  problemTypeDefinition,
-                  shapeIndex,
-                )
-              }
-              .toMap()
+                problemTypeDefinition.type to
+                  typeRegistry.defineProblemType(
+                    problemCode,
+                    problemTypeDefinition,
+                    shapeIndex,
+                  )
+              }.toMap()
           } ?: emptyMap()
 
         val functionSpec =
@@ -388,7 +397,8 @@ abstract class SwiftGenerator(
         )
 
       val uriParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
           .run {
             if (parameter.required == false) {
               makeOptional()
@@ -444,7 +454,8 @@ abstract class SwiftGenerator(
         )
 
       val queryParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
           .run {
             if (parameter.required == false) {
               makeOptional()
@@ -455,10 +466,11 @@ abstract class SwiftGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val queryParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
-        queryParameterTypeName,
-      )
+      val queryParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(parameter.swiftIdentifierName, parameter),
+          queryParameterTypeName,
+        )
 
       val defaultValue = parameter.schema?.defaultValue
       if (defaultValue != null) {
@@ -499,7 +511,8 @@ abstract class SwiftGenerator(
         )
 
       val headerParameterTypeName =
-        typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(header.schema!!, headerParameterTypeNameContext)
           .run {
             if (header.required == false) {
               makeOptional()
@@ -510,10 +523,11 @@ abstract class SwiftGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val headerParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(header.swiftIdentifierName, header),
-        headerParameterTypeName,
-      )
+      val headerParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(header.swiftIdentifierName, header),
+          headerParameterTypeName,
+        )
 
       val defaultValue = header.schema?.defaultValue
       if (defaultValue != null) {
@@ -537,17 +551,19 @@ abstract class SwiftGenerator(
     }
   }
 
-  fun resolveTypeName(shape: Shape, suggestedTypeName: DeclaredTypeName?): TypeName {
-    return typeRegistry.resolveTypeName(shape, SwiftResolutionContext(document, shapeIndex, suggestedTypeName))
-  }
+  fun resolveTypeName(
+    shape: Shape,
+    suggestedTypeName: DeclaredTypeName?,
+  ): TypeName = typeRegistry.resolveTypeName(shape, SwiftResolutionContext(document, shapeIndex, suggestedTypeName))
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
 
     val problemBaseUriParams =
-      document.api.findAnnotation(
-        ProblemBaseUriParams,
-        null,
-      )?.objectValue ?: emptyMap()
+      document.api
+        .findAnnotation(
+          ProblemBaseUriParams,
+          null,
+        )?.objectValue ?: emptyMap()
 
     fun expand(template: String): URI {
       try {
@@ -555,20 +571,27 @@ abstract class SwiftGenerator(
       } catch (ignored: URISyntaxException) {
         genError(
           """
-            Problem URI is not a valid URI; it cannot be a template.
-            Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
+          Problem URI is not a valid URI; it cannot be a template.
+          Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
           """.trimIndent(),
         )
       }
     }
 
-    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
+    val baseUri =
+      expand(
+        document.api.servers
+          .firstOrNull()
+          ?.url ?: options.defaultProblemBaseUri,
+      )
 
     var problemBaseUri =
-      document.api.findAnnotation(
-        ProblemBaseUri,
-        null,
-      )?.stringValue?.let { expand(it) } ?: baseUri
+      document.api
+        .findAnnotation(
+          ProblemBaseUri,
+          null,
+        )?.stringValue
+        ?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
     }
@@ -584,8 +607,7 @@ abstract class SwiftGenerator(
           .properties()
           ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit, problemAnn) }
           ?.entries
-      }
-      .flatten()
+      }.flatten()
       .associate { it.key to it.value }
       .toMap()
   }

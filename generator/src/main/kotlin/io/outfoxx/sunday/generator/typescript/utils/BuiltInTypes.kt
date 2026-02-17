@@ -23,5 +23,7 @@ val URL_TYPE = TypeName.implicit("URL")
 val RECORD = TypeName.implicit("Record")
 val UNKNOWN = TypeName.implicit("unknown")
 
-fun recordType(keyType: TypeName, valueType: TypeName): TypeName =
-  TypeName.parameterizedType(RECORD, keyType, valueType)
+fun recordType(
+  keyType: TypeName,
+  valueType: TypeName,
+): TypeName = TypeName.parameterizedType(RECORD, keyType, valueType)

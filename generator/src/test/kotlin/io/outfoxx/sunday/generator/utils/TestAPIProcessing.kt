@@ -86,9 +86,13 @@ object TestAPIProcessing : APIProcessor() {
       }
     }
 
-    val baseUri = document.api.servers.firstOrNull()?.url ?: "http://example.com/"
+    val baseUri =
+      document.api.servers
+        .firstOrNull()
+        ?.url ?: "http://example.com/"
     val problemBaseUri =
-      UriTemplate.buildFromTemplate(baseUri)
+      UriTemplate
+        .buildFromTemplate(baseUri)
         .template(document.api.findAnnotation(APIAnnotationName.ProblemBaseUri, mode)?.stringValue ?: "")
         .build()
         .expand()

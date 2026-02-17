@@ -25,23 +25,68 @@ import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
 import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.APIAnnotationName.*
+import io.outfoxx.sunday.generator.APIAnnotationName.EventSource
+import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
+import io.outfoxx.sunday.generator.APIAnnotationName.Exclude
+import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
+import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.Generator
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.typescript.utils.*
-import io.outfoxx.sunday.generator.utils.*
-import io.outfoxx.typescriptpoet.*
+import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
+import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
+import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
+import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_PROMISE_RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
+import io.outfoxx.sunday.generator.typescript.utils.PROMISE_FROM
+import io.outfoxx.sunday.generator.typescript.utils.REQUEST
+import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.RESULT_RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.isOptional
+import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.nullable
+import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
+import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
+import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
+import io.outfoxx.sunday.generator.utils.allowEmptyValue
+import io.outfoxx.sunday.generator.utils.defaultValue
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.mediaType
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.scalarValue
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.typescriptpoet.ClassSpec
+import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.CodeBlock.Companion.joinToCode
+import io.outfoxx.typescriptpoet.FunctionSpec
+import io.outfoxx.typescriptpoet.Modifier
+import io.outfoxx.typescriptpoet.NameAllocator
+import io.outfoxx.typescriptpoet.ParameterSpec
+import io.outfoxx.typescriptpoet.PropertySpec
+import io.outfoxx.typescriptpoet.TypeName
 import io.outfoxx.typescriptpoet.TypeName.Companion.ARRAY
 import io.outfoxx.typescriptpoet.TypeName.Companion.PROMISE
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import java.net.URI
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
 
 /**
  * Generator for TypeScript/Sunday interfaces
@@ -52,11 +97,11 @@ class TypeScriptSundayGenerator(
   typeRegistry: TypeScriptTypeRegistry,
   override val options: Options,
 ) : TypeScriptGenerator(
-  document,
-  shapeIndex,
-  typeRegistry,
-  options,
-) {
+    document,
+    shapeIndex,
+    typeRegistry,
+    options,
+  ) {
 
   class Options(
     val useResultResponseReturn: Boolean,
@@ -65,10 +110,10 @@ class TypeScriptSundayGenerator(
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
   ) : Generator.Options(
-    defaultProblemBaseUri,
-    defaultMediaTypes,
-    serviceSuffix,
-  )
+      defaultProblemBaseUri,
+      defaultMediaTypes,
+      serviceSuffix,
+    )
 
   private var uriParameters = mutableListOf<Pair<Parameter, TypeName>>()
   private var queryParameters = mutableListOf<Pair<Parameter, TypeName>>()
@@ -85,20 +130,26 @@ class TypeScriptSundayGenerator(
   private var referencedAcceptTypes = mutableSetOf<String>()
   private var referencedProblemTypes = mutableMapOf<URI, TypeName>()
 
-  override fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
+  override fun processServiceBegin(
+    endPoints: List<EndPoint>,
+    typeBuilder: ClassSpec.Builder,
+  ): ClassSpec.Builder {
 
     referencedContentTypes = mutableSetOf()
     referencedAcceptTypes = mutableSetOf("application/problem+json")
 
     typeBuilder
       .addProperty(
-        PropertySpec.builder("requestFactory", REQUEST_FACTORY, false, Modifier.PUBLIC)
+        PropertySpec
+          .builder("requestFactory", REQUEST_FACTORY, false, Modifier.PUBLIC)
           .initializer("requestFactory")
           .build(),
       )
 
-    consBuilder = FunctionSpec.constructorBuilder()
-      .addParameter("requestFactory", REQUEST_FACTORY)
+    consBuilder =
+      FunctionSpec
+        .constructorBuilder()
+        .addParameter("requestFactory", REQUEST_FACTORY)
 
     return typeBuilder
   }
@@ -139,11 +190,11 @@ class TypeScriptSundayGenerator(
 
       consBuilder
         .addParameter(
-          ParameterSpec.builder("options", optionsType, true)
+          ParameterSpec
+            .builder("options", optionsType, true)
             .defaultValue("undefined")
             .build(),
-        )
-        .addStatement("this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L", mediaTypesArray(contentTypes))
+        ).addStatement("this.defaultContentTypes =\noptions?.defaultContentTypes ?? %L", mediaTypesArray(contentTypes))
         .addStatement("this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L", mediaTypesArray(acceptTypes))
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
@@ -170,7 +221,7 @@ class TypeScriptSundayGenerator(
     resultBodyType = body
     originalReturnType = returnTypeName
 
-    var asyncWrapper =
+    val asyncWrapper =
       if (
         operation.findBoolAnnotation(EventSource, null) == true ||
         operation.hasAnnotation(EventStream, null)
@@ -336,7 +387,10 @@ class TypeScriptSundayGenerator(
 
     val typeProperties = mutableMapOf<String, CodeBlock>()
 
-    fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
+    fun parametersGen(
+      fieldName: String,
+      parameters: List<Pair<Parameter, TypeName>>,
+    ): CodeBlock {
       val parametersBlock = CodeBlock.builder().add("%L: {%>\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
         val (param, paramType) = parameterInfo
@@ -473,14 +527,15 @@ class TypeScriptSundayGenerator(
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n  ") { "case %S: return decoder.decodeText(data, [%T]);" }
-          val typesParams = types.flatMap { type ->
-            val typeName = typeRegistry.resolveTypeName(type, TypeScriptResolutionContext(document, shapeIndex, null))
-            val discValue =
-              type.discriminatorValue
-                ?: (typeName as? TypeName.Standard)?.simpleName()
-                ?: "$typeName"
-            listOf(discValue, typeName)
-          }
+          val typesParams =
+            types.flatMap { type ->
+              val typeName = typeRegistry.resolveTypeName(type, TypeScriptResolutionContext(document, shapeIndex, null))
+              val discValue =
+                type.discriminatorValue
+                  ?: (typeName as? TypeName.Standard)?.simpleName()
+                  ?: "$typeName"
+              listOf(discValue, typeName)
+            }
 
           builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
           builder.add(specGen())
@@ -587,7 +642,8 @@ class TypeScriptSundayGenerator(
         .toTypedArray()
 
     val nullFunCodeBuilder =
-      CodeBlock.builder()
+      CodeBlock
+        .builder()
         .add(
           """
           |return this.%N(${function.parameters.joinToString { it.name }})
@@ -613,27 +669,28 @@ class TypeScriptSundayGenerator(
       }
 
     typeBuilder.addFunction(
-      FunctionSpec.builder("${function.name}OrNull")
+      FunctionSpec
+        .builder("${function.name}OrNull")
         .addDecorators(function.decorators)
         .addModifiers(function.modifiers)
         .addTypeVariables(function.typeVariables)
         .addParameters(function.parameters)
         .apply {
           returnTypeOptional?.let { returns(it) }
-        }
-        .addTSDoc(function.tsDoc)
+        }.addTSDoc(function.tsDoc)
         .addCode(nullFunCodeBuilder.build())
         .build(),
     )
   }
 
-  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock {
-    return mediaTypesArray(*mimeTypes.toTypedArray())
-  }
+  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock = mediaTypesArray(*mimeTypes.toTypedArray())
 
-  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock {
-    return mimeTypes.distinct().map { mediaType(it) }.joinToCode(prefix = "[", suffix = "]")
-  }
+  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock =
+    mimeTypes
+      .distinct()
+      .map {
+        mediaType(it)
+      }.joinToCode(prefix = "[", suffix = "]")
 
   private fun mediaType(value: String) =
     when (value) {

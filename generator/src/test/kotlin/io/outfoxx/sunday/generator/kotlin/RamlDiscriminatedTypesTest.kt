@@ -41,83 +41,89 @@ class RamlDiscriminatedTypesTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
-    val parenTypeSpec = builtTypes[ClassName.bestGuess("io.test.Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonSubTypes
-        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonSubTypes
+      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+      import kotlin.String
 
-        @JsonTypeInfo(
-          use = JsonTypeInfo.Id.NAME,
-          include = JsonTypeInfo.As.EXISTING_PROPERTY,
-          property = "type",
-        )
-        @JsonSubTypes(value = [
-          JsonSubTypes.Type(value = Child1::class),
-          JsonSubTypes.Type(value = Child2::class)
-        ])
-        public interface Parent {
-          public val type: String
-        }
+      @JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "type",
+      )
+      @JsonSubTypes(value = [
+        JsonSubTypes.Type(value = Child1::class),
+        JsonSubTypes.Type(value = Child2::class)
+      ])
+      public interface Parent {
+        public val type: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", parenTypeSpec)
+        FileSpec
+          .get("io.test", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("Child1")
-        public interface Child1 : Parent {
-          public val `value`: String?
+      @JsonTypeName("Child1")
+      public interface Child1 : Parent {
+        public val `value`: String?
 
-          public val value1: Int
-        }
+        public val value1: Int
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child1TypeSpec)
+        FileSpec
+          .get("io.test", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("child2")
-        public interface Child2 : Parent {
-          public val `value`: String?
+      @JsonTypeName("child2")
+      public interface Child2 : Parent {
+        public val `value`: String?
 
-          public val value2: Int
-        }
+        public val value2: Int
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child2TypeSpec)
+        FileSpec
+          .get("io.test", child2TypeSpec)
           .writeTo(this)
       },
     )
@@ -132,156 +138,162 @@ class RamlDiscriminatedTypesTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
-    val parenTypeSpec = builtTypes[ClassName.bestGuess("io.test.Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonSubTypes
-        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonSubTypes
+      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.String
 
-        @JsonTypeInfo(
-          use = JsonTypeInfo.Id.NAME,
-          include = JsonTypeInfo.As.EXISTING_PROPERTY,
-          property = "type",
-        )
-        @JsonSubTypes(value = [
-          JsonSubTypes.Type(value = Child1::class),
-          JsonSubTypes.Type(value = Child2::class)
-        ])
-        public abstract class Parent {
-          public abstract val type: String
+      @JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "type",
+      )
+      @JsonSubTypes(value = [
+        JsonSubTypes.Type(value = Child1::class),
+        JsonSubTypes.Type(value = Child2::class)
+      ])
+      public abstract class Parent {
+        public abstract val type: String
 
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
 
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""Parent()""${'"'}
+          return true
         }
+
+        override fun toString(): String = ${'"'}""Parent()""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", parenTypeSpec)
+        FileSpec
+          .get("io.test", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("Child1")
-        public class Child1(
-          public val `value`: String? = null,
-          public val value1: Int,
-        ) : Parent() {
-          override val type: String
-            get() = "Child1"
+      @JsonTypeName("Child1")
+      public class Child1(
+        public val `value`: String? = null,
+        public val value1: Int,
+      ) : Parent() {
+        override val type: String
+          get() = "Child1"
 
-          public fun copy(`value`: String? = null, value1: Int? = null): Child1 = Child1(value ?:
-              this.value, value1 ?: this.value1)
+        public fun copy(`value`: String? = null, value1: Int? = null): Child1 = Child1(value ?:
+            this.value, value1 ?: this.value1)
 
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + (value?.hashCode() ?: 0)
-            result = 31 * result + value1.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Child1
-
-            if (value != other.value) return false
-            if (value1 != other.value1) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Child1(value='${'$'}value',
-          | value1='${'$'}value1')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + (value?.hashCode() ?: 0)
+          result = 31 * result + value1.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Child1
+
+          if (value != other.value) return false
+          if (value1 != other.value1) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Child1(value='${'$'}value',
+        | value1='${'$'}value1')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child1TypeSpec)
+        FileSpec
+          .get("io.test", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("child2")
-        public class Child2(
-          public val `value`: String? = null,
-          public val value2: Int,
-        ) : Parent() {
-          override val type: String
-            get() = "child2"
+      @JsonTypeName("child2")
+      public class Child2(
+        public val `value`: String? = null,
+        public val value2: Int,
+      ) : Parent() {
+        override val type: String
+          get() = "child2"
 
-          public fun copy(`value`: String? = null, value2: Int? = null): Child2 = Child2(value ?:
-              this.value, value2 ?: this.value2)
+        public fun copy(`value`: String? = null, value2: Int? = null): Child2 = Child2(value ?:
+            this.value, value2 ?: this.value2)
 
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + (value?.hashCode() ?: 0)
-            result = 31 * result + value2.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Child2
-
-            if (value != other.value) return false
-            if (value2 != other.value2) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Child2(value='${'$'}value',
-          | value2='${'$'}value2')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + (value?.hashCode() ?: 0)
+          result = 31 * result + value2.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Child2
+
+          if (value != other.value) return false
+          if (value2 != other.value2) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Child2(value='${'$'}value',
+        | value2='${'$'}value2')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child2TypeSpec)
+        FileSpec
+          .get("io.test", child2TypeSpec)
           .writeTo(this)
       },
     )
@@ -296,76 +308,82 @@ class RamlDiscriminatedTypesTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
-    val parenTypeSpec = builtTypes[ClassName.bestGuess("io.test.Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonSubTypes
-        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+      import com.fasterxml.jackson.`annotation`.JsonSubTypes
+      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
 
-        @JsonTypeInfo(
-          use = JsonTypeInfo.Id.NAME,
-          include = JsonTypeInfo.As.EXISTING_PROPERTY,
-          property = "type",
-        )
-        @JsonSubTypes(value = [
-          JsonSubTypes.Type(value = Child1::class),
-          JsonSubTypes.Type(value = Child2::class)
-        ])
-        public interface Parent {
-          public val type: Type
-        }
+      @JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "type",
+      )
+      @JsonSubTypes(value = [
+        JsonSubTypes.Type(value = Child1::class),
+        JsonSubTypes.Type(value = Child2::class)
+      ])
+      public interface Parent {
+        public val type: Type
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", parenTypeSpec)
+        FileSpec
+          .get("io.test", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.String
 
-        @JsonTypeName("Child1")
-        public interface Child1 : Parent {
-          public val `value`: String?
-        }
+      @JsonTypeName("Child1")
+      public interface Child1 : Parent {
+        public val `value`: String?
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child1TypeSpec)
+        FileSpec
+          .get("io.test", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.String
 
-        @JsonTypeName("Child2")
-        public interface Child2 : Parent {
-          public val `value`: String?
-        }
+      @JsonTypeName("Child2")
+      public interface Child2 : Parent {
+        public val `value`: String?
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child2TypeSpec)
+        FileSpec
+          .get("io.test", child2TypeSpec)
           .writeTo(this)
       },
     )
@@ -380,142 +398,148 @@ class RamlDiscriminatedTypesTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
-    val parenTypeSpec = builtTypes[ClassName.bestGuess("io.test.Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonSubTypes
-        import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonSubTypes
+      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.String
 
-        @JsonTypeInfo(
-          use = JsonTypeInfo.Id.NAME,
-          include = JsonTypeInfo.As.EXISTING_PROPERTY,
-          property = "type",
-        )
-        @JsonSubTypes(value = [
-          JsonSubTypes.Type(value = Child1::class),
-          JsonSubTypes.Type(value = Child2::class)
-        ])
-        public abstract class Parent {
-          public abstract val type: Type
+      @JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "type",
+      )
+      @JsonSubTypes(value = [
+        JsonSubTypes.Type(value = Child1::class),
+        JsonSubTypes.Type(value = Child2::class)
+      ])
+      public abstract class Parent {
+        public abstract val type: Type
 
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
 
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""Parent()""${'"'}
+          return true
         }
+
+        override fun toString(): String = ${'"'}""Parent()""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", parenTypeSpec)
+        FileSpec
+          .get("io.test", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("Child1")
-        public class Child1(
-          public val `value`: String? = null,
-        ) : Parent() {
-          override val type: Type
-            get() = Type.Child1
+      @JsonTypeName("Child1")
+      public class Child1(
+        public val `value`: String? = null,
+      ) : Parent() {
+        override val type: Type
+          get() = Type.Child1
 
-          public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
+        public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
 
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + (value?.hashCode() ?: 0)
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Child1
-
-            if (value != other.value) return false
-
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + (value?.hashCode() ?: 0)
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Child1
+
+          if (value != other.value) return false
+
+          return true
+        }
+
+        override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child1TypeSpec)
+        FileSpec
+          .get("io.test", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[ClassName.bestGuess("io.test.Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[ClassName.bestGuess("io.test.Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonTypeName
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonTypeName
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        @JsonTypeName("Child2")
-        public class Child2(
-          public val `value`: String? = null,
-        ) : Parent() {
-          override val type: Type
-            get() = Type.Child2
+      @JsonTypeName("Child2")
+      public class Child2(
+        public val `value`: String? = null,
+      ) : Parent() {
+        override val type: Type
+          get() = Type.Child2
 
-          public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
+        public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
 
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + (value?.hashCode() ?: 0)
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Child2
-
-            if (value != other.value) return false
-
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + (value?.hashCode() ?: 0)
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Child2
+
+          if (value != other.value) return false
+
+          return true
+        }
+
+        override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", child2TypeSpec)
+        FileSpec
+          .get("io.test", child2TypeSpec)
           .writeTo(this)
       },
     )

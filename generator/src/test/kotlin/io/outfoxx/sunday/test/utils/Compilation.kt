@@ -33,17 +33,20 @@ object Compilation {
 
   val isCI = !System.getenv("CI").isNullOrBlank()
 
-  fun printFailure(files: Map<String, String>, compilerOutput: String) {
+  fun printFailure(
+    files: Map<String, String>,
+    compilerOutput: String,
+  ) {
 
     err.println("Compilation failed:\n")
 
     out.println(
       """
-        
-        
-        ${colorize("COMPILER OUTPUT", headerNameFmt)}
-        ${colorize(" ".repeat(60), headerMarkerFmt)}
-        
+      
+      
+      ${colorize("COMPILER OUTPUT", headerNameFmt)}
+      ${colorize(" ".repeat(60), headerMarkerFmt)}
+      
       """.trimIndent(),
     )
 
@@ -51,11 +54,11 @@ object Compilation {
 
     out.println(
       """
-        
-        
-        ${colorize("CODE", headerNameFmt)}
-        ${colorize(" ".repeat(60), headerMarkerFmt)}
-        
+      
+      
+      ${colorize("CODE", headerNameFmt)}
+      ${colorize(" ".repeat(60), headerMarkerFmt)}
+      
       """.trimIndent(),
     )
 
@@ -81,7 +84,10 @@ object Compilation {
 
   private val lineNumberFmt = AnsiFormat(BRIGHT_BLACK_TEXT(), SATURATED())
 
-  private fun colorize(string: String, format: AnsiFormat): String {
+  private fun colorize(
+    string: String,
+    format: AnsiFormat,
+  ): String {
     if (isCI) {
       return string
     }
@@ -90,7 +96,9 @@ object Compilation {
   }
 
   private fun numberLines(string: String): String =
-    string.split("\n").mapIndexed { index, line ->
-      colorize("${(index + 1).toString().padStart(4)}|", lineNumberFmt) + " $line"
-    }.joinToString("\n")
+    string
+      .split("\n")
+      .mapIndexed { index, line ->
+        colorize("${(index + 1).toString().padStart(4)}|", lineNumberFmt) + " $line"
+      }.joinToString("\n")
 }

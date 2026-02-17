@@ -40,13 +40,18 @@ import amf.core.internal.annotations.ResolvedLinkTargetAnnotation
 import amf.core.internal.metamodel.domain.`DomainElementModel$`
 import amf.core.internal.metamodel.domain.`ShapeModel$`
 import amf.shapes.client.platform.model.domain.NodeShape
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.utils.LocalSundayDefinitionResourceLoader
+import io.outfoxx.sunday.generator.utils.allUnits
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.value
 import scala.Option
-import scala.collection.JavaConverters.*
+import scala.collection.JavaConverters.asJavaIterable
+import scala.collection.JavaConverters.asJavaIterator
+import scala.collection.JavaConverters.asScalaIterator
+import scala.collection.JavaConverters.seqAsJavaList
 import scala.collection.Seq
 import java.net.URI
 import java.util.concurrent.ExecutionException
-import kotlin.collections.set
 import amf.core.client.scala.model.document.BaseUnit as InternalBaseUnit
 import amf.core.client.scala.model.domain.Annotation as InternalAnnotation
 import amf.core.client.scala.model.domain.DomainElement as InternalDomainElement
@@ -81,20 +86,21 @@ open class APIProcessor {
       get() = validationResults.none { it.severityLevel() == SeverityLevels.VIOLATION() }
 
     val validationLog: List<Entry>
-      get() = validationResults.map {
-        val level =
-          when (it.severityLevel()) {
-            SeverityLevels.VIOLATION() -> Level.Error
-            SeverityLevels.WARNING() -> Level.Warning
-            SeverityLevels.INFO() -> Level.Info
-            else -> Level.Error
-          }
-        val file = it.location()?.orElse("unknown")!!
-        val line = it.position().start().line()
-        val column = it.position().start().column()
-        val message = it.message()
-        Entry(level, file, line, column, message)
-      }
+      get() =
+        validationResults.map {
+          val level =
+            when (it.severityLevel()) {
+              SeverityLevels.VIOLATION() -> Level.Error
+              SeverityLevels.WARNING() -> Level.Warning
+              SeverityLevels.INFO() -> Level.Info
+              else -> Level.Error
+            }
+          val file = it.location()?.orElse("unknown")!!
+          val line = it.position().start().line()
+          val column = it.position().start().column()
+          val message = it.message()
+          Entry(level, file, line, column, message)
+        }
   }
 
   open fun process(uri: URI): Result {
@@ -189,11 +195,10 @@ class InheritanceTransformationStep(
     }
   }
 
-  private fun findOriginal(element: InternalDomainElement): InternalDomainElement? {
-    return originalElements[element.id()]
+  private fun findOriginal(element: InternalDomainElement): InternalDomainElement? =
+    originalElements[element.id()]
       ?: originalElements[element.sourceId()]
       ?: originalElements[element.uniqueId()]
-  }
 
   override fun transform(
     model: BaseUnit,
@@ -201,8 +206,14 @@ class InheritanceTransformationStep(
     configuration: AMFGraphConfiguration,
   ): BaseUnit {
     model.allUnits
-      .flatMap { it.findByType(`DomainElementModel$`.`MODULE$`.typeIris().asList.first()) }
-      .forEach { element ->
+      .flatMap {
+        it.findByType(
+          `DomainElementModel$`.`MODULE$`
+            .typeIris()
+            .asList
+            .first(),
+        )
+      }.forEach { element ->
         if (element !is RecursiveShape) {
           index(element)
           if (element is NodeShape) {
@@ -239,7 +250,12 @@ class InheritanceTransformationStep(
 
   private fun fixInheritance(node: InternalNodeShape): InternalNodeShape {
     val inheritsViaAnnotation =
-      node.annotations().find(InheritedShapes::class.java).value?.uris()?.asList
+      node
+        .annotations()
+        .find(InheritedShapes::class.java)
+        .value
+        ?.uris()
+        ?.asList
         ?.mapNotNull { internalElements[it] as? InternalNodeShape }
         ?: listOf()
     node.withInherits(inheritsViaAnnotation.asScalaSeq)
@@ -266,14 +282,18 @@ class InheritanceTransformationStep(
     // Add inherited properties first
     for (property in properties.filter { it.name().value() !in originalPropertyNames }) {
       orderedProperties.add(property)
-      property.annotations().inheritanceProvenance().value
+      property
+        .annotations()
+        .inheritanceProvenance()
+        .value
         ?.let { provenance ->
           val inherited =
             internalElements[provenance] as? InternalNodeShape
               ?: error("Provenance element not found: $provenance")
           inherits.add(inherited)
           if (inherited.uniqueId() != provenance) {
-            property.annotations()
+            property
+              .annotations()
               .reject { it is InheritanceProvenance }
               .`$plus$eq`(InheritanceProvenance(node.uniqueId()))
           }
@@ -282,7 +302,8 @@ class InheritanceTransformationStep(
     }
     for (propertyName in originalPropertyNames) {
       val found = properties.first { it.name().value() == propertyName }
-      found.annotations()
+      found
+        .annotations()
         .reject { it is InheritanceProvenance }
         .`$plus$eq`(InheritanceProvenance(node.uniqueId()))
       orderedProperties.add(found)
@@ -301,7 +322,9 @@ class InheritanceTransformationStep(
       }
 
     val sourceShape = originalShape ?: node
-    return sourceShape.properties().asList
+    return sourceShape
+      .properties()
+      .asList
       .map { it.name().value() }
   }
 
@@ -312,16 +335,17 @@ class InheritanceTransformationStep(
         resolved
           .mapNotNull { inherit ->
             val node =
-            when (val found = clientDeclared[inherit]) {
-              null -> null
-              is NodeShape -> found
-              is RecursiveShape -> clientElements[found.fixpoint().value] as NodeShape?
-              else -> error("Inheriting shape not a NodeShape: $inherit")
-            }
-            if (node != null && node.inherits().any { it.name == shape.name().value() })
+              when (val found = clientDeclared[inherit]) {
+                null -> null
+                is NodeShape -> found
+                is RecursiveShape -> clientElements[found.fixpoint().value] as NodeShape?
+                else -> error("Inheriting shape not a NodeShape: $inherit")
+              }
+            if (node != null && node.inherits().any { it.name == shape.name().value() }) {
               node
-            else
+            } else {
               null
+            }
           }
       shape.annotations().`$plus$eq`(Inheriting(inheriting))
     }
@@ -329,17 +353,15 @@ class InheritanceTransformationStep(
   }
 }
 
-inline fun <reified T> InternalBaseUnit.filterIsInstance(): Sequence<T> {
-  return asJavaIterator(
+inline fun <reified T> InternalBaseUnit.filterIsInstance(): Sequence<T> =
+  asJavaIterator(
     this.iterator(
       `DomainElementStrategy$`.`MODULE$`,
       FieldsFilter.`All$`.`MODULE$`,
       IdCollector(MutableScalaSet.`MODULE$`.empty()),
     ),
-  )
-    .asSequence()
+  ).asSequence()
     .filterIsInstance<T>()
-}
 
 private val <T> Option<T>.value: T?
   get() = if (isDefined) get() else null
@@ -354,11 +376,13 @@ private val <T> Iterable<T>.asScalaSeq: Seq<T>
   get() = asScalaIterator(iterator()).toSeq()
 
 private fun InternalDomainElement.resolvedLinkTargets(): List<String> =
-  annotations().serializables().asList.filterIsInstance<ResolvedLinkTargetAnnotation>()
+  annotations()
+    .serializables()
+    .asList
+    .filterIsInstance<ResolvedLinkTargetAnnotation>()
     .map { it.linkTargetId() }
 
-private fun InternalDomainElement.sourceId(): String =
-  annotations().sourceLocation().toString()
+private fun InternalDomainElement.sourceId(): String = annotations().sourceLocation().toString()
 
 private fun InternalDomainElement.uniqueIdLocation(): String? =
   fields()[`ShapeModel$`.`MODULE$`.Name()]
@@ -371,7 +395,9 @@ private fun InternalDomainElement.uniqueId(): String =
   if (this is InternalNamedDomainElement) {
     uniqueIdLocation()
       ?.let { location ->
-        annotations().fragmentName().value
+        annotations()
+          .fragmentName()
+          .value
           ?.let { fragmentName ->
             "$location#$fragmentName/${name().value()}"
           }

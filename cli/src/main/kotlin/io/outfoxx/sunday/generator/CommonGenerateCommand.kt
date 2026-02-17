@@ -21,7 +21,12 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.multiple
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.unique
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import io.outfoxx.sunday.generator.common.APIProcessor
@@ -29,7 +34,10 @@ import io.outfoxx.sunday.generator.common.ShapeIndex
 import java.net.URI
 import kotlin.system.exitProcess
 
-abstract class CommonGenerateCommand(name: String, val help: String) : CliktCommand(name = name) {
+abstract class CommonGenerateCommand(
+  name: String,
+  val help: String,
+) : CliktCommand(name = name) {
 
   override fun help(context: Context): String = help
 
@@ -69,7 +77,11 @@ abstract class CommonGenerateCommand(name: String, val help: String) : CliktComm
     .multiple(required = true)
 
   abstract val typeRegistry: TypeRegistry
-  abstract fun generatorFactory(document: Document, shapeIndex: ShapeIndex): Generator
+
+  abstract fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+  ): Generator
 
   override fun run() {
     println("Generating ${this.outputCategories} types")

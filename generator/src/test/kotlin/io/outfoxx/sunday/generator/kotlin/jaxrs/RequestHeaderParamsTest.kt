@@ -55,39 +55,40 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DELETE
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DELETE
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.HeaderParam
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @HeaderParam(value = "obj") obj: Test,
-            @HeaderParam(value = "str-req") strReq: String,
-            @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @HeaderParam(value = "obj") obj: Test,
+          @HeaderParam(value = "str-req") strReq: String,
+          @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int,
+        ): Response
 
-          @DELETE
-          @Path(value = "/tests")
-          public fun deleteTest(): Response
-        }
+        @DELETE
+        @Path(value = "/tests")
+        public fun deleteTest(): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -114,36 +115,37 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.HeaderParam
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @HeaderParam(value = "obj") obj: Test?,
-            @HeaderParam(value = "str") str: String?,
-            @HeaderParam(value = "int") int: Int?,
-            @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @HeaderParam(value = "obj") obj: Test?,
+          @HeaderParam(value = "str") str: String?,
+          @HeaderParam(value = "int") int: Int?,
+          @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
+          @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
+        ): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -170,37 +172,38 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.validation.Valid
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.HeaderParam
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @HeaderParam(value = "obj") @Valid obj: Test?,
-            @HeaderParam(value = "str") str: String?,
-            @HeaderParam(value = "int") int: Int?,
-            @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @HeaderParam(value = "obj") @Valid obj: Test?,
+          @HeaderParam(value = "str") str: String?,
+          @HeaderParam(value = "int") int: Int?,
+          @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
+          @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
+        ): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -227,37 +230,38 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.HeaderParam
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.HeaderParam
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@HeaderParam(value = "category") category: FetchTestCategoryHeaderParam,
-              @HeaderParam(value = "type") type: FetchTestTypeHeaderParam): Response
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@HeaderParam(value = "category") category: FetchTestCategoryHeaderParam,
+            @HeaderParam(value = "type") type: FetchTestTypeHeaderParam): Response
 
-          public enum class FetchTestCategoryHeaderParam {
-            Politics,
-            Science,
-          }
-
-          public enum class FetchTestTypeHeaderParam {
-            All,
-            Limited,
-          }
+        public enum class FetchTestCategoryHeaderParam {
+          Politics,
+          Science,
         }
+
+        public enum class FetchTestTypeHeaderParam {
+          All,
+          Limited,
+        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -296,40 +300,41 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DELETE
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Int
-        import kotlin.String
-        import kotlin.Unit
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DELETE
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Int
+      import kotlin.String
+      import kotlin.Unit
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestHeader(value = "obj") obj: Test,
-            @RestHeader(value = "str-req") strReq: String,
-            @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
-          ): RestResponse<Test>
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestHeader(value = "obj") obj: Test,
+          @RestHeader(value = "str-req") strReq: String,
+          @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
+        ): RestResponse<Test>
 
-          @DELETE
-          @Path(value = "/tests")
-          public fun deleteTest(): RestResponse<Unit>
-        }
+        @DELETE
+        @Path(value = "/tests")
+        public fun deleteTest(): RestResponse<Unit>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -368,28 +373,29 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.PUT
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.PUT
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @PUT
-          @Path(value = "/tests")
-          public fun putTest(@RestHeader(value = "x-custom") xCustom: String): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @PUT
+        @Path(value = "/tests")
+        public fun putTest(@RestHeader(value = "x-custom") xCustom: String): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -428,32 +434,33 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.PUT
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.String
-        import org.eclipse.microprofile.rest.client.`annotation`.ClientHeaderParam
-        import org.jboss.resteasy.reactive.RestHeader
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.PUT
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.String
+      import org.eclipse.microprofile.rest.client.`annotation`.ClientHeaderParam
+      import org.jboss.resteasy.reactive.RestHeader
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @PUT
-          @Path(value = "/tests")
-          @ClientHeaderParam(
-            name = "Expect",
-            value = "100-continue",
-          )
-          public fun putTest(@RestHeader(value = "x-custom") xCustom: String): Test
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @PUT
+        @Path(value = "/tests")
+        @ClientHeaderParam(
+          name = "Expect",
+          value = "100-continue",
+        )
+        public fun putTest(@RestHeader(value = "x-custom") xCustom: String): Test
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -492,36 +499,37 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Int
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Int
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestHeader(value = "obj") obj: Test?,
-            @RestHeader(value = "str") str: String?,
-            @RestHeader(value = "int") int: Int?,
-            @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
-            @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestHeader(value = "obj") obj: Test?,
+          @RestHeader(value = "str") str: String?,
+          @RestHeader(value = "int") int: Int?,
+          @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
+          @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
+        ): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -560,37 +568,38 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import javax.validation.Valid
-        import kotlin.Int
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import javax.validation.Valid
+      import kotlin.Int
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestHeader(value = "obj") @Valid obj: Test?,
-            @RestHeader(value = "str") str: String?,
-            @RestHeader(value = "int") int: Int?,
-            @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
-            @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestHeader(value = "obj") @Valid obj: Test?,
+          @RestHeader(value = "str") str: String?,
+          @RestHeader(value = "int") int: Int?,
+          @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
+          @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
+        ): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -629,40 +638,41 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Any
-        import kotlin.String
-        import kotlin.collections.Map
-        import org.jboss.resteasy.reactive.RestHeader
-        import org.jboss.resteasy.reactive.RestResponse
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Any
+      import kotlin.String
+      import kotlin.collections.Map
+      import org.jboss.resteasy.reactive.RestHeader
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
-              @RestHeader(value = "type") type: FetchTestTypeHeaderParam): RestResponse<Map<String, Any>>
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
+            @RestHeader(value = "type") type: FetchTestTypeHeaderParam): RestResponse<Map<String, Any>>
 
-          public enum class FetchTestCategoryHeaderParam {
-            Politics,
-            Science,
-          }
-
-          public enum class FetchTestTypeHeaderParam {
-            All,
-            Limited,
-          }
+        public enum class FetchTestCategoryHeaderParam {
+          Politics,
+          Science,
         }
+
+        public enum class FetchTestTypeHeaderParam {
+          All,
+          Limited,
+        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

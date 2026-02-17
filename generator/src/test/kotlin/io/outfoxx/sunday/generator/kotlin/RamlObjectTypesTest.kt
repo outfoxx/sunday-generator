@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import com.github.difflib.text.DiffRowGenerator
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
@@ -48,22 +47,23 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.String
-        import kotlin.collections.List
-        import kotlin.collections.Map
+      import kotlin.Any
+      import kotlin.String
+      import kotlin.collections.List
+      import kotlin.collections.Map
 
-        public interface Test {
-          public val map: Map<String, Any>
+      public interface Test {
+        public val map: Map<String, Any>
 
-          public val array: List<Any>
-        }
+        public val array: List<Any>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -82,47 +82,48 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.String
+      import kotlin.String
 
-        public interface Test {
-          public val fromNilUnion: String?
+      public interface Test {
+        public val fromNilUnion: String?
 
-          public val notRequired: String?
-        }
+        public val notRequired: String?
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
-
 
     val typeSpec2 = findType("io.test.Test2", types)
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.String
-        import kotlin.collections.Map
+      import kotlin.Any
+      import kotlin.String
+      import kotlin.collections.Map
 
-        public interface Test2 {
-          public val optionalObject: Map<String, Any>?
+      public interface Test2 {
+        public val optionalObject: Map<String, Any>?
 
-          public val nillableObject: Map<String, Any>?
+        public val nillableObject: Map<String, Any>?
 
-          public val optionalHierarchy: Parent?
+        public val optionalHierarchy: Parent?
 
-          public val nillableHierarchy: Parent?
-        }
+        public val nillableHierarchy: Parent?
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec2)
+        FileSpec
+          .get("io.test", typeSpec2)
           .writeTo(this)
       },
     )
@@ -140,48 +141,49 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public class Test(
-          public val fromNilUnion: String?,
-          public val notRequired: String? = null,
-        ) {
-          public fun copy(fromNilUnion: String? = null, notRequired: String? = null): Test =
-              Test(fromNilUnion ?: this.fromNilUnion, notRequired ?: this.notRequired)
+      public class Test(
+        public val fromNilUnion: String?,
+        public val notRequired: String? = null,
+      ) {
+        public fun copy(fromNilUnion: String? = null, notRequired: String? = null): Test =
+            Test(fromNilUnion ?: this.fromNilUnion, notRequired ?: this.notRequired)
 
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + (fromNilUnion?.hashCode() ?: 0)
-            result = 31 * result + (notRequired?.hashCode() ?: 0)
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test
-
-            if (fromNilUnion != other.fromNilUnion) return false
-            if (notRequired != other.notRequired) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Test(fromNilUnion='${'$'}fromNilUnion',
-          | notRequired='${'$'}notRequired')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + (fromNilUnion?.hashCode() ?: 0)
+          result = 31 * result + (notRequired?.hashCode() ?: 0)
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test
+
+          if (fromNilUnion != other.fromNilUnion) return false
+          if (notRequired != other.notRequired) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Test(fromNilUnion='${'$'}fromNilUnion',
+        | notRequired='${'$'}notRequired')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -190,62 +192,63 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
-        import kotlin.collections.Map
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
+      import kotlin.collections.Map
 
-        public class Test2(
-          public val optionalObject: Map<String, Any>? = null,
-          public val nillableObject: Map<String, Any>?,
-          public val optionalHierarchy: Parent? = null,
-          public val nillableHierarchy: Parent?,
-        ) {
-          public fun copy(
-            optionalObject: Map<String, Any>? = null,
-            nillableObject: Map<String, Any>? = null,
-            optionalHierarchy: Parent? = null,
-            nillableHierarchy: Parent? = null,
-          ): Test2 = Test2(optionalObject ?: this.optionalObject, nillableObject ?: this.nillableObject,
-              optionalHierarchy ?: this.optionalHierarchy, nillableHierarchy ?: this.nillableHierarchy)
+      public class Test2(
+        public val optionalObject: Map<String, Any>? = null,
+        public val nillableObject: Map<String, Any>?,
+        public val optionalHierarchy: Parent? = null,
+        public val nillableHierarchy: Parent?,
+      ) {
+        public fun copy(
+          optionalObject: Map<String, Any>? = null,
+          nillableObject: Map<String, Any>? = null,
+          optionalHierarchy: Parent? = null,
+          nillableHierarchy: Parent? = null,
+        ): Test2 = Test2(optionalObject ?: this.optionalObject, nillableObject ?: this.nillableObject,
+            optionalHierarchy ?: this.optionalHierarchy, nillableHierarchy ?: this.nillableHierarchy)
 
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + (optionalObject?.hashCode() ?: 0)
-            result = 31 * result + (nillableObject?.hashCode() ?: 0)
-            result = 31 * result + (optionalHierarchy?.hashCode() ?: 0)
-            result = 31 * result + (nillableHierarchy?.hashCode() ?: 0)
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test2
-
-            if (optionalObject != other.optionalObject) return false
-            if (nillableObject != other.nillableObject) return false
-            if (optionalHierarchy != other.optionalHierarchy) return false
-            if (nillableHierarchy != other.nillableHierarchy) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Test2(optionalObject='${"$"}optionalObject',
-          | nillableObject='${"$"}nillableObject',
-          | optionalHierarchy='${"$"}optionalHierarchy',
-          | nillableHierarchy='${"$"}nillableHierarchy')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + (optionalObject?.hashCode() ?: 0)
+          result = 31 * result + (nillableObject?.hashCode() ?: 0)
+          result = 31 * result + (optionalHierarchy?.hashCode() ?: 0)
+          result = 31 * result + (nillableHierarchy?.hashCode() ?: 0)
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test2
+
+          if (optionalObject != other.optionalObject) return false
+          if (nillableObject != other.nillableObject) return false
+          if (optionalHierarchy != other.optionalHierarchy) return false
+          if (nillableHierarchy != other.nillableHierarchy) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Test2(optionalObject='${"$"}optionalObject',
+        | nillableObject='${"$"}nillableObject',
+        | optionalHierarchy='${"$"}optionalHierarchy',
+        | nillableHierarchy='${"$"}nillableHierarchy')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec2)
+        FileSpec
+          .get("io.test", typeSpec2)
           .writeTo(this)
       },
     )
@@ -309,64 +312,68 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.String
+      import kotlin.String
 
-        public interface Test {
-          public val `value`: String
-        }
+      public interface Test {
+        public val `value`: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", testSpec)
+        FileSpec
+          .get("io.test", testSpec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.String
+      import kotlin.String
 
-        public interface Test2 : Test {
-          public val value2: String
-        }
+      public interface Test2 : Test {
+        public val value2: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", test2Spec)
+        FileSpec
+          .get("io.test", test2Spec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        public interface Empty : Test2
+      public interface Empty : Test2
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", emptySpec)
+        FileSpec
+          .get("io.test", emptySpec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.String
+      import kotlin.String
 
-        public interface Test3 : Empty {
-          public val value3: String
-        }
+      public interface Test3 : Empty {
+        public val value3: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", test3Spec)
+        FileSpec
+          .get("io.test", test3Spec)
           .writeTo(this)
       },
     )
@@ -396,172 +403,176 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public open class Test(
-          public val `value`: String,
-        ) {
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + value.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test
-
-            if (value != other.value) return false
-
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""Test(value='${'$'}value')""${'"'}
+      public open class Test(
+        public val `value`: String,
+      ) {
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + value.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test
+
+          if (value != other.value) return false
+
+          return true
+        }
+
+        override fun toString(): String = ${'"'}""Test(value='${'$'}value')""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", testSpec)
+        FileSpec
+          .get("io.test", testSpec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public open class Test2(
-          `value`: String,
-          public val value2: String,
-        ) : Test(value) {
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + value2.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test2
-
-            if (value != other.value) return false
-            if (value2 != other.value2) return false
-
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""
-          |Test2(value='${'$'}value',
-          | value2='${'$'}value2')
-          ""${'"'}.trimMargin()
+      public open class Test2(
+        `value`: String,
+        public val value2: String,
+      ) : Test(value) {
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + value2.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test2
+
+          if (value != other.value) return false
+          if (value2 != other.value2) return false
+
+          return true
+        }
+
+        override fun toString(): String = ${'"'}""
+        |Test2(value='${'$'}value',
+        | value2='${'$'}value2')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", test2Spec)
+        FileSpec
+          .get("io.test", test2Spec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.String
 
-        public open class Empty(
-          `value`: String,
-          value2: String,
-        ) : Test2(value, value2) {
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+      public open class Empty(
+        `value`: String,
+        value2: String,
+      ) : Test2(value, value2) {
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
 
-            other as Empty
+          other as Empty
 
-            if (value != other.value) return false
-            if (value2 != other.value2) return false
-            return true
-          }
-
-          override fun toString(): String = ${'"'}""
-          |Empty(value='${'$'}value',
-          | value2='${'$'}value2')
-          ""${'"'}.trimMargin()
+          if (value != other.value) return false
+          if (value2 != other.value2) return false
+          return true
         }
+
+        override fun toString(): String = ${'"'}""
+        |Empty(value='${'$'}value',
+        | value2='${'$'}value2')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", emptySpec)
+        FileSpec
+          .get("io.test", emptySpec)
           .writeTo(this)
       },
     )
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public class Test3(
-          `value`: String,
-          value2: String,
-          public val value3: String,
-        ) : Empty(value, value2) {
-          public fun copy(
-            `value`: String? = null,
-            value2: String? = null,
-            value3: String? = null,
-          ): Test3 = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
+      public class Test3(
+        `value`: String,
+        value2: String,
+        public val value3: String,
+      ) : Empty(value, value2) {
+        public fun copy(
+          `value`: String? = null,
+          value2: String? = null,
+          value3: String? = null,
+        ): Test3 = Test3(value ?: this.value, value2 ?: this.value2, value3 ?: this.value3)
 
-          override fun hashCode(): Int {
-            var result = 31 * super.hashCode()
-            result = 31 * result + value3.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test3
-
-            if (value != other.value) return false
-            if (value2 != other.value2) return false
-            if (value3 != other.value3) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Test3(value='${'$'}value',
-          | value2='${'$'}value2',
-          | value3='${'$'}value3')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 31 * super.hashCode()
+          result = 31 * result + value3.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test3
+
+          if (value != other.value) return false
+          if (value2 != other.value2) return false
+          if (value3 != other.value3) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Test3(value='${'$'}value',
+        | value2='${'$'}value2',
+        | value3='${'$'}value3')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", test3Spec)
+        FileSpec
+          .get("io.test", test3Spec)
           .writeTo(this)
       },
     )
@@ -578,19 +589,20 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.String
+      import kotlin.String
 
-        public interface Test {
-          public val someValue: String
+      public interface Test {
+        public val someValue: String
 
-          public val anotherValue: String
-        }
+        public val anotherValue: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -607,51 +619,52 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonProperty
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import com.fasterxml.jackson.`annotation`.JsonProperty
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public class Test(
-          @param:JsonProperty(value = "some-value")
-          public val someValue: String,
-          @param:JsonProperty(value = "another_value")
-          public val anotherValue: String,
-        ) {
-          public fun copy(someValue: String? = null, anotherValue: String? = null): Test = Test(someValue ?:
-              this.someValue, anotherValue ?: this.anotherValue)
+      public class Test(
+        @param:JsonProperty(value = "some-value")
+        public val someValue: String,
+        @param:JsonProperty(value = "another_value")
+        public val anotherValue: String,
+      ) {
+        public fun copy(someValue: String? = null, anotherValue: String? = null): Test = Test(someValue ?:
+            this.someValue, anotherValue ?: this.anotherValue)
 
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + someValue.hashCode()
-            result = 31 * result + anotherValue.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test
-
-            if (someValue != other.someValue) return false
-            if (anotherValue != other.anotherValue) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Test(someValue='${'$'}someValue',
-          | anotherValue='${'$'}anotherValue')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + someValue.hashCode()
+          result = 31 * result + anotherValue.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test
+
+          if (someValue != other.someValue) return false
+          if (anotherValue != other.anotherValue) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Test(someValue='${'$'}someValue',
+        | anotherValue='${'$'}anotherValue')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -668,56 +681,57 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
-        import kotlin.collections.List
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
+      import kotlin.collections.List
 
-        public class Test(
-          public val parent: Test?,
-          public val other: Test? = null,
-          public val children: List<Test>,
-        ) {
-          public fun copy(
-            parent: Test? = null,
-            other: Test? = null,
-            children: List<Test>? = null,
-          ): Test = Test(parent ?: this.parent, other ?: this.other, children ?: this.children)
+      public class Test(
+        public val parent: Test?,
+        public val other: Test? = null,
+        public val children: List<Test>,
+      ) {
+        public fun copy(
+          parent: Test? = null,
+          other: Test? = null,
+          children: List<Test>? = null,
+        ): Test = Test(parent ?: this.parent, other ?: this.other, children ?: this.children)
 
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + (parent?.hashCode() ?: 0)
-            result = 31 * result + (other?.hashCode() ?: 0)
-            result = 31 * result + children.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Test
-
-            if (parent != other.parent) return false
-            if (other != other.other) return false
-            if (children != other.children) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}
-          |Test(parent='${'$'}parent',
-          | other='${'$'}other',
-          | children='${'$'}children')
-          ""${'"'}.trimMargin()
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + (parent?.hashCode() ?: 0)
+          result = 31 * result + (other?.hashCode() ?: 0)
+          result = 31 * result + children.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Test
+
+          if (parent != other.parent) return false
+          if (other != other.other) return false
+          if (children != other.children) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}
+        |Test(parent='${'$'}parent',
+        | other='${'$'}other',
+        | children='${'$'}children')
+        ""${'"'}.trimMargin()
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -741,39 +755,40 @@ class RamlObjectTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.Int
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.Int
+      import kotlin.String
 
-        public open class Node(
-          public val type: NodeType,
-        ) {
-          override fun hashCode(): Int {
-            var result = 1
-            result = 31 * result + type.hashCode()
-            return result
-          }
-
-          override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Node
-
-            if (type != other.type) return false
-
-            return true
-          }
-
-          override fun toString(): String = ""${'"'}Node(type='${'$'}type')""${'"'}
+      public open class Node(
+        public val type: NodeType,
+      ) {
+        override fun hashCode(): Int {
+          var result = 1
+          result = 31 * result + type.hashCode()
+          return result
         }
+
+        override fun equals(other: Any?): Boolean {
+          if (this === other) return true
+          if (javaClass != other?.javaClass) return false
+
+          other as Node
+
+          if (type != other.type) return false
+
+          return true
+        }
+
+        override fun toString(): String = ""${'"'}Node(type='${'$'}type')""${'"'}
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

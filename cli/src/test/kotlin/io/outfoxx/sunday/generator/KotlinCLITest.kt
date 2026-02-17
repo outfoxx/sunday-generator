@@ -25,7 +25,10 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.*
+import org.hamcrest.Matchers.containsStringIgnoringCase
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.not
+import org.hamcrest.core.IsIterableContaining.hasItems
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -39,8 +42,10 @@ class KotlinCLITest {
     private val emptyFile = KotlinCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-pkg", "io.test",
-        "-out", emptyFile.resolve("..").path,
+        "-pkg",
+        "io.test",
+        "-out",
+        emptyFile.resolve("..").path,
         emptyFile.path,
       )
   }
@@ -79,7 +84,8 @@ class KotlinCLITest {
     val command = KotlinJAXRSGenerateCommand()
     val options =
       arrayOf(
-        "-out", tempDir.absolutePath,
+        "-out",
+        tempDir.absolutePath,
         testFile.path,
       )
     assertDoesNotThrow { command.parse(options) }
@@ -96,7 +102,8 @@ class KotlinCLITest {
     val command = KotlinJAXRSGenerateCommand()
     val options =
       arrayOf(
-        "-out", tempDir.absolutePath,
+        "-out",
+        tempDir.absolutePath,
         testFile.path,
       )
 
@@ -132,8 +139,10 @@ class KotlinCLITest {
     val command = KotlinJAXRSGenerateCommand()
     val options =
       arrayOf(
-        "-service-pkg", "io.test",
-        "-out", tempDir.absolutePath,
+        "-service-pkg",
+        "io.test",
+        "-out",
+        tempDir.absolutePath,
         testFile.path,
       )
 

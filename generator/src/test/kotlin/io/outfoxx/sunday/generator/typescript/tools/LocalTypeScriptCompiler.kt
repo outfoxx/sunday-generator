@@ -19,7 +19,10 @@ package io.outfoxx.sunday.generator.typescript.tools
 import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.nio.file.Path
 
-class LocalTypeScriptCompiler(private val command: String, workDir: Path) : TypeScriptCompiler(workDir) {
+class LocalTypeScriptCompiler(
+  private val command: String,
+  workDir: Path,
+) : TypeScriptCompiler(workDir) {
 
   val env = ShellProcess.loadExtraEnvironment()
 
@@ -31,8 +34,7 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
         .command(command, "ci")
         .apply {
           environment().putAll(env)
-        }
-        .redirectErrorStream(true)
+        }.redirectErrorStream(true)
         .start()
 
     println("### Installing NPM packages")
@@ -50,8 +52,7 @@ class LocalTypeScriptCompiler(private val command: String, workDir: Path) : Type
         .command(command, "run", "build")
         .apply {
           environment().putAll(env)
-        }
-        .redirectErrorStream(true)
+        }.redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()

@@ -37,7 +37,8 @@ class SwiftCLITest {
     private val emptyFile = SwiftCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-out", emptyFile.resolve("..").path,
+        "-out",
+        emptyFile.resolve("..").path,
         emptyFile.path,
       )
   }
@@ -46,7 +47,7 @@ class SwiftCLITest {
     override fun generatorFactory(
       document: Document,
       shapeIndex: ShapeIndex,
-      typeRegistry: SwiftTypeRegistry
+      typeRegistry: SwiftTypeRegistry,
     ): SwiftGenerator {
       error("should not execute")
     }

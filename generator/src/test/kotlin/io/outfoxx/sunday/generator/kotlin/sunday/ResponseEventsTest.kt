@@ -21,10 +21,10 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
-import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
-import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -64,30 +64,31 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.EventSource
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import kotlin.collections.List
+      import io.outfoxx.sunday.EventSource
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import kotlin.collections.List
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(),
-        ) {
-          public suspend fun fetchEvents(): EventSource = this.requestFactory
-            .eventSource(
-              method = Method.Get,
-              pathTemplate = "/tests",
-              acceptTypes = listOf(MediaType.EventStream)
-            )
-        }
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(),
+      ) {
+        public suspend fun fetchEvents(): EventSource = this.requestFactory
+          .eventSource(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = listOf(MediaType.EventStream)
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -122,54 +123,55 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import io.test.Test1
-        import io.test.Test2
-        import io.test.Test3
-        import kotlin.Any
-        import kotlin.collections.List
-        import kotlin.reflect.typeOf
-        import kotlinx.coroutines.flow.Flow
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import io.test.Test1
+      import io.test.Test2
+      import io.test.Test3
+      import kotlin.Any
+      import kotlin.collections.List
+      import kotlin.reflect.typeOf
+      import kotlinx.coroutines.flow.Flow
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(),
-        ) {
-          public fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
-            .eventStream(
-              method = Method.Get,
-              pathTemplate = "/test1",
-              acceptTypes = listOf(MediaType.EventStream),
-              decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
-            )
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(),
+      ) {
+        public fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
+          .eventStream(
+            method = Method.Get,
+            pathTemplate = "/test1",
+            acceptTypes = listOf(MediaType.EventStream),
+            decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
+          )
 
-          public fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
-            .eventStream(
-              method = Method.Get,
-              pathTemplate = "/test2",
-              acceptTypes = listOf(MediaType.EventStream),
-              decoder = { decoder, event, _, data, logger ->
-                when (event) {
-                  "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
-                  "test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
-                  "t3" -> decoder.decode<Test3>(data, typeOf<Test3>())
-                  else -> {
-                    logger.error("Unknown event type, ignoring event: event=${'$'}event")
-                    null
-                  }
+        public fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
+          .eventStream(
+            method = Method.Get,
+            pathTemplate = "/test2",
+            acceptTypes = listOf(MediaType.EventStream),
+            decoder = { decoder, event, _, data, logger ->
+              when (event) {
+                "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
+                "test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
+                "t3" -> decoder.decode<Test3>(data, typeOf<Test3>())
+                else -> {
+                  logger.error("Unknown event type, ignoring event: event=${'$'}event")
+                  null
                 }
               }
-            )
-        }
+            }
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -204,52 +206,53 @@ class ResponseEventsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import io.test.Base
-        import io.test.Test1
-        import io.test.Test2
-        import kotlin.collections.List
-        import kotlin.reflect.typeOf
-        import kotlinx.coroutines.flow.Flow
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import io.test.Base
+      import io.test.Test1
+      import io.test.Test2
+      import kotlin.collections.List
+      import kotlin.reflect.typeOf
+      import kotlinx.coroutines.flow.Flow
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(),
-        ) {
-          public fun fetchEventsSimple(): Flow<Base> = this.requestFactory
-            .eventStream(
-              method = Method.Get,
-              pathTemplate = "/test1",
-              acceptTypes = listOf(MediaType.EventStream),
-              decoder = { decoder, _, _, data, _ -> decoder.decode<Base>(data, typeOf<Base>()) }
-            )
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(),
+      ) {
+        public fun fetchEventsSimple(): Flow<Base> = this.requestFactory
+          .eventStream(
+            method = Method.Get,
+            pathTemplate = "/test1",
+            acceptTypes = listOf(MediaType.EventStream),
+            decoder = { decoder, _, _, data, _ -> decoder.decode<Base>(data, typeOf<Base>()) }
+          )
 
-          public fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory
-            .eventStream(
-              method = Method.Get,
-              pathTemplate = "/test2",
-              acceptTypes = listOf(MediaType.EventStream),
-              decoder = { decoder, event, _, data, logger ->
-                when (event) {
-                  "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
-                  "Test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
-                  else -> {
-                    logger.error("Unknown event type, ignoring event: event=${'$'}event")
-                    null
-                  }
+        public fun fetchEventsDiscriminated(): Flow<Base> = this.requestFactory
+          .eventStream(
+            method = Method.Get,
+            pathTemplate = "/test2",
+            acceptTypes = listOf(MediaType.EventStream),
+            decoder = { decoder, event, _, data, logger ->
+              when (event) {
+                "Test1" -> decoder.decode<Test1>(data, typeOf<Test1>())
+                "Test2" -> decoder.decode<Test2>(data, typeOf<Test2>())
+                else -> {
+                  logger.error("Unknown event type, ignoring event: event=${'$'}event")
+                  null
                 }
               }
-            )
-        }
+            }
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

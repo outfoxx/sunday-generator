@@ -36,10 +36,15 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
 
-fun findType(name: String, types: Map<ClassName, TypeSpec>): TypeSpec =
-  types[ClassName.bestGuess(name)] ?: fail("Type '$name' not defined")
+fun findType(
+  name: String,
+  types: Map<ClassName, TypeSpec>,
+): TypeSpec = types[ClassName.bestGuess(name)] ?: fail("Type '$name' not defined")
 
-fun generateTypes(uri: URI, typeRegistry: KotlinTypeRegistry): Map<ClassName, TypeSpec> {
+fun generateTypes(
+  uri: URI,
+  typeRegistry: KotlinTypeRegistry,
+): Map<ClassName, TypeSpec> {
 
   val (document, shapeIndex) = TestAPIProcessing.process(uri)
 

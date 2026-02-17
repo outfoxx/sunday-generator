@@ -29,8 +29,10 @@ class KotlinSundayCLITest {
     private val emptyFile = KotlinSundayCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-pkg", "io.test",
-        "-out", emptyFile.resolve("..").path,
+        "-pkg",
+        "io.test",
+        "-out",
+        emptyFile.resolve("..").path,
         emptyFile.path,
       )
   }

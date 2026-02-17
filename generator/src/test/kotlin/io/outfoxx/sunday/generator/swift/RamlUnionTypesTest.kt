@@ -43,71 +43,72 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var any: Any
-          public var duplicate: String
-          public var nullable: String?
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .add(any, named: "any")
-                .add(duplicate, named: "duplicate")
-                .add(nullable, named: "nullable")
-                .build()
-          }
+        public var any: Any
+        public var duplicate: String
+        public var nullable: String?
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .add(any, named: "any")
+              .add(duplicate, named: "duplicate")
+              .add(nullable, named: "nullable")
+              .build()
+        }
 
-          public init(
-            any: Any,
-            duplicate: String,
-            nullable: String?
-          ) {
-            self.any = any
-            self.duplicate = duplicate
-            self.nullable = nullable
-          }
+        public init(
+          any: Any,
+          duplicate: String,
+          nullable: String?
+        ) {
+          self.any = any
+          self.duplicate = duplicate
+          self.nullable = nullable
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.any = try container.decode(AnyValue.self, forKey: .any).unwrapped
-            self.duplicate = try container.decode(String.self, forKey: .duplicate)
-            self.nullable = try container.decodeIfPresent(String.self, forKey: .nullable)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.any = try container.decode(AnyValue.self, forKey: .any).unwrapped
+          self.duplicate = try container.decode(String.self, forKey: .duplicate)
+          self.nullable = try container.decodeIfPresent(String.self, forKey: .nullable)
+        }
 
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(AnyValue.wrapped(any), forKey: .any)
-            try container.encode(self.duplicate, forKey: .duplicate)
-            try container.encodeIfPresent(self.nullable, forKey: .nullable)
-          }
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(AnyValue.wrapped(any), forKey: .any)
+          try container.encode(self.duplicate, forKey: .duplicate)
+          try container.encodeIfPresent(self.nullable, forKey: .nullable)
+        }
 
-          public func withAny(any: Any) -> Test {
-            return Test(any: any, duplicate: duplicate, nullable: nullable)
-          }
+        public func withAny(any: Any) -> Test {
+          return Test(any: any, duplicate: duplicate, nullable: nullable)
+        }
 
-          public func withDuplicate(duplicate: String) -> Test {
-            return Test(any: any, duplicate: duplicate, nullable: nullable)
-          }
+        public func withDuplicate(duplicate: String) -> Test {
+          return Test(any: any, duplicate: duplicate, nullable: nullable)
+        }
 
-          public func withNullable(nullable: String?) -> Test {
-            return Test(any: any, duplicate: duplicate, nullable: nullable)
-          }
+        public func withNullable(nullable: String?) -> Test {
+          return Test(any: any, duplicate: duplicate, nullable: nullable)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case any = "any"
-            case duplicate = "duplicate"
-            case nullable = "nullable"
-
-          }
+          case any = "any"
+          case duplicate = "duplicate"
+          case nullable = "nullable"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -125,46 +126,47 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var value: Base
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .add(value, named: "value")
-                .build()
-          }
+        public var value: Base
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .add(value, named: "value")
+              .build()
+        }
 
-          public init(value: Base) {
-            self.value = value
-          }
+        public init(value: Base) {
+          self.value = value
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: Test.CodingKeys.self)
-            self.value = try container.decode(Base.self, forKey: .value)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: Test.CodingKeys.self)
+          self.value = try container.decode(Base.self, forKey: .value)
+        }
 
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: Test.CodingKeys.self)
-            try container.encode(self.value, forKey: .value)
-          }
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: Test.CodingKeys.self)
+          try container.encode(self.value, forKey: .value)
+        }
 
-          public func withValue(value: Base) -> Test {
-            return Test(value: value)
-          }
+        public func withValue(value: Base) -> Test {
+          return Test(value: value)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
-
-          }
+          case value = "value"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -183,11 +185,12 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

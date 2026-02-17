@@ -21,10 +21,10 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
-import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
-import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -64,48 +64,49 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import io.test.Test
-        import kotlin.Int
-        import kotlin.String
-        import kotlin.Unit
-        import kotlin.collections.List
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import io.test.Test
+      import kotlin.Int
+      import kotlin.String
+      import kotlin.Unit
+      import kotlin.collections.List
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-        ) {
-          public suspend fun fetchTest(
-            obj: Test,
-            strReq: String,
-            int: Int = 5,
-          ): Test = this.requestFactory
-            .result(
-              method = Method.Get,
-              pathTemplate = "/tests",
-              acceptTypes = this.defaultAcceptTypes,
-              headers = mapOf(
-                "obj" to obj,
-                "str-req" to strReq,
-                "int" to int
-              )
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+      ) {
+        public suspend fun fetchTest(
+          obj: Test,
+          strReq: String,
+          int: Int = 5,
+        ): Test = this.requestFactory
+          .result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes,
+            headers = mapOf(
+              "obj" to obj,
+              "str-req" to strReq,
+              "int" to int
             )
+          )
 
-          public suspend fun deleteTest(): Unit = this.requestFactory
-            .result(
-              method = Method.Delete,
-              pathTemplate = "/tests"
-            )
-        }
+        public suspend fun deleteTest(): Unit = this.requestFactory
+          .result(
+            method = Method.Delete,
+            pathTemplate = "/tests"
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -140,35 +141,36 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import io.test.Test
-        import kotlin.String
-        import kotlin.collections.List
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import io.test.Test
+      import kotlin.String
+      import kotlin.collections.List
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-        ) {
-          public suspend fun putTest(xCustom: String): Test = this.requestFactory
-            .result(
-              method = Method.Put,
-              pathTemplate = "/tests",
-              acceptTypes = this.defaultAcceptTypes,
-              headers = mapOf(
-                "Expect" to "100-continue",
-                "x-custom" to xCustom
-              )
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+      ) {
+        public suspend fun putTest(xCustom: String): Test = this.requestFactory
+          .result(
+            method = Method.Put,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes,
+            headers = mapOf(
+              "Expect" to "100-continue",
+              "x-custom" to xCustom
             )
-        }
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -203,45 +205,46 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import io.test.Test
-        import kotlin.Int
-        import kotlin.String
-        import kotlin.collections.List
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import io.test.Test
+      import kotlin.Int
+      import kotlin.String
+      import kotlin.collections.List
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-        ) {
-          public suspend fun fetchTest(
-            obj: Test? = null,
-            str: String? = null,
-            int: Int? = null,
-            def1: String? = "test",
-            def2: Int? = 10,
-          ): Test = this.requestFactory
-            .result(
-              method = Method.Get,
-              pathTemplate = "/tests",
-              acceptTypes = this.defaultAcceptTypes,
-              headers = mapOf(
-                "obj" to obj,
-                "str" to str,
-                "int" to int,
-                "def1" to def1,
-                "def2" to def2
-              ).filterValues { it != null }
-            )
-        }
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+      ) {
+        public suspend fun fetchTest(
+          obj: Test? = null,
+          str: String? = null,
+          int: Int? = null,
+          def1: String? = "test",
+          def2: Int? = 10,
+        ): Test = this.requestFactory
+          .result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes,
+            headers = mapOf(
+              "obj" to obj,
+              "str" to str,
+              "int" to int,
+              "def1" to def1,
+              "def2" to def2
+            ).filterValues { it != null }
+          )
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -276,47 +279,48 @@ class RequestHeaderParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.MediaType
-        import io.outfoxx.sunday.RequestFactory
-        import io.outfoxx.sunday.http.Method
-        import kotlin.Any
-        import kotlin.String
-        import kotlin.collections.List
-        import kotlin.collections.Map
+      import io.outfoxx.sunday.MediaType
+      import io.outfoxx.sunday.RequestFactory
+      import io.outfoxx.sunday.http.Method
+      import kotlin.Any
+      import kotlin.String
+      import kotlin.collections.List
+      import kotlin.collections.Map
 
-        public class API(
-          public val requestFactory: RequestFactory,
-          public val defaultContentTypes: List<MediaType> = listOf(),
-          public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-        ) {
-          public suspend fun fetchTest(category: FetchTestCategoryHeaderParam,
-              type: FetchTestTypeHeaderParam): Map<String, Any> = this.requestFactory
-            .result(
-              method = Method.Get,
-              pathTemplate = "/tests",
-              acceptTypes = this.defaultAcceptTypes,
-              headers = mapOf(
-                "category" to category,
-                "type" to type
-              )
+      public class API(
+        public val requestFactory: RequestFactory,
+        public val defaultContentTypes: List<MediaType> = listOf(),
+        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+      ) {
+        public suspend fun fetchTest(category: FetchTestCategoryHeaderParam,
+            type: FetchTestTypeHeaderParam): Map<String, Any> = this.requestFactory
+          .result(
+            method = Method.Get,
+            pathTemplate = "/tests",
+            acceptTypes = this.defaultAcceptTypes,
+            headers = mapOf(
+              "category" to category,
+              "type" to type
             )
+          )
 
-          public enum class FetchTestCategoryHeaderParam {
-            Politics,
-            Science,
-          }
-
-          public enum class FetchTestTypeHeaderParam {
-            All,
-            Limited,
-          }
+        public enum class FetchTestCategoryHeaderParam {
+          Politics,
+          Science,
         }
+
+        public enum class FetchTestTypeHeaderParam {
+          All,
+          Limited,
+        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

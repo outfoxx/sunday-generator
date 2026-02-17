@@ -21,7 +21,10 @@ import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.TypeSpec
 
-fun compileTypes(compiler: SwiftCompiler, types: Map<DeclaredTypeName, TypeSpec>): Boolean {
+fun compileTypes(
+  compiler: SwiftCompiler,
+  types: Map<DeclaredTypeName, TypeSpec>,
+): Boolean {
   try {
     val fileSpecs =
       types.map { (typeName, typeSpec) ->

@@ -55,34 +55,35 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.QueryParam
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.QueryParam
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @QueryParam(value = "obj") obj: Test,
-            @QueryParam(value = "str-req") strReq: String,
-            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @QueryParam(value = "obj") obj: Test,
+          @QueryParam(value = "str-req") strReq: String,
+          @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
+        ): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -109,35 +110,36 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.QueryParam
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.validation.Valid
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.QueryParam
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @QueryParam(value = "obj") @Valid obj: Test,
-            @QueryParam(value = "str-req") strReq: String,
-            @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
-          ): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @QueryParam(value = "obj") @Valid obj: Test,
+          @QueryParam(value = "str-req") strReq: String,
+          @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
+        ): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -164,36 +166,37 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.DefaultValue
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.QueryParam
-        import javax.ws.rs.core.Response
-        import kotlin.Int
-        import kotlin.String
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.DefaultValue
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.QueryParam
+      import javax.ws.rs.core.Response
+      import kotlin.Int
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @QueryParam(value = "obj") obj: Test?,
-            @QueryParam(value = "str") str: String?,
-            @QueryParam(value = "int") int: Int?,
-            @QueryParam(value = "def1") @DefaultValue(value = "test") def1: String,
-            @QueryParam(value = "def2") @DefaultValue(value = "10") def2: Int,
-          ): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @QueryParam(value = "obj") obj: Test?,
+          @QueryParam(value = "str") str: String?,
+          @QueryParam(value = "int") int: Int?,
+          @QueryParam(value = "def1") @DefaultValue(value = "test") def1: String,
+          @QueryParam(value = "def2") @DefaultValue(value = "10") def2: Int,
+        ): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -220,37 +223,38 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.QueryParam
-        import javax.ws.rs.core.Response
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.QueryParam
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@QueryParam(value = "category") category: FetchTestCategoryQueryParam,
-              @QueryParam(value = "type") type: FetchTestTypeQueryParam): Response
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@QueryParam(value = "category") category: FetchTestCategoryQueryParam,
+            @QueryParam(value = "type") type: FetchTestTypeQueryParam): Response
 
-          public enum class FetchTestCategoryQueryParam {
-            Politics,
-            Science,
-          }
-
-          public enum class FetchTestTypeQueryParam {
-            All,
-            Limited,
-          }
+        public enum class FetchTestCategoryQueryParam {
+          Politics,
+          Science,
         }
+
+        public enum class FetchTestTypeQueryParam {
+          All,
+          Limited,
+        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -289,34 +293,35 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Int
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Int
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestQuery
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestQuery obj: Test,
-            @RestQuery strReq: String,
-            @RestQuery @DefaultValue(value = "5") int: Int,
-          ): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestQuery obj: Test,
+          @RestQuery strReq: String,
+          @RestQuery @DefaultValue(value = "5") int: Int,
+        ): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -355,35 +360,36 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import javax.validation.Valid
-        import kotlin.Int
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import javax.validation.Valid
+      import kotlin.Int
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestQuery
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestQuery @Valid obj: Test,
-            @RestQuery strReq: String,
-            @RestQuery @DefaultValue(value = "5") int: Int,
-          ): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestQuery @Valid obj: Test,
+          @RestQuery strReq: String,
+          @RestQuery @DefaultValue(value = "5") int: Int,
+        ): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -422,36 +428,37 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.DefaultValue
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Int
-        import kotlin.String
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.DefaultValue
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Int
+      import kotlin.String
+      import org.jboss.resteasy.reactive.RestQuery
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(
-            @RestQuery obj: Test?,
-            @RestQuery str: String?,
-            @RestQuery int: Int?,
-            @RestQuery @DefaultValue(value = "test") def1: String,
-            @RestQuery @DefaultValue(value = "10") def2: Int,
-          ): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(
+          @RestQuery obj: Test?,
+          @RestQuery str: String?,
+          @RestQuery int: Int?,
+          @RestQuery @DefaultValue(value = "test") def1: String,
+          @RestQuery @DefaultValue(value = "10") def2: Int,
+        ): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -490,40 +497,41 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Any
-        import kotlin.String
-        import kotlin.collections.Map
-        import org.jboss.resteasy.reactive.RestQuery
-        import org.jboss.resteasy.reactive.RestResponse
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Any
+      import kotlin.String
+      import kotlin.collections.Map
+      import org.jboss.resteasy.reactive.RestQuery
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@RestQuery category: FetchTestCategoryQueryParam, @RestQuery
-              type: FetchTestTypeQueryParam): RestResponse<Map<String, Any>>
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@RestQuery category: FetchTestCategoryQueryParam, @RestQuery
+            type: FetchTestTypeQueryParam): RestResponse<Map<String, Any>>
 
-          public enum class FetchTestCategoryQueryParam {
-            Politics,
-            Science,
-          }
-
-          public enum class FetchTestTypeQueryParam {
-            All,
-            Limited,
-          }
+        public enum class FetchTestCategoryQueryParam {
+          Politics,
+          Science,
         }
+
+        public enum class FetchTestTypeQueryParam {
+          All,
+          Limited,
+        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

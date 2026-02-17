@@ -17,7 +17,10 @@
 package io.outfoxx.sunday.generator.common
 
 @Suppress("MagicNumber")
-enum class HttpStatus(val code: Int, val text: String) {
+enum class HttpStatus(
+  val code: Int,
+  val text: String,
+) {
   // Informational 1xx
   CONTINUE(100, "Continue"),
   SWITCHING_PROTOCOLS(101, "Switching Protocols"),
@@ -89,17 +92,15 @@ enum class HttpStatus(val code: Int, val text: String) {
   LOOP_DETECTED(508, "Loop Detected"),
   BANDWIDTH_LIMIT_EXCEEDED(509, "Bandwidth Limit Exceeded"),
   NOT_EXTENDED(510, "Not Extended"),
-  NETWORK_AUTHENTICATION_REQUIRED(511, "Network Authentication Required");
+  NETWORK_AUTHENTICATION_REQUIRED(511, "Network Authentication Required"),
+  ;
 
   companion object {
     private val map = values().associateBy(HttpStatus::code)
 
-    fun valueOf(code: Int): HttpStatus {
-      return map[code] ?: throw IllegalArgumentException("No HTTP status found for code $code")
-    }
+    fun valueOf(code: Int): HttpStatus =
+      map[code] ?: throw IllegalArgumentException("No HTTP status found for code $code")
 
-    fun find(code: Int): HttpStatus? {
-      return map[code]
-    }
+    fun find(code: Int): HttpStatus? = map[code]
   }
 }

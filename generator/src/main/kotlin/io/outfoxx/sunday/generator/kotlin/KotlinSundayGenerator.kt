@@ -24,9 +24,21 @@ import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.NodeShape
 import amf.shapes.client.platform.model.domain.UnionShape
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.KModifier.PUBLIC
+import com.squareup.kotlinpoet.LIST
+import com.squareup.kotlinpoet.MemberName
+import com.squareup.kotlinpoet.NameAllocator
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
@@ -35,9 +47,9 @@ import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.REQUEST_FACTORY
-import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_EVENT_SOURCE
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_METHOD
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_REQUEST
@@ -45,7 +57,22 @@ import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESULT_RESPONSE
 import io.outfoxx.sunday.generator.kotlin.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.mediaType
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.scalarValue
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.values
 import java.net.URI
 
 class KotlinSundayGenerator(
@@ -54,11 +81,11 @@ class KotlinSundayGenerator(
   typeRegistry: KotlinTypeRegistry,
   override val options: Options,
 ) : KotlinGenerator(
-  document,
-  shapeIndex,
-  typeRegistry,
-  options,
-) {
+    document,
+    shapeIndex,
+    typeRegistry,
+    options,
+  ) {
 
   init {
     require(typeRegistry.problemLibrary != KotlinProblemLibrary.QUARKUS) {
@@ -73,11 +100,11 @@ class KotlinSundayGenerator(
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
   ) : KotlinGenerator.Options(
-    defaultServicePackageName,
-    defaultProblemBaseUri,
-    defaultMediaTypes,
-    serviceSuffix,
-  )
+      defaultServicePackageName,
+      defaultProblemBaseUri,
+      defaultMediaTypes,
+      serviceSuffix,
+    )
 
   init {
     require(typeRegistry.generationMode == GenerationMode.Client) {
@@ -100,7 +127,10 @@ class KotlinSundayGenerator(
   private var referencedAcceptTypes = mutableSetOf<String>()
   private var referencedProblemTypes = mutableMapOf<URI, TypeName>()
 
-  override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
+  override fun processServiceBegin(
+    serviceTypeName: ClassName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder {
 
     val serviceTypeBuilder = TypeSpec.classBuilder(serviceTypeName)
     serviceTypeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
@@ -112,24 +142,24 @@ class KotlinSundayGenerator(
       companionTypeBuilder
         .apply { typeRegistry.addGeneratedTo(this, false) }
         .addFunction(
-          FunSpec.builder("baseURL")
+          FunSpec
+            .builder("baseURL")
             .returns(URI_TEMPLATE)
             .apply {
               baseURLParameters.forEach { param ->
                 val paramTypeName =
                   if (param.defaultValue != null) param.typeName.copy(nullable = false) else param.typeName
                 addParameter(
-                  ParameterSpec.builder(param.name, paramTypeName)
+                  ParameterSpec
+                    .builder(param.name, paramTypeName)
                     .apply {
                       if (param.defaultValue != null) {
                         defaultValue(param.defaultValue.kotlinConstant(paramTypeName, param.shape))
                       }
-                    }
-                    .build(),
+                    }.build(),
                 )
               }
-            }
-            .addCode("return %T(⇥\n", URI_TEMPLATE)
+            }.addCode("return %T(⇥\n", URI_TEMPLATE)
             .addCode("%S,\nmapOf(", baseURL)
             .apply {
               baseURLParameters.forEachIndexed { idx, param ->
@@ -140,8 +170,7 @@ class KotlinSundayGenerator(
                   addCode(", ")
                 }
               }
-            }
-            .addCode(")⇤\n)\n")
+            }.addCode(")⇤\n)\n")
             .build(),
         )
     }
@@ -151,13 +180,16 @@ class KotlinSundayGenerator(
 
     serviceTypeBuilder
       .addProperty(
-        PropertySpec.builder("requestFactory", REQUEST_FACTORY, PUBLIC)
+        PropertySpec
+          .builder("requestFactory", REQUEST_FACTORY, PUBLIC)
           .initializer("requestFactory")
           .build(),
       )
 
-    consBuilder = FunSpec.constructorBuilder()
-      .addParameter("requestFactory", REQUEST_FACTORY)
+    consBuilder =
+      FunSpec
+        .constructorBuilder()
+        .addParameter("requestFactory", REQUEST_FACTORY)
 
     return serviceTypeBuilder
   }
@@ -192,12 +224,13 @@ class KotlinSundayGenerator(
 
       consBuilder
         .addParameter(
-          ParameterSpec.builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
+          ParameterSpec
+            .builder("defaultContentTypes", LIST.parameterizedBy(MEDIA_TYPE))
             .defaultValue("%L", mediaTypesArray(contentTypes))
             .build(),
-        )
-        .addParameter(
-          ParameterSpec.builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
+        ).addParameter(
+          ParameterSpec
+            .builder("defaultAcceptTypes", LIST.parameterizedBy(MEDIA_TYPE))
             .defaultValue("%L", mediaTypesArray(acceptTypes))
             .build(),
         )
@@ -387,7 +420,10 @@ class KotlinSundayGenerator(
 
     val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-    fun parametersGen(fieldName: String, parameters: List<Pair<Parameter, TypeName>>): CodeBlock {
+    fun parametersGen(
+      fieldName: String,
+      parameters: List<Pair<Parameter, TypeName>>,
+    ): CodeBlock {
       val anyNullable = parameters.any { it.second.isNullable }
       val parametersBlock = CodeBlock.builder().add("%L = mapOf(⇥\n", fieldName)
       parameters.forEachIndexed { idx, parameterInfo ->
@@ -496,12 +532,13 @@ class KotlinSundayGenerator(
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n    ") { "%S -> decoder.decode<%T>(data, %M<%T>())" }
-          val typesParams = types.flatMap {
-            val typeName = resolveTypeName(it, null)
-            val discValue =
-              it.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
-            listOf(discValue, typeName, TYPE_OF, typeName)
-          }
+          val typesParams =
+            types.flatMap {
+              val typeName = resolveTypeName(it, null)
+              val discValue =
+                it.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
+              listOf(discValue, typeName, TYPE_OF, typeName)
+            }
 
           builder.add("return this.requestFactory⇥\n.eventStream(⇥\n", originalReturnType)
           builder.add(specGen())
@@ -557,13 +594,14 @@ class KotlinSundayGenerator(
     return functionBuilder.build()
   }
 
-  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock {
-    return mediaTypesArray(*mimeTypes.toTypedArray())
-  }
+  private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock = mediaTypesArray(*mimeTypes.toTypedArray())
 
-  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock {
-    return mimeTypes.distinct().map { mediaType(it) }.joinToCode(prefix = "listOf(", suffix = ")")
-  }
+  private fun mediaTypesArray(vararg mimeTypes: String): CodeBlock =
+    mimeTypes
+      .distinct()
+      .map {
+        mediaType(it)
+      }.joinToCode(prefix = "listOf(", suffix = ")")
 
   private fun mediaType(value: String) =
     when (value) {
