@@ -31,11 +31,18 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import java.net.URI
 
-fun findTypeMod(name: String, types: Map<TypeName.Standard, ModuleSpec>): ModuleSpec =
-  types[TypeName.standard(name)] ?: fail("Type '$name' not defined")
+fun findTypeMod(
+  name: String,
+  types: Map<TypeName.Standard, ModuleSpec>,
+): ModuleSpec = types[TypeName.standard(name)] ?: fail("Type '$name' not defined")
 
-fun findNestedType(typeModSpec: ModuleSpec, vararg names: String): AnyTypeSpec? =
-  typeModSpec.members.filterIsInstance<ModuleSpec>().firstOrNull { it.name == names.first() }
+fun findNestedType(
+  typeModSpec: ModuleSpec,
+  vararg names: String,
+): AnyTypeSpec? =
+  typeModSpec.members
+    .filterIsInstance<ModuleSpec>()
+    .firstOrNull { it.name == names.first() }
     ?.let { findNestedType(it, *names.dropLast(1).toTypedArray()) }
     ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull { it.name == names.first() }
 

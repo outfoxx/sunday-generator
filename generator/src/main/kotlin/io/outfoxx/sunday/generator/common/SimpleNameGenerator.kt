@@ -25,7 +25,10 @@ class SimpleNameGenerator : NameGenerator {
 
   private var generatedCount = 0
 
-  override fun generate(endPoint: EndPoint, operation: Operation): String {
+  override fun generate(
+    endPoint: EndPoint,
+    operation: Operation,
+  ): String {
 
     val specifiedName = operation.name ?: operation.operationId
     if (specifiedName != null) {

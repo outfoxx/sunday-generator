@@ -24,10 +24,15 @@ import java.nio.file.Files
 
 class TypeScriptCompilerExtension : ParameterResolver {
 
-  override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
-    parameterContext.parameter.type == TypeScriptCompiler::class.java
+  override fun supportsParameter(
+    parameterContext: ParameterContext,
+    extensionContext: ExtensionContext,
+  ): Boolean = parameterContext.parameter.type == TypeScriptCompiler::class.java
 
-  override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any {
+  override fun resolveParameter(
+    parameterContext: ParameterContext,
+    extensionContext: ExtensionContext,
+  ): Any {
 
     val store = extensionContext.root.getStore(ExtensionContext.Namespace.GLOBAL)
 

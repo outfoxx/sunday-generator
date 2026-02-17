@@ -47,7 +47,10 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       "Foundation.URL",
-      type.propertySpecs.firstOrNull()?.type?.toString(),
+      type.propertySpecs
+        .firstOrNull()
+        ?.type
+        ?.toString(),
     )
   }
 
@@ -97,174 +100,129 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Group : Codable, CustomDebugStringConvertible {
+      public class Group : Codable, CustomDebugStringConvertible {
 
-          public var value: String
-          public var debugDescription: String {
-            return DescriptionBuilder(Group.self)
+        public var value: String
+        public var debugDescription: String {
+          return DescriptionBuilder(Group.self)
+              .add(value, named: "value")
+              .build()
+        }
+
+        public init(value: String) {
+          self.value = value
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decode(String.self, forKey: .value)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.value, forKey: .value)
+        }
+
+        public func withValue(value: String) -> Group {
+          return Group(value: value)
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
+
+          case value = "value"
+
+        }
+
+        public class Member1 : Group {
+
+          public var memberValue1: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Member1.self)
                 .add(value, named: "value")
+                .add(memberValue1, named: "memberValue1")
                 .build()
           }
 
-          public init(value: String) {
-            self.value = value
+          public init(value: String, memberValue1: String) {
+            self.memberValue1 = memberValue1
+            super.init(value: value)
           }
 
           public required init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decode(String.self, forKey: .value)
+            self.memberValue1 = try container.decode(String.self, forKey: .memberValue1)
+            try super.init(from: decoder)
           }
 
-          public func encode(to encoder: Encoder) throws {
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.value, forKey: .value)
+            try container.encode(self.memberValue1, forKey: .memberValue1)
           }
 
-          public func withValue(value: String) -> Group {
-            return Group(value: value)
+          public override func withValue(value: String) -> Member1 {
+            return Member1(value: value, memberValue1: memberValue1)
+          }
+
+          public func withMemberValue1(memberValue1: String) -> Member1 {
+            return Member1(value: value, memberValue1: memberValue1)
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
+            case memberValue1 = "memberValue1"
 
           }
 
-          public class Member1 : Group {
+          public class Sub : Member1 {
 
-            public var memberValue1: String
+            public var subMemberValue: String
             public override var debugDescription: String {
-              return DescriptionBuilder(Member1.self)
+              return DescriptionBuilder(Sub.self)
                   .add(value, named: "value")
                   .add(memberValue1, named: "memberValue1")
+                  .add(subMemberValue, named: "subMemberValue")
                   .build()
             }
 
-            public init(value: String, memberValue1: String) {
-              self.memberValue1 = memberValue1
-              super.init(value: value)
+            public init(
+              value: String,
+              memberValue1: String,
+              subMemberValue: String
+            ) {
+              self.subMemberValue = subMemberValue
+              super.init(value: value, memberValue1: memberValue1)
             }
 
             public required init(from decoder: Decoder) throws {
               let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.memberValue1 = try container.decode(String.self, forKey: .memberValue1)
+              self.subMemberValue = try container.decode(String.self, forKey: .subMemberValue)
               try super.init(from: decoder)
             }
 
             public override func encode(to encoder: Encoder) throws {
               try super.encode(to: encoder)
               var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.memberValue1, forKey: .memberValue1)
+              try container.encode(self.subMemberValue, forKey: .subMemberValue)
             }
 
-            public override func withValue(value: String) -> Member1 {
-              return Member1(value: value, memberValue1: memberValue1)
+            public override func withValue(value: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
             }
 
-            public func withMemberValue1(memberValue1: String) -> Member1 {
-              return Member1(value: value, memberValue1: memberValue1)
+            public override func withMemberValue1(memberValue1: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
             }
 
-            fileprivate enum CodingKeys : String, CodingKey {
-
-              case memberValue1 = "memberValue1"
-
-            }
-
-            public class Sub : Member1 {
-
-              public var subMemberValue: String
-              public override var debugDescription: String {
-                return DescriptionBuilder(Sub.self)
-                    .add(value, named: "value")
-                    .add(memberValue1, named: "memberValue1")
-                    .add(subMemberValue, named: "subMemberValue")
-                    .build()
-              }
-
-              public init(
-                value: String,
-                memberValue1: String,
-                subMemberValue: String
-              ) {
-                self.subMemberValue = subMemberValue
-                super.init(value: value, memberValue1: memberValue1)
-              }
-
-              public required init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.subMemberValue = try container.decode(String.self, forKey: .subMemberValue)
-                try super.init(from: decoder)
-              }
-
-              public override func encode(to encoder: Encoder) throws {
-                try super.encode(to: encoder)
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(self.subMemberValue, forKey: .subMemberValue)
-              }
-
-              public override func withValue(value: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              public override func withMemberValue1(memberValue1: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              public func withSubMemberValue(subMemberValue: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              fileprivate enum CodingKeys : String, CodingKey {
-
-                case subMemberValue = "subMemberValue"
-
-              }
-
-            }
-
-          }
-
-          public class Member2 : Group {
-
-            public var memberValue2: String
-            public override var debugDescription: String {
-              return DescriptionBuilder(Member2.self)
-                  .add(value, named: "value")
-                  .add(memberValue2, named: "memberValue2")
-                  .build()
-            }
-
-            public init(value: String, memberValue2: String) {
-              self.memberValue2 = memberValue2
-              super.init(value: value)
-            }
-
-            public required init(from decoder: Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.memberValue2 = try container.decode(String.self, forKey: .memberValue2)
-              try super.init(from: decoder)
-            }
-
-            public override func encode(to encoder: Encoder) throws {
-              try super.encode(to: encoder)
-              var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.memberValue2, forKey: .memberValue2)
-            }
-
-            public override func withValue(value: String) -> Member2 {
-              return Member2(value: value, memberValue2: memberValue2)
-            }
-
-            public func withMemberValue2(memberValue2: String) -> Member2 {
-              return Member2(value: value, memberValue2: memberValue2)
+            public func withSubMemberValue(subMemberValue: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
             }
 
             fileprivate enum CodingKeys : String, CodingKey {
 
-              case memberValue2 = "memberValue2"
+              case subMemberValue = "subMemberValue"
 
             }
 
@@ -272,9 +230,55 @@ class RamlTypeAnnotationsTest {
 
         }
 
+        public class Member2 : Group {
+
+          public var memberValue2: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Member2.self)
+                .add(value, named: "value")
+                .add(memberValue2, named: "memberValue2")
+                .build()
+          }
+
+          public init(value: String, memberValue2: String) {
+            self.memberValue2 = memberValue2
+            super.init(value: value)
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.memberValue2 = try container.decode(String.self, forKey: .memberValue2)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.memberValue2, forKey: .memberValue2)
+          }
+
+          public override func withValue(value: String) -> Member2 {
+            return Member2(value: value, memberValue2: memberValue2)
+          }
+
+          public func withMemberValue2(memberValue2: String) -> Member2 {
+            return Member2(value: value, memberValue2: memberValue2)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case memberValue2 = "memberValue2"
+
+          }
+
+        }
+
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -292,7 +296,236 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
+
+      public class Group : Codable, CustomDebugStringConvertible {
+
+        public var value: String
+        public var debugDescription: String {
+          return DescriptionBuilder(Group.self)
+              .add(value, named: "value")
+              .build()
+        }
+
+        public init(value: String) {
+          self.value = value
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decode(String.self, forKey: .value)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.value, forKey: .value)
+        }
+
+        public func withValue(value: String) -> Group {
+          return Group(value: value)
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
+
+          case value = "value"
+
+        }
+
+        public class Member1 : Group {
+
+          public var memberValue1: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Member1.self)
+                .add(value, named: "value")
+                .add(memberValue1, named: "memberValue1")
+                .build()
+          }
+
+          public init(value: String, memberValue1: String) {
+            self.memberValue1 = memberValue1
+            super.init(value: value)
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.memberValue1 = try container.decode(String.self, forKey: .memberValue1)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.memberValue1, forKey: .memberValue1)
+          }
+
+          public override func withValue(value: String) -> Member1 {
+            return Member1(value: value, memberValue1: memberValue1)
+          }
+
+          public func withMemberValue1(memberValue1: String) -> Member1 {
+            return Member1(value: value, memberValue1: memberValue1)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case memberValue1 = "memberValue1"
+
+          }
+
+          public class Sub : Member1 {
+
+            public var subMemberValue: String
+            public override var debugDescription: String {
+              return DescriptionBuilder(Sub.self)
+                  .add(value, named: "value")
+                  .add(memberValue1, named: "memberValue1")
+                  .add(subMemberValue, named: "subMemberValue")
+                  .build()
+            }
+
+            public init(
+              value: String,
+              memberValue1: String,
+              subMemberValue: String
+            ) {
+              self.subMemberValue = subMemberValue
+              super.init(value: value, memberValue1: memberValue1)
+            }
+
+            public required init(from decoder: Decoder) throws {
+              let container = try decoder.container(keyedBy: CodingKeys.self)
+              self.subMemberValue = try container.decode(String.self, forKey: .subMemberValue)
+              try super.init(from: decoder)
+            }
+
+            public override func encode(to encoder: Encoder) throws {
+              try super.encode(to: encoder)
+              var container = encoder.container(keyedBy: CodingKeys.self)
+              try container.encode(self.subMemberValue, forKey: .subMemberValue)
+            }
+
+            public override func withValue(value: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
+            }
+
+            public override func withMemberValue1(memberValue1: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
+            }
+
+            public func withSubMemberValue(subMemberValue: String) -> Sub {
+              return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
+            }
+
+            fileprivate enum CodingKeys : String, CodingKey {
+
+              case subMemberValue = "subMemberValue"
+
+            }
+
+          }
+
+        }
+
+        public class Member2 : Group {
+
+          public var memberValue2: String
+          public override var debugDescription: String {
+            return DescriptionBuilder(Member2.self)
+                .add(value, named: "value")
+                .add(memberValue2, named: "memberValue2")
+                .build()
+          }
+
+          public init(value: String, memberValue2: String) {
+            self.memberValue2 = memberValue2
+            super.init(value: value)
+          }
+
+          public required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.memberValue2 = try container.decode(String.self, forKey: .memberValue2)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: Encoder) throws {
+            try super.encode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.memberValue2, forKey: .memberValue2)
+          }
+
+          public override func withValue(value: String) -> Member2 {
+            return Member2(value: value, memberValue2: memberValue2)
+          }
+
+          public func withMemberValue2(memberValue2: String) -> Member2 {
+            return Member2(value: value, memberValue2: memberValue2)
+          }
+
+          fileprivate enum CodingKeys : String, CodingKey {
+
+            case memberValue2 = "memberValue2"
+
+          }
+
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get("", typeSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test class hierarchy generated for 'nested' annotation using library types`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = SwiftTypeRegistry(setOf())
+
+    val typeSpec = findType("Root", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+      import Sunday
+
+      public class Root : Codable, CustomDebugStringConvertible {
+
+        public var value: String
+        public var debugDescription: String {
+          return DescriptionBuilder(Root.self)
+              .add(value, named: "value")
+              .build()
+        }
+
+        public init(value: String) {
+          self.value = value
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decode(String.self, forKey: .value)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.value, forKey: .value)
+        }
+
+        public func withValue(value: String) -> Root {
+          return Root(value: value)
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
+
+          case value = "value"
+
+        }
 
         public class Group : Codable, CustomDebugStringConvertible {
 
@@ -327,266 +560,36 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          public class Member1 : Group {
+          public class Member : Codable, CustomDebugStringConvertible {
 
-            public var memberValue1: String
-            public override var debugDescription: String {
-              return DescriptionBuilder(Member1.self)
-                  .add(value, named: "value")
-                  .add(memberValue1, named: "memberValue1")
-                  .build()
-            }
-
-            public init(value: String, memberValue1: String) {
-              self.memberValue1 = memberValue1
-              super.init(value: value)
-            }
-
-            public required init(from decoder: Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.memberValue1 = try container.decode(String.self, forKey: .memberValue1)
-              try super.init(from: decoder)
-            }
-
-            public override func encode(to encoder: Encoder) throws {
-              try super.encode(to: encoder)
-              var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.memberValue1, forKey: .memberValue1)
-            }
-
-            public override func withValue(value: String) -> Member1 {
-              return Member1(value: value, memberValue1: memberValue1)
-            }
-
-            public func withMemberValue1(memberValue1: String) -> Member1 {
-              return Member1(value: value, memberValue1: memberValue1)
-            }
-
-            fileprivate enum CodingKeys : String, CodingKey {
-
-              case memberValue1 = "memberValue1"
-
-            }
-
-            public class Sub : Member1 {
-
-              public var subMemberValue: String
-              public override var debugDescription: String {
-                return DescriptionBuilder(Sub.self)
-                    .add(value, named: "value")
-                    .add(memberValue1, named: "memberValue1")
-                    .add(subMemberValue, named: "subMemberValue")
-                    .build()
-              }
-
-              public init(
-                value: String,
-                memberValue1: String,
-                subMemberValue: String
-              ) {
-                self.subMemberValue = subMemberValue
-                super.init(value: value, memberValue1: memberValue1)
-              }
-
-              public required init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.subMemberValue = try container.decode(String.self, forKey: .subMemberValue)
-                try super.init(from: decoder)
-              }
-
-              public override func encode(to encoder: Encoder) throws {
-                try super.encode(to: encoder)
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(self.subMemberValue, forKey: .subMemberValue)
-              }
-
-              public override func withValue(value: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              public override func withMemberValue1(memberValue1: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              public func withSubMemberValue(subMemberValue: String) -> Sub {
-                return Sub(value: value, memberValue1: memberValue1, subMemberValue: subMemberValue)
-              }
-
-              fileprivate enum CodingKeys : String, CodingKey {
-
-                case subMemberValue = "subMemberValue"
-
-              }
-
-            }
-
-          }
-
-          public class Member2 : Group {
-
-            public var memberValue2: String
-            public override var debugDescription: String {
-              return DescriptionBuilder(Member2.self)
-                  .add(value, named: "value")
-                  .add(memberValue2, named: "memberValue2")
-                  .build()
-            }
-
-            public init(value: String, memberValue2: String) {
-              self.memberValue2 = memberValue2
-              super.init(value: value)
-            }
-
-            public required init(from decoder: Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.memberValue2 = try container.decode(String.self, forKey: .memberValue2)
-              try super.init(from: decoder)
-            }
-
-            public override func encode(to encoder: Encoder) throws {
-              try super.encode(to: encoder)
-              var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.memberValue2, forKey: .memberValue2)
-            }
-
-            public override func withValue(value: String) -> Member2 {
-              return Member2(value: value, memberValue2: memberValue2)
-            }
-
-            public func withMemberValue2(memberValue2: String) -> Member2 {
-              return Member2(value: value, memberValue2: memberValue2)
-            }
-
-            fileprivate enum CodingKeys : String, CodingKey {
-
-              case memberValue2 = "memberValue2"
-
-            }
-
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get("", typeSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test class hierarchy generated for 'nested' annotation using library types`(
-    compiler: SwiftCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = SwiftTypeRegistry(setOf())
-
-    val typeSpec = findType("Root", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-        import Sunday
-
-        public class Root : Codable, CustomDebugStringConvertible {
-
-          public var value: String
-          public var debugDescription: String {
-            return DescriptionBuilder(Root.self)
-                .add(value, named: "value")
-                .build()
-          }
-
-          public init(value: String) {
-            self.value = value
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decode(String.self, forKey: .value)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.value, forKey: .value)
-          }
-
-          public func withValue(value: String) -> Root {
-            return Root(value: value)
-          }
-
-          fileprivate enum CodingKeys : String, CodingKey {
-
-            case value = "value"
-
-          }
-
-          public class Group : Codable, CustomDebugStringConvertible {
-
-            public var value: String
+            public var memberValue: String
             public var debugDescription: String {
-              return DescriptionBuilder(Group.self)
-                  .add(value, named: "value")
+              return DescriptionBuilder(Member.self)
+                  .add(memberValue, named: "memberValue")
                   .build()
             }
 
-            public init(value: String) {
-              self.value = value
+            public init(memberValue: String) {
+              self.memberValue = memberValue
             }
 
             public required init(from decoder: Decoder) throws {
               let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.value = try container.decode(String.self, forKey: .value)
+              self.memberValue = try container.decode(String.self, forKey: .memberValue)
             }
 
             public func encode(to encoder: Encoder) throws {
               var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.value, forKey: .value)
+              try container.encode(self.memberValue, forKey: .memberValue)
             }
 
-            public func withValue(value: String) -> Group {
-              return Group(value: value)
+            public func withMemberValue(memberValue: String) -> Member {
+              return Member(memberValue: memberValue)
             }
 
             fileprivate enum CodingKeys : String, CodingKey {
 
-              case value = "value"
-
-            }
-
-            public class Member : Codable, CustomDebugStringConvertible {
-
-              public var memberValue: String
-              public var debugDescription: String {
-                return DescriptionBuilder(Member.self)
-                    .add(memberValue, named: "memberValue")
-                    .build()
-              }
-
-              public init(memberValue: String) {
-                self.memberValue = memberValue
-              }
-
-              public required init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.memberValue = try container.decode(String.self, forKey: .memberValue)
-              }
-
-              public func encode(to encoder: Encoder) throws {
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(self.memberValue, forKey: .memberValue)
-              }
-
-              public func withMemberValue(memberValue: String) -> Member {
-                return Member(memberValue: memberValue)
-              }
-
-              fileprivate enum CodingKeys : String, CodingKey {
-
-                case memberValue = "memberValue"
-
-              }
+              case memberValue = "memberValue"
 
             }
 
@@ -594,9 +597,12 @@ class RamlTypeAnnotationsTest {
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -614,13 +620,46 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Root : Codable, CustomDebugStringConvertible {
+      public class Root : Codable, CustomDebugStringConvertible {
+
+        public var value: String
+        public var debugDescription: String {
+          return DescriptionBuilder(Root.self)
+              .add(value, named: "value")
+              .build()
+        }
+
+        public init(value: String) {
+          self.value = value
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decode(String.self, forKey: .value)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.value, forKey: .value)
+        }
+
+        public func withValue(value: String) -> Root {
+          return Root(value: value)
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
+
+          case value = "value"
+
+        }
+
+        public class Group : Codable, CustomDebugStringConvertible {
 
           public var value: String
           public var debugDescription: String {
-            return DescriptionBuilder(Root.self)
+            return DescriptionBuilder(Group.self)
                 .add(value, named: "value")
                 .build()
           }
@@ -639,8 +678,8 @@ class RamlTypeAnnotationsTest {
             try container.encode(self.value, forKey: .value)
           }
 
-          public func withValue(value: String) -> Root {
-            return Root(value: value)
+          public func withValue(value: String) -> Group {
+            return Group(value: value)
           }
 
           fileprivate enum CodingKeys : String, CodingKey {
@@ -649,71 +688,36 @@ class RamlTypeAnnotationsTest {
 
           }
 
-          public class Group : Codable, CustomDebugStringConvertible {
+          public class Member : Codable, CustomDebugStringConvertible {
 
-            public var value: String
+            public var memberValue: String
             public var debugDescription: String {
-              return DescriptionBuilder(Group.self)
-                  .add(value, named: "value")
+              return DescriptionBuilder(Member.self)
+                  .add(memberValue, named: "memberValue")
                   .build()
             }
 
-            public init(value: String) {
-              self.value = value
+            public init(memberValue: String) {
+              self.memberValue = memberValue
             }
 
             public required init(from decoder: Decoder) throws {
               let container = try decoder.container(keyedBy: CodingKeys.self)
-              self.value = try container.decode(String.self, forKey: .value)
+              self.memberValue = try container.decode(String.self, forKey: .memberValue)
             }
 
             public func encode(to encoder: Encoder) throws {
               var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(self.value, forKey: .value)
+              try container.encode(self.memberValue, forKey: .memberValue)
             }
 
-            public func withValue(value: String) -> Group {
-              return Group(value: value)
+            public func withMemberValue(memberValue: String) -> Member {
+              return Member(memberValue: memberValue)
             }
 
             fileprivate enum CodingKeys : String, CodingKey {
 
-              case value = "value"
-
-            }
-
-            public class Member : Codable, CustomDebugStringConvertible {
-
-              public var memberValue: String
-              public var debugDescription: String {
-                return DescriptionBuilder(Member.self)
-                    .add(memberValue, named: "memberValue")
-                    .build()
-              }
-
-              public init(memberValue: String) {
-                self.memberValue = memberValue
-              }
-
-              public required init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.memberValue = try container.decode(String.self, forKey: .memberValue)
-              }
-
-              public func encode(to encoder: Encoder) throws {
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(self.memberValue, forKey: .memberValue)
-              }
-
-              public func withMemberValue(memberValue: String) -> Member {
-                return Member(memberValue: memberValue)
-              }
-
-              fileprivate enum CodingKeys : String, CodingKey {
-
-                case memberValue = "memberValue"
-
-              }
+              case memberValue = "memberValue"
 
             }
 
@@ -721,9 +725,12 @@ class RamlTypeAnnotationsTest {
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -741,38 +748,39 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import Foundation
-        import Sunday
+      import Foundation
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var className: String {
-            return String(describing: Data.self) + "-value-" + "-literal"
-          }
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .build()
-          }
-
-          public init() {
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let _ = try decoder.container(keyedBy: CodingKeys.self)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            let _ = encoder.container(keyedBy: CodingKeys.self)
-          }
-
-          fileprivate enum CodingKeys : CodingKey {
-          }
-
+        public var className: String {
+          return String(describing: Data.self) + "-value-" + "-literal"
         }
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .build()
+        }
+
+        public init() {
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let _ = try decoder.container(keyedBy: CodingKeys.self)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          let _ = encoder.container(keyedBy: CodingKeys.self)
+        }
+
+        fileprivate enum CodingKeys : CodingKey {
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -788,233 +796,241 @@ class RamlTypeAnnotationsTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
-    val parenTypeSpec = builtTypes[typeName(".Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[typeName(".Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Parent : Codable, CustomDebugStringConvertible {
+      public class Parent : Codable, CustomDebugStringConvertible {
 
-          public var type: String {
-            fatalError("abstract type method")
-          }
-          public var debugDescription: String {
-            return DescriptionBuilder(Parent.self)
-                .build()
-          }
-
-          public init() {
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let _ = try decoder.container(keyedBy: CodingKeys.self)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            let _ = encoder.container(keyedBy: CodingKeys.self)
-          }
-
-          fileprivate enum CodingKeys : CodingKey {
-          }
-
+        public var type: String {
+          fatalError("abstract type method")
         }
+        public var debugDescription: String {
+          return DescriptionBuilder(Parent.self)
+              .build()
+        }
+
+        public init() {
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let _ = try decoder.container(keyedBy: CodingKeys.self)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          let _ = encoder.container(keyedBy: CodingKeys.self)
+        }
+
+        fileprivate enum CodingKeys : CodingKey {
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", parenTypeSpec)
+        FileSpec
+          .get("", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[typeName(".Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[typeName(".Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Child1 : Parent {
+      public class Child1 : Parent {
 
-          public override var type: String {
-            return "Child1"
-          }
-          public var value: String?
-          public override var debugDescription: String {
-            return DescriptionBuilder(Child1.self)
-                .add(type, named: "type")
-                .add(value, named: "value")
-                .build()
-          }
+        public override var type: String {
+          return "Child1"
+        }
+        public var value: String?
+        public override var debugDescription: String {
+          return DescriptionBuilder(Child1.self)
+              .add(type, named: "type")
+              .add(value, named: "value")
+              .build()
+        }
 
-          public init(value: String? = nil) {
-            self.value = value
-            super.init()
-          }
+        public init(value: String? = nil) {
+          self.value = value
+          super.init()
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decodeIfPresent(String.self, forKey: .value)
-            try super.init(from: decoder)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decodeIfPresent(String.self, forKey: .value)
+          try super.init(from: decoder)
+        }
 
-          public override func encode(to encoder: Encoder) throws {
-            try super.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfPresent(self.value, forKey: .value)
-          }
+        public override func encode(to encoder: Encoder) throws {
+          try super.encode(to: encoder)
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfPresent(self.value, forKey: .value)
+        }
 
-          public func withValue(value: String?) -> Child1 {
-            return Child1(value: value)
-          }
+        public func withValue(value: String?) -> Child1 {
+          return Child1(value: value)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
-
-          }
+          case value = "value"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", child1TypeSpec)
+        FileSpec
+          .get("", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[typeName(".Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[typeName(".Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Child2 : Parent {
+      public class Child2 : Parent {
 
-          public override var type: String {
-            return "child2"
-          }
-          public var value: String?
-          public override var debugDescription: String {
-            return DescriptionBuilder(Child2.self)
-                .add(type, named: "type")
-                .add(value, named: "value")
-                .build()
-          }
+        public override var type: String {
+          return "child2"
+        }
+        public var value: String?
+        public override var debugDescription: String {
+          return DescriptionBuilder(Child2.self)
+              .add(type, named: "type")
+              .add(value, named: "value")
+              .build()
+        }
 
-          public init(value: String? = nil) {
-            self.value = value
-            super.init()
-          }
+        public init(value: String? = nil) {
+          self.value = value
+          super.init()
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decodeIfPresent(String.self, forKey: .value)
-            try super.init(from: decoder)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decodeIfPresent(String.self, forKey: .value)
+          try super.init(from: decoder)
+        }
 
-          public override func encode(to encoder: Encoder) throws {
-            try super.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfPresent(self.value, forKey: .value)
-          }
+        public override func encode(to encoder: Encoder) throws {
+          try super.encode(to: encoder)
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfPresent(self.value, forKey: .value)
+        }
 
-          public func withValue(value: String?) -> Child2 {
-            return Child2(value: value)
-          }
+        public func withValue(value: String?) -> Child2 {
+          return Child2(value: value)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
-
-          }
+          case value = "value"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", child2TypeSpec)
+        FileSpec
+          .get("", child2TypeSpec)
           .writeTo(this)
       },
     )
 
-    val testTypeSpec = builtTypes[typeName(".Test")]
-      ?: error("Test type is not defined")
+    val testTypeSpec =
+      builtTypes[typeName(".Test")]
+        ?: error("Test type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var parent: Parent
-          public var parentType: String
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .add(parent, named: "parent")
-                .add(parentType, named: "parentType")
-                .build()
+        public var parent: Parent
+        public var parentType: String
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .add(parent, named: "parent")
+              .add(parentType, named: "parentType")
+              .build()
+        }
+
+        public init(parent: Parent, parentType: String) {
+          self.parent = parent
+          self.parentType = parentType
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.parentType = try container.decode(String.self, forKey: .parentType)
+          switch self.parentType {
+          case "Child1": self.parent = try container.decode(Child1.self, forKey: .parent)
+          case "child2": self.parent = try container.decode(Child2.self, forKey: .parent)
+          default:
+              throw DecodingError.dataCorruptedError(
+                forKey: CodingKeys.parentType,
+                in: container,
+                debugDescription: "unsupported value for \"parentType\""
+              )
           }
+        }
 
-          public init(parent: Parent, parentType: String) {
-            self.parent = parent
-            self.parentType = parentType
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.parentType = try container.decode(String.self, forKey: .parentType)
-            switch self.parentType {
-            case "Child1": self.parent = try container.decode(Child1.self, forKey: .parent)
-            case "child2": self.parent = try container.decode(Child2.self, forKey: .parent)
-            default:
-                throw DecodingError.dataCorruptedError(
-                  forKey: CodingKeys.parentType,
-                  in: container,
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.parentType, forKey: .parentType)
+          switch self.parentType {
+          case "Child1": try container.encode(self.parent as! Child1, forKey: .parent)
+          case "child2": try container.encode(self.parent as! Child2, forKey: .parent)
+          default:
+              throw EncodingError.invalidValue(
+                self.parentType,
+                EncodingError.Context(
+                  codingPath: encoder.codingPath + [CodingKeys.parentType],
                   debugDescription: "unsupported value for \"parentType\""
                 )
-            }
+              )
           }
+        }
 
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.parentType, forKey: .parentType)
-            switch self.parentType {
-            case "Child1": try container.encode(self.parent as! Child1, forKey: .parent)
-            case "child2": try container.encode(self.parent as! Child2, forKey: .parent)
-            default:
-                throw EncodingError.invalidValue(
-                  self.parentType,
-                  EncodingError.Context(
-                    codingPath: encoder.codingPath + [CodingKeys.parentType],
-                    debugDescription: "unsupported value for \"parentType\""
-                  )
-                )
-            }
-          }
+        public func withParent(parent: Parent) -> Test {
+          return Test(parent: parent, parentType: parentType)
+        }
 
-          public func withParent(parent: Parent) -> Test {
-            return Test(parent: parent, parentType: parentType)
-          }
+        public func withParentType(parentType: String) -> Test {
+          return Test(parent: parent, parentType: parentType)
+        }
 
-          public func withParentType(parentType: String) -> Test {
-            return Test(parent: parent, parentType: parentType)
-          }
+        fileprivate enum CodingKeys : String, CodingKey {
 
-          fileprivate enum CodingKeys : String, CodingKey {
-
-            case parent = "parent"
-            case parentType = "parentType"
-
-          }
+          case parent = "parent"
+          case parentType = "parentType"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", testTypeSpec)
+        FileSpec
+          .get("", testTypeSpec)
           .writeTo(this)
       },
     )
@@ -1030,219 +1046,227 @@ class RamlTypeAnnotationsTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler)
 
-    val parenTypeSpec = builtTypes[typeName(".Parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[typeName(".Parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Parent : Codable, CustomDebugStringConvertible {
+      public class Parent : Codable, CustomDebugStringConvertible {
 
-          public var type: `Type` {
-            fatalError("abstract type method")
-          }
-          public var debugDescription: String {
-            return DescriptionBuilder(Parent.self)
-                .build()
-          }
-
-          public init() {
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let _ = try decoder.container(keyedBy: CodingKeys.self)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            let _ = encoder.container(keyedBy: CodingKeys.self)
-          }
-
-          fileprivate enum CodingKeys : CodingKey {
-          }
-
+        public var type: `Type` {
+          fatalError("abstract type method")
         }
+        public var debugDescription: String {
+          return DescriptionBuilder(Parent.self)
+              .build()
+        }
+
+        public init() {
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let _ = try decoder.container(keyedBy: CodingKeys.self)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          let _ = encoder.container(keyedBy: CodingKeys.self)
+        }
+
+        fileprivate enum CodingKeys : CodingKey {
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", parenTypeSpec)
+        FileSpec
+          .get("", parenTypeSpec)
           .writeTo(this)
       },
     )
 
-    val child1TypeSpec = builtTypes[typeName(".Child1")]
-      ?: error("Child1 type is not defined")
+    val child1TypeSpec =
+      builtTypes[typeName(".Child1")]
+        ?: error("Child1 type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Child1 : Parent {
+      public class Child1 : Parent {
 
-          public override var type: `Type` {
-            return `Type`.child1
-          }
-          public var value: String?
-          public override var debugDescription: String {
-            return DescriptionBuilder(Child1.self)
-                .add(type, named: "type")
-                .add(value, named: "value")
-                .build()
-          }
+        public override var type: `Type` {
+          return `Type`.child1
+        }
+        public var value: String?
+        public override var debugDescription: String {
+          return DescriptionBuilder(Child1.self)
+              .add(type, named: "type")
+              .add(value, named: "value")
+              .build()
+        }
 
-          public init(value: String? = nil) {
-            self.value = value
-            super.init()
-          }
+        public init(value: String? = nil) {
+          self.value = value
+          super.init()
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decodeIfPresent(String.self, forKey: .value)
-            try super.init(from: decoder)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decodeIfPresent(String.self, forKey: .value)
+          try super.init(from: decoder)
+        }
 
-          public override func encode(to encoder: Encoder) throws {
-            try super.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfPresent(self.value, forKey: .value)
-          }
+        public override func encode(to encoder: Encoder) throws {
+          try super.encode(to: encoder)
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfPresent(self.value, forKey: .value)
+        }
 
-          public func withValue(value: String?) -> Child1 {
-            return Child1(value: value)
-          }
+        public func withValue(value: String?) -> Child1 {
+          return Child1(value: value)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
-
-          }
+          case value = "value"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", child1TypeSpec)
+        FileSpec
+          .get("", child1TypeSpec)
           .writeTo(this)
       },
     )
 
-    val child2TypeSpec = builtTypes[typeName(".Child2")]
-      ?: error("Child2 type is not defined")
+    val child2TypeSpec =
+      builtTypes[typeName(".Child2")]
+        ?: error("Child2 type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Child2 : Parent {
+      public class Child2 : Parent {
 
-          public override var type: `Type` {
-            return `Type`.child2
-          }
-          public var value: String?
-          public override var debugDescription: String {
-            return DescriptionBuilder(Child2.self)
-                .add(type, named: "type")
-                .add(value, named: "value")
-                .build()
-          }
+        public override var type: `Type` {
+          return `Type`.child2
+        }
+        public var value: String?
+        public override var debugDescription: String {
+          return DescriptionBuilder(Child2.self)
+              .add(type, named: "type")
+              .add(value, named: "value")
+              .build()
+        }
 
-          public init(value: String? = nil) {
-            self.value = value
-            super.init()
-          }
+        public init(value: String? = nil) {
+          self.value = value
+          super.init()
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.value = try container.decodeIfPresent(String.self, forKey: .value)
-            try super.init(from: decoder)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.value = try container.decodeIfPresent(String.self, forKey: .value)
+          try super.init(from: decoder)
+        }
 
-          public override func encode(to encoder: Encoder) throws {
-            try super.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfPresent(self.value, forKey: .value)
-          }
+        public override func encode(to encoder: Encoder) throws {
+          try super.encode(to: encoder)
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfPresent(self.value, forKey: .value)
+        }
 
-          public func withValue(value: String?) -> Child2 {
-            return Child2(value: value)
-          }
+        public func withValue(value: String?) -> Child2 {
+          return Child2(value: value)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case value = "value"
-
-          }
+          case value = "value"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", child2TypeSpec)
+        FileSpec
+          .get("", child2TypeSpec)
           .writeTo(this)
       },
     )
 
-    val testTypeSpec = builtTypes[typeName(".Test")]
-      ?: error("Test type is not defined")
+    val testTypeSpec =
+      builtTypes[typeName(".Test")]
+        ?: error("Test type is not defined")
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var parent: Parent
-          public var parentType: `Type`
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .add(parent, named: "parent")
-                .add(parentType, named: "parentType")
-                .build()
+        public var parent: Parent
+        public var parentType: `Type`
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .add(parent, named: "parent")
+              .add(parentType, named: "parentType")
+              .build()
+        }
+
+        public init(parent: Parent, parentType: `Type`) {
+          self.parent = parent
+          self.parentType = parentType
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.parentType = try container.decode(`Type`.self, forKey: .parentType)
+          switch self.parentType {
+          case .child2: self.parent = try container.decode(Child2.self, forKey: .parent)
+          case .child1: self.parent = try container.decode(Child1.self, forKey: .parent)
           }
+        }
 
-          public init(parent: Parent, parentType: `Type`) {
-            self.parent = parent
-            self.parentType = parentType
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.parentType, forKey: .parentType)
+          switch self.parentType {
+          case .child2: try container.encode(self.parent as! Child2, forKey: .parent)
+          case .child1: try container.encode(self.parent as! Child1, forKey: .parent)
           }
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.parentType = try container.decode(`Type`.self, forKey: .parentType)
-            switch self.parentType {
-            case .child2: self.parent = try container.decode(Child2.self, forKey: .parent)
-            case .child1: self.parent = try container.decode(Child1.self, forKey: .parent)
-            }
-          }
+        public func withParent(parent: Parent) -> Test {
+          return Test(parent: parent, parentType: parentType)
+        }
 
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.parentType, forKey: .parentType)
-            switch self.parentType {
-            case .child2: try container.encode(self.parent as! Child2, forKey: .parent)
-            case .child1: try container.encode(self.parent as! Child1, forKey: .parent)
-            }
-          }
+        public func withParentType(parentType: `Type`) -> Test {
+          return Test(parent: parent, parentType: parentType)
+        }
 
-          public func withParent(parent: Parent) -> Test {
-            return Test(parent: parent, parentType: parentType)
-          }
+        fileprivate enum CodingKeys : String, CodingKey {
 
-          public func withParentType(parentType: `Type`) -> Test {
-            return Test(parent: parent, parentType: parentType)
-          }
-
-          fileprivate enum CodingKeys : String, CodingKey {
-
-            case parent = "parent"
-            case parentType = "parentType"
-
-          }
+          case parent = "parent"
+          case parentType = "parentType"
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", testTypeSpec)
+        FileSpec
+          .get("", testTypeSpec)
           .writeTo(this)
       },
     )
@@ -1276,130 +1300,130 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      public class Test : Codable, CustomDebugStringConvertible {
 
-          public var string: UpdateOp<String>?
-          public var int: UpdateOp<Int>?
-          public var bool: UpdateOp<Bool>?
-          public var nullable: PatchOp<String>?
-          public var optional: UpdateOp<String>?
-          public var nullableOptional: PatchOp<String>?
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .add(string, named: "string")
-                .add(int, named: "int")
-                .add(bool, named: "bool")
-                .add(nullable, named: "nullable")
-                .add(optional, named: "optional")
-                .add(nullableOptional, named: "nullableOptional")
-                .build()
-          }
+        public var string: UpdateOp<String>?
+        public var int: UpdateOp<Int>?
+        public var bool: UpdateOp<Bool>?
+        public var nullable: PatchOp<String>?
+        public var optional: UpdateOp<String>?
+        public var nullableOptional: PatchOp<String>?
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .add(string, named: "string")
+              .add(int, named: "int")
+              .add(bool, named: "bool")
+              .add(nullable, named: "nullable")
+              .add(optional, named: "optional")
+              .add(nullableOptional, named: "nullableOptional")
+              .build()
+        }
 
-          public init(
-            string: UpdateOp<String>? = .none,
-            int: UpdateOp<Int>? = .none,
-            bool: UpdateOp<Bool>? = .none,
-            nullable: PatchOp<String>? = .none,
-            optional: UpdateOp<String>? = .none,
-            nullableOptional: PatchOp<String>? = .none
-          ) {
-            self.string = string
-            self.int = int
-            self.bool = bool
-            self.nullable = nullable
-            self.optional = optional
-            self.nullableOptional = nullableOptional
-          }
+        public init(
+          string: UpdateOp<String>? = .none,
+          int: UpdateOp<Int>? = .none,
+          bool: UpdateOp<Bool>? = .none,
+          nullable: PatchOp<String>? = .none,
+          optional: UpdateOp<String>? = .none,
+          nullableOptional: PatchOp<String>? = .none
+        ) {
+          self.string = string
+          self.int = int
+          self.bool = bool
+          self.nullable = nullable
+          self.optional = optional
+          self.nullableOptional = nullableOptional
+        }
 
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.string = try container.decodeIfExists(String.self, forKey: .string)
-            self.int = try container.decodeIfExists(Int.self, forKey: .int)
-            self.bool = try container.decodeIfExists(Bool.self, forKey: .bool)
-            self.nullable = try container.decodeIfExists(String.self, forKey: .nullable)
-            self.optional = try container.decodeIfExists(String.self, forKey: .optional)
-            self.nullableOptional = try container.decodeIfExists(String.self, forKey: .nullableOptional)
-          }
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.string = try container.decodeIfExists(String.self, forKey: .string)
+          self.int = try container.decodeIfExists(Int.self, forKey: .int)
+          self.bool = try container.decodeIfExists(Bool.self, forKey: .bool)
+          self.nullable = try container.decodeIfExists(String.self, forKey: .nullable)
+          self.optional = try container.decodeIfExists(String.self, forKey: .optional)
+          self.nullableOptional = try container.decodeIfExists(String.self, forKey: .nullableOptional)
+        }
 
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfExists(self.string, forKey: .string)
-            try container.encodeIfExists(self.int, forKey: .int)
-            try container.encodeIfExists(self.bool, forKey: .bool)
-            try container.encodeIfExists(self.nullable, forKey: .nullable)
-            try container.encodeIfExists(self.optional, forKey: .optional)
-            try container.encodeIfExists(self.nullableOptional, forKey: .nullableOptional)
-          }
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfExists(self.string, forKey: .string)
+          try container.encodeIfExists(self.int, forKey: .int)
+          try container.encodeIfExists(self.bool, forKey: .bool)
+          try container.encodeIfExists(self.nullable, forKey: .nullable)
+          try container.encodeIfExists(self.optional, forKey: .optional)
+          try container.encodeIfExists(self.nullableOptional, forKey: .nullableOptional)
+        }
 
-          public func withString(string: UpdateOp<String>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withString(string: UpdateOp<String>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          public func withInt(int: UpdateOp<Int>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withInt(int: UpdateOp<Int>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          public func withBool(bool: UpdateOp<Bool>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withBool(bool: UpdateOp<Bool>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          public func withNullable(nullable: PatchOp<String>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withNullable(nullable: PatchOp<String>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          public func withOptional(optional: UpdateOp<String>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withOptional(optional: UpdateOp<String>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          public func withNullableOptional(nullableOptional: PatchOp<String>?) -> Test {
-            return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional)
-          }
+        public func withNullableOptional(nullableOptional: PatchOp<String>?) -> Test {
+          return Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional)
+        }
 
-          fileprivate enum CodingKeys : String, CodingKey {
+        fileprivate enum CodingKeys : String, CodingKey {
 
-            case string = "string"
-            case int = "int"
-            case bool = "bool"
-            case nullable = "nullable"
-            case optional = "optional"
-            case nullableOptional = "nullableOptional"
-
-          }
+          case string = "string"
+          case int = "int"
+          case bool = "bool"
+          case nullable = "nullable"
+          case optional = "optional"
+          case nullableOptional = "nullableOptional"
 
         }
 
-        extension AnyPatchOp where Value == Test {
+      }
 
-          public static func merge(
-            string: UpdateOp<String>? = .none,
-            int: UpdateOp<Int>? = .none,
-            bool: UpdateOp<Bool>? = .none,
-            nullable: PatchOp<String>? = .none,
-            optional: UpdateOp<String>? = .none,
-            nullableOptional: PatchOp<String>? = .none
-          ) -> Self {
-            Self.merge(Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
-                nullableOptional: nullableOptional))
-          }
+      extension AnyPatchOp where Value == Test {
 
+        public static func merge(
+          string: UpdateOp<String>? = .none,
+          int: UpdateOp<Int>? = .none,
+          bool: UpdateOp<Bool>? = .none,
+          nullable: PatchOp<String>? = .none,
+          optional: UpdateOp<String>? = .none,
+          nullableOptional: PatchOp<String>? = .none
+        ) -> Self {
+          Self.merge(Test(string: string, int: int, bool: bool, nullable: nullable, optional: optional,
+              nullableOptional: nullableOptional))
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.builder("", typeSpec.name)
+        FileSpec
+          .builder("", typeSpec.name)
           .addType(typeSpec)
           .apply {
             typeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
-          }
-          .build()
+          }.build()
           .writeTo(this)
       },
     )
@@ -1420,178 +1444,178 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        public enum TestType : String, CaseIterable, Codable {
+      public enum TestType : String, CaseIterable, Codable {
+
+        case child = "child"
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .builder("", testTypeTypeSpec.name)
+          .addType(testTypeTypeSpec)
+          .apply {
+            testTypeTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }.build()
+          .writeTo(this)
+      },
+    )
+    assertEquals(
+      """
+      import Sunday
+
+      public class Test : Codable, CustomDebugStringConvertible {
+
+        public var type: TestType {
+          fatalError("abstract type method")
+        }
+        public var debugDescription: String {
+          return DescriptionBuilder(Test.self)
+              .build()
+        }
+
+        public init() {
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let _ = try decoder.container(keyedBy: CodingKeys.self)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encode(self.type, forKey: .type)
+        }
+
+        public enum AnyRef : Codable, CustomDebugStringConvertible {
+
+          case child(Child)
+
+          public var value: Test {
+            switch self {
+            case .child(let value): return value
+            }
+          }
+          public var debugDescription: String {
+            switch self {
+            case .child(let value): return value.debugDescription
+            }
+          }
+
+          public init(value: Test) {
+            switch value {
+            case let value as Child: self = .child(value)
+            default: fatalError("Invalid value type")
+            }
+          }
+
+          public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let type = try container.decode(TestType.self, forKey: CodingKeys.type)
+            switch type {
+            case .child: self = .child(try Child(from: decoder))
+            }
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .child(let value): try container.encode(value)
+            }
+          }
+
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
+
+          case type = "type"
+
+        }
+
+      }
+
+      extension AnyPatchOp where Value == Test {
+
+        public static func merge() -> Self {
+          Self.merge(Test())
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .builder("", testTypeSpec.name)
+          .addType(testTypeSpec)
+          .apply {
+            testTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
+          }.build()
+          .writeTo(this)
+      },
+    )
+
+    assertEquals(
+      """
+      import Sunday
+
+      public class Child : Test {
+
+        public override var type: TestType {
+          return TestType.child
+        }
+        public var child: UpdateOp<String>?
+        public override var debugDescription: String {
+          return DescriptionBuilder(Child.self)
+              .add(type, named: "type")
+              .add(child, named: "child")
+              .build()
+        }
+
+        public init(child: UpdateOp<String>? = .none) {
+          self.child = child
+          super.init()
+        }
+
+        public required init(from decoder: Decoder) throws {
+          let container = try decoder.container(keyedBy: CodingKeys.self)
+          self.child = try container.decodeIfExists(String.self, forKey: .child)
+          try super.init(from: decoder)
+        }
+
+        public override func encode(to encoder: Encoder) throws {
+          try super.encode(to: encoder)
+          var container = encoder.container(keyedBy: CodingKeys.self)
+          try container.encodeIfExists(self.child, forKey: .child)
+        }
+
+        public func withChild(child: UpdateOp<String>?) -> Child {
+          return Child(child: child)
+        }
+
+        fileprivate enum CodingKeys : String, CodingKey {
 
           case child = "child"
 
         }
 
-      """.trimIndent(),
-      buildString {
-        FileSpec.builder("", testTypeTypeSpec.name)
-          .addType(testTypeTypeSpec)
-          .apply {
-            testTypeTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
-          }
-          .build()
-          .writeTo(this)
-      },
-    )
-    assertEquals(
-      """
-        import Sunday
+      }
 
-        public class Test : Codable, CustomDebugStringConvertible {
+      extension AnyPatchOp where Value == Child {
 
-          public var type: TestType {
-            fatalError("abstract type method")
-          }
-          public var debugDescription: String {
-            return DescriptionBuilder(Test.self)
-                .build()
-          }
-
-          public init() {
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let _ = try decoder.container(keyedBy: CodingKeys.self)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.type, forKey: .type)
-          }
-
-          public enum AnyRef : Codable, CustomDebugStringConvertible {
-
-            case child(Child)
-
-            public var value: Test {
-              switch self {
-              case .child(let value): return value
-              }
-            }
-            public var debugDescription: String {
-              switch self {
-              case .child(let value): return value.debugDescription
-              }
-            }
-
-            public init(value: Test) {
-              switch value {
-              case let value as Child: self = .child(value)
-              default: fatalError("Invalid value type")
-              }
-            }
-
-            public init(from decoder: Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              let type = try container.decode(TestType.self, forKey: CodingKeys.type)
-              switch type {
-              case .child: self = .child(try Child(from: decoder))
-              }
-            }
-
-            public func encode(to encoder: Encoder) throws {
-              var container = encoder.singleValueContainer()
-              switch self {
-              case .child(let value): try container.encode(value)
-              }
-            }
-
-          }
-
-          fileprivate enum CodingKeys : String, CodingKey {
-
-            case type = "type"
-
-          }
-
+        public static func merge(child: UpdateOp<String>? = .none) -> Self {
+          Self.merge(Child(child: child))
         }
 
-        extension AnyPatchOp where Value == Test {
-
-          public static func merge() -> Self {
-            Self.merge(Test())
-          }
-
-        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.builder("", testTypeSpec.name)
-          .addType(testTypeSpec)
-          .apply {
-            testTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
-          }
-          .build()
-          .writeTo(this)
-      },
-    )
-
-    assertEquals(
-      """
-        import Sunday
-
-        public class Child : Test {
-
-          public override var type: TestType {
-            return TestType.child
-          }
-          public var child: UpdateOp<String>?
-          public override var debugDescription: String {
-            return DescriptionBuilder(Child.self)
-                .add(type, named: "type")
-                .add(child, named: "child")
-                .build()
-          }
-
-          public init(child: UpdateOp<String>? = .none) {
-            self.child = child
-            super.init()
-          }
-
-          public required init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.child = try container.decodeIfExists(String.self, forKey: .child)
-            try super.init(from: decoder)
-          }
-
-          public override func encode(to encoder: Encoder) throws {
-            try super.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encodeIfExists(self.child, forKey: .child)
-          }
-
-          public func withChild(child: UpdateOp<String>?) -> Child {
-            return Child(child: child)
-          }
-
-          fileprivate enum CodingKeys : String, CodingKey {
-
-            case child = "child"
-
-          }
-
-        }
-
-        extension AnyPatchOp where Value == Child {
-
-          public static func merge(child: UpdateOp<String>? = .none) -> Self {
-            Self.merge(Child(child: child))
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.builder("", childTypeSpec.name)
+        FileSpec
+          .builder("", childTypeSpec.name)
           .addType(childTypeSpec)
           .apply {
             childTypeSpec.tag<AssociatedExtensions>()?.forEach { addExtension(it) }
-          }
-          .build()
+          }.build()
           .writeTo(this)
       },
     )

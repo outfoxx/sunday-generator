@@ -18,7 +18,9 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
 
-class BeanValidationTypes(basePackage: String) {
+class BeanValidationTypes(
+  basePackage: String,
+) {
 
   val valid = ClassName.bestGuess("$basePackage.validation.Valid")
   val decimalMax = ClassName.bestGuess("$basePackage.validation.constraints.DecimalMax")

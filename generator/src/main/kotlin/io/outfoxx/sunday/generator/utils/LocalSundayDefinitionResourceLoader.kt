@@ -24,9 +24,11 @@ import java.util.concurrent.CompletableFuture
 object LocalSundayDefinitionResourceLoader : ResourceLoader {
 
   private val sundayRAML: ByteArray
+
   init {
-    val content = LocalSundayDefinitionResourceLoader::class.java.getResource("/sunday.raml")
-      ?: throw IllegalStateException("Could not find sunday.raml resource")
+    val content =
+      LocalSundayDefinitionResourceLoader::class.java.getResource("/sunday.raml")
+        ?: throw IllegalStateException("Could not find sunday.raml resource")
     sundayRAML = content.readBytes()
   }
 
@@ -36,9 +38,8 @@ object LocalSundayDefinitionResourceLoader : ResourceLoader {
 
   private val httpLoader = HttpResourceLoader()
 
-  override fun accepts(resource: String?): Boolean {
-    return resource.equals("https://outfoxx.github.io/sunday-generator/sunday.raml", ignoreCase = true)
-  }
+  override fun accepts(resource: String?): Boolean =
+    resource.equals("https://outfoxx.github.io/sunday-generator/sunday.raml", ignoreCase = true)
 
   override fun fetch(resource: String): CompletableFuture<Content> {
     val content = Content(String(sundayRAML, Charsets.UTF_8), resource)

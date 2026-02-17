@@ -35,10 +35,11 @@ val PropertyShape.typeScriptIdentifierName: String get() = name!!.toLowerCamelCa
 private val enumSplitRegex = """\W""".toRegex()
 
 val ScalarNode.typeScriptEnumName: String
-  get() = stringValue!!
-    .split(enumSplitRegex)
-    .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
-    .toUpperCamelCase()
+  get() =
+    stringValue!!
+      .split(enumSplitRegex)
+      .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
+      .toUpperCamelCase()
 
 val Parameter.typeScriptTypeName: String get() = parameterName!!.toUpperCamelCase()
 val Parameter.typeScriptIdentifierName: String get() = parameterName!!.toLowerCamelCase()

@@ -44,35 +44,36 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Child1, Child2} from './index';
-        import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+      import {Child1, Child2} from './index';
+      import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
-        export interface ParentSpec {
+      export interface ParentSpec {
+      }
+
+      @JsonTypeInfo({
+        use: JsonTypeInfoId.NAME,
+        include: JsonTypeInfoAs.PROPERTY,
+        property: 'type',
+      })
+      @JsonSubTypes({
+        types: [
+          {class: () => Child1, name: 'Child1'},
+          {class: () => Child2, name: 'child2'}
+        ]
+      })
+      export abstract class Parent implements ParentSpec {
+
+        toString(): string {
+          return `Parent()`;
         }
 
-        @JsonTypeInfo({
-          use: JsonTypeInfoId.NAME,
-          include: JsonTypeInfoAs.PROPERTY,
-          property: 'type',
-        })
-        @JsonSubTypes({
-          types: [
-            {class: () => Child1, name: 'Child1'},
-            {class: () => Child2, name: 'child2'}
-          ]
-        })
-        export abstract class Parent implements ParentSpec {
-
-          toString(): string {
-            return `Parent()`;
-          }
-
-        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(parentTypeModSpec)
+        FileSpec
+          .get(parentTypeModSpec)
           .writeTo(this)
       },
     )
@@ -81,52 +82,53 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {Parent, ParentSpec} from './parent';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface Child1Spec extends ParentSpec {
+      export interface Child1Spec extends ParentSpec {
 
-          value?: string;
+        value?: string;
 
-          value1: number;
+        value1: number;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child1 extends Parent implements Child1Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        value1: number;
+
+        constructor(init: Child1Spec) {
+          super();
+          this.value = init.value;
+          this.value1 = init.value1;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child1 extends Parent implements Child1Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          value1: number;
-
-          constructor(init: Child1Spec) {
-            super();
-            this.value = init.value;
-            this.value1 = init.value1;
-          }
-
-          get type(): string {
-            return 'Child1';
-          }
-
-          copy(changes: Partial<Child1Spec>): Child1 {
-            return new Child1(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child1(value='${'$'}{this.value}', value1='${'$'}{this.value1}')`;
-          }
-
+        get type(): string {
+          return 'Child1';
         }
+
+        copy(changes: Partial<Child1Spec>): Child1 {
+          return new Child1(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child1(value='${'$'}{this.value}', value1='${'$'}{this.value1}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child1TypeModSpec)
+        FileSpec
+          .get(child1TypeModSpec)
           .writeTo(this)
       },
     )
@@ -135,52 +137,53 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {Parent, ParentSpec} from './parent';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface Child2Spec extends ParentSpec {
+      export interface Child2Spec extends ParentSpec {
 
-          value?: string;
+        value?: string;
 
-          value2: number;
+        value2: number;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child2 extends Parent implements Child2Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        value2: number;
+
+        constructor(init: Child2Spec) {
+          super();
+          this.value = init.value;
+          this.value2 = init.value2;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child2 extends Parent implements Child2Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          value2: number;
-
-          constructor(init: Child2Spec) {
-            super();
-            this.value = init.value;
-            this.value2 = init.value2;
-          }
-
-          get type(): string {
-            return 'child2';
-          }
-
-          copy(changes: Partial<Child2Spec>): Child2 {
-            return new Child2(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child2(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
-          }
-
+        get type(): string {
+          return 'child2';
         }
+
+        copy(changes: Partial<Child2Spec>): Child2 {
+          return new Child2(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child2(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child2TypeModSpec)
+        FileSpec
+          .get(child2TypeModSpec)
           .writeTo(this)
       },
     )
@@ -199,35 +202,36 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Child1, Child2} from './index';
-        import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+      import {Child1, Child2} from './index';
+      import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
-        export interface ParentSpec {
+      export interface ParentSpec {
+      }
+
+      @JsonTypeInfo({
+        use: JsonTypeInfoId.NAME,
+        include: JsonTypeInfoAs.PROPERTY,
+        property: 'type',
+      })
+      @JsonSubTypes({
+        types: [
+          {class: () => Child1, name: 'Child1' /* Type.Child1 */},
+          {class: () => Child2, name: 'Child2' /* Type.Child2 */}
+        ]
+      })
+      export abstract class Parent implements ParentSpec {
+
+        toString(): string {
+          return `Parent()`;
         }
 
-        @JsonTypeInfo({
-          use: JsonTypeInfoId.NAME,
-          include: JsonTypeInfoAs.PROPERTY,
-          property: 'type',
-        })
-        @JsonSubTypes({
-          types: [
-            {class: () => Child1, name: 'Child1' /* Type.Child1 */},
-            {class: () => Child2, name: 'Child2' /* Type.Child2 */}
-          ]
-        })
-        export abstract class Parent implements ParentSpec {
-
-          toString(): string {
-            return `Parent()`;
-          }
-
-        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(parentTypeModSpec)
+        FileSpec
+          .get(parentTypeModSpec)
           .writeTo(this)
       },
     )
@@ -236,46 +240,47 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent, ParentSpec} from './parent';
-        import {Type} from './type';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {Parent, ParentSpec} from './parent';
+      import {Type} from './type';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface Child1Spec extends ParentSpec {
+      export interface Child1Spec extends ParentSpec {
 
-          value?: string;
+        value?: string;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child1 extends Parent implements Child1Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child1Spec) {
+          super();
+          this.value = init.value;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child1 extends Parent implements Child1Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child1Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): Type {
-            return Type.Child1;
-          }
-
-          copy(changes: Partial<Child1Spec>): Child1 {
-            return new Child1(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child1(value='${'$'}{this.value}')`;
-          }
-
+        get type(): Type {
+          return Type.Child1;
         }
+
+        copy(changes: Partial<Child1Spec>): Child1 {
+          return new Child1(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child1(value='${'$'}{this.value}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child1TypeModSpec)
+        FileSpec
+          .get(child1TypeModSpec)
           .writeTo(this)
       },
     )
@@ -284,46 +289,47 @@ class RamlDiscriminatedTypesTest {
 
     assertEquals(
       """
-        import {Parent, ParentSpec} from './parent';
-        import {Type} from './type';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {Parent, ParentSpec} from './parent';
+      import {Type} from './type';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface Child2Spec extends ParentSpec {
+      export interface Child2Spec extends ParentSpec {
 
-          value?: string;
+        value?: string;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child2 extends Parent implements Child2Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child2Spec) {
+          super();
+          this.value = init.value;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child2 extends Parent implements Child2Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child2Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): Type {
-            return Type.Child2;
-          }
-
-          copy(changes: Partial<Child2Spec>): Child2 {
-            return new Child2(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child2(value='${'$'}{this.value}')`;
-          }
-
+        get type(): Type {
+          return Type.Child2;
         }
+
+        copy(changes: Partial<Child2Spec>): Child2 {
+          return new Child2(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child2(value='${'$'}{this.value}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(child2TypeModSpec)
+        FileSpec
+          .get(child2TypeModSpec)
           .writeTo(this)
       },
     )

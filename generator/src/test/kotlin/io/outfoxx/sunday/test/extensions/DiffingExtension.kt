@@ -16,13 +16,15 @@
 
 package io.outfoxx.sunday.test.extensions
 
-import com.github.ajalt.mordant.markdown.Markdown
 import com.github.ajalt.mordant.rendering.TextAlign.CENTER
-import com.github.ajalt.mordant.rendering.TextColors.*
+import com.github.ajalt.mordant.rendering.TextColors.black
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.green
+import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextColors.white
 import com.github.ajalt.mordant.rendering.TextStyle
 import com.github.ajalt.mordant.rendering.Whitespace
 import com.github.ajalt.mordant.table.Borders
-import com.github.ajalt.mordant.table.ColumnWidth
 import com.github.ajalt.mordant.table.table
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.difflib.text.DiffRow
@@ -32,24 +34,31 @@ import org.junit.jupiter.api.extension.TestExecutionExceptionHandler
 import org.opentest4j.AssertionFailedError
 import kotlin.math.max
 
-
 class DiffingExtension : TestExecutionExceptionHandler {
 
   private val differ: DiffRowGenerator =
-    DiffRowGenerator.create()
+    DiffRowGenerator
+      .create()
       .lineNormalizer { it }
       .build()
   private val terminal = Terminal()
 
-  override fun handleTestExecutionException(context: ExtensionContext, throwable: Throwable) {
+  override fun handleTestExecutionException(
+    context: ExtensionContext,
+    throwable: Throwable,
+  ) {
     if (throwable !is AssertionFailedError || !throwable.isStringMismatch()) {
       throw throwable
     }
     val diff =
       differ
         .generateDiffRows(
-          throwable.expected.value.toString().split("\n"),
-          throwable.actual.value.toString().split("\n")
+          throwable.expected.value
+            .toString()
+            .split("\n"),
+          throwable.actual.value
+            .toString()
+            .split("\n"),
         )
     val maxWidth = diff.maxOf { max(it.oldLine.length, it.newLine.length) }
     terminal.println(
@@ -86,14 +95,15 @@ class DiffingExtension : TestExecutionExceptionHandler {
           }
 //          row { cells("", "") { cellBorders = Borders.LEFT_RIGHT_BOTTOM } }
         }
-      }
+      },
     )
 
     throw throwable
   }
 
   private fun AssertionFailedError.isStringMismatch(): Boolean =
-    isExpectedDefined && isActualDefined &&
-      CharSequence::class.java.isAssignableFrom(expected.type) && CharSequence::class.java.isAssignableFrom(actual.type)
-
+    isExpectedDefined &&
+      isActualDefined &&
+      CharSequence::class.java.isAssignableFrom(expected.type) &&
+      CharSequence::class.java.isAssignableFrom(actual.type)
 }

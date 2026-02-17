@@ -18,4 +18,7 @@ package org.eclipse.microprofile.rest.client.annotation
 
 // MicroProfile Rest Client annotations to skip the dependency on the MicroProfile Rest Client API
 
-annotation class ClientHeaderParam(val name: String, val value: String)
+annotation class ClientHeaderParam(
+  val name: String,
+  val value: String,
+)

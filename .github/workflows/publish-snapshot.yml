@@ -33,7 +33,7 @@ jobs:
         echo "GIT_COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
 
     - name: Build Artifacts & Documentation
-      run: ./gradlew build dokkaHtmlMultiModule -x test
+      run: ./gradlew build :dokkaGenerate -x test
       env:
         GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHORT_SHA }}
 

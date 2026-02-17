@@ -42,7 +42,9 @@ data class ProblemTypeDefinition(
       ?: error("Problem type '$code' missing title"),
     fields.get<DataNode>("detail")?.stringValue
       ?: error("Problem type '$code' missing detail"),
-    fields.get<ObjectNode>("custom")?.properties()
+    fields
+      .get<ObjectNode>("custom")
+      ?.properties()
       ?.map { it.key to (it.value.stringValue ?: "string") }
       ?.toMap() ?: emptyMap(),
     definedIn,

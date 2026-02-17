@@ -121,12 +121,17 @@ abstract class KotlinGenerator(
     defaultMediaTypes: List<String>,
     serviceSuffix: String,
   ) : Generator.Options(
-    defaultProblemBaseUri,
-    defaultMediaTypes,
-    serviceSuffix,
-  )
+      defaultProblemBaseUri,
+      defaultMediaTypes,
+      serviceSuffix,
+    )
 
-  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
+  data class URIParameter(
+    val name: String,
+    val typeName: TypeName,
+    val shape: Shape?,
+    val defaultValue: DataNode?,
+  )
 
   protected val generationMode get() = typeRegistry.generationMode
 
@@ -153,7 +158,10 @@ abstract class KotlinGenerator(
     }
   }
 
-  open fun generateServiceType(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
+  open fun generateServiceType(
+    serviceTypeName: ClassName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder {
 
     val serviceTypeBuilder = processServiceBegin(serviceTypeName, endPoints)
 
@@ -162,7 +170,10 @@ abstract class KotlinGenerator(
     return processServiceEnd(serviceTypeBuilder)
   }
 
-  abstract fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder
+  abstract fun processServiceBegin(
+    serviceTypeName: ClassName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder
 
   abstract fun processResourceMethodStart(
     endPoint: EndPoint,
@@ -259,7 +270,8 @@ abstract class KotlinGenerator(
         val operationName = nameGenerator.generate(endPoint, operation).kotlinIdentifierName
 
         var functionBuilder =
-          FunSpec.builder(operationName)
+          FunSpec
+            .builder(operationName)
             .returns(UNIT)
 
         functionBuilder.tag(NameAllocator::class, NameAllocator())
@@ -383,18 +395,17 @@ abstract class KotlinGenerator(
                   val problemType =
                     problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
                   problemCode to problemType
-                }
-                .toMap()
+                }.toMap()
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(
-                  problemCode,
-                  problemTypeDefinition,
-                  shapeIndex,
-                )
-              }
-              .toMap()
+                problemTypeDefinition.type to
+                  typeRegistry.defineProblemType(
+                    problemCode,
+                    problemTypeDefinition,
+                    shapeIndex,
+                  )
+              }.toMap()
           } ?: emptyMap()
 
         val functionSpec =
@@ -427,7 +438,8 @@ abstract class KotlinGenerator(
         )
 
       val uriParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(parameter.schema!!, uriParameterTypeNameContext)
           .run {
             if (parameter.required == false) {
               copy(nullable = true)
@@ -483,7 +495,8 @@ abstract class KotlinGenerator(
         )
 
       val queryParameterTypeName =
-        typeRegistry.resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(parameter.schema!!, queryParameterTypeNameContext)
           .run {
             if (parameter.required == false) {
               copy(nullable = true)
@@ -494,10 +507,11 @@ abstract class KotlinGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val queryParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
-        queryParameterTypeName,
-      )
+      val queryParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(parameter.kotlinIdentifierName, parameter),
+          queryParameterTypeName,
+        )
 
       val defaultValue = parameter.schema?.defaultValue
       if (defaultValue != null) {
@@ -538,7 +552,8 @@ abstract class KotlinGenerator(
         )
 
       val headerParameterTypeName =
-        typeRegistry.resolveTypeName(header.schema!!, headerParameterTypeNameContext)
+        typeRegistry
+          .resolveTypeName(header.schema!!, headerParameterTypeNameContext)
           .run {
             if (header.required == false) {
               copy(nullable = true)
@@ -549,10 +564,11 @@ abstract class KotlinGenerator(
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val headerParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
-        headerParameterTypeName,
-      )
+      val headerParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(header.kotlinIdentifierName, header),
+          headerParameterTypeName,
+        )
 
       val defaultValue = header.schema?.defaultValue
       if (defaultValue != null) {
@@ -576,17 +592,19 @@ abstract class KotlinGenerator(
     }
   }
 
-  fun resolveTypeName(shape: Shape, suggestedTypeName: ClassName?): TypeName {
-    return typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, shapeIndex, suggestedTypeName))
-  }
+  fun resolveTypeName(
+    shape: Shape,
+    suggestedTypeName: ClassName?,
+  ): TypeName = typeRegistry.resolveTypeName(shape, KotlinResolutionContext(document, shapeIndex, suggestedTypeName))
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
 
     val problemBaseUriParams =
-      document.api.findAnnotation(
-        ProblemBaseUriParams,
-        typeRegistry.generationMode,
-      )?.objectValue ?: emptyMap()
+      document.api
+        .findAnnotation(
+          ProblemBaseUriParams,
+          typeRegistry.generationMode,
+        )?.objectValue ?: emptyMap()
 
     fun expand(template: String): URI {
       try {
@@ -594,20 +612,27 @@ abstract class KotlinGenerator(
       } catch (ignored: URISyntaxException) {
         genError(
           """
-            Problem URI is not a valid URI; it cannot be a template.
-            Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
+          Problem URI is not a valid URI; it cannot be a template.
+          Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
           """.trimIndent(),
         )
       }
     }
 
-    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
+    val baseUri =
+      expand(
+        document.api.servers
+          .firstOrNull()
+          ?.url ?: options.defaultProblemBaseUri,
+      )
 
     var problemBaseUri =
-      document.api.findAnnotation(
-        ProblemBaseUri,
-        typeRegistry.generationMode,
-      )?.stringValue?.let { expand(it) } ?: baseUri
+      document.api
+        .findAnnotation(
+          ProblemBaseUri,
+          typeRegistry.generationMode,
+        )?.stringValue
+        ?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
     }
@@ -623,8 +648,7 @@ abstract class KotlinGenerator(
           .properties()
           ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit, problemAnn) }
           ?.entries
-      }
-      .flatten()
+      }.flatten()
       .associate { it.key to it.value }
       .toMap()
   }
@@ -713,7 +737,8 @@ abstract class KotlinGenerator(
         }
 
       typeBuilder.addFunction(
-        FunSpec.builder("${function.name}OrNull")
+        FunSpec
+          .builder("${function.name}OrNull")
           .addModifiers(function.modifiers.filter { it != KModifier.ABSTRACT })
           .addTypeVariables(function.typeVariables)
           .addParameters(
@@ -723,16 +748,14 @@ abstract class KotlinGenerator(
               paramBuilder.annotations.clear()
               paramBuilder.build()
             },
-          )
-          .apply {
+          ).apply {
             if (copyAnnotations) {
               addAnnotations(function.annotations)
             }
             nullableReturnType.let {
               returns(it)
             }
-          }
-          .addKdoc(function.kdoc)
+          }.addKdoc(function.kdoc)
           .addCode(nullifyFunctionCodeBlock)
           .build(),
       )
@@ -746,7 +769,8 @@ abstract class KotlinGenerator(
   ): CodeBlock {
 
     val codeBuilder =
-      CodeBlock.builder()
+      CodeBlock
+        .builder()
         .beginControlFlow("return try")
         .addStatement("%L(%L)", function.name, function.parameters.joinToString { it.name })
 
@@ -771,10 +795,15 @@ abstract class KotlinGenerator(
           .endControlFlow()
       } else {
         codeBuilder
-          .add("when ($statusAccess) {").indent().add("\n")
+          .add("when ($statusAccess) {")
+          .indent()
+          .add("\n")
           .add("%L -> null\n", statuses.joinToString(", "))
-          .add("else -> throw x").unindent().add("\n")
-          .add("}").add("\n")
+          .add("else -> throw x")
+          .unindent()
+          .add("\n")
+          .add("}")
+          .add("\n")
       }
     }
 
@@ -783,17 +812,19 @@ abstract class KotlinGenerator(
     return codeBuilder.build()
   }
 
-  private val rxReturnTypes: List<TypeName> = listOf(
-    RXSINGLE2,
-    RXSINGLE3,
-    RXOBSERVABLE2,
-    RXOBSERVABLE3,
-  )
+  private val rxReturnTypes: List<TypeName> =
+    listOf(
+      RXSINGLE2,
+      RXSINGLE3,
+      RXOBSERVABLE2,
+      RXOBSERVABLE3,
+    )
 
-  private val supportedReactiveReturnTypes = listOf(
-    CompletionStage::class.asTypeName(),
-    UNI,
-  ) + rxReturnTypes
+  private val supportedReactiveReturnTypes =
+    listOf(
+      CompletionStage::class.asTypeName(),
+      UNI,
+    ) + rxReturnTypes
 
   private fun createReactiveNullifyMethodCode(
     function: FunSpec,
@@ -805,8 +836,10 @@ abstract class KotlinGenerator(
     val throwableType = typeRegistry.problemLibrarySupport.throwableType
     val statusAccess = typeRegistry.problemLibrarySupport.statusCodeAccess("x")
 
-    codeBuilder.add("return %N(%L)", function.name, function.parameters.joinToString { it.name })
-      .indent().add("\n")
+    codeBuilder
+      .add("return %N(%L)", function.name, function.parameters.joinToString { it.name })
+      .indent()
+      .add("\n")
 
     val nullLiteral =
       when (function.returnType.rawType.copy(nullable = false)) {
@@ -822,8 +855,11 @@ abstract class KotlinGenerator(
         }
 
         RXSINGLE3, RXOBSERVABLE3, RXSINGLE2, RXOBSERVABLE2 -> {
-          codeBuilder.add(".map { %T.of(it) }", Optional::class.asTypeName())
-            .add("\n.onErrorReturn { x ->").indent().add("\n")
+          codeBuilder
+            .add(".map { %T.of(it) }", Optional::class.asTypeName())
+            .add("\n.onErrorReturn { x ->")
+            .indent()
+            .add("\n")
 
           "Optional.empty()"
         }
@@ -847,9 +883,15 @@ abstract class KotlinGenerator(
     }
 
     codeBuilder
-      .add("else -> throw x").unindent().add("\n")
-      .add("}").unindent().add("\n")
-      .add("}").unindent().add("\n")
+      .add("else -> throw x")
+      .unindent()
+      .add("\n")
+      .add("}")
+      .unindent()
+      .add("\n")
+      .add("}")
+      .unindent()
+      .add("\n")
 
     return codeBuilder.build()
   }

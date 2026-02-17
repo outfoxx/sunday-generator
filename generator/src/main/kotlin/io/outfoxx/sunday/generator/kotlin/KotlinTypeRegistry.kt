@@ -21,17 +21,143 @@ package io.outfoxx.sunday.generator.kotlin
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.*
-import amf.shapes.client.platform.model.domain.*
-import com.squareup.kotlinpoet.*
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
+import com.squareup.kotlinpoet.ANY
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BOOLEAN
+import com.squareup.kotlinpoet.BYTE
+import com.squareup.kotlinpoet.BYTE_ARRAY
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.DOUBLE
+import com.squareup.kotlinpoet.FLOAT
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.INT
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.LIST
+import com.squareup.kotlinpoet.LONG
+import com.squareup.kotlinpoet.LambdaTypeName
+import com.squareup.kotlinpoet.MAP
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import io.outfoxx.sunday.generator.*
-import io.outfoxx.sunday.generator.APIAnnotationName.*
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.SET
+import com.squareup.kotlinpoet.SHORT
+import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.asTypeName
+import com.squareup.kotlinpoet.tag
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinImpl
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinModelPkg
+import io.outfoxx.sunday.generator.APIAnnotationName.KotlinType
+import io.outfoxx.sunday.generator.APIAnnotationName.Nested
+import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
-import io.outfoxx.sunday.generator.kotlin.utils.*
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ContainerElementValid
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.SuppressPublicApiWarnings
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.UseJakartaPackages
+import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.BeanValidationTypes
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_CREATOR
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_IGNORE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_INCLUDE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_NON_EMPTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_SUBTYPES_TYPE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrarySupport
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH_SET_OP
+import io.outfoxx.sunday.generator.kotlin.utils.ProblemCustomProperty
+import io.outfoxx.sunday.generator.kotlin.utils.UPDATE_OP
+import io.outfoxx.sunday.generator.kotlin.utils.isArray
+import io.outfoxx.sunday.generator.kotlin.utils.isCollectionLike
+import io.outfoxx.sunday.generator.kotlin.utils.isMapLike
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.withAnnotatedTypeArgument
+import io.outfoxx.sunday.generator.kotlin.utils.withTypeArgument
+import io.outfoxx.sunday.generator.utils.anyOf
+import io.outfoxx.sunday.generator.utils.dataType
+import io.outfoxx.sunday.generator.utils.discriminator
+import io.outfoxx.sunday.generator.utils.discriminatorMapping
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.encodes
+import io.outfoxx.sunday.generator.utils.findAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.format
+import io.outfoxx.sunday.generator.utils.get
+import io.outfoxx.sunday.generator.utils.getValue
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.id
+import io.outfoxx.sunday.generator.utils.isNameExplicit
+import io.outfoxx.sunday.generator.utils.items
+import io.outfoxx.sunday.generator.utils.makesNullable
+import io.outfoxx.sunday.generator.utils.maxItems
+import io.outfoxx.sunday.generator.utils.maxLength
+import io.outfoxx.sunday.generator.utils.maximum
+import io.outfoxx.sunday.generator.utils.minCount
+import io.outfoxx.sunday.generator.utils.minItems
+import io.outfoxx.sunday.generator.utils.minLength
+import io.outfoxx.sunday.generator.utils.minimum
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
+import io.outfoxx.sunday.generator.utils.nullable
+import io.outfoxx.sunday.generator.utils.nullableType
+import io.outfoxx.sunday.generator.utils.optional
+import io.outfoxx.sunday.generator.utils.or
+import io.outfoxx.sunday.generator.utils.pattern
+import io.outfoxx.sunday.generator.utils.patternProperties
+import io.outfoxx.sunday.generator.utils.range
+import io.outfoxx.sunday.generator.utils.scalarValue
+import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import io.outfoxx.sunday.generator.utils.uniqueId
+import io.outfoxx.sunday.generator.utils.uniqueItems
+import io.outfoxx.sunday.generator.utils.value
+import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.sunday.generator.utils.xone
 import java.math.BigDecimal
 import java.net.URI
 import java.nio.file.Path
@@ -67,14 +193,18 @@ class KotlinTypeRegistry(
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
-  private val beanValidationTypes = if (options.contains(UseJakartaPackages)) {
-    BeanValidationTypes.JAKARTA
-  } else {
-    BeanValidationTypes.JAVAX
-  }
+  private val beanValidationTypes =
+    if (options.contains(UseJakartaPackages)) {
+      BeanValidationTypes.JAKARTA
+    } else {
+      BeanValidationTypes.JAVAX
+    }
   val problemLibrarySupport: KotlinProblemLibrarySupport = problemLibrary.support(problemRfc)
 
-  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+  override fun generateFiles(
+    categories: Set<GeneratedTypeCategory>,
+    outputDirectory: Path,
+  ) {
 
     val builtTypes = buildTypes()
 
@@ -100,7 +230,10 @@ class KotlinTypeRegistry(
     return typeBuilders.mapValues { it.value.build() }
   }
 
-  fun resolveTypeName(shapeRef: Shape, context: KotlinResolutionContext): TypeName {
+  fun resolveTypeName(
+    shapeRef: Shape,
+    context: KotlinResolutionContext,
+  ): TypeName {
 
     val shape = context.dereference(shapeRef)
 
@@ -120,7 +253,10 @@ class KotlinTypeRegistry(
     typeBuilders.remove(typeName)
   }
 
-  fun addServiceType(className: ClassName, serviceType: TypeSpec.Builder) {
+  fun addServiceType(
+    className: ClassName,
+    serviceType: TypeSpec.Builder,
+  ) {
 
     serviceType
       .addGenerated(true)
@@ -145,29 +281,32 @@ class KotlinTypeRegistry(
       ClassName.bestGuess("$problemPackageName.${problemCode.toUpperCamelCase()}Problem")
 
     val problemTypeBuilder =
-      TypeSpec.classBuilder(problemTypeName)
+      TypeSpec
+        .classBuilder(problemTypeName)
         .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .addGenerated(true)
         .addSuppress()
         .addType(
-          TypeSpec.companionObjectBuilder()
+          TypeSpec
+            .companionObjectBuilder()
             .addGenerated(false)
             .addProperty(
-              PropertySpec.builder("TYPE", STRING)
+              PropertySpec
+                .builder("TYPE", STRING)
                 .addModifiers(KModifier.CONST)
                 .initializer("%S", problemTypeDefinition.type)
                 .build(),
-            )
-            .addProperty(
-              PropertySpec.builder("TYPE_URI", URI::class.asTypeName())
+            ).addProperty(
+              PropertySpec
+                .builder("TYPE_URI", URI::class.asTypeName())
                 .initializer("%T(%L)", URI::class.asTypeName(), "TYPE")
                 .build(),
-            )
-            .build(),
+            ).build(),
         )
 
     val constructorBuilder =
-      FunSpec.constructorBuilder()
+      FunSpec
+        .constructorBuilder()
         .apply {
           // Add all custom properties to the constructor
           problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
@@ -182,24 +321,22 @@ class KotlinTypeRegistry(
                 .builder(
                   customPropertyName.kotlinIdentifierName,
                   parameterTypeName,
-                )
-                .apply {
+                ).apply {
                   if (parameterTypeName.isNullable) {
                     defaultValue("null")
                   }
                   if (customPropertyName.kotlinIdentifierName != customPropertyName) {
                     addAnnotation(
-                      AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+                      AnnotationSpec
+                        .builder(JACKSON_JSON_PROPERTY)
                         .addMember("value = %S", customPropertyName)
                         .build(),
                     )
                   }
-                }
-                .build(),
+                }.build(),
             )
           }
-        }
-        .apply {
+        }.apply {
           if (options.contains(JacksonAnnotations)) {
             addAnnotation(JACKSON_JSON_CREATOR)
           }
@@ -243,15 +380,15 @@ class KotlinTypeRegistry(
               KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
             ),
             KModifier.PUBLIC,
-          )
-          .initializer(customPropertyName.kotlinIdentifierName)
+          ).initializer(customPropertyName.kotlinIdentifierName)
           .build(),
       )
     }
 
     if (options.contains(JacksonAnnotations)) {
       problemTypeBuilder.addAnnotation(
-        AnnotationSpec.builder(JACKSON_JSON_TYPENAME)
+        AnnotationSpec
+          .builder(JACKSON_JSON_TYPENAME)
           .addMember("%T.TYPE", problemTypeName)
           .build(),
       )
@@ -262,7 +399,11 @@ class KotlinTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(nameStr: String, source: DomainElement, context: KotlinResolutionContext): TypeName {
+  private fun resolveTypeReference(
+    nameStr: String,
+    source: DomainElement,
+    context: KotlinResolutionContext,
+  ): TypeName {
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
     val elementTypeName =
@@ -279,8 +420,9 @@ class KotlinTypeRegistry(
         "datetime-only" -> LocalDateTime::class.asTypeName()
         "datetime" -> OffsetDateTime::class.asTypeName()
         else -> {
-          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
-            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          val (element, unit) =
+            context.resolveRef(elementTypeNameStr, source)
+              ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
           resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
@@ -295,8 +437,10 @@ class KotlinTypeRegistry(
     return typeName.copy(nullable = nameStr.endsWith("?"))
   }
 
-  private fun resolveReferencedTypeName(shape: Shape, context: KotlinResolutionContext): TypeName =
-    resolveTypeName(shape, context.copy(suggestedTypeName = null))
+  private fun resolveReferencedTypeName(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): TypeName = resolveTypeName(shape, context.copy(suggestedTypeName = null))
 
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
@@ -304,9 +448,10 @@ class KotlinTypeRegistry(
     context: KotlinResolutionContext,
   ): TypeName {
 
-    val propertyContext = context.copy(
-      suggestedTypeName = className.nestedClass(propertyShape.kotlinTypeName),
-    )
+    val propertyContext =
+      context.copy(
+        suggestedTypeName = className.nestedClass(propertyShape.kotlinTypeName),
+      )
 
     val typeName = resolveTypeName(propertyShape.range, propertyContext)
     return if ((propertyShape.minCount ?: 0) == 0) {
@@ -316,7 +461,10 @@ class KotlinTypeRegistry(
     }
   }
 
-  private fun generateTypeName(shape: Shape, context: KotlinResolutionContext): TypeName {
+  private fun generateTypeName(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): TypeName {
 
     val kotlinTypeAnn = shape.findStringAnnotation(KotlinType, generationMode)
     if (kotlinTypeAnn != null) {
@@ -326,7 +474,10 @@ class KotlinTypeRegistry(
     return processShape(shape, context)
   }
 
-  private fun processShape(shape: Shape, context: KotlinResolutionContext): TypeName =
+  private fun processShape(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): TypeName =
     when (shape) {
       is ScalarShape -> processScalarShape(shape, context)
       is ArrayShape -> processArrayShape(shape, context)
@@ -338,7 +489,10 @@ class KotlinTypeRegistry(
       else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }
 
-  private fun processAnyShape(shape: AnyShape, context: KotlinResolutionContext): TypeName =
+  private fun processAnyShape(
+    shape: AnyShape,
+    context: KotlinResolutionContext,
+  ): TypeName =
     when {
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
@@ -355,7 +509,10 @@ class KotlinTypeRegistry(
       else -> ANY
     }
 
-  private fun processScalarShape(shape: ScalarShape, context: KotlinResolutionContext): TypeName =
+  private fun processScalarShape(
+    shape: ScalarShape,
+    context: KotlinResolutionContext,
+  ): TypeName =
     when (shape.dataType) {
       DataTypes.String() ->
 
@@ -399,7 +556,10 @@ class KotlinTypeRegistry(
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
-  private fun processArrayShape(shape: ArrayShape, context: KotlinResolutionContext): TypeName {
+  private fun processArrayShape(
+    shape: ArrayShape,
+    context: KotlinResolutionContext,
+  ): TypeName {
 
     val elementType =
       shape.items
@@ -418,14 +578,20 @@ class KotlinTypeRegistry(
     return collectionType.parameterizedBy(elementType)
   }
 
-  private fun processUnionShape(shape: UnionShape, context: KotlinResolutionContext): TypeName =
+  private fun processUnionShape(
+    shape: UnionShape,
+    context: KotlinResolutionContext,
+  ): TypeName =
     if (shape.makesNullable) {
       resolveReferencedTypeName(shape.nullableType, context).copy(nullable = true)
     } else {
       nearestCommonAncestor(shape.anyOf, context) ?: ANY
     }
 
-  private fun processNodeShape(shape: NodeShape, context: KotlinResolutionContext): TypeName {
+  private fun processNodeShape(
+    shape: NodeShape,
+    context: KotlinResolutionContext,
+  ): TypeName {
 
     if (
       shape.nonPatternProperties.isEmpty() &&
@@ -494,7 +660,8 @@ class KotlinTypeRegistry(
       typeBuilder
         .addSuperinterface(PATCH)
         .addAnnotation(
-          AnnotationSpec.builder(JACKSON_JSON_INCLUDE)
+          AnnotationSpec
+            .builder(JACKSON_JSON_INCLUDE)
             .addMember("%T.%L", JACKSON_JSON_INCLUDE_INCLUDE, JACKSON_JSON_INCLUDE_NON_EMPTY)
             .build(),
         )
@@ -539,7 +706,8 @@ class KotlinTypeRegistry(
 
             if (shape.findBoolAnnotation(ExternallyDiscriminated, generationMode) == true) {
               discriminatorBuilder.addAnnotation(
-                AnnotationSpec.builder(JACKSON_JSON_IGNORE)
+                AnnotationSpec
+                  .builder(JACKSON_JSON_IGNORE)
                   .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
                   .build(),
               )
@@ -556,7 +724,8 @@ class KotlinTypeRegistry(
             // Add concrete discriminator for the leaf of the discriminated tree
 
             val discriminatorBuilder =
-              PropertySpec.builder(discriminatorProperty.kotlinIdentifierName, discriminatorPropertyTypeName)
+              PropertySpec
+                .builder(discriminatorProperty.kotlinIdentifierName, discriminatorPropertyTypeName)
                 .addModifiers(KModifier.OVERRIDE)
 
             val discriminatorValue = findDiscriminatorPropertyValue(shape, context) ?: shape.name!!
@@ -564,17 +733,18 @@ class KotlinTypeRegistry(
             val isEnum = typeBuilders[discriminatorPropertyTypeName]?.enumConstants?.isNotEmpty() ?: false
             if (isEnum) {
               discriminatorBuilder.getter(
-                FunSpec.getterBuilder()
+                FunSpec
+                  .getterBuilder()
                   .addStatement(
                     "return %T.%L",
                     discriminatorPropertyTypeName,
                     discriminatorValue.toUpperCamelCase(),
-                  )
-                  .build(),
+                  ).build(),
               )
             } else {
               discriminatorBuilder.getter(
-                FunSpec.getterBuilder()
+                FunSpec
+                  .getterBuilder()
                   .addStatement("return %S", discriminatorValue)
                   .build(),
               )
@@ -615,15 +785,13 @@ class KotlinTypeRegistry(
                 .builder(
                   inheritedProperty.kotlinIdentifierName,
                   paramTypeName,
-                )
-                .apply {
+                ).apply {
                   if (isPatchable) {
                     defaultValue("%T.none()", PATCH_OP)
                   } else {
                     if (inheritedProperty.optional && paramTypeName.isNullable) defaultValue("null")
                   }
-                }
-                .build(),
+                }.build(),
             )
 
             typeBuilder.addSuperclassConstructorParameter("%L", inheritedProperty.kotlinIdentifierName)
@@ -642,7 +810,8 @@ class KotlinTypeRegistry(
         val hashBuilder: FunSpec.Builder?
         if (definedProperties.isNotEmpty()) {
           hashBuilder =
-            FunSpec.builder("hashCode")
+            FunSpec
+              .builder("hashCode")
               .addModifiers(KModifier.OVERRIDE)
               .returns(INT)
           if (superShape != null) {
@@ -660,7 +829,8 @@ class KotlinTypeRegistry(
         if (definedProperties.isNotEmpty() || inheritingTypes.isNotEmpty()) {
 
           equalsBuilder =
-            FunSpec.builder("equals")
+            FunSpec
+              .builder("equals")
               .addModifiers(KModifier.OVERRIDE)
               .returns(BOOLEAN)
               .addParameter("other", ANY.copy(nullable = true))
@@ -678,7 +848,10 @@ class KotlinTypeRegistry(
           equalsBuilder = null
         }
 
-        fun addEquals(propertyTypeName: TypeName, property: PropertyShape) {
+        fun addEquals(
+          propertyTypeName: TypeName,
+          property: PropertyShape,
+        ) {
           equalsBuilder ?: return
           if (propertyTypeName.isArray) {
             if (propertyTypeName.isNullable) {
@@ -689,8 +862,7 @@ class KotlinTypeRegistry(
                   "if (!%L.contentEquals(other.%L)) return false",
                   property.kotlinIdentifierName,
                   property.kotlinIdentifierName,
-                )
-                .endControlFlow()
+                ).endControlFlow()
                 .addStatement("else if (other.%L != null) return false", property.kotlinIdentifierName)
             } else {
               equalsBuilder.addStatement(
@@ -764,28 +936,31 @@ class KotlinTypeRegistry(
           if (implAnn != null) {
 
             declaredPropertyBuilder.addAnnotation(
-              AnnotationSpec.builder(JACKSON_JSON_IGNORE)
+              AnnotationSpec
+                .builder(JACKSON_JSON_IGNORE)
                 .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
                 .build(),
             )
 
             val code = implAnn.getValue("code") ?: ""
             val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
-            val convertedCodeParams = codeParams.map { codeParam ->
-              val atype = codeParam.getValue("type")
-              val avalue = codeParam.getValue("value")
-              if (atype != null && avalue != null) {
-                when (atype) {
-                  "Type" -> ClassName.bestGuess(avalue)
-                  else -> avalue
+            val convertedCodeParams =
+              codeParams.map { codeParam ->
+                val atype = codeParam.getValue("type")
+                val avalue = codeParam.getValue("value")
+                if (atype != null && avalue != null) {
+                  when (atype) {
+                    "Type" -> ClassName.bestGuess(avalue)
+                    else -> avalue
+                  }
+                } else {
+                  ""
                 }
-              } else {
-                ""
               }
-            }
 
             declaredPropertyBuilder.getter(
-              FunSpec.getterBuilder()
+              FunSpec
+                .getterBuilder()
                 .addStatement(code, *convertedCodeParams.toTypedArray())
                 .build(),
             )
@@ -801,7 +976,8 @@ class KotlinTypeRegistry(
             if (declaredProperty.kotlinIdentifierName != declaredProperty.name) {
               declaredPropertyBuilder
                 .addAnnotation(
-                  AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+                  AnnotationSpec
+                    .builder(JACKSON_JSON_PROPERTY)
                     .useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM)
                     .addMember("value = %S", declaredProperty.name())
                     .build(),
@@ -819,8 +995,7 @@ class KotlinTypeRegistry(
                   } else if (declaredProperty.optional && validatedTypeName.isNullable) {
                     defaultValue("null")
                   }
-                }
-                .build(),
+                }.build(),
             )
 
             // Add toString value
@@ -859,7 +1034,8 @@ class KotlinTypeRegistry(
         if (inheritingTypes.isEmpty() && !isPatchable) {
 
           val copyBuilder =
-            FunSpec.builder("copy")
+            FunSpec
+              .builder("copy")
               .returns(className)
               .addCode("return %T(", className)
 
@@ -869,7 +1045,8 @@ class KotlinTypeRegistry(
               val propertyTypeName = resolvePropertyTypeName(copyProperty, className, context)
 
               copyBuilder.addParameter(
-                ParameterSpec.builder(copyProperty.kotlinIdentifierName, propertyTypeName.copy(nullable = true))
+                ParameterSpec
+                  .builder(copyProperty.kotlinIdentifierName, propertyTypeName.copy(nullable = true))
                   .defaultValue("null")
                   .build(),
               )
@@ -908,14 +1085,16 @@ class KotlinTypeRegistry(
 
         // Finish toString method
         val toStringTemplate =
-          CodeBlock.of(
-            "%L(%L)",
-            className.simpleName,
-            toStringCode.joinToString(",\n "),
-          ).toString()
+          CodeBlock
+            .of(
+              "%L(%L)",
+              className.simpleName,
+              toStringCode.joinToString(",\n "),
+            ).toString()
 
         typeBuilder.addFunction(
-          FunSpec.builder("toString")
+          FunSpec
+            .builder("toString")
             .returns(STRING)
             .addModifiers(KModifier.OVERRIDE)
             .addStatement("return %P", toStringTemplate)
@@ -939,9 +1118,11 @@ class KotlinTypeRegistry(
           val propertyBuilder = PropertySpec.builder(declaredProperty.kotlinIdentifierName, validatedTypeName)
 
           validationAnnotations.forEach { annotation ->
-            val getAnn = annotation.toBuilder()
-              .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
-              .build()
+            val getAnn =
+              annotation
+                .toBuilder()
+                .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+                .build()
             propertyBuilder.addAnnotation(getAnn)
           }
 
@@ -955,10 +1136,12 @@ class KotlinTypeRegistry(
       val initLambdaTypeName = LambdaTypeName.get(className, listOf(), UNIT)
 
       typeBuilder.addType(
-        TypeSpec.companionObjectBuilder()
+        TypeSpec
+          .companionObjectBuilder()
           // Add a merge method to a companion object
           .addFunction(
-            FunSpec.builder("merge")
+            FunSpec
+              .builder("merge")
               .addModifiers(KModifier.INLINE)
               .returns(PATCH_SET_OP.parameterizedBy(className))
               .addParameter("init", initLambdaTypeName)
@@ -969,14 +1152,14 @@ class KotlinTypeRegistry(
           )
           // Add a patch method to the companion object
           .addFunction(
-            FunSpec.builder("patch")
+            FunSpec
+              .builder("patch")
               .returns(className)
               .addModifiers(KModifier.INLINE)
               .addParameter("init", initLambdaTypeName)
               .addStatement("return merge(init).value")
               .build(),
-          )
-          .build(),
+          ).build(),
       )
     }
 
@@ -1009,7 +1192,8 @@ class KotlinTypeRegistry(
           if (subTypeName != null) {
 
             typeBuilder.addAnnotation(
-              AnnotationSpec.builder(JACKSON_JSON_TYPENAME)
+              AnnotationSpec
+                .builder(JACKSON_JSON_TYPENAME)
                 .addMember("%S", subTypeName)
                 .build(),
             )
@@ -1021,7 +1205,10 @@ class KotlinTypeRegistry(
     return className
   }
 
-  private fun defineEnum(shape: Shape, context: KotlinResolutionContext): TypeName {
+  private fun defineEnum(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): TypeName {
 
     val className = typeNameOf(shape, context)
 
@@ -1043,13 +1230,14 @@ class KotlinTypeRegistry(
 
       if (options.contains(JacksonAnnotations)) {
         val enumType =
-          TypeSpec.anonymousClassBuilder()
+          TypeSpec
+            .anonymousClassBuilder()
             .addAnnotation(
-              AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+              AnnotationSpec
+                .builder(JACKSON_JSON_PROPERTY)
                 .addMember("value = %S", enum.scalarValue!!)
                 .build(),
-            )
-            .build()
+            ).build()
 
         enumBuilder.addEnumConstant(enum.kotlinEnumName, enumType)
       } else {
@@ -1085,7 +1273,11 @@ class KotlinTypeRegistry(
     return builder
   }
 
-  fun applyUseSiteAnnotations(use: Shape, typeName: TypeName, applicator: (AnnotationSpec) -> Unit): TypeName {
+  fun applyUseSiteAnnotations(
+    use: Shape,
+    typeName: TypeName,
+    applicator: (AnnotationSpec) -> Unit,
+  ): TypeName {
 
     if (options.contains(ValidationConstraints)) {
       return when (use) {
@@ -1143,7 +1335,8 @@ class KotlinTypeRegistry(
           }
 
           applicator.invoke(
-            AnnotationSpec.builder(beanValidationTypes.valid)
+            AnnotationSpec
+              .builder(beanValidationTypes.valid)
               .build(),
           )
         }
@@ -1153,7 +1346,10 @@ class KotlinTypeRegistry(
     return typeName
   }
 
-  private fun applyContainerElementValid(use: Shape, typeName: TypeName): TypeName {
+  private fun applyContainerElementValid(
+    use: Shape,
+    typeName: TypeName,
+  ): TypeName {
     val validAnnotation = AnnotationSpec.builder(beanValidationTypes.valid).build()
 
     return when {
@@ -1233,15 +1429,17 @@ class KotlinTypeRegistry(
   }
 
   private fun scalarConstraintAnnotationsForElement(shape: Shape?): List<AnnotationSpec> {
-    val scalarShape = when (shape) {
-      is ScalarShape -> shape
-      is UnionShape -> {
-        val nonNil = shape.anyOf.filterNot { it is NilShape }
-        val scalar = nonNil.filterIsInstance<ScalarShape>()
-        if (scalar.size == 1 && nonNil.size == 1) scalar.single() else null
+    val scalarShape =
+      when (shape) {
+        is ScalarShape -> shape
+        is UnionShape -> {
+          val nonNil = shape.anyOf.filterNot { it is NilShape }
+          val scalar = nonNil.filterIsInstance<ScalarShape>()
+          if (scalar.size == 1 && nonNil.size == 1) scalar.single() else null
+        }
+
+        else -> null
       }
-      else -> null
-    }
     return if (scalarShape != null) scalarConstraintAnnotations(scalarShape) else emptyList()
   }
 
@@ -1269,7 +1467,8 @@ class KotlinTypeRegistry(
 
         if (!scalar.pattern.isNullOrBlank() && scalar.pattern != ".*") {
           annotations.add(
-            AnnotationSpec.builder(beanValidationTypes.pattern)
+            AnnotationSpec
+              .builder(beanValidationTypes.pattern)
               .addMember("regexp = %P", scalar.pattern())
               .build(),
           )
@@ -1279,14 +1478,16 @@ class KotlinTypeRegistry(
       "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#long" -> {
         if (scalar.maximum != null) {
           annotations.add(
-            AnnotationSpec.builder(beanValidationTypes.max)
+            AnnotationSpec
+              .builder(beanValidationTypes.max)
               .addMember("value = %L", scalar.maximum!!.toLong())
               .build(),
           )
         }
         if (scalar.minimum != null) {
           annotations.add(
-            AnnotationSpec.builder(beanValidationTypes.min)
+            AnnotationSpec
+              .builder(beanValidationTypes.min)
               .addMember("value = %L", scalar.minimum!!.toLong())
               .build(),
           )
@@ -1296,14 +1497,16 @@ class KotlinTypeRegistry(
       "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2001/XMLSchema#double" -> {
         if (scalar.maximum != null) {
           annotations.add(
-            AnnotationSpec.builder(beanValidationTypes.decimalMax)
+            AnnotationSpec
+              .builder(beanValidationTypes.decimalMax)
               .addMember("value = %S", scalar.maximum!!.toBigDecimal())
               .build(),
           )
         }
         if (scalar.minimum != null) {
           annotations.add(
-            AnnotationSpec.builder(beanValidationTypes.decimalMin)
+            AnnotationSpec
+              .builder(beanValidationTypes.decimalMin)
               .addMember("value = %S", scalar.minimum!!.toBigDecimal())
               .build(),
           )
@@ -1328,7 +1531,8 @@ class KotlinTypeRegistry(
   ) {
 
     propertySpec.addAnnotation(
-      AnnotationSpec.builder(JACKSON_JSON_TYPEINFO)
+      AnnotationSpec
+        .builder(JACKSON_JSON_TYPEINFO)
         .addMember("use = %T.%L", JACKSON_JSON_TYPEINFO_ID, JACKSON_JSON_TYPEINFO_ID_NAME)
         .addMember("include = %T.%L", JACKSON_JSON_TYPEINFO_AS, JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY)
         .addMember("property = %S", externalDiscriminatorPropertyName)
@@ -1343,14 +1547,16 @@ class KotlinTypeRegistry(
     context: KotlinResolutionContext,
   ) {
 
-    val subTypes = inheritingTypes
-      .map { inheritingType ->
+    val subTypes =
+      inheritingTypes
+        .map { inheritingType ->
 
-        "%T(value = %T::class)" to listOf(
-          JACKSON_JSON_SUBTYPES_TYPE,
-          resolveReferencedTypeName(inheritingType, context),
-        )
-      }
+          "%T(value = %T::class)" to
+            listOf(
+              JACKSON_JSON_SUBTYPES_TYPE,
+              resolveReferencedTypeName(inheritingType, context),
+            )
+        }
 
     if (subTypes.isNotEmpty()) {
 
@@ -1359,7 +1565,8 @@ class KotlinTypeRegistry(
         val discriminator = shape.discriminator ?: genError("Missing required discriminator", shape)
 
         classBuilder.addAnnotation(
-          AnnotationSpec.builder(JACKSON_JSON_TYPEINFO)
+          AnnotationSpec
+            .builder(JACKSON_JSON_TYPEINFO)
             .addMember("use = %T.%L", JACKSON_JSON_TYPEINFO_ID, JACKSON_JSON_TYPEINFO_ID_NAME)
             .addMember("include = %T.%L", JACKSON_JSON_TYPEINFO_AS, JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY)
             .addMember("property = %S", discriminator)
@@ -1368,25 +1575,28 @@ class KotlinTypeRegistry(
       }
 
       classBuilder.addAnnotation(
-        AnnotationSpec.builder(JACKSON_JSON_SUBTYPES)
+        AnnotationSpec
+          .builder(JACKSON_JSON_SUBTYPES)
           .addMember(
-            CodeBlock.builder()
+            CodeBlock
+              .builder()
               .add("value = [")
               .indent()
               .add(
                 "\n${subTypes.joinToString(",\n") { it.first }}",
                 *subTypes.flatMap { it.second }.toTypedArray(),
-              )
-              .unindent()
+              ).unindent()
               .add("\n]")
               .build(),
-          )
-          .build(),
+          ).build(),
       )
     }
   }
 
-  private fun typeNameOf(shape: Shape, context: KotlinResolutionContext): ClassName {
+  private fun typeNameOf(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): ClassName {
 
     if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
@@ -1394,8 +1604,9 @@ class KotlinTypeRegistry(
 
     val pkgName = packageNameOf(shape, context)
 
-    val nestedAnn = shape.findAnnotation(Nested, generationMode)
-      ?: return ClassName.bestGuess("$pkgName.${shape.kotlinTypeName}")
+    val nestedAnn =
+      shape.findAnnotation(Nested, generationMode)
+        ?: return ClassName.bestGuess("$pkgName.${shape.kotlinTypeName}")
 
     val (nestedEnclosedIn, nestedName) =
       when {
@@ -1415,11 +1626,13 @@ class KotlinTypeRegistry(
 
         nestedAnn is ObjectNode -> {
 
-          val enclosedIn = nestedAnn.getValue("enclosedIn")
-            ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
+          val enclosedIn =
+            nestedAnn.getValue("enclosedIn")
+              ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
 
-          val name = nestedAnn.getValue("name")
-            ?: genError("Nested annotation is missing name", nestedAnn)
+          val name =
+            nestedAnn.getValue("name")
+              ?: genError("Nested annotation is missing name", nestedAnn)
 
           enclosedIn to name
         }
@@ -1428,22 +1641,26 @@ class KotlinTypeRegistry(
           genError("Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys")
       }
 
-    val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
-      ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+    val (nestedEnclosingType, nestedEnclosingTypeUnit) =
+      context.resolveRef(nestedEnclosedIn, shape)
+        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
 
     val nestedEnclosingTypeContext = context.copy(unit = nestedEnclosingTypeUnit, suggestedTypeName = null)
 
-    val nestedEnclosingTypeName = resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? ClassName
-      ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
+    val nestedEnclosingTypeName =
+      resolveTypeName(nestedEnclosingType, nestedEnclosingTypeContext) as? ClassName
+        ?: genError("Nested annotation references non-defining enclosing type", nestedAnn)
 
     return nestedEnclosingTypeName.nestedClass(nestedName)
   }
 
-  private fun packageNameOf(shape: Shape, context: KotlinResolutionContext): String =
-    packageNameOf(context.findDeclaringUnit(shape))
+  private fun packageNameOf(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): String = packageNameOf(context.findDeclaringUnit(shape))
 
   private fun packageNameOf(unit: BaseUnit?): String =
     (unit as? CustomizableElement)?.findStringAnnotation(KotlinModelPkg, generationMode)
@@ -1453,7 +1670,10 @@ class KotlinTypeRegistry(
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun nearestCommonAncestor(types: List<Shape>, context: KotlinResolutionContext): TypeName? {
+  private fun nearestCommonAncestor(
+    types: List<Shape>,
+    context: KotlinResolutionContext,
+  ): TypeName? {
 
     // TODO(https://github.com/outfoxx/sunday-generator/issues/45):
     // Support JVM hierarchy for known JVM types.
@@ -1474,7 +1694,10 @@ class KotlinTypeRegistry(
     return currentClassNameHierarchy?.firstOrNull()
   }
 
-  private fun classNameHierarchy(shape: Shape, context: KotlinResolutionContext): List<TypeName> {
+  private fun classNameHierarchy(
+    shape: Shape,
+    context: KotlinResolutionContext,
+  ): List<TypeName> {
 
     val names = mutableListOf<TypeName>()
 
@@ -1487,13 +1710,19 @@ class KotlinTypeRegistry(
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: NodeShape, context: KotlinResolutionContext): String? =
+  private fun findDiscriminatorPropertyName(
+    shape: NodeShape,
+    context: KotlinResolutionContext,
+  ): String? =
     when {
       !shape.discriminator.isNullOrEmpty() -> shape.discriminator
       else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: KotlinResolutionContext): String? =
+  private fun findDiscriminatorPropertyValue(
+    shape: NodeShape,
+    context: KotlinResolutionContext,
+  ): String? =
     if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
@@ -1501,34 +1730,42 @@ class KotlinTypeRegistry(
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 
-  private fun buildDiscriminatorMappings(shape: NodeShape, context: KotlinResolutionContext): Map<String, String> =
-    shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
-      mapping.templateVariable().value()!! to refElement.id
-    }.toMap()
+  private fun buildDiscriminatorMappings(
+    shape: NodeShape,
+    context: KotlinResolutionContext,
+  ): Map<String, String> =
+    shape.discriminatorMapping
+      .mapNotNull { mapping ->
+        val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
+        mapping.templateVariable().value()!! to refElement.id
+      }.toMap()
 
   private fun TypeSpec.Builder.addGenerated(verbose: Boolean): TypeSpec.Builder {
     if (options.contains(AddGeneratedAnnotation)) {
       addAnnotation(
-        AnnotationSpec.builder(generatedAnnotationName)
+        AnnotationSpec
+          .builder(generatedAnnotationName)
           .apply {
             if (verbose) {
               addMember("value = [%S]", this@KotlinTypeRegistry.javaClass.name)
               addMember("date = %S", generationTimestamp)
             }
-          }
-          .build(),
+          }.build(),
       )
     }
     return this
   }
 
-  fun addGeneratedTo(builder: TypeSpec.Builder, verbose: Boolean) = builder.addGenerated(verbose)
+  fun addGeneratedTo(
+    builder: TypeSpec.Builder,
+    verbose: Boolean,
+  ) = builder.addGenerated(verbose)
 
   private fun TypeSpec.Builder.addSuppress(): TypeSpec.Builder {
     if (options.contains(SuppressPublicApiWarnings)) {
       addAnnotation(
-        AnnotationSpec.builder(Suppress::class)
+        AnnotationSpec
+          .builder(Suppress::class)
           .addMember("%S, %S", "RedundantVisibilityModifier", "RedundantUnitReturnType")
           .build(),
       )

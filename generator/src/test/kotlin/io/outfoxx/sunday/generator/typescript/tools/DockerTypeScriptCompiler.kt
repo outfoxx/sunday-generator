@@ -35,9 +35,14 @@ import java.lang.ref.WeakReference
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.MINUTES
 
-class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), ExtensionContext.Store.CloseableResource {
+class DockerTypeScriptCompiler(
+  workDir: Path,
+) : TypeScriptCompiler(workDir),
+  ExtensionContext.Store.CloseableResource {
 
-  class Shutdown(value: DockerTypeScriptCompiler) : Thread() {
+  class Shutdown(
+    value: DockerTypeScriptCompiler,
+  ) : Thread() {
 
     private val ref = WeakReference(value)
 
@@ -48,16 +53,18 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
 
   companion object {
 
-    private const val imageRepo = "node"
-    private const val imageTag = "15-alpine"
+    private const val IMAGE_REPO = "node"
+    private const val IMAGE_TAG = "15-alpine"
   }
 
   private val dockerConfig: DockerClientConfig =
-    DefaultDockerClientConfig.createDefaultConfigBuilder()
+    DefaultDockerClientConfig
+      .createDefaultConfigBuilder()
       .build()
 
   private val dockerHttpClient: DockerHttpClient =
-    ApacheDockerHttpClient.Builder()
+    ApacheDockerHttpClient
+      .Builder()
       .dockerHost(dockerConfig.dockerHost)
       .sslConfig(dockerConfig.sslConfig)
       .build()
@@ -71,7 +78,8 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
 
     val imageExists =
       try {
-        dockerClient.inspectImageCmd("$imageRepo:$imageTag")
+        dockerClient
+          .inspectImageCmd("$IMAGE_REPO:$IMAGE_TAG")
           .exec()
         true
       } catch (x: NotFoundException) {
@@ -79,27 +87,31 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
       }
 
     if (!imageExists) {
-      dockerClient.pullImageCmd(imageRepo)
-        .withTag(imageTag)
+      dockerClient
+        .pullImageCmd(IMAGE_REPO)
+        .withTag(IMAGE_TAG)
         .exec(PullImageResultCallback())
         .awaitCompletion(10, MINUTES)
     }
 
     containerId =
-      dockerClient.createContainerCmd("$imageRepo:$imageTag")
+      dockerClient
+        .createContainerCmd("$IMAGE_REPO:$IMAGE_TAG")
         .withCmd("sleep", "3600")
         .withHostConfig(
-          HostConfig.newHostConfig()
+          HostConfig
+            .newHostConfig()
             .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/")),
-        )
-        .exec().id
+        ).exec()
+        .id
 
     dockerClient.startContainerCmd(containerId).exec()
 
     Runtime.getRuntime().addShutdownHook(Shutdown(this))
 
     val execId =
-      dockerClient.execCreateCmd(containerId)
+      dockerClient
+        .execCreateCmd(containerId)
         .withCmd("npm", "ci")
         .withWorkingDir("/work")
         .withAttachStdout(true)
@@ -107,7 +119,8 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
         .exec()
         .id
 
-    dockerClient.execStartCmd(execId)
+    dockerClient
+      .execStartCmd(execId)
       .exec(ExecStartResultCallback(System.out, System.err))
       .awaitCompletion(3, MINUTES)
   }
@@ -115,7 +128,8 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
   override fun compile(): Pair<Int, String> {
 
     val execId =
-      dockerClient.execCreateCmd(containerId)
+      dockerClient
+        .execCreateCmd(containerId)
         .withCmd("npm", "run", "build")
         .withWorkingDir("/work")
         .withAttachStdout(true)
@@ -125,14 +139,17 @@ class DockerTypeScriptCompiler(workDir: Path) : TypeScriptCompiler(workDir), Ext
 
     val out = ByteArrayOutputStream()
 
-    dockerClient.execStartCmd(execId)
+    dockerClient
+      .execStartCmd(execId)
       .exec(ExecStartResultCallback(out, out))
       .awaitCompletion(3, MINUTES)
 
     val resultCode =
-      dockerClient.inspectExecCmd(execId)
+      dockerClient
+        .inspectExecCmd(execId)
         .exec()
-        .exitCodeLong.toInt()
+        .exitCodeLong
+        .toInt()
 
     return resultCode to out.toByteArray().decodeToString()
   }

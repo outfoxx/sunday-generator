@@ -37,9 +37,14 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
-class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionContext.Store.CloseableResource {
+class DockerSwiftCompiler(
+  workDir: Path,
+) : SwiftCompiler(workDir),
+  ExtensionContext.Store.CloseableResource {
 
-  class Shutdown(value: SwiftCompiler) : Thread() {
+  class Shutdown(
+    value: SwiftCompiler,
+  ) : Thread() {
 
     private val ref = WeakReference(value)
 
@@ -50,8 +55,8 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
 
   companion object {
 
-    const val imageRepo = "swift"
-    const val imageTag = "5.3"
+    const val IMAGE_REPO = "swift"
+    const val IMAGE_TAG = "5.3"
   }
 
   init {
@@ -67,11 +72,13 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
   }
 
   private val dockerConfig: DockerClientConfig =
-    DefaultDockerClientConfig.createDefaultConfigBuilder()
+    DefaultDockerClientConfig
+      .createDefaultConfigBuilder()
       .build()
 
   private val dockerHttpClient: DockerHttpClient =
-    ApacheDockerHttpClient.Builder()
+    ApacheDockerHttpClient
+      .Builder()
       .dockerHost(dockerConfig.dockerHost)
       .sslConfig(dockerConfig.sslConfig)
       .build()
@@ -85,28 +92,32 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
 
     val imageExists =
       try {
-        dockerClient.inspectImageCmd("$imageRepo:$imageTag")
+        dockerClient
+          .inspectImageCmd("$IMAGE_REPO:$IMAGE_TAG")
           .exec()
         true
-      } catch (x: NotFoundException) {
+      } catch (_: NotFoundException) {
         false
       }
 
     if (!imageExists) {
-      dockerClient.pullImageCmd(imageRepo)
-        .withTag(imageTag)
+      dockerClient
+        .pullImageCmd(IMAGE_REPO)
+        .withTag(IMAGE_TAG)
         .exec(PullImageResultCallback())
         .awaitCompletion(10, TimeUnit.MINUTES)
     }
 
     containerId =
-      dockerClient.createContainerCmd("$imageRepo:$imageTag")
+      dockerClient
+        .createContainerCmd("$IMAGE_REPO:$IMAGE_TAG")
         .withCmd("sleep", "3600")
         .withHostConfig(
-          HostConfig.newHostConfig()
+          HostConfig
+            .newHostConfig()
             .withBinds(Bind.parse("${workDir.toAbsolutePath()}:/work/")),
-        )
-        .exec().id
+        ).exec()
+        .id
 
     dockerClient.startContainerCmd(containerId).exec()
 
@@ -116,7 +127,8 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
   override fun compile(): Pair<Int, String> {
 
     val execId =
-      dockerClient.execCreateCmd(containerId)
+      dockerClient
+        .execCreateCmd(containerId)
         .withCmd("swift", "build")
         .withWorkingDir("/work")
         .withAttachStdout(true)
@@ -126,14 +138,17 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
 
     val output = ByteArrayOutputStream()
 
-    dockerClient.execStartCmd(execId)
+    dockerClient
+      .execStartCmd(execId)
       .exec(ExecStartResultCallback(output, output))
       .awaitCompletion(3, TimeUnit.MINUTES)
 
     val resultCode =
-      dockerClient.inspectExecCmd(execId)
+      dockerClient
+        .inspectExecCmd(execId)
         .exec()
-        .exitCodeLong.toInt()
+        .exitCodeLong
+        .toInt()
 
     return resultCode to output.toByteArray().decodeToString()
   }
@@ -143,12 +158,12 @@ class DockerSwiftCompiler(workDir: Path) : SwiftCompiler(workDir), ExtensionCont
 
     try {
       dockerClient.killContainerCmd(containerId).exec()
-    } catch (x: Throwable) {
+    } catch (_: Throwable) {
     }
 
     try {
       dockerClient.removeContainerCmd(containerId).exec()
-    } catch (x: Throwable) {
+    } catch (_: Throwable) {
     }
 
     dockerClient.close()

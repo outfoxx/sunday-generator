@@ -35,7 +35,8 @@ class SundayGeneration(
 ) {
 
   val source: Property<FileCollection> =
-    objects.property(FileCollection::class.java)
+    objects
+      .property(FileCollection::class.java)
       .convention(project.fileTree("src/main/sunday") { it.include("**/*.raml") })
 
   val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
@@ -65,6 +66,7 @@ class SundayGeneration(
   val outputDir: Property<Directory> = objects.directoryProperty()
 
   val targetSourceSet: Property<String> =
-    objects.property(String::class.java)
+    objects
+      .property(String::class.java)
       .convention(MAIN_SOURCE_SET_NAME)
 }

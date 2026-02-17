@@ -55,26 +55,27 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: Test): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: Test): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -101,35 +102,36 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import com.fasterxml.jackson.databind.JsonNode
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+      import com.fasterxml.jackson.databind.JsonNode
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: JsonNode): Response
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: JsonNode): Response
 
-          @GET
-          @Path(value = "/tests-client")
-          public fun fetchTestClient(body: Test): Response
+        @GET
+        @Path(value = "/tests-client")
+        public fun fetchTestClient(body: Test): Response
 
-          @GET
-          @Path(value = "/tests-server")
-          public fun fetchTestServer(body: JsonNode): Response
-        }
+        @GET
+        @Path(value = "/tests-server")
+        public fun fetchTestServer(body: JsonNode): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -156,34 +158,35 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import com.fasterxml.jackson.databind.JsonNode
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
+      import com.fasterxml.jackson.databind.JsonNode
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: JsonNode): Test
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: JsonNode): Test
 
-          @GET
-          @Path(value = "/tests-client")
-          public fun fetchTestClient(body: JsonNode): Test
+        @GET
+        @Path(value = "/tests-client")
+        public fun fetchTestClient(body: JsonNode): Test
 
-          @GET
-          @Path(value = "/tests-server")
-          public fun fetchTestServer(body: Test): Test
-        }
+        @GET
+        @Path(value = "/tests-server")
+        public fun fetchTestServer(body: Test): Test
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -210,27 +213,28 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+      import io.test.Test
+      import javax.validation.Valid
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@Valid body: Test): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@Valid body: Test): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -263,28 +267,29 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Child
-        import javax.validation.Valid
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.POST
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.collections.List
+      import io.test.Child
+      import javax.validation.Valid
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.POST
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.collections.List
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @POST
-          @Path(value = "/tests")
-          public fun fetchTest(body: List<@Valid Child>): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @POST
+        @Path(value = "/tests")
+        public fun fetchTest(body: List<@Valid Child>): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -311,26 +316,27 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: Test?): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: Test?): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -357,27 +363,28 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.ByteArray
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.ByteArray
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Consumes(value = ["application/octet-stream"])
-          public fun fetchTest(body: ByteArray): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Consumes(value = ["application/octet-stream"])
+        public fun fetchTest(body: ByteArray): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -416,26 +423,27 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: Test): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: Test): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -474,35 +482,36 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import com.fasterxml.jackson.databind.JsonNode
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import org.jboss.resteasy.reactive.RestResponse
+      import com.fasterxml.jackson.databind.JsonNode
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: JsonNode): RestResponse<Test>
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: JsonNode): RestResponse<Test>
 
-          @GET
-          @Path(value = "/tests-client")
-          public fun fetchTestClient(body: Test): RestResponse<Test>
+        @GET
+        @Path(value = "/tests-client")
+        public fun fetchTestClient(body: Test): RestResponse<Test>
 
-          @GET
-          @Path(value = "/tests-server")
-          public fun fetchTestServer(body: JsonNode): RestResponse<Test>
-        }
+        @GET
+        @Path(value = "/tests-server")
+        public fun fetchTestServer(body: JsonNode): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -541,34 +550,35 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import com.fasterxml.jackson.databind.JsonNode
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
+      import com.fasterxml.jackson.databind.JsonNode
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: JsonNode): Test
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: JsonNode): Test
 
-          @GET
-          @Path(value = "/tests-client")
-          public fun fetchTestClient(body: JsonNode): Test
+        @GET
+        @Path(value = "/tests-client")
+        public fun fetchTestClient(body: JsonNode): Test
 
-          @GET
-          @Path(value = "/tests-server")
-          public fun fetchTestServer(body: Test): Test
-        }
+        @GET
+        @Path(value = "/tests-server")
+        public fun fetchTestServer(body: Test): Test
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -607,27 +617,28 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import javax.validation.Valid
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import javax.validation.Valid
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(@Valid body: Test): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(@Valid body: Test): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -666,26 +677,27 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import org.jboss.resteasy.reactive.RestResponse
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          public fun fetchTest(body: Test?): RestResponse<Test>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        public fun fetchTest(body: Test?): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -724,30 +736,31 @@ class RequestBodyParamTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import kotlin.Any
-        import kotlin.ByteArray
-        import kotlin.String
-        import kotlin.collections.Map
-        import org.jboss.resteasy.reactive.RestResponse
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import kotlin.Any
+      import kotlin.ByteArray
+      import kotlin.String
+      import kotlin.collections.Map
+      import org.jboss.resteasy.reactive.RestResponse
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Consumes(value = ["application/octet-stream"])
-          public fun fetchTest(body: ByteArray): RestResponse<Map<String, Any>>
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Consumes(value = ["application/octet-stream"])
+        public fun fetchTest(body: ByteArray): RestResponse<Map<String, Any>>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

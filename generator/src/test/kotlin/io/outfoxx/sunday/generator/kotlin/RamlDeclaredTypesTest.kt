@@ -63,18 +63,19 @@ class RamlDeclaredTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import io.test.client.Test
-        import kotlin.String
+      import io.test.client.Test
+      import kotlin.String
 
-        public interface Test : Test {
-          public val value2: String
-        }
+      public interface Test : Test {
+        public val value2: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

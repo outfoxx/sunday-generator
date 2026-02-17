@@ -37,10 +37,11 @@ val ScalarNode.swiftIdentifierName: String get() = stringValue!!.toLowerCamelCas
 private val enumSplitRegex = """\W""".toRegex()
 
 val ScalarNode.swiftEnumName: String
-  get() = stringValue!!
-    .split(enumSplitRegex)
-    .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
-    .toLowerCamelCase()
+  get() =
+    stringValue!!
+      .split(enumSplitRegex)
+      .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
+      .toLowerCamelCase()
 
 val Parameter.swiftTypeName: String get() = parameterName!!.toUpperCamelCase()
 val Parameter.swiftIdentifierName: String get() = parameterName!!.toLowerCamelCase()

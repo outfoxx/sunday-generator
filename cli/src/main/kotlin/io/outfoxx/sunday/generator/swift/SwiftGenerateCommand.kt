@@ -25,7 +25,10 @@ import io.outfoxx.sunday.generator.provideDelegate
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.DefaultIdentifiableTypes
 
-abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
+abstract class SwiftGenerateCommand(
+  name: String,
+  help: String,
+) : CommonGenerateCommand(name = name, help = help) {
 
   val options by flags<SwiftTypeRegistry.Option> {
     AddGeneratedHeader to "Add generated header to generated files".default(true)
@@ -36,8 +39,10 @@ abstract class SwiftGenerateCommand(name: String, help: String) : CommonGenerate
     SwiftTypeRegistry(options)
   }
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex) =
-    generatorFactory(document, shapeIndex, typeRegistry)
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+  ) = generatorFactory(document, shapeIndex, typeRegistry)
 
   abstract fun generatorFactory(
     document: Document,

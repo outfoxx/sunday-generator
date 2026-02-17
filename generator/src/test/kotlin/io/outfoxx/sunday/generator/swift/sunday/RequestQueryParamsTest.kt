@@ -55,50 +55,51 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
-
-          public func fetchTest(
-            obj: Test,
-            strReq: String,
-            int: Int = 5
-          ) async throws -> Test {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests",
-              pathParameters: nil,
-              queryParameters: [
-                "obj": obj,
-                "str-req": strReq,
-                "int": int
-              ],
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
-
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
         }
+
+        public func fetchTest(
+          obj: Test,
+          strReq: String,
+          int: Int = 5
+        ) async throws -> Test {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests",
+            pathParameters: nil,
+            queryParameters: [
+              "obj": obj,
+              "str-req": strReq,
+              "int": int
+            ],
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -126,54 +127,55 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
-
-          public func fetchTest(
-            obj: Test? = nil,
-            str: String? = nil,
-            int: Int? = nil,
-            def1: String? = "test",
-            def2: Int? = 10
-          ) async throws -> Test {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests",
-              pathParameters: nil,
-              queryParameters: [
-                "obj": obj as Any?,
-                "str": str as Any?,
-                "int": int as Any?,
-                "def1": def1 as Any?,
-                "def2": def2 as Any?
-              ].filter { ${'$'}0.value != nil },
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
-
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
         }
+
+        public func fetchTest(
+          obj: Test? = nil,
+          str: String? = nil,
+          int: Int? = nil,
+          def1: String? = "test",
+          def2: Int? = 10
+        ) async throws -> Test {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests",
+            pathParameters: nil,
+            queryParameters: [
+              "obj": obj as Any?,
+              "str": str as Any?,
+              "int": int as Any?,
+              "def1": def1 as Any?,
+              "def2": def2 as Any?
+            ].filter { ${'$'}0.value != nil },
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -201,60 +203,61 @@ class RequestQueryParamsTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
+        }
 
-          public func fetchTest(category: FetchTestCategoryQueryParam, type: FetchTestTypeQueryParam) async throws -> [String : AnyValue] {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests",
-              pathParameters: nil,
-              queryParameters: [
-                "category": category,
-                "type": type
-              ],
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
+        public func fetchTest(category: FetchTestCategoryQueryParam, type: FetchTestTypeQueryParam) async throws -> [String : AnyValue] {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests",
+            pathParameters: nil,
+            queryParameters: [
+              "category": category,
+              "type": type
+            ],
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
 
-          public enum FetchTestCategoryQueryParam : String, CaseIterable, Codable {
+        public enum FetchTestCategoryQueryParam : String, CaseIterable, Codable {
 
-            case politics = "politics"
-            case science = "science"
-
-          }
-
-          public enum FetchTestTypeQueryParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
+          case politics = "politics"
+          case science = "science"
 
         }
 
+        public enum FetchTestTypeQueryParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )

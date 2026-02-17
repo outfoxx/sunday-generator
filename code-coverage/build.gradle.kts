@@ -1,34 +1,16 @@
-
 plugins {
   base
-  id("jacoco-report-aggregation")
-}
-
-repositories {
-  mavenCentral()
+  alias(libs.plugins.kover)
 }
 
 dependencies {
-  jacocoAggregation(project(":generator"))
-  jacocoAggregation(project(":cli"))
-  jacocoAggregation(project(":gradle-plugin"))
-}
-
-reporting {
-  reports {
-    create<JacocoCoverageReport>("testCoverageReport") {
-      testType.set(TestSuiteType.UNIT_TEST)
-      reportTask {
-        reports.xml.required.set(true)
-      }
-    }
-  }
+  kover(project(":generator"))
+  kover(project(":cli"))
+  kover(project(":gradle-plugin"))
 }
 
 tasks {
-
   check {
-    finalizedBy(named<JacocoReport>("testCoverageReport"))
+    finalizedBy(named("koverXmlReport"), named("koverHtmlReport"))
   }
-
 }

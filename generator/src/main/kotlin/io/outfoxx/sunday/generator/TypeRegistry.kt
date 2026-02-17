@@ -21,7 +21,10 @@ import java.nio.file.Path
 
 interface TypeRegistry {
 
-  fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path)
+  fun generateFiles(
+    categories: Set<GeneratedTypeCategory>,
+    outputDirectory: Path,
+  )
 
   fun defineProblemType(
     problemCode: String,

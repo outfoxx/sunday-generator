@@ -34,17 +34,20 @@ open class TypeScriptSundayGenerateCommand :
     help = "Service methods will return promises and carry an extra final argument for an abort signal",
   ).flag(default = false)
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: TypeScriptTypeRegistry) =
-    TypeScriptSundayGenerator(
-      document,
-      shapeIndex,
-      typeRegistry,
-      TypeScriptSundayGenerator.Options(
-        useResultResponseReturn,
-        enableAbortablePromises,
-        problemBaseUri,
-        mediaTypes.toList(),
-        serviceSuffix,
-      ),
-    )
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: TypeScriptTypeRegistry,
+  ) = TypeScriptSundayGenerator(
+    document,
+    shapeIndex,
+    typeRegistry,
+    TypeScriptSundayGenerator.Options(
+      useResultResponseReturn,
+      enableAbortablePromises,
+      problemBaseUri,
+      mediaTypes.toList(),
+      serviceSuffix,
+    ),
+  )
 }

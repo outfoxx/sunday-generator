@@ -21,7 +21,10 @@ import amf.apicontract.client.platform.model.domain.Operation
 
 interface NameGenerator {
 
-  fun generate(endPoint: EndPoint, operation: Operation): String
+  fun generate(
+    endPoint: EndPoint,
+    operation: Operation,
+  ): String
 
   companion object {
 

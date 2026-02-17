@@ -28,8 +28,11 @@ class GenerateCommand : CliktCommand(name = "sunday") {
       helpFormatter = { MordantMarkdownHelpFormatter(it, showDefaultValues = true, showRequiredTag = true) }
     }
   }
+
   override fun help(context: Context) = "Generate types and/or services from RAML definitions"
+
   override val printHelpOnEmptyArgs = true
   override val invokeWithoutSubcommand = true
+
   override fun run() = Unit
 }

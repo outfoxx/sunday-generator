@@ -16,6 +16,4 @@
 
 package io.outfoxx.sunday.generator.utils
 
-fun <T> Collection<T>.equalsInAnyOrder(other: Collection<T>): Boolean {
-  return size == other.size && containsAll(other)
-}
+fun <T> Collection<T>.equalsInAnyOrder(other: Collection<T>): Boolean = size == other.size && containsAll(other)

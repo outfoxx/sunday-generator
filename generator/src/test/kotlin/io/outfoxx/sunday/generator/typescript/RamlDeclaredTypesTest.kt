@@ -64,37 +64,38 @@ class RamlDeclaredTypesTest {
 
     assertEquals(
       """
-        import {Test as Test_, TestSpec as TestSpec_} from './test/client/test';
+      import {Test as Test_, TestSpec as TestSpec_} from './test/client/test';
 
 
-        export interface TestSpec extends TestSpec_ {
+      export interface TestSpec extends TestSpec_ {
 
-          value2: string;
+        value2: string;
 
+      }
+
+      export class Test extends Test_ implements TestSpec {
+
+        value2: string;
+
+        constructor(init: TestSpec) {
+          super(init);
+          this.value2 = init.value2;
         }
 
-        export class Test extends Test_ implements TestSpec {
-
-          value2: string;
-
-          constructor(init: TestSpec) {
-            super(init);
-            this.value2 = init.value2;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
+        FileSpec
+          .get(typeModSpec)
           .writeTo(this)
       },
     )

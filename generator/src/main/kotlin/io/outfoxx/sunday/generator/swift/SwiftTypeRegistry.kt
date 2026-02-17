@@ -21,16 +21,91 @@ package io.outfoxx.sunday.generator.swift
 import amf.core.client.platform.model.DataTypes
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.*
-import amf.shapes.client.platform.model.domain.*
-import io.outfoxx.sunday.generator.*
-import io.outfoxx.sunday.generator.APIAnnotationName.*
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.FileShape
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternalDiscriminator
+import io.outfoxx.sunday.generator.APIAnnotationName.ExternallyDiscriminated
+import io.outfoxx.sunday.generator.APIAnnotationName.Nested
+import io.outfoxx.sunday.generator.APIAnnotationName.Patchable
+import io.outfoxx.sunday.generator.APIAnnotationName.SwiftImpl
+import io.outfoxx.sunday.generator.APIAnnotationName.SwiftModelModule
+import io.outfoxx.sunday.generator.APIAnnotationName.SwiftType
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ProblemTypeDefinition
+import io.outfoxx.sunday.generator.TypeRegistry
 import io.outfoxx.sunday.generator.common.DefinitionLocation
 import io.outfoxx.sunday.generator.common.GenerationHeaders
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
-import io.outfoxx.sunday.generator.swift.utils.*
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
+import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY
+import io.outfoxx.sunday.generator.swift.utils.ARRAY_ANY_OPTIONAL
+import io.outfoxx.sunday.generator.swift.utils.CODABLE
+import io.outfoxx.sunday.generator.swift.utils.CODING_KEY
+import io.outfoxx.sunday.generator.swift.utils.CUSTOM_STRING_CONVERTIBLE
+import io.outfoxx.sunday.generator.swift.utils.DATE
+import io.outfoxx.sunday.generator.swift.utils.DECIMAL
+import io.outfoxx.sunday.generator.swift.utils.DECODER
+import io.outfoxx.sunday.generator.swift.utils.DECODING_ERROR
+import io.outfoxx.sunday.generator.swift.utils.DESCRIPTION_BUILDER
+import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY
+import io.outfoxx.sunday.generator.swift.utils.DICTIONARY_STRING_ANY_OPTIONAL
+import io.outfoxx.sunday.generator.swift.utils.ENCODER
+import io.outfoxx.sunday.generator.swift.utils.ENCODING_ERROR
+import io.outfoxx.sunday.generator.swift.utils.PROBLEM
+import io.outfoxx.sunday.generator.swift.utils.URL
+import io.outfoxx.sunday.generator.swift.utils.concreteType
+import io.outfoxx.sunday.generator.swift.utils.swiftEnumName
+import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
+import io.outfoxx.sunday.generator.swift.utils.swiftTypeName
+import io.outfoxx.sunday.generator.utils.anyOf
+import io.outfoxx.sunday.generator.utils.dataType
+import io.outfoxx.sunday.generator.utils.discriminator
+import io.outfoxx.sunday.generator.utils.discriminatorMapping
+import io.outfoxx.sunday.generator.utils.discriminatorValue
+import io.outfoxx.sunday.generator.utils.encodes
+import io.outfoxx.sunday.generator.utils.findAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.format
+import io.outfoxx.sunday.generator.utils.get
+import io.outfoxx.sunday.generator.utils.getValue
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.id
+import io.outfoxx.sunday.generator.utils.isNameExplicit
+import io.outfoxx.sunday.generator.utils.items
+import io.outfoxx.sunday.generator.utils.makesNullable
+import io.outfoxx.sunday.generator.utils.minCount
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonPatternProperties
+import io.outfoxx.sunday.generator.utils.nullable
+import io.outfoxx.sunday.generator.utils.nullableType
+import io.outfoxx.sunday.generator.utils.optional
+import io.outfoxx.sunday.generator.utils.or
+import io.outfoxx.sunday.generator.utils.patternProperties
+import io.outfoxx.sunday.generator.utils.range
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import io.outfoxx.sunday.generator.utils.uniqueId
+import io.outfoxx.sunday.generator.utils.uniqueItems
+import io.outfoxx.sunday.generator.utils.value
+import io.outfoxx.sunday.generator.utils.values
+import io.outfoxx.sunday.generator.utils.xone
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.ARRAY
 import io.outfoxx.swiftpoet.BOOL
@@ -50,7 +125,11 @@ import io.outfoxx.swiftpoet.INT16
 import io.outfoxx.swiftpoet.INT32
 import io.outfoxx.swiftpoet.INT64
 import io.outfoxx.swiftpoet.INT8
-import io.outfoxx.swiftpoet.Modifier.*
+import io.outfoxx.swiftpoet.Modifier.FILEPRIVATE
+import io.outfoxx.swiftpoet.Modifier.OVERRIDE
+import io.outfoxx.swiftpoet.Modifier.PUBLIC
+import io.outfoxx.swiftpoet.Modifier.REQUIRED
+import io.outfoxx.swiftpoet.Modifier.STATIC
 import io.outfoxx.swiftpoet.ParameterSpec
 import io.outfoxx.swiftpoet.ParameterizedTypeName
 import io.outfoxx.swiftpoet.PropertySpec
@@ -82,9 +161,15 @@ class SwiftTypeRegistry(
   private val typeNameMappings = mutableMapOf<String, TypeName>()
   private var referenceTypes = mutableMapOf<TypeName, TypeName>()
 
-  override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
+  override fun generateFiles(
+    categories: Set<GeneratedTypeCategory>,
+    outputDirectory: Path,
+  ) {
 
-    fun addExtensions(builder: FileSpec.Builder, typeSpec: TypeSpec) {
+    fun addExtensions(
+      builder: FileSpec.Builder,
+      typeSpec: TypeSpec,
+    ) {
       typeSpec.tag<AssociatedExtensions>()?.forEach { builder.addExtension(it) }
       typeSpec.typeSpecs.forEach {
         if (it is TypeSpec) {
@@ -99,12 +184,12 @@ class SwiftTypeRegistry(
       .filter { it.key.topLevelTypeName() == it.key }
       .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
       .map { (typeName, typeSpec) ->
-        FileSpec.builder(typeName.moduleName, typeSpec.name)
+        FileSpec
+          .builder(typeName.moduleName, typeSpec.name)
           .addType(typeSpec)
           .apply { addExtensions(this, typeSpec) }
           .build()
-      }
-      .forEach { it.writeTo(outputDirectory) }
+      }.forEach { it.writeTo(outputDirectory) }
   }
 
   fun buildTypes(): Map<DeclaredTypeName, TypeSpec> {
@@ -122,7 +207,10 @@ class SwiftTypeRegistry(
     return typeBuilders.mapValues { it.value.build() }
   }
 
-  fun resolveTypeName(shapeRef: Shape, context: SwiftResolutionContext): TypeName {
+  fun resolveTypeName(
+    shapeRef: Shape,
+    context: SwiftResolutionContext,
+  ): TypeName {
 
     val shape = context.dereference(shapeRef)
 
@@ -145,7 +233,10 @@ class SwiftTypeRegistry(
 
   fun getReferenceType(className: TypeName): TypeName? = referenceTypes[className]
 
-  fun addServiceType(className: DeclaredTypeName, serviceType: TypeSpec.Builder) {
+  fun addServiceType(
+    className: DeclaredTypeName,
+    serviceType: TypeSpec.Builder,
+  ) {
 
     serviceType.addModifiers(PUBLIC)
 
@@ -174,18 +265,20 @@ class SwiftTypeRegistry(
     val problemCodingKeysTypeName = problemTypeName.nestedType(CODING_KEYS_NAME)
 
     val problemTypeBuilder =
-      TypeSpec.classBuilder(problemTypeName)
+      TypeSpec
+        .classBuilder(problemTypeName)
         .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .addModifiers(PUBLIC)
         .addSuperType(PROBLEM)
         .addProperty(
-          PropertySpec.builder("type", URL, PUBLIC)
+          PropertySpec
+            .builder("type", URL, PUBLIC)
             .addModifiers(STATIC)
             .initializer("%T(string: %S)!", URL, problemTypeDefinition.type)
             .build(),
-        )
-        .addFunction(
-          FunctionSpec.constructorBuilder()
+        ).addFunction(
+          FunctionSpec
+            .constructorBuilder()
             .addModifiers(PUBLIC)
             .apply {
               // Add all custom properties to the constructor
@@ -202,55 +295,50 @@ class SwiftTypeRegistry(
                     .builder(
                       customPropertyName.swiftIdentifierName,
                       parameterTypeName,
-                    )
-                    .apply {
+                    ).apply {
                       if (parameterTypeName.optional) {
                         defaultValue("nil")
                       }
-                    }
-                    .build(),
+                    }.build(),
                 )
               }
-            }
-            .addParameter(
-              ParameterSpec.builder("instance", URL.makeOptional())
+            }.addParameter(
+              ParameterSpec
+                .builder("instance", URL.makeOptional())
                 .defaultValue("nil")
                 .build(),
-            )
-            .apply {
+            ).apply {
               problemTypeDefinition.custom.map {
                 addStatement("self.%N = %N", it.key.swiftIdentifierName, it.key.swiftIdentifierName)
               }
-            }
-            .addStatement(
+            }.addStatement(
               "super.init(type: %T.type,%Wtitle: %S,%Wstatus: %L,%Wdetail: %S,%Winstance: instance,%Wparameters: nil)",
               SelfTypeName.INSTANCE,
               problemTypeDefinition.title,
               problemTypeDefinition.status,
               problemTypeDefinition.detail,
-            )
-            .build(),
-        )
-        .apply {
+            ).build(),
+        ).apply {
           problemTypeDefinition.custom.map { (customPropertyName, customPropertyTypeNameStr) ->
             addProperty(
-              PropertySpec.builder(
-                customPropertyName.swiftIdentifierName,
-                resolveTypeReference(
-                  customPropertyTypeNameStr,
-                  problemTypeDefinition.source,
-                  SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-                ),
-                PUBLIC,
-              )
-                .build(),
+              PropertySpec
+                .builder(
+                  customPropertyName.swiftIdentifierName,
+                  resolveTypeReference(
+                    customPropertyTypeNameStr,
+                    problemTypeDefinition.source,
+                    SwiftResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+                  ),
+                  PUBLIC,
+                ).build(),
             )
           }
-        }
-        .addProperty(
-          PropertySpec.builder("description", STRING, OVERRIDE, PUBLIC)
+        }.addProperty(
+          PropertySpec
+            .builder("description", STRING, OVERRIDE, PUBLIC)
             .getter(
-              FunctionSpec.getterBuilder()
+              FunctionSpec
+                .getterBuilder()
                 .addStatement(
                   "return %T(%T.self)\n" +
                     ".add(type, named: %S)\n" +
@@ -260,17 +348,21 @@ class SwiftTypeRegistry(
                     ".add(instance, named: %S)\n" +
                     problemTypeDefinition.custom.map { ".add(%N, named: %S)\n" }.joinToString("") +
                     ".build()",
-                  DESCRIPTION_BUILDER, SelfTypeName.INSTANCE, "type", "title", "status", "detail", "instance",
+                  DESCRIPTION_BUILDER,
+                  SelfTypeName.INSTANCE,
+                  "type",
+                  "title",
+                  "status",
+                  "detail",
+                  "instance",
                   *problemTypeDefinition.custom
                     .flatMap { listOf(it.key.swiftIdentifierName, it.key.swiftIdentifierName) }
                     .toTypedArray(),
-                )
-                .build(),
-            )
-            .build(),
-        )
-        .addFunction(
-          FunctionSpec.constructorBuilder()
+                ).build(),
+            ).build(),
+        ).addFunction(
+          FunctionSpec
+            .constructorBuilder()
             .addModifiers(PUBLIC, REQUIRED)
             .addParameter("from", "decoder", DECODER)
             .throws(true)
@@ -294,12 +386,11 @@ class SwiftTypeRegistry(
                   customPropertyName.swiftIdentifierName,
                 )
               }
-            }
-            .addStatement("try super.init(from: decoder)")
+            }.addStatement("try super.init(from: decoder)")
             .build(),
-        )
-        .addFunction(
-          FunctionSpec.builder("encode")
+        ).addFunction(
+          FunctionSpec
+            .builder("encode")
             .addModifiers(PUBLIC, OVERRIDE)
             .addParameter("to", "encoder", ENCODER)
             .throws(true)
@@ -316,14 +407,14 @@ class SwiftTypeRegistry(
                   it.key.swiftIdentifierName,
                 )
               }
-            }
-            .build(),
+            }.build(),
         )
 
     if (problemTypeDefinition.custom.isNotEmpty()) {
 
       val problemCodingKeysTypeBuilder =
-        TypeSpec.enumBuilder(CODING_KEYS_NAME)
+        TypeSpec
+          .enumBuilder(CODING_KEYS_NAME)
           .addModifiers(FILEPRIVATE)
           .addSuperType(STRING)
           .addSuperType(CODING_KEY)
@@ -344,7 +435,11 @@ class SwiftTypeRegistry(
     return problemTypeName
   }
 
-  private fun resolveTypeReference(nameStr: String, source: DomainElement, context: SwiftResolutionContext): TypeName {
+  private fun resolveTypeReference(
+    nameStr: String,
+    source: DomainElement,
+    context: SwiftResolutionContext,
+  ): TypeName {
     val typeNameStr = nameStr.removeSuffix("?")
     val elementTypeNameStr = typeNameStr.removeSuffix("[]")
     val elementTypeName =
@@ -361,8 +456,9 @@ class SwiftTypeRegistry(
         "datetime-only" -> DATE
         "datetime" -> DATE
         else -> {
-          val (element, unit) = context.resolveRef(elementTypeNameStr, source)
-            ?: genError("Invalid type reference '$elementTypeNameStr'", source)
+          val (element, unit) =
+            context.resolveRef(elementTypeNameStr, source)
+              ?: genError("Invalid type reference '$elementTypeNameStr'", source)
           element as? Shape ?: genError("Invalid type reference '$elementTypeNameStr'", source)
 
           resolveReferencedTypeName(element, context.copy(unit = unit, suggestedTypeName = null))
@@ -381,8 +477,10 @@ class SwiftTypeRegistry(
     }
   }
 
-  private fun resolveReferencedTypeName(shape: Shape, context: SwiftResolutionContext): TypeName =
-    resolveTypeName(shape, context.copy(suggestedTypeName = null))
+  private fun resolveReferencedTypeName(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): TypeName = resolveTypeName(shape, context.copy(suggestedTypeName = null))
 
   private fun resolvePropertyTypeName(
     propertyShape: PropertyShape,
@@ -390,9 +488,10 @@ class SwiftTypeRegistry(
     context: SwiftResolutionContext,
   ): TypeName {
 
-    val propertyContext = context.copy(
-      suggestedTypeName = className.nestedType(propertyShape.swiftTypeName),
-    )
+    val propertyContext =
+      context.copy(
+        suggestedTypeName = className.nestedType(propertyShape.swiftTypeName),
+      )
 
     val typeName = resolveTypeName(propertyShape.range, propertyContext)
     return if ((propertyShape.minCount ?: 0) == 0) {
@@ -402,7 +501,10 @@ class SwiftTypeRegistry(
     }
   }
 
-  private fun generateTypeName(shape: Shape, context: SwiftResolutionContext): TypeName {
+  private fun generateTypeName(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): TypeName {
 
     val swiftTypeAnn = shape.findStringAnnotation(SwiftType, null)
     if (swiftTypeAnn != null) {
@@ -412,7 +514,10 @@ class SwiftTypeRegistry(
     return processShape(shape, context)
   }
 
-  private fun processShape(shape: Shape, context: SwiftResolutionContext): TypeName =
+  private fun processShape(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): TypeName =
     when (shape) {
       is ScalarShape -> processScalarShape(shape, context)
       is ArrayShape -> processArrayShape(shape, context)
@@ -424,7 +529,10 @@ class SwiftTypeRegistry(
       else -> genError("Shape type '${shape::class.simpleName}' is unsupported", shape)
     }
 
-  private fun processAnyShape(shape: AnyShape, context: SwiftResolutionContext): TypeName =
+  private fun processAnyShape(
+    shape: AnyShape,
+    context: SwiftResolutionContext,
+  ): TypeName =
     when {
       context.hasInherited(shape) && shape is NodeShape ->
         defineClass(
@@ -441,7 +549,10 @@ class SwiftTypeRegistry(
       else -> ANY_VALUE
     }
 
-  private fun processScalarShape(shape: ScalarShape, context: SwiftResolutionContext): TypeName =
+  private fun processScalarShape(
+    shape: ScalarShape,
+    context: SwiftResolutionContext,
+  ): TypeName =
     when (shape.dataType) {
       DataTypes.String() ->
 
@@ -485,7 +596,10 @@ class SwiftTypeRegistry(
       else -> genError("Scalar data type '${shape.dataType}' is unsupported", shape)
     }
 
-  private fun processArrayShape(shape: ArrayShape, context: SwiftResolutionContext): TypeName {
+  private fun processArrayShape(
+    shape: ArrayShape,
+    context: SwiftResolutionContext,
+  ): TypeName {
 
     val elementType =
       shape.items
@@ -504,14 +618,20 @@ class SwiftTypeRegistry(
     return collectionType.parameterizedBy(elementType)
   }
 
-  private fun processUnionShape(shape: UnionShape, context: SwiftResolutionContext): TypeName =
+  private fun processUnionShape(
+    shape: UnionShape,
+    context: SwiftResolutionContext,
+  ): TypeName =
     if (shape.makesNullable) {
       resolveReferencedTypeName(shape.nullableType, context).makeOptional()
     } else {
       nearestCommonAncestor(shape.anyOf, context) ?: ANY
     }
 
-  private fun processNodeShape(shape: NodeShape, context: SwiftResolutionContext): TypeName {
+  private fun processNodeShape(
+    shape: NodeShape,
+    context: SwiftResolutionContext,
+  ): TypeName {
 
     if (
       shape.nonPatternProperties.isEmpty() &&
@@ -577,8 +697,10 @@ class SwiftTypeRegistry(
       originalInheritedProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var inheritedDeclaredProperties = originalInheritedDeclaredProperties
 
-    val originalLocalProperties = context.findProperties(shape)
-      .filter { prop -> prop.name !in originalInheritedProperties.map { it.name } }
+    val originalLocalProperties =
+      context
+        .findProperties(shape)
+        .filter { prop -> prop.name !in originalInheritedProperties.map { it.name } }
     var localProperties = originalLocalProperties
     val originalLocalDeclaredProperties = localProperties.filterNot { it.range.hasAnnotation(SwiftImpl, null) }
     var localDeclaredProperties = originalLocalDeclaredProperties
@@ -611,55 +733,66 @@ class SwiftTypeRegistry(
       if (context.hasNoInherited(shape)) {
 
         typeBuilder.addProperty(
-          PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
+          PropertySpec
+            .builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
             .getter(
-              FunctionSpec.getterBuilder()
+              FunctionSpec
+                .getterBuilder()
                 .addStatement("fatalError(\"abstract type method\")")
                 .build(),
-            )
-            .build(),
+            ).build(),
         )
 
         if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
 
           /*
           Generate a polymorphic encoding/decoding type (replaces type name)
-         */
+           */
 
           val refTypeName = className.nestedType(ANY_REF_NAME)
           referenceTypes[className] = refTypeName
 
           val refTypeBuilder =
-            TypeSpec.enumBuilder(refTypeName)
+            TypeSpec
+              .enumBuilder(refTypeName)
               .addModifiers(PUBLIC)
               .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE))
 
-          val refValueInitBuilder = FunctionSpec.constructorBuilder()
-            .addModifiers(PUBLIC)
-            .addParameter("value", className)
-            .beginControlFlow("switch", "value")
-          val refDecoderBuilder = FunctionSpec.constructorBuilder()
-            .addModifiers(PUBLIC)
-            .addParameter("from", "decoder", DECODER)
-            .throws(true)
-            .addCode("let container = try decoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
-            .addCode(
-              "let type = try container.decode(%T.self, forKey: %T.%N)\n",
-              discriminatorPropertyTypeName,
-              codingKeysTypeName,
-              discriminatorPropertyName,
-            )
-            .beginControlFlow("switch", "type")
-          val refEncoderBuilder = FunctionSpec.builder("encode")
-            .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
-            .addParameter("to", "encoder", ENCODER)
-            .throws(true)
-            .addStatement("var container = encoder.singleValueContainer()")
-            .beginControlFlow("switch", "self")
-          val refValueBuilder = FunctionSpec.getterBuilder()
-            .beginControlFlow("switch", "self")
-          val refDescriptionBuilder = FunctionSpec.getterBuilder()
-            .beginControlFlow("switch", "self")
+          val refValueInitBuilder =
+            FunctionSpec
+              .constructorBuilder()
+              .addModifiers(PUBLIC)
+              .addParameter("value", className)
+              .beginControlFlow("switch", "value")
+          val refDecoderBuilder =
+            FunctionSpec
+              .constructorBuilder()
+              .addModifiers(PUBLIC)
+              .addParameter("from", "decoder", DECODER)
+              .throws(true)
+              .addCode("let container = try decoder.container(keyedBy: %T.self)\n", codingKeysTypeName)
+              .addCode(
+                "let type = try container.decode(%T.self, forKey: %T.%N)\n",
+                discriminatorPropertyTypeName,
+                codingKeysTypeName,
+                discriminatorPropertyName,
+              ).beginControlFlow("switch", "type")
+          val refEncoderBuilder =
+            FunctionSpec
+              .builder("encode")
+              .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
+              .addParameter("to", "encoder", ENCODER)
+              .throws(true)
+              .addStatement("var container = encoder.singleValueContainer()")
+              .beginControlFlow("switch", "self")
+          val refValueBuilder =
+            FunctionSpec
+              .getterBuilder()
+              .beginControlFlow("switch", "self")
+          val refDescriptionBuilder =
+            FunctionSpec
+              .getterBuilder()
+              .beginControlFlow("switch", "self")
 
           val usedDiscriminators = mutableSetOf<String>()
 
@@ -734,14 +867,16 @@ class SwiftTypeRegistry(
 
           refValueBuilder.endControlFlow("switch")
           refTypeBuilder.addProperty(
-            PropertySpec.builder("value", className, PUBLIC)
+            PropertySpec
+              .builder("value", className, PUBLIC)
               .getter(refValueBuilder.build())
               .build(),
           )
 
           refDescriptionBuilder.endControlFlow("switch")
           refTypeBuilder.addProperty(
-            PropertySpec.builder(DESCRIPTION_PROP_NAME, STRING, PUBLIC)
+            PropertySpec
+              .builder(DESCRIPTION_PROP_NAME, STRING, PUBLIC)
               .getter(refDescriptionBuilder.build())
               .build(),
           )
@@ -757,24 +892,26 @@ class SwiftTypeRegistry(
         // Add concrete discriminator for the leaf of the discriminated tree
 
         val discriminatorBuilder =
-          PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
+          PropertySpec
+            .builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
             .addModifiers(OVERRIDE)
 
         val discriminatorValue = findDiscriminatorPropertyValue(shape, context) ?: shape.name!!
 
         if (!discriminatorPropertyTypeEnumCases.isNullOrEmpty()) {
           discriminatorBuilder.getter(
-            FunctionSpec.getterBuilder()
+            FunctionSpec
+              .getterBuilder()
               .addStatement(
                 "return %T.%N",
                 discriminatorPropertyTypeName,
                 discriminatorValue.swiftIdentifierName,
-              )
-              .build(),
+              ).build(),
           )
         } else {
           discriminatorBuilder.getter(
-            FunctionSpec.getterBuilder()
+            FunctionSpec
+              .getterBuilder()
               .addStatement("return %S", discriminatorValue)
               .build(),
           )
@@ -786,7 +923,7 @@ class SwiftTypeRegistry(
 
     /*
       Generate Codable support
-    */
+     */
 
     if (isRoot) {
       typeBuilder.addSuperType(CODABLE)
@@ -795,7 +932,8 @@ class SwiftTypeRegistry(
     if (isRoot || localDeclaredProperties.isNotEmpty() || discriminatorProperty != null) {
 
       val codingKeysBuilder =
-        TypeSpec.enumBuilder(codingKeysTypeName)
+        TypeSpec
+          .enumBuilder(codingKeysTypeName)
           .addModifiers(FILEPRIVATE)
 
       if (isRoot && discriminatorProperty != null) {
@@ -818,10 +956,12 @@ class SwiftTypeRegistry(
       codingKeysType = codingKeysBuilder.build()
     }
 
-    val decoderInitFunctionBuilder = FunctionSpec.constructorBuilder()
-      .addModifiers(PUBLIC, REQUIRED)
-      .addParameter("from", "decoder", DECODER)
-      .throws(true)
+    val decoderInitFunctionBuilder =
+      FunctionSpec
+        .constructorBuilder()
+        .addModifiers(PUBLIC, REQUIRED)
+        .addParameter("from", "decoder", DECODER)
+        .throws(true)
 
     if (localDeclaredProperties.isNotEmpty() || isRoot) {
       decoderInitFunctionBuilder.addStatement(
@@ -831,10 +971,12 @@ class SwiftTypeRegistry(
       )
     }
 
-    val encoderFunctionBuilder = FunctionSpec.builder("encode")
-      .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
-      .addParameter("to", "encoder", ENCODER)
-      .throws(true)
+    val encoderFunctionBuilder =
+      FunctionSpec
+        .builder("encode")
+        .addModifiers(*if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
+        .addParameter("to", "encoder", ENCODER)
+        .throws(true)
     if (!isRoot) {
       encoderFunctionBuilder.addStatement("try super.encode(to: encoder)")
     }
@@ -882,11 +1024,12 @@ class SwiftTypeRegistry(
 
       when {
         !isLeaf -> {
-          propertyTypeName = if (isOptional) {
-            (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME)
-          } else {
-            (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
-          }
+          propertyTypeName =
+            if (isOptional) {
+              (propertyTypeName.makeNonOptional() as DeclaredTypeName).nestedType(ANY_REF_NAME)
+            } else {
+              (propertyTypeName as DeclaredTypeName).nestedType(ANY_REF_NAME)
+            }
 
           decoderPost.add("${if (isOptional) "?" else ""}.value")
         }
@@ -945,7 +1088,8 @@ class SwiftTypeRegistry(
 
     // Unpack all properties with (externalDiscriminator) annotation, because we know the discriminator is already unpacked!
 
-    localDeclaredProperties.filter { it.range.hasAnnotation(ExternalDiscriminator, null) }
+    localDeclaredProperties
+      .filter { it.range.hasAnnotation(ExternalDiscriminator, null) }
       .forEach { prop ->
         val propertyTypeName = resolvePropertyTypeName(prop, className, context)
         val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
@@ -1087,23 +1231,27 @@ class SwiftTypeRegistry(
 
     // Build parameter constructor
     //
-    val paramConsBuilder = FunctionSpec.constructorBuilder()
-      .addModifiers(*if (!isRoot && localDeclaredProperties.isEmpty()) arrayOf(PUBLIC, OVERRIDE) else arrayOf(PUBLIC))
+    val paramConsBuilder =
+      FunctionSpec
+        .constructorBuilder()
+        .addModifiers(*if (!isRoot && localDeclaredProperties.isEmpty()) arrayOf(PUBLIC, OVERRIDE) else arrayOf(PUBLIC))
 
     inheritedDeclaredProperties.forEach {
-      val paramType = resolvePropertyTypeName(it, className, context)
-        .run {
-          if (isPatchable) {
-            val base = if (it.nullable) PATCH_OP else UPDATE_OP
-            base.parameterizedBy(makeNonOptional()).makeOptional()
-          } else if (it.required) {
-            this.makeNonOptional()
-          } else {
-            this.makeOptional()
+      val paramType =
+        resolvePropertyTypeName(it, className, context)
+          .run {
+            if (isPatchable) {
+              val base = if (it.nullable) PATCH_OP else UPDATE_OP
+              base.parameterizedBy(makeNonOptional()).makeOptional()
+            } else if (it.required) {
+              this.makeNonOptional()
+            } else {
+              this.makeOptional()
+            }
           }
-        }
       paramConsBuilder.addParameter(
-        ParameterSpec.builder(it.swiftIdentifierName, paramType)
+        ParameterSpec
+          .builder(it.swiftIdentifierName, paramType)
           .apply { if (it.optional && paramType.optional) defaultValue("nil") }
           .build(),
       )
@@ -1111,8 +1259,10 @@ class SwiftTypeRegistry(
 
     // Description builder
     //
-    val descriptionCodeBuilder = CodeBlock.builder()
-      .add("%[return %T(%T.self)\n", DESCRIPTION_BUILDER, className)
+    val descriptionCodeBuilder =
+      CodeBlock
+        .builder()
+        .add("%[return %T(%T.self)\n", DESCRIPTION_BUILDER, className)
     originalInheritedDeclaredProperties.forEach {
       descriptionCodeBuilder.add(".add(%N, named: %S)\n", it.swiftIdentifierName, it.swiftIdentifierName)
     }
@@ -1142,21 +1292,23 @@ class SwiftTypeRegistry(
 
         val code = implAnn.getValue("code") ?: ""
         val codeParams = implAnn.get<ArrayNode>("parameters")?.members()?.map { it as ObjectNode } ?: emptyList()
-        val convertedCodeParams = codeParams.map { codeParam ->
-          val atype = codeParam.getValue("type")
-          val avalue = codeParam.getValue("value")
-          if (atype != null && avalue != null) {
-            when (atype) {
-              "Type" -> typeName(avalue)
-              else -> avalue
+        val convertedCodeParams =
+          codeParams.map { codeParam ->
+            val atype = codeParam.getValue("type")
+            val avalue = codeParam.getValue("value")
+            if (atype != null && avalue != null) {
+              when (atype) {
+                "Type" -> typeName(avalue)
+                else -> avalue
+              }
+            } else {
+              ""
             }
-          } else {
-            ""
           }
-        }
 
         propertyBuilder.getter(
-          FunctionSpec.getterBuilder()
+          FunctionSpec
+            .getterBuilder()
             .addStatement(code, *convertedCodeParams.toTypedArray())
             .build(),
         )
@@ -1177,15 +1329,13 @@ class SwiftTypeRegistry(
               .builder(
                 propertyDeclaration.swiftIdentifierName,
                 propertyTypeName,
-              )
-              .apply {
+              ).apply {
                 if (isPatchable) {
                   defaultValue(".none")
                 } else if (propertyDeclaration.optional && propertyTypeName.optional) {
                   defaultValue("nil")
                 }
-              }
-              .build(),
+              }.build(),
           )
 
         paramConsBuilder.addStatement(
@@ -1210,7 +1360,8 @@ class SwiftTypeRegistry(
     if (!isRoot) {
       paramConsBuilder.addStatement(
         "super.init(%L)",
-        inheritedDeclaredProperties.map { CodeBlock.of("%L: %N", it.swiftIdentifierName, it.swiftIdentifierName) }
+        inheritedDeclaredProperties
+          .map { CodeBlock.of("%L: %N", it.swiftIdentifierName, it.swiftIdentifierName) }
           .joinToCode(",%W"),
       )
     }
@@ -1220,17 +1371,17 @@ class SwiftTypeRegistry(
     //
 
     typeBuilder.addProperty(
-      PropertySpec.builder(
-        DESCRIPTION_PROP_NAME,
-        STRING,
-        *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE),
-      )
-        .getter(
-          FunctionSpec.getterBuilder()
+      PropertySpec
+        .builder(
+          DESCRIPTION_PROP_NAME,
+          STRING,
+          *if (isRoot) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE),
+        ).getter(
+          FunctionSpec
+            .getterBuilder()
             .addCode(descriptionCodeBuilder.add(".build()%]\n").build())
             .build(),
-        )
-        .build(),
+        ).build(),
     )
 
     // Add codable methods
@@ -1257,20 +1408,22 @@ class SwiftTypeRegistry(
           }
 
       val fluentBuilder =
-        FunctionSpec.builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
+        FunctionSpec
+          .builder("with" + propertyDeclaration.swiftIdentifierName.replaceFirstChar { it.titlecase() })
           .addModifiers(*if (!isInherited) arrayOf(PUBLIC) else arrayOf(PUBLIC, OVERRIDE))
           .returns(className)
           .addParameter(propertyDeclaration.swiftIdentifierName, propertyTypeName)
           .addStatement(
             "return %T(%L)",
             className,
-            (inheritedDeclaredProperties + localDeclaredProperties).map {
-              CodeBlock.of(
-                "%L: %N",
-                it.swiftIdentifierName,
-                it.swiftIdentifierName,
-              )
-            }.joinToCode(",%W"),
+            (inheritedDeclaredProperties + localDeclaredProperties)
+              .map {
+                CodeBlock.of(
+                  "%L: %N",
+                  it.swiftIdentifierName,
+                  it.swiftIdentifierName,
+                )
+              }.joinToCode(",%W"),
           )
 
       typeBuilder.addFunction(fluentBuilder.build())
@@ -1283,39 +1436,40 @@ class SwiftTypeRegistry(
       val properties =
         (inheritedDeclaredProperties + localDeclaredProperties)
           .associate { property ->
-            val propertyTypeName = resolvePropertyTypeName(property, className, context)
-              .run {
-                val base = if (property.nullable) PATCH_OP else UPDATE_OP
-                base.parameterizedBy(makeNonOptional()).makeOptional()
-              }
+            val propertyTypeName =
+              resolvePropertyTypeName(property, className, context)
+                .run {
+                  val base = if (property.nullable) PATCH_OP else UPDATE_OP
+                  base.parameterizedBy(makeNonOptional()).makeOptional()
+                }
             property.swiftIdentifierName to propertyTypeName
           }
 
       val patchOpExt =
-        ExtensionSpec.builder(ANY_PATCH_OP)
+        ExtensionSpec
+          .builder(ANY_PATCH_OP)
           .addConditionalConstraint(typeVariable("Value", bound(SAME_TYPE, className)))
           .addFunction(
-            FunctionSpec.builder("merge")
+            FunctionSpec
+              .builder("merge")
               .addModifiers(PUBLIC, STATIC)
               .returns(SelfTypeName.INSTANCE)
               .apply {
                 for ((propertyName, propertyTypeName) in properties) {
                   addParameter(
-                    ParameterSpec.builder(propertyName, propertyTypeName)
+                    ParameterSpec
+                      .builder(propertyName, propertyTypeName)
                       .defaultValue(".none")
                       .build(),
                   )
                 }
-              }
-              .addStatement(
+              }.addStatement(
                 "%T.merge(%T(%L))",
                 SelfTypeName.INSTANCE,
                 className,
                 properties.keys.map { CodeBlock.of("%L: %L", it, it) }.joinToCode(",%W"),
-              )
-              .build(),
-          )
-          .build()
+              ).build(),
+          ).build()
 
       typeBuilder.associatedExtensions.add(patchOpExt)
     }
@@ -1336,7 +1490,10 @@ class SwiftTypeRegistry(
     return className
   }
 
-  private fun defineEnum(shape: Shape, context: SwiftResolutionContext): DeclaredTypeName {
+  private fun defineEnum(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): DeclaredTypeName {
 
     val className = typeNameOf(shape, context)
 
@@ -1350,11 +1507,13 @@ class SwiftTypeRegistry(
       }
     }
 
-    val enumBuilder = defineType(className) {
-      TypeSpec.enumBuilder(it)
-        .addModifiers(PUBLIC)
-        .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE))
-    }
+    val enumBuilder =
+      defineType(className) {
+        TypeSpec
+          .enumBuilder(it)
+          .addModifiers(PUBLIC)
+          .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE))
+      }
 
     enumBuilder.tag(DefinitionLocation(shape))
 
@@ -1389,7 +1548,10 @@ class SwiftTypeRegistry(
     return builder
   }
 
-  private fun typeNameOf(shape: Shape, context: SwiftResolutionContext): DeclaredTypeName {
+  private fun typeNameOf(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): DeclaredTypeName {
 
     if (!shape.isNameExplicit && context.suggestedTypeName != null) {
       return context.suggestedTypeName
@@ -1397,8 +1559,9 @@ class SwiftTypeRegistry(
 
     val moduleName = moduleNameOf(shape, context)
 
-    val nestedAnn = shape.findAnnotation(Nested, null)
-      ?: return typeName("$moduleName.${shape.swiftTypeName}")
+    val nestedAnn =
+      shape.findAnnotation(Nested, null)
+        ?: return typeName("$moduleName.${shape.swiftTypeName}")
 
     val (nestedEnclosedIn, nestedName) =
       when {
@@ -1418,11 +1581,13 @@ class SwiftTypeRegistry(
 
         nestedAnn is ObjectNode -> {
 
-          val enclosedIn = nestedAnn.getValue("enclosedIn")
-            ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
+          val enclosedIn =
+            nestedAnn.getValue("enclosedIn")
+              ?: genError("Nested annotation is missing 'enclosedIn'", nestedAnn)
 
-          val name = nestedAnn.getValue("name")
-            ?: genError("Nested annotation is missing name", nestedAnn)
+          val name =
+            nestedAnn.getValue("name")
+              ?: genError("Nested annotation is missing name", nestedAnn)
 
           enclosedIn to name
         }
@@ -1431,8 +1596,9 @@ class SwiftTypeRegistry(
           genError("Nested annotation must be the value 'dashed' or an object containing 'enclosedIn' & 'name' keys")
       }
 
-    val (nestedEnclosingType, nestedEnclosingTypeUnit) = context.resolveRef(nestedEnclosedIn, shape)
-      ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
+    val (nestedEnclosingType, nestedEnclosingTypeUnit) =
+      context.resolveRef(nestedEnclosedIn, shape)
+        ?: genError("Nested annotation references invalid enclosing type", nestedAnn)
 
     nestedEnclosingType as? Shape
       ?: genError("Nested annotation enclosing type references non-type definition", nestedAnn)
@@ -1446,8 +1612,10 @@ class SwiftTypeRegistry(
     return nestedEnclosingTypeName.nestedType(nestedName)
   }
 
-  private fun moduleNameOf(shape: Shape, context: SwiftResolutionContext): String =
-    moduleNameOf(context.findDeclaringUnit(shape))
+  private fun moduleNameOf(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): String = moduleNameOf(context.findDeclaringUnit(shape))
 
   private fun moduleNameOf(unit: BaseUnit?): String =
     (unit as? CustomizableElement)?.findStringAnnotation(SwiftModelModule, null)
@@ -1457,33 +1625,37 @@ class SwiftTypeRegistry(
   private fun replaceCollectionValueTypesWithReferenceTypes(typeName: TypeName): Pair<TypeName, TypeName> {
     val baseTypeName =
       typeName.makeNonOptional() as? ParameterizedTypeName ?: return typeName to typeName
-    val (mappedTypeName, elementRefTypeName) = when (baseTypeName.rawType) {
-      DICTIONARY -> {
-        val valueType = baseTypeName.typeArguments[1]
-        val refValueType = referenceTypes[valueType] ?: valueType
-        DICTIONARY.parameterizedBy(baseTypeName.typeArguments[0], refValueType) to refValueType
-      }
+    val (mappedTypeName, elementRefTypeName) =
+      when (baseTypeName.rawType) {
+        DICTIONARY -> {
+          val valueType = baseTypeName.typeArguments[1]
+          val refValueType = referenceTypes[valueType] ?: valueType
+          DICTIONARY.parameterizedBy(baseTypeName.typeArguments[0], refValueType) to refValueType
+        }
 
-      ARRAY -> {
-        val valueType = baseTypeName.typeArguments[0]
-        val refValueType = referenceTypes[valueType] ?: valueType
-        ARRAY.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
-      }
+        ARRAY -> {
+          val valueType = baseTypeName.typeArguments[0]
+          val refValueType = referenceTypes[valueType] ?: valueType
+          ARRAY.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
+        }
 
-      SET -> {
-        val valueType = baseTypeName.typeArguments[0]
-        val refValueType = referenceTypes[valueType] ?: valueType
-        SET.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
-      }
+        SET -> {
+          val valueType = baseTypeName.typeArguments[0]
+          val refValueType = referenceTypes[valueType] ?: valueType
+          SET.parameterizedBy(referenceTypes[valueType] ?: valueType) to refValueType
+        }
 
-      else -> typeName to typeName
-    }
+        else -> typeName to typeName
+      }
     return (if (typeName.optional) mappedTypeName.makeOptional() else mappedTypeName) to elementRefTypeName
   }
 
   private fun collectTypes(types: List<Shape>) = types.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
-  private fun nearestCommonAncestor(types: List<Shape>, context: SwiftResolutionContext): TypeName? {
+  private fun nearestCommonAncestor(
+    types: List<Shape>,
+    context: SwiftResolutionContext,
+  ): TypeName? {
 
     var currentClassNameHierarchy: List<TypeName>? = null
     for (type in types) {
@@ -1499,7 +1671,10 @@ class SwiftTypeRegistry(
     return currentClassNameHierarchy?.firstOrNull()
   }
 
-  private fun classNameHierarchy(shape: Shape, context: SwiftResolutionContext): List<TypeName> {
+  private fun classNameHierarchy(
+    shape: Shape,
+    context: SwiftResolutionContext,
+  ): List<TypeName> {
 
     val names = mutableListOf<TypeName>()
 
@@ -1512,13 +1687,19 @@ class SwiftTypeRegistry(
     return names.reversed()
   }
 
-  private fun findDiscriminatorPropertyName(shape: NodeShape, context: SwiftResolutionContext): String? =
+  private fun findDiscriminatorPropertyName(
+    shape: NodeShape,
+    context: SwiftResolutionContext,
+  ): String? =
     when {
       !shape.discriminator.isNullOrEmpty() -> shape.discriminator
       else -> context.findSuperShapeOrNull(shape)?.let { findDiscriminatorPropertyName(it as NodeShape, context) }
     }
 
-  private fun findDiscriminatorPropertyValue(shape: NodeShape, context: SwiftResolutionContext): String? =
+  private fun findDiscriminatorPropertyValue(
+    shape: NodeShape,
+    context: SwiftResolutionContext,
+  ): String? =
     if (!shape.discriminatorValue.isNullOrEmpty()) {
       shape.discriminatorValue!!
     } else {
@@ -1526,11 +1707,15 @@ class SwiftTypeRegistry(
       buildDiscriminatorMappings(root, context).entries.find { it.value == shape.id }?.key
     }
 
-  private fun buildDiscriminatorMappings(shape: NodeShape, context: SwiftResolutionContext): Map<String, String> =
-    shape.discriminatorMapping.mapNotNull { mapping ->
-      val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
-      mapping.templateVariable().value()!! to refElement.id
-    }.toMap()
+  private fun buildDiscriminatorMappings(
+    shape: NodeShape,
+    context: SwiftResolutionContext,
+  ): Map<String, String> =
+    shape.discriminatorMapping
+      .mapNotNull { mapping ->
+        val (refElement) = context.resolveRef(mapping.linkExpression().value(), shape) ?: return@mapNotNull null
+        mapping.templateVariable().value()!! to refElement.id
+      }.toMap()
 
   private fun Shape.isPatchable(context: SwiftResolutionContext): Boolean =
     findBoolAnnotation(Patchable, null) == true ||

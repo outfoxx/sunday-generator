@@ -102,7 +102,12 @@ abstract class TypeScriptGenerator(
   override val options: Options,
 ) : Generator(document.api, options) {
 
-  data class URIParameter(val name: String, val typeName: TypeName, val shape: Shape?, val defaultValue: DataNode?)
+  data class URIParameter(
+    val name: String,
+    val typeName: TypeName,
+    val shape: Shape?,
+    val defaultValue: DataNode?,
+  )
 
   override fun generateServiceTypes() {
 
@@ -125,10 +130,14 @@ abstract class TypeScriptGenerator(
     }
   }
 
-  open fun generateServiceType(serviceTypeName: TypeName.Standard, endPoints: List<EndPoint>): ClassSpec.Builder {
+  open fun generateServiceType(
+    serviceTypeName: TypeName.Standard,
+    endPoints: List<EndPoint>,
+  ): ClassSpec.Builder {
 
     var serviceTypeBuilder =
-      ClassSpec.builder(serviceTypeName)
+      ClassSpec
+        .builder(serviceTypeName)
         .addModifiers(Modifier.EXPORT)
         .tag(CodeBlock.builder())
 
@@ -136,15 +145,15 @@ abstract class TypeScriptGenerator(
     getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
 
       serviceTypeBuilder.addFunction(
-        FunctionSpec.builder("baseURL")
+        FunctionSpec
+          .builder("baseURL")
           .addModifiers(Modifier.STATIC)
           .returns(URL_TEMPLATE)
           .apply {
             baseURLParameters.forEach { param ->
               addParameter(param.name, param.typeName, optional = param.defaultValue != null)
             }
-          }
-          .addCode("return new URLTemplate(%>\n")
+          }.addCode("return new URLTemplate(%>\n")
           .addCode("%S,\n{", baseURL)
           .apply {
             baseURLParameters.forEachIndexed { idx, param ->
@@ -161,8 +170,7 @@ abstract class TypeScriptGenerator(
                 addCode(", ")
               }
             }
-          }
-          .addCode("}%<\n);\n")
+          }.addCode("}%<\n);\n")
           .build(),
       )
     }
@@ -174,7 +182,10 @@ abstract class TypeScriptGenerator(
     return processServiceEnd(serviceTypeBuilder)
   }
 
-  abstract fun processServiceBegin(endPoints: List<EndPoint>, typeBuilder: ClassSpec.Builder): ClassSpec.Builder
+  abstract fun processServiceBegin(
+    endPoints: List<EndPoint>,
+    typeBuilder: ClassSpec.Builder,
+  ): ClassSpec.Builder
 
   abstract fun processResourceMethodStart(
     endPoint: EndPoint,
@@ -238,9 +249,7 @@ abstract class TypeScriptGenerator(
     functionBuilder: FunctionSpec.Builder,
   ): FunctionSpec
 
-  open fun processServiceEnd(typeBuilder: ClassSpec.Builder): ClassSpec.Builder {
-    return typeBuilder
-  }
+  open fun processServiceEnd(typeBuilder: ClassSpec.Builder): ClassSpec.Builder = typeBuilder
 
   private fun generateClientServiceMethods(
     typeName: TypeName.Standard,
@@ -258,7 +267,8 @@ abstract class TypeScriptGenerator(
         val operationName = namedGenerator.generate(endPoint, operation).typeScriptIdentifierName
 
         var functionBuilder =
-          FunctionSpec.builder(operationName)
+          FunctionSpec
+            .builder(operationName)
             .addModifiers(Modifier.ABSTRACT)
 
         functionBuilder.tag(NameAllocator())
@@ -367,23 +377,23 @@ abstract class TypeScriptGenerator(
             val referencedProblemTypes =
               referencedProblemCodes
                 .map { problemCode ->
-                  val problemType = problemTypes[problemCode] ?: genError(
-                    "Unknown problem code referenced: $problemCode",
-                    operation,
-                  )
+                  val problemType =
+                    problemTypes[problemCode] ?: genError(
+                      "Unknown problem code referenced: $problemCode",
+                      operation,
+                    )
                   problemCode to problemType
-                }
-                .toMap()
+                }.toMap()
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
-                problemTypeDefinition.type to typeRegistry.defineProblemType(
-                  problemCode,
-                  problemTypeDefinition,
-                  shapeIndex,
-                )
-              }
-              .toMap()
+                problemTypeDefinition.type to
+                  typeRegistry.defineProblemType(
+                    problemCode,
+                    problemTypeDefinition,
+                    shapeIndex,
+                  )
+              }.toMap()
           } ?: emptyMap()
 
         val functionSpec =
@@ -411,14 +421,15 @@ abstract class TypeScriptGenerator(
       val uriParameterSuggestedTypeName =
         typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}UriParam")
 
-      val uriParameterTypeName = resolveTypeName(parameter.schema!!, uriParameterSuggestedTypeName)
-        .run {
-          if (parameter.schema?.defaultValue != null || parameter.required == false) {
-            undefinable
-          } else {
-            this
+      val uriParameterTypeName =
+        resolveTypeName(parameter.schema!!, uriParameterSuggestedTypeName)
+          .run {
+            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+              undefinable
+            } else {
+              this
+            }
           }
-        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
@@ -457,21 +468,23 @@ abstract class TypeScriptGenerator(
       val queryParameterSuggestedTypeName =
         typeName.nested("${operation.typeScriptTypeName}${parameter.typeScriptTypeName}QueryParam")
 
-      val queryParameterTypeName = resolveTypeName(parameter.schema!!, queryParameterSuggestedTypeName)
-        .run {
-          if (parameter.schema?.defaultValue != null || parameter.required == false) {
-            undefinable
-          } else {
-            this
+      val queryParameterTypeName =
+        resolveTypeName(parameter.schema!!, queryParameterSuggestedTypeName)
+          .run {
+            if (parameter.schema?.defaultValue != null || parameter.required == false) {
+              undefinable
+            } else {
+              this
+            }
           }
-        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val uriParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(parameter.typeScriptIdentifierName, parameter),
-        queryParameterTypeName,
-      )
+      val uriParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(parameter.typeScriptIdentifierName, parameter),
+          queryParameterTypeName,
+        )
 
       val uriParameterSpec =
         processResourceMethodQueryParameter(
@@ -501,21 +514,23 @@ abstract class TypeScriptGenerator(
       val headerParameterSuggestedTypeName =
         typeName.nested("${operation.typeScriptTypeName}${header.typeScriptTypeName}HeaderParam")
 
-      val headerParameterTypeName = resolveTypeName(header.schema!!, headerParameterSuggestedTypeName)
-        .run {
-          if (header.schema?.defaultValue != null || header.required == false) {
-            undefinable
-          } else {
-            this
+      val headerParameterTypeName =
+        resolveTypeName(header.schema!!, headerParameterSuggestedTypeName)
+          .run {
+            if (header.schema?.defaultValue != null || header.required == false) {
+              undefinable
+            } else {
+              this
+            }
           }
-        }
 
       val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-      val headerParameterBuilder = ParameterSpec.builder(
-        functionBuilderNameAllocator.newName(header.typeScriptIdentifierName, header),
-        headerParameterTypeName,
-      )
+      val headerParameterBuilder =
+        ParameterSpec.builder(
+          functionBuilderNameAllocator.newName(header.typeScriptIdentifierName, header),
+          headerParameterTypeName,
+        )
 
       val headerParameterSpec =
         processResourceMethodHeaderParameter(
@@ -535,9 +550,11 @@ abstract class TypeScriptGenerator(
     }
   }
 
-  private fun resolveTypeName(shape: Shape, suggestedTypeName: TypeName.Standard): TypeName {
-    return typeRegistry.resolveTypeName(shape, TypeScriptResolutionContext(document, shapeIndex, suggestedTypeName))
-  }
+  private fun resolveTypeName(
+    shape: Shape,
+    suggestedTypeName: TypeName.Standard,
+  ): TypeName =
+    typeRegistry.resolveTypeName(shape, TypeScriptResolutionContext(document, shapeIndex, suggestedTypeName))
 
   private fun findProblemTypes(): Map<String, ProblemTypeDefinition> {
 
@@ -550,20 +567,27 @@ abstract class TypeScriptGenerator(
       } catch (ignored: URISyntaxException) {
         genError(
           """
-            Problem URI is not a valid URI; it cannot be a template.
-            Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
+          Problem URI is not a valid URI; it cannot be a template.
+          Use `problemBaseUri` and/or `problemBaseUriParams` to ensure it is valid.
           """.trimIndent(),
         )
       }
     }
 
-    val baseUri = expand(document.api.servers.firstOrNull()?.url ?: options.defaultProblemBaseUri)
+    val baseUri =
+      expand(
+        document.api.servers
+          .firstOrNull()
+          ?.url ?: options.defaultProblemBaseUri,
+      )
 
     var problemBaseUri =
-      document.api.findAnnotation(
-        ProblemBaseUri,
-        null,
-      )?.stringValue?.let { expand(it) } ?: baseUri
+      document.api
+        .findAnnotation(
+          ProblemBaseUri,
+          null,
+        )?.stringValue
+        ?.let { expand(it) } ?: baseUri
     if (!problemBaseUri.isAbsolute) {
       problemBaseUri = baseUri.resolve(problemBaseUri)
     }
@@ -579,8 +603,7 @@ abstract class TypeScriptGenerator(
           .properties()
           ?.mapValues { ProblemTypeDefinition(it.key, it.value as ObjectNode, problemBaseUri, unit, problemAnn) }
           ?.entries
-      }
-      .flatten()
+      }.flatten()
       .associate { it.key to it.value }
       .toMap()
   }

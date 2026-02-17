@@ -67,7 +67,8 @@ open class KotlinJAXRSGenerateCommand :
 
   val quarkus by option(
     "-quarkus",
-    help = """
+    help =
+      """
       Enable Quarkus-specific types:
         * `@RestPath`, `@RestQuery`, `@RestHeader` annotations (implied parameter names)
         * `RestResponse<T>` return type
@@ -75,23 +76,26 @@ open class KotlinJAXRSGenerateCommand :
       """.trimIndent(),
   ).flag(default = false)
 
-  override fun generatorFactory(document: Document, shapeIndex: ShapeIndex, typeRegistry: KotlinTypeRegistry) =
-    KotlinJAXRSGenerator(
-      document,
-      shapeIndex,
-      typeRegistry,
-      KotlinJAXRSGenerator.Options(
-        coroutineFlowMethods,
-        coroutineServiceMethods,
-        reactiveResponseType,
-        explicitSecurityParameters,
-        baseUriPathMode,
-        alwaysUseResponseReturn,
-        servicePackageName ?: packageName,
-        problemBaseUri,
-        mediaTypes.toList(),
-        serviceSuffix,
-        quarkus,
-      ),
-    )
+  override fun generatorFactory(
+    document: Document,
+    shapeIndex: ShapeIndex,
+    typeRegistry: KotlinTypeRegistry,
+  ) = KotlinJAXRSGenerator(
+    document,
+    shapeIndex,
+    typeRegistry,
+    KotlinJAXRSGenerator.Options(
+      coroutineFlowMethods,
+      coroutineServiceMethods,
+      reactiveResponseType,
+      explicitSecurityParameters,
+      baseUriPathMode,
+      alwaysUseResponseReturn,
+      servicePackageName ?: packageName,
+      problemBaseUri,
+      mediaTypes.toList(),
+      serviceSuffix,
+      quarkus,
+    ),
+  )
 }

@@ -21,7 +21,10 @@ import io.outfoxx.sunday.generator.utils.annotations
 import io.outfoxx.sunday.generator.utils.location
 import org.mulesoft.common.client.lexical.PositionRange
 
-data class DefinitionLocation(val location: String, val range: PositionRange) {
+data class DefinitionLocation(
+  val location: String,
+  val range: PositionRange,
+) {
 
   constructor(element: DomainElement) : this(element.annotations.location, element.position())
 
