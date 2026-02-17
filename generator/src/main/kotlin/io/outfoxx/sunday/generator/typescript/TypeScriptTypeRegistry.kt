@@ -710,8 +710,8 @@ class TypeScriptTypeRegistry(
             val avalue = codeParam.getValue("value")
             if (atype != null && avalue != null) {
               when (atype) {
-                "Type" -> TypeName.standard(avalue.toString())
-                else -> avalue.toString()
+                "Type" -> TypeName.standard(avalue)
+                else -> avalue
               }
             } else {
               ""
@@ -1199,7 +1199,7 @@ class TypeScriptTypeRegistry(
           propertyClassNameHierarchy
         } else {
           (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
-            .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
+            .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy[it] }
             .map { propertyClassNameHierarchy[it] }
         }
     }

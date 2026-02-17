@@ -488,10 +488,10 @@ class SwiftSundayGenerator(
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n  ") { "case %S: return try decoder.decode(%T.self, from: data)" }
-          val typesParams = types.flatMap {
-            val typeName = resolveTypeName(it, null)
+          val typesParams = types.flatMap { type ->
+            val typeName = resolveTypeName(type, null)
             val discValue =
-              (it as? NodeShape)?.discriminatorValue
+              type.discriminatorValue
                 ?: (typeName as? DeclaredTypeName)?.simpleName
                 ?: "$typeName"
             listOf(discValue, typeName)

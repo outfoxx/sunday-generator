@@ -21,6 +21,8 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
@@ -39,12 +41,22 @@ import java.util.concurrent.CompletionStage
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Reactive Methods Test")
 class RequestReactiveMethodsTest {
 
+  private fun typeRegistry(mode: GenerationMode): KotlinTypeRegistry =
+    KotlinTypeRegistry(
+      "io.test",
+      null,
+      mode,
+      setOf(),
+      problemLibrary = KotlinProblemLibrary.ZALANDO,
+      problemRfc = KotlinProblemRfc.RFC7807,
+    )
+
   @Test
   fun `test basic reactive method generation in server mode`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -106,7 +118,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -170,7 +182,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -233,7 +245,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -296,7 +308,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -360,7 +372,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -486,7 +498,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -612,7 +624,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -689,7 +701,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -815,7 +827,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -947,7 +959,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -1079,7 +1091,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -1211,7 +1223,7 @@ class RequestReactiveMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->

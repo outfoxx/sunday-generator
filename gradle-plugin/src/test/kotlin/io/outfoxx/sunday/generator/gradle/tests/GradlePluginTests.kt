@@ -40,7 +40,7 @@ class GradlePluginTests {
     import static io.outfoxx.sunday.generator.GenerationMode.*
 
     plugins {
-      id 'org.jetbrains.kotlin.jvm' version '1.8.20'
+      id 'org.jetbrains.kotlin.jvm' version '2.3.10'
       id 'io.outfoxx.sunday-generator'
     }
 
@@ -82,20 +82,20 @@ class GradlePluginTests {
     }
 
     dependencies {
-      implementation "io.outfoxx.sunday:sunday-core:1.0.0-beta.23"
+      implementation "io.outfoxx.sunday:sunday-core:1.0.0-beta.25"
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
       implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
     }
 
     java {
-      sourceCompatibility = "11"
-      targetCompatibility = "11"
+      sourceCompatibility = "21"
+      targetCompatibility = "21"
     }
 
     compileKotlin {
       kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
         suppressWarnings = true
       }
     }

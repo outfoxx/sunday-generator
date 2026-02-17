@@ -31,13 +31,13 @@ import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.APIAnnotationName.RequestOnly
 import io.outfoxx.sunday.generator.APIAnnotationName.ResponseOnly
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.REQUEST_FACTORY
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_EVENT_SOURCE
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_METHOD
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_REQUEST
@@ -59,6 +59,12 @@ class KotlinSundayGenerator(
   typeRegistry,
   options,
 ) {
+
+  init {
+    require(typeRegistry.problemLibrary != KotlinProblemLibrary.QUARKUS) {
+      "Kotlin Sunday generator does not support Quarkus HttpProblem. Use -problem-library sunday or zalando."
+    }
+  }
 
   class Options(
     val useResultResponseReturn: Boolean,
@@ -493,7 +499,7 @@ class KotlinSundayGenerator(
           val typesParams = types.flatMap {
             val typeName = resolveTypeName(it, null)
             val discValue =
-              (it as? NodeShape)?.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
+              it.discriminatorValue ?: (typeName as? ClassName)?.simpleName ?: "$typeName"
             listOf(discValue, typeName, TYPE_OF, typeName)
           }
 

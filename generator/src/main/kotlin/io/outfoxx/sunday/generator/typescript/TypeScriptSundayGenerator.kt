@@ -473,10 +473,10 @@ class TypeScriptSundayGenerator(
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
           val typesTemplate = types.joinToString("\n  ") { "case %S: return decoder.decodeText(data, [%T]);" }
-          val typesParams = types.flatMap {
-            val typeName = typeRegistry.resolveTypeName(it, TypeScriptResolutionContext(document, shapeIndex, null))
+          val typesParams = types.flatMap { type ->
+            val typeName = typeRegistry.resolveTypeName(type, TypeScriptResolutionContext(document, shapeIndex, null))
             val discValue =
-              (it as? NodeShape)?.discriminatorValue
+              type.discriminatorValue
                 ?: (typeName as? TypeName.Standard)?.simpleName()
                 ?: "$typeName"
             listOf(discValue, typeName)

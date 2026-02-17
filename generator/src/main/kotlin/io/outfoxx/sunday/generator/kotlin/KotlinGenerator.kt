@@ -65,7 +65,6 @@ import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE3
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE3
-import io.outfoxx.sunday.generator.kotlin.utils.THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.UNI
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinConstant
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -751,6 +750,9 @@ abstract class KotlinGenerator(
         .beginControlFlow("return try")
         .addStatement("%L(%L)", function.name, function.parameters.joinToString { it.name })
 
+    val throwableType = typeRegistry.problemLibrarySupport.throwableType
+    val statusAccess = typeRegistry.problemLibrarySupport.statusCodeAccess("x")
+
     problemTypeNames.forEach {
       codeBuilder
         .nextControlFlow("catch(x: %T)", it)
@@ -758,18 +760,18 @@ abstract class KotlinGenerator(
     }
 
     if (statuses.isNotEmpty()) {
-      codeBuilder.nextControlFlow("catch(x: %T)", THROWABLE_PROBLEM)
+      codeBuilder.nextControlFlow("catch(x: %T)", throwableType)
 
       if (statuses.size == 1) {
         codeBuilder
-          .beginControlFlow("if (x.status?.statusCode == %L)", statuses.first())
+          .beginControlFlow("if ($statusAccess == %L)", statuses.first())
           .addStatement("null")
           .nextControlFlow("else")
           .addStatement("throw x")
           .endControlFlow()
       } else {
         codeBuilder
-          .add("when (x.status?.statusCode) {").indent().add("\n")
+          .add("when ($statusAccess) {").indent().add("\n")
           .add("%L -> null\n", statuses.joinToString(", "))
           .add("else -> throw x").unindent().add("\n")
           .add("}").add("\n")
@@ -800,6 +802,8 @@ abstract class KotlinGenerator(
   ): CodeBlock {
 
     val codeBuilder = CodeBlock.builder()
+    val throwableType = typeRegistry.problemLibrarySupport.throwableType
+    val statusAccess = typeRegistry.problemLibrarySupport.statusCodeAccess("x")
 
     codeBuilder.add("return %N(%L)", function.name, function.parameters.joinToString { it.name })
       .indent().add("\n")
@@ -836,8 +840,8 @@ abstract class KotlinGenerator(
     if (statuses.isNotEmpty()) {
       codeBuilder.addStatement(
         "x is %T && ${if (statuses.size == 1) "%L" else "(%L)"} -> %L",
-        THROWABLE_PROBLEM,
-        statuses.joinToString(" || ") { "x.status?.statusCode == $it" },
+        throwableType,
+        statuses.joinToString(" || ") { "$statusAccess == $it" },
         nullLiteral,
       )
     }

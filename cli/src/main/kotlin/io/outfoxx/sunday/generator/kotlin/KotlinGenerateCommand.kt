@@ -17,10 +17,14 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import amf.core.client.platform.model.document.Document
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.*
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 
 abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerateCommand(name = name, help = help) {
 
@@ -57,6 +61,18 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
     help = "Fully qualified name of generated source annotation",
   )
 
+  val problemLibrary by option(
+    "-problem-library",
+    help = "Problem library to target (quarkus, zalando, or sunday)",
+  ).enum<KotlinProblemLibrary> { it.id }
+    .default(KotlinProblemLibrary.QUARKUS)
+
+  val problemRfc by option(
+    "-problem-rfc",
+    help = "Problem Details RFC compliance mode (rfc7807 or rfc9457)",
+  ).enum<KotlinProblemRfc> { it.id }
+    .default(KotlinProblemRfc.RFC9457)
+
   private fun implyRegistryOptions(): Set<KotlinTypeRegistry.Option> {
     val options = mutableSetOf<KotlinTypeRegistry.Option>()
     if (generatedAnnotationName != null) {
@@ -67,12 +83,18 @@ abstract class KotlinGenerateCommand(name: String, help: String) : CommonGenerat
 
   fun allRegistryOptions() = registryOptions + implyRegistryOptions()
 
+  protected open fun effectiveProblemLibrary(): KotlinProblemLibrary = problemLibrary
+
+  protected open fun effectiveProblemRfc(): KotlinProblemRfc = problemRfc
+
   override val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
       modelPackageName ?: packageName,
       generatedAnnotationName,
       mode,
       allRegistryOptions(),
+      effectiveProblemLibrary(),
+      effectiveProblemRfc(),
     )
   }
 
