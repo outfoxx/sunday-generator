@@ -20,6 +20,8 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -32,12 +34,22 @@ import java.net.URI
 @DisplayName("[Kotlin] [RAML] Problem Types Test")
 class ProblemTypesTest {
 
+  private fun typeRegistry(options: Set<KotlinTypeRegistry.Option> = setOf()): KotlinTypeRegistry =
+    KotlinTypeRegistry(
+      "io.test",
+      null,
+      GenerationMode.Server,
+      options,
+      problemLibrary = KotlinProblemLibrary.ZALANDO,
+      problemRfc = KotlinProblemRfc.RFC7807,
+    )
+
   @Test
   fun `generates problem types`(
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry()
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -56,7 +68,7 @@ class ProblemTypesTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -160,7 +172,7 @@ class ProblemTypesTest {
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = typeRegistry(setOf(JacksonAnnotations))
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -183,7 +195,7 @@ class ProblemTypesTest {
 
         @JsonTypeName(InvalidIdProblem.TYPE)
         public class InvalidIdProblem @JsonCreator constructor(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -252,7 +264,15 @@ class ProblemTypesTest {
     @ResourceUri("raml/type-gen/annotations/problem-types.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(AddGeneratedAnnotation),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
 
     val builtTypes = generateTypes(testUri, typeRegistry)
 
@@ -277,7 +297,7 @@ class ProblemTypesTest {
           date = "${typeRegistry.generationTimestamp}",
         )
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,

@@ -43,8 +43,8 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
           val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
           SourceFile.kotlin(fileName, it.toString())
         }
-        kotlincArguments = listOf("-jvm-target", "11")
-        languageVersion = "1.9"
+        kotlincArguments = listOf("-jvm-target", "21", "-Xannotation-default-target=param-property")
+        languageVersion = "2.3"
         inheritClassPath = true
         verbose = false
         allWarningsAsErrors = true

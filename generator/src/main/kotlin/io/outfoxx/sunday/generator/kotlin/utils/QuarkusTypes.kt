@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.test.extensions
+package io.outfoxx.sunday.generator.kotlin.utils
 
-import java.nio.file.Files
-import java.nio.file.Path
+import com.squareup.kotlinpoet.ClassName
 
-class TempDir : AutoCloseable {
-
-  val path: Path = Files.createTempDirectory(null)
-
-  override fun close() {
-    path.toFile().deleteRecursively()
-  }
-}
+val QUARKUS_HTTP_PROBLEM = ClassName.bestGuess("io.quarkiverse.resteasy.problem.HttpProblem")

@@ -29,6 +29,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
@@ -159,6 +161,16 @@ open class SundayGenerate
   @Optional
   val quarkus: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+  @Input
+  @Optional
+  val problemLibrary: Property<KotlinProblemLibrary> = objects.property(KotlinProblemLibrary::class.java)
+    .convention(KotlinProblemLibrary.QUARKUS)
+
+  @Input
+  @Optional
+  val problemRfc: Property<KotlinProblemRfc> = objects.property(KotlinProblemRfc::class.java)
+    .convention(KotlinProblemRfc.RFC9457)
+
   @OutputDirectory
   val outputDir: Property<Directory> = objects.directoryProperty()
     .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
@@ -198,7 +210,22 @@ open class SundayGenerate
       options.remove(KotlinTypeRegistry.Option.UseJakartaPackages)
     }
 
-    val typeRegistry = KotlinTypeRegistry(modelPkgName.get(), generatedAnnotation.orNull, mode, options)
+    val effectiveProblemLibrary =
+      if (framework.get() == TargetFramework.Sunday && problemLibrary.get() == KotlinProblemLibrary.QUARKUS) {
+        KotlinProblemLibrary.SUNDAY
+      } else {
+        problemLibrary.get()
+      }
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        modelPkgName.get(),
+        generatedAnnotation.orNull,
+        mode,
+        options,
+        effectiveProblemLibrary,
+        problemRfc.get(),
+      )
 
     source
       .filter { it.extension == "raml" && it.isFile }

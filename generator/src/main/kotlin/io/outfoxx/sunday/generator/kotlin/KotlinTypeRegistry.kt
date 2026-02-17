@@ -28,7 +28,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import io.outfoxx.sunday.generator.*
 import io.outfoxx.sunday.generator.APIAnnotationName.*
 import io.outfoxx.sunday.generator.common.DefinitionLocation
-import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.*
 import io.outfoxx.sunday.generator.kotlin.utils.*
@@ -49,6 +48,9 @@ class KotlinTypeRegistry(
   generatedAnnotationName: String?,
   val generationMode: GenerationMode,
   val options: Set<Option>,
+  val problemLibrary: KotlinProblemLibrary = KotlinProblemLibrary.QUARKUS,
+  val problemRfc: KotlinProblemRfc = KotlinProblemRfc.RFC9457,
+  val validateProblemRfc: Boolean = false,
 ) : TypeRegistry {
 
   enum class Option {
@@ -65,11 +67,12 @@ class KotlinTypeRegistry(
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
-  private val beanValidationTypes = if (options.contains(Option.UseJakartaPackages)) {
+  private val beanValidationTypes = if (options.contains(UseJakartaPackages)) {
     BeanValidationTypes.JAKARTA
   } else {
     BeanValidationTypes.JAVAX
   }
+  val problemLibrarySupport: KotlinProblemLibrarySupport = problemLibrary.support(problemRfc)
 
   override fun generateFiles(categories: Set<GeneratedTypeCategory>, outputDirectory: Path) {
 
@@ -146,7 +149,6 @@ class KotlinTypeRegistry(
         .tag(GeneratedTypeCategory::class, GeneratedTypeCategory.Model)
         .addGenerated(true)
         .addSuppress()
-        .superclass(ZALANDO_ABSTRACT_THROWABLE_PROBLEM)
         .addType(
           TypeSpec.companionObjectBuilder()
             .addGenerated(false)
@@ -163,96 +165,89 @@ class KotlinTypeRegistry(
             )
             .build(),
         )
-        .primaryConstructor(
-          FunSpec.constructorBuilder()
-            .apply {
-              // Add all custom properties to constructor
-              problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
-                val parameterTypeName =
-                  resolveTypeReference(
-                    customPropertyTypeNameStr,
-                    problemTypeDefinition.source,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-                  )
-                addParameter(
-                  ParameterSpec
-                    .builder(
-                      customPropertyName.kotlinIdentifierName,
-                      parameterTypeName,
-                    )
-                    .apply {
-                      if (parameterTypeName.isNullable) {
-                        defaultValue("null")
-                      }
-                      if (customPropertyName.kotlinIdentifierName != customPropertyName) {
-                        addAnnotation(
-                          AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
-                            .useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM)
-                            .addMember("value = %S", customPropertyName)
-                            .build(),
-                        )
-                      }
-                    }
-                    .build(),
-                )
-              }
-            }
-            .addParameter(
-              ParameterSpec.builder("instance", URI::class.asTypeName().copy(nullable = true))
-                .defaultValue("null")
-                .build(),
-            )
-            .addParameter(
-              ParameterSpec.builder("cause", ZALANDO_THROWABLE_PROBLEM.copy(nullable = true))
-                .defaultValue("null")
-                .build(),
-            )
-            .apply {
-              if (options.contains(JacksonAnnotations)) {
-                addAnnotation(JACKSON_JSON_CREATOR)
-              }
-            }
-            .build(),
-        )
-        .addSuperclassConstructorParameter("TYPE_URI")
-        .addSuperclassConstructorParameter("%S", problemTypeDefinition.title)
-        .addSuperclassConstructorParameter(
-          "%T.%L",
-          ZALANDO_STATUS,
-          HttpStatus.valueOf(problemTypeDefinition.status).name,
-        )
-        .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
-        .addSuperclassConstructorParameter("instance")
-        .addSuperclassConstructorParameter("cause")
+
+    val constructorBuilder =
+      FunSpec.constructorBuilder()
         .apply {
-          problemTypeDefinition.custom.map { (customPropertyName, customPropertyTypeNameStr) ->
-            addProperty(
-              PropertySpec
+          // Add all custom properties to the constructor
+          problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+            val parameterTypeName =
+              resolveTypeReference(
+                customPropertyTypeNameStr,
+                problemTypeDefinition.source,
+                KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+              )
+            addParameter(
+              ParameterSpec
                 .builder(
                   customPropertyName.kotlinIdentifierName,
-                  resolveTypeReference(
-                    customPropertyTypeNameStr,
-                    problemTypeDefinition.source,
-                    KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
-                  ),
-                  KModifier.PUBLIC,
+                  parameterTypeName,
                 )
-                .initializer(customPropertyName.kotlinIdentifierName)
+                .apply {
+                  if (parameterTypeName.isNullable) {
+                    defaultValue("null")
+                  }
+                  if (customPropertyName.kotlinIdentifierName != customPropertyName) {
+                    addAnnotation(
+                      AnnotationSpec.builder(JACKSON_JSON_PROPERTY)
+                        .addMember("value = %S", customPropertyName)
+                        .build(),
+                    )
+                  }
+                }
                 .build(),
             )
           }
         }
-        .addFunction(
-          FunSpec.builder("getCause")
-            .addAnnotation(
-              AnnotationSpec.builder(JACKSON_JSON_IGNORE)
-                .build()
-            )
-            .returns(ZALANDO_EXCEPTIONAL.copy(nullable = true))
-            .addModifiers(KModifier.OVERRIDE)
-            .addCode("return super.cause")
-            .build(),
+        .apply {
+          if (options.contains(JacksonAnnotations)) {
+            addAnnotation(JACKSON_JSON_CREATOR)
+          }
+        }
+
+    val customProperties =
+      problemTypeDefinition.custom.map { (customPropertyName, customPropertyTypeNameStr) ->
+        val parameterTypeName =
+          resolveTypeReference(
+            customPropertyTypeNameStr,
+            problemTypeDefinition.source,
+            KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+          )
+        ProblemCustomProperty(
+          jsonName = customPropertyName,
+          paramName = customPropertyName.kotlinIdentifierName,
+          typeName = parameterTypeName,
         )
+      }
+
+    if (validateProblemRfc) {
+      problemLibrarySupport.validateRfcCompliance()
+    }
+
+    problemLibrarySupport.configureProblemType(
+      problemTypeBuilder,
+      problemTypeName,
+      problemTypeDefinition,
+      customProperties,
+      constructorBuilder,
+    )
+
+    problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
+      problemTypeBuilder.addProperty(
+        PropertySpec
+          .builder(
+            customPropertyName.kotlinIdentifierName,
+            resolveTypeReference(
+              customPropertyTypeNameStr,
+              problemTypeDefinition.source,
+              KotlinResolutionContext(problemTypeDefinition.definedIn, shapeIndex, null),
+            ),
+            KModifier.PUBLIC,
+          )
+          .initializer(customPropertyName.kotlinIdentifierName)
+          .build(),
+      )
+    }
 
     if (options.contains(JacksonAnnotations)) {
       problemTypeBuilder.addAnnotation(
@@ -535,7 +530,7 @@ class KotlinTypeRegistry(
           declaredProperties = declaredProperties.filter { it.name != discriminatorPropertyName }
           inheritedProperties = inheritedProperties.filter { it.name != discriminatorPropertyName }
 
-          // Add abstract discriminator if this is the root of the discriminator tree
+          // Add an abstract discriminator if this is the root of the discriminator tree
 
           if (context.hasNoInherited(shape)) {
 
@@ -558,7 +553,7 @@ class KotlinTypeRegistry(
             typeBuilder.addProperty(discriminatorBuilder.build())
           } else if (options.contains(ImplementModel)) {
 
-            // Add concrete discriminator for leaf of the discriminated tree
+            // Add concrete discriminator for the leaf of the discriminated tree
 
             val discriminatorBuilder =
               PropertySpec.builder(discriminatorProperty.kotlinIdentifierName, discriminatorPropertyTypeName)
@@ -781,8 +776,8 @@ class KotlinTypeRegistry(
               val avalue = codeParam.getValue("value")
               if (atype != null && avalue != null) {
                 when (atype) {
-                  "Type" -> ClassName.bestGuess(avalue.toString())
-                  else -> avalue.toString()
+                  "Type" -> ClassName.bestGuess(avalue)
+                  else -> avalue
                 }
               } else {
                 ""
@@ -831,7 +826,7 @@ class KotlinTypeRegistry(
             // Add toString value
             //
             toStringCode.add(
-              CodeBlock.of("%L='\$%L'", declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName),
+              CodeBlock.of("%L='$%L'", declaredProperty.kotlinIdentifierName, declaredProperty.kotlinIdentifierName),
             )
 
             // Add hashCode value
@@ -859,7 +854,7 @@ class KotlinTypeRegistry(
           typeBuilder.addProperty(declaredPropertyBuilder.build())
         }
 
-        // Add copy method
+        // Add a copy method
         //
         if (inheritingTypes.isEmpty() && !isPatchable) {
 
@@ -961,7 +956,7 @@ class KotlinTypeRegistry(
 
       typeBuilder.addType(
         TypeSpec.companionObjectBuilder()
-          // Add merge method to companion object
+          // Add a merge method to a companion object
           .addFunction(
             FunSpec.builder("merge")
               .addModifiers(KModifier.INLINE)
@@ -972,7 +967,7 @@ class KotlinTypeRegistry(
               .addStatement("return %T(patch)", PATCH_SET_OP)
               .build(),
           )
-          // Add patch method to companion object
+          // Add a patch method to the companion object
           .addFunction(
             FunSpec.builder("patch")
               .returns(className)
@@ -997,13 +992,13 @@ class KotlinTypeRegistry(
 
       val root = context.findRootShape(shape) as NodeShape
 
-      // Is this shape the root with discrimination?
+      // Is this shape the root node with discrimination?
       if (root.id == shape.id && shape.supportsDiscrimination) {
 
         addJacksonPolymorphism(shape, inheritingTypes, typeBuilder, context)
       } else if (!typeBuilder.modifiers.contains(KModifier.ABSTRACT)) {
 
-        // Does the root of this shape tree support discrimination
+        // Does the root of this shape tree support discrimination?
         if (root.supportsDiscrimination) {
 
           val discriminatorMappings = buildDiscriminatorMappings(shape, context)
@@ -1175,7 +1170,7 @@ class KotlinTypeRegistry(
           return typeName
         }
         val cascadeShape = cascadeShapes.singleOrNull()
-        var updatedValueType =
+        val updatedValueType =
           if (cascadeShape != null) {
             applyContainerElementValid(cascadeShape, valueType)
           } else {
@@ -1208,7 +1203,7 @@ class KotlinTypeRegistry(
         if (elementType == ANY) {
           return typeName
         }
-        var updatedElementType =
+        val updatedElementType =
           if (shouldCascade(itemShape)) {
             applyContainerElementValid(itemShape, elementType)
           } else {
@@ -1380,7 +1375,7 @@ class KotlinTypeRegistry(
               .indent()
               .add(
                 "\n${subTypes.joinToString(",\n") { it.first }}",
-                *subTypes.map { it.second }.flatten().toTypedArray(),
+                *subTypes.flatMap { it.second }.toTypedArray(),
               )
               .unindent()
               .add("\n]")
@@ -1471,7 +1466,7 @@ class KotlinTypeRegistry(
           propertyClassNameHierarchy
         } else {
           (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
-            .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
+            .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy[it] }
             .map { propertyClassNameHierarchy[it] }
         }
     }

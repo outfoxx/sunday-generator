@@ -221,7 +221,7 @@ val Message.summary: String? get() = this.summary().value
 val Message.bindings: MessageBindings get() = this.bindings()
 
 //
-val Request.required: Boolean get() = this.required().value()
+val Request.required: Boolean get() = this.required().value ?: false
 val Request.queryParameters: List<Parameter> get() = this.queryParameters()
 val Request.headers: List<Parameter> get() = this.headers()
 val Request.queryString: Shape? get() = this.queryString()

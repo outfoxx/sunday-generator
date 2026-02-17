@@ -188,7 +188,7 @@ class SwiftTypeRegistry(
           FunctionSpec.constructorBuilder()
             .addModifiers(PUBLIC)
             .apply {
-              // Add all custom properties to constructor
+              // Add all custom properties to the constructor
               problemTypeDefinition.custom.forEach { (customPropertyName, customPropertyTypeNameStr) ->
                 val parameterTypeName =
                   resolveTypeReference(
@@ -606,7 +606,7 @@ class SwiftTypeRegistry(
       localProperties = localProperties.filter { it.name != discriminatorPropertyName }
       localDeclaredProperties = localDeclaredProperties.filter { it.name != discriminatorPropertyName }
 
-      // Add abstract discriminator if this is the root of the discriminator tree
+      // Add an abstract discriminator if this is the root of the discriminator tree
 
       if (context.hasNoInherited(shape)) {
 
@@ -623,7 +623,7 @@ class SwiftTypeRegistry(
         if (shape.findBoolAnnotation(ExternallyDiscriminated, null) != true) {
 
           /*
-          Generate polymorphic encoding/decoding type (replaces type name)
+          Generate a polymorphic encoding/decoding type (replaces type name)
          */
 
           val refTypeName = className.nestedType(ANY_REF_NAME)
@@ -754,7 +754,7 @@ class SwiftTypeRegistry(
         }
       } else {
 
-        // Add concrete discriminator for leaf of the discriminated tree
+        // Add concrete discriminator for the leaf of the discriminated tree
 
         val discriminatorBuilder =
           PropertySpec.builder(discriminatorProperty.swiftIdentifierName, discriminatorPropertyTypeName, PUBLIC)
@@ -1147,8 +1147,8 @@ class SwiftTypeRegistry(
           val avalue = codeParam.getValue("value")
           if (atype != null && avalue != null) {
             when (atype) {
-              "Type" -> typeName(avalue.toString())
-              else -> avalue.toString()
+              "Type" -> typeName(avalue)
+              else -> avalue
             }
           } else {
             ""
@@ -1450,8 +1450,8 @@ class SwiftTypeRegistry(
     moduleNameOf(context.findDeclaringUnit(shape))
 
   private fun moduleNameOf(unit: BaseUnit?): String =
-    (unit as? CustomizableElement)?.findStringAnnotation(APIAnnotationName.SwiftModelModule, null)
-      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(APIAnnotationName.SwiftModelModule, null)
+    (unit as? CustomizableElement)?.findStringAnnotation(SwiftModelModule, null)
+      ?: (unit as? EncodesModel)?.encodes?.findStringAnnotation(SwiftModelModule, null)
       ?: ""
 
   private fun replaceCollectionValueTypesWithReferenceTypes(typeName: TypeName): Pair<TypeName, TypeName> {
@@ -1489,13 +1489,11 @@ class SwiftTypeRegistry(
     for (type in types) {
       val propertyClassNameHierarchy = classNameHierarchy(type, context)
       currentClassNameHierarchy =
-        if (currentClassNameHierarchy == null) {
-          propertyClassNameHierarchy
-        } else {
-          (0 until min(propertyClassNameHierarchy.size, currentClassNameHierarchy.size))
-            .takeWhile { propertyClassNameHierarchy[it] == currentClassNameHierarchy!![it] }
+        currentClassNameHierarchy?.let { cch ->
+          (0 until min(cch.size, cch.size))
+            .takeWhile { propertyClassNameHierarchy[it] == cch[it] }
             .map { propertyClassNameHierarchy[it] }
-        }
+        } ?: propertyClassNameHierarchy
     }
 
     return currentClassNameHierarchy?.firstOrNull()

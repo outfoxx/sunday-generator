@@ -21,6 +21,8 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -38,7 +40,15 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -90,7 +100,15 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -142,7 +160,15 @@ class RequestBodyParamTest {
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->

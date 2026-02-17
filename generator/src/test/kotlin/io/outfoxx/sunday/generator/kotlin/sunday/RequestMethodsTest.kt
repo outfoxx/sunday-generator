@@ -21,6 +21,8 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -33,12 +35,22 @@ import java.net.URI
 @DisplayName("[Kotlin/Sunday] [RAML] Request Methods Test")
 class RequestMethodsTest {
 
+  private fun typeRegistry(): KotlinTypeRegistry =
+    KotlinTypeRegistry(
+      "io.test",
+      null,
+      GenerationMode.Client,
+      setOf(),
+      problemLibrary = KotlinProblemLibrary.ZALANDO,
+      problemRfc = KotlinProblemRfc.RFC7807,
+    )
+
   @Test
   fun `test request method generation`(
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry()
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -158,7 +170,7 @@ class RequestMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry()
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -285,7 +297,7 @@ class RequestMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry()
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -438,7 +450,7 @@ class RequestMethodsTest {
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry()
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->

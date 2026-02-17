@@ -23,6 +23,7 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.junitParams)
   testRuntimeOnly(libs.junitEngine)
+  testRuntimeOnly(libs.junitPlatform)
 
   testImplementation(libs.hamcrest)
 }

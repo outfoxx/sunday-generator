@@ -23,6 +23,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -37,12 +39,25 @@ import java.net.URI
 @DisplayName("[Kotlin/JAXRS] [RAML] Response Problems Test")
 class ResponseProblemsTest {
 
+  private fun typeRegistry(
+    mode: GenerationMode,
+    options: Set<KotlinTypeRegistry.Option> = setOf(),
+  ): KotlinTypeRegistry =
+    KotlinTypeRegistry(
+      "io.test",
+      null,
+      mode,
+      options,
+      problemLibrary = KotlinProblemLibrary.ZALANDO,
+      problemRfc = KotlinProblemRfc.RFC7807,
+    )
+
   @Test
   fun `test API problem registration in server mode when no problems referenced`(
     @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = typeRegistry(GenerationMode.Server, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -87,7 +102,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
+    val typeRegistry = typeRegistry(GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -132,7 +147,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(JacksonAnnotations))
+    val typeRegistry = typeRegistry(GenerationMode.Server, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -185,11 +200,49 @@ class ResponseProblemsTest {
   }
 
   @Test
+  fun `test problem type generation with sunday library`(
+    @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
+  ) {
+
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+
+    val builtTypes =
+      generate(testUri, typeRegistry) { document, shapeIndex ->
+        KotlinJAXRSGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          kotlinJAXRSTestOptions,
+        )
+      }
+
+    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
+    val generated =
+      buildString {
+        FileSpec.get("io.test.service", typeSpec)
+          .writeTo(this)
+      }
+
+    assertTrue(generated.contains("import io.outfoxx.sunday.problems.SundayHttpProblem"), generated)
+    assertTrue(generated.contains("class InvalidIdProblem"), generated)
+    assertTrue(generated.contains("SundayHttpProblem(TYPE_URI, \"Invalid Id\", 400,"), generated)
+    assertFalse(generated.contains("org.zalando.problem.AbstractThrowableProblem"), generated)
+  }
+
+  @Test
   fun `test API problem registration in client mode`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf(JacksonAnnotations))
+    val typeRegistry = typeRegistry(GenerationMode.Client, setOf(JacksonAnnotations))
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -246,7 +299,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -277,7 +330,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -306,7 +359,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Client, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -337,7 +390,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -366,7 +419,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -397,7 +450,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -426,7 +479,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -457,7 +510,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -486,7 +539,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -517,7 +570,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,
@@ -546,7 +599,7 @@ class ResponseProblemsTest {
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -577,7 +630,7 @@ class ResponseProblemsTest {
         import org.zalando.problem.ThrowableProblem
 
         public class InvalidIdProblem(
-          @param:JsonProperty(value = "offending_id")
+          @JsonProperty(value = "offending_id")
           public val offendingId: String,
           instance: URI? = null,
           cause: ThrowableProblem? = null,

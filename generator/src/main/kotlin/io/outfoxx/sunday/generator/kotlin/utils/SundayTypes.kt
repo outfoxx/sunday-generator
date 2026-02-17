@@ -25,11 +25,11 @@ val SUNDAY_REQUEST = ClassName.bestGuess("io.outfoxx.sunday.http.Request")
 val SUNDAY_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.Response")
 val SUNDAY_RESULT_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.ResultResponse")
 
-val THROWABLE_PROBLEM = ClassName.bestGuess("org.zalando.problem.ThrowableProblem")
-
 val MEDIA_TYPE = ClassName.bestGuess("io.outfoxx.sunday.MediaType")
 val REQUEST_FACTORY = ClassName.bestGuess("io.outfoxx.sunday.RequestFactory")
 val URI_TEMPLATE = ClassName.bestGuess("io.outfoxx.sunday.URITemplate")
+
+val SUNDAY_HTTP_PROBLEM = ClassName.bestGuess("io.outfoxx.sunday.problems.SundayHttpProblem")
 
 val PATCH_OP = ClassName("io.outfoxx.sunday.json.patch", "PatchOp")
 val PATCH_SET_OP = PATCH_OP.nestedClass("Set")

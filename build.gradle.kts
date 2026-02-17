@@ -25,8 +25,8 @@ val moduleNames = listOf("generator", "cli", "gradle-plugin")
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
-val javaVersion = libs.versions.javaLanguage.get()
-val kotlinVersion = libs.versions.kotlinLanguage.get()
+val javaVersion: String = libs.versions.javaLanguage.get()
+val kotlinVersion: String = libs.versions.kotlinLanguage.get()
 
 
 allprojects {
@@ -208,7 +208,7 @@ tasks {
         )
       }
       // For major.minor.patch releases, add sunday.raml as current
-      // and add docs in "current" directory
+      // and add docs in the "current" directory
       if (releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())) {
         copy {
           into(docDir.map { it.dir("current") })
@@ -260,23 +260,21 @@ githubRelease {
     )
   }
 
-  owner("outfoxx")
-  repo("sunday-generator")
-  tagName(releaseVersion)
-  targetCommitish("main")
-  releaseName("🚀 v$releaseVersion")
-  generateReleaseNotes(true)
-  draft(false)
-  prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
-  releaseAssets(
+  owner = "outfoxx"
+  repo = "sunday-generator"
+  tagName = releaseVersion
+  targetCommitish = "main"
+  releaseName = "🚀 v$releaseVersion"
+  generateReleaseNotes = true
+  draft = false
+  prerelease = !releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex())
+  releaseAssets.from(
     moduleNames.flatMap { moduleName ->
       listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/$moduleName-$releaseVersion$suffix.jar")
       }
     } + layout.buildDirectory.dir("scripts").get().file("sunday"),
   )
-  overwrite(true)
-  authorization(
-    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")),
-  )
+  overwrite = true
+  authorization = "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
 }
