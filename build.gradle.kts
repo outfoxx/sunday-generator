@@ -24,6 +24,7 @@ val moduleNames = listOf("generator", "cli", "gradle-plugin")
 
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
+val isReleaseVersion = releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())
 
 
 //
@@ -42,53 +43,51 @@ dokka {
   }
 }
 
-tasks {
-  dokkaGenerate.configure {
-    val docDir = layout.buildDirectory.dir("dokka")
-    val relDocDir = docDir.map { it.dir(releaseVersion) }
-    doLast {
-      // Copy versioned sunday.raml
-      copy {
-        into(relDocDir)
-        from("generator/src/main/resources") {
-          include("sunday.raml")
-        }
-      }
-      // Copy JBang script
-      copy {
-        into(relDocDir)
-        from("scripts") {
-          if (isSnapshot) {
-            include("sunday-snapshot")
-            rename("sunday-snapshot", "sunday")
-          } else {
-            include("sunday")
-          }
-        }
-        filter<ReplaceTokens>(
-          "tokens" to mapOf("env.VER" to releaseVersion),
-          "beginToken" to "\${",
-          "endToken" to "}",
-        )
-      }
-      // For major.minor.patch releases, add sunday.raml as current
-      // and add docs in the "current" directory
-      if (releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())) {
-        copy {
-          into(docDir.map { it.dir("current") })
-          from(relDocDir) {
-            include("**")
-          }
-        }
-        copy {
-          into(docDir)
-          from("generator/src/main/resources") {
-            include("sunday.raml")
-          }
-        }
-      }
+val docDir = layout.buildDirectory.dir("dokka")
+val versionedDocDir = docDir.map { it.dir(releaseVersion) }
+
+val copyVersionedRaml = tasks.register<Copy>("copyVersionedRaml") {
+  into(versionedDocDir)
+  from("generator/src/main/resources") {
+    include("sunday.raml")
+  }
+}
+
+val copyVersionedJbang = tasks.register<Copy>("copyVersionedJbang") {
+  into(versionedDocDir)
+  from("scripts") {
+    if (isSnapshot) {
+      include("sunday-snapshot")
+      rename("sunday-snapshot", "sunday")
+    } else {
+      include("sunday")
     }
   }
+  filter<ReplaceTokens>(
+    "tokens" to mapOf("env.VER" to releaseVersion),
+    "beginToken" to "\${",
+    "endToken" to "}",
+  )
+}
+
+val copyCurrentDocs = tasks.register<Copy>("copyCurrentDocs") {
+  enabled = isReleaseVersion
+  into(docDir.map { it.dir("current") })
+  from(versionedDocDir) {
+    include("**")
+  }
+}
+
+val copyCurrentRaml = tasks.register<Copy>("copyCurrentRaml") {
+  enabled = isReleaseVersion
+  into(docDir)
+  from("generator/src/main/resources") {
+    include("sunday.raml")
+  }
+}
+
+tasks.named("dokkaGenerate") {
+  finalizedBy(copyVersionedRaml, copyVersionedJbang, copyCurrentDocs, copyCurrentRaml)
 }
 
 
