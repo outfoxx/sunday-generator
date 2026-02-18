@@ -24,7 +24,7 @@ val moduleNames = listOf("generator", "cli", "gradle-plugin")
 
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
-val isReleaseVersion = releaseVersion.matches("""^\d+.\d+.\d+$""".toRegex())
+val isReleaseVersion = releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex())
 
 
 //
@@ -76,6 +76,7 @@ val copyCurrentDocs = tasks.register<Copy>("copyCurrentDocs") {
   from(versionedDocDir) {
     include("**")
   }
+  dependsOn(copyVersionedRaml, copyVersionedJbang)
 }
 
 val copyCurrentRaml = tasks.register<Copy>("copyCurrentRaml") {
