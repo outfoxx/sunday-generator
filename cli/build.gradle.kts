@@ -37,6 +37,10 @@ application {
 
 val releaseVersion: String by project
 
+val enableMultiPlatformJib = !gradle.startParameter.taskNames.any { taskName ->
+  taskName == "jibDockerBuild" || taskName.endsWith(":jibDockerBuild")
+}
+
 fun Manifest.updateAttributes() {
   val title = "Sunday Generator"
   val version = releaseVersion
@@ -87,22 +91,19 @@ jib {
   }
   from {
     image = "eclipse-temurin:21-jre-noble"
-  }
-  containerizingMode = "packaged"
-}
-
-gradle.taskGraph.addTaskExecutionGraphListener {
-  jib.from.platforms {
-    platform {
-      os = "linux"
-      architecture = "arm64"
-    }
-    if (!it.hasTask(":cli:jibDockerBuild")) {
-      logger.warn("JIB: Enabling Multi-Platform Images")
+    platforms {
       platform {
         os = "linux"
-        architecture = "amd64"
+        architecture = "arm64"
+      }
+      if (enableMultiPlatformJib) {
+        logger.warn("JIB: Enabling Multi-Platform Images")
+        platform {
+          os = "linux"
+          architecture = "amd64"
+        }
       }
     }
   }
+  containerizingMode = "packaged"
 }
