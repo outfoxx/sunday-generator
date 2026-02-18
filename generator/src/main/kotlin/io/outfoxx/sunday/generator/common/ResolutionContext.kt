@@ -25,7 +25,13 @@ import amf.core.client.platform.model.domain.PropertyShape
 import amf.core.client.platform.model.domain.Shape
 import amf.core.internal.annotations.Aliases
 import amf.shapes.client.platform.model.domain.NodeShape
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.utils.allUnits
+import io.outfoxx.sunday.generator.utils.annotations
+import io.outfoxx.sunday.generator.utils.declares
+import io.outfoxx.sunday.generator.utils.id
+import io.outfoxx.sunday.generator.utils.location
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.nonNullableType
 import scala.collection.JavaConverters
 
 interface ResolutionContext {
@@ -39,18 +45,14 @@ interface ResolutionContext {
 
   fun hasNoInheriting(shape: Shape): Boolean = shapeIndex.hasNoInheriting(shape.nonNullableType)
 
-  fun findRootShape(shape: Shape): Shape = findSuperShapeOrNull(shape.nonNullableType)?.let(this::findRootShape) ?: shape
+  fun findRootShape(shape: Shape): Shape =
+    findSuperShapeOrNull(shape.nonNullableType)?.let(this::findRootShape) ?: shape
 
-  fun findSuperShapeOrNull(shape: Shape): Shape? {
-    return shapeIndex.findSuperShapeOrNull(shape)
-  }
+  fun findSuperShapeOrNull(shape: Shape): Shape? = shapeIndex.findSuperShapeOrNull(shape)
 
-  fun findInheritingShapes(shape: Shape): List<Shape> {
-    return shapeIndex.findInheriting(shape.nonNullableType)
-  }
+  fun findInheritingShapes(shape: Shape): List<Shape> = shapeIndex.findInheriting(shape.nonNullableType)
 
-  fun findProperties(shape: NodeShape): List<PropertyShape> =
-    shapeIndex.findOrderedProperties(shape)
+  fun findProperties(shape: NodeShape): List<PropertyShape> = shapeIndex.findOrderedProperties(shape)
 
   fun findAllProperties(shape: NodeShape): List<PropertyShape> {
     val superShape = findSuperShapeOrNull(shape) as NodeShape?
@@ -58,24 +60,28 @@ interface ResolutionContext {
     return superProperties + findProperties(shape)
   }
 
-  fun findDeclaringUnit(element: DomainElement) =
-    unit.allUnits.first { it.location == element.annotations.location }
+  fun findDeclaringUnit(element: DomainElement) = unit.allUnits.first { it.location == element.annotations.location }
 
-  fun findImportingUnit(element: DomainElement, allUnits: Set<BaseUnit>): BaseUnit? {
+  fun findImportingUnit(
+    element: DomainElement,
+    allUnits: Set<BaseUnit>,
+  ): BaseUnit? {
     if (this !is ExternalFragment) return null
 
     val importingUnitLocation = element.id.split("#", limit = 2).first()
     return allUnits.find { it.location == importingUnitLocation }
   }
 
-  fun resolveRef(name: String, source: DomainElement): Pair<DomainElement, BaseUnit>? {
+  fun resolveRef(
+    name: String,
+    source: DomainElement,
+  ): Pair<DomainElement, BaseUnit>? {
     val sourceUnit = findDeclaringUnit(source)
     return sourceUnit.resolveRef(name)
       ?: findImportingUnit(source, unit.allUnits)?.resolveRef(name)
   }
 
-  fun dereference(shape: Shape): Shape =
-    shapeIndex.resolve(shape)
+  fun dereference(shape: Shape): Shape = shapeIndex.resolve(shape)
 }
 
 private val ELEMENT_REF_REGEX = """(?:([^.]+)\.)?([\w-_.]+)""".toRegex()
@@ -96,15 +102,21 @@ private fun BaseUnit.resolveRef(ref: String): Pair<DomainElement, BaseUnit>? {
         annotations._internal().find(Aliases::class.java).getOrElse(null)
           ?: error("Unable to find unit aliases")
 
-      val unitUrl = JavaConverters.setAsJavaSet(aliases.aliases()).first { it._1 == libraryName }?._2!!.fullUrl()
+      val unitUrl =
+        JavaConverters
+          .setAsJavaSet(aliases.aliases())
+          .first { it._1 == libraryName }
+          ?._2!!
+          .fullUrl()
 
       allUnits.find { it.location == unitUrl } as? DeclaresModel
     } ?: return null
 
-  val decl = declarationUnit.declares
-    .filterIsInstance<NamedDomainElement>()
-    .firstOrNull { it.name == declarationName } as? DomainElement
-    ?: return null
+  val decl =
+    declarationUnit.declares
+      .filterIsInstance<NamedDomainElement>()
+      .firstOrNull { it.name == declarationName } as? DomainElement
+      ?: return null
 
   return decl to (declarationUnit as BaseUnit)
 }

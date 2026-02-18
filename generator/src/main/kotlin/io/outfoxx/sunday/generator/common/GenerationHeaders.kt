@@ -23,8 +23,12 @@ object GenerationHeaders {
 
   private val paramRegex = """\{\{\s*(\w+)\s*}}""".toRegex()
 
-  fun create(fileName: String, linePrefix: String = ""): String =
-    GenerationHeaders::class.java.classLoader.getResourceAsStream("header.gen.txt")!!
+  fun create(
+    fileName: String,
+    linePrefix: String = "",
+  ): String =
+    GenerationHeaders::class.java.classLoader
+      .getResourceAsStream("header.gen.txt")!!
       .readAllBytes()
       .decodeToString()
       .replace(paramRegex) {
@@ -33,6 +37,6 @@ object GenerationHeaders {
           "date" -> LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
           else -> ""
         }
-      }
-      .split("\n").joinToString("\n") { "$linePrefix$it" }
+      }.split("\n")
+      .joinToString("\n") { "$linePrefix$it" }
 }

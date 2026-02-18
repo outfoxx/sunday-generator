@@ -37,7 +37,8 @@ class TypeScriptCLITest {
     private val emptyFile = TypeScriptCLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-out", emptyFile.resolve("..").path,
+        "-out",
+        emptyFile.resolve("..").path,
         emptyFile.path,
       )
   }

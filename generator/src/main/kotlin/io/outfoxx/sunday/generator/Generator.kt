@@ -44,7 +44,10 @@ abstract class Generator(
 
     val ordered = LinkedHashSet<String>()
     val mediaTypes = api.contentType.filterNotNull().toMutableList()
-    api.accepts.filterNotNull().filterNot(mediaTypes::contains).forEach(mediaTypes::add)
+    api.accepts
+      .filterNotNull()
+      .filterNot(mediaTypes::contains)
+      .forEach(mediaTypes::add)
 
     // Add any from command line also referenced in model
     options.defaultMediaTypes.forEach { defaultMediaType ->

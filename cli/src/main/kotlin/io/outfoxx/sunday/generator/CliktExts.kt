@@ -29,7 +29,7 @@ import kotlin.reflect.KProperty
 typealias EnumOption = OptionWithValues<Boolean, Boolean, Boolean>
 typealias EnumOptions<E> = Map<E, EnumOption>
 
-class EnumFlagBuilder<E: Enum<E>> {
+class EnumFlagBuilder<E : Enum<E>> {
   val flags = mutableMapOf<E, EnumFlag>()
 
   infix fun E.to(flag: EnumFlag) = flags.put(this, flag)
@@ -42,14 +42,11 @@ inline fun <reified E : Enum<E>> ParameterHolder.flags(block: EnumFlagBuilder<E>
   return flags(builder.flags)
 }
 
-inline fun <reified E : Enum<E>> ParameterHolder.flags(
-  vararg entries: Pair<E, String>,
-): EnumOptions<E> = flags(entries.associate { (value, help) -> value to EnumFlag(help = help) })
+inline fun <reified E : Enum<E>> ParameterHolder.flags(vararg entries: Pair<E, String>): EnumOptions<E> =
+  flags(entries.associate { (value, help) -> value to EnumFlag(help = help) })
 
 @JvmName("flagsToHelp")
-inline fun <reified E : Enum<E>> ParameterHolder.flags(
-  entries: Map<E, String>,
-): EnumOptions<E> {
+inline fun <reified E : Enum<E>> ParameterHolder.flags(entries: Map<E, String>): EnumOptions<E> {
   val enumFlags = entries.mapValues { (_, help) -> EnumFlag(help = help) }
   return flags(enumFlags)
 }
@@ -62,13 +59,13 @@ data class EnumFlag(
   constructor(help: String) : this(help = help, default = false)
 
   fun name(name: String) = apply { this.name = name }
+
   fun help(help: String) = apply { this.help = help }
+
   fun default(default: Boolean) = apply { this.default = default }
 }
 
-inline fun <reified E : Enum<E>> ParameterHolder.flags(
-  entries: Map<E, EnumFlag>,
-): EnumOptions<E> =
+inline fun <reified E : Enum<E>> ParameterHolder.flags(entries: Map<E, EnumFlag>): EnumOptions<E> =
   entries.mapValues { (value, flag) ->
     val enableName = flag.name ?: value.name.camelCaseToKebabCase()
     val disableName = "no-$enableName"
@@ -77,18 +74,20 @@ inline fun <reified E : Enum<E>> ParameterHolder.flags(
       .flag("-$disableName", default = true, defaultForHelp = helpDefault)
   }
 
-class EnumFlagsOptionGroup<E: Enum<E>>(
+class EnumFlagsOptionGroup<E : Enum<E>>(
   name: String,
   help: String? = null,
-  val options: EnumOptions<E>
+  val options: EnumOptions<E>,
 ) : OptionGroup(name, help) {
   init {
     options.forEach { (_, option) -> registerOption(option) }
   }
 }
 
-fun <E: Enum<E>> EnumOptions<E>.grouped(name: String, help: String? = null): EnumFlagsOptionGroup<E> =
-  EnumFlagsOptionGroup(name, help, this)
+fun <E : Enum<E>> EnumOptions<E>.grouped(
+  name: String,
+  help: String? = null,
+): EnumFlagsOptionGroup<E> = EnumFlagsOptionGroup(name, help, this)
 
 operator fun <E : Enum<E>> EnumOptions<E>.provideDelegate(
   thisRef: ParameterHolder,

@@ -44,22 +44,23 @@ class RamlGeneratedAnnotationsTest {
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.`annotation`.processing.Generated
-        import kotlin.String
+      import javax.`annotation`.processing.Generated
+      import kotlin.String
 
-        @Generated(
-          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-          date = "${typeRegistry.generationTimestamp}",
-        )
-        public interface Test {
-          public val `value`: String
-        }
+      @Generated(
+        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+        date = "${typeRegistry.generationTimestamp}",
+      )
+      public interface Test {
+        public val `value`: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", type)
+        FileSpec
+          .get("io.test.service", type)
           .writeTo(this)
       },
     )
@@ -70,32 +71,34 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry(
-      "io.test",
-      "io.outfoxx.sunday.annotation.Generated",
-      GenerationMode.Server,
-      setOf(AddGeneratedAnnotation),
-    )
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        "io.outfoxx.sunday.annotation.Generated",
+        GenerationMode.Server,
+        setOf(AddGeneratedAnnotation),
+      )
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.outfoxx.sunday.`annotation`.Generated
-        import kotlin.String
+      import io.outfoxx.sunday.`annotation`.Generated
+      import kotlin.String
 
-        @Generated(
-          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-          date = "${typeRegistry.generationTimestamp}",
-        )
-        public interface Test {
-          public val `value`: String
-        }
+      @Generated(
+        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+        date = "${typeRegistry.generationTimestamp}",
+      )
+      public interface Test {
+        public val `value`: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", type)
+        FileSpec
+          .get("io.test.service", type)
           .writeTo(this)
       },
     )
@@ -111,19 +114,20 @@ class RamlGeneratedAnnotationsTest {
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import kotlin.String
-        import kotlin.Suppress
+      import kotlin.String
+      import kotlin.Suppress
 
-        @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
-        public interface Test {
-          public val `value`: String
-        }
+      @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
+      public interface Test {
+        public val `value`: String
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", type)
+        FileSpec
+          .get("io.test.service", type)
           .writeTo(this)
       },
     )
@@ -149,32 +153,33 @@ class RamlGeneratedAnnotationsTest {
     val type = findType("io.test.service.API", builtTypes)
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.`annotation`.processing.Generated
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.PathParam
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.String
+      import javax.`annotation`.processing.Generated
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.PathParam
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.String
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        @Generated(
-          value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-          date = "${typeRegistry.generationTimestamp}",
-        )
-        public interface API {
-          @GET
-          @Path(value = "/tests/{id}")
-          public fun fetchTest(@PathParam(value = "id") id: String): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      @Generated(
+        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
+        date = "${typeRegistry.generationTimestamp}",
+      )
+      public interface API {
+        @GET
+        @Path(value = "/tests/{id}")
+        public fun fetchTest(@PathParam(value = "id") id: String): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", type)
+        FileSpec
+          .get("io.test.service", type)
           .writeTo(this)
       },
     )
@@ -200,29 +205,30 @@ class RamlGeneratedAnnotationsTest {
     val type = findType("io.test.service.API", builtTypes)
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.PathParam
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Response
-        import kotlin.String
-        import kotlin.Suppress
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.PathParam
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Response
+      import kotlin.String
+      import kotlin.Suppress
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
-        public interface API {
-          @GET
-          @Path(value = "/tests/{id}")
-          public fun fetchTest(@PathParam(value = "id") id: String): Response
-        }
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
+      public interface API {
+        @GET
+        @Path(value = "/tests/{id}")
+        public fun fetchTest(@PathParam(value = "id") id: String): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", type)
+        FileSpec
+          .get("io.test.service", type)
           .writeTo(this)
       },
     )

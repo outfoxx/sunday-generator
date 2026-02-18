@@ -41,22 +41,23 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.String
+      import kotlin.Any
+      import kotlin.String
 
-        public interface Test {
-          public val any: Any
+      public interface Test {
+        public val any: Any
 
-          public val duplicate: String
+        public val duplicate: String
 
-          public val nullable: String?
-        }
+        public val nullable: String?
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -73,15 +74,16 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        public interface Test {
-          public val `value`: Base
-        }
+      public interface Test {
+        public val `value`: Base
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -98,17 +100,18 @@ class RamlUnionTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
+      import kotlin.Any
 
-        public interface Test {
-          public val `value`: Any
-        }
+      public interface Test {
+        public val `value`: Any
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

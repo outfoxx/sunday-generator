@@ -66,7 +66,8 @@ class QuarkusRequestMethodsTest {
     val typeSpec = findType("io.test.service.API", builtTypes)
     val generated =
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       }
 

@@ -22,9 +22,9 @@ import amf.core.client.platform.model.domain.PropertyShape
 import amf.core.client.platform.model.domain.RecursiveShape
 import amf.core.client.platform.model.domain.Shape
 import amf.core.client.scala.errorhandling.DefaultErrorHandler
+import amf.core.internal.annotations.DeclaredElement
 import amf.core.internal.annotations.InheritedShapes
 import amf.core.internal.annotations.ResolvedLinkTargetAnnotation
-import amf.core.internal.annotations.DeclaredElement
 import amf.shapes.client.platform.model.domain.NodeShape
 import io.outfoxx.sunday.generator.utils.annotations
 import io.outfoxx.sunday.generator.utils.id
@@ -54,7 +54,8 @@ class ShapeIndex(
 
   private val referenceMapById = referenceMap.values.associateBy { it.id }
   private val referenceMapByName =
-    referenceMap.values.mapNotNull { shape -> shape.name?.let { it to shape } }
+    referenceMap.values
+      .mapNotNull { shape -> shape.name?.let { it to shape } }
       .groupBy({ it.first }, { it.second })
 
   companion object {
@@ -80,7 +81,7 @@ class ShapeIndex(
           }
           Option.apply(internalShape)
         },
-        DefaultErrorHandler()
+        DefaultErrorHandler(),
       )
       return this
     }
@@ -88,23 +89,17 @@ class ShapeIndex(
     fun build() = ShapeIndex(referenceMap)
   }
 
-  fun hasInherited(shape: Shape): Boolean =
-    findInherited(shape).isNotEmpty()
+  fun hasInherited(shape: Shape): Boolean = findInherited(shape).isNotEmpty()
 
-  fun hasNoInherited(shape: Shape): Boolean =
-    findInherited(shape).isEmpty()
+  fun hasNoInherited(shape: Shape): Boolean = findInherited(shape).isEmpty()
 
-  fun findSuperShapeOrNull(shape: Shape): Shape? =
-    findInherited(shape).firstOrNull()
+  fun findSuperShapeOrNull(shape: Shape): Shape? = findInherited(shape).firstOrNull()
 
-  fun findInherited(shape: Shape): List<Shape> =
-    resolve(shape).inherits.map { resolve(it) }
+  fun findInherited(shape: Shape): List<Shape> = resolve(shape).inherits.map { resolve(it) }
 
-  fun hasInheriting(shape: Shape): Boolean =
-    findInheriting(shape).isNotEmpty()
+  fun hasInheriting(shape: Shape): Boolean = findInheriting(shape).isNotEmpty()
 
-  fun hasNoInheriting(shape: Shape): Boolean =
-    findInheriting(shape).isEmpty()
+  fun hasNoInheriting(shape: Shape): Boolean = findInheriting(shape).isEmpty()
 
   fun findInheriting(shape: Shape): List<Shape> {
     val opt = resolve(shape).annotations._internal().find(Inheriting::class.java)
@@ -130,8 +125,7 @@ class ShapeIndex(
     }
   }
 
-  private inline fun <reified T : Shape> resolveAs(shape: T): T =
-    resolve(shape) as T
+  private inline fun <reified T : Shape> resolveAs(shape: T): T = resolve(shape) as T
 
   fun resolve(shape: Shape): Shape {
     val linkTargetShape = (shape as? Linkable)?.linkTarget as? Shape
@@ -169,9 +163,11 @@ class ShapeIndex(
               ?: candidates.singleOrNull()
           }
 
-        val inheritedResolved = shape.inherits.firstOrNull()
-          ?.takeIf { it != shape }
-          ?.let { resolve(it) }
+        val inheritedResolved =
+          shape.inherits
+            .firstOrNull()
+            ?.takeIf { it != shape }
+            ?.let { resolve(it) }
 
         inheritedIdMatch
           ?: nameMatch
@@ -187,12 +183,17 @@ class ShapeIndex(
 private fun <T> Seq<T>.asList(): List<T> = JavaConverters.seqAsJavaList(this)
 
 private fun Shape.resolvedLinkTargetIds(): List<String> =
-  _internal().annotations().serializables().asList()
+  _internal()
+    .annotations()
+    .serializables()
+    .asList()
     .filterIsInstance<ResolvedLinkTargetAnnotation>()
     .map { it.linkTargetId() }
 
 private fun Shape.inheritedShapeIds(): List<String> =
-  _internal().annotations().find(InheritedShapes::class.java)
+  _internal()
+    .annotations()
+    .find(InheritedShapes::class.java)
     .let { opt ->
       if (opt.isDefined) {
         opt.get().baseIds().asList()

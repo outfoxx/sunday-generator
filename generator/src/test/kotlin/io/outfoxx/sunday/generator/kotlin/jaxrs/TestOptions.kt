@@ -18,16 +18,17 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 
-val kotlinJAXRSTestOptions = KotlinJAXRSGenerator.Options(
-  coroutineFlowMethods = false,
-  coroutineServiceMethods = false,
-  null,
-  false,
-  null,
-  false,
-  "io.test.service",
-  "http://example.com/",
-  listOf("application/json"),
-  "API",
-  false,
-)
+val kotlinJAXRSTestOptions =
+  KotlinJAXRSGenerator.Options(
+    coroutineFlowMethods = false,
+    coroutineServiceMethods = false,
+    null,
+    false,
+    null,
+    false,
+    "io.test.service",
+    "http://example.com/",
+    listOf("application/json"),
+    "API",
+    false,
+  )

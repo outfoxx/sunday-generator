@@ -55,74 +55,75 @@ class RequestMixedParamsTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
+        }
 
-          public func fetchTest(
-            select: FetchTestSelectUriParam,
-            page: FetchTestPageQueryParam,
-            xType: FetchTestXTypeHeaderParam
-          ) async throws -> [String : AnyValue] {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{select}",
-              pathParameters: [
-                "select": select
-              ],
-              queryParameters: [
-                "page": page
-              ],
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: [
-                "x-type": xType
-              ]
-            )
-          }
+        public func fetchTest(
+          select: FetchTestSelectUriParam,
+          page: FetchTestPageQueryParam,
+          xType: FetchTestXTypeHeaderParam
+        ) async throws -> [String : AnyValue] {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{select}",
+            pathParameters: [
+              "select": select
+            ],
+            queryParameters: [
+              "page": page
+            ],
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: [
+              "x-type": xType
+            ]
+          )
+        }
 
-          public enum FetchTestSelectUriParam : String, CaseIterable, Codable {
+        public enum FetchTestSelectUriParam : String, CaseIterable, Codable {
 
-            case all = "all"
-            case limited = "limited"
-
-          }
-
-          public enum FetchTestPageQueryParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
-
-          public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
+          case all = "all"
+          case limited = "limited"
 
         }
 
+        public enum FetchTestPageQueryParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+        public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -150,74 +151,75 @@ class RequestMixedParamsTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
+        }
 
-          public func fetchTest(
-            type: FetchTestTypeUriParam,
-            type_: FetchTestTypeQueryParam,
-            type__: FetchTestTypeHeaderParam
-          ) async throws -> [String : AnyValue] {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{type}",
-              pathParameters: [
-                "type": type
-              ],
-              queryParameters: [
-                "type": type_
-              ],
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: [
-                "type": type__
-              ]
-            )
-          }
+        public func fetchTest(
+          type: FetchTestTypeUriParam,
+          type_: FetchTestTypeQueryParam,
+          type__: FetchTestTypeHeaderParam
+        ) async throws -> [String : AnyValue] {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{type}",
+            pathParameters: [
+              "type": type
+            ],
+            queryParameters: [
+              "type": type_
+            ],
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: [
+              "type": type__
+            ]
+          )
+        }
 
-          public enum FetchTestTypeUriParam : String, CaseIterable, Codable {
+        public enum FetchTestTypeUriParam : String, CaseIterable, Codable {
 
-            case all = "all"
-            case limited = "limited"
-
-          }
-
-          public enum FetchTestTypeQueryParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
-
-          public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
+          case all = "all"
+          case limited = "limited"
 
         }
 
+        public enum FetchTestTypeQueryParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+        public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )

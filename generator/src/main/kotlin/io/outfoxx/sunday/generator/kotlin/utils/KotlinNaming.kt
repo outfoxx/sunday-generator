@@ -35,10 +35,11 @@ val PropertyShape.kotlinIdentifierName: String get() = name!!.toLowerCamelCase()
 private val enumSplitRegex = """\W""".toRegex()
 
 val ScalarNode.kotlinEnumName: String
-  get() = stringValue!!
-    .split(enumSplitRegex)
-    .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
-    .toUpperCamelCase()
+  get() =
+    stringValue!!
+      .split(enumSplitRegex)
+      .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
+      .toUpperCamelCase()
 
 val Parameter.kotlinTypeName: String get() = parameterName!!.toUpperCamelCase()
 val Parameter.kotlinIdentifierName: String get() = parameterName!!.toLowerCamelCase()

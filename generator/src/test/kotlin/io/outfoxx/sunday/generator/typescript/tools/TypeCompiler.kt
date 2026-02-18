@@ -33,24 +33,25 @@ fun compileTypes(
     val indexBuilder = FileSpec.builder("index")
 
     val fileSpecs =
-      types.map { (typeName, moduleSpec) ->
+      types
+        .map { (typeName, moduleSpec) ->
 
-        val importSymbol = typeName.base as? SymbolSpec.Imported
-        if (importSymbol != null) {
-          indexBuilder.addCode(
-            CodeBlock.of(
-              "export {%L} from './%L';",
-              importSymbol.value,
-              importSymbol.source.removePrefix("!"),
-            ),
-          )
-        }
+          val importSymbol = typeName.base as? SymbolSpec.Imported
+          if (importSymbol != null) {
+            indexBuilder.addCode(
+              CodeBlock.of(
+                "export {%L} from './%L';",
+                importSymbol.value,
+                importSymbol.source.removePrefix("!"),
+              ),
+            )
+          }
 
-        val imported = typeName.base as SymbolSpec.Imported
-        val modulePath = imported.source.replaceFirst("!", "")
+          val imported = typeName.base as SymbolSpec.Imported
+          val modulePath = imported.source.replaceFirst("!", "")
 
-        FileSpec.get(moduleSpec, modulePath)
-      }.toMutableList()
+          FileSpec.get(moduleSpec, modulePath)
+        }.toMutableList()
 
     if (generateIndex) {
       fileSpecs.add(indexBuilder.build())

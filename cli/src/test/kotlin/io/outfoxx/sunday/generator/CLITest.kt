@@ -20,8 +20,11 @@ import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.parse
 import com.github.ajalt.clikt.testing.test
 import io.outfoxx.sunday.generator.common.ShapeIndex
+import org.hamcrest.CoreMatchers.hasItem
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.*
+import org.hamcrest.Matchers.contains
+import org.hamcrest.Matchers.containsString
+import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.io.path.toPath
@@ -32,7 +35,8 @@ class CLITest {
     private val emptyFile = CLITest::class.java.getResource("/empty.raml")!!.toURI()!!
     private val requiredOptions =
       arrayOf(
-        "-out", emptyFile.resolve("..").path,
+        "-out",
+        emptyFile.resolve("..").path,
         emptyFile.path,
       )
   }
@@ -41,7 +45,10 @@ class CLITest {
     override val typeRegistry: TypeRegistry
       get() = error("should not be called")
 
-    override fun generatorFactory(document: Document, shapeIndex: ShapeIndex): Generator {
+    override fun generatorFactory(
+      document: Document,
+      shapeIndex: ShapeIndex,
+    ): Generator {
       error("should not be called")
     }
 

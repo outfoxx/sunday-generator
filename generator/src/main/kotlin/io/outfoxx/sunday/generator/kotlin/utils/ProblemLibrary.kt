@@ -32,7 +32,9 @@ import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.TITLE
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.TYPE
 import java.net.URI
 
-enum class KotlinProblemLibrary(val id: String) {
+enum class KotlinProblemLibrary(
+  val id: String,
+) {
   QUARKUS("quarkus"),
   SUNDAY("sunday"),
   ZALANDO("zalando"),
@@ -128,19 +130,18 @@ private class QuarkusProblemLibrarySupport(
 
     constructorBuilder
       .addParameter(
-        ParameterSpec.builder(
-          "instance",
-          URI::class.asTypeName().copy(nullable = true),
-        )
-          .defaultValue("null")
+        ParameterSpec
+          .builder(
+            "instance",
+            URI::class.asTypeName().copy(nullable = true),
+          ).defaultValue("null")
           .build(),
-      )
-      .addParameter(
-        ParameterSpec.builder(
-          "cause",
-          Throwable::class.asTypeName().copy(nullable = true),
-        )
-          .defaultValue("null")
+      ).addParameter(
+        ParameterSpec
+          .builder(
+            "cause",
+            Throwable::class.asTypeName().copy(nullable = true),
+          ).defaultValue("null")
           .build(),
       )
 
@@ -150,7 +151,8 @@ private class QuarkusProblemLibrarySupport(
       .addSuperclassConstructorParameter("%L", buildBuilderCode(problemTypeDefinition, customProperties))
 
     problemTypeBuilder.addInitializerBlock(
-      CodeBlock.builder()
+      CodeBlock
+        .builder()
         .beginControlFlow("if (cause != null)")
         .addStatement("initCause(cause)")
         .endControlFlow()
@@ -214,11 +216,11 @@ private class SundayProblemLibrarySupport(
 
     constructorBuilder
       .addParameter(
-        ParameterSpec.builder(
-          "instance",
-          URI::class.asTypeName().copy(nullable = true),
-        )
-          .defaultValue("null")
+        ParameterSpec
+          .builder(
+            "instance",
+            URI::class.asTypeName().copy(nullable = true),
+          ).defaultValue("null")
           .build(),
       )
 
@@ -260,19 +262,18 @@ private class ZalandoProblemLibrarySupport(
 
     constructorBuilder
       .addParameter(
-        ParameterSpec.builder(
-          "instance",
-          URI::class.asTypeName().copy(nullable = true),
-        )
-          .defaultValue("null")
+        ParameterSpec
+          .builder(
+            "instance",
+            URI::class.asTypeName().copy(nullable = true),
+          ).defaultValue("null")
           .build(),
-      )
-      .addParameter(
-        ParameterSpec.builder(
-          "cause",
-          ZALANDO_THROWABLE_PROBLEM.copy(nullable = true),
-        )
-          .defaultValue("null")
+      ).addParameter(
+        ParameterSpec
+          .builder(
+            "cause",
+            ZALANDO_THROWABLE_PROBLEM.copy(nullable = true),
+          ).defaultValue("null")
           .build(),
       )
 
@@ -285,12 +286,12 @@ private class ZalandoProblemLibrarySupport(
         "%T.%L",
         ZALANDO_STATUS,
         HttpStatus.valueOf(problemTypeDefinition.status).name,
-      )
-      .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
+      ).addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
       .addSuperclassConstructorParameter("instance")
       .addSuperclassConstructorParameter("cause")
       .addFunction(
-        FunSpec.builder("getCause")
+        FunSpec
+          .builder("getCause")
           .addAnnotation(JACKSON_JSON_IGNORE)
           .returns(ZALANDO_EXCEPTIONAL.copy(nullable = true))
           .addModifiers(com.squareup.kotlinpoet.KModifier.OVERRIDE)

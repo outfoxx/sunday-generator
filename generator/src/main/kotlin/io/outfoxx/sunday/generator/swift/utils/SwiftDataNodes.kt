@@ -27,13 +27,20 @@ import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.TypeName
 
-fun DataNode.swiftConstant(typeName: TypeName, shape: Shape?): CodeBlock {
+fun DataNode.swiftConstant(
+  typeName: TypeName,
+  shape: Shape?,
+): CodeBlock {
   val builder = CodeBlock.builder()
   swiftConstant(typeName, shape, builder)
   return builder.build()
 }
 
-fun DataNode.swiftConstant(typeName: TypeName, shape: Shape?, builder: CodeBlock.Builder) {
+fun DataNode.swiftConstant(
+  typeName: TypeName,
+  shape: Shape?,
+  builder: CodeBlock.Builder,
+) {
   when (this) {
     is ScalarNode ->
       when (dataType().value()) {

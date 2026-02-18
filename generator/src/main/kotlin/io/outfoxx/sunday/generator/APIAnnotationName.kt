@@ -16,7 +16,10 @@
 
 package io.outfoxx.sunday.generator
 
-enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) {
+enum class APIAnnotationName(
+  val id: String,
+  private val modeSpecific: Boolean,
+) {
 
   ServiceName("name", false),
   ServiceGroup("group", false),
@@ -72,12 +75,14 @@ enum class APIAnnotationName(val id: String, private val modeSpecific: Boolean) 
 
   ;
 
-  fun matches(test: String, generationMode: GenerationMode? = null) =
-    if (modeSpecific && generationMode != null) {
-      test == "$id:${generationMode.name.lowercase()}" || test == "sunday-$id-${generationMode.name.lowercase()}"
-    } else {
-      test == id || test == "sunday-$id"
-    }
+  fun matches(
+    test: String,
+    generationMode: GenerationMode? = null,
+  ) = if (modeSpecific && generationMode != null) {
+    test == "$id:${generationMode.name.lowercase()}" || test == "sunday-$id-${generationMode.name.lowercase()}"
+  } else {
+    test == id || test == "sunday-$id"
+  }
 
   override fun toString() = id
 }

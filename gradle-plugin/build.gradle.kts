@@ -1,5 +1,6 @@
 plugins {
-  alias(libs.plugins.pluginPublish)
+  id("common.conventions")
+  alias(libs.plugins.plugin.publish)
   alias(libs.plugins.shadow)
 }
 
@@ -43,7 +44,10 @@ gradlePlugin {
       id = "io.outfoxx.sunday-generator"
       implementationClass = "io.outfoxx.sunday.generator.gradle.SundayGeneratorPlugin"
       displayName = "Sunday Generator - Gradle Plugin"
-      description = "Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages."
+      description =
+        """
+        Sunday Generator is a code generator for Sunday HTTP clients and JAX-RS server stubs in multiple languages.
+        """.trimIndent()
       tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
     }
   }

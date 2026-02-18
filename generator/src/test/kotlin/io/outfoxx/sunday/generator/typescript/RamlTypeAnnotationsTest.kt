@@ -54,7 +54,11 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       "FormData",
-      (type.members.firstOrNull() as? InterfaceSpec)?.propertySpecs?.firstOrNull()?.type?.toString(),
+      (type.members.firstOrNull() as? InterfaceSpec)
+        ?.propertySpecs
+        ?.firstOrNull()
+        ?.type
+        ?.toString(),
     )
   }
 
@@ -82,7 +86,8 @@ class RamlTypeAnnotationsTest {
     generateTypes(testUri, typeRegistry, compiler)
 
     val fileSpecModulePaths =
-      typeRegistry.generateExportedTypeFiles(categories = setOf(GeneratedTypeCategory.Model))
+      typeRegistry
+        .generateExportedTypeFiles(categories = setOf(GeneratedTypeCategory.Model))
         .map { it.modulePath }
 
     assertThat(fileSpecModulePaths, contains("merged"))
@@ -96,14 +101,15 @@ class RamlTypeAnnotationsTest {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val generatedTypes = generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-      TypeScriptSundayGenerator(
-        document,
-        shapeIndex,
-        typeRegistry,
-        typeScriptSundayTestOptions,
-      )
-    }
+    val generatedTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
 
     assertThat(generatedTypes.keys, hasItem(TypeName.namedImport("API", "!explicit/client/api")))
   }
@@ -121,116 +127,117 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
 
-        export interface GroupSpec {
+      export interface GroupSpec {
 
-          value: string;
+        value: string;
+
+      }
+
+      export class Group implements GroupSpec {
+
+        value: string;
+
+        constructor(init: GroupSpec) {
+          this.value = init.value;
+        }
+
+        copy(changes: Partial<GroupSpec>): Group {
+          return new Group(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Group(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      export namespace Group {
+
+        export interface Member1Spec extends GroupSpec {
+
+          memberValue1: string;
 
         }
 
-        export class Group implements GroupSpec {
+        export class Member1 extends Group implements Member1Spec {
 
-          value: string;
+          memberValue1: string;
 
-          constructor(init: GroupSpec) {
-            this.value = init.value;
+          constructor(init: Member1Spec) {
+            super(init);
+            this.memberValue1 = init.memberValue1;
           }
 
-          copy(changes: Partial<GroupSpec>): Group {
-            return new Group(Object.assign({}, this, changes));
+          copy(changes: Partial<Member1Spec>): Member1 {
+            return new Member1(Object.assign({}, this, changes));
           }
 
           toString(): string {
-            return `Group(value='${'$'}{this.value}')`;
+            return `Group.Member1(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}')`;
           }
 
         }
 
-        export namespace Group {
+        export namespace Member1 {
 
-          export interface Member1Spec extends GroupSpec {
+          export interface SubSpec extends Member1Spec {
 
-            memberValue1: string;
+            subMemberValue: string;
 
           }
 
-          export class Member1 extends Group implements Member1Spec {
+          export class Sub extends Member1 implements SubSpec {
 
-            memberValue1: string;
+            subMemberValue: string;
 
-            constructor(init: Member1Spec) {
+            constructor(init: SubSpec) {
               super(init);
-              this.memberValue1 = init.memberValue1;
+              this.subMemberValue = init.subMemberValue;
             }
 
-            copy(changes: Partial<Member1Spec>): Member1 {
-              return new Member1(Object.assign({}, this, changes));
+            copy(changes: Partial<SubSpec>): Sub {
+              return new Sub(Object.assign({}, this, changes));
             }
 
             toString(): string {
-              return `Group.Member1(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}')`;
-            }
-
-          }
-
-          export namespace Member1 {
-
-            export interface SubSpec extends Member1Spec {
-
-              subMemberValue: string;
-
-            }
-
-            export class Sub extends Member1 implements SubSpec {
-
-              subMemberValue: string;
-
-              constructor(init: SubSpec) {
-                super(init);
-                this.subMemberValue = init.subMemberValue;
-              }
-
-              copy(changes: Partial<SubSpec>): Sub {
-                return new Sub(Object.assign({}, this, changes));
-              }
-
-              toString(): string {
-                return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
-              }
-
-            }
-
-          }
-
-          export interface Member2Spec extends GroupSpec {
-
-            memberValue2: string;
-
-          }
-
-          export class Member2 extends Group implements Member2Spec {
-
-            memberValue2: string;
-
-            constructor(init: Member2Spec) {
-              super(init);
-              this.memberValue2 = init.memberValue2;
-            }
-
-            copy(changes: Partial<Member2Spec>): Member2 {
-              return new Member2(Object.assign({}, this, changes));
-            }
-
-            toString(): string {
-              return `Group.Member2(value='${'$'}{this.value}', memberValue2='${'$'}{this.memberValue2}')`;
+              return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
             }
 
           }
 
         }
+
+        export interface Member2Spec extends GroupSpec {
+
+          memberValue2: string;
+
+        }
+
+        export class Member2 extends Group implements Member2Spec {
+
+          memberValue2: string;
+
+          constructor(init: Member2Spec) {
+            super(init);
+            this.memberValue2 = init.memberValue2;
+          }
+
+          copy(changes: Partial<Member2Spec>): Member2 {
+            return new Member2(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Group.Member2(value='${'$'}{this.value}', memberValue2='${'$'}{this.memberValue2}')`;
+          }
+
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
+        FileSpec
+          .get(typeModSpec)
           .writeTo(this)
       },
     )
@@ -249,6 +256,161 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
 
+      export interface GroupSpec {
+
+        value: string;
+
+      }
+
+      export class Group implements GroupSpec {
+
+        value: string;
+
+        constructor(init: GroupSpec) {
+          this.value = init.value;
+        }
+
+        copy(changes: Partial<GroupSpec>): Group {
+          return new Group(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Group(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      export namespace Group {
+
+        export interface Member1Spec extends GroupSpec {
+
+          memberValue1: string;
+
+        }
+
+        export class Member1 extends Group implements Member1Spec {
+
+          memberValue1: string;
+
+          constructor(init: Member1Spec) {
+            super(init);
+            this.memberValue1 = init.memberValue1;
+          }
+
+          copy(changes: Partial<Member1Spec>): Member1 {
+            return new Member1(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Group.Member1(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}')`;
+          }
+
+        }
+
+        export namespace Member1 {
+
+          export interface SubSpec extends Member1Spec {
+
+            subMemberValue: string;
+
+          }
+
+          export class Sub extends Member1 implements SubSpec {
+
+            subMemberValue: string;
+
+            constructor(init: SubSpec) {
+              super(init);
+              this.subMemberValue = init.subMemberValue;
+            }
+
+            copy(changes: Partial<SubSpec>): Sub {
+              return new Sub(Object.assign({}, this, changes));
+            }
+
+            toString(): string {
+              return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
+            }
+
+          }
+
+        }
+
+        export interface Member2Spec extends GroupSpec {
+
+          memberValue2: string;
+
+        }
+
+        export class Member2 extends Group implements Member2Spec {
+
+          memberValue2: string;
+
+          constructor(init: Member2Spec) {
+            super(init);
+            this.memberValue2 = init.memberValue2;
+          }
+
+          copy(changes: Partial<Member2Spec>): Member2 {
+            return new Member2(Object.assign({}, this, changes));
+          }
+
+          toString(): string {
+            return `Group.Member2(value='${'$'}{this.value}', memberValue2='${'$'}{this.memberValue2}')`;
+          }
+
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(typeModSpec)
+          .writeTo(this)
+      },
+    )
+  }
+
+  @Test
+  fun `test class hierarchy generated for 'nested' annotation using library types`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val typeSpec = findTypeMod("Root@!root", generateTypes(testUri, typeRegistry, compiler))
+
+    assertEquals(
+      """
+
+      export interface RootSpec {
+
+        value: string;
+
+      }
+
+      export class Root implements RootSpec {
+
+        value: string;
+
+        constructor(init: RootSpec) {
+          this.value = init.value;
+        }
+
+        copy(changes: Partial<RootSpec>): Root {
+          return new Root(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Root(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      export namespace Root {
+
         export interface GroupSpec {
 
           value: string;
@@ -268,198 +430,45 @@ class RamlTypeAnnotationsTest {
           }
 
           toString(): string {
-            return `Group(value='${'$'}{this.value}')`;
+            return `Root.Group(value='${'$'}{this.value}')`;
           }
 
         }
 
         export namespace Group {
 
-          export interface Member1Spec extends GroupSpec {
+          export interface MemberSpec {
 
-            memberValue1: string;
+            memberValue: string;
 
           }
 
-          export class Member1 extends Group implements Member1Spec {
+          export class Member implements MemberSpec {
 
-            memberValue1: string;
+            memberValue: string;
 
-            constructor(init: Member1Spec) {
-              super(init);
-              this.memberValue1 = init.memberValue1;
+            constructor(init: MemberSpec) {
+              this.memberValue = init.memberValue;
             }
 
-            copy(changes: Partial<Member1Spec>): Member1 {
-              return new Member1(Object.assign({}, this, changes));
+            copy(changes: Partial<MemberSpec>): Member {
+              return new Member(Object.assign({}, this, changes));
             }
 
             toString(): string {
-              return `Group.Member1(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}')`;
-            }
-
-          }
-
-          export namespace Member1 {
-
-            export interface SubSpec extends Member1Spec {
-
-              subMemberValue: string;
-
-            }
-
-            export class Sub extends Member1 implements SubSpec {
-
-              subMemberValue: string;
-
-              constructor(init: SubSpec) {
-                super(init);
-                this.subMemberValue = init.subMemberValue;
-              }
-
-              copy(changes: Partial<SubSpec>): Sub {
-                return new Sub(Object.assign({}, this, changes));
-              }
-
-              toString(): string {
-                return `Group.Member1.Sub(value='${'$'}{this.value}', memberValue1='${'$'}{this.memberValue1}', subMemberValue='${'$'}{this.subMemberValue}')`;
-              }
-
-            }
-
-          }
-
-          export interface Member2Spec extends GroupSpec {
-
-            memberValue2: string;
-
-          }
-
-          export class Member2 extends Group implements Member2Spec {
-
-            memberValue2: string;
-
-            constructor(init: Member2Spec) {
-              super(init);
-              this.memberValue2 = init.memberValue2;
-            }
-
-            copy(changes: Partial<Member2Spec>): Member2 {
-              return new Member2(Object.assign({}, this, changes));
-            }
-
-            toString(): string {
-              return `Group.Member2(value='${'$'}{this.value}', memberValue2='${'$'}{this.memberValue2}')`;
+              return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
             }
 
           }
 
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeModSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test class hierarchy generated for 'nested' annotation using library types`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/annotations/type-nested-lib.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val typeSpec = findTypeMod("Root@!root", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-        export interface RootSpec {
-
-          value: string;
-
-        }
-
-        export class Root implements RootSpec {
-
-          value: string;
-
-          constructor(init: RootSpec) {
-            this.value = init.value;
-          }
-
-          copy(changes: Partial<RootSpec>): Root {
-            return new Root(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Root(value='${'$'}{this.value}')`;
-          }
-
-        }
-
-        export namespace Root {
-
-          export interface GroupSpec {
-
-            value: string;
-
-          }
-
-          export class Group implements GroupSpec {
-
-            value: string;
-
-            constructor(init: GroupSpec) {
-              this.value = init.value;
-            }
-
-            copy(changes: Partial<GroupSpec>): Group {
-              return new Group(Object.assign({}, this, changes));
-            }
-
-            toString(): string {
-              return `Root.Group(value='${'$'}{this.value}')`;
-            }
-
-          }
-
-          export namespace Group {
-
-            export interface MemberSpec {
-
-              memberValue: string;
-
-            }
-
-            export class Member implements MemberSpec {
-
-              memberValue: string;
-
-              constructor(init: MemberSpec) {
-                this.memberValue = init.memberValue;
-              }
-
-              copy(changes: Partial<MemberSpec>): Member {
-                return new Member(Object.assign({}, this, changes));
-              }
-
-              toString(): string {
-                return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
-              }
-
-            }
-
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -478,89 +487,90 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
 
-        export interface RootSpec {
+      export interface RootSpec {
+
+        value: string;
+
+      }
+
+      export class Root implements RootSpec {
+
+        value: string;
+
+        constructor(init: RootSpec) {
+          this.value = init.value;
+        }
+
+        copy(changes: Partial<RootSpec>): Root {
+          return new Root(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Root(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      export namespace Root {
+
+        export interface GroupSpec {
 
           value: string;
 
         }
 
-        export class Root implements RootSpec {
+        export class Group implements GroupSpec {
 
           value: string;
 
-          constructor(init: RootSpec) {
+          constructor(init: GroupSpec) {
             this.value = init.value;
           }
 
-          copy(changes: Partial<RootSpec>): Root {
-            return new Root(Object.assign({}, this, changes));
+          copy(changes: Partial<GroupSpec>): Group {
+            return new Group(Object.assign({}, this, changes));
           }
 
           toString(): string {
-            return `Root(value='${'$'}{this.value}')`;
+            return `Root.Group(value='${'$'}{this.value}')`;
           }
 
         }
 
-        export namespace Root {
+        export namespace Group {
 
-          export interface GroupSpec {
+          export interface MemberSpec {
 
-            value: string;
+            memberValue: string;
 
           }
 
-          export class Group implements GroupSpec {
+          export class Member implements MemberSpec {
 
-            value: string;
+            memberValue: string;
 
-            constructor(init: GroupSpec) {
-              this.value = init.value;
+            constructor(init: MemberSpec) {
+              this.memberValue = init.memberValue;
             }
 
-            copy(changes: Partial<GroupSpec>): Group {
-              return new Group(Object.assign({}, this, changes));
+            copy(changes: Partial<MemberSpec>): Member {
+              return new Member(Object.assign({}, this, changes));
             }
 
             toString(): string {
-              return `Root.Group(value='${'$'}{this.value}')`;
-            }
-
-          }
-
-          export namespace Group {
-
-            export interface MemberSpec {
-
-              memberValue: string;
-
-            }
-
-            export class Member implements MemberSpec {
-
-              memberValue: string;
-
-              constructor(init: MemberSpec) {
-                this.memberValue = init.memberValue;
-              }
-
-              copy(changes: Partial<MemberSpec>): Member {
-                return new Member(Object.assign({}, this, changes));
-              }
-
-              toString(): string {
-                return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
-              }
-
+              return `Root.Group.Member(memberValue='${'$'}{this.memberValue}')`;
             }
 
           }
 
         }
 
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -578,29 +588,30 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonIgnore} from '@outfoxx/jackson-js';
-        import {OffsetDateTime} from '@outfoxx/sunday';
+      import {JsonIgnore} from '@outfoxx/jackson-js';
+      import {OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
+      }
+
+      export class Test implements TestSpec {
+
+        @JsonIgnore()
+        get className(): string {
+          return OffsetDateTime.name + '-value-' + "-literal";
         }
 
-        export class Test implements TestSpec {
-
-          @JsonIgnore()
-          get className(): string {
-            return OffsetDateTime.name + '-value-' + "-literal";
-          }
-
-          toString(): string {
-            return `Test()`;
-          }
-
+        toString(): string {
+          return `Test()`;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -616,193 +627,201 @@ class RamlTypeAnnotationsTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
 
-    val parenTypeSpec = builtTypes[TypeName.namedImport("Parent", "!parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[TypeName.namedImport("Parent", "!parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        import {Child1, Child2} from './index';
-        import {JsonSubTypes} from '@outfoxx/jackson-js';
+      import {Child1, Child2} from './index';
+      import {JsonSubTypes} from '@outfoxx/jackson-js';
 
 
-        export interface ParentSpec {
+      export interface ParentSpec {
+      }
+
+      @JsonSubTypes({
+        types: [
+          {class: () => Child1, name: 'Child1'},
+          {class: () => Child2, name: 'child2'}
+        ]
+      })
+      export abstract class Parent implements ParentSpec {
+
+        toString(): string {
+          return `Parent()`;
         }
 
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(parenTypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child1TypeSpec =
+      builtTypes[TypeName.namedImport("Child1", "!child1")]
+        ?: error("Child1 type is not defined")
+
+    assertEquals(
+      """
+      import {Parent, ParentSpec} from './parent';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+      export interface Child1Spec extends ParentSpec {
+
+        value?: string;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child1 extends Parent implements Child1Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child1Spec) {
+          super();
+          this.value = init.value;
+        }
+
+        get type(): string {
+          return 'Child1';
+        }
+
+        copy(changes: Partial<Child1Spec>): Child1 {
+          return new Child1(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child1(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(child1TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child2TypeSpec =
+      builtTypes[TypeName.namedImport("Child2", "!child2")]
+        ?: error("Child2 type is not defined")
+
+    assertEquals(
+      """
+      import {Parent, ParentSpec} from './parent';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+      export interface Child2Spec extends ParentSpec {
+
+        value?: string;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child2 extends Parent implements Child2Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child2Spec) {
+          super();
+          this.value = init.value;
+        }
+
+        get type(): string {
+          return 'child2';
+        }
+
+        copy(changes: Partial<Child2Spec>): Child2 {
+          return new Child2(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child2(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(child2TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val testTypeSpec =
+      builtTypes[TypeName.namedImport("Test", "!test")]
+        ?: error("Test type is not defined")
+
+    assertEquals(
+      """
+      import {Child1, Child2} from './index';
+      import {Parent} from './parent';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+
+
+      export interface TestSpec {
+
+        parent: Parent;
+
+        parentType: string;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonTypeInfo({
+          use: JsonTypeInfoId.NAME,
+          include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
+          property: 'parentType',
+        })
         @JsonSubTypes({
           types: [
             {class: () => Child1, name: 'Child1'},
             {class: () => Child2, name: 'child2'}
           ]
         })
-        export abstract class Parent implements ParentSpec {
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Parent]})
+        parent: Parent;
 
-          toString(): string {
-            return `Parent()`;
-          }
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [String]})
+        parentType: string;
 
+        constructor(init: TestSpec) {
+          this.parent = init.parent;
+          this.parentType = init.parentType;
         }
+
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Test(parent='${'$'}{this.parent}', parentType='${'$'}{this.parentType}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(parenTypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val child1TypeSpec = builtTypes[TypeName.namedImport("Child1", "!child1")]
-      ?: error("Child1 type is not defined")
-
-    assertEquals(
-      """
-        import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-        export interface Child1Spec extends ParentSpec {
-
-          value?: string;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child1 extends Parent implements Child1Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child1Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): string {
-            return 'Child1';
-          }
-
-          copy(changes: Partial<Child1Spec>): Child1 {
-            return new Child1(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child1(value='${'$'}{this.value}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(child1TypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val child2TypeSpec = builtTypes[TypeName.namedImport("Child2", "!child2")]
-      ?: error("Child2 type is not defined")
-
-    assertEquals(
-      """
-        import {Parent, ParentSpec} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-        export interface Child2Spec extends ParentSpec {
-
-          value?: string;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child2 extends Parent implements Child2Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child2Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): string {
-            return 'child2';
-          }
-
-          copy(changes: Partial<Child2Spec>): Child2 {
-            return new Child2(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child2(value='${'$'}{this.value}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(child2TypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val testTypeSpec = builtTypes[TypeName.namedImport("Test", "!test")]
-      ?: error("Test type is not defined")
-
-    assertEquals(
-      """
-        import {Child1, Child2} from './index';
-        import {Parent} from './parent';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
-
-
-        export interface TestSpec {
-
-          parent: Parent;
-
-          parentType: string;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonTypeInfo({
-            use: JsonTypeInfoId.NAME,
-            include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
-            property: 'parentType',
-          })
-          @JsonSubTypes({
-            types: [
-              {class: () => Child1, name: 'Child1'},
-              {class: () => Child2, name: 'child2'}
-            ]
-          })
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Parent]})
-          parent: Parent;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [String]})
-          parentType: string;
-
-          constructor(init: TestSpec) {
-            this.parent = init.parent;
-            this.parentType = init.parentType;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(parent='${'$'}{this.parent}', parentType='${'$'}{this.parentType}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(testTypeSpec)
+        FileSpec
+          .get(testTypeSpec)
           .writeTo(this)
       },
     )
@@ -818,196 +837,204 @@ class RamlTypeAnnotationsTest {
 
     val builtTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
 
-    val parenTypeSpec = builtTypes[TypeName.namedImport("Parent", "!parent")]
-      ?: error("Parent type is not defined")
+    val parenTypeSpec =
+      builtTypes[TypeName.namedImport("Parent", "!parent")]
+        ?: error("Parent type is not defined")
 
     assertEquals(
       """
-        import {Child1, Child2} from './index';
-        import {JsonSubTypes} from '@outfoxx/jackson-js';
+      import {Child1, Child2} from './index';
+      import {JsonSubTypes} from '@outfoxx/jackson-js';
 
 
-        export interface ParentSpec {
+      export interface ParentSpec {
+      }
+
+      @JsonSubTypes({
+        types: [
+          {class: () => Child2, name: 'child-2' /* Type.Child2 */},
+          {class: () => Child1, name: 'child-1' /* Type.Child1 */}
+        ]
+      })
+      export abstract class Parent implements ParentSpec {
+
+        toString(): string {
+          return `Parent()`;
         }
 
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(parenTypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child1TypeSpec =
+      builtTypes[TypeName.namedImport("Child1", "!child1")]
+        ?: error("Child1 type is not defined")
+
+    assertEquals(
+      """
+      import {Parent, ParentSpec} from './parent';
+      import {Type} from './type';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+      export interface Child1Spec extends ParentSpec {
+
+        value?: string;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child1 extends Parent implements Child1Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child1Spec) {
+          super();
+          this.value = init.value;
+        }
+
+        get type(): Type {
+          return Type.Child1;
+        }
+
+        copy(changes: Partial<Child1Spec>): Child1 {
+          return new Child1(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child1(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(child1TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val child2TypeSpec =
+      builtTypes[TypeName.namedImport("Child2", "!child2")]
+        ?: error("Child2 type is not defined")
+
+    assertEquals(
+      """
+      import {Parent, ParentSpec} from './parent';
+      import {Type} from './type';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+
+
+      export interface Child2Spec extends ParentSpec {
+
+        value?: string;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Child2 extends Parent implements Child2Spec {
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        value: string | undefined;
+
+        constructor(init: Child2Spec) {
+          super();
+          this.value = init.value;
+        }
+
+        get type(): Type {
+          return Type.Child2;
+        }
+
+        copy(changes: Partial<Child2Spec>): Child2 {
+          return new Child2(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Child2(value='${'$'}{this.value}')`;
+        }
+
+      }
+
+      """.trimIndent(),
+      buildString {
+        FileSpec
+          .get(child2TypeSpec)
+          .writeTo(this)
+      },
+    )
+
+    val testTypeSpec =
+      builtTypes[TypeName.namedImport("Test", "!test")]
+        ?: error("Test type is not defined")
+
+    assertEquals(
+      """
+      import {Child1, Child2} from './index';
+      import {Parent} from './parent';
+      import {Type} from './type';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+
+
+      export interface TestSpec {
+
+        parent: Parent;
+
+        parentType: Type;
+
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonTypeInfo({
+          use: JsonTypeInfoId.NAME,
+          include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
+          property: 'parentType',
+        })
         @JsonSubTypes({
           types: [
             {class: () => Child2, name: 'child-2' /* Type.Child2 */},
             {class: () => Child1, name: 'child-1' /* Type.Child1 */}
           ]
         })
-        export abstract class Parent implements ParentSpec {
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Parent]})
+        parent: Parent;
 
-          toString(): string {
-            return `Parent()`;
-          }
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Object]})
+        parentType: Type;
 
+        constructor(init: TestSpec) {
+          this.parent = init.parent;
+          this.parentType = init.parentType;
         }
+
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
+        }
+
+        toString(): string {
+          return `Test(parent='${'$'}{this.parent}', parentType='${'$'}{this.parentType}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(parenTypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val child1TypeSpec = builtTypes[TypeName.namedImport("Child1", "!child1")]
-      ?: error("Child1 type is not defined")
-
-    assertEquals(
-      """
-        import {Parent, ParentSpec} from './parent';
-        import {Type} from './type';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-        export interface Child1Spec extends ParentSpec {
-
-          value?: string;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child1 extends Parent implements Child1Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child1Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): Type {
-            return Type.Child1;
-          }
-
-          copy(changes: Partial<Child1Spec>): Child1 {
-            return new Child1(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child1(value='${'$'}{this.value}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(child1TypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val child2TypeSpec = builtTypes[TypeName.namedImport("Child2", "!child2")]
-      ?: error("Child2 type is not defined")
-
-    assertEquals(
-      """
-        import {Parent, ParentSpec} from './parent';
-        import {Type} from './type';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-        export interface Child2Spec extends ParentSpec {
-
-          value?: string;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Child2 extends Parent implements Child2Spec {
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          value: string | undefined;
-
-          constructor(init: Child2Spec) {
-            super();
-            this.value = init.value;
-          }
-
-          get type(): Type {
-            return Type.Child2;
-          }
-
-          copy(changes: Partial<Child2Spec>): Child2 {
-            return new Child2(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Child2(value='${'$'}{this.value}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(child2TypeSpec)
-          .writeTo(this)
-      },
-    )
-
-    val testTypeSpec = builtTypes[TypeName.namedImport("Test", "!test")]
-      ?: error("Test type is not defined")
-
-    assertEquals(
-      """
-        import {Child1, Child2} from './index';
-        import {Parent} from './parent';
-        import {Type} from './type';
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
-
-
-        export interface TestSpec {
-
-          parent: Parent;
-
-          parentType: Type;
-
-        }
-
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonTypeInfo({
-            use: JsonTypeInfoId.NAME,
-            include: JsonTypeInfoAs.EXTERNAL_PROPERTY,
-            property: 'parentType',
-          })
-          @JsonSubTypes({
-            types: [
-              {class: () => Child2, name: 'child-2' /* Type.Child2 */},
-              {class: () => Child1, name: 'child-1' /* Type.Child1 */}
-            ]
-          })
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Parent]})
-          parent: Parent;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Object]})
-          parentType: Type;
-
-          constructor(init: TestSpec) {
-            this.parent = init.parent;
-            this.parentType = init.parentType;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(parent='${'$'}{this.parent}', parentType='${'$'}{this.parentType}')`;
-          }
-
-        }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec.get(testTypeSpec)
+        FileSpec
+          .get(testTypeSpec)
           .writeTo(this)
       },
     )
@@ -1042,58 +1069,59 @@ class RamlTypeAnnotationsTest {
     assertEquals(
       """
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          string: string;
+        string: string;
 
-          int: number;
+        int: number;
 
-          bool: boolean;
+        bool: boolean;
 
-          nullable: string | null;
+        nullable: string | null;
 
-          optional?: string;
+        optional?: string;
 
-          nullableOptional?: string | null;
+        nullableOptional?: string | null;
 
+      }
+
+      export class Test implements TestSpec {
+
+        string: string;
+
+        int: number;
+
+        bool: boolean;
+
+        nullable: string | null;
+
+        optional: string | undefined;
+
+        nullableOptional: string | null | undefined;
+
+        constructor(init: TestSpec) {
+          this.string = init.string;
+          this.int = init.int;
+          this.bool = init.bool;
+          this.nullable = init.nullable;
+          this.optional = init.optional;
+          this.nullableOptional = init.nullableOptional;
         }
 
-        export class Test implements TestSpec {
-
-          string: string;
-
-          int: number;
-
-          bool: boolean;
-
-          nullable: string | null;
-
-          optional: string | undefined;
-
-          nullableOptional: string | null | undefined;
-
-          constructor(init: TestSpec) {
-            this.string = init.string;
-            this.int = init.int;
-            this.bool = init.bool;
-            this.nullable = init.nullable;
-            this.optional = init.optional;
-            this.nullableOptional = init.nullableOptional;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -1111,75 +1139,76 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonInclude, JsonIncludeType, JsonProperty} from '@outfoxx/jackson-js';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonInclude, JsonIncludeType, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          string: string;
+        string: string;
 
-          int: number;
+        int: number;
 
-          bool: boolean;
+        bool: boolean;
 
-          nullable: string | null;
+        nullable: string | null;
 
-          optional?: string;
+        optional?: string;
 
-          nullableOptional?: string | null;
+        nullableOptional?: string | null;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      @JsonInclude({value: JsonIncludeType.ALWAYS})
+      export class Test implements TestSpec {
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [String]})
+        string: string;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Boolean]})
+        bool: boolean;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [String]})
+        nullable: string | null;
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        optional: string | undefined;
+
+        @JsonProperty()
+        @JsonClassType({type: () => [String]})
+        nullableOptional: string | null | undefined;
+
+        constructor(init: TestSpec) {
+          this.string = init.string;
+          this.int = init.int;
+          this.bool = init.bool;
+          this.nullable = init.nullable;
+          this.optional = init.optional;
+          this.nullableOptional = init.nullableOptional;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        @JsonInclude({value: JsonIncludeType.ALWAYS})
-        export class Test implements TestSpec {
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [String]})
-          string: string;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Boolean]})
-          bool: boolean;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [String]})
-          nullable: string | null;
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          optional: string | undefined;
-
-          @JsonProperty()
-          @JsonClassType({type: () => [String]})
-          nullableOptional: string | null | undefined;
-
-          constructor(init: TestSpec) {
-            this.string = init.string;
-            this.int = init.int;
-            this.bool = init.bool;
-            this.nullable = init.nullable;
-            this.optional = init.optional;
-            this.nullableOptional = init.nullableOptional;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(string='${'$'}{this.string}', int='${'$'}{this.int}', bool='${'$'}{this.bool}', nullable='${'$'}{this.nullable}', optional='${'$'}{this.optional}', nullableOptional='${'$'}{this.nullableOptional}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -1197,35 +1226,36 @@ class RamlTypeAnnotationsTest {
 
     assertEquals(
       """
-        import {Child} from './index';
-        import {JsonInclude, JsonIncludeType, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
+      import {Child} from './index';
+      import {JsonInclude, JsonIncludeType, JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
+      }
+
+      @JsonInclude({value: JsonIncludeType.ALWAYS})
+      @JsonTypeInfo({
+        use: JsonTypeInfoId.NAME,
+        include: JsonTypeInfoAs.PROPERTY,
+        property: 'type',
+      })
+      @JsonSubTypes({
+        types: [
+          {class: () => Child, name: 'child' /* TestType.Child */}
+        ]
+      })
+      export abstract class Test implements TestSpec {
+
+        toString(): string {
+          return `Test()`;
         }
 
-        @JsonInclude({value: JsonIncludeType.ALWAYS})
-        @JsonTypeInfo({
-          use: JsonTypeInfoId.NAME,
-          include: JsonTypeInfoAs.PROPERTY,
-          property: 'type',
-        })
-        @JsonSubTypes({
-          types: [
-            {class: () => Child, name: 'child' /* TestType.Child */}
-          ]
-        })
-        export abstract class Test implements TestSpec {
-
-          toString(): string {
-            return `Test()`;
-          }
-
-        }
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

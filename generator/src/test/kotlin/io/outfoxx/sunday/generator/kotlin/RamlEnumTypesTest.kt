@@ -42,20 +42,21 @@ class RamlEnumTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        public enum class TestEnum {
-          None,
-          Some,
-          All,
-          SnakeCase,
-          KebabCase,
-          InvalidChar,
-        }
+      public enum class TestEnum {
+        None,
+        Some,
+        All,
+        SnakeCase,
+        KebabCase,
+        InvalidChar,
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -72,28 +73,29 @@ class RamlEnumTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import com.fasterxml.jackson.`annotation`.JsonProperty
+      import com.fasterxml.jackson.`annotation`.JsonProperty
 
-        public enum class TestEnum {
-          @JsonProperty(value = "none")
-          None,
-          @JsonProperty(value = "some")
-          Some,
-          @JsonProperty(value = "all")
-          All,
-          @JsonProperty(value = "snake_case")
-          SnakeCase,
-          @JsonProperty(value = "kebab-case")
-          KebabCase,
-          @JsonProperty(value = "invalid:char")
-          InvalidChar,
-        }
+      public enum class TestEnum {
+        @JsonProperty(value = "none")
+        None,
+        @JsonProperty(value = "some")
+        Some,
+        @JsonProperty(value = "all")
+        All,
+        @JsonProperty(value = "snake_case")
+        SnakeCase,
+        @JsonProperty(value = "kebab-case")
+        KebabCase,
+        @JsonProperty(value = "invalid:char")
+        InvalidChar,
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

@@ -21,21 +21,25 @@ import java.io.Closeable
 import java.nio.file.Path
 import kotlin.text.RegexOption.IGNORE_CASE
 
-abstract class SwiftCompiler(val workDir: Path) : Closeable {
+abstract class SwiftCompiler(
+  val workDir: Path,
+) : Closeable {
 
   companion object {
 
     fun create(workDir: Path): SwiftCompiler {
 
-      fun useDocker(message: String) = run {
-        println("### $message, using Docker")
-        DockerSwiftCompiler(workDir)
-      }
+      fun useDocker(message: String) =
+        run {
+          println("### $message, using Docker")
+          DockerSwiftCompiler(workDir)
+        }
 
-      fun useLocal(command: String) = run {
-        println("### Using Local 'swift' with command '$command'")
-        LocalSwiftCompiler(command, workDir)
-      }
+      fun useLocal(command: String) =
+        run {
+          println("### Using Local 'swift' with command '$command'")
+          LocalSwiftCompiler(command, workDir)
+        }
 
       val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
       if (forceDocker) {

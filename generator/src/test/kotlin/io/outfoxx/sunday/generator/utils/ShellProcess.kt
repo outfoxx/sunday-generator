@@ -20,29 +20,34 @@ object ShellProcess {
 
   const val DEFAULT_SHELL = "/bin/sh"
 
-  fun execute(command: String, vararg args: String, useEnvShell: Boolean = false): Pair<Boolean, String> {
+  fun execute(
+    command: String,
+    vararg args: String,
+    useEnvShell: Boolean = false,
+  ): Pair<Boolean, String> {
     val process =
       ProcessBuilder()
         .command(getShell(useEnvShell), command, *args)
         .apply {
           environment().putAll(loadExtraEnvironment())
-        }
-        .start()
+        }.start()
 
     val result = process.waitFor()
-    val out = if (result == 0) {
-      process.inputStream.readAllBytes().decodeToString()
-    } else {
-      process.errorStream.readAllBytes().decodeToString()
-    }
+    val out =
+      if (result == 0) {
+        process.inputStream.readAllBytes().decodeToString()
+      } else {
+        process.errorStream.readAllBytes().decodeToString()
+      }
     return (result == 0) to out
   }
 
   fun getShell(fromEnv: Boolean = false) =
-    if (fromEnv)
+    if (fromEnv) {
       System.getenv("SHELL").ifBlank { null } ?: DEFAULT_SHELL
-    else
+    } else {
       DEFAULT_SHELL
+    }
 
   fun loadExtraEnvironment(): Map<String, String> {
     if (System.getenv("CI") != null) {
@@ -67,7 +72,9 @@ object ShellProcess {
           .start()
 
       return if (loadEnv.waitFor() == 0) {
-        loadEnv.inputStream.readAllBytes().decodeToString()
+        loadEnv.inputStream
+          .readAllBytes()
+          .decodeToString()
           .split("\n")
           .map { it.removePrefix("export ") }
           .filter { it.isNotBlank() }
@@ -80,5 +87,4 @@ object ShellProcess {
       return mapOf()
     }
   }
-
 }

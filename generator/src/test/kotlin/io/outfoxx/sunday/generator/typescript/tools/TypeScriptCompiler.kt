@@ -22,21 +22,25 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-abstract class TypeScriptCompiler(val workDir: Path) : Closeable {
+abstract class TypeScriptCompiler(
+  val workDir: Path,
+) : Closeable {
 
   companion object {
 
     fun create(workDir: Path): TypeScriptCompiler {
 
-      fun useDocker(message: String) = run {
-        println("### $message, using Docker")
-        DockerTypeScriptCompiler(workDir)
-      }
+      fun useDocker(message: String) =
+        run {
+          println("### $message, using Docker")
+          DockerTypeScriptCompiler(workDir)
+        }
 
-      fun useLocal(path: String) = run {
-        println("### Local '$path' found at $path")
-        LocalTypeScriptCompiler(path, workDir)
-      }
+      fun useLocal(path: String) =
+        run {
+          println("### Local '$path' found at $path")
+          LocalTypeScriptCompiler(path, workDir)
+        }
 
       val forceDocker = System.getProperty("sunday.validation.force-docker", "false").toBoolean()
       if (forceDocker) {

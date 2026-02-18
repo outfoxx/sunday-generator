@@ -44,53 +44,54 @@ class RamlScalarTypesTest {
     assertEquals(
       """
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          bool: boolean;
+        bool: boolean;
 
-          string: string;
+        string: string;
 
-          file: ArrayBuffer;
+        file: ArrayBuffer;
 
-          any: any;
+        any: any;
 
-          nil: null;
+        nil: null;
 
+      }
+
+      export class Test implements TestSpec {
+
+        bool: boolean;
+
+        string: string;
+
+        file: ArrayBuffer;
+
+        any: any;
+
+        nil: null;
+
+        constructor(init: TestSpec) {
+          this.bool = init.bool;
+          this.string = init.string;
+          this.file = init.file;
+          this.any = init.any;
+          this.nil = init.nil;
         }
 
-        export class Test implements TestSpec {
-
-          bool: boolean;
-
-          string: string;
-
-          file: ArrayBuffer;
-
-          any: any;
-
-          nil: null;
-
-          constructor(init: TestSpec) {
-            this.bool = init.bool;
-            this.string = init.string;
-            this.file = init.file;
-            this.any = init.any;
-            this.nil = init.nil;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(bool='${'$'}{this.bool}', string='${'$'}{this.string}', file='${'$'}{this.file}', any='${'$'}{this.any}', nil='${'$'}{this.nil}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(bool='${'$'}{this.bool}', string='${'$'}{this.string}', file='${'$'}{this.file}', any='${'$'}{this.any}', nil='${'$'}{this.nil}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -108,67 +109,68 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          bool: boolean;
+        bool: boolean;
 
-          string: string;
+        string: string;
 
-          file: ArrayBuffer;
+        file: ArrayBuffer;
 
-          any: any;
+        any: any;
 
-          nil: null;
+        nil: null;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Boolean]})
+        bool: boolean;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [String]})
+        string: string;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [ArrayBuffer]})
+        file: ArrayBuffer;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Object]})
+        any: any;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Object]})
+        nil: null;
+
+        constructor(init: TestSpec) {
+          this.bool = init.bool;
+          this.string = init.string;
+          this.file = init.file;
+          this.any = init.any;
+          this.nil = init.nil;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Boolean]})
-          bool: boolean;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [String]})
-          string: string;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [ArrayBuffer]})
-          file: ArrayBuffer;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Object]})
-          any: any;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Object]})
-          nil: null;
-
-          constructor(init: TestSpec) {
-            this.bool = init.bool;
-            this.string = init.string;
-            this.file = init.file;
-            this.any = init.any;
-            this.nil = init.nil;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(bool='${'$'}{this.bool}', string='${'$'}{this.string}', file='${'$'}{this.file}', any='${'$'}{this.any}', nil='${'$'}{this.nil}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(bool='${'$'}{this.bool}', string='${'$'}{this.string}', file='${'$'}{this.file}', any='${'$'}{this.any}', nil='${'$'}{this.nil}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -187,63 +189,64 @@ class RamlScalarTypesTest {
     assertEquals(
       """
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          int8: number;
+        int8: number;
 
-          int16: number;
+        int16: number;
 
-          int32: number;
+        int32: number;
 
-          int64: number;
+        int64: number;
 
-          int: number;
+        int: number;
 
-          long: number;
+        long: number;
 
-          none: number;
+        none: number;
 
+      }
+
+      export class Test implements TestSpec {
+
+        int8: number;
+
+        int16: number;
+
+        int32: number;
+
+        int64: number;
+
+        int: number;
+
+        long: number;
+
+        none: number;
+
+        constructor(init: TestSpec) {
+          this.int8 = init.int8;
+          this.int16 = init.int16;
+          this.int32 = init.int32;
+          this.int64 = init.int64;
+          this.int = init.int;
+          this.long = init.long;
+          this.none = init.none;
         }
 
-        export class Test implements TestSpec {
-
-          int8: number;
-
-          int16: number;
-
-          int32: number;
-
-          int64: number;
-
-          int: number;
-
-          long: number;
-
-          none: number;
-
-          constructor(init: TestSpec) {
-            this.int8 = init.int8;
-            this.int16 = init.int16;
-            this.int32 = init.int32;
-            this.int64 = init.int64;
-            this.int = init.int;
-            this.long = init.long;
-            this.none = init.none;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(int8='${'$'}{this.int8}', int16='${'$'}{this.int16}', int32='${'$'}{this.int32}', int64='${'$'}{this.int64}', int='${'$'}{this.int}', long='${'$'}{this.long}', none='${'$'}{this.none}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(int8='${'$'}{this.int8}', int16='${'$'}{this.int16}', int32='${'$'}{this.int32}', int64='${'$'}{this.int64}', int='${'$'}{this.int}', long='${'$'}{this.long}', none='${'$'}{this.none}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -261,81 +264,82 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          int8: number;
+        int8: number;
 
-          int16: number;
+        int16: number;
 
-          int32: number;
+        int32: number;
 
-          int64: number;
+        int64: number;
 
-          int: number;
+        int: number;
 
-          long: number;
+        long: number;
 
-          none: number;
+        none: number;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int8: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int16: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int32: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int64: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        int: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        long: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        none: number;
+
+        constructor(init: TestSpec) {
+          this.int8 = init.int8;
+          this.int16 = init.int16;
+          this.int32 = init.int32;
+          this.int64 = init.int64;
+          this.int = init.int;
+          this.long = init.long;
+          this.none = init.none;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int8: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int16: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int32: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int64: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          int: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          long: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          none: number;
-
-          constructor(init: TestSpec) {
-            this.int8 = init.int8;
-            this.int16 = init.int16;
-            this.int32 = init.int32;
-            this.int64 = init.int64;
-            this.int = init.int;
-            this.long = init.long;
-            this.none = init.none;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(int8='${'$'}{this.int8}', int16='${'$'}{this.int16}', int32='${'$'}{this.int32}', int64='${'$'}{this.int64}', int='${'$'}{this.int}', long='${'$'}{this.long}', none='${'$'}{this.none}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(int8='${'$'}{this.int8}', int16='${'$'}{this.int16}', int32='${'$'}{this.int32}', int64='${'$'}{this.int64}', int='${'$'}{this.int}', long='${'$'}{this.long}', none='${'$'}{this.none}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -354,43 +358,44 @@ class RamlScalarTypesTest {
     assertEquals(
       """
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          float: number;
+        float: number;
 
-          double: number;
+        double: number;
 
-          none: number;
+        none: number;
 
+      }
+
+      export class Test implements TestSpec {
+
+        float: number;
+
+        double: number;
+
+        none: number;
+
+        constructor(init: TestSpec) {
+          this.float = init.float;
+          this.double = init.double;
+          this.none = init.none;
         }
 
-        export class Test implements TestSpec {
-
-          float: number;
-
-          double: number;
-
-          none: number;
-
-          constructor(init: TestSpec) {
-            this.float = init.float;
-            this.double = init.double;
-            this.none = init.none;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(float='${'$'}{this.float}', double='${'$'}{this.double}', none='${'$'}{this.none}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(float='${'$'}{this.float}', double='${'$'}{this.double}', none='${'$'}{this.none}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -408,53 +413,54 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          float: number;
+        float: number;
 
-          double: number;
+        double: number;
 
-          none: number;
+        none: number;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        float: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        double: number;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [Number]})
+        none: number;
+
+        constructor(init: TestSpec) {
+          this.float = init.float;
+          this.double = init.double;
+          this.none = init.none;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          float: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          double: number;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [Number]})
-          none: number;
-
-          constructor(init: TestSpec) {
-            this.float = init.float;
-            this.double = init.double;
-            this.none = init.none;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(float='${'$'}{this.float}', double='${'$'}{this.double}', none='${'$'}{this.none}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(float='${'$'}{this.float}', double='${'$'}{this.double}', none='${'$'}{this.none}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -472,51 +478,52 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
+      import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          dateOnly: LocalDate;
+        dateOnly: LocalDate;
 
-          timeOnly: LocalTime;
+        timeOnly: LocalTime;
 
-          dateTimeOnly: LocalDateTime;
+        dateTimeOnly: LocalDateTime;
 
-          dateTime: OffsetDateTime;
+        dateTime: OffsetDateTime;
 
+      }
+
+      export class Test implements TestSpec {
+
+        dateOnly: LocalDate;
+
+        timeOnly: LocalTime;
+
+        dateTimeOnly: LocalDateTime;
+
+        dateTime: OffsetDateTime;
+
+        constructor(init: TestSpec) {
+          this.dateOnly = init.dateOnly;
+          this.timeOnly = init.timeOnly;
+          this.dateTimeOnly = init.dateTimeOnly;
+          this.dateTime = init.dateTime;
         }
 
-        export class Test implements TestSpec {
-
-          dateOnly: LocalDate;
-
-          timeOnly: LocalTime;
-
-          dateTimeOnly: LocalDateTime;
-
-          dateTime: OffsetDateTime;
-
-          constructor(init: TestSpec) {
-            this.dateOnly = init.dateOnly;
-            this.timeOnly = init.timeOnly;
-            this.dateTimeOnly = init.dateTimeOnly;
-            this.dateTime = init.dateTime;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(dateOnly='${'$'}{this.dateOnly}', timeOnly='${'$'}{this.timeOnly}', dateTimeOnly='${'$'}{this.dateTimeOnly}', dateTime='${'$'}{this.dateTime}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(dateOnly='${'$'}{this.dateOnly}', timeOnly='${'$'}{this.timeOnly}', dateTimeOnly='${'$'}{this.dateTimeOnly}', dateTime='${'$'}{this.dateTime}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -534,61 +541,62 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-        import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
+      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
+      import {LocalDate, LocalDateTime, LocalTime, OffsetDateTime} from '@outfoxx/sunday';
 
 
-        export interface TestSpec {
+      export interface TestSpec {
 
-          dateOnly: LocalDate;
+        dateOnly: LocalDate;
 
-          timeOnly: LocalTime;
+        timeOnly: LocalTime;
 
-          dateTimeOnly: LocalDateTime;
+        dateTimeOnly: LocalDateTime;
 
-          dateTime: OffsetDateTime;
+        dateTime: OffsetDateTime;
 
+      }
+
+      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
+      export class Test implements TestSpec {
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [LocalDate]})
+        dateOnly: LocalDate;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [LocalTime]})
+        timeOnly: LocalTime;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [LocalDateTime]})
+        dateTimeOnly: LocalDateTime;
+
+        @JsonProperty({required: true})
+        @JsonClassType({type: () => [OffsetDateTime]})
+        dateTime: OffsetDateTime;
+
+        constructor(init: TestSpec) {
+          this.dateOnly = init.dateOnly;
+          this.timeOnly = init.timeOnly;
+          this.dateTimeOnly = init.dateTimeOnly;
+          this.dateTime = init.dateTime;
         }
 
-        @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-        export class Test implements TestSpec {
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [LocalDate]})
-          dateOnly: LocalDate;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [LocalTime]})
-          timeOnly: LocalTime;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [LocalDateTime]})
-          dateTimeOnly: LocalDateTime;
-
-          @JsonProperty({required: true})
-          @JsonClassType({type: () => [OffsetDateTime]})
-          dateTime: OffsetDateTime;
-
-          constructor(init: TestSpec) {
-            this.dateOnly = init.dateOnly;
-            this.timeOnly = init.timeOnly;
-            this.dateTimeOnly = init.dateTimeOnly;
-            this.dateTime = init.dateTime;
-          }
-
-          copy(changes: Partial<TestSpec>): Test {
-            return new Test(Object.assign({}, this, changes));
-          }
-
-          toString(): string {
-            return `Test(dateOnly='${'$'}{this.dateOnly}', timeOnly='${'$'}{this.timeOnly}', dateTimeOnly='${'$'}{this.dateTimeOnly}', dateTime='${'$'}{this.dateTime}')`;
-          }
-
+        copy(changes: Partial<TestSpec>): Test {
+          return new Test(Object.assign({}, this, changes));
         }
+
+        toString(): string {
+          return `Test(dateOnly='${'$'}{this.dateOnly}', timeOnly='${'$'}{this.timeOnly}', dateTimeOnly='${'$'}{this.dateTimeOnly}', dateTime='${'$'}{this.dateTime}')`;
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

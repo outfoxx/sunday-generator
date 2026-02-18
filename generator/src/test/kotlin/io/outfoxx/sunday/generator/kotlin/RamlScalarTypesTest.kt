@@ -41,29 +41,30 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Any
-        import kotlin.Boolean
-        import kotlin.ByteArray
-        import kotlin.String
-        import kotlin.Unit
+      import kotlin.Any
+      import kotlin.Boolean
+      import kotlin.ByteArray
+      import kotlin.String
+      import kotlin.Unit
 
-        public interface Test {
-          public val bool: Boolean
+      public interface Test {
+        public val bool: Boolean
 
-          public val string: String
+        public val string: String
 
-          public val `file`: ByteArray
+        public val `file`: ByteArray
 
-          public val any: Any
+        public val any: Any
 
-          public val nil: Unit
-        }
+        public val nil: Unit
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -80,32 +81,33 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Byte
-        import kotlin.Int
-        import kotlin.Long
-        import kotlin.Short
+      import kotlin.Byte
+      import kotlin.Int
+      import kotlin.Long
+      import kotlin.Short
 
-        public interface Test {
-          public val int8: Byte
+      public interface Test {
+        public val int8: Byte
 
-          public val int16: Short
+        public val int16: Short
 
-          public val int32: Int
+        public val int32: Int
 
-          public val int64: Long
+        public val int64: Long
 
-          public val int: Int
+        public val int: Int
 
-          public val long: Long
+        public val long: Long
 
-          public val none: Int
-        }
+        public val none: Int
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -122,22 +124,23 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import kotlin.Double
-        import kotlin.Float
+      import kotlin.Double
+      import kotlin.Float
 
-        public interface Test {
-          public val float: Float
+      public interface Test {
+        public val float: Float
 
-          public val double: Double
+        public val double: Double
 
-          public val none: Double
-        }
+        public val none: Double
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )
@@ -154,26 +157,27 @@ class RamlScalarTypesTest {
 
     assertEquals(
       """
-        package io.test
+      package io.test
 
-        import java.time.LocalDate
-        import java.time.LocalDateTime
-        import java.time.LocalTime
-        import java.time.OffsetDateTime
+      import java.time.LocalDate
+      import java.time.LocalDateTime
+      import java.time.LocalTime
+      import java.time.OffsetDateTime
 
-        public interface Test {
-          public val dateOnly: LocalDate
+      public interface Test {
+        public val dateOnly: LocalDate
 
-          public val timeOnly: LocalTime
+        public val timeOnly: LocalTime
 
-          public val dateTimeOnly: LocalDateTime
+        public val dateTimeOnly: LocalDateTime
 
-          public val dateTime: OffsetDateTime
-        }
+        public val dateTime: OffsetDateTime
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test", typeSpec)
+        FileSpec
+          .get("io.test", typeSpec)
           .writeTo(this)
       },
     )

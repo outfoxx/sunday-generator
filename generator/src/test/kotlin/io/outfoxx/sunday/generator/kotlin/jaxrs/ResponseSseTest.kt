@@ -54,38 +54,39 @@ class ResponseSseTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.core.Context
-        import javax.ws.rs.core.Response
-        import javax.ws.rs.sse.Sse
-        import javax.ws.rs.sse.SseEventSink
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.core.Context
+      import javax.ws.rs.core.Response
+      import javax.ws.rs.sse.Sse
+      import javax.ws.rs.sse.SseEventSink
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Produces(value = ["text/event-stream"])
-          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Produces(value = ["text/event-stream"])
+        public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
-          @GET
-          @Path(value = "/tests/server")
-          @Produces(value = ["text/event-stream"])
-          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
+        @GET
+        @Path(value = "/tests/server")
+        @Produces(value = ["text/event-stream"])
+        public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
-          @GET
-          @Path(value = "/tests/client")
-          public fun fetchEventsClient(): Response
-        }
+        @GET
+        @Path(value = "/tests/client")
+        public fun fetchEventsClient(): Response
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -112,36 +113,37 @@ class ResponseSseTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import javax.ws.rs.Consumes
-        import javax.ws.rs.GET
-        import javax.ws.rs.Path
-        import javax.ws.rs.Produces
-        import javax.ws.rs.sse.SseEventSource
+      import io.test.Test
+      import javax.ws.rs.Consumes
+      import javax.ws.rs.GET
+      import javax.ws.rs.Path
+      import javax.ws.rs.Produces
+      import javax.ws.rs.sse.SseEventSource
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Produces(value = ["text/event-stream"])
-          public fun fetchEvents(): SseEventSource
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Produces(value = ["text/event-stream"])
+        public fun fetchEvents(): SseEventSource
 
-          @GET
-          @Path(value = "/tests/server")
-          public fun fetchEventsServer(): Test
+        @GET
+        @Path(value = "/tests/server")
+        public fun fetchEventsServer(): Test
 
-          @GET
-          @Path(value = "/tests/client")
-          @Produces(value = ["text/event-stream"])
-          public fun fetchEventsClient(): SseEventSource
-        }
+        @GET
+        @Path(value = "/tests/client")
+        @Produces(value = ["text/event-stream"])
+        public fun fetchEventsClient(): SseEventSource
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -180,42 +182,43 @@ class ResponseSseTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import jakarta.ws.rs.core.Context
-        import jakarta.ws.rs.sse.Sse
-        import jakarta.ws.rs.sse.SseEventSink
-        import org.jboss.resteasy.reactive.RestResponse
-        import org.jboss.resteasy.reactive.RestStreamElementType
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import jakarta.ws.rs.core.Context
+      import jakarta.ws.rs.sse.Sse
+      import jakarta.ws.rs.sse.SseEventSink
+      import org.jboss.resteasy.reactive.RestResponse
+      import org.jboss.resteasy.reactive.RestStreamElementType
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Produces(value = ["text/event-stream"])
-          @RestStreamElementType(value = "application/json")
-          public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Produces(value = ["text/event-stream"])
+        @RestStreamElementType(value = "application/json")
+        public fun fetchEvents(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
-          @GET
-          @Path(value = "/tests/server")
-          @Produces(value = ["text/event-stream"])
-          @RestStreamElementType(value = "application/json")
-          public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
+        @GET
+        @Path(value = "/tests/server")
+        @Produces(value = ["text/event-stream"])
+        @RestStreamElementType(value = "application/json")
+        public fun fetchEventsServer(@Context sse: Sse, @Context sseEvents: SseEventSink)
 
-          @GET
-          @Path(value = "/tests/client")
-          public fun fetchEventsClient(): RestResponse<Test>
-        }
+        @GET
+        @Path(value = "/tests/client")
+        public fun fetchEventsClient(): RestResponse<Test>
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )
@@ -254,39 +257,40 @@ class ResponseSseTest {
 
     assertEquals(
       """
-        package io.test.service
+      package io.test.service
 
-        import io.test.Test
-        import jakarta.ws.rs.Consumes
-        import jakarta.ws.rs.GET
-        import jakarta.ws.rs.Path
-        import jakarta.ws.rs.Produces
-        import jakarta.ws.rs.sse.SseEventSource
-        import org.jboss.resteasy.reactive.RestStreamElementType
+      import io.test.Test
+      import jakarta.ws.rs.Consumes
+      import jakarta.ws.rs.GET
+      import jakarta.ws.rs.Path
+      import jakarta.ws.rs.Produces
+      import jakarta.ws.rs.sse.SseEventSource
+      import org.jboss.resteasy.reactive.RestStreamElementType
 
-        @Produces(value = ["application/json"])
-        @Consumes(value = ["application/json"])
-        public interface API {
-          @GET
-          @Path(value = "/tests")
-          @Produces(value = ["text/event-stream"])
-          @RestStreamElementType(value = "application/json")
-          public fun fetchEvents(): SseEventSource
+      @Produces(value = ["application/json"])
+      @Consumes(value = ["application/json"])
+      public interface API {
+        @GET
+        @Path(value = "/tests")
+        @Produces(value = ["text/event-stream"])
+        @RestStreamElementType(value = "application/json")
+        public fun fetchEvents(): SseEventSource
 
-          @GET
-          @Path(value = "/tests/server")
-          public fun fetchEventsServer(): Test
+        @GET
+        @Path(value = "/tests/server")
+        public fun fetchEventsServer(): Test
 
-          @GET
-          @Path(value = "/tests/client")
-          @Produces(value = ["text/event-stream"])
-          @RestStreamElementType(value = "application/json")
-          public fun fetchEventsClient(): SseEventSource
-        }
+        @GET
+        @Path(value = "/tests/client")
+        @Produces(value = ["text/event-stream"])
+        @RestStreamElementType(value = "application/json")
+        public fun fetchEventsClient(): SseEventSource
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("io.test.service", typeSpec)
+        FileSpec
+          .get("io.test.service", typeSpec)
           .writeTo(this)
       },
     )

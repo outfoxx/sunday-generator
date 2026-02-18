@@ -26,14 +26,23 @@ class ResourceExtension : ParameterResolver {
   companion object {
 
     fun get(name: String) =
-      Thread.currentThread().contextClassLoader.getResource(name)?.toURI()
+      Thread
+        .currentThread()
+        .contextClassLoader
+        .getResource(name)
+        ?.toURI()
         ?: throw ParameterResolutionException("Unable to find test resource '$name'")
   }
 
-  override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
-    parameterContext.isAnnotated(ResourceUri::class.java)
+  override fun supportsParameter(
+    parameterContext: ParameterContext,
+    extensionContext: ExtensionContext,
+  ): Boolean = parameterContext.isAnnotated(ResourceUri::class.java)
 
-  override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any {
+  override fun resolveParameter(
+    parameterContext: ParameterContext,
+    extensionContext: ExtensionContext,
+  ): Any {
 
     val resAnn = parameterContext.findAnnotation(ResourceUri::class.java).orElse(null)
     if (resAnn != null) {

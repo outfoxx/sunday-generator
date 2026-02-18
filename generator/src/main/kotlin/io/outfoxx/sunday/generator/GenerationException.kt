@@ -29,7 +29,10 @@ class GenerationException(
   override fun toString(): String = "$file:$line: $message"
 }
 
-fun genError(message: String, element: DomainElement? = null): Nothing {
+fun genError(
+  message: String,
+  element: DomainElement? = null,
+): Nothing {
   if (element == null) {
     throw GenerationException(message, "", 0, 0)
   }

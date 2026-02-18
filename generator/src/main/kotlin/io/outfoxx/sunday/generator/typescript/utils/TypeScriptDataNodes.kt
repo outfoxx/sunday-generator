@@ -27,13 +27,20 @@ import io.outfoxx.sunday.generator.utils.values
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.TypeName
 
-fun DataNode.typeScriptConstant(typeName: TypeName, shape: Shape?): CodeBlock {
+fun DataNode.typeScriptConstant(
+  typeName: TypeName,
+  shape: Shape?,
+): CodeBlock {
   val builder = CodeBlock.builder()
   typeScriptConstant(typeName, shape, builder)
   return builder.build()
 }
 
-fun DataNode.typeScriptConstant(typeName: TypeName, shape: Shape?, builder: CodeBlock.Builder) {
+fun DataNode.typeScriptConstant(
+  typeName: TypeName,
+  shape: Shape?,
+  builder: CodeBlock.Builder,
+) {
   when (this) {
     is ScalarNode ->
       when (dataType().value()) {

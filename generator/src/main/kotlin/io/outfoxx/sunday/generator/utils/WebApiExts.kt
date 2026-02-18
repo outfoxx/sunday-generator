@@ -18,7 +18,21 @@
 
 package io.outfoxx.sunday.generator.utils
 
-import amf.apicontract.client.platform.model.domain.*
+import amf.apicontract.client.platform.model.domain.Callback
+import amf.apicontract.client.platform.model.domain.CorrelationId
+import amf.apicontract.client.platform.model.domain.Encoding
+import amf.apicontract.client.platform.model.domain.EndPoint
+import amf.apicontract.client.platform.model.domain.License
+import amf.apicontract.client.platform.model.domain.Message
+import amf.apicontract.client.platform.model.domain.Operation
+import amf.apicontract.client.platform.model.domain.Organization
+import amf.apicontract.client.platform.model.domain.Parameter
+import amf.apicontract.client.platform.model.domain.Payload
+import amf.apicontract.client.platform.model.domain.Request
+import amf.apicontract.client.platform.model.domain.Response
+import amf.apicontract.client.platform.model.domain.Server
+import amf.apicontract.client.platform.model.domain.Tag
+import amf.apicontract.client.platform.model.domain.TemplatedLink
 import amf.apicontract.client.platform.model.domain.api.WebApi
 import amf.apicontract.client.platform.model.domain.bindings.ChannelBindings
 import amf.apicontract.client.platform.model.domain.bindings.MessageBindings
@@ -28,22 +42,51 @@ import amf.apicontract.client.platform.model.domain.security.ParametrizedSecurit
 import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.apicontract.client.platform.model.domain.security.SecurityScheme
 import amf.apicontract.client.platform.model.domain.security.Settings
-import amf.core.client.platform.model.*
+import amf.core.client.platform.model.Annotable
+import amf.core.client.platform.model.Annotations
+import amf.core.client.platform.model.BoolField
+import amf.core.client.platform.model.DataTypes
+import amf.core.client.platform.model.DoubleField
+import amf.core.client.platform.model.IntField
+import amf.core.client.platform.model.StrField
 import amf.core.client.platform.model.document.BaseUnit
 import amf.core.client.platform.model.document.DeclaresModel
 import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.document.EncodesModel
-import amf.core.client.platform.model.domain.*
+import amf.core.client.platform.model.domain.ArrayNode
+import amf.core.client.platform.model.domain.CustomDomainProperty
+import amf.core.client.platform.model.domain.CustomizableElement
+import amf.core.client.platform.model.domain.DataNode
+import amf.core.client.platform.model.domain.DomainElement
+import amf.core.client.platform.model.domain.DomainExtension
+import amf.core.client.platform.model.domain.Linkable
+import amf.core.client.platform.model.domain.NamedDomainElement
+import amf.core.client.platform.model.domain.ObjectNode
+import amf.core.client.platform.model.domain.PropertyShape
+import amf.core.client.platform.model.domain.ScalarNode
+import amf.core.client.platform.model.domain.Shape
+import amf.core.client.platform.model.domain.ShapeExtension
 import amf.core.internal.annotations.DeclaredElement
 import amf.core.internal.metamodel.domain.`ShapeModel$`
-import amf.shapes.client.platform.model.domain.*
+import amf.shapes.client.platform.model.domain.AnyShape
+import amf.shapes.client.platform.model.domain.ArrayShape
+import amf.shapes.client.platform.model.domain.CreativeWork
+import amf.shapes.client.platform.model.domain.DataArrangeShape
+import amf.shapes.client.platform.model.domain.Example
+import amf.shapes.client.platform.model.domain.IriTemplateMapping
+import amf.shapes.client.platform.model.domain.NilShape
+import amf.shapes.client.platform.model.domain.NodeShape
+import amf.shapes.client.platform.model.domain.PropertyDependencies
+import amf.shapes.client.platform.model.domain.ScalarShape
+import amf.shapes.client.platform.model.domain.UnionShape
+import amf.shapes.client.platform.model.domain.XMLSerializer
 import io.outfoxx.sunday.generator.APIAnnotationName
 import io.outfoxx.sunday.generator.GenerationMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
-import java.util.*
+import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
 
 val BoolField.value: Boolean? get() = option().orElse(null) as Boolean?
@@ -83,25 +126,37 @@ val DomainElement.extendsNode: List<DomainElement> get() = this.extendsNode()
 //
 val CustomizableElement.customDomainProperties: List<DomainExtension> get() = this.customDomainProperties()
 
-fun CustomizableElement.hasAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
-  customDomainProperties.any { name.matches(it.definedBy.name, generationMode) } ||
-    customDomainProperties.any { name.matches(it.definedBy.name, null) }
+fun CustomizableElement.hasAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+) = customDomainProperties.any { name.matches(it.definedBy.name, generationMode) } ||
+  customDomainProperties.any { name.matches(it.definedBy.name, null) }
 
-fun CustomizableElement.findAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
-  customDomainProperties.find { name.matches(it.definedBy.name, generationMode) }?.extension
-    ?: customDomainProperties.find { name.matches(it.definedBy.name, null) }?.extension
+fun CustomizableElement.findAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+) = customDomainProperties.find { name.matches(it.definedBy.name, generationMode) }?.extension
+  ?: customDomainProperties.find { name.matches(it.definedBy.name, null) }?.extension
 
-fun CustomizableElement.findStringAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
-  findAnnotation(name, generationMode)?.stringValue
+fun CustomizableElement.findStringAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+) = findAnnotation(name, generationMode)?.stringValue
 
-fun CustomizableElement.findBoolAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
-  findAnnotation(name, generationMode)?.rawScalarValue?.toBoolean()
+fun CustomizableElement.findBoolAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+) = findAnnotation(name, generationMode)?.rawScalarValue?.toBoolean()
 
-fun CustomizableElement.findIntAnnotation(name: APIAnnotationName, generationMode: GenerationMode?) =
-  findAnnotation(name, generationMode)?.rawScalarValue?.toInt()
+fun CustomizableElement.findIntAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+) = findAnnotation(name, generationMode)?.rawScalarValue?.toInt()
 
-fun CustomizableElement.findArrayAnnotation(name: APIAnnotationName, generationMode: GenerationMode?): List<DataNode>? =
-  findAnnotation(name, generationMode)?.let { it as ArrayNode }?.members()
+fun CustomizableElement.findArrayAnnotation(
+  name: APIAnnotationName,
+  generationMode: GenerationMode?,
+): List<DataNode>? = findAnnotation(name, generationMode)?.let { it as ArrayNode }?.members()
 
 //
 val DomainExtension.name: String get() = this.name().value()
@@ -289,16 +344,19 @@ val Shape.elseShape: Shape? get() = this.elseShape()
 val Shape.inlined: Boolean get() = this.annotations.inlinedElement()
 val Shape.nonNullableType: Shape get() = if (this is UnionShape) this.nullableType else this
 
-val Shape.isNameExplicit: Boolean get() =
-  hasExplicitName() || annotations._internal().contains(DeclaredElement::class.java)
+val Shape.isNameExplicit: Boolean
+  get() =
+    hasExplicitName() || annotations._internal().contains(DeclaredElement::class.java)
 
 val Shape.location: String?
   get() =
-    _internal().fields()[`ShapeModel$`.`MODULE$`.Name()]
+    _internal()
+      .fields()[`ShapeModel$`.`MODULE$`.Name()]
       ?.let { name ->
         val nameLocation = name.location()
         if (nameLocation.isDefined) {
-          nameLocation.get()
+          nameLocation
+            .get()
             .ifBlank { null }
         } else {
           null
@@ -428,25 +486,26 @@ val DataNode.stringValue: String? get() = anyValue as? String
 val DataNode.numberValue: Number? get() = anyValue as? Number
 val DataNode.rawScalarValue: String? get() = (this as? ScalarNode)?.value
 val DataNode.scalarValue: Any?
-  get() = (this as? ScalarNode)?.value?.let {
-    when (dataType().value()) {
-      DataTypes.String() -> value().value
-      DataTypes.Boolean() -> value().value?.toBoolean()
-      DataTypes.Integer() -> value().value?.toInt()
-      DataTypes.Long() -> value().value?.toLong()
-      DataTypes.Float() -> value().value?.toFloat()
-      DataTypes.Double() -> value().value?.toDouble()
-      DataTypes.Number() -> value().value?.toBigDecimal()
-      DataTypes.Decimal() -> value().value?.toBigDecimal()
+  get() =
+    (this as? ScalarNode)?.value?.let {
+      when (dataType().value()) {
+        DataTypes.String() -> value().value
+        DataTypes.Boolean() -> value().value?.toBoolean()
+        DataTypes.Integer() -> value().value?.toInt()
+        DataTypes.Long() -> value().value?.toLong()
+        DataTypes.Float() -> value().value?.toFloat()
+        DataTypes.Double() -> value().value?.toDouble()
+        DataTypes.Number() -> value().value?.toBigDecimal()
+        DataTypes.Decimal() -> value().value?.toBigDecimal()
 //    DataTypes.Duration() -> value().value?.let { Duration.parse(it) }
-      DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
-      DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
-      DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
-      DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
-      DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
-      else -> error("unsupported scalar node data type")
+        DataTypes.Date() -> value().value?.let { LocalDate.parse(it) }
+        DataTypes.Time() -> value().value?.let { LocalTime.parse(it) }
+        DataTypes.DateTimeOnly() -> value().value?.let { LocalDateTime.parse(it) }
+        DataTypes.DateTime() -> value().value?.let { OffsetDateTime.parse(it) }
+        DataTypes.Binary() -> value().value?.let { Base64.getDecoder().decode(it) }
+        else -> error("unsupported scalar node data type")
+      }
     }
-  }
 val DataNode.arrayValue: List<Any?>? get() = (this as? ArrayNode)?.members()?.map { it.anyValue }
 val DataNode.objectValue: Map<String, Any?>?
   get() =

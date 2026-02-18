@@ -55,39 +55,40 @@ class BuilderMethodsTest {
 
     assertEquals(
       """
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          fetchTest(): Observable<Request> {
-            return this.requestFactory.request(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test/request',
-                  acceptTypes: this.defaultAcceptTypes
-                }
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
+
+        fetchTest(): Observable<Request> {
+          return this.requestFactory.request(
+              {
+                method: 'GET',
+                pathTemplate: '/test/request',
+                acceptTypes: this.defaultAcceptTypes
+              }
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -115,39 +116,40 @@ class BuilderMethodsTest {
 
     assertEquals(
       """
-        import {MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          fetchTest(): Observable<Response> {
-            return this.requestFactory.response(
-                {
-                  method: 'GET',
-                  pathTemplate: '/test/response',
-                  acceptTypes: this.defaultAcceptTypes
-                }
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
+
+        fetchTest(): Observable<Response> {
+          return this.requestFactory.response(
+              {
+                method: 'GET',
+                pathTemplate: '/test/response',
+                acceptTypes: this.defaultAcceptTypes
+              }
+          );
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )

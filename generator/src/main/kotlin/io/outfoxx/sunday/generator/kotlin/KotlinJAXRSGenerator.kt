@@ -26,15 +26,22 @@ import amf.core.client.platform.model.document.Document
 import amf.core.client.platform.model.domain.Shape
 import amf.shapes.client.platform.model.domain.UnionShape
 import com.damnhandy.uri.template.UriTemplate
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.KModifier.SUSPEND
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.UNIT
 import io.outfoxx.sunday.generator.APIAnnotationName.Asynchronous
 import io.outfoxx.sunday.generator.APIAnnotationName.EventStream
+import io.outfoxx.sunday.generator.APIAnnotationName.JaxrsContext
 import io.outfoxx.sunday.generator.APIAnnotationName.JsonBody
 import io.outfoxx.sunday.generator.APIAnnotationName.Reactive
 import io.outfoxx.sunday.generator.APIAnnotationName.SSE
-import io.outfoxx.sunday.generator.APIAnnotationName.JaxrsContext
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.ProblemTypeDefinition
@@ -42,10 +49,44 @@ import io.outfoxx.sunday.generator.common.HttpStatus.CREATED
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.utils.*
-import io.outfoxx.sunday.generator.utils.*
+import io.outfoxx.sunday.generator.kotlin.utils.FLOW
+import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
+import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
+import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
+import io.outfoxx.sunday.generator.kotlin.utils.UNI
+import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.utils.api
+import io.outfoxx.sunday.generator.utils.defaultValueStr
+import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
+import io.outfoxx.sunday.generator.utils.findArrayAnnotation
+import io.outfoxx.sunday.generator.utils.findBoolAnnotation
+import io.outfoxx.sunday.generator.utils.findStringAnnotation
+import io.outfoxx.sunday.generator.utils.flattened
+import io.outfoxx.sunday.generator.utils.hasAnnotation
+import io.outfoxx.sunday.generator.utils.headers
+import io.outfoxx.sunday.generator.utils.mediaType
+import io.outfoxx.sunday.generator.utils.method
+import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.parameterName
+import io.outfoxx.sunday.generator.utils.parent
+import io.outfoxx.sunday.generator.utils.path
+import io.outfoxx.sunday.generator.utils.payloads
+import io.outfoxx.sunday.generator.utils.queryParameters
+import io.outfoxx.sunday.generator.utils.request
+import io.outfoxx.sunday.generator.utils.requests
+import io.outfoxx.sunday.generator.utils.required
+import io.outfoxx.sunday.generator.utils.scalarValue
+import io.outfoxx.sunday.generator.utils.schema
+import io.outfoxx.sunday.generator.utils.scheme
+import io.outfoxx.sunday.generator.utils.schemes
+import io.outfoxx.sunday.generator.utils.security
+import io.outfoxx.sunday.generator.utils.statusCode
+import io.outfoxx.sunday.generator.utils.stringValue
+import io.outfoxx.sunday.generator.utils.successes
+import io.outfoxx.sunday.generator.utils.values
 import java.net.URI
-import kotlin.collections.set
 
 /**
  * Generator for Kotlin/'JAX-RS 2' interfaces
@@ -56,11 +97,11 @@ class KotlinJAXRSGenerator(
   typeRegistry: KotlinTypeRegistry,
   override val options: Options,
 ) : KotlinGenerator(
-  document,
-  shapeIndex,
-  typeRegistry,
-  options,
-) {
+    document,
+    shapeIndex,
+    typeRegistry,
+    options,
+  ) {
 
   class Options(
     val coroutineFlowMethods: Boolean,
@@ -75,11 +116,11 @@ class KotlinJAXRSGenerator(
     serviceSuffix: String,
     val quarkus: Boolean,
   ) : KotlinGenerator.Options(
-    defaultServicePackageName,
-    defaultProblemBaseUri,
-    defaultMediaTypes,
-    serviceSuffix,
-  ) {
+      defaultServicePackageName,
+      defaultProblemBaseUri,
+      defaultMediaTypes,
+      serviceSuffix,
+    ) {
 
     enum class BaseUriMode {
       FULL,
@@ -111,17 +152,21 @@ class KotlinJAXRSGenerator(
   private fun isOverridingDefaultMediaTypes(mediaTypes: List<String>) =
     mediaTypes.isNotEmpty() && !mediaTypes.equalsInAnyOrder(defaultMediaTypes)
 
-  override fun processServiceBegin(serviceTypeName: ClassName, endPoints: List<EndPoint>): TypeSpec.Builder {
+  override fun processServiceBegin(
+    serviceTypeName: ClassName,
+    endPoints: List<EndPoint>,
+  ): TypeSpec.Builder {
 
     val typeBuilder = TypeSpec.interfaceBuilder(serviceTypeName)
     typeBuilder.tag(TypeSpec.Builder::class, TypeSpec.companionObjectBuilder())
 
     getBaseURIInfo()?.let { (baseURL, baseURLParameters) ->
 
-      val parameterValues = baseURLParameters.associate { param ->
-        val defaultValue = param.defaultValue?.scalarValue?.toString() ?: "{${param.name}}"
-        param.name to defaultValue
-      }
+      val parameterValues =
+        baseURLParameters.associate { param ->
+          val defaultValue = param.defaultValue?.scalarValue?.toString() ?: "{${param.name}}"
+          param.name to defaultValue
+        }
 
       val expandedBaseURL = UriTemplate.buildFromTemplate(baseURL).build().expand(parameterValues)
 
@@ -168,20 +213,20 @@ class KotlinJAXRSGenerator(
 
     if (typeRegistry.options.contains(JacksonAnnotations) && referencedProblemTypes.isNotEmpty()) {
       typeBuilder.addType(
-        TypeSpec.companionObjectBuilder()
+        TypeSpec
+          .companionObjectBuilder()
           .apply { typeRegistry.addGeneratedTo(this, false) }
           .addFunction(
-            FunSpec.builder("registerProblems")
+            FunSpec
+              .builder("registerProblems")
               .addParameter("mapper", OBJECT_MAPPER)
               .addCode(
                 "mapper.registerSubtypes(⇥\n" +
                   referencedProblemTypes.values.joinToString(",\n") { "%T::class.java" } +
                   "⇤\n)",
                 *referencedProblemTypes.values.toTypedArray(),
-              )
-              .build(),
-          )
-          .build(),
+              ).build(),
+          ).build(),
       )
     }
 
@@ -241,7 +286,11 @@ class KotlinJAXRSGenerator(
     }
   }
 
-  private fun FunSpec.Builder.asSSE(operation: Operation, body: Shape?, mediaTypesForPayloads: List<String>): TypeName {
+  private fun FunSpec.Builder.asSSE(
+    operation: Operation,
+    body: Shape?,
+    mediaTypesForPayloads: List<String>,
+  ): TypeName {
 
     addSseElementTypeAnnotation(mediaTypesForPayloads, operation)
 
@@ -289,7 +338,10 @@ class KotlinJAXRSGenerator(
     }
   }
 
-  private fun FunSpec.Builder.addSseElementTypeAnnotation(mediaTypesForPayloads: List<String>, operation: Operation) {
+  private fun FunSpec.Builder.addSseElementTypeAnnotation(
+    mediaTypesForPayloads: List<String>,
+    operation: Operation,
+  ) {
     val elementTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
     if (elementTypes.size > 1) {
       genError("Multiple media types not supported for Server-Sent Events", operation)
@@ -319,7 +371,8 @@ class KotlinJAXRSGenerator(
         schemeTypeName.nestedClass("${parameter.kotlinTypeName}${type.replaceFirstChar { it.titlecase() }}Param"),
       )
 
-    return typeRegistry.resolveTypeName(parameter.schema!!, parameterTypeNameContext)
+    return typeRegistry
+      .resolveTypeName(parameter.schema!!, parameterTypeNameContext)
       .run {
         if (parameter.required == false) {
           copy(nullable = true)
@@ -329,7 +382,10 @@ class KotlinJAXRSGenerator(
       }
   }
 
-  private fun resolveSecurityRequirements(endPoint: EndPoint, operation: Operation): List<SecurityRequirement> {
+  private fun resolveSecurityRequirements(
+    endPoint: EndPoint,
+    operation: Operation,
+  ): List<SecurityRequirement> {
 
     val reqs = mutableListOf<SecurityRequirement>()
 
@@ -347,7 +403,10 @@ class KotlinJAXRSGenerator(
     return reqs
   }
 
-  private fun resolveSecuritySchemes(endPoint: EndPoint, operation: Operation): List<SecurityScheme> {
+  private fun resolveSecuritySchemes(
+    endPoint: EndPoint,
+    operation: Operation,
+  ): List<SecurityScheme> {
     val schemes = mutableMapOf<String, SecurityScheme>()
     resolveSecurityRequirements(endPoint, operation).forEach { securityRequirement ->
       securityRequirement.schemes.forEach { parametrizedSecurityScheme ->
@@ -395,8 +454,9 @@ class KotlinJAXRSGenerator(
     functionBuilder.addModifiers(KModifier.ABSTRACT)
 
     // Add @GET, @POST, @PUT, @DELETE to resource method
-    val httpMethodAnnClass = jaxRsTypes.httpMethod(operation.method)
-      ?: genError("Unsupported HTTP method", operation)
+    val httpMethodAnnClass =
+      jaxRsTypes.httpMethod(operation.method)
+        ?: genError("Unsupported HTTP method", operation)
 
     functionBuilder.addAnnotation(httpMethodAnnClass)
 
@@ -419,7 +479,8 @@ class KotlinJAXRSGenerator(
       }
     val validatedBuilder =
       if (validatedType != builtParameter.type) {
-        ParameterSpec.builder(builtParameter.name, validatedType)
+        ParameterSpec
+          .builder(builtParameter.name, validatedType)
           .addKdoc(builtParameter.kdoc)
           .addAnnotations(builtParameter.annotations)
           .addModifiers(builtParameter.modifiers)
@@ -434,12 +495,14 @@ class KotlinJAXRSGenerator(
     if (defaultValue != null) {
       val updatedParameter = validatedBuilder.build()
       val newParameter =
-        ParameterSpec.builder(updatedParameter.name, updatedParameter.type.copy(nullable = false))
+        ParameterSpec
+          .builder(updatedParameter.name, updatedParameter.type.copy(nullable = false))
           .addKdoc(updatedParameter.kdoc)
           .addAnnotations(updatedParameter.annotations)
           .addModifiers(updatedParameter.modifiers)
       newParameter.addAnnotation(
-        AnnotationSpec.builder(jaxRsTypes.defaultValue)
+        AnnotationSpec
+          .builder(jaxRsTypes.defaultValue)
           .addMember("value = %S", defaultValue)
           .build(),
       )
@@ -453,16 +516,15 @@ class KotlinJAXRSGenerator(
     parameter: Parameter,
     parameterType: JaxRsTypes.ParamType,
     requireName: Boolean = false,
-  ) =
-    addAnnotation(
-      AnnotationSpec.builder(jaxRsTypes.paramAnnotation(parameterType))
-        .apply {
-          if (requireName || jaxRsTypes.isNameRequiredForParameters) {
-            addMember("value = %S", parameter.name())
-          }
+  ) = addAnnotation(
+    AnnotationSpec
+      .builder(jaxRsTypes.paramAnnotation(parameterType))
+      .apply {
+        if (requireName || jaxRsTypes.isNameRequiredForParameters) {
+          addMember("value = %S", parameter.name())
         }
-        .build(),
-    )
+      }.build(),
+  )
 
   override fun processResourceMethodUriParameter(
     endPoint: EndPoint,
@@ -508,10 +570,17 @@ class KotlinJAXRSGenerator(
       val clientHeaderParam = jaxRsTypes.clientHeaderParam
       if (generationMode == Client && clientHeaderParam != null) {
         functionBuilder.addAnnotation(
-          AnnotationSpec.builder(clientHeaderParam)
+          AnnotationSpec
+            .builder(clientHeaderParam)
             .addMember("name = %S", parameter.name())
-            .addMember("value = %S", parameter.schema?.values?.first()?.scalarValue?.toString() ?: "")
-            .build(),
+            .addMember(
+              "value = %S",
+              parameter.schema
+                ?.values
+                ?.first()
+                ?.scalarValue
+                ?.toString() ?: "",
+            ).build(),
         )
         return null
       } else if (generationMode == Server) {
@@ -542,7 +611,8 @@ class KotlinJAXRSGenerator(
       }
     val validatedBuilder =
       if (validatedType != builtParameter.type) {
-        ParameterSpec.builder(builtParameter.name, validatedType)
+        ParameterSpec
+          .builder(builtParameter.name, validatedType)
           .addKdoc(builtParameter.kdoc)
           .addAnnotations(builtParameter.annotations)
           .addModifiers(builtParameter.modifiers)
@@ -589,7 +659,8 @@ class KotlinJAXRSGenerator(
       // Add async response parameter to asynchronous methods
       if (operation.findBoolAnnotation(Asynchronous, generationMode) == true) {
         functionBuilder.addParameter(
-          ParameterSpec.builder("asyncResponse", jaxRsTypes.asyncResponse)
+          ParameterSpec
+            .builder("asyncResponse", jaxRsTypes.asyncResponse)
             .addAnnotation(jaxRsTypes.suspended)
             .build(),
         )
@@ -599,13 +670,15 @@ class KotlinJAXRSGenerator(
       if (operation.findBoolAnnotation(SSE, generationMode) == true && !options.coroutineServiceMethods) {
 
         functionBuilder.addParameter(
-          ParameterSpec.builder("sse", jaxRsTypes.sse)
+          ParameterSpec
+            .builder("sse", jaxRsTypes.sse)
             .addAnnotation(jaxRsTypes.context)
             .build(),
         )
 
         functionBuilder.addParameter(
-          ParameterSpec.builder("sseEvents", jaxRsTypes.sseEventSink)
+          ParameterSpec
+            .builder("sseEvents", jaxRsTypes.sseEventSink)
             .addAnnotation(jaxRsTypes.context)
             .build(),
         )
@@ -614,7 +687,8 @@ class KotlinJAXRSGenerator(
       // Add UriInfo parameter to CREATED methods
       if (operation.successes.firstOrNull()?.statusCode == "${CREATED.code}") {
         functionBuilder.addParameter(
-          ParameterSpec.builder("uriInfo", jaxRsTypes.uriInfo)
+          ParameterSpec
+            .builder("uriInfo", jaxRsTypes.uriInfo)
             .addAnnotation(jaxRsTypes.context)
             .build(),
         )
@@ -636,18 +710,21 @@ class KotlinJAXRSGenerator(
       }
 
       val requestedContextValues =
-        operation.findArrayAnnotation(JaxrsContext, generationMode)
+        operation
+          .findArrayAnnotation(JaxrsContext, generationMode)
           ?.mapNotNull { it.stringValue }
           ?.distinct()
           ?: emptyList()
 
       requestedContextValues.forEach { contextValue ->
-        val contextType = jaxRsTypes.contextType(contextValue)
-          ?: genError("Unsupported JAX-RS context type '$contextValue'", operation)
+        val contextType =
+          jaxRsTypes.contextType(contextValue)
+            ?: genError("Unsupported JAX-RS context type '$contextValue'", operation)
         if (!existingParameterTypes.contains(contextType)) {
           val contextParameterName = getUniqueContextParameterName(contextValue)
           functionBuilder.addParameter(
-            ParameterSpec.builder(contextParameterName, contextType)
+            ParameterSpec
+              .builder(contextParameterName, contextType)
               .addAnnotation(jaxRsTypes.context)
               .build(),
           )
@@ -668,5 +745,4 @@ class KotlinJAXRSGenerator(
       else -> resolveTypeName(shape, null)
     }
   }
-
 }

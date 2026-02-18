@@ -56,7 +56,8 @@ class QuarkusProblemTypesTest {
     val invalidIdType = findType("io.test.InvalidIdProblem", builtTypes)
     val generated =
       buildString {
-        FileSpec.get("io.test.service", invalidIdType)
+        FileSpec
+          .get("io.test.service", invalidIdType)
           .writeTo(this)
       }
 

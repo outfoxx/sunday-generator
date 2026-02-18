@@ -24,45 +24,53 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
   override fun apply(project: Project) {
 
-    val allTask = project.tasks.register("sundayGenerateAll") {
-      it.group = "code-generation"
-    }
+    val allTask =
+      project.tasks.register("sundayGenerateAll") {
+        it.group = "code-generation"
+      }
 
     val generationsContainer =
-      project.container(SundayGeneration::class.java) { name -> SundayGeneration(name, project.objects, project) }
+      project.objects.domainObjectContainer(SundayGeneration::class.java) { name ->
+        SundayGeneration(
+          name,
+          project.objects,
+          project,
+        )
+      }
     project.extensions.add("sundayGenerations", generationsContainer)
 
     generationsContainer.configureEach { gen ->
 
-      val genTask = project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
-        genTask.group = "code-generation"
-        gen.source.takeIf { it.isPresent }?.let { genTask.source(gen.source) }
-        gen.includes.takeIf { it.isPresent }?.let { genTask.includes.set(it) }
-        gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
-        gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
-        gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
-        gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
-        gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
-        gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }
-        gen.serviceSuffix.takeIf { it.isPresent }?.let { genTask.serviceSuffix.set(it) }
-        gen.modelPkgName.takeIf { it.isPresent }?.let { genTask.modelPkgName.set(it) }
-        gen.disableValidationConstraints.takeIf { it.isPresent }?.let { genTask.disableValidationConstraints.set(it) }
-        gen.disableContainerElementValid.takeIf { it.isPresent }?.let { genTask.disableContainerElementValid.set(it) }
-        gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
-        gen.disableModelImplementations.takeIf { it.isPresent }?.let { genTask.disableModelImplementations.set(it) }
-        gen.coroutines.takeIf { it.isPresent }?.let { genTask.coroutines.set(it) }
-        gen.flowCoroutines.takeIf { it.isPresent }?.let { genTask.flowCoroutines.set(it) }
-        gen.reactiveResponseType.takeIf { it.isPresent }?.let { genTask.reactiveResponseType.set(it) }
-        gen.explicitSecurityParameters.takeIf { it.isPresent }?.let { genTask.explicitSecurityParameters.set(it) }
-        gen.baseUriMode.takeIf { it.isPresent }?.let { genTask.baseUriMode.set(it) }
-        gen.defaultMediaTypes.takeIf { it.isPresent }?.let { genTask.defaultMediaTypes.set(it) }
-        gen.generatedAnnotation.takeIf { it.isPresent }?.let { genTask.generatedAnnotation.set(it) }
-        gen.alwaysUseResponseReturn.takeIf { it.isPresent }?.let { genTask.alwaysUseResponseReturn.set(it) }
-        gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
-        gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
-        gen.quarkus.takeIf { it.isPresent }?.let { genTask.quarkus.set(it) }
-        gen.outputDir.takeIf { it.isPresent }?.let { genTask.outputDir.set(it) }
-      }
+      val genTask =
+        project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
+          genTask.group = "code-generation"
+          gen.source.takeIf { it.isPresent }?.let { genTask.source(gen.source) }
+          gen.includes.takeIf { it.isPresent }?.let { genTask.includes.set(it) }
+          gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
+          gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
+          gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
+          gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
+          gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
+          gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }
+          gen.serviceSuffix.takeIf { it.isPresent }?.let { genTask.serviceSuffix.set(it) }
+          gen.modelPkgName.takeIf { it.isPresent }?.let { genTask.modelPkgName.set(it) }
+          gen.disableValidationConstraints.takeIf { it.isPresent }?.let { genTask.disableValidationConstraints.set(it) }
+          gen.disableContainerElementValid.takeIf { it.isPresent }?.let { genTask.disableContainerElementValid.set(it) }
+          gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
+          gen.disableModelImplementations.takeIf { it.isPresent }?.let { genTask.disableModelImplementations.set(it) }
+          gen.coroutines.takeIf { it.isPresent }?.let { genTask.coroutines.set(it) }
+          gen.flowCoroutines.takeIf { it.isPresent }?.let { genTask.flowCoroutines.set(it) }
+          gen.reactiveResponseType.takeIf { it.isPresent }?.let { genTask.reactiveResponseType.set(it) }
+          gen.explicitSecurityParameters.takeIf { it.isPresent }?.let { genTask.explicitSecurityParameters.set(it) }
+          gen.baseUriMode.takeIf { it.isPresent }?.let { genTask.baseUriMode.set(it) }
+          gen.defaultMediaTypes.takeIf { it.isPresent }?.let { genTask.defaultMediaTypes.set(it) }
+          gen.generatedAnnotation.takeIf { it.isPresent }?.let { genTask.generatedAnnotation.set(it) }
+          gen.alwaysUseResponseReturn.takeIf { it.isPresent }?.let { genTask.alwaysUseResponseReturn.set(it) }
+          gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
+          gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
+          gen.quarkus.takeIf { it.isPresent }?.let { genTask.quarkus.set(it) }
+          gen.outputDir.takeIf { it.isPresent }?.let { genTask.outputDir.set(it) }
+        }
 
       allTask.configure { it.dependsOn(genTask) }
     }

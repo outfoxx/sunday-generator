@@ -55,52 +55,53 @@ class RequestUriParamsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
-
-          public func fetchTest(
-            def: String,
-            obj: Test,
-            strReq: String,
-            int: Int = 5
-          ) async throws -> Test {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{obj}/{str-req}/{int}/{def}",
-              pathParameters: [
-                "def": def,
-                "obj": obj,
-                "str-req": strReq,
-                "int": int
-              ],
-              queryParameters: nil,
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
-
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
         }
+
+        public func fetchTest(
+          def: String,
+          obj: Test,
+          strReq: String,
+          int: Int = 5
+        ) async throws -> Test {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{obj}/{str-req}/{int}/{def}",
+            pathParameters: [
+              "def": def,
+              "obj": obj,
+              "str-req": strReq,
+              "int": int
+            ],
+            queryParameters: nil,
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -128,53 +129,54 @@ class RequestUriParamsTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
-
-          public func fetchTest(
-            obj: [String : Any],
-            str: String,
-            def: String,
-            int: Int
-          ) async throws -> [String : AnyValue] {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
-              pathParameters: [
-                "obj": obj,
-                "str": str,
-                "def": def,
-                "int": int
-              ],
-              queryParameters: nil,
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
-
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
         }
+
+        public func fetchTest(
+          obj: [String : Any],
+          str: String,
+          def: String,
+          int: Int
+        ) async throws -> [String : AnyValue] {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
+            pathParameters: [
+              "obj": obj,
+              "str": str,
+              "def": def,
+              "int": int
+            ],
+            queryParameters: nil,
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -202,56 +204,57 @@ class RequestUriParamsTest {
 
     assertEquals(
       """
-        import Sunday
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
-
-          public func fetchTest(
-            def2: Int? = 10,
-            obj: Test? = nil,
-            str: String? = nil,
-            def1: String? = "test",
-            int: Int? = nil,
-            def: String
-          ) async throws -> Test {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
-              pathParameters: [
-                "def2": def2 as Any?,
-                "obj": obj as Any?,
-                "str": str as Any?,
-                "def1": def1 as Any?,
-                "int": int as Any?,
-                "def": def as Any?
-              ].filter { ${'$'}0.value != nil },
-              queryParameters: nil,
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
-
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
         }
+
+        public func fetchTest(
+          def2: Int? = 10,
+          obj: Test? = nil,
+          str: String? = nil,
+          def1: String? = "test",
+          int: Int? = nil,
+          def: String
+        ) async throws -> Test {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
+            pathParameters: [
+              "def2": def2 as Any?,
+              "obj": obj as Any?,
+              "str": str as Any?,
+              "def1": def1 as Any?,
+              "int": int as Any?,
+              "def": def as Any?
+            ].filter { ${'$'}0.value != nil },
+            queryParameters: nil,
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )
@@ -279,60 +282,61 @@ class RequestUriParamsTest {
 
     assertEquals(
       """
-        import PotentCodables
-        import Sunday
+      import PotentCodables
+      import Sunday
 
-        public class API {
+      public class API {
 
-          public let requestFactory: RequestFactory
-          public let defaultContentTypes: [MediaType]
-          public let defaultAcceptTypes: [MediaType]
+        public let requestFactory: RequestFactory
+        public let defaultContentTypes: [MediaType]
+        public let defaultAcceptTypes: [MediaType]
 
-          public init(
-            requestFactory: RequestFactory,
-            defaultContentTypes: [MediaType] = [],
-            defaultAcceptTypes: [MediaType] = [.json]
-          ) {
-            self.requestFactory = requestFactory
-            self.defaultContentTypes = defaultContentTypes
-            self.defaultAcceptTypes = defaultAcceptTypes
-          }
+        public init(
+          requestFactory: RequestFactory,
+          defaultContentTypes: [MediaType] = [],
+          defaultAcceptTypes: [MediaType] = [.json]
+        ) {
+          self.requestFactory = requestFactory
+          self.defaultContentTypes = defaultContentTypes
+          self.defaultAcceptTypes = defaultAcceptTypes
+        }
 
-          public func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) async throws -> [String : AnyValue] {
-            return try await self.requestFactory.result(
-              method: .get,
-              pathTemplate: "/tests/{category}/{type}",
-              pathParameters: [
-                "category": category,
-                "type": type
-              ],
-              queryParameters: nil,
-              body: Empty.none,
-              contentTypes: nil,
-              acceptTypes: self.defaultAcceptTypes,
-              headers: nil
-            )
-          }
+        public func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) async throws -> [String : AnyValue] {
+          return try await self.requestFactory.result(
+            method: .get,
+            pathTemplate: "/tests/{category}/{type}",
+            pathParameters: [
+              "category": category,
+              "type": type
+            ],
+            queryParameters: nil,
+            body: Empty.none,
+            contentTypes: nil,
+            acceptTypes: self.defaultAcceptTypes,
+            headers: nil
+          )
+        }
 
-          public enum FetchTestCategoryUriParam : String, CaseIterable, Codable {
+        public enum FetchTestCategoryUriParam : String, CaseIterable, Codable {
 
-            case politics = "politics"
-            case science = "science"
-
-          }
-
-          public enum FetchTestTypeUriParam : String, CaseIterable, Codable {
-
-            case all = "all"
-            case limited = "limited"
-
-          }
+          case politics = "politics"
+          case science = "science"
 
         }
 
+        public enum FetchTestTypeUriParam : String, CaseIterable, Codable {
+
+          case all = "all"
+          case limited = "limited"
+
+        }
+
+      }
+
       """.trimIndent(),
       buildString {
-        FileSpec.get("", typeSpec)
+        FileSpec
+          .get("", typeSpec)
           .writeTo(this)
       },
     )

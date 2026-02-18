@@ -58,47 +58,48 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {InvalidIdProblem} from './invalid-id-problem';
-        import {Test} from './test';
-        import {TestNotFoundProblem} from './test-not-found-problem';
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {InvalidIdProblem} from './invalid-id-problem';
+      import {Test} from './test';
+      import {TestNotFoundProblem} from './test-not-found-problem';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-            requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblem);
-            requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
-          }
-
-          fetchTest(): Observable<Test> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
-                },
-                fetchTestReturnType
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
+          requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblem);
+          requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblem);
         }
 
-        const fetchTestReturnType: AnyType = [Test];
+        fetchTest(): Observable<Test> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: this.defaultAcceptTypes
+              },
+              fetchTestReturnType
+          );
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [Test];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -126,43 +127,44 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Test} from './test';
-        import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-        import {Observable} from 'rxjs';
+      import {Test} from './test';
+      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
+      import {Observable} from 'rxjs';
 
 
-        export class API {
+      export class API {
 
-          defaultContentTypes: Array<MediaType>;
+        defaultContentTypes: Array<MediaType>;
 
-          defaultAcceptTypes: Array<MediaType>;
+        defaultAcceptTypes: Array<MediaType>;
 
-          constructor(public requestFactory: RequestFactory,
-              options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-            this.defaultContentTypes =
-                options?.defaultContentTypes ?? [];
-            this.defaultAcceptTypes =
-                options?.defaultAcceptTypes ?? [MediaType.JSON];
-          }
-
-          fetchTest(): Observable<Test> {
-            return this.requestFactory.result(
-                {
-                  method: 'GET',
-                  pathTemplate: '/tests',
-                  acceptTypes: this.defaultAcceptTypes
-                },
-                fetchTestReturnType
-            );
-          }
-
+        constructor(public requestFactory: RequestFactory,
+            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+          this.defaultContentTypes =
+              options?.defaultContentTypes ?? [];
+          this.defaultAcceptTypes =
+              options?.defaultAcceptTypes ?? [MediaType.JSON];
         }
 
-        const fetchTestReturnType: AnyType = [Test];
+        fetchTest(): Observable<Test> {
+          return this.requestFactory.result(
+              {
+                method: 'GET',
+                pathTemplate: '/tests',
+                acceptTypes: this.defaultAcceptTypes
+              },
+              fetchTestReturnType
+          );
+        }
+
+      }
+
+      const fetchTestReturnType: AnyType = [Test];
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec)
+        FileSpec
+          .get(typeSpec)
           .writeTo(this)
       },
     )
@@ -193,31 +195,32 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/invalid_id';
+        static TYPE: string = 'http://example.com/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec, "invalid-id-problem")
+        FileSpec
+          .get(typeSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -248,31 +251,32 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://api.example.com/api/invalid_id';
+        static TYPE: string = 'http://api.example.com/api/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec, "invalid-id-problem")
+        FileSpec
+          .get(typeSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -303,31 +307,32 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://errors.example.com/docs/invalid_id';
+        static TYPE: string = 'http://errors.example.com/docs/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec, "invalid-id-problem")
+        FileSpec
+          .get(typeSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -358,31 +363,32 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/api/errors/invalid_id';
+        static TYPE: string = 'http://example.com/api/errors/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec, "invalid-id-problem")
+        FileSpec
+          .get(typeSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )
@@ -413,31 +419,32 @@ class ResponseProblemsTest {
 
     assertEquals(
       """
-        import {Problem} from '@outfoxx/sunday';
+      import {Problem} from '@outfoxx/sunday';
 
 
-        export class InvalidIdProblem extends Problem {
+      export class InvalidIdProblem extends Problem {
 
-          static TYPE: string = 'http://example.com/invalid_id';
+        static TYPE: string = 'http://example.com/invalid_id';
 
-          offendingId: string;
+        offendingId: string;
 
-          constructor(offendingId: string, instance: string | URL | undefined = undefined) {
-            super({
-              type: InvalidIdProblem.TYPE,
-              title: 'Invalid Id',
-              status: 400,
-              detail: 'The id contains one or more invalid characters.',
-              instance
-            });
-            this.offendingId = offendingId;
-          }
-
+        constructor(offendingId: string, instance: string | URL | undefined = undefined) {
+          super({
+            type: InvalidIdProblem.TYPE,
+            title: 'Invalid Id',
+            status: 400,
+            detail: 'The id contains one or more invalid characters.',
+            instance
+          });
+          this.offendingId = offendingId;
         }
+
+      }
 
       """.trimIndent(),
       buildString {
-        FileSpec.get(typeSpec, "invalid-id-problem")
+        FileSpec
+          .get(typeSpec, "invalid-id-problem")
           .writeTo(this)
       },
     )

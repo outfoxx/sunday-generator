@@ -36,7 +36,7 @@ jobs:
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        build dokkaHtmlMultiModule
+        build :dokkaGenerate
         -x test
       env:
         GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHORT_SHA }}
