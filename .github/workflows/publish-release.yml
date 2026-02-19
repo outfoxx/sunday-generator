@@ -69,7 +69,6 @@ jobs:
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        --no-configuration-cache
         --continue
         -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
         -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
