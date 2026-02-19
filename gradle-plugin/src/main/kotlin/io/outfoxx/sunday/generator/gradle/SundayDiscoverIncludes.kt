@@ -76,30 +76,30 @@ abstract class SundayDiscoverIncludes
       val includes = mutableSetOf<File>()
 
       roots.forEach { file ->
-          val processed = apiProcessor.process(file.toURI())
-          processed.validationLog.forEach {
-            val level =
-              when (it.level) {
-                APIProcessor.Result.Level.Error -> LogLevel.ERROR
-                APIProcessor.Result.Level.Warning -> LogLevel.WARN
-                APIProcessor.Result.Level.Info -> LogLevel.INFO
-              }
-            logger.log(level, "${it.file}:${it.line}: ${it.message}")
-          }
-
-          processed
-            .document
-            .allUnits
-            .mapNotNull { unit -> unit.location }
-            .mapNotNull { location ->
-              when {
-                location.startsWith("file:", ignoreCase = true) -> runCatching { File(URI(location)) }.getOrNull()
-                location.isNotBlank() -> File(location)
-                else -> null
-              }
-            }.filter { it.exists() }
-            .forEach { includes.add(it.canonicalFile) }
+        val processed = apiProcessor.process(file.toURI())
+        processed.validationLog.forEach {
+          val level =
+            when (it.level) {
+              APIProcessor.Result.Level.Error -> LogLevel.ERROR
+              APIProcessor.Result.Level.Warning -> LogLevel.WARN
+              APIProcessor.Result.Level.Info -> LogLevel.INFO
+            }
+          logger.log(level, "${it.file}:${it.line}: ${it.message}")
         }
+
+        processed
+          .document
+          .allUnits
+          .mapNotNull { unit -> unit.location }
+          .mapNotNull { location ->
+            when {
+              location.startsWith("file:", ignoreCase = true) -> runCatching { File(URI(location)) }.getOrNull()
+              location.isNotBlank() -> File(location)
+              else -> null
+            }
+          }.filter { it.exists() }
+          .forEach { includes.add(it.canonicalFile) }
+      }
 
       val outputFile = includesIndexFile.get().asFile
       outputFile.parentFile.mkdirs()
