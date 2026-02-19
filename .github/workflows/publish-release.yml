@@ -39,7 +39,7 @@ jobs:
         build :dokkaGenerate
         -x test
       env:
-        GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHORT_SHA }}
+        GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHA }}
 
     - name: Publish Maven Release
       run: >-
