@@ -37,9 +37,10 @@ application {
 
 val releaseVersion: String by project
 
-val enableMultiPlatformJib = !gradle.startParameter.taskNames.any { taskName ->
-  taskName == "jibDockerBuild" || taskName.endsWith(":jibDockerBuild")
-}
+val enableMultiPlatformJib =
+  !gradle.startParameter.taskNames.any { taskName ->
+    taskName == "jibDockerBuild" || taskName.endsWith(":jibDockerBuild")
+  }
 
 fun Manifest.updateAttributes() {
   val title = "Sunday Generator"
