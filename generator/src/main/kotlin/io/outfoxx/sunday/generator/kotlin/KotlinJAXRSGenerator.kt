@@ -184,7 +184,7 @@ class KotlinJAXRSGenerator(
           Options.BaseUriMode.PATH_ONLY ->
             try {
               URI(expandedBaseURL).path
-            } catch (ignored: Throwable) {
+            } catch (_: Throwable) {
               expandedBaseURL.replace("//", "").dropWhile { it != '/' }
             }
         }
@@ -298,7 +298,7 @@ class KotlinJAXRSGenerator(
     referenceTypeUsage(body)
 
     return if (generationMode == Client) {
-      return jaxRsTypes.sseEventSource
+      jaxRsTypes.sseEventSource
     } else {
       UNIT
     }
@@ -387,20 +387,20 @@ class KotlinJAXRSGenerator(
     operation: Operation,
   ): List<SecurityRequirement> {
 
-    val reqs = mutableListOf<SecurityRequirement>()
+    val requirements = mutableListOf<SecurityRequirement>()
 
-    reqs.addAll(document.api.security)
+    requirements.addAll(document.api.security)
 
     fun addEndpoint(endPoint: EndPoint) {
       endPoint.parent?.let(::addEndpoint)
-      reqs.addAll(endPoint.security)
+      requirements.addAll(endPoint.security)
     }
 
     addEndpoint(endPoint)
 
-    reqs += operation.security
+    requirements += operation.security
 
-    return reqs
+    return requirements
   }
 
   private fun resolveSecuritySchemes(
@@ -453,7 +453,7 @@ class KotlinJAXRSGenerator(
 
     functionBuilder.addModifiers(KModifier.ABSTRACT)
 
-    // Add @GET, @POST, @PUT, @DELETE to resource method
+    // Add @GET, @POST, @PUT, @DELETE to the resource method
     val httpMethodAnnClass =
       jaxRsTypes.httpMethod(operation.method)
         ?: genError("Unsupported HTTP method", operation)

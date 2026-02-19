@@ -274,9 +274,9 @@ class RequestMethodsTest {
       public interface API {
         public fun fetchTest1OrNull(limit: Int): Test? = try {
           fetchTest1(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           when (x.status?.statusCode) {
@@ -291,9 +291,9 @@ class RequestMethodsTest {
 
         public fun fetchTest2OrNull(limit: Int): Test? = try {
           fetchTest2(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           if (x.status?.statusCode == 404) {
@@ -309,9 +309,9 @@ class RequestMethodsTest {
 
         public fun fetchTest3OrNull(limit: Int): Test? = try {
           fetchTest3(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         }
 
