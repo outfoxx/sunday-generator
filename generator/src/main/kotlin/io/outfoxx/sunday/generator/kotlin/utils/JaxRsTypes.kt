@@ -128,7 +128,7 @@ interface JaxRsTypes {
   fun httpMethod(method: String): ClassName? =
     try {
       httpMethod(Method.valueOf(method.uppercase()))
-    } catch (e: IllegalArgumentException) {
+    } catch (_: IllegalArgumentException) {
       null
     }
 

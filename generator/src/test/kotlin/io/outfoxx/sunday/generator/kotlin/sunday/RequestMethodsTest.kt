@@ -336,9 +336,9 @@ class RequestMethodsTest {
         }
         public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
           fetchTest1(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           when (x.status?.statusCode) {
@@ -359,9 +359,9 @@ class RequestMethodsTest {
 
         public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
           fetchTest2(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           if (x.status?.statusCode == 404) {
@@ -383,9 +383,9 @@ class RequestMethodsTest {
 
         public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
           fetchTest3(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         }
 
@@ -497,9 +497,9 @@ class RequestMethodsTest {
         }
         public suspend fun fetchTest1OrNull(limit: Int): ResultResponse<Test>? = try {
           fetchTest1(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           when (x.status?.statusCode) {
@@ -520,9 +520,9 @@ class RequestMethodsTest {
 
         public suspend fun fetchTest2OrNull(limit: Int): ResultResponse<Test>? = try {
           fetchTest2(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         } catch(x: ThrowableProblem) {
           if (x.status?.statusCode == 404) {
@@ -544,9 +544,9 @@ class RequestMethodsTest {
 
         public suspend fun fetchTest3OrNull(limit: Int): ResultResponse<Test>? = try {
           fetchTest3(limit)
-        } catch(x: TestNotFoundProblem) {
+        } catch(_: TestNotFoundProblem) {
           null
-        } catch(x: AnotherNotFoundProblem) {
+        } catch(_: AnotherNotFoundProblem) {
           null
         }
 

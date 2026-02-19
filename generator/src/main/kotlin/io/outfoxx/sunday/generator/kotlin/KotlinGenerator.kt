@@ -391,11 +391,10 @@ abstract class KotlinGenerator(
             val referencedProblemCodes = problems.mapNotNull { it.stringValue }
             val referencedProblemTypes =
               referencedProblemCodes
-                .map { problemCode ->
-                  val problemType =
-                    problemTypes[problemCode] ?: genError("Unknown problem code referenced: $problemCode", operation)
-                  problemCode to problemType
-                }.toMap()
+                .associateWith { problemCode ->
+                  problemTypes[problemCode]
+                    ?: genError("Unknown problem code referenced: $problemCode", operation)
+                }
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
@@ -609,7 +608,7 @@ abstract class KotlinGenerator(
     fun expand(template: String): URI {
       try {
         return URI(UriTemplate.expand(template, problemBaseUriParams))
-      } catch (ignored: URISyntaxException) {
+      } catch (_: URISyntaxException) {
         genError(
           """
           Problem URI is not a valid URI; it cannot be a template.
@@ -752,9 +751,7 @@ abstract class KotlinGenerator(
             if (copyAnnotations) {
               addAnnotations(function.annotations)
             }
-            nullableReturnType.let {
-              returns(it)
-            }
+            returns(nullableReturnType)
           }.addKdoc(function.kdoc)
           .addCode(nullifyFunctionCodeBlock)
           .build(),
@@ -779,7 +776,7 @@ abstract class KotlinGenerator(
 
     problemTypeNames.forEach {
       codeBuilder
-        .nextControlFlow("catch(x: %T)", it)
+        .nextControlFlow("catch(_: %T)", it)
         .addStatement("null")
     }
 

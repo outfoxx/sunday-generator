@@ -175,7 +175,7 @@ class KotlinTypeRegistry(
   val generationMode: GenerationMode,
   val options: Set<Option>,
   val problemLibrary: KotlinProblemLibrary = KotlinProblemLibrary.QUARKUS,
-  val problemRfc: KotlinProblemRfc = KotlinProblemRfc.RFC9457,
+  problemRfc: KotlinProblemRfc = KotlinProblemRfc.RFC9457,
   val validateProblemRfc: Boolean = false,
 ) : TypeRegistry {
 
