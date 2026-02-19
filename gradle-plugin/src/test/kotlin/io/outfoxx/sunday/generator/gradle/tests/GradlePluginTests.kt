@@ -482,6 +482,49 @@ class GradlePluginTests {
     }
   }
 
+  @Test
+  fun `discover includes ignores RAML fragments in source`() {
+
+    buildFile.writeText(dualTestBuildFileNoIncludes)
+
+    val sourceDir = testProjectDir.resolve("src/main/sunday")
+    sourceDir.mkdirs()
+
+    sourceDir.resolve("main_file.raml").writeText(
+      """
+      #%RAML 1.0
+      title: Test
+      version: 1.0.0
+      baseUri: http://localhost:8080/api
+      mediaType: application/json
+      types:
+        Test:
+          type: object
+          properties:
+            id: string
+      """.trimIndent(),
+    )
+
+    sourceDir.resolve("bad_fragment.raml").writeText(
+      """
+      #%RAML 1.0 DataType
+      type: [this is invalid
+      """.trimIndent(),
+    )
+
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("sundayDiscoverIncludes_client", "--stacktrace", "--debug")
+        .withDebug(true)
+        .build()
+
+    val discoverTask = result.task(":sundayDiscoverIncludes_client")
+    assertThat(discoverTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+  }
+
 
   @Test
   fun `disable container element validation applies use-site constraints`() {
