@@ -525,10 +525,8 @@ class GradlePluginTests {
     assertThat(discoverTask?.outcome, equalTo(TaskOutcome.SUCCESS))
   }
 
-
   @Test
   fun `disable container element validation applies use-site constraints`() {
-
     copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
     copy("/validation-constraints.raml", testProjectDir.resolve("src/main/sunday"))
 
