@@ -1,1 +1,1 @@
-sourceset_dependencies = '{":cli:dokkaHtmlPartial/main":[],":generator:dokkaHtmlPartial/main":[],":gradle-plugin:dokkaHtmlPartial/main":[]}'
+sourceset_dependencies = '{":cli/main":[],":generator/main":[],":gradle-plugin/main":[]}'
