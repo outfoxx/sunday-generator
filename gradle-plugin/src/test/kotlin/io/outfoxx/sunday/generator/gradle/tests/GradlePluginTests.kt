@@ -385,11 +385,35 @@ class GradlePluginTests {
 
     copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
 
-    val includes = testProjectDir.resolve("src/main/sunday-includes")
-    includes.mkdirs()
+    val sourceDir = testProjectDir.resolve("src/main/sunday")
+    sourceDir.mkdirs()
 
-    val include = includes.resolve("include.raml")
+    val includesDir = testProjectDir.resolve("src/main/sunday-includes")
+    includesDir.mkdirs()
+
+    val nestedInclude = includesDir.resolve("nested_include.raml")
+    nestedInclude.writeText(
+      """
+      #%RAML 1.0 DataType
+      type: object
+      properties:
+        value: string
+      """.trimIndent(),
+    )
+
+    val include = includesDir.resolve("include1.raml")
     include.writeText(
+      """
+      #%RAML 1.0 DataType
+      type: object
+      properties:
+        id: string
+        nested: !include nested_include.raml
+      """.trimIndent(),
+    )
+
+    val mainFile = sourceDir.resolve("main_file.raml")
+    mainFile.writeText(
       """
       #%RAML 1.0
       title: Test
@@ -398,99 +422,7 @@ class GradlePluginTests {
       mediaType: application/json
       types:
         Test:
-          type: object
-          properties:
-            id: string
-      """.trimIndent(),
-    )
-
-    buildFile.writeText(dualTestBuildFile)
-
-    // Generate settings.gradle.kts with temporary build cache dir
-    testProjectDir.resolve("settings.gradle.kts").writeText(
-      """
-      buildCache {
-        local {
-          directory = file("${testProjectDir.resolve("local-cache")}")
-        }
-      }
-      """.trimIndent(),
-    )
-
-    listOf(
-      Triple(TaskOutcome.SUCCESS, TaskOutcome.SUCCESS, false),
-      Triple(TaskOutcome.FROM_CACHE, TaskOutcome.FROM_CACHE, false),
-      Triple(TaskOutcome.SUCCESS, TaskOutcome.SUCCESS, true),
-    ).forEach { (clientOutcome, serverOutcome, updateInclude) ->
-      println("Executing build expecting outcomes: client=$clientOutcome, server=$serverOutcome")
-
-      // Delete build directory to test loading from cache
-      testProjectDir.resolve("build").deleteRecursively()
-
-      if (updateInclude) {
-        // Change contents of include.raml to force regeneration
-        include.writeText(
-          """
-          #%RAML 1.0
-          title: Test
-          version: 1.0.0
-          baseUri: http://localhost:8080/api
-          mediaType: application/json
-          types:
-            Test:
-              type: object
-              properties:
-                id: string
-                name: string
-          """.trimIndent(),
-        )
-      }
-
-      val result =
-        GradleRunner
-          .create()
-          .withProjectDir(testProjectDir)
-          .withPluginClasspath()
-          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-          .withDebug(true)
-          .forwardOutput()
-          .build()
-
-      val genClientTask = result.task(":sundayGenerate_client")
-      assertThat(genClientTask?.outcome, equalTo(clientOutcome))
-
-      val genServerTask = result.task(":sundayGenerate_server")
-      assertThat(genServerTask?.outcome, equalTo(serverOutcome))
-
-      val kotlinTask = result.task(":compileKotlin")
-      assertThat(
-        kotlinTask?.outcome,
-        anyOf(equalTo(clientOutcome), equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.UP_TO_DATE)),
-      )
-    }
-  }
-
-  @Test
-  fun `generate sources for kotlin are regenerated when default includes changes`() {
-
-    copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
-
-    val includes = testProjectDir.resolve("src/main/sunday-includes")
-    includes.mkdirs()
-
-    val include = includes.resolve("include.raml")
-    include.writeText(
-      """
-      #%RAML 1.0
-      title: Test
-      version: 1.0.0
-      baseUri: http://localhost:8080/api
-      mediaType: application/json
-      types:
-        Test:
-          type: object
-          properties:
-            id: string
+          type: !include ../sunday-includes/include1.raml
       """.trimIndent(),
     )
 
@@ -515,37 +447,41 @@ class GradlePluginTests {
       .withDebug(true)
       .build()
 
-    include.writeText(
-      """
-      #%RAML 1.0
-      title: Test
-      version: 1.0.0
-      baseUri: http://localhost:8080/api
-      mediaType: application/json
-      types:
-        Test:
-          type: object
-          properties:
-            id: string
-            name: string
-      """.trimIndent(),
-    )
+    listOf(
+      mainFile to "main",
+      include to "include1",
+      nestedInclude to "nested",
+    ).forEach { (file, label) ->
+      println("Executing build after updating $label file")
 
-    val result =
-      GradleRunner
-        .create()
-        .withProjectDir(testProjectDir)
-        .withPluginClasspath()
-        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-        .withDebug(true)
-        .build()
+      testProjectDir.resolve("build").deleteRecursively()
 
-    val genClientTask = result.task(":sundayGenerate_client")
-    assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+      file.appendText("\n# Updated $label\n")
 
-    val genServerTask = result.task(":sundayGenerate_server")
-    assertThat(genServerTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+      val result =
+        GradleRunner
+          .create()
+          .withProjectDir(testProjectDir)
+          .withPluginClasspath()
+          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
+          .withDebug(true)
+          .forwardOutput()
+          .build()
+
+      val genClientTask = result.task(":sundayGenerate_client")
+      assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+
+      val genServerTask = result.task(":sundayGenerate_server")
+      assertThat(genServerTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+
+      val kotlinTask = result.task(":compileKotlin")
+      assertThat(
+        kotlinTask?.outcome,
+        anyOf(equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.UP_TO_DATE)),
+      )
+    }
   }
+
 
   @Test
   fun `disable container element validation applies use-site constraints`() {

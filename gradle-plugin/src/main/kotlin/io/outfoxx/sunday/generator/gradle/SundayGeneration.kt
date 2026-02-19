@@ -39,10 +39,7 @@ class SundayGeneration(
       .property(FileCollection::class.java)
       .convention(project.fileTree("src/main/sunday") { it.include("**/*.raml") })
 
-  val includes: Property<FileCollection> =
-    objects
-      .property(FileCollection::class.java)
-      .convention(project.fileTree("src/main/sunday-includes") { it.include("**/*.raml") })
+  val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
   val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)

@@ -19,6 +19,8 @@ package io.outfoxx.sunday.generator.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
+import java.io.File
+import java.util.concurrent.Callable
 
 class SundayGeneratorPlugin : Plugin<Project> {
 
@@ -43,11 +45,37 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
     generationsContainer.configureEach { gen ->
 
+      val includesIndex = project.layout.buildDirectory.file("generated/sunday/includes/${gen.name}.txt")
+      val discoveredIncludes =
+        project.files(
+          Callable {
+            val indexFile = includesIndex.get().asFile
+            if (!indexFile.exists()) {
+              emptyList<File>()
+            } else {
+              indexFile
+                .readLines()
+                .filter { it.isNotBlank() }
+                .map { File(it) }
+            }
+          },
+        )
+
+      val discoverTask =
+        project.tasks.register("sundayDiscoverIncludes_${gen.name}", SundayDiscoverIncludes::class.java) { task ->
+          task.group = "code-generation"
+          task.source(gen.source)
+          gen.includes.takeIf { it.isPresent }?.let { task.extraIncludes.set(it) }
+          task.includesIndexFile.set(includesIndex)
+          task.bootstrapIncludes.from(discoveredIncludes)
+        }
+
       val genTask =
         project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
           genTask.group = "code-generation"
           genTask.source(gen.source)
-          genTask.includes.set(gen.includes)
+          genTask.includes.set(discoveredIncludes)
+          genTask.dependsOn(discoverTask)
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
