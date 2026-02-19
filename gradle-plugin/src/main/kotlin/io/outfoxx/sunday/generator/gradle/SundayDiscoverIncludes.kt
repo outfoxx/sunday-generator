@@ -62,15 +62,18 @@ abstract class SundayDiscoverIncludes
 
     @TaskAction
     fun discover() {
-      val roots = mutableSetOf<File>()
-      roots.addAll(source.files)
-      bootstrapIncludes.orNull?.files?.let { roots.addAll(it) }
+      val roots =
+        source.files.filter { file ->
+          if (!file.isFile || file.extension != "raml") {
+            return@filter false
+          }
+          val header = file.bufferedReader().use { it.readLine() }?.trim() ?: return@filter false
+          header.startsWith("#%RAML 1.0")
+        }
 
       val includes = mutableSetOf<File>()
 
-      roots
-        .filter { it.isFile && it.extension == "raml" }
-        .forEach { file ->
+      roots.forEach { file ->
           val processed = apiProcessor.process(file.toURI())
           processed.validationLog.forEach {
             val level =
