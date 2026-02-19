@@ -39,7 +39,12 @@ class SundayGeneration(
       .property(FileCollection::class.java)
       .convention(project.fileTree("src/main/sunday") { it.include("**/*.raml") })
 
+  @Deprecated(
+    message = "Includes are discovered automatically; this property has no effect.",
+    level = DeprecationLevel.WARNING,
+  )
   val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
+
   val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)

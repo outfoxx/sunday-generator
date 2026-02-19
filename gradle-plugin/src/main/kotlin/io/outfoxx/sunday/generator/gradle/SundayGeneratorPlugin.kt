@@ -65,9 +65,8 @@ class SundayGeneratorPlugin : Plugin<Project> {
         project.tasks.register("sundayDiscoverIncludes_${gen.name}", SundayDiscoverIncludes::class.java) { task ->
           task.group = "code-generation"
           task.source(gen.source)
-          gen.includes.takeIf { it.isPresent }?.let { task.extraIncludes.set(it) }
           task.includesIndexFile.set(includesIndex)
-          task.bootstrapIncludes.from(discoveredIncludes)
+          task.bootstrapIncludes.set(discoveredIncludes)
         }
 
       val genTask =

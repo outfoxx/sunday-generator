@@ -21,7 +21,6 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.location
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
 import org.gradle.api.file.RegularFileProperty
@@ -54,12 +53,7 @@ abstract class SundayDiscoverIncludes
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     @Optional
-    val extraIncludes: Property<FileCollection> = objects.property(FileCollection::class.java)
-
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
-    @Optional
-    val bootstrapIncludes: ConfigurableFileCollection = objects.fileCollection()
+    val bootstrapIncludes: Property<FileCollection> = objects.property(FileCollection::class.java)
 
     @OutputFile
     val includesIndexFile: RegularFileProperty = objects.fileProperty()
@@ -70,8 +64,7 @@ abstract class SundayDiscoverIncludes
     fun discover() {
       val roots = mutableSetOf<File>()
       roots.addAll(source.files)
-      extraIncludes.orNull?.files?.let { roots.addAll(it) }
-      roots.addAll(bootstrapIncludes.files)
+      bootstrapIncludes.orNull?.files?.let { roots.addAll(it) }
 
       val includes = mutableSetOf<File>()
 
