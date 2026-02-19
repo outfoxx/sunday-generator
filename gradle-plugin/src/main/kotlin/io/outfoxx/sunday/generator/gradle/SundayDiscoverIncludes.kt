@@ -68,7 +68,9 @@ abstract class SundayDiscoverIncludes
             return@filter false
           }
           val header = file.bufferedReader().use { it.readLine() }?.trim() ?: return@filter false
-          header.startsWith("#%RAML 1.0")
+          header == "#%RAML 1.0" ||
+            header.startsWith("#%RAML 1.0 Overlay") ||
+            header.startsWith("#%RAML 1.0 Extension")
         }
 
       val includes = mutableSetOf<File>()
