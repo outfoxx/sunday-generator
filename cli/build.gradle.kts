@@ -1,3 +1,4 @@
+import com.google.cloud.tools.jib.gradle.BuildImageTask
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
@@ -80,6 +81,10 @@ tasks.generateResourcesConfigFile {
 
 tasks.nativeCompile {
   classpathJar = tasks.shadowJar.flatMap { it.archiveFile }
+}
+
+tasks.withType<BuildImageTask>().configureEach {
+  notCompatibleWithConfigurationCache("Jib tasks require project access at execution time.")
 }
 
 jib {
