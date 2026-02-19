@@ -177,6 +177,7 @@ class KotlinTypeRegistry(
   val problemLibrary: KotlinProblemLibrary = KotlinProblemLibrary.QUARKUS,
   problemRfc: KotlinProblemRfc = KotlinProblemRfc.RFC9457,
   val validateProblemRfc: Boolean = false,
+  generationTimestamp: String? = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME),
 ) : TypeRegistry {
 
   enum class Option {
@@ -189,7 +190,7 @@ class KotlinTypeRegistry(
     UseJakartaPackages,
   }
 
-  val generationTimestamp = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)!!
+  val generationTimestamp = generationTimestamp?.ifBlank { null }
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   private val typeNameMappings = mutableMapOf<String, TypeName>()
@@ -1748,7 +1749,9 @@ class KotlinTypeRegistry(
           .apply {
             if (verbose) {
               addMember("value = [%S]", this@KotlinTypeRegistry.javaClass.name)
-              addMember("date = %S", generationTimestamp)
+              if (generationTimestamp != null) {
+                addMember("date = %S", generationTimestamp)
+              }
             }
           }.build(),
       )

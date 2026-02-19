@@ -39,13 +39,15 @@ class SundayGeneratorPlugin : Plugin<Project> {
       }
     project.extensions.add("sundayGenerations", generationsContainer)
 
+    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+
     generationsContainer.configureEach { gen ->
 
       val genTask =
         project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
           genTask.group = "code-generation"
-          gen.source.takeIf { it.isPresent }?.let { genTask.source(gen.source) }
-          gen.includes.takeIf { it.isPresent }?.let { genTask.includes.set(it) }
+          genTask.source(gen.source)
+          genTask.includes.set(gen.includes)
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
@@ -65,6 +67,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.baseUriMode.takeIf { it.isPresent }?.let { genTask.baseUriMode.set(it) }
           gen.defaultMediaTypes.takeIf { it.isPresent }?.let { genTask.defaultMediaTypes.set(it) }
           gen.generatedAnnotation.takeIf { it.isPresent }?.let { genTask.generatedAnnotation.set(it) }
+          gen.generationTimestamp.takeIf { it.isPresent }?.let { genTask.generationTimestamp.set(it) }
           gen.alwaysUseResponseReturn.takeIf { it.isPresent }?.let { genTask.alwaysUseResponseReturn.set(it) }
           gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
           gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
@@ -73,19 +76,9 @@ class SundayGeneratorPlugin : Plugin<Project> {
         }
 
       allTask.configure { it.dependsOn(genTask) }
-    }
 
-    project.afterEvaluate {
-
-      generationsContainer.all { gen ->
-
-        val genTask = project.tasks.named("sundayGenerate_${gen.name}", SundayGenerate::class.java)
-
-        val sourceSetName = gen.targetSourceSet.get()
-
-        val sourceSets = project.extensions.getByName("sourceSets") as SourceSetContainer
-        sourceSets.getByName(sourceSetName).java.srcDir(genTask)
-      }
+      val sourceSetName = gen.targetSourceSet.get()
+      sourceSets.getByName(sourceSetName).java.srcDir(genTask)
     }
   }
 }

@@ -26,17 +26,28 @@ object GenerationHeaders {
   fun create(
     fileName: String,
     linePrefix: String = "",
+    generationTimestamp: String? = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
   ): String =
     GenerationHeaders::class.java.classLoader
       .getResourceAsStream("header.gen.txt")!!
       .readAllBytes()
       .decodeToString()
-      .replace(paramRegex) {
-        when (it.groupValues[1]) {
-          "filename" -> fileName
-          "date" -> LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-          else -> ""
+      .split("\n")
+      .mapNotNull { line ->
+        if (generationTimestamp.isNullOrBlank() && line.contains("{{ date }}")) {
+          null
+        } else {
+          line
         }
-      }.split("\n")
-      .joinToString("\n") { "$linePrefix$it" }
+      }.joinToString("\n") { line ->
+        val replaced =
+          line.replace(paramRegex) {
+            when (it.groupValues[1]) {
+              "filename" -> fileName
+              "date" -> generationTimestamp ?: ""
+              else -> ""
+            }
+          }
+        "$linePrefix$replaced"
+      }
 }

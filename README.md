@@ -10,6 +10,13 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [Read the Documentation](https://outfoxx.github.io/sunday)
 
+Gradle Plugin Cache Notes
+-------------------------
+
+- The Gradle plugin now defaults to deterministic output for build/cache correctness by omitting generated timestamps unless explicitly set.
+- Included RAML fragments under `src/main/sunday-includes/**/*.raml` are tracked by default. Override with `includes.set(...)` in `sundayGenerations` if you use a different layout.
+- To opt in to a timestamp, set `generationTimestamp` on a generation (for example, a fixed string or a time you compute in the build script).
+
 
 License
 -------

@@ -39,7 +39,10 @@ class SundayGeneration(
       .property(FileCollection::class.java)
       .convention(project.fileTree("src/main/sunday") { it.include("**/*.raml") })
 
-  val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
+  val includes: Property<FileCollection> =
+    objects
+      .property(FileCollection::class.java)
+      .convention(project.fileTree("src/main/sunday-includes") { it.include("**/*.raml") })
   val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
@@ -59,6 +62,7 @@ class SundayGeneration(
   val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java)
   val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java)
   val generatedAnnotation: Property<String> = objects.property(String::class.java)
+  val generationTimestamp: Property<String> = objects.property(String::class.java)
   val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)

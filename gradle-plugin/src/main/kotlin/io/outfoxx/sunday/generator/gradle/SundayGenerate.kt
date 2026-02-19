@@ -42,6 +42,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -63,124 +64,134 @@ abstract class SundayGenerate
     @PathSensitive(PathSensitivity.RELATIVE)
     override fun getSource(): FileTree = super.getSource()
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
-    @Optional
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:Optional
     val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
 
-    @Input
+    @get:Input
     val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
 
-    @Input
+    @get:Input
     val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val generateModel: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val generateService: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val pkgName: Property<String> = objects.property(String::class.java).convention("com.example")
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val modelPkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val servicePkgName: Property<String> = objects.property(String::class.java).convention(pkgName)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val serviceSuffix: Property<String> = objects.property(String::class.java).convention("API")
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val problemBaseUri: Property<String> = objects.property(String::class.java).convention("http://example.com/")
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val coroutines: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val flowCoroutines: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val reactiveResponseType: Property<String> = objects.property(String::class.java).convention(null as String?)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val explicitSecurityParameters: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val baseUriMode: Property<BaseUriMode> = objects.property(BaseUriMode::class.java).convention(null as BaseUriMode?)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val defaultMediaTypes: ListProperty<String> = objects.listProperty(String::class.java).convention(listOf())
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val generatedAnnotation: Property<String> = objects.property(String::class.java).convention(null as String?)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
+    val generationTimestamp: Property<String> = objects.property(String::class.java)
+
+    @get:Input
+    @get:Optional
     val alwaysUseResponseReturn: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val quarkus: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val problemLibrary: Property<KotlinProblemLibrary> =
       objects
         .property(KotlinProblemLibrary::class.java)
         .convention(KotlinProblemLibrary.QUARKUS)
 
-    @Input
-    @Optional
+    @get:Input
+    @get:Optional
     val problemRfc: Property<KotlinProblemRfc> =
       objects
         .property(KotlinProblemRfc::class.java)
         .convention(KotlinProblemRfc.RFC9457)
 
-    @OutputDirectory
+    @get:OutputDirectory
     val outputDir: Property<Directory> =
       objects
         .directoryProperty()
         .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
+
+    @get:Internal
+    val rootDir: Property<Directory> =
+      objects
+        .directoryProperty()
+        .convention(project.layout.projectDirectory)
 
     private val apiProcessor = APIProcessor()
 
@@ -232,6 +243,7 @@ abstract class SundayGenerate
           options,
           effectiveProblemLibrary,
           problemRfc.get(),
+          generationTimestamp = generationTimestamp.orNull,
         )
 
       source
@@ -257,7 +269,7 @@ abstract class SundayGenerate
             APIProcessor.Result.Level.Warning -> LogLevel.WARN
             APIProcessor.Result.Level.Info -> LogLevel.INFO
           }
-        val errorFile = File(it.file).relativeToOrSelf(project.rootDir)
+        val errorFile = File(it.file).relativeToOrSelf(rootDir.get().asFile)
         logger.log(level, "$errorFile:${it.line}: ${it.message}")
       }
 
