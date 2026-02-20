@@ -76,7 +76,7 @@ val copyCurrentDocs = tasks.register<Copy>("copyCurrentDocs") {
   from(versionedDocDir) {
     include("**")
   }
-  dependsOn(copyVersionedRaml, copyVersionedJbang)
+  dependsOn(copyVersionedRaml, copyVersionedJbang, copyCurrentRaml)
 }
 
 val copyCurrentRaml = tasks.register<Copy>("copyCurrentRaml") {
