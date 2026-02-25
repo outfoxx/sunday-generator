@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -62,38 +62,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.test.Base
-      import io.test.Test
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): Test = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
-
-        public suspend fun fetchDerivedTest(): Base = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/derived",
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-basic-body-parameter-generation-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -129,30 +99,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.ByteArray
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(),
-      ) {
-        public suspend fun fetchTest(): ByteArray = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = listOf(MediaType.OctetStream)
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-generation-of-body-parameter-with-explicit-content-type-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -188,34 +136,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.String
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): FetchTestResponseBody = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
-
-        public interface FetchTestResponseBody {
-          public val `value`: String
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-generation-of-body-parameter-with-inline-type-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -251,29 +173,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Unit
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): Unit = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests"
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-generation-of-response-body-that-is-no-content-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -309,29 +210,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Unit
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun startTest(): Unit = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests"
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-generation-of-no-response-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -367,29 +247,8 @@ class ResponseBodyContentTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Unit
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun startTest(): Unit = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests"
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseBodyContentTest/test-generation-of-no-response-in-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

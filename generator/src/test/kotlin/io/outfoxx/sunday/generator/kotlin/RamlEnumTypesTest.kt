@@ -21,8 +21,8 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -40,20 +40,8 @@ class RamlEnumTypesTest {
 
     val typeSpec = findType("io.test.TestEnum", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      public enum class TestEnum {
-        None,
-        Some,
-        All,
-        SnakeCase,
-        KebabCase,
-        InvalidChar,
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlEnumTypesTest/test-names-generated-for-enums-types-values.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -71,28 +59,8 @@ class RamlEnumTypesTest {
 
     val typeSpec = findType("io.test.TestEnum", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-
-      public enum class TestEnum {
-        @JsonProperty(value = "none")
-        None,
-        @JsonProperty(value = "some")
-        Some,
-        @JsonProperty(value = "all")
-        All,
-        @JsonProperty(value = "snake_case")
-        SnakeCase,
-        @JsonProperty(value = "kebab-case")
-        KebabCase,
-        @JsonProperty(value = "invalid:char")
-        InvalidChar,
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlEnumTypesTest/test-names-generated-for-enums-types-values-with-jackson.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)

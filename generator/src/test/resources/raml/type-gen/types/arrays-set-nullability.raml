@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+  - application/json
+
+types:
+
+  StringSet:
+    type: array
+    uniqueItems: true
+    items: string
+
+  NullableStringSet:
+    type: StringSet | nil
+
+  Test:
+    type: object
+    properties:
+      requiredSet: StringSet
+      optionalSet?: StringSet
+      nullableSet: NullableStringSet
+      nullableOptionalSet?: NullableStringSet
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

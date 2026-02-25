@@ -3,16 +3,15 @@
   "version": "1.0.0",
   "description": "Generator Test Package",
   "scripts": {
-    "build": "tsc --build tsconfig.json"
+    "build": "tsc --project tsconfig.json --noEmit --pretty false --incremental false --noErrorTruncation"
   },
   "keywords": [],
   "author": "nobody",
   "license": "outfox",
   "dependencies": {
-    "@outfoxx/sunday": "~1.1.0-beta.17",
-    "@outfoxx/jackson-js": "~1.4.0"
+    "@outfoxx/sunday": "file:./sunday-stub"
   },
   "devDependencies": {
-    "typescript": "^4.0.2"
+    "typescript": "^5.9.3"
   }
 }

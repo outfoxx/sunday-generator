@@ -20,8 +20,8 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -39,22 +39,8 @@ class RamlUnionTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import kotlin.Any
-      import kotlin.String
-
-      public interface Test {
-        public val any: Any
-
-        public val duplicate: String
-
-        public val nullable: String?
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlUnionTypesTest/test-generated-types-for-general-union-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -72,15 +58,8 @@ class RamlUnionTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      public interface Test {
-        public val `value`: Base
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlUnionTypesTest/test-generated-types-for-common-object-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -98,17 +77,8 @@ class RamlUnionTypesTest {
 
     val typeSpec = findType("io.test.lib.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import kotlin.Any
-
-      public interface Test {
-        public val `value`: Any
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlUnionTypesTest/test-generated-types-for-similarly-named-but-uncommon-object-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)

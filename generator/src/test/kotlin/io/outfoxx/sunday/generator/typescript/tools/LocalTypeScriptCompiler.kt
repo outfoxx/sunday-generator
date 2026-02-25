@@ -31,7 +31,7 @@ class LocalTypeScriptCompiler(
     val buildPkg =
       ProcessBuilder()
         .directory(workDir.toFile())
-        .command(command, "ci")
+        .command(command, "install")
         .apply {
           environment().putAll(env)
         }.redirectErrorStream(true)

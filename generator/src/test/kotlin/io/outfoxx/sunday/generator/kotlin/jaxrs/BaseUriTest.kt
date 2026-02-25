@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -55,26 +55,8 @@ class BaseUriTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import kotlin.String
-
-      @Path(value = "http://master.sbx.example.com/api/1")
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(): String
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "BaseUriTest/test-baseurl-generation-in-api-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -105,26 +87,8 @@ class BaseUriTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Path(value = "/api/1")
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "BaseUriTest/test-baseurl-generation-in-api-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

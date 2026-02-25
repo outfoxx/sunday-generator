@@ -26,8 +26,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -64,43 +64,8 @@ class BaseUriTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.URITemplate
-      import io.outfoxx.sunday.http.Method
-      import io.test.Environment
-      import kotlin.String
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): String = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
-
-        public companion object {
-          public fun baseURL(
-            server: String = "master",
-            environment: Environment = Environment.Sbx,
-            version: String = "1",
-          ): URITemplate = URITemplate(
-            "http://{server}.{environment}.example.com/api/{version}",
-            mapOf("server" to server, "environment" to environment, "version" to version)
-          )
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "BaseUriTest/test-baseurl-generation-in-api.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

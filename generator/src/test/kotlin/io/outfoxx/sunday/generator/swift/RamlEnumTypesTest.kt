@@ -19,9 +19,9 @@ package io.outfoxx.sunday.generator.swift
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -40,20 +40,8 @@ class RamlEnumTypesTest {
 
     val typeSpec = findType("TestEnum", generateTypes(testUri, typeRegistry, compiler))
 
-    assertEquals(
-      """
-      public enum TestEnum : String, CaseIterable, Codable {
-
-        case none = "none"
-        case some = "some"
-        case all = "all"
-        case snakeCase = "snake_case"
-        case kebabCase = "kebab-case"
-        case invalidChar = "invalid:char"
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "RamlEnumTypesTest/test-names-generated-for-enums-types-values.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)

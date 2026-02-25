@@ -22,8 +22,8 @@ import io.outfoxx.sunday.generator.GenerationMode.Server
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -45,28 +45,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Parent")]
         ?: error("Parent type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonSubTypes
-      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-      import kotlin.String
-
-      @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "type",
-      )
-      @JsonSubTypes(value = [
-        JsonSubTypes.Type(value = Child1::class),
-        JsonSubTypes.Type(value = Child2::class)
-      ])
-      public interface Parent {
-        public val type: String
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-string-discriminated-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", parenTypeSpec)
@@ -78,22 +58,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child1")]
         ?: error("Child1 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("Child1")
-      public interface Child1 : Parent {
-        public val `value`: String?
-
-        public val value1: Int
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-string-discriminated-types.output2.kt",
       buildString {
         FileSpec
           .get("io.test", child1TypeSpec)
@@ -105,22 +71,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child2")]
         ?: error("Child2 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("child2")
-      public interface Child2 : Parent {
-        public val `value`: String?
-
-        public val value2: Int
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-string-discriminated-types.output3.kt",
       buildString {
         FileSpec
           .get("io.test", child2TypeSpec)
@@ -142,39 +94,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Parent")]
         ?: error("Parent type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonSubTypes
-      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.String
-
-      @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "type",
-      )
-      @JsonSubTypes(value = [
-        JsonSubTypes.Type(value = Child1::class),
-        JsonSubTypes.Type(value = Child2::class)
-      ])
-      public abstract class Parent {
-        public abstract val type: String
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          return true
-        }
-
-        override fun toString(): String = ${'"'}""Parent()""${'"'}
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-string-discriminated-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", parenTypeSpec)
@@ -186,53 +107,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child1")]
         ?: error("Child1 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("Child1")
-      public class Child1(
-        public val `value`: String? = null,
-        public val value1: Int,
-      ) : Parent() {
-        override val type: String
-          get() = "Child1"
-
-        public fun copy(`value`: String? = null, value1: Int? = null): Child1 = Child1(value ?:
-            this.value, value1 ?: this.value1)
-
-        override fun hashCode(): Int {
-          var result = 31 * super.hashCode()
-          result = 31 * result + (value?.hashCode() ?: 0)
-          result = 31 * result + value1.hashCode()
-          return result
-        }
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          other as Child1
-
-          if (value != other.value) return false
-          if (value1 != other.value1) return false
-
-          return true
-        }
-
-        override fun toString(): String = ""${'"'}
-        |Child1(value='${'$'}value',
-        | value1='${'$'}value1')
-        ""${'"'}.trimMargin()
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-string-discriminated-types.output2.kt",
       buildString {
         FileSpec
           .get("io.test", child1TypeSpec)
@@ -244,53 +120,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child2")]
         ?: error("Child2 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("child2")
-      public class Child2(
-        public val `value`: String? = null,
-        public val value2: Int,
-      ) : Parent() {
-        override val type: String
-          get() = "child2"
-
-        public fun copy(`value`: String? = null, value2: Int? = null): Child2 = Child2(value ?:
-            this.value, value2 ?: this.value2)
-
-        override fun hashCode(): Int {
-          var result = 31 * super.hashCode()
-          result = 31 * result + (value?.hashCode() ?: 0)
-          result = 31 * result + value2.hashCode()
-          return result
-        }
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          other as Child2
-
-          if (value != other.value) return false
-          if (value2 != other.value2) return false
-
-          return true
-        }
-
-        override fun toString(): String = ""${'"'}
-        |Child2(value='${'$'}value',
-        | value2='${'$'}value2')
-        ""${'"'}.trimMargin()
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-string-discriminated-types.output3.kt",
       buildString {
         FileSpec
           .get("io.test", child2TypeSpec)
@@ -312,27 +143,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Parent")]
         ?: error("Parent type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonSubTypes
-      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-
-      @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "type",
-      )
-      @JsonSubTypes(value = [
-        JsonSubTypes.Type(value = Child1::class),
-        JsonSubTypes.Type(value = Child2::class)
-      ])
-      public interface Parent {
-        public val type: Type
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-enum-discriminated-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", parenTypeSpec)
@@ -344,19 +156,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child1")]
         ?: error("Child1 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.String
-
-      @JsonTypeName("Child1")
-      public interface Child1 : Parent {
-        public val `value`: String?
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-enum-discriminated-types.output2.kt",
       buildString {
         FileSpec
           .get("io.test", child1TypeSpec)
@@ -368,19 +169,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child2")]
         ?: error("Child2 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.String
-
-      @JsonTypeName("Child2")
-      public interface Child2 : Parent {
-        public val `value`: String?
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-interfaces-of-enum-discriminated-types.output3.kt",
       buildString {
         FileSpec
           .get("io.test", child2TypeSpec)
@@ -402,39 +192,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Parent")]
         ?: error("Parent type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonSubTypes
-      import com.fasterxml.jackson.`annotation`.JsonTypeInfo
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.String
-
-      @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "type",
-      )
-      @JsonSubTypes(value = [
-        JsonSubTypes.Type(value = Child1::class),
-        JsonSubTypes.Type(value = Child2::class)
-      ])
-      public abstract class Parent {
-        public abstract val type: Type
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          return true
-        }
-
-        override fun toString(): String = ${'"'}""Parent()""${'"'}
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-enum-discriminated-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", parenTypeSpec)
@@ -446,46 +205,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child1")]
         ?: error("Child1 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("Child1")
-      public class Child1(
-        public val `value`: String? = null,
-      ) : Parent() {
-        override val type: Type
-          get() = Type.Child1
-
-        public fun copy(`value`: String? = null): Child1 = Child1(value ?: this.value)
-
-        override fun hashCode(): Int {
-          var result = 31 * super.hashCode()
-          result = 31 * result + (value?.hashCode() ?: 0)
-          return result
-        }
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          other as Child1
-
-          if (value != other.value) return false
-
-          return true
-        }
-
-        override fun toString(): String = ${'"'}""Child1(value='${'$'}value')""${'"'}
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-enum-discriminated-types.output2.kt",
       buildString {
         FileSpec
           .get("io.test", child1TypeSpec)
@@ -497,46 +218,8 @@ class RamlDiscriminatedTypesTest {
       builtTypes[ClassName.bestGuess("io.test.Child2")]
         ?: error("Child2 type is not defined")
 
-    assertEquals(
-      """
-      package io.test
-
-      import com.fasterxml.jackson.`annotation`.JsonTypeName
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.Int
-      import kotlin.String
-
-      @JsonTypeName("Child2")
-      public class Child2(
-        public val `value`: String? = null,
-      ) : Parent() {
-        override val type: Type
-          get() = Type.Child2
-
-        public fun copy(`value`: String? = null): Child2 = Child2(value ?: this.value)
-
-        override fun hashCode(): Int {
-          var result = 31 * super.hashCode()
-          result = 31 * result + (value?.hashCode() ?: 0)
-          return result
-        }
-
-        override fun equals(other: Any?): Boolean {
-          if (this === other) return true
-          if (javaClass != other?.javaClass) return false
-
-          other as Child2
-
-          if (value != other.value) return false
-
-          return true
-        }
-
-        override fun toString(): String = ${'"'}""Child2(value='${'$'}value')""${'"'}
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDiscriminatedTypesTest/test-polymorphism-added-to-generated-classes-of-enum-discriminated-types.output3.kt",
       buildString {
         FileSpec
           .get("io.test", child2TypeSpec)

@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.typescript.utils
 
 import io.outfoxx.typescriptpoet.TypeName
 
+val ASYNC_ITERABLE = TypeName.implicit("AsyncIterable")
 val PARTIAL = TypeName.implicit("Partial")
 val URL_TYPE = TypeName.implicit("URL")
 val RECORD = TypeName.implicit("Record")

@@ -16,13 +16,12 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -37,85 +36,28 @@ class RamlEnumTypesTest {
     @ResourceUri("raml/type-gen/types/scalar/enums.raml") testUri: URI,
   ) {
 
-    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val generatedTypes = generateTypes(testUri, typeRegistry, compiler)
     val enumTypeModSpec = findTypeMod("TestEnum@!test-enum", generatedTypes)
     val usageTypeModSpec = findTypeMod("Test@!test", generatedTypes)
 
-    assertEquals(
-      """
-
-      export enum TestEnum {
-        None = 'none',
-        Some = 'some',
-        All = 'all',
-        SnakeCase = 'snake_case',
-        KebabCase = 'kebab-case',
-        InvalidChar = 'invalid:char'
-      }
-
-      """.trimIndent(),
+    val enumOutput =
       buildString {
         FileSpec
           .get(enumTypeModSpec)
           .writeTo(this)
-      },
-    )
-
-    assertEquals(
-      """
-      import {TestEnum} from './test-enum';
-      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-      export interface TestSpec {
-
-        enumVal: TestEnum;
-
-        setVal: Set<TestEnum>;
-
-        arrayVal: Array<TestEnum>;
-
       }
 
-      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-      export class Test implements TestSpec {
+    assertSnapshot("RamlEnumTypesTest/test-enum.ts", enumOutput)
 
-        @JsonProperty({required: true})
-        @JsonClassType({type: () => [Object]})
-        enumVal: TestEnum;
-
-        @JsonProperty({required: true})
-        @JsonClassType({type: () => [Set, [Object]]})
-        setVal: Set<TestEnum>;
-
-        @JsonProperty({required: true})
-        @JsonClassType({type: () => [Array, [Object]]})
-        arrayVal: Array<TestEnum>;
-
-        constructor(init: TestSpec) {
-          this.enumVal = init.enumVal;
-          this.setVal = init.setVal;
-          this.arrayVal = init.arrayVal;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(enumVal='${'$'}{this.enumVal}', setVal='${'$'}{this.setVal}', arrayVal='${'$'}{this.arrayVal}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val usageOutput =
       buildString {
         FileSpec
           .get(usageTypeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlEnumTypesTest/test-usage.ts", usageOutput)
   }
 }

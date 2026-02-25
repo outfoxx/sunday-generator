@@ -1,7 +1,7 @@
 ///usr/bin/env jbang "$0" "$@" ; exit $?
 //JAVA 21
 //REPOS https://oss.sonatype.org/content/repositories/snapshots
-//DEPS io.outfoxx.sunday:cli:${env.VER}
+//DEPS io.outfoxx.sunday:cli:${env.VER}:all
 
 import io.outfoxx.sunday.generator.MainKt;
 import io.outfoxx.sunday.generator.VersionKt;

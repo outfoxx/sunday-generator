@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -62,60 +62,8 @@ class RequestMixedParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Any
-      import kotlin.String
-      import kotlin.collections.List
-      import kotlin.collections.Map
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(
-          select: FetchTestSelectUriParam,
-          page: FetchTestPageQueryParam,
-          xType: FetchTestXTypeHeaderParam,
-        ): Map<String, Any> = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{select}",
-            pathParameters = mapOf(
-              "select" to select
-            ),
-            queryParameters = mapOf(
-              "page" to page
-            ),
-            acceptTypes = this.defaultAcceptTypes,
-            headers = mapOf(
-              "x-type" to xType
-            )
-          )
-
-        public enum class FetchTestSelectUriParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestPageQueryParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestXTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestMixedParamsTest/test-generation-of-multiple-parameters-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -151,60 +99,8 @@ class RequestMixedParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Any
-      import kotlin.String
-      import kotlin.collections.List
-      import kotlin.collections.Map
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(
-          type: FetchTestTypeUriParam,
-          type_: FetchTestTypeQueryParam,
-          type__: FetchTestTypeHeaderParam,
-        ): Map<String, Any> = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{type}",
-            pathParameters = mapOf(
-              "type" to type
-            ),
-            queryParameters = mapOf(
-              "type" to type_
-            ),
-            acceptTypes = this.defaultAcceptTypes,
-            headers = mapOf(
-              "type" to type__
-            )
-          )
-
-        public enum class FetchTestTypeUriParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestTypeQueryParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestMixedParamsTest/test-generation-of-multiple-parameters-of-same-name-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

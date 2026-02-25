@@ -41,7 +41,7 @@ class DiffingExtension : TestExecutionExceptionHandler {
       .create()
       .lineNormalizer { it }
       .build()
-  private val terminal = Terminal()
+  private val terminal = Terminal(width = 160)
 
   override fun handleTestExecutionException(
     context: ExtensionContext,

@@ -23,7 +23,6 @@ import io.outfoxx.sunday.generator.flags
 import io.outfoxx.sunday.generator.grouped
 import io.outfoxx.sunday.generator.provideDelegate
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 
 abstract class TypeScriptGenerateCommand(
   name: String,
@@ -32,7 +31,6 @@ abstract class TypeScriptGenerateCommand(
 
   val options by flags<TypeScriptTypeRegistry.Option> {
     AddGenerationHeader to "Add generation header to generated files".default(true)
-    JacksonDecorators to "Add Jackson decorators".default(true)
   }.grouped("Model Generation Options")
 
   override val typeRegistry: TypeScriptTypeRegistry by lazy {

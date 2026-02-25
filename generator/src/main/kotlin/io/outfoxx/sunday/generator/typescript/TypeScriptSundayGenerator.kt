@@ -36,24 +36,21 @@ import io.outfoxx.sunday.generator.common.APIAnnotations
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
-import io.outfoxx.sunday.generator.typescript.utils.ANY_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.ASYNC_ITERABLE
 import io.outfoxx.sunday.generator.typescript.utils.BODY_INIT
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.MEDIA_TYPE
-import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_PROMISE_RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_RESPONSE
-import io.outfoxx.sunday.generator.typescript.utils.OBSERVABLE
-import io.outfoxx.sunday.generator.typescript.utils.PROMISE_FROM
+import io.outfoxx.sunday.generator.typescript.utils.NULLIFY_PROBLEM
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.REQUEST_FACTORY
 import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.RESULT_RESPONSE
+import io.outfoxx.sunday.generator.typescript.utils.SCHEMA_LIKE
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.isValidTypeScriptIdentifier
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
-import io.outfoxx.sunday.generator.typescript.utils.typeInitializer
 import io.outfoxx.sunday.generator.typescript.utils.typeScriptConstant
 import io.outfoxx.sunday.generator.utils.allowEmptyValue
 import io.outfoxx.sunday.generator.utils.defaultValue
@@ -198,7 +195,14 @@ class TypeScriptSundayGenerator(
         .addStatement("this.defaultAcceptTypes =\noptions?.defaultAcceptTypes ?? %L", mediaTypesArray(acceptTypes))
 
       referencedProblemTypes.forEach { (typeId, typeName) ->
-        consBuilder.addStatement("requestFactory.registerProblem(%S, %T)", typeId, typeName)
+        consBuilder.addCode(
+          CodeBlock
+            .builder()
+            .add("requestFactory.registerProblem(%S, ", typeId)
+            .add(typeRegistry.schemaInitializer(typeName))
+            .add(");\n")
+            .build(),
+        )
       }
 
       typeBuilder.constructor(consBuilder.build())
@@ -228,14 +232,14 @@ class TypeScriptSundayGenerator(
       ) {
         resultContentTypes = listOf("text/event-stream")
 
-        OBSERVABLE
+        ASYNC_ITERABLE
       } else {
 
         val mediaTypesForPayloads = response.payloads.mapNotNull { it.mediaType }
         resultContentTypes = mediaTypesForPayloads.ifEmpty { defaultMediaTypes }
         referencedAcceptTypes.addAll(resultContentTypes ?: emptyList())
 
-        if (options.enableAbortablePromises) PROMISE else OBSERVABLE
+        PROMISE
       }
 
     if (operation.findBoolAnnotation(EventSource, null) == true) {
@@ -385,7 +389,7 @@ class TypeScriptSundayGenerator(
 
     val generatedFunctionName = functionBuilder.build().name
 
-    val typeProperties = mutableMapOf<String, CodeBlock>()
+    val typeProperties = mutableMapOf<String, Pair<TypeName, CodeBlock>>()
 
     fun parametersGen(
       fieldName: String,
@@ -437,24 +441,25 @@ class TypeScriptSundayGenerator(
 
     fun specGen(): CodeBlock {
       val builder = CodeBlock.builder()
-      builder.add("{%>\n")
-      builder.add("method: %S", operation.method.uppercase())
-      builder.add(",\n")
-      builder.add("pathTemplate: %S", endPoint.path)
+      builder.add("{%>")
+      builder.add("\nmethod: %S,", operation.method.uppercase())
+      builder.add("\npathTemplate: %S,", endPoint.path)
 
       if (uriParameters.isNotEmpty()) {
-        builder.add(",\n")
+        builder.add("\n")
         builder.add(parametersGen("pathParameters", uriParameters))
+        builder.add(",")
       }
 
       if (queryParameters.isNotEmpty()) {
-        builder.add(",\n")
+        builder.add("\n")
         builder.add(parametersGen("queryParameters", queryParameters))
+        builder.add(",")
       }
 
       if (requestBodyParameter != null) {
-        builder.add(",\n")
-        builder.add(CodeBlock.of("body: %L", requestBodyParameter))
+        builder.add("\n")
+        builder.add(CodeBlock.of("body: %L,", requestBodyParameter))
         if (requestBodyType != null) {
 
           val requestBodyTypeContext = TypeScriptResolutionContext(document, shapeIndex, null)
@@ -463,9 +468,9 @@ class TypeScriptSundayGenerator(
           if (requestBodyTypeName != VOID) {
 
             val bodyTypePropName = "${generatedFunctionName}BodyType"
-            typeProperties[bodyTypePropName] = typeRegistry.reflectionTypeName(requestBodyTypeName).typeInitializer()
-            builder.add(",\n")
-            builder.add("bodyType: %L", bodyTypePropName)
+            typeProperties[bodyTypePropName] =
+              requestBodyTypeName to typeRegistry.schemaInitializer(requestBodyTypeName)
+            builder.add("\nbodyType: %L,", bodyTypePropName)
           }
         }
 
@@ -480,8 +485,7 @@ class TypeScriptSundayGenerator(
             else -> CodeBlock.of("nil")
           }
 
-        builder.add(",\n")
-        builder.add("contentTypes: %L", contentTypesVal)
+        builder.add("\ncontentTypes: %L,", contentTypesVal)
       }
 
       if (resultContentTypes != null && originalReturnType != VOID) {
@@ -491,19 +495,23 @@ class TypeScriptSundayGenerator(
           } else {
             CodeBlock.of("this.defaultAcceptTypes")
           }
-        builder.add(",\n")
-        builder.add("acceptTypes: %L", acceptTypes)
+        builder.add("\nacceptTypes: %L,", acceptTypes)
       }
 
       if (headerParameters.isNotEmpty()) {
-        builder.add(",\n")
+        builder.add("\n")
         builder.add(parametersGen("headers", headerParameters))
+        builder.add(",")
       }
+
+      builder.add("\nsignal: signal,")
 
       builder.add("%<\n}")
 
       return builder.build()
     }
+
+    functionBuilder.addParameter("signal", ABORT_SIGNAL, true)
 
     val builder = CodeBlock.builder()
 
@@ -511,52 +519,61 @@ class TypeScriptSundayGenerator(
       operation.findBoolAnnotation(EventSource, null) == true ||
       operation.hasAnnotation(EventStream, null)
     ) {
+      val eventReturnType = requireNotNull(originalReturnType) { "Event stream requires a return type" }
       resultContentTypes = listOf("text/event-stream")
 
       // Generate EventSource/Event Stream handling method
       when (operation.findStringAnnotation(EventStream, null)) {
 
         "simple" -> {
-          builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
+          val eventTypePropName = "${generatedFunctionName}EventType"
+          typeProperties[eventTypePropName] =
+            eventReturnType to typeRegistry.schemaInitializer(eventReturnType)
+          builder.add("%[return this.requestFactory.eventStream<%T>(\n", eventReturnType)
           builder.add(specGen())
           builder.add(",\n")
-          builder.add("(decoder, event, id, data) => decoder.decodeText(data, [%T])%]\n);\n", originalReturnType)
+          builder.add("(decoder, event, id, data) => decoder.decodeText(data, %L)%]\n);\n", eventTypePropName)
         }
 
         "discriminated" -> {
 
           val types = (resultBodyType as UnionShape).flattened.filterIsInstance<NodeShape>()
-          val typesTemplate = types.joinToString("\n  ") { "case %S: return decoder.decodeText(data, [%T]);" }
-          val typesParams =
-            types.flatMap { type ->
+          val eventTypeProps =
+            types.mapIndexed { idx, type ->
               val typeName = typeRegistry.resolveTypeName(type, TypeScriptResolutionContext(document, shapeIndex, null))
               val discValue =
                 type.discriminatorValue
                   ?: (typeName as? TypeName.Standard)?.simpleName()
                   ?: "$typeName"
-              listOf(discValue, typeName)
+              val propName = "${generatedFunctionName}EventType${idx + 1}"
+              typeProperties[propName] = typeName to typeRegistry.schemaInitializer(typeName)
+              discValue to propName
             }
 
-          builder.add("%[return this.requestFactory.eventStream<%T>(\n", originalReturnType)
+          builder.add("%[return this.requestFactory.eventStream<%T>(\n", eventReturnType)
           builder.add(specGen())
-          builder.add(
-            """,
-            |(decoder, event, id, data, logger) => {
-            |  switch (event) {
-            |  $typesTemplate
+          builder.add(",\n")
+          val discBuilder = CodeBlock.builder()
+          discBuilder.add("(decoder, event, id, data, logger) => {\n")
+          discBuilder.add("  switch (event) {\n")
+          eventTypeProps.forEach { (discValue, propName) ->
+            discBuilder.add("  case %S: return decoder.decodeText(data, %L);\n", discValue, propName)
+          }
+          discBuilder.add(
+            $$"""
             |  default:
-            |    logger?.error?.(`Unknown event type, ignoring event: event=${'$'}{event}`);
+            |    logger?.error?.(`Unknown event type, ignoring event: event=${event}`);
             |    return undefined;
             |  }
             |},
             """.trimMargin(),
-            *typesParams.toTypedArray(),
           )
+          builder.add(discBuilder.build())
           builder.add("%]\n);\n")
         }
 
         else -> {
-          builder.add("%[return this.requestFactory.eventSource(\n", originalReturnType)
+          builder.add("%[return this.requestFactory.eventSource(\n", eventReturnType)
           builder.add(specGen())
           builder.add("%]\n);\n")
         }
@@ -566,10 +583,6 @@ class TypeScriptSundayGenerator(
       val requestOnly = operation.findBoolAnnotation(RequestOnly, null) == true
       val responseOnly = operation.findBoolAnnotation(ResponseOnly, null) == true
 
-      if (options.enableAbortablePromises) {
-        functionBuilder.addParameter("signal", ABORT_SIGNAL, true)
-      }
-
       val factoryMethod =
         when {
           requestOnly -> "request"
@@ -578,26 +591,19 @@ class TypeScriptSundayGenerator(
           else -> "result"
         }
 
-      if (options.enableAbortablePromises) {
-        builder.add("%[return %Q(this.requestFactory.%L(\n", PROMISE_FROM, factoryMethod)
-      } else {
-        builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
-      }
+      builder.add("%[return this.requestFactory.%L(\n", factoryMethod)
 
       builder.add(specGen())
 
       if (!requestOnly && !responseOnly && originalReturnType != null && originalReturnType != VOID) {
 
         val retTypePropName = "${generatedFunctionName}ReturnType"
-        typeProperties[retTypePropName] = typeRegistry.reflectionTypeName(originalReturnType!!).typeInitializer()
+        typeProperties[retTypePropName] =
+          originalReturnType!! to typeRegistry.schemaInitializer(originalReturnType!!)
         builder.add(",\n%L", retTypePropName)
       }
 
-      if (options.enableAbortablePromises) {
-        builder.add("%]\n), signal);\n")
-      } else {
-        builder.add("%]\n);\n")
-      }
+      builder.add("%]\n);\n")
 
       if (!requestOnly && !responseOnly) {
         addNullifyMethod(operation, functionBuilder.build(), problemTypes, typeBuilder)
@@ -611,8 +617,9 @@ class TypeScriptSundayGenerator(
     if (operation.findBoolAnnotation(Exclude, null) != true) {
 
       val typeCodeBuilder = typeBuilder.tags[CodeBlock.Builder::class] as CodeBlock.Builder
-      typeProperties.forEach { (propName, propInit) ->
-        typeCodeBuilder.add("%[const %N: %T = ", propName, ANY_TYPE)
+      typeProperties.forEach { (propName, spec) ->
+        val (typeName, propInit) = spec
+        typeCodeBuilder.add("%[const %N: %T = ", propName, SCHEMA_LIKE.parameterized(typeName))
         typeCodeBuilder.add(propInit)
         typeCodeBuilder.add(";\n%]")
       }
@@ -635,29 +642,25 @@ class TypeScriptSundayGenerator(
 
     val (nullifyProblemTypeCodes, nullifyStatuses) = APIAnnotations.groupNullifyIntoStatusesAndProblems(nullifyAnn)
 
-    val nullifyProblemTypeNames =
+    val nullifyProblemTypeMatchers =
       problemTypes
         .filter { (key) -> nullifyProblemTypeCodes.any { key.path.endsWith(it) } }
-        .map { it.value }
-        .toTypedArray()
+        .map { (_, typeName) -> CodeBlock.of("(problem) => problem instanceof %T", typeName) }
 
     val nullFunCodeBuilder =
       CodeBlock
         .builder()
-        .add(
-          """
-          |return this.%N(${function.parameters.joinToString { it.name }})
-          |  .%L(%Q(
-          |    [${nullifyStatuses.joinToString { "$it" }}],
-          |    [${nullifyProblemTypeNames.joinToString { "%T" }}]
-          |  ));
-          |
-          """.trimMargin(),
-          function.name,
-          if (options.enableAbortablePromises) "catch" else "pipe",
-          if (options.enableAbortablePromises) NULLIFY_PROMISE_RESPONSE else NULLIFY_RESPONSE,
-          *nullifyProblemTypeNames,
-        )
+        .add("return %Q(\n", NULLIFY_PROBLEM)
+        .add("  this.%N(", function.name)
+        .add(function.parameters.map { CodeBlock.of("%L", it.name) }.joinToCode(", "))
+        .add("),\n")
+        .add("  [")
+        .add(nullifyStatuses.map { CodeBlock.of("%L", it) }.joinToCode(", "))
+        .add("],\n")
+        .add("  [")
+        .add(nullifyProblemTypeMatchers.joinToCode(", "))
+        .add("]\n")
+        .add(");\n")
 
     val returnType = function.returnType
     val returnTypeOptional =
