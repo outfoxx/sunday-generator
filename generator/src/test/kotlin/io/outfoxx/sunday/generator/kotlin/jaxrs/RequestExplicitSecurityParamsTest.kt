@@ -23,8 +23,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -70,29 +70,8 @@ class RequestExplicitSecurityParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.PathParam
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.String
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests/{id}")
-        public fun fetchTest(@HeaderParam(value = "Authorization") bearerAuthorization: String,
-            @PathParam(value = "id") id: String): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestExplicitSecurityParamsTest/test-explicit-security-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -132,29 +111,8 @@ class RequestExplicitSecurityParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.String
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestPath
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests/{id}")
-        public fun fetchTest(@RestHeader(value = "Authorization") bearerAuthorization: String, @RestPath
-            id: String): RestResponse<String>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestExplicitSecurityParamsTest/test-explicit-security-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

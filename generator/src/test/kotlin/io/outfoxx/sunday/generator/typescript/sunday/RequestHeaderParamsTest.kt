@@ -20,11 +20,11 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -52,64 +52,14 @@ class RequestHeaderParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {Test} from './test';
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(obj: Test, strReq: string, int: number | undefined = undefined): Observable<Test> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests',
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  obj,
-                  'str-req': strReq,
-                  int: int ?? 5
-                }
-              },
-              fetchTestReturnType
-          );
-        }
-
-        deleteTest(): Observable<void> {
-          return this.requestFactory.result(
-              {
-                method: 'DELETE',
-                pathTemplate: '/tests'
-              }
-          );
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [Test];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestHeaderParamsTest/req-header-params.api.ts", output)
   }
 
   @Test
@@ -131,54 +81,14 @@ class RequestHeaderParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {Test} from './test';
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        putTest(xCustom: string): Observable<Test> {
-          return this.requestFactory.result(
-              {
-                method: 'PUT',
-                pathTemplate: '/tests',
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  Expect: '100-continue',
-                  'x-custom': xCustom
-                }
-              },
-              putTestReturnType
-          );
-        }
-
-      }
-
-      const putTestReturnType: AnyType = [Test];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestHeaderParamsTest/req-header-params-constant.api.ts", output)
   }
 
   @Test
@@ -200,63 +110,14 @@ class RequestHeaderParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {Test} from './test';
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(
-            obj: Test | undefined = undefined,
-            str: string | undefined = undefined,
-            int: number | null = null,
-            def1: string | undefined = undefined,
-            def2: number | null | undefined = undefined
-        ): Observable<Test> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests',
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  obj,
-                  str,
-                  int,
-                  def1: def1 ?? 'test',
-                  def2: def2 ?? 10
-                }
-              },
-              fetchTestReturnType
-          );
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [Test];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestHeaderParamsTest/req-header-params-optional.api.ts", output)
   }
 
   @Test
@@ -278,67 +139,13 @@ class RequestHeaderParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(category: API.FetchTestCategoryHeaderParam,
-            type: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests',
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  category,
-                  type
-                }
-              },
-              fetchTestReturnType
-          );
-        }
-
-      }
-
-      export namespace API {
-
-        export enum FetchTestCategoryHeaderParam {
-          Politics = 'politics',
-          Science = 'science'
-        }
-
-        export enum FetchTestTypeHeaderParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [Object, [String, Object]];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestHeaderParamsTest/req-header-params-inline-types.api.ts", output)
   }
 }

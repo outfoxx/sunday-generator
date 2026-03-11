@@ -23,8 +23,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -67,26 +67,8 @@ class ServiceTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-
-      @Produces(value = ["application/cbor", "application/yaml", "application/json"])
-      @Consumes(value = ["application/cbor"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        @Consumes(value = ["application/yaml"])
-        public fun fetchTest(body: Test): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "ServiceTest/test-default-media-types-are-limited-correctly-client.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -129,27 +111,8 @@ class ServiceTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/cbor", "application/yaml", "application/json"])
-      @Consumes(value = ["application/cbor", "application/yaml", "application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        @Consumes(value = ["application/yaml"])
-        public fun fetchTest(body: Test): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "ServiceTest/test-default-media-types-are-limited-correctly-server.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -192,40 +155,8 @@ class ServiceTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json", "application/yaml"])
-      @Consumes(value = ["application/json", "application/yaml"])
-      public interface API {
-        @GET
-        @Path(value = "/tests/1")
-        @Produces(value = ["application/yaml"])
-        public fun fetchTest1(): Response
-
-        @GET
-        @Path(value = "/tests/2s")
-        public fun fetchTest2Same(): Response
-
-        @GET
-        @Path(value = "/tests/2d")
-        @Produces(value = ["application/yaml", "application/cbor"])
-        public fun fetchTest2Different(): Response
-
-        @GET
-        @Path(value = "/tests/3")
-        @Produces(value = ["application/yaml", "application/json", "application/cbor"])
-        public fun fetchTest3(): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "ServiceTest/test-default-media-types-are-overridden-correctly-server.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

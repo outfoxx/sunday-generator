@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -109,29 +109,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun fetchTest(): Response
-
-        @GET
-        @Path(value = "/tests/derived")
-        public suspend fun fetchDerivedTest(): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -159,30 +138,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun fetchTest(): Test
-
-        @GET
-        @Path(value = "/tests/derived")
-        public suspend fun fetchDerivedTest(): Base
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -210,100 +167,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.AnotherNotFoundProblem
-      import io.test.Test
-      import io.test.TestNotFoundProblem
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.QueryParam
-      import kotlin.Int
-      import org.zalando.problem.ThrowableProblem
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
-          fetchTest1(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        } catch(x: ThrowableProblem) {
-          when (x.status?.statusCode) {
-            404, 405 -> null
-            else -> throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test1")
-        public suspend fun fetchTest1(@QueryParam(value = "limit") limit: Int): Test
-
-        public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
-          fetchTest2(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        } catch(x: ThrowableProblem) {
-          if (x.status?.statusCode == 404) {
-            null
-          } else {
-            throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test2")
-        public suspend fun fetchTest2(@QueryParam(value = "limit") limit: Int): Test
-
-        public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
-          fetchTest3(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        }
-
-        @GET
-        @Path(value = "/test3")
-        public suspend fun fetchTest3(@QueryParam(value = "limit") limit: Int): Test
-
-        public suspend fun fetchTest4OrNull(limit: Int): Test? = try {
-          fetchTest4(limit)
-        } catch(x: ThrowableProblem) {
-          when (x.status?.statusCode) {
-            404, 405 -> null
-            else -> throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test4")
-        public suspend fun fetchTest4(@QueryParam(value = "limit") limit: Int): Test
-
-        public suspend fun fetchTest5OrNull(limit: Int): Test? = try {
-          fetchTest5(limit)
-        } catch(x: ThrowableProblem) {
-          if (x.status?.statusCode == 404) {
-            null
-          } else {
-            throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test5")
-        public suspend fun fetchTest5(@QueryParam(value = "limit") limit: Int): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-client-mode-with-nullify.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -331,39 +196,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.sse.OutboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -391,39 +225,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.sse.OutboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json", "application/yaml"])
-      @Consumes(value = ["application/json", "application/yaml"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-server-mode-with-multiple-default-types.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -451,39 +254,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.sse.InboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -511,39 +283,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.sse.InboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json", "application/yaml"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-client-mode-with-multiple-default-types.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -571,32 +312,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Base>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Base>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-with-common-type-in-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -624,32 +341,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Base>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Base>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-with-common-type-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -677,31 +370,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun fetchTest(): RestResponse<Test>
-
-        @GET
-        @Path(value = "/tests/derived")
-        public suspend fun fetchDerivedTest(): RestResponse<Base>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-server-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -729,30 +399,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun fetchTest(): Test
-
-        @GET
-        @Path(value = "/tests/derived")
-        public suspend fun fetchDerivedTest(): Base
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-client-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -780,100 +428,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.AnotherNotFoundProblem
-      import io.test.Test
-      import io.test.TestNotFoundProblem
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.Int
-      import org.jboss.resteasy.reactive.RestQuery
-      import org.zalando.problem.ThrowableProblem
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        public suspend fun fetchTest1OrNull(limit: Int): Test? = try {
-          fetchTest1(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        } catch(x: ThrowableProblem) {
-          when (x.status?.statusCode) {
-            404, 405 -> null
-            else -> throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test1")
-        public suspend fun fetchTest1(@RestQuery limit: Int): Test
-
-        public suspend fun fetchTest2OrNull(limit: Int): Test? = try {
-          fetchTest2(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        } catch(x: ThrowableProblem) {
-          if (x.status?.statusCode == 404) {
-            null
-          } else {
-            throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test2")
-        public suspend fun fetchTest2(@RestQuery limit: Int): Test
-
-        public suspend fun fetchTest3OrNull(limit: Int): Test? = try {
-          fetchTest3(limit)
-        } catch(_: TestNotFoundProblem) {
-          null
-        } catch(_: AnotherNotFoundProblem) {
-          null
-        }
-
-        @GET
-        @Path(value = "/test3")
-        public suspend fun fetchTest3(@RestQuery limit: Int): Test
-
-        public suspend fun fetchTest4OrNull(limit: Int): Test? = try {
-          fetchTest4(limit)
-        } catch(x: ThrowableProblem) {
-          when (x.status?.statusCode) {
-            404, 405 -> null
-            else -> throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test4")
-        public suspend fun fetchTest4(@RestQuery limit: Int): Test
-
-        public suspend fun fetchTest5OrNull(limit: Int): Test? = try {
-          fetchTest5(limit)
-        } catch(x: ThrowableProblem) {
-          if (x.status?.statusCode == 404) {
-            null
-          } else {
-            throw x
-          }
-        }
-
-        @GET
-        @Path(value = "/test5")
-        public suspend fun fetchTest5(@RestQuery limit: Int): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-basic-coroutines-method-generation-in-client-mode-with-nullify-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -901,39 +457,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import jakarta.ws.rs.sse.OutboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-server-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -961,39 +486,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import jakarta.ws.rs.sse.OutboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json", "application/yaml"])
-      @Consumes(value = ["application/json", "application/yaml"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<OutboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-server-mode-with-quarkus-option-enabled-and-multiple-defaults-types.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1021,39 +515,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import jakarta.ws.rs.sse.InboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-client-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1081,39 +544,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test1
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import jakarta.ws.rs.sse.InboundSseEvent
-      import kotlin.Any
-      import kotlinx.coroutines.flow.Flow
-
-      @Produces(value = ["application/json", "application/yaml"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimple(): Flow<Test1>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsDiscriminated(): Flow<Any>
-
-        @GET
-        @Path(value = "/test3")
-        @Produces(value = ["text/event-stream"])
-        public suspend fun fetchEventsSimpleSse(): Flow<InboundSseEvent>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-in-client-mode-with-quarkus-option-enabled-and-multiple-defaults-types.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1141,35 +573,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlinx.coroutines.flow.Flow
-      import org.jboss.resteasy.reactive.RestStreamElementType
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        @RestStreamElementType(value = "application/json")
-        public suspend fun fetchEventsSimple(): Flow<Base>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        @RestStreamElementType(value = "application/json")
-        public suspend fun fetchEventsDiscriminated(): Flow<Base>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-with-common-type-in-server-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1197,35 +602,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Base
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlinx.coroutines.flow.Flow
-      import org.jboss.resteasy.reactive.RestStreamElementType
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/test1")
-        @Produces(value = ["text/event-stream"])
-        @RestStreamElementType(value = "application/json")
-        public suspend fun fetchEventsSimple(): Flow<Base>
-
-        @GET
-        @Path(value = "/test2")
-        @Produces(value = ["text/event-stream"])
-        @RestStreamElementType(value = "application/json")
-        public suspend fun fetchEventsDiscriminated(): Flow<Base>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-event-coroutines-method-generation-with-common-type-in-client-mode-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1253,24 +631,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun startTest()
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-generation-of-coroutine-with-no-response-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -1298,24 +660,8 @@ class RequestCoroutineMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public suspend fun startTest()
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestCoroutineMethodsTest/test-generation-of-coroutine-with-no-response-in-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

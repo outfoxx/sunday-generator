@@ -21,10 +21,10 @@ import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.contains
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -61,18 +61,8 @@ class RamlDeclaredTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import io.test.client.Test
-      import kotlin.String
-
-      public interface Test : Test {
-        public val value2: String
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlDeclaredTypesTest/test-multiple-declarations-with-same-name-in-separate-files-is-fixed-by-package-annotation.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)

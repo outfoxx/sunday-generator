@@ -1,0 +1,48 @@
+#%RAML 1.0
+title: External Discriminator Multi Props Nullable Regression
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+  ParamType:
+    type: string
+    enum: [ a, b ]
+
+  Payload:
+    (sunday.externallyDiscriminated): true
+    type: object
+    properties:
+      value?: string
+
+  PayloadA:
+    type: Payload
+    discriminatorValue: a
+    properties:
+      aValue: string
+
+  PayloadB:
+    type: Payload
+    discriminatorValue: b
+    properties:
+      bValue: string
+
+  Container:
+    type: object
+    properties:
+      left:
+        type: Payload
+        (sunday.externalDiscriminator): leftType
+      leftType: ParamType
+      right:
+        type: Payload | nil
+        (sunday.externalDiscriminator): rightType
+      rightType: ParamType
+
+/tests:
+  get:
+    responses:
+      200:
+        body:
+          type: Container

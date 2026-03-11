@@ -20,8 +20,8 @@ import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -39,29 +39,8 @@ class RamlScalarTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import kotlin.Any
-      import kotlin.Boolean
-      import kotlin.ByteArray
-      import kotlin.String
-      import kotlin.Unit
-
-      public interface Test {
-        public val bool: Boolean
-
-        public val string: String
-
-        public val `file`: ByteArray
-
-        public val any: Any
-
-        public val nil: Unit
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlScalarTypesTest/test-type-names-generated-for-general-scalar-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -79,32 +58,8 @@ class RamlScalarTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import kotlin.Byte
-      import kotlin.Int
-      import kotlin.Long
-      import kotlin.Short
-
-      public interface Test {
-        public val int8: Byte
-
-        public val int16: Short
-
-        public val int32: Int
-
-        public val int64: Long
-
-        public val int: Int
-
-        public val long: Long
-
-        public val none: Int
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlScalarTypesTest/test-type-names-generated-for-integer-scalar-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -122,22 +77,8 @@ class RamlScalarTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import kotlin.Double
-      import kotlin.Float
-
-      public interface Test {
-        public val float: Float
-
-        public val double: Double
-
-        public val none: Double
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlScalarTypesTest/test-type-names-generated-for-float-scalar-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -155,26 +96,8 @@ class RamlScalarTypesTest {
 
     val typeSpec = findType("io.test.Test", generateTypes(testUri, typeRegistry))
 
-    assertEquals(
-      """
-      package io.test
-
-      import java.time.LocalDate
-      import java.time.LocalDateTime
-      import java.time.LocalTime
-      import java.time.OffsetDateTime
-
-      public interface Test {
-        public val dateOnly: LocalDate
-
-        public val timeOnly: LocalTime
-
-        public val dateTimeOnly: LocalDateTime
-
-        public val dateTime: OffsetDateTime
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlScalarTypesTest/test-type-names-generated-for-date-time-scalar-types.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)

@@ -20,11 +20,11 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -52,78 +52,14 @@ class RequestMixedParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(select: API.FetchTestSelectUriParam, page: API.FetchTestPageQueryParam,
-            xType: API.FetchTestXTypeHeaderParam): Observable<Record<string, unknown>> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests/{select}',
-                pathParameters: {
-                  select
-                },
-                queryParameters: {
-                  page
-                },
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  'x-type': xType
-                }
-              },
-              fetchTestReturnType
-          );
-        }
-
-      }
-
-      export namespace API {
-
-        export enum FetchTestSelectUriParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-        export enum FetchTestPageQueryParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-        export enum FetchTestXTypeHeaderParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [Object, [String, Object]];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestMixedParamsTest/req-mixed-params-inline-types.api.ts", output)
   }
 
   @Test
@@ -145,77 +81,13 @@ class RequestMixedParamsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {AnyType, MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(type: API.FetchTestTypeUriParam, type_: API.FetchTestTypeQueryParam,
-            type__: API.FetchTestTypeHeaderParam): Observable<Record<string, unknown>> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests/{type}',
-                pathParameters: {
-                  type
-                },
-                queryParameters: {
-                  type: type_
-                },
-                acceptTypes: this.defaultAcceptTypes,
-                headers: {
-                  type: type__
-                }
-              },
-              fetchTestReturnType
-          );
-        }
-
-      }
-
-      export namespace API {
-
-        export enum FetchTestTypeUriParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-        export enum FetchTestTypeQueryParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-        export enum FetchTestTypeHeaderParam {
-          All = 'all',
-          Limited = 'limited'
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [Object, [String, Object]];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RequestMixedParamsTest/req-mixed-params-inline-types-same-name.api.ts", output)
   }
 }

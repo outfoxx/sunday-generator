@@ -22,10 +22,10 @@ import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -55,57 +55,8 @@ class BaseUriTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public static func baseURL(
-          server: String = "master",
-          environment: Environment = Environment.sbx,
-          version: String = "1"
-        ) -> URI.Template {
-          return URI.Template(
-            format: "http://{server}.{environment}.example.com/api/{version}",
-            parameters: [
-              "server": server,
-              "environment": environment,
-              "version": version
-            ]
-          )
-        }
-
-        public func fetchTest() async throws -> String {
-          return try await self.requestFactory.result(
-            method: .get,
-            pathTemplate: "/tests",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "BaseUriTest/test-baseurl-generation-in-api.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)

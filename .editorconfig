@@ -13,3 +13,4 @@ ktlint_standard_no-empty-first-line-in-class-body = disabled
 
 [*.md]
 indent_size = unset
+trim_trailing_whitespace = unset

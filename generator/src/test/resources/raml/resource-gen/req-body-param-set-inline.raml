@@ -1,0 +1,18 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+  - application/json
+
+/aliases:
+  post:
+    displayName: checkAliases
+    body:
+      type: array
+      uniqueItems: true
+      items: string
+    responses:
+      200:
+        body:
+          type: array
+          uniqueItems: true
+          items: string

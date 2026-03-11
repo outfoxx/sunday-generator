@@ -24,8 +24,8 @@ import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.tools.generateTypes
+import io.outfoxx.sunday.generator.tools.assertKotlinSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -33,31 +33,27 @@ import java.net.URI
 @KotlinTest
 @DisplayName("[Kotlin] [RAML] Generated Annotations Test")
 class RamlGeneratedAnnotationsTest {
+  companion object {
+    private const val FIXED_GENERATION_TIMESTAMP = "2024-01-01T00:00:00"
+  }
 
   @Test
   fun `test generated annotation is added to root classes`(
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(AddGeneratedAnnotation),
+        generationTimestamp = FIXED_GENERATION_TIMESTAMP,
+      )
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.`annotation`.processing.Generated
-      import kotlin.String
-
-      @Generated(
-        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-        date = "${typeRegistry.generationTimestamp}",
-      )
-      public interface Test {
-        public val `value`: String
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlGeneratedAnnotationsTest/test-generated-annotation-is-added-to-root-classes.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", type)
@@ -77,25 +73,12 @@ class RamlGeneratedAnnotationsTest {
         "io.outfoxx.sunday.annotation.Generated",
         GenerationMode.Server,
         setOf(AddGeneratedAnnotation),
+        generationTimestamp = FIXED_GENERATION_TIMESTAMP,
       )
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.`annotation`.Generated
-      import kotlin.String
-
-      @Generated(
-        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-        date = "${typeRegistry.generationTimestamp}",
-      )
-      public interface Test {
-        public val `value`: String
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlGeneratedAnnotationsTest/test-special-generated-annotation-is-added-to-root-classes.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", type)
@@ -109,22 +92,18 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(SuppressPublicApiWarnings),
+        generationTimestamp = FIXED_GENERATION_TIMESTAMP,
+      )
 
     val type = findType("io.test.Test", generateTypes(testUri, typeRegistry))
-    assertEquals(
-      """
-      package io.test.service
-
-      import kotlin.String
-      import kotlin.Suppress
-
-      @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
-      public interface Test {
-        public val `value`: String
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlGeneratedAnnotationsTest/test-warning-annotations-are-added-to-hide-public-api.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", type)
@@ -138,7 +117,14 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(AddGeneratedAnnotation))
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(AddGeneratedAnnotation),
+        generationTimestamp = FIXED_GENERATION_TIMESTAMP,
+      )
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -151,32 +137,8 @@ class RamlGeneratedAnnotationsTest {
       }
 
     val type = findType("io.test.service.API", builtTypes)
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.`annotation`.processing.Generated
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.PathParam
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.String
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      @Generated(
-        value = ["io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry"],
-        date = "${typeRegistry.generationTimestamp}",
-      )
-      public interface API {
-        @GET
-        @Path(value = "/tests/{id}")
-        public fun fetchTest(@PathParam(value = "id") id: String): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlGeneratedAnnotationsTest/test-generated-annotation-is-added-to-service-class.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", type)
@@ -190,7 +152,14 @@ class RamlGeneratedAnnotationsTest {
     @ResourceUri("raml/type-gen/general/generated-annotations.raml") testUri: URI,
   ) {
 
-    val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(SuppressPublicApiWarnings))
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(SuppressPublicApiWarnings),
+        generationTimestamp = FIXED_GENERATION_TIMESTAMP,
+      )
 
     val builtTypes =
       generate(testUri, typeRegistry) { document, shapeIndex ->
@@ -203,29 +172,8 @@ class RamlGeneratedAnnotationsTest {
       }
 
     val type = findType("io.test.service.API", builtTypes)
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.PathParam
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.String
-      import kotlin.Suppress
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      @Suppress("RedundantVisibilityModifier", "RedundantUnitReturnType")
-      public interface API {
-        @GET
-        @Path(value = "/tests/{id}")
-        public fun fetchTest(@PathParam(value = "id") id: String): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinSnapshot(
+      "RamlGeneratedAnnotationsTest/test-warning-annotation-is-added-to-service-class.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", type)

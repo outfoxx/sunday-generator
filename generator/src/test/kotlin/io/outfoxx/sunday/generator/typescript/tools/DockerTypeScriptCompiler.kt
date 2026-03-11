@@ -112,7 +112,7 @@ class DockerTypeScriptCompiler(
     val execId =
       dockerClient
         .execCreateCmd(containerId)
-        .withCmd("npm", "ci")
+        .withCmd("npm", "install")
         .withWorkingDir("/work")
         .withAttachStdout(true)
         .withAttachStderr(true)

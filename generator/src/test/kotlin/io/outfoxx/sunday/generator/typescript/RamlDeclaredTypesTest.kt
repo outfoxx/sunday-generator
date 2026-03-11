@@ -18,12 +18,12 @@ package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findNestedType
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -62,43 +62,14 @@ class RamlDeclaredTypesTest {
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
 
-    assertEquals(
-      """
-      import {Test as Test_, TestSpec as TestSpec_} from './test/client/test';
-
-
-      export interface TestSpec extends TestSpec_ {
-
-        value2: string;
-
-      }
-
-      export class Test extends Test_ implements TestSpec {
-
-        value2: string;
-
-        constructor(init: TestSpec) {
-          super(init);
-          this.value2 = init.value2;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlDeclaredTypesTest/decl-dups.test.ts", output)
   }
 
   @Test

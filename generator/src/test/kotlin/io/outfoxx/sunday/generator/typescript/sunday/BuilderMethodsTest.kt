@@ -20,11 +20,11 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -52,46 +52,14 @@ class BuilderMethodsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(): Observable<Request> {
-          return this.requestFactory.request(
-              {
-                method: 'GET',
-                pathTemplate: '/test/request',
-                acceptTypes: this.defaultAcceptTypes
-              }
-          );
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("BuilderMethodsTest/request-builder.api.ts", output)
   }
 
   @Test
@@ -113,45 +81,13 @@ class BuilderMethodsTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    assertEquals(
-      """
-      import {MediaType, RequestFactory} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        fetchTest(): Observable<Response> {
-          return this.requestFactory.response(
-              {
-                method: 'GET',
-                pathTemplate: '/test/response',
-                acceptTypes: this.defaultAcceptTypes
-              }
-          );
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("BuilderMethodsTest/response-builder.api.ts", output)
   }
 }

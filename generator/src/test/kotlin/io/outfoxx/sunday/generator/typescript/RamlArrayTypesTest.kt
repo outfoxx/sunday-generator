@@ -17,13 +17,15 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import java.net.URI
 
 @TypeScriptTest
@@ -39,66 +41,14 @@ class RamlArrayTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        arrayOfStrings: Array<string>;
-
-        arrayOfNullableStrings: Array<string | null>;
-
-        nullableArrayOfStrings: Array<string> | null;
-
-        nullableArrayOfNullableStrings: Array<string | null> | null;
-
-        declaredArrayOfStrings: Array<string>;
-
-        declaredArrayOfNullableStrings: Array<string | null>;
-
-      }
-
-      export class Test implements TestSpec {
-
-        arrayOfStrings: Array<string>;
-
-        arrayOfNullableStrings: Array<string | null>;
-
-        nullableArrayOfStrings: Array<string> | null;
-
-        nullableArrayOfNullableStrings: Array<string | null> | null;
-
-        declaredArrayOfStrings: Array<string>;
-
-        declaredArrayOfNullableStrings: Array<string | null>;
-
-        constructor(init: TestSpec) {
-          this.arrayOfStrings = init.arrayOfStrings;
-          this.arrayOfNullableStrings = init.arrayOfNullableStrings;
-          this.nullableArrayOfStrings = init.nullableArrayOfStrings;
-          this.nullableArrayOfNullableStrings = init.nullableArrayOfNullableStrings;
-          this.declaredArrayOfStrings = init.declaredArrayOfStrings;
-          this.declaredArrayOfNullableStrings = init.declaredArrayOfNullableStrings;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(arrayOfStrings='${'$'}{this.arrayOfStrings}', arrayOfNullableStrings='${'$'}{this.arrayOfNullableStrings}', nullableArrayOfStrings='${'$'}{this.nullableArrayOfStrings}', nullableArrayOfNullableStrings='${'$'}{this.nullableArrayOfNullableStrings}', declaredArrayOfStrings='${'$'}{this.declaredArrayOfStrings}', declaredArrayOfNullableStrings='${'$'}{this.declaredArrayOfNullableStrings}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlArrayTypesTest/arrays-nullability.test.ts", output)
   }
 
   @Test
@@ -110,56 +60,14 @@ class RamlArrayTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        implicit: Array<string>;
-
-        unspecified: Array<string>;
-
-        nonUnique: Array<string>;
-
-        unique: Set<string>;
-
-      }
-
-      export class Test implements TestSpec {
-
-        implicit: Array<string>;
-
-        unspecified: Array<string>;
-
-        nonUnique: Array<string>;
-
-        unique: Set<string>;
-
-        constructor(init: TestSpec) {
-          this.implicit = init.implicit;
-          this.unspecified = init.unspecified;
-          this.nonUnique = init.nonUnique;
-          this.unique = init.unique;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(implicit='${'$'}{this.implicit}', unspecified='${'$'}{this.unspecified}', nonUnique='${'$'}{this.nonUnique}', unique='${'$'}{this.unique}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlArrayTypesTest/arrays-collection.test.ts", output)
   }
 
   @Test
@@ -171,45 +79,36 @@ class RamlArrayTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        binary: ArrayBuffer;
-
-        nullableBinary: ArrayBuffer | null;
-
-      }
-
-      export class Test implements TestSpec {
-
-        binary: ArrayBuffer;
-
-        nullableBinary: ArrayBuffer | null;
-
-        constructor(init: TestSpec) {
-          this.binary = init.binary;
-          this.nullableBinary = init.nullableBinary;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(binary='${'$'}{this.binary}', nullableBinary='${'$'}{this.nullableBinary}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlArrayTypesTest/arrays-primitive.test.ts", output)
+  }
+
+  @Test
+  fun `test generated set nullability class`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/types/arrays-set-nullability.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+    val typeModSpec =
+      builtTypes.values.firstOrNull { module ->
+        module.members.any { member -> member is ClassSpec && member.name == "Test" }
+      } ?: fail("Type 'Test' not defined. Available types: ${builtTypes.keys.joinToString()}")
+    val output =
+      buildString {
+        FileSpec
+          .get(typeModSpec)
+          .writeTo(this)
+      }
+
+    assertSnapshot("RamlArrayTypesTest/arrays-set-nullability.test.ts", output)
   }
 }

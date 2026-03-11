@@ -16,21 +16,14 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
-import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
-import io.outfoxx.sunday.generator.typescript.tools.findNestedType
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
-import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import io.outfoxx.typescriptpoet.TypeName
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import java.net.URI
 
 @TypeScriptTest
@@ -46,582 +39,70 @@ class RamlObjectTypesTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        map: Record<string, unknown>;
-
-        array: Array<unknown>;
-
-      }
-
-      export class Test implements TestSpec {
-
-        map: Record<string, unknown>;
-
-        array: Array<unknown>;
-
-        constructor(init: TestSpec) {
-          this.map = init.map;
-          this.array = init.array;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(map='${'$'}{this.map}', array='${'$'}{this.array}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("RamlObjectTypesTest/obj-freeform.test.ts", output)
   }
 
   @Test
-  fun `test generated nullability of property types in classes`(
+  fun `test generated property nullability`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-property-nullability.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val types = generateTypes(testUri, typeRegistry, compiler)
-    val typeModSpec = findTypeMod("Test@!test", types)
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        fromNilUnion: string | null;
-
-        notRequired?: string;
-
-      }
-
-      export class Test implements TestSpec {
-
-        fromNilUnion: string | null;
-
-        notRequired: string | undefined;
-
-        constructor(init: TestSpec) {
-          this.fromNilUnion = init.fromNilUnion;
-          this.notRequired = init.notRequired;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(fromNilUnion='${'$'}{this.fromNilUnion}', notRequired='${'$'}{this.notRequired}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
-
-    val typeModSpec2 = findTypeMod("Test2@!test2", types)
-
-    assertEquals(
-      """
-      import {Parent} from './parent';
-
-
-      export interface Test2Spec {
-
-        optionalObject?: Record<string, unknown>;
-
-        nillableObject: Record<string, unknown> | null;
-
-        optionalHierarchy?: Parent;
-
-        nillableHierarchy: Parent | null;
-
       }
 
-      export class Test2 implements Test2Spec {
-
-        optionalObject: Record<string, unknown> | undefined;
-
-        nillableObject: Record<string, unknown> | null;
-
-        optionalHierarchy: Parent | undefined;
-
-        nillableHierarchy: Parent | null;
-
-        constructor(init: Test2Spec) {
-          this.optionalObject = init.optionalObject;
-          this.nillableObject = init.nillableObject;
-          this.optionalHierarchy = init.optionalHierarchy;
-          this.nillableHierarchy = init.nillableHierarchy;
-        }
-
-        copy(changes: Partial<Test2Spec>): Test2 {
-          return new Test2(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test2(optionalObject='${"$"}{this.optionalObject}', nillableObject='${"$"}{this.nillableObject}', optionalHierarchy='${"$"}{this.optionalHierarchy}', nillableHierarchy='${"$"}{this.nillableHierarchy}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(typeModSpec2)
-          .writeTo(this)
-      },
-    )
+    assertSnapshot("RamlObjectTypesTest/obj-property-nullability.test.ts", output)
   }
 
   @Test
-  fun `test naming of types defined inline in property`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-inline-type.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    findNestedType(typeModSpec, "Test", "Value") ?: fail("Nested type 'Value' not defined")
-  }
-
-  @Test
-  fun `test naming of types defined inline in resource`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-resource-inline-type.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
-    val typeModSpec = findTypeMod("API@!api", builtTypes)
-
-    findNestedType(typeModSpec, "API", "FetchTestResponsePayload")
-      ?: fail("Nested type 'FetchTestResponsePayload' not defined")
-  }
-
-  @Test
-  fun `test generated classes for object hierarchy`(
+  fun `test generated inheritance`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/type-gen/types/obj-inherits.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
-    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
-
-    val testSpec = builtTypes[TypeName.namedImport("Test", "!test")]
-    testSpec ?: fail("No Test class defined")
-
-    val test2Spec = builtTypes[TypeName.namedImport("Test2", "!test2")]
-    test2Spec ?: fail("No Test2 class defined")
-
-    val emptySpec = builtTypes[TypeName.namedImport("Empty", "!empty")]
-    emptySpec ?: fail("No Empty class defined")
-
-    val test3Spec = builtTypes[TypeName.namedImport("Test3", "!test3")]
-    test3Spec ?: fail("No Test3 class defined")
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        value: string;
-
-      }
-
-      export class Test implements TestSpec {
-
-        value: string;
-
-        constructor(init: TestSpec) {
-          this.value = init.value;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(value='${'$'}{this.value}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val typeModSpec = findTypeMod("Test2@!test2", generateTypes(testUri, typeRegistry, compiler))
+    val output =
       buildString {
         FileSpec
-          .get(testSpec)
+          .get(typeModSpec)
           .writeTo(this)
-      },
-    )
-
-    assertEquals(
-      """
-      import {Test, TestSpec} from './test';
-
-
-      export interface Test2Spec extends TestSpec {
-
-        value2: string;
-
       }
 
-      export class Test2 extends Test implements Test2Spec {
-
-        value2: string;
-
-        constructor(init: Test2Spec) {
-          super(init);
-          this.value2 = init.value2;
-        }
-
-        copy(changes: Partial<Test2Spec>): Test2 {
-          return new Test2(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test2(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(test2Spec)
-          .writeTo(this)
-      },
-    )
-
-    assertEquals(
-      """
-      import {Test2, Test2Spec} from './test2';
-
-
-      export interface EmptySpec extends Test2Spec {
-      }
-
-      export class Empty extends Test2 implements EmptySpec {
-
-        constructor(init: EmptySpec) {
-          super(init);
-        }
-
-        copy(changes: Partial<EmptySpec>): Empty {
-          return new Empty(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Empty(value='${'$'}{this.value}', value2='${'$'}{this.value2}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(emptySpec)
-          .writeTo(this)
-      },
-    )
-
-    assertEquals(
-      """
-      import {Empty, EmptySpec} from './empty';
-
-
-      export interface Test3Spec extends EmptySpec {
-
-        value3: string;
-
-      }
-
-      export class Test3 extends Empty implements Test3Spec {
-
-        value3: string;
-
-        constructor(init: Test3Spec) {
-          super(init);
-          this.value3 = init.value3;
-        }
-
-        copy(changes: Partial<Test3Spec>): Test3 {
-          return new Test3(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test3(value='${'$'}{this.value}', value2='${'$'}{this.value2}', value3='${'$'}{this.value3}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(test3Spec)
-          .writeTo(this)
-      },
-    )
+    assertSnapshot("RamlObjectTypesTest/obj-inherits.test2.ts", output)
   }
 
   @Test
-  fun `test generated class property with kebab or snake case names`(
+  fun `test generated empty object decode constructor`(
     compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
+    @ResourceUri("raml/type-gen/types/obj-empty.raml") testUri: URI,
   ) {
 
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-
-      export interface TestSpec {
-
-        someValue: string;
-
-        anotherValue: string;
-
-      }
-
-      export class Test implements TestSpec {
-
-        someValue: string;
-
-        anotherValue: string;
-
-        constructor(init: TestSpec) {
-          this.someValue = init.someValue;
-          this.anotherValue = init.anotherValue;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(someValue='${'$'}{this.someValue}', anotherValue='${'$'}{this.anotherValue}')`;
-        }
-
-      }
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeModSpec)
           .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test generated class property with kebab or snake case names and jackson decorators`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-property-renamed.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-      export interface TestSpec {
-
-        someValue: string;
-
-        anotherValue: string;
-
       }
 
-      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-      export class Test implements TestSpec {
-
-        @JsonProperty({value: 'some-value', required: true})
-        @JsonClassType({type: () => [String]})
-        someValue: string;
-
-        @JsonProperty({value: 'another_value', required: true})
-        @JsonClassType({type: () => [String]})
-        anotherValue: string;
-
-        constructor(init: TestSpec) {
-          this.someValue = init.someValue;
-          this.anotherValue = init.anotherValue;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(someValue='${'$'}{this.someValue}', anotherValue='${'$'}{this.anotherValue}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(typeModSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test generated class with recursive property`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-recursive.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-
-    val typeModSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
-
-    assertEquals(
-      """
-      import {JsonClassType, JsonCreator, JsonCreatorMode, JsonProperty} from '@outfoxx/jackson-js';
-
-
-      export interface TestSpec {
-
-        parent: Test | null;
-
-        other?: Test;
-
-        children: Array<Test>;
-
-      }
-
-      @JsonCreator({ mode: JsonCreatorMode.PROPERTIES_OBJECT })
-      export class Test implements TestSpec {
-
-        @JsonProperty({required: true})
-        @JsonClassType({type: () => [Test]})
-        parent: Test | null;
-
-        @JsonProperty()
-        @JsonClassType({type: () => [Test]})
-        other: Test | undefined;
-
-        @JsonProperty({required: true})
-        @JsonClassType({type: () => [Array, [Test]]})
-        children: Array<Test>;
-
-        constructor(init: TestSpec) {
-          this.parent = init.parent;
-          this.other = init.other;
-          this.children = init.children;
-        }
-
-        copy(changes: Partial<TestSpec>): Test {
-          return new Test(Object.assign({}, this, changes));
-        }
-
-        toString(): string {
-          return `Test(parent='${'$'}{this.parent}', other='${'$'}{this.other}', children='${'$'}{this.children}')`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(typeModSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test generated class with recursion down to a complex leaf`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/type-gen/types/obj-recursive-complex-leaf.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf(JacksonDecorators))
-
-    val typeSpecs = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
-    val typeSpec = findTypeMod("Node@!node", typeSpecs)
-
-    assertNotNull(typeSpec)
-    assertNotNull(findTypeMod("NodeType@!node-type", typeSpecs))
-    assertNotNull(findTypeMod("NodeValue@!node-value", typeSpecs))
-    assertNotNull(findTypeMod("NodeList@!node-list", typeSpecs))
-    assertNotNull(findTypeMod("NodeMap@!node-map", typeSpecs))
-
-    assertEquals(
-      """
-      import {NodeList, NodeMap, NodeValue} from './index';
-      import {JsonSubTypes, JsonTypeInfo, JsonTypeInfoAs, JsonTypeInfoId} from '@outfoxx/jackson-js';
-
-
-      export interface NodeSpec {
-      }
-
-      @JsonTypeInfo({
-        use: JsonTypeInfoId.NAME,
-        include: JsonTypeInfoAs.PROPERTY,
-        property: 'type',
-      })
-      @JsonSubTypes({
-        types: [
-          {class: () => NodeList, name: 'list' /* NodeType.List */},
-          {class: () => NodeValue, name: 'value' /* NodeType.Value */},
-          {class: () => NodeMap, name: 'map' /* NodeType.Map */}
-        ]
-      })
-      export abstract class Node implements NodeSpec {
-
-        toString(): string {
-          return `Node()`;
-        }
-
-      }
-
-      """.trimIndent(),
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      },
-    )
+    assertSnapshot("RamlObjectTypesTest/obj-empty.test.ts", output)
   }
 }

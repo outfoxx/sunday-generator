@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -62,43 +62,8 @@ class RequestUriParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.test.Test
-      import kotlin.Int
-      import kotlin.String
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(
-          def: String,
-          obj: Test,
-          strReq: String,
-          int: Int = 5,
-        ): Test = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str-req}/{int}/{def}",
-            pathParameters = mapOf(
-              "def" to def,
-              "obj" to obj,
-              "str-req" to strReq,
-              "int" to int
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestUriParamsTest/test-basic-uri-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -134,44 +99,8 @@ class RequestUriParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Any
-      import kotlin.Int
-      import kotlin.String
-      import kotlin.collections.List
-      import kotlin.collections.Map
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(
-          obj: Map<String, Any>,
-          str: String,
-          def: String,
-          int: Int,
-        ): Map<String, Any> = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str}/{int}/{def}",
-            pathParameters = mapOf(
-              "obj" to obj,
-              "str" to str,
-              "def" to def,
-              "int" to int
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestUriParamsTest/test-inherited-uri-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -207,47 +136,8 @@ class RequestUriParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.test.Test
-      import kotlin.Int
-      import kotlin.String
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(
-          def2: Int? = 10,
-          obj: Test? = null,
-          str: String? = null,
-          def1: String? = "test",
-          int: Int? = null,
-          def: String,
-        ): Test = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
-            pathParameters = mapOf(
-              "def2" to def2,
-              "obj" to obj,
-              "str" to str,
-              "def1" to def1,
-              "int" to int,
-              "def" to def
-            ).filterValues { it != null },
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestUriParamsTest/test-optional-uri-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -283,47 +173,8 @@ class RequestUriParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import kotlin.Any
-      import kotlin.String
-      import kotlin.collections.List
-      import kotlin.collections.Map
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam):
-            Map<String, Any> = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests/{category}/{type}",
-            pathParameters = mapOf(
-              "category" to category,
-              "type" to type
-            ),
-            acceptTypes = this.defaultAcceptTypes
-          )
-
-        public enum class FetchTestCategoryUriParam {
-          Politics,
-          Science,
-        }
-
-        public enum class FetchTestTypeUriParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "RequestUriParamsTest/test-generation-of-multiple-uri-parameters-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

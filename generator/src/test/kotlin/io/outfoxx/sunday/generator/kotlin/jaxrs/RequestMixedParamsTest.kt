@@ -23,8 +23,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -52,47 +52,8 @@ class RequestMixedParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.PathParam
-      import javax.ws.rs.Produces
-      import javax.ws.rs.QueryParam
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests/{select}")
-        public fun fetchTest(
-          @PathParam(value = "select") select: FetchTestSelectUriParam,
-          @QueryParam(value = "page") page: FetchTestPageQueryParam,
-          @HeaderParam(value = "x-type") xType: FetchTestXTypeHeaderParam,
-        ): Response
-
-        public enum class FetchTestSelectUriParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestPageQueryParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestXTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestMixedParamsTest/test-generation-of-multiple-parameters-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -120,47 +81,8 @@ class RequestMixedParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.PathParam
-      import javax.ws.rs.Produces
-      import javax.ws.rs.QueryParam
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests/{type}")
-        public fun fetchTest(
-          @PathParam(value = "type") type: FetchTestTypeUriParam,
-          @QueryParam(value = "type") type_: FetchTestTypeQueryParam,
-          @HeaderParam(value = "type") type__: FetchTestTypeHeaderParam,
-        ): Response
-
-        public enum class FetchTestTypeUriParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestTypeQueryParam {
-          All,
-          Limited,
-        }
-
-        public enum class FetchTestTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestMixedParamsTest/test-generation-of-multiple-parameters-of-same-name-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

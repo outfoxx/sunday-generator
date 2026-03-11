@@ -1,0 +1,44 @@
+#%RAML 1.0
+title: External Discriminator Duplicate Values Regression
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+  ParamType:
+    type: string
+    enum: [ dup ]
+
+  Payload:
+    (sunday.externallyDiscriminated): true
+    type: object
+    properties:
+      value?: string
+
+  PayloadA:
+    type: Payload
+    discriminatorValue: dup
+    properties:
+      aValue: string
+
+  PayloadB:
+    type: Payload
+    discriminatorValue: dup
+    properties:
+      bValue: string
+
+  Container:
+    type: object
+    properties:
+      payload:
+        type: Payload
+        (sunday.externalDiscriminator): payloadType
+      payloadType: ParamType
+
+/tests:
+  get:
+    responses:
+      200:
+        body:
+          type: Container

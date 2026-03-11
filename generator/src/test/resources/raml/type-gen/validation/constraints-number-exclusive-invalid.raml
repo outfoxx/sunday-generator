@@ -1,0 +1,29 @@
+#%RAML 1.0
+title: Test API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      gt:
+        type: number
+        minimum: 1
+        exclusiveMinimum: true
+      lt:
+        type: number
+        maximum: 10
+        exclusiveMaximum: true
+
+/tests/{id}:
+
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

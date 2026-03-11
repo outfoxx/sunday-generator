@@ -17,13 +17,16 @@
 package io.outfoxx.sunday.generator.typescript
 
 import amf.core.client.platform.model.document.Document
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.flags
 import io.outfoxx.sunday.generator.grouped
 import io.outfoxx.sunday.generator.provideDelegate
+import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.ImportStyle
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.AddGenerationHeader
-import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry.Option.JacksonDecorators
 
 abstract class TypeScriptGenerateCommand(
   name: String,
@@ -32,11 +35,20 @@ abstract class TypeScriptGenerateCommand(
 
   val options by flags<TypeScriptTypeRegistry.Option> {
     AddGenerationHeader to "Add generation header to generated files".default(true)
-    JacksonDecorators to "Add Jackson decorators".default(true)
   }.grouped("Model Generation Options")
 
+  val importStyle by option(
+    "-import-style",
+    help = "TypeScript import style (esm or node-next)",
+  ).enum<ImportStyle> {
+    when (it) {
+      ImportStyle.ESM -> "esm"
+      ImportStyle.NodeNext -> "node-next"
+    }
+  }.default(ImportStyle.ESM)
+
   override val typeRegistry: TypeScriptTypeRegistry by lazy {
-    TypeScriptTypeRegistry(options)
+    TypeScriptTypeRegistry(options, importStyle)
   }
 
   override fun generatorFactory(

@@ -286,33 +286,30 @@ abstract class TypeScriptGenerator(
         generateClientServiceMethodHeaderParameters(endPoint, operation, typeName, typeBuilder, functionBuilder)
 
         val request = operation.request ?: operation.requests.firstOrNull()
-        if (request != null) {
+        request?.payloads?.firstOrNull()?.schema?.let { payloadSchema ->
 
-          request.payloads.firstOrNull()?.schema?.let { payloadSchema ->
+          val requestBodyParameterTypeName =
+            resolveTypeName(payloadSchema, typeName.nested("${operation.typeScriptTypeName}RequestBody"))
 
-            val requestBodyParameterTypeName =
-              resolveTypeName(payloadSchema, typeName.nested("${operation.typeScriptTypeName}RequestBody"))
+          val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
 
-            val functionBuilderNameAllocator = functionBuilder.tags[NameAllocator::class] as NameAllocator
+          val requestBodyParameterBuilder =
+            ParameterSpec.builder(
+              functionBuilderNameAllocator.newName("body", payloadSchema),
+              requestBodyParameterTypeName,
+            )
 
-            val requestBodyParameterBuilder =
-              ParameterSpec.builder(
-                functionBuilderNameAllocator.newName("body", payloadSchema),
-                requestBodyParameterTypeName,
-              )
+          val requestBodyParameterSpec =
+            processResourceMethodBodyParameter(
+              endPoint,
+              operation,
+              payloadSchema,
+              typeBuilder,
+              functionBuilder,
+              requestBodyParameterBuilder,
+            )
 
-            val requestBodyParameterSpec =
-              processResourceMethodBodyParameter(
-                endPoint,
-                operation,
-                payloadSchema,
-                typeBuilder,
-                functionBuilder,
-                requestBodyParameterBuilder,
-              )
-
-            functionBuilder.addParameter(requestBodyParameterSpec)
-          }
+          functionBuilder.addParameter(requestBodyParameterSpec)
         }
 
         operation.successes.forEach { response ->
@@ -376,14 +373,14 @@ abstract class TypeScriptGenerator(
             val referencedProblemCodes = problems.mapNotNull { it.stringValue }
             val referencedProblemTypes =
               referencedProblemCodes
-                .map { problemCode ->
+                .associateWith { problemCode ->
                   val problemType =
                     problemTypes[problemCode] ?: genError(
                       "Unknown problem code referenced: $problemCode",
                       operation,
                     )
-                  problemCode to problemType
-                }.toMap()
+                  problemType
+                }
 
             referencedProblemTypes
               .map { (problemCode, problemTypeDefinition) ->
@@ -564,7 +561,7 @@ abstract class TypeScriptGenerator(
     fun expand(template: String): URI {
       try {
         return URI(UriTemplate.expand(template, problemBaseUriParams))
-      } catch (ignored: URISyntaxException) {
+      } catch (_: URISyntaxException) {
         genError(
           """
           Problem URI is not a valid URI; it cannot be a template.

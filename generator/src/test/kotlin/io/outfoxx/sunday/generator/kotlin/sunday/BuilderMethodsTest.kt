@@ -25,8 +25,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -62,30 +62,8 @@ class BuilderMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.outfoxx.sunday.http.Request
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): Request = this.requestFactory
-          .request(
-            method = Method.Get,
-            pathTemplate = "/test/request",
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "BuilderMethodsTest/test-request-builder-method-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)
@@ -121,30 +99,8 @@ class BuilderMethodsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.outfoxx.sunday.http.Response
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): Response = this.requestFactory
-          .response(
-            method = Method.Get,
-            pathTemplate = "/test/response",
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "BuilderMethodsTest/test-response-builder-method-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test", typeSpec)

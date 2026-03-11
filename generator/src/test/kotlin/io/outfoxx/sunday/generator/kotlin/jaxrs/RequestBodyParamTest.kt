@@ -24,8 +24,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -53,26 +53,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: Test): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-basic-body-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -100,35 +82,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.databind.JsonNode
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: JsonNode): Response
-
-        @GET
-        @Path(value = "/tests-client")
-        public fun fetchTestClient(body: Test): Response
-
-        @GET
-        @Path(value = "/tests-server")
-        public fun fetchTestServer(body: JsonNode): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-body-parameter-generation-with-json-override-server-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -156,34 +111,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.databind.JsonNode
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: JsonNode): Test
-
-        @GET
-        @Path(value = "/tests-client")
-        public fun fetchTestClient(body: JsonNode): Test
-
-        @GET
-        @Path(value = "/tests-server")
-        public fun fetchTestServer(body: Test): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-body-parameter-generation-with-json-override-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -211,27 +140,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.validation.Valid
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(@Valid body: Test): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-basic-body-parameter-generation-with-validation-constraints.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -265,28 +175,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Child
-      import javax.validation.Valid
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.POST
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.collections.List
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @POST
-        @Path(value = "/tests")
-        public fun fetchTest(body: List<@Valid Child>): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-container-element-validation-for-body-parameter.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -314,26 +204,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: Test?): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-optional-body-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -361,27 +233,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.ByteArray
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        @Consumes(value = ["application/octet-stream"])
-        public fun fetchTest(body: ByteArray): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-generation-of-body-parameter-with-explicit-content-type.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -421,26 +274,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: Test): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-basic-body-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -480,35 +315,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.databind.JsonNode
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: JsonNode): RestResponse<Test>
-
-        @GET
-        @Path(value = "/tests-client")
-        public fun fetchTestClient(body: Test): RestResponse<Test>
-
-        @GET
-        @Path(value = "/tests-server")
-        public fun fetchTestServer(body: JsonNode): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-body-parameter-generation-with-json-override-server-mode-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -548,34 +356,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.databind.JsonNode
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: JsonNode): Test
-
-        @GET
-        @Path(value = "/tests-client")
-        public fun fetchTestClient(body: JsonNode): Test
-
-        @GET
-        @Path(value = "/tests-server")
-        public fun fetchTestServer(body: Test): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-body-parameter-generation-with-json-override-client-mode-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -615,27 +397,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import javax.validation.Valid
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(@Valid body: Test): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-basic-body-parameter-generation-with-validation-constraints-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -675,26 +438,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(body: Test?): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-optional-body-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -734,30 +479,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.Any
-      import kotlin.ByteArray
-      import kotlin.String
-      import kotlin.collections.Map
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        @Consumes(value = ["application/octet-stream"])
-        public fun fetchTest(body: ByteArray): RestResponse<Map<String, Any>>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestBodyParamTest/test-generation-of-body-parameter-with-explicit-content-type-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

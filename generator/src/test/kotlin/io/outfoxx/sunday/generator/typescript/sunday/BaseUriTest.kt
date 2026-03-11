@@ -20,11 +20,11 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
+import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generate
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -52,56 +52,13 @@ class BaseUriTest {
       }
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
-
-    Assertions.assertEquals(
-      """
-      import {Environment} from './environment';
-      import {AnyType, MediaType, RequestFactory, URLTemplate} from '@outfoxx/sunday';
-      import {Observable} from 'rxjs';
-
-
-      export class API {
-
-        defaultContentTypes: Array<MediaType>;
-
-        defaultAcceptTypes: Array<MediaType>;
-
-        constructor(public requestFactory: RequestFactory,
-            options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
-          this.defaultContentTypes =
-              options?.defaultContentTypes ?? [];
-          this.defaultAcceptTypes =
-              options?.defaultAcceptTypes ?? [MediaType.JSON];
-        }
-
-        static baseURL(server?: string, environment?: Environment, version?: string): URLTemplate {
-          return new URLTemplate(
-            'http://{server}.{environment}.example.com/api/{version}',
-            {server: server ?? 'master', environment: environment ?? Environment.Sbx, version: version ?? '1'}
-          );
-        }
-
-        fetchTest(): Observable<string> {
-          return this.requestFactory.result(
-              {
-                method: 'GET',
-                pathTemplate: '/tests',
-                acceptTypes: this.defaultAcceptTypes
-              },
-              fetchTestReturnType
-          );
-        }
-
-      }
-
-      const fetchTestReturnType: AnyType = [String];
-
-      """.trimIndent(),
+    val output =
       buildString {
         FileSpec
           .get(typeSpec)
           .writeTo(this)
-      },
-    )
+      }
+
+    assertSnapshot("BaseUriTest/base-uri.api.ts", output)
   }
 }

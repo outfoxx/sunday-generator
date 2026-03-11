@@ -22,9 +22,9 @@ import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -53,41 +53,8 @@ class ResponseEventsTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = []
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchEvents() -> EventSource {
-          return self.requestFactory.eventSource(
-            method: .get,
-            pathTemplate: "/tests",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: [.eventStream],
-            headers: nil
-          )}
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "ResponseEventsTest/test-event-source-method.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -116,66 +83,8 @@ class ResponseEventsTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = []
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchEventsSimple() -> AsyncStream<Test1> {
-          return self.requestFactory.eventStream(
-            method: .get,
-            pathTemplate: "/test1",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: [.eventStream],
-            headers: nil,
-            decoder: { decoder, _, _, data, _ in try decoder.decode(Test1.self, from: data) }
-          )
-        }
-
-        public func fetchEventsDiscriminated() -> AsyncStream<Any> {
-          return self.requestFactory.eventStream(
-            method: .get,
-            pathTemplate: "/test2",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: [.eventStream],
-            headers: nil,
-            decoder: { decoder, event, _, data, log in
-              switch event {
-              case "Test1": return try decoder.decode(Test1.self, from: data)
-              case "test2": return try decoder.decode(Test2.self, from: data)
-              case "t3": return try decoder.decode(Test3.self, from: data)
-              default:
-                log.error("Unknown event type, ignoring event: event=\(event ?? "<none>", privacy: .public)")
-                return nil
-              }
-            }
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "ResponseEventsTest/test-event-stream-method-generation.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -204,65 +113,8 @@ class ResponseEventsTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = []
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchEventsSimple() -> AsyncStream<Base> {
-          return self.requestFactory.eventStream(
-            method: .get,
-            pathTemplate: "/test1",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: [.eventStream],
-            headers: nil,
-            decoder: { decoder, _, _, data, _ in try decoder.decode(Base.AnyRef.self, from: data).value }
-          )
-        }
-
-        public func fetchEventsDiscriminated() -> AsyncStream<Base> {
-          return self.requestFactory.eventStream(
-            method: .get,
-            pathTemplate: "/test2",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: [.eventStream],
-            headers: nil,
-            decoder: { decoder, event, _, data, log in
-              switch event {
-              case "Test1": return try decoder.decode(Test1.self, from: data)
-              case "Test2": return try decoder.decode(Test2.self, from: data)
-              default:
-                log.error("Unknown event type, ignoring event: event=\(event ?? "<none>", privacy: .public)")
-                return nil
-              }
-            }
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "ResponseEventsTest/test-event-stream-method-generation-for-common-base-events.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)

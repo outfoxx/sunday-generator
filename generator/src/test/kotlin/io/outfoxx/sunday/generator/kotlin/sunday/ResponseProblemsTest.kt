@@ -27,8 +27,8 @@ import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -68,36 +68,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.test.InvalidIdProblem
-      import io.test.Test
-      import io.test.TestNotFoundProblem
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        init {
-          requestFactory.registerProblem("http://example.com/invalid_id", InvalidIdProblem::class)
-          requestFactory.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
-        }
-        public suspend fun fetchTest(): Test = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-api-problem-registration.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -125,30 +97,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.outfoxx.sunday.MediaType
-      import io.outfoxx.sunday.RequestFactory
-      import io.outfoxx.sunday.http.Method
-      import io.test.Test
-      import kotlin.collections.List
-
-      public class API(
-        public val requestFactory: RequestFactory,
-        public val defaultContentTypes: List<MediaType> = listOf(),
-        public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
-      ) {
-        public suspend fun fetchTest(): Test = this.requestFactory
-          .result(
-            method = Method.Get,
-            pathTemplate = "/tests",
-            acceptTypes = this.defaultAcceptTypes
-          )
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-api-problem-registration-when-no-problems.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -179,37 +129,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.`annotation`.JsonIgnore
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-      import java.net.URI
-      import kotlin.String
-      import org.zalando.problem.AbstractThrowableProblem
-      import org.zalando.problem.Exceptional
-      import org.zalando.problem.Status
-      import org.zalando.problem.ThrowableProblem
-
-      public class InvalidIdProblem(
-        @JsonProperty(value = "offending_id")
-        public val offendingId: String,
-        instance: URI? = null,
-        cause: ThrowableProblem? = null,
-      ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-          "The id contains one or more invalid characters.", instance, cause) {
-        @JsonIgnore
-        override fun getCause(): Exceptional? = super.cause
-
-        public companion object {
-          public const val TYPE: String = "http://example.com/invalid_id"
-
-          public val TYPE_URI: URI = URI(TYPE)
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-problem-type-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -279,37 +200,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.`annotation`.JsonIgnore
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-      import java.net.URI
-      import kotlin.String
-      import org.zalando.problem.AbstractThrowableProblem
-      import org.zalando.problem.Exceptional
-      import org.zalando.problem.Status
-      import org.zalando.problem.ThrowableProblem
-
-      public class InvalidIdProblem(
-        @JsonProperty(value = "offending_id")
-        public val offendingId: String,
-        instance: URI? = null,
-        cause: ThrowableProblem? = null,
-      ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-          "The id contains one or more invalid characters.", instance, cause) {
-        @JsonIgnore
-        override fun getCause(): Exceptional? = super.cause
-
-        public companion object {
-          public const val TYPE: String = "http://api.example.com/api/invalid_id"
-
-          public val TYPE_URI: URI = URI(TYPE)
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-problem-type-generation-using-base-uri.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -340,37 +232,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.`annotation`.JsonIgnore
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-      import java.net.URI
-      import kotlin.String
-      import org.zalando.problem.AbstractThrowableProblem
-      import org.zalando.problem.Exceptional
-      import org.zalando.problem.Status
-      import org.zalando.problem.ThrowableProblem
-
-      public class InvalidIdProblem(
-        @JsonProperty(value = "offending_id")
-        public val offendingId: String,
-        instance: URI? = null,
-        cause: ThrowableProblem? = null,
-      ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-          "The id contains one or more invalid characters.", instance, cause) {
-        @JsonIgnore
-        override fun getCause(): Exceptional? = super.cause
-
-        public companion object {
-          public const val TYPE: String = "http://errors.example.com/docs/invalid_id"
-
-          public val TYPE_URI: URI = URI(TYPE)
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-problem-type-generation-using-absolute-problem-base-uri.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -401,37 +264,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.`annotation`.JsonIgnore
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-      import java.net.URI
-      import kotlin.String
-      import org.zalando.problem.AbstractThrowableProblem
-      import org.zalando.problem.Exceptional
-      import org.zalando.problem.Status
-      import org.zalando.problem.ThrowableProblem
-
-      public class InvalidIdProblem(
-        @JsonProperty(value = "offending_id")
-        public val offendingId: String,
-        instance: URI? = null,
-        cause: ThrowableProblem? = null,
-      ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-          "The id contains one or more invalid characters.", instance, cause) {
-        @JsonIgnore
-        override fun getCause(): Exceptional? = super.cause
-
-        public companion object {
-          public const val TYPE: String = "http://example.com/api/errors/invalid_id"
-
-          public val TYPE_URI: URI = URI(TYPE)
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-problem-type-generation-using-relative-problem-base-uri.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -462,37 +296,8 @@ class ResponseProblemsTest {
 
     val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import com.fasterxml.jackson.`annotation`.JsonIgnore
-      import com.fasterxml.jackson.`annotation`.JsonProperty
-      import java.net.URI
-      import kotlin.String
-      import org.zalando.problem.AbstractThrowableProblem
-      import org.zalando.problem.Exceptional
-      import org.zalando.problem.Status
-      import org.zalando.problem.ThrowableProblem
-
-      public class InvalidIdProblem(
-        @JsonProperty(value = "offending_id")
-        public val offendingId: String,
-        instance: URI? = null,
-        cause: ThrowableProblem? = null,
-      ) : AbstractThrowableProblem(TYPE_URI, "Invalid Id", Status.BAD_REQUEST,
-          "The id contains one or more invalid characters.", instance, cause) {
-        @JsonIgnore
-        override fun getCause(): Exceptional? = super.cause
-
-        public companion object {
-          public const val TYPE: String = "http://example.com/invalid_id"
-
-          public val TYPE_URI: URI = URI(TYPE)
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinSundaySnapshot(
+      "ResponseProblemsTest/test-problem-type-generation-locates-problems-in-libraries.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

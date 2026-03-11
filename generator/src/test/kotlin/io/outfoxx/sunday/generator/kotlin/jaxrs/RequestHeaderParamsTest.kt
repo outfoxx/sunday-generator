@@ -24,8 +24,8 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.generator.kotlin.tools.findType
 import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -53,39 +53,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.DELETE
-      import javax.ws.rs.DefaultValue
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.Int
-      import kotlin.String
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @HeaderParam(value = "obj") obj: Test,
-          @HeaderParam(value = "str-req") strReq: String,
-          @HeaderParam(value = "int") @DefaultValue(value = "5") int: Int,
-        ): Response
-
-        @DELETE
-        @Path(value = "/tests")
-        public fun deleteTest(): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-basic-header-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -113,36 +82,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.DefaultValue
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.Int
-      import kotlin.String
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @HeaderParam(value = "obj") obj: Test?,
-          @HeaderParam(value = "str") str: String?,
-          @HeaderParam(value = "int") int: Int?,
-          @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-          @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
-        ): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-optional-header-parameter-generation.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -170,37 +111,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import javax.validation.Valid
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.DefaultValue
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-      import kotlin.Int
-      import kotlin.String
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @HeaderParam(value = "obj") @Valid obj: Test?,
-          @HeaderParam(value = "str") str: String?,
-          @HeaderParam(value = "int") int: Int?,
-          @HeaderParam(value = "def1") @DefaultValue(value = "test") def1: String,
-          @HeaderParam(value = "def2") @DefaultValue(value = "10") def2: Int,
-        ): Response
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-optional-header-parameter-generation-with-validation-constraints.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -228,37 +140,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import javax.ws.rs.Consumes
-      import javax.ws.rs.GET
-      import javax.ws.rs.HeaderParam
-      import javax.ws.rs.Path
-      import javax.ws.rs.Produces
-      import javax.ws.rs.core.Response
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(@HeaderParam(value = "category") category: FetchTestCategoryHeaderParam,
-            @HeaderParam(value = "type") type: FetchTestTypeHeaderParam): Response
-
-        public enum class FetchTestCategoryHeaderParam {
-          Politics,
-          Science,
-        }
-
-        public enum class FetchTestTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-generation-of-multiple-header-parameters-with-inline-type-definitions.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -298,40 +181,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.DELETE
-      import jakarta.ws.rs.DefaultValue
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.Int
-      import kotlin.String
-      import kotlin.Unit
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @RestHeader(value = "obj") obj: Test,
-          @RestHeader(value = "str-req") strReq: String,
-          @RestHeader(value = "int") @DefaultValue(value = "5") int: Int,
-        ): RestResponse<Test>
-
-        @DELETE
-        @Path(value = "/tests")
-        public fun deleteTest(): RestResponse<Unit>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-basic-header-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -371,28 +222,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.PUT
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.String
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @PUT
-        @Path(value = "/tests")
-        public fun putTest(@RestHeader(value = "x-custom") xCustom: String): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-constant-header-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -432,32 +263,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.PUT
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.String
-      import org.eclipse.microprofile.rest.client.`annotation`.ClientHeaderParam
-      import org.jboss.resteasy.reactive.RestHeader
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @PUT
-        @Path(value = "/tests")
-        @ClientHeaderParam(
-          name = "Expect",
-          value = "100-continue",
-        )
-        public fun putTest(@RestHeader(value = "x-custom") xCustom: String): Test
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-constant-header-parameter-generation-with-quarkus-option-enabled-in-client-mode.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -497,36 +304,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.DefaultValue
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.Int
-      import kotlin.String
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @RestHeader(value = "obj") obj: Test?,
-          @RestHeader(value = "str") str: String?,
-          @RestHeader(value = "int") int: Int?,
-          @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
-          @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-        ): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-optional-header-parameter-generation-with-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -566,37 +345,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import io.test.Test
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.DefaultValue
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import javax.validation.Valid
-      import kotlin.Int
-      import kotlin.String
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(
-          @RestHeader(value = "obj") @Valid obj: Test?,
-          @RestHeader(value = "str") str: String?,
-          @RestHeader(value = "int") int: Int?,
-          @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,
-          @RestHeader(value = "def2") @DefaultValue(value = "10") def2: Int,
-        ): RestResponse<Test>
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-optional-header-parameter-generation-with-validation-constraints-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)
@@ -636,40 +386,8 @@ class RequestHeaderParamsTest {
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
-    assertEquals(
-      """
-      package io.test.service
-
-      import jakarta.ws.rs.Consumes
-      import jakarta.ws.rs.GET
-      import jakarta.ws.rs.Path
-      import jakarta.ws.rs.Produces
-      import kotlin.Any
-      import kotlin.String
-      import kotlin.collections.Map
-      import org.jboss.resteasy.reactive.RestHeader
-      import org.jboss.resteasy.reactive.RestResponse
-
-      @Produces(value = ["application/json"])
-      @Consumes(value = ["application/json"])
-      public interface API {
-        @GET
-        @Path(value = "/tests")
-        public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
-            @RestHeader(value = "type") type: FetchTestTypeHeaderParam): RestResponse<Map<String, Any>>
-
-        public enum class FetchTestCategoryHeaderParam {
-          Politics,
-          Science,
-        }
-
-        public enum class FetchTestTypeHeaderParam {
-          All,
-          Limited,
-        }
-      }
-
-      """.trimIndent(),
+    assertKotlinJaxrsSnapshot(
+      "RequestHeaderParamsTest/test-generation-of-multiple-header-parameters-with-inline-type-definitions-and-quarkus-option-enabled.output.kt",
       buildString {
         FileSpec
           .get("io.test.service", typeSpec)

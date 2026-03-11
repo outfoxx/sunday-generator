@@ -22,9 +22,9 @@ import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -53,43 +53,8 @@ class BuilderMethodsTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Foundation
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchTest() async throws -> URLRequest {
-          return try await self.requestFactory.request(
-            method: .get,
-            pathTemplate: "/test/request",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "BuilderMethodsTest/test-request-builder-method-generation.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -118,43 +83,8 @@ class BuilderMethodsTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Foundation
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchTest() async throws -> (Data?, HTTPURLResponse) {
-          return try await self.requestFactory.response(
-            method: .get,
-            pathTemplate: "/test/response",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: Empty.none,
-            contentTypes: nil,
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "BuilderMethodsTest/test-response-builder-method-generation.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)

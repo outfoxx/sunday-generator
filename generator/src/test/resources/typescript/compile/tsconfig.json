@@ -1,12 +1,15 @@
 {
   "include": ["src/**/*.ts"],
   "compilerOptions": {
-    "incremental": true,
-    "moduleResolution": "node",
+    "incremental": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "baseUrl": ".",
-    "target": "ES2018",
-    "lib": ["DOM", "ES2018"],
+    "target": "ES2022",
+    "lib": ["DOM", "ES2022"],
+    "types": [],
     "strict": true,
+    "skipLibCheck": false,
     "experimentalDecorators": true
   }
 }

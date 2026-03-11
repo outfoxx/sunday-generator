@@ -22,9 +22,9 @@ import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -53,42 +53,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [.json],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchTest(body: Test) async throws -> Test {
-          return try await self.requestFactory.result(
-            method: .get,
-            pathTemplate: "/tests",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: body,
-            contentTypes: self.defaultContentTypes,
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "RequestBodyParamTest/test-basic-body-parameter-generation.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -117,42 +83,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [.json],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchTest(body: Test?) async throws -> Test {
-          return try await self.requestFactory.result(
-            method: .get,
-            pathTemplate: "/tests",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: body,
-            contentTypes: self.defaultContentTypes,
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "RequestBodyParamTest/test-optional-body-parameter-generation.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -181,44 +113,8 @@ class RequestBodyParamTest {
 
     val typeSpec = findType("API", builtTypes)
 
-    assertEquals(
-      """
-      import Foundation
-      import PotentCodables
-      import Sunday
-
-      public class API {
-
-        public let requestFactory: RequestFactory
-        public let defaultContentTypes: [MediaType]
-        public let defaultAcceptTypes: [MediaType]
-
-        public init(
-          requestFactory: RequestFactory,
-          defaultContentTypes: [MediaType] = [],
-          defaultAcceptTypes: [MediaType] = [.json]
-        ) {
-          self.requestFactory = requestFactory
-          self.defaultContentTypes = defaultContentTypes
-          self.defaultAcceptTypes = defaultAcceptTypes
-        }
-
-        public func fetchTest(body: Data) async throws -> [String : AnyValue] {
-          return try await self.requestFactory.result(
-            method: .get,
-            pathTemplate: "/tests",
-            pathParameters: nil,
-            queryParameters: nil,
-            body: body,
-            contentTypes: [.octetStream],
-            acceptTypes: self.defaultAcceptTypes,
-            headers: nil
-          )
-        }
-
-      }
-
-      """.trimIndent(),
+    assertSwiftSnapshot(
+      "RequestBodyParamTest/test-generation-of-body-parameter-with-explicit-content-type.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
