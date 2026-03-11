@@ -61,4 +61,33 @@ class ResponseEventsTest {
 
     assertSnapshot("ResponseEventsTest/res-events.api.ts", output)
   }
+
+  @Test
+  fun `test event source generation`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes =
+      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
+        TypeScriptSundayGenerator(
+          document,
+          shapeIndex,
+          typeRegistry,
+          typeScriptSundayTestOptions,
+        )
+      }
+
+    val typeSpec = findTypeMod("API@!api", builtTypes)
+    val output =
+      buildString {
+        FileSpec
+          .get(typeSpec)
+          .writeTo(this)
+      }
+
+    assertSnapshot("ResponseEventsTest/res-event-source.api.ts", output)
+  }
 }

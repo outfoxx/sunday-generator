@@ -50,4 +50,25 @@ class ProblemTypesTest {
 
     assertSnapshot("ProblemTypesTest/invalid-id-problem.ts", invalidOutput)
   }
+
+  @Test
+  fun `generates problem types with temporal aliases`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/problem-types-all.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val builtTypes = generateTypes(testUri, typeRegistry, compiler)
+
+    val createFailedTypeModSpec = findTypeMod("CreateFailedProblem@!create-failed-problem", builtTypes)
+    val createFailedOutput =
+      buildString {
+        FileSpec
+          .get(createFailedTypeModSpec, "create-failed-problem")
+          .writeTo(this)
+      }
+
+    assertSnapshot("ProblemTypesTest/create-failed-problem.ts", createFailedOutput)
+  }
 }

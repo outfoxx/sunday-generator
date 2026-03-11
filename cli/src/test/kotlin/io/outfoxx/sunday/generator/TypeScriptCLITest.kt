@@ -27,6 +27,7 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.not
+import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
@@ -95,9 +96,11 @@ class TypeScriptCLITest {
     val nodeNextCommand = TypeScriptGenerateCommandTest()
     assertDoesNotThrow { nodeNextCommand.parse(arrayOf("-import-style", "node-next", *requiredOptions)) }
     assertThat(nodeNextCommand.importStyle, equalTo(TypeScriptTypeRegistry.ImportStyle.NodeNext))
+    assertThat(nodeNextCommand.typeRegistry, notNullValue())
 
     val esmCommand = TypeScriptGenerateCommandTest()
     assertDoesNotThrow { esmCommand.parse(arrayOf("-import-style", "esm", *requiredOptions)) }
     assertThat(esmCommand.importStyle, equalTo(TypeScriptTypeRegistry.ImportStyle.ESM))
+    assertThat(esmCommand.typeRegistry, notNullValue())
   }
 }

@@ -398,8 +398,11 @@ class TypeScriptTypeRegistry(
 
     val companionModules =
       companionSchemaFileMembers
+        .mapValues { it.value.toList() }
         .mapNotNull { (modulePath, members) ->
-          val ownerTypeName = companionSchemaModules[modulePath] ?: return@mapNotNull null
+          val ownerTypeName =
+            companionSchemaModules[modulePath]
+              ?: return@mapNotNull null
           val schemaTypeName =
             TypeName.namedImport(
               "${ownerTypeName.simpleName()}Schema",
@@ -1219,7 +1222,7 @@ class TypeScriptTypeRegistry(
         .add("  });\n")
     } else {
       val wireProperties =
-        mutableListOf<Pair<String, CodeBlock>>().apply {
+        buildList {
           if (leafDiscriminatorPropertyName != null) {
             val discriminatorStandardType =
               discriminatorPropertyTypeName?.nonOptional?.nonNullable as? TypeName.Standard

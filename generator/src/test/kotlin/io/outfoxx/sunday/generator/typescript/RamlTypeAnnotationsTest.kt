@@ -128,4 +128,23 @@ class RamlTypeAnnotationsTest {
 
     assertSnapshot("RamlTypeAnnotationsTest/type-ts-duration.test.ts", output)
   }
+
+  @Test
+  fun `test custom typescript type annotation resolves custom type`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/annotations/type-ts-custom.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+
+    val typeSpec = findTypeMod("Test@!test", generateTypes(testUri, typeRegistry, compiler))
+    val output =
+      buildString {
+        FileSpec
+          .get(typeSpec)
+          .writeTo(this)
+      }
+
+    assertSnapshot("RamlTypeAnnotationsTest/type-ts-custom.test.ts", output)
+  }
 }
