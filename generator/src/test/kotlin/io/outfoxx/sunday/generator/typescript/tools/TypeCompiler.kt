@@ -24,6 +24,8 @@ import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import java.nio.file.Files
 
+private fun normalizeModulePath(modulePath: String): String = modulePath.removeSuffix(".js")
+
 fun compileTypes(
   compiler: TypeScriptCompiler,
   types: Map<TypeName.Standard, ModuleSpec>,
@@ -59,11 +61,14 @@ fun compileTypes(
 
     fileSpecs.forEach {
 
-      val modulePath = compiler.srcDir.resolve(it.modulePath).normalize()
+      val outputModulePath = normalizeModulePath(it.modulePath)
+      val modulePath = compiler.srcDir.resolve("$outputModulePath.ts").normalize()
 
       Files.createDirectories(modulePath.parent)
 
-      it.writeTo(compiler.srcDir)
+      Files.newBufferedWriter(modulePath).use { writer ->
+        it.writeTo(writer, compiler.srcDir)
+      }
     }
 
     val (result, output) = compiler.compile()
@@ -74,7 +79,7 @@ fun compileTypes(
         fileSpecs.associate {
           val builder = StringBuilder()
           it.writeTo(builder)
-          "${it.modulePath}.ts" to builder.toString()
+          "${normalizeModulePath(it.modulePath)}.ts" to builder.toString()
         }
 
       Compilation.printFailure(files, output)

@@ -168,17 +168,26 @@ import io.outfoxx.typescriptpoet.TypeName.Companion.STRING
 import io.outfoxx.typescriptpoet.TypeName.Companion.UNDEFINED
 import io.outfoxx.typescriptpoet.TypeName.Companion.VOID
 import io.outfoxx.typescriptpoet.tag
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.math.min
 
 class TypeScriptTypeRegistry(
   private val options: Set<Option>,
+  private val importStyle: ImportStyle = ImportStyle.ESM,
   private val schemaRuntimeArgumentName: String = "runtime",
 ) : TypeRegistry {
 
   data class SpecificationInterface(
     val value: InterfaceSpec.Builder,
   )
+
+  enum class ImportStyle(
+    val importExtension: String,
+  ) {
+    ESM(""),
+    NodeNext(".js"),
+  }
 
   enum class Option {
     AddGenerationHeader,
@@ -201,10 +210,22 @@ class TypeScriptTypeRegistry(
     val fileSpecs = generateExportedTypeFiles(categories)
 
     fileSpecs
-      .forEach { it.writeTo(outputDirectory) }
+      .forEach { fileSpec -> writeFileSpec(fileSpec, outputDirectory) }
 
     listOf(generateIndexFile(fileSpecs))
       .forEach { it.writeTo(outputDirectory) }
+  }
+
+  private fun writeFileSpec(
+    fileSpec: FileSpec,
+    outputDirectory: Path,
+  ) {
+    val outputModulePath = normalizeModulePath(fileSpec.modulePath)
+    val outputPath = outputDirectory.resolve("$outputModulePath.ts")
+    outputPath.parent?.let { Files.createDirectories(it) }
+    Files.newBufferedWriter(outputPath).use { writer ->
+      fileSpec.writeTo(writer, outputDirectory)
+    }
   }
 
   fun generateExportedTypeFiles(categories: Set<GeneratedTypeCategory>): List<FileSpec> {
@@ -213,11 +234,9 @@ class TypeScriptTypeRegistry(
       buildTypes()
         .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
         .map { (typeName, moduleSpec) ->
-
-          val imported = typeName.base as SymbolSpec.Imported
-          val modulePath = imported.source.replaceFirst("!", "")
-
-          Triple(modulePath, typeName, moduleSpec)
+          val importModulePath = importModulePath(typeName)
+          val outputModulePath = normalizeModulePath(importModulePath)
+          Triple(outputModulePath, typeName, moduleSpec)
         }.groupBy { it.first }
         .map { (modulePath, moduleSpecs) ->
           val orderedModuleSpecs =
@@ -228,11 +247,12 @@ class TypeScriptTypeRegistry(
                 }.thenBy { it.second.simpleName() },
               ).map { it.third }
 
+          val importModulePath = renderImportModulePath(modulePath)
           val fileSpecBuilder =
             if (orderedModuleSpecs.size == 1) {
-              FileSpec.get(orderedModuleSpecs.first(), modulePath).toBuilder()
+              FileSpec.get(orderedModuleSpecs.first(), importModulePath).toBuilder()
             } else {
-              val fileSpecBuilder = FileSpec.builder(modulePath)
+              val fileSpecBuilder = FileSpec.builder(importModulePath)
               orderedModuleSpecs.forEach { moduleSpec ->
                 moduleSpec.members.forEach { member ->
                   when (member) {
@@ -248,7 +268,7 @@ class TypeScriptTypeRegistry(
             }
 
           if (options.contains(AddGenerationHeader)) {
-            val fileName = "${fileSpecBuilder.build().modulePath}.ts"
+            val fileName = "$modulePath.ts"
             fileSpecBuilder.addComment(GenerationHeaders.create(fileName))
           }
 
@@ -268,11 +288,11 @@ class TypeScriptTypeRegistry(
                 }.thenBy { it.first.simpleName() },
               )
             val fileSpecBuilder =
-              FileSpec.builder(modulePath).apply {
+              FileSpec.builder(renderImportModulePath(modulePath)).apply {
                 sortedMembers.forEach { (_, code) -> addCode(code) }
               }
             if (options.contains(AddGenerationHeader)) {
-              val fileName = "${fileSpecBuilder.build().modulePath}.ts"
+              val fileName = "$modulePath.ts"
               fileSpecBuilder.addComment(GenerationHeaders.create(fileName))
             }
             fileSpecBuilder.build()
@@ -380,7 +400,11 @@ class TypeScriptTypeRegistry(
       companionSchemaFileMembers
         .mapNotNull { (modulePath, members) ->
           val ownerTypeName = companionSchemaModules[modulePath] ?: return@mapNotNull null
-          val schemaTypeName = TypeName.namedImport("${ownerTypeName.simpleName()}Schema", "!$modulePath")
+          val schemaTypeName =
+            TypeName.namedImport(
+              "${ownerTypeName.simpleName()}Schema",
+              "!${renderImportModulePath(modulePath)}",
+            )
 
           val moduleSpecBuilder = ModuleSpec.builder(schemaTypeName.simpleName(), ModuleSpec.Kind.MODULE)
           members
@@ -441,7 +465,11 @@ class TypeScriptTypeRegistry(
   ): TypeName {
 
     val problemTypeNameStr = "${problemCode.typeScriptTypeName}Problem"
-    val problemTypeName = TypeName.namedImport(problemTypeNameStr, "!${problemTypeNameStr.camelCaseToKebabCase()}")
+    val problemTypeName =
+      TypeName.namedImport(
+        problemTypeNameStr,
+        "!${problemTypeNameStr.camelCaseToKebabCase()}${importStyle.importExtension}",
+      )
 
     exportedTypeBuilders.computeIfAbsent(problemTypeName) {
 
@@ -1464,7 +1492,19 @@ class TypeScriptTypeRegistry(
 
   private fun companionSchemaModulePath(typeName: TypeName.Standard): String = "${modulePath(typeName)}-schema"
 
-  private fun modulePath(typeName: TypeName.Standard): String = importedType(typeName).source.replaceFirst("!", "")
+  private fun sourceToImportModulePath(source: String): String = source.removePrefix("!")
+
+  private fun renderImportModulePath(modulePath: String): String = "$modulePath${importStyle.importExtension}"
+
+  private fun normalizeModulePath(importModulePath: String): String =
+    importModulePath.removeSuffix(importStyle.importExtension)
+
+  private fun importModulePath(typeName: TypeName.Standard): String =
+    sourceToImportModulePath(
+      importedType(typeName).source,
+    )
+
+  private fun modulePath(typeName: TypeName.Standard): String = normalizeModulePath(importModulePath(typeName))
 
   private fun importedType(typeName: TypeName.Standard): SymbolSpec.Imported =
     when (val base = typeName.base) {
@@ -1773,7 +1813,7 @@ class TypeScriptTypeRegistry(
       (
         typeBuilders[discriminatorPropertyTypeName] is EnumSpec.Builder ||
           isLocalGeneratedType(discriminatorPropertyTypeName)
-        )
+      )
     ) {
       return CodeBlock.of(
         "%T.literal(%T.%L)",
@@ -1795,7 +1835,7 @@ class TypeScriptTypeRegistry(
       (
         typeBuilders[discriminatorPropertyTypeName] is EnumSpec.Builder ||
           isLocalGeneratedType(discriminatorPropertyTypeName)
-        )
+      )
     ) {
       return CodeBlock.of("%T.%L", discriminatorPropertyTypeName, discriminatorEnumMemberName(discriminatorValue))
     }
@@ -1825,14 +1865,17 @@ class TypeScriptTypeRegistry(
         } else {
           "$modulePath/${shape.typeScriptTypeName.camelCaseToKebabCase()}"
         }
-      return TypeName.namedImport(shape.typeScriptTypeName, "!$fullModulePath")
+      return TypeName.namedImport(
+        shape.typeScriptTypeName,
+        "!$fullModulePath${importStyle.importExtension}",
+      )
     }
 
     val nestedAnn =
       shape.findAnnotation(Nested, null)
         ?: return TypeName.namedImport(
           shape.typeScriptTypeName,
-          "!${shape.typeScriptTypeName.camelCaseToKebabCase()}",
+          "!${shape.typeScriptTypeName.camelCaseToKebabCase()}${importStyle.importExtension}",
         )
 
     val (nestedEnclosedIn, nestedName) =
@@ -2068,7 +2111,7 @@ class TypeScriptTypeRegistry(
       OFFSET_TIME,
       ZONED_DATETIME,
       DURATION,
-        -> true
+      -> true
 
       else ->
         isLocalGeneratedType(typeName) ||
@@ -2406,7 +2449,10 @@ class TypeScriptTypeRegistry(
     }
 
     if (hasCompanionSchemaType(typeName)) {
-      return TypeName.namedImport("${typeName.simpleName()}Schema", "!${companionSchemaModulePath(typeName)}")
+      return TypeName.namedImport(
+        "${typeName.simpleName()}Schema",
+        "!${companionSchemaModulePath(typeName)}${importStyle.importExtension}",
+      )
     }
 
     return typeName.sibling("Schema")

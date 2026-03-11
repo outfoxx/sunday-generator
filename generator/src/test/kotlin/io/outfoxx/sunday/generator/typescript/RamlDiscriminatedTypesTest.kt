@@ -22,7 +22,9 @@ import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateTypes
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
+import io.outfoxx.typescriptpoet.SymbolSpec
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -112,5 +114,62 @@ class RamlDiscriminatedTypesTest {
       }
 
     assertSnapshot("RamlDiscriminatedTypesTest/enum.parent-schema.ts", parentSchemaOutput)
+  }
+
+  @Test
+  fun `test node-next import style emits js imports and avoids self imports`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(), TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
+
+    val child1TypeModSpec = findTypeMod("Child1@!child1.js", generatedTypes)
+    val child1Output =
+      buildString {
+        FileSpec
+          .get(child1TypeModSpec, "child1.js")
+          .writeTo(this)
+      }
+
+    assertTrue(child1Output.contains("from './parent.js'"))
+    assertFalse(child1Output.contains("from './child1.js'"))
+
+    val parentSchemaTypeModSpec = findTypeMod("ParentSchema@!parent-schema.js", generatedTypes)
+    val parentSchemaOutput =
+      buildString {
+        FileSpec
+          .get(parentSchemaTypeModSpec, "parent-schema.js")
+          .writeTo(this)
+      }
+
+    assertFalse(parentSchemaOutput.contains(".js-schema"))
+    assertFalse(
+      generatedTypes.keys.any {
+        ((it.base as? SymbolSpec.Imported)?.source ?: "").contains(".js-schema")
+      },
+    )
+  }
+
+  @Test
+  fun `test esm import style preserves extensionless imports`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/type-gen/discriminated/simple.raml") testUri: URI,
+  ) {
+
+    val typeRegistry = TypeScriptTypeRegistry(setOf(), TypeScriptTypeRegistry.ImportStyle.ESM)
+    val generatedTypes = generateTypes(testUri, typeRegistry, compiler, includeIndex = true)
+
+    val child1TypeModSpec = findTypeMod("Child1@!child1", generatedTypes)
+    val child1Output =
+      buildString {
+        FileSpec
+          .get(child1TypeModSpec, "child1")
+          .writeTo(this)
+      }
+
+    assertTrue(child1Output.contains("from './parent'"))
+    assertFalse(child1Output.contains("from './parent.js'"))
   }
 }

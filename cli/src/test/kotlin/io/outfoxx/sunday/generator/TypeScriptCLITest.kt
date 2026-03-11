@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
@@ -80,5 +81,23 @@ class TypeScriptCLITest {
     val command = TypeScriptGenerateCommandTest()
     assertDoesNotThrow { command.parse(arrayOf("-$optionName", "-no-$optionName", *requiredOptions)) }
     assertThat(command.options, not(hasItems(option)))
+  }
+
+  @Test
+  fun `import style defaults to esm`() {
+    val command = TypeScriptGenerateCommandTest()
+    assertDoesNotThrow { command.parse(requiredOptions) }
+    assertThat(command.importStyle, equalTo(TypeScriptTypeRegistry.ImportStyle.ESM))
+  }
+
+  @Test
+  fun `import style parses node-next and esm`() {
+    val nodeNextCommand = TypeScriptGenerateCommandTest()
+    assertDoesNotThrow { nodeNextCommand.parse(arrayOf("-import-style", "node-next", *requiredOptions)) }
+    assertThat(nodeNextCommand.importStyle, equalTo(TypeScriptTypeRegistry.ImportStyle.NodeNext))
+
+    val esmCommand = TypeScriptGenerateCommandTest()
+    assertDoesNotThrow { esmCommand.parse(arrayOf("-import-style", "esm", *requiredOptions)) }
+    assertThat(esmCommand.importStyle, equalTo(TypeScriptTypeRegistry.ImportStyle.ESM))
   }
 }
