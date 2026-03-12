@@ -1,0 +1,1165 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>io.outfoxx.sunday.generator.typescript.utils</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../index.html" tabindex="1">
+                    sunday-generator
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":generator/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":generator/main" data-filter=":generator/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    sunday-generator
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="generator::io.outfoxx.sunday.generator.typescript.utils////PointingToDeclaration//-1790917311">
+  <div class="breadcrumbs"><a href="../index.html">generator</a><span class="delimiter">/</span><span class="current">io.outfoxx.sunday.generator.typescript.utils</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button><button class="section-tab" data-togglable="PROPERTY,EXTENSION_PROPERTY">Properties</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="289194820%2FProperties%2F-1790917311" anchor-label="ABORT_SIGNAL" id="289194820%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-a-b-o-r-t_-s-i-g-n-a-l.html"><span>ABORT_</span><wbr><span>SIGNAL</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="289194820%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-a-b-o-r-t_-s-i-g-n-a-l.html">ABORT_SIGNAL</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-954963483%2FProperties%2F-1790917311" anchor-label="ARRAY_BUFFER_SCHEMA" id="-954963483%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-a-r-r-a-y_-b-u-f-f-e-r_-s-c-h-e-m-a.html"><span>ARRAY_</span><wbr><span>BUFFER_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-954963483%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-a-r-r-a-y_-b-u-f-f-e-r_-s-c-h-e-m-a.html">ARRAY_BUFFER_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1176282438%2FProperties%2F-1790917311" anchor-label="ASYNC_ITERABLE" id="1176282438%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-a-s-y-n-c_-i-t-e-r-a-b-l-e.html"><span>ASYNC_</span><wbr><span>ITERABLE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1176282438%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-a-s-y-n-c_-i-t-e-r-a-b-l-e.html">ASYNC_ITERABLE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="225028402%2FProperties%2F-1790917311" anchor-label="BODY_INIT" id="225028402%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-b-o-d-y_-i-n-i-t.html"><span>BODY_</span><wbr><span>INIT</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="225028402%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-b-o-d-y_-i-n-i-t.html">BODY_INIT</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="271803363%2FProperties%2F-1790917311" anchor-label="BOOLEAN_SCHEMA" id="271803363%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-b-o-o-l-e-a-n_-s-c-h-e-m-a.html"><span>BOOLEAN_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="271803363%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-b-o-o-l-e-a-n_-s-c-h-e-m-a.html">BOOLEAN_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1371873464%2FProperties%2F-1790917311" anchor-label="CREATE_PROBLEM_CODEC" id="-1371873464%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-c-r-e-a-t-e_-p-r-o-b-l-e-m_-c-o-d-e-c.html"><span>CREATE_</span><wbr><span>PROBLEM_</span><wbr><span>CODEC</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1371873464%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-c-r-e-a-t-e_-p-r-o-b-l-e-m_-c-o-d-e-c.html">CREATE_PROBLEM_CODEC</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/SymbolSpec///PointingToDeclaration/">SymbolSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-371888083%2FProperties%2F-1790917311" anchor-label="DATE" id="-371888083%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-d-a-t-e.html"><span><span>DATE</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-371888083%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-d-a-t-e.html">DATE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-261035379%2FProperties%2F-1790917311" anchor-label="DATE_SCHEMA" id="-261035379%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-d-a-t-e_-s-c-h-e-m-a.html"><span>DATE_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-261035379%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-d-a-t-e_-s-c-h-e-m-a.html">DATE_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1055757286%2FProperties%2F-1790917311" anchor-label="DEFINE_SCHEMA" id="-1055757286%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-d-e-f-i-n-e_-s-c-h-e-m-a.html"><span>DEFINE_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1055757286%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-d-e-f-i-n-e_-s-c-h-e-m-a.html">DEFINE_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/SymbolSpec///PointingToDeclaration/">SymbolSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-712504825%2FProperties%2F-1790917311" anchor-label="DURATION" id="-712504825%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-d-u-r-a-t-i-o-n.html"><span><span>DURATION</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-712504825%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-d-u-r-a-t-i-o-n.html">DURATION</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-502241421%2FProperties%2F-1790917311" anchor-label="DURATION_SCHEMA" id="-502241421%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-d-u-r-a-t-i-o-n_-s-c-h-e-m-a.html"><span>DURATION_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-502241421%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-d-u-r-a-t-i-o-n_-s-c-h-e-m-a.html">DURATION_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-348821349%2FProperties%2F-1790917311" anchor-label="EVENT_SOURCE" id="-348821349%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-e-v-e-n-t_-s-o-u-r-c-e.html"><span>EVENT_</span><wbr><span>SOURCE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-348821349%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-e-v-e-n-t_-s-o-u-r-c-e.html">EVENT_SOURCE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="881042430%2FProperties%2F-1790917311" anchor-label="INSTANT" id="881042430%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-i-n-s-t-a-n-t.html"><span><span>INSTANT</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="881042430%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-i-n-s-t-a-n-t.html">INSTANT</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1865877092%2FProperties%2F-1790917311" anchor-label="INSTANT_SCHEMA" id="-1865877092%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-i-n-s-t-a-n-t_-s-c-h-e-m-a.html"><span>INSTANT_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1865877092%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-i-n-s-t-a-n-t_-s-c-h-e-m-a.html">INSTANT_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1404415599%2FProperties%2F-1790917311" anchor-label="isNullable" id="-1404415599%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-nullable.html"><span>is</span><wbr><span><span>Nullable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1404415599%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="is-nullable.html">isNullable</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2067292541%2FProperties%2F-1790917311" anchor-label="isNullableUnion" id="2067292541%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-nullable-union.html"><span>is</span><wbr><span>Nullable</span><wbr><span><span>Union</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2067292541%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Union///PointingToDeclaration/">TypeName.Union</span><span class="token punctuation">.</span><a href="is-nullable-union.html">isNullableUnion</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-741737934%2FProperties%2F-1790917311" anchor-label="isOptional" id="-741737934%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-optional.html"><span>is</span><wbr><span><span>Optional</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-741737934%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="is-optional.html">isOptional</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1771616828%2FProperties%2F-1790917311" anchor-label="isOptionalUnion" id="1771616828%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-optional-union.html"><span>is</span><wbr><span>Optional</span><wbr><span><span>Union</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1771616828%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Union///PointingToDeclaration/">TypeName.Union</span><span class="token punctuation">.</span><a href="is-optional-union.html">isOptionalUnion</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1990107839%2FProperties%2F-1790917311" anchor-label="isUndefinable" id="1990107839%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-undefinable.html"><span>is</span><wbr><span><span>Undefinable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1990107839%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="is-undefinable.html">isUndefinable</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1268983695%2FProperties%2F-1790917311" anchor-label="isUndefinableUnion" id="1268983695%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-undefinable-union.html"><span>is</span><wbr><span>Undefinable</span><wbr><span><span>Union</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1268983695%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Union///PointingToDeclaration/">TypeName.Union</span><span class="token punctuation">.</span><a href="is-undefinable-union.html">isUndefinableUnion</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="123835931%2FProperties%2F-1790917311" anchor-label="isValidTypeScriptIdentifier" id="123835931%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-valid-type-script-identifier.html"><span>is</span><wbr><span>Valid</span><wbr><span>Type</span><wbr><span>Script</span><wbr><span><span>Identifier</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="123835931%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="is-valid-type-script-identifier.html">isValidTypeScriptIdentifier</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-937675847%2FProperties%2F-1790917311" anchor-label="LOCAL_DATE" id="-937675847%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-d-a-t-e.html"><span>LOCAL_</span><wbr><span>DATE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-937675847%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-d-a-t-e.html">LOCAL_DATE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-339914367%2FProperties%2F-1790917311" anchor-label="LOCAL_DATE_SCHEMA" id="-339914367%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-d-a-t-e_-s-c-h-e-m-a.html"><span>LOCAL_</span><wbr><span>DATE_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-339914367%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-d-a-t-e_-s-c-h-e-m-a.html">LOCAL_DATE_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-370975860%2FProperties%2F-1790917311" anchor-label="LOCAL_DATETIME" id="-370975860%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-d-a-t-e-t-i-m-e.html"><span>LOCAL_</span><wbr><span>DATETIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-370975860%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-d-a-t-e-t-i-m-e.html">LOCAL_DATETIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2021934670%2FProperties%2F-1790917311" anchor-label="LOCAL_DATETIME_SCHEMA" id="2021934670%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html"><span>LOCAL_</span><wbr><span>DATETIME_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2021934670%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html">LOCAL_DATETIME_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1382760826%2FProperties%2F-1790917311" anchor-label="LOCAL_TIME" id="1382760826%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-t-i-m-e.html"><span>LOCAL_</span><wbr><span>TIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1382760826%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-t-i-m-e.html">LOCAL_TIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1164412768%2FProperties%2F-1790917311" anchor-label="LOCAL_TIME_SCHEMA" id="-1164412768%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-l-o-c-a-l_-t-i-m-e_-s-c-h-e-m-a.html"><span>LOCAL_</span><wbr><span>TIME_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1164412768%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-l-o-c-a-l_-t-i-m-e_-s-c-h-e-m-a.html">LOCAL_TIME_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-396156826%2FProperties%2F-1790917311" anchor-label="MEDIA_TYPE" id="-396156826%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-m-e-d-i-a_-t-y-p-e.html"><span>MEDIA_</span><wbr><span>TYPE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-396156826%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-m-e-d-i-a_-t-y-p-e.html">MEDIA_TYPE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-575089646%2FProperties%2F-1790917311" anchor-label="nonNullable" id="-575089646%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="non-nullable.html"><span>non</span><wbr><span><span>Nullable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-575089646%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="non-nullable.html">nonNullable</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="87588019%2FProperties%2F-1790917311" anchor-label="nonOptional" id="87588019%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="non-optional.html"><span>non</span><wbr><span><span>Optional</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="87588019%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="non-optional.html">nonOptional</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-507280226%2FProperties%2F-1790917311" anchor-label="nonUndefinable" id="-507280226%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="non-undefinable.html"><span>non</span><wbr><span><span>Undefinable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-507280226%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="non-undefinable.html">nonUndefinable</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1334997349%2FProperties%2F-1790917311" anchor-label="nullable" id="-1334997349%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nullable.html"><span><span>nullable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1334997349%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="nullable.html">nullable</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1185706506%2FProperties%2F-1790917311" anchor-label="NULLIFY_PROBLEM" id="1185706506%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-n-u-l-l-i-f-y_-p-r-o-b-l-e-m.html"><span>NULLIFY_</span><wbr><span>PROBLEM</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1185706506%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-n-u-l-l-i-f-y_-p-r-o-b-l-e-m.html">NULLIFY_PROBLEM</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/SymbolSpec///PointingToDeclaration/">SymbolSpec</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1684911528%2FProperties%2F-1790917311" anchor-label="NUMBER_SCHEMA" id="1684911528%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-n-u-m-b-e-r_-s-c-h-e-m-a.html"><span>NUMBER_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1684911528%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-n-u-m-b-e-r_-s-c-h-e-m-a.html">NUMBER_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="157706456%2FProperties%2F-1790917311" anchor-label="OFFSET_DATETIME" id="157706456%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-o-f-f-s-e-t_-d-a-t-e-t-i-m-e.html"><span>OFFSET_</span><wbr><span>DATETIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="157706456%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-o-f-f-s-e-t_-d-a-t-e-t-i-m-e.html">OFFSET_DATETIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1245582462%2FProperties%2F-1790917311" anchor-label="OFFSET_DATETIME_SCHEMA" id="-1245582462%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-o-f-f-s-e-t_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html"><span>OFFSET_</span><wbr><span>DATETIME_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1245582462%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-o-f-f-s-e-t_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html">OFFSET_DATETIME_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2000628538%2FProperties%2F-1790917311" anchor-label="OFFSET_TIME" id="-2000628538%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-o-f-f-s-e-t_-t-i-m-e.html"><span>OFFSET_</span><wbr><span>TIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2000628538%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-o-f-f-s-e-t_-t-i-m-e.html">OFFSET_TIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-834611244%2FProperties%2F-1790917311" anchor-label="OFFSET_TIME_SCHEMA" id="-834611244%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-o-f-f-s-e-t_-t-i-m-e_-s-c-h-e-m-a.html"><span>OFFSET_</span><wbr><span>TIME_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-834611244%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-o-f-f-s-e-t_-t-i-m-e_-s-c-h-e-m-a.html">OFFSET_TIME_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1811305566%2FProperties%2F-1790917311" anchor-label="PARTIAL" id="1811305566%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-p-a-r-t-i-a-l.html"><span><span>PARTIAL</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1811305566%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-p-a-r-t-i-a-l.html">PARTIAL</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1621608192%2FProperties%2F-1790917311" anchor-label="PROBLEM" id="-1621608192%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-p-r-o-b-l-e-m.html"><span><span>PROBLEM</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1621608192%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-p-r-o-b-l-e-m.html">PROBLEM</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1765879588%2FProperties%2F-1790917311" anchor-label="PROBLEM_WIRE_SCHEMA" id="1765879588%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-p-r-o-b-l-e-m_-w-i-r-e_-s-c-h-e-m-a.html"><span>PROBLEM_</span><wbr><span>WIRE_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1765879588%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-p-r-o-b-l-e-m_-w-i-r-e_-s-c-h-e-m-a.html">PROBLEM_WIRE_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1939416297%2FProperties%2F-1790917311" anchor-label="quotedIfNotTypeScriptIdentifier" id="-1939416297%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="quoted-if-not-type-script-identifier.html"><span>quoted</span><wbr><span>If</span><wbr><span>Not</span><wbr><span>Type</span><wbr><span>Script</span><wbr><span><span>Identifier</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1939416297%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="quoted-if-not-type-script-identifier.html">quotedIfNotTypeScriptIdentifier</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1936767638%2FProperties%2F-1790917311" anchor-label="RECORD" id="-1936767638%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-e-c-o-r-d.html"><span><span>RECORD</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1936767638%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-r-e-c-o-r-d.html">RECORD</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1272370960%2FProperties%2F-1790917311" anchor-label="REQUEST" id="1272370960%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-e-q-u-e-s-t.html"><span><span>REQUEST</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1272370960%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-r-e-q-u-e-s-t.html">REQUEST</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-588425531%2FProperties%2F-1790917311" anchor-label="REQUEST_FACTORY" id="-588425531%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-e-q-u-e-s-t_-f-a-c-t-o-r-y.html"><span>REQUEST_</span><wbr><span>FACTORY</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-588425531%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-r-e-q-u-e-s-t_-f-a-c-t-o-r-y.html">REQUEST_FACTORY</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="226308090%2FProperties%2F-1790917311" anchor-label="RESPONSE" id="226308090%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-e-s-p-o-n-s-e.html"><span><span>RESPONSE</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="226308090%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-r-e-s-p-o-n-s-e.html">RESPONSE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1099473956%2FProperties%2F-1790917311" anchor-label="RESULT_RESPONSE" id="-1099473956%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-r-e-s-u-l-t_-r-e-s-p-o-n-s-e.html"><span>RESULT_</span><wbr><span>RESPONSE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1099473956%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-r-e-s-u-l-t_-r-e-s-p-o-n-s-e.html">RESULT_RESPONSE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1262447670%2FProperties%2F-1790917311" anchor-label="SCHEMA_LIKE" id="-1262447670%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-s-c-h-e-m-a_-l-i-k-e.html"><span>SCHEMA_</span><wbr><span>LIKE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1262447670%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-s-c-h-e-m-a_-l-i-k-e.html">SCHEMA_LIKE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1252101951%2FProperties%2F-1790917311" anchor-label="SCHEMA_RUNTIME" id="-1252101951%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-s-c-h-e-m-a_-r-u-n-t-i-m-e.html"><span>SCHEMA_</span><wbr><span>RUNTIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1252101951%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-s-c-h-e-m-a_-r-u-n-t-i-m-e.html">SCHEMA_RUNTIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="174398064%2FProperties%2F-1790917311" anchor-label="STRING_SCHEMA" id="174398064%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-s-t-r-i-n-g_-s-c-h-e-m-a.html"><span>STRING_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="174398064%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-s-t-r-i-n-g_-s-c-h-e-m-a.html">STRING_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1793665666%2FProperties%2F-1790917311" anchor-label="SUNDAY_PKG" id="-1793665666%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-s-u-n-d-a-y_-p-k-g.html"><span>SUNDAY_</span><wbr><span>PKG</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1793665666%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-s-u-n-d-a-y_-p-k-g.html">SUNDAY_PKG</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="552015754%2FProperties%2F-1790917311" anchor-label="typeScriptEnumName" id="552015754%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-script-enum-name.html"><span>type</span><wbr><span>Script</span><wbr><span>Enum</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="552015754%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.core.client.platform.model.domain/ScalarNode///PointingToDeclaration/">ScalarNode</span><span class="token punctuation">.</span><a href="type-script-enum-name.html">typeScriptEnumName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-957885310%2FProperties%2F-1790917311" anchor-label="typeScriptIdentifierName" id="-957885310%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-script-identifier-name.html"><span>type</span><wbr><span>Script</span><wbr><span>Identifier</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-957885310%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">.</span><a href="type-script-identifier-name.html">typeScriptIdentifierName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">.</span><a href="type-script-identifier-name.html">typeScriptIdentifierName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.core.client.platform.model.domain/PropertyShape///PointingToDeclaration/">PropertyShape</span><span class="token punctuation">.</span><a href="type-script-identifier-name.html">typeScriptIdentifierName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="symbol monospace"><span class="token keyword">val </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="type-script-identifier-name.html">typeScriptIdentifierName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1327497753%2FProperties%2F-1790917311" anchor-label="typeScriptTypeName" id="1327497753%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-script-type-name.html"><span>type</span><wbr><span>Script</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1327497753%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Operation///PointingToDeclaration/">Operation</span><span class="token punctuation">.</span><a href="type-script-type-name.html">typeScriptTypeName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.apicontract.client.platform.model.domain/Parameter///PointingToDeclaration/">Parameter</span><span class="token punctuation">.</span><a href="type-script-type-name.html">typeScriptTypeName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">.</span><a href="type-script-type-name.html">typeScriptTypeName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="symbol monospace"><span class="token keyword">val </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="type-script-type-name.html">typeScriptTypeName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-145043083%2FProperties%2F-1790917311" anchor-label="undefinable" id="-145043083%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_PROPERTY" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="undefinable.html"><span><span>undefinable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-145043083%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="undefinable.html">undefinable</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1112410699%2FProperties%2F-1790917311" anchor-label="UNKNOWN" id="-1112410699%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-n-k-n-o-w-n.html"><span><span>UNKNOWN</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1112410699%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-u-n-k-n-o-w-n.html">UNKNOWN</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1915406640%2FProperties%2F-1790917311" anchor-label="URL" id="1915406640%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-r-l.html"><span><span>URL</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1915406640%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-u-r-l.html">URL</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-826738646%2FProperties%2F-1790917311" anchor-label="URL_SCHEMA" id="-826738646%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-r-l_-s-c-h-e-m-a.html"><span>URL_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-826738646%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-u-r-l_-s-c-h-e-m-a.html">URL_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1052907505%2FProperties%2F-1790917311" anchor-label="URL_TEMPLATE" id="1052907505%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-r-l_-t-e-m-p-l-a-t-e.html"><span>URL_</span><wbr><span>TEMPLATE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1052907505%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-u-r-l_-t-e-m-p-l-a-t-e.html">URL_TEMPLATE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1691339825%2FProperties%2F-1790917311" anchor-label="URL_TYPE" id="1691339825%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-u-r-l_-t-y-p-e.html"><span>URL_</span><wbr><span>TYPE</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1691339825%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-u-r-l_-t-y-p-e.html">URL_TYPE</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-254077691%2FProperties%2F-1790917311" anchor-label="Z" id="-254077691%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-z.html"><span><span>Z</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-254077691%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-z.html">Z</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1765044483%2FProperties%2F-1790917311" anchor-label="ZOD_PKG" id="1765044483%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-z-o-d_-p-k-g.html"><span>ZOD_</span><wbr><span>PKG</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1765044483%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">const </span><span class="token keyword">val </span><a href="-z-o-d_-p-k-g.html">ZOD_PKG</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1516100377%2FProperties%2F-1790917311" anchor-label="ZONED_DATETIME" id="1516100377%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-z-o-n-e-d_-d-a-t-e-t-i-m-e.html"><span>ZONED_</span><wbr><span>DATETIME</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1516100377%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-z-o-n-e-d_-d-a-t-e-t-i-m-e.html">ZONED_DATETIME</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1460837921%2FProperties%2F-1790917311" anchor-label="ZONED_DATETIME_SCHEMA" id="1460837921%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-z-o-n-e-d_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html"><span>ZONED_</span><wbr><span>DATETIME_</span><wbr><span>SCHEMA</span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1460837921%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="-z-o-n-e-d_-d-a-t-e-t-i-m-e_-s-c-h-e-m-a.html">ZONED_DATETIME_SCHEMA</a><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName.Standard///PointingToDeclaration/">TypeName.Standard</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1912416395%2FFunctions%2F-1790917311" anchor-label="box" id="-1912416395%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="box.html"><span><span>box</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1912416395%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="box.html"><span class="token function">box</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1053077956%2FFunctions%2F-1790917311" anchor-label="internalTypeInitializer" id="-1053077956%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="internal-type-initializer.html"><span>internal</span><wbr><span>Type</span><wbr><span><span>Initializer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1053077956%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="internal-type-initializer.html"><span class="token function">internalTypeInitializer</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">builder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/CodeBlock.Builder///PointingToDeclaration/">CodeBlock.Builder</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1521841039%2FFunctions%2F-1790917311" anchor-label="recordType" id="1521841039%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="record-type.html"><span>record</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1521841039%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="record-type.html"><span class="token function">recordType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">keyType<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter ">valueType<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1030498520%2FFunctions%2F-1790917311" anchor-label="typeInitializer" id="1030498520%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-initializer.html"><span>type</span><wbr><span><span>Initializer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1030498520%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">.</span><a href="type-initializer.html"><span class="token function">typeInitializer</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/CodeBlock///PointingToDeclaration/">CodeBlock</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-216953626%2FFunctions%2F-1790917311" anchor-label="typeScriptConstant" id="-216953626%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="EXTENSION_FUNCTION" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="type-script-constant.html"><span>type</span><wbr><span>Script</span><wbr><span><span>Constant</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-216953626%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><span data-unresolved-link="amf.core.client.platform.model.domain/DataNode///PointingToDeclaration/">DataNode</span><span class="token punctuation">.</span><a href="type-script-constant.html"><span class="token function">typeScriptConstant</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter ">shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/CodeBlock///PointingToDeclaration/">CodeBlock</span></div><div class="symbol monospace"><span class="token keyword">fun </span><span data-unresolved-link="amf.core.client.platform.model.domain/DataNode///PointingToDeclaration/">DataNode</span><span class="token punctuation">.</span><a href="type-script-constant.html"><span class="token function">typeScriptConstant</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeName<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter ">shape<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">builder<span class="token operator">: </span><span data-unresolved-link="io.outfoxx.typescriptpoet/CodeBlock.Builder///PointingToDeclaration/">CodeBlock.Builder</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
