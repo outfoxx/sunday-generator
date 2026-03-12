@@ -1,6 +1,6 @@
-///usr/bin/env jbang "$0" "$@" ; exit $?
+///usr/bin/env jbang --fresh "$0" "$@" ; exit $?
 //JAVA 21
-//DEPS io.outfoxx.sunday:cli:${env.VER}:all
+//DEPS io.outfoxx.sunday:cli:${env.VER}:all@fatjar
 
 import io.outfoxx.sunday.generator.MainKt;
 
