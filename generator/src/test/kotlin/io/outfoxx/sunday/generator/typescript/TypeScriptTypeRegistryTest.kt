@@ -36,6 +36,7 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.not
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -202,5 +203,25 @@ class TypeScriptTypeRegistryTest {
 
     assertThat(imported.value, equalTo("SharedType"))
     assertThat(imported.source, equalTo("!shared-type"))
+  }
+
+  @Test
+  fun `generatedTypeName keeps esm module paths extensionless`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf(), ImportStyle.ESM)
+
+    val generated = typeRegistry.generatedTypeName("Service", "services/service")
+
+    assertEquals("Service", generated.simpleName())
+    assertEquals("!services/service", (generated.base as SymbolSpec.Imported).source)
+  }
+
+  @Test
+  fun `generatedTypeName normalizes node-next module paths without doubling js extension`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf(), ImportStyle.NodeNext)
+
+    val generated = typeRegistry.generatedTypeName("Service", "services/service.js")
+
+    assertEquals("Service", generated.simpleName())
+    assertEquals("!services/service.js", (generated.base as SymbolSpec.Imported).source)
   }
 }

@@ -1502,6 +1502,15 @@ class TypeScriptTypeRegistry(
   private fun normalizeModulePath(importModulePath: String): String =
     importModulePath.removeSuffix(importStyle.importExtension)
 
+  internal fun generatedTypeName(
+    simpleName: String,
+    modulePath: String,
+  ): TypeName.Standard =
+    TypeName.namedImport(
+      simpleName,
+      "!${renderImportModulePath(normalizeModulePath(modulePath))}",
+    )
+
   private fun importModulePath(typeName: TypeName.Standard): String =
     sourceToImportModulePath(
       importedType(typeName).source,

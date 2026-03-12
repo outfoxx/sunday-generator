@@ -119,10 +119,9 @@ abstract class TypeScriptGenerator(
 
       val serviceSimpleName = "${servicePrefix.typeScriptTypeName}${options.serviceSuffix}"
 
-      val modulePath = modulePathOf(document)?.let { "!$it/" } ?: "!"
+      val modulePath = resolveServiceModulePath(serviceSimpleName, modulePathOf(document))
 
-      val serviceTypeName =
-        TypeName.namedImport(serviceSimpleName, "$modulePath${serviceSimpleName.camelCaseToKebabCase()}")
+      val serviceTypeName = typeRegistry.generatedTypeName(serviceSimpleName, modulePath)
 
       val serviceTypeBuilder = generateServiceType(serviceTypeName, endPoints)
 
@@ -640,3 +639,13 @@ abstract class TypeScriptGenerator(
     return server.url to parameters
   }
 }
+
+internal fun resolveServiceModulePath(
+  serviceSimpleName: String,
+  modulePath: String?,
+): String =
+  when {
+    modulePath == null -> serviceSimpleName.camelCaseToKebabCase()
+    modulePath.endsWith(".ts") -> modulePath.removeSuffix(".ts")
+    else -> "$modulePath/${serviceSimpleName.camelCaseToKebabCase()}"
+  }
