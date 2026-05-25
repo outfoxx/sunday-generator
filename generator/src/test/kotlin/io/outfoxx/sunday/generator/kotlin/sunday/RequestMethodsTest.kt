@@ -16,15 +16,14 @@
 
 package io.outfoxx.sunday.generator.kotlin.sunday
 
-import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
-import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateSunday
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
@@ -52,60 +51,11 @@ class RequestMethodsTest {
 
     val typeRegistry = typeRegistry()
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertKotlinSundaySnapshot(
       "RequestMethodsTest/test-request-method-generation.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test request method generation with result response`(
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = typeRegistry()
-
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinSundayGenerator.Options(
-            true,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
-
-    assertKotlinSundaySnapshot(
-      "RequestMethodsTest/test-request-method-generation-with-result-response.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -116,60 +66,14 @@ class RequestMethodsTest {
 
     val typeRegistry = typeRegistry()
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertKotlinSundaySnapshot(
       "RequestMethodsTest/test-request-method-generation-with-nullify.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
-  @Test
-  fun `test request method generation with nullify and result response`(
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = typeRegistry()
-
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinSundayGenerator.Options(
-            true,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
-
-    assertKotlinSundaySnapshot(
-      "RequestMethodsTest/test-request-method-generation-with-nullify-and-result-response.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
-    )
-  }
+  private fun compiledServiceSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
 }

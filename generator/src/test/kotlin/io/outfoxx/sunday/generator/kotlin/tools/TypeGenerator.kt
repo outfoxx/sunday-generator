@@ -18,19 +18,19 @@
 
 package io.outfoxx.sunday.generator.kotlin.tools
 
-import amf.core.client.platform.model.document.Document
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
-import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
-import io.outfoxx.sunday.generator.kotlin.KotlinResolutionContext
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
+import io.outfoxx.sunday.generator.kotlin.KotlinSundayIrGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
+import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
+import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
-import io.outfoxx.sunday.generator.utils.encodes
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
@@ -41,30 +41,19 @@ fun findType(
   types: Map<ClassName, TypeSpec>,
 ): TypeSpec = types[ClassName.bestGuess(name)] ?: fail("Type '$name' not defined")
 
-fun generateTypes(
+fun generateSunday(
   uri: URI,
   typeRegistry: KotlinTypeRegistry,
+  options: KotlinSundayOptions = kotlinSundayTestOptions,
 ): Map<ClassName, TypeSpec> {
 
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
+  val result = TestAPIProcessing.process(uri)
+  val api =
+    RamlToGeneratedApi(options = GeneratedApiIrOptions(deriveServicesFromTags = options.servicesFromTags))
+      .convert(result)
 
-  val apiPackageName =
-    document.encodes.findStringAnnotation(APIAnnotationName.KotlinPkg, typeRegistry.generationMode)
-      ?: typeRegistry.defaultModelPackageName
-      ?: genError("No model package specified")
-
-  val apiTypeName = ClassName.bestGuess("$apiPackageName.API")
-  typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
-
-  TestAPIProcessing.generateTypes(
-    document,
-    shapeIndex,
-    typeRegistry.generationMode,
-    typeRegistry::defineProblemType,
-  ) { name, schema ->
-    val context = KotlinResolutionContext(document, shapeIndex, apiTypeName.nestedClass(name))
-    typeRegistry.resolveTypeName(schema, context)
-  }
+  KotlinSundayIrGenerator(api, typeRegistry, options)
+    .generateServiceTypes()
 
   val builtTypes = typeRegistry.buildTypes()
 
@@ -73,17 +62,19 @@ fun generateTypes(
   return builtTypes
 }
 
-fun generate(
+fun generateJaxrs(
   uri: URI,
   typeRegistry: KotlinTypeRegistry,
-  generatorFactory: (Document, ShapeIndex) -> KotlinGenerator,
+  options: KotlinJAXRSOptions = kotlinJAXRSTestOptions,
 ): Map<ClassName, TypeSpec> {
 
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
+  val result = TestAPIProcessing.process(uri)
+  val api =
+    RamlToGeneratedApi(options = GeneratedApiIrOptions(deriveServicesFromTags = options.servicesFromTags))
+      .convert(result)
 
-  val generator = generatorFactory(document, shapeIndex)
-
-  generator.generateServiceTypes()
+  KotlinJAXRSIrGenerator(api, typeRegistry, options)
+    .generateServiceTypes()
 
   val builtTypes = typeRegistry.buildTypes()
 

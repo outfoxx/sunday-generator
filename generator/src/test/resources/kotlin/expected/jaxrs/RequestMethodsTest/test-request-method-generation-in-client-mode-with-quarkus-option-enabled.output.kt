@@ -1,5 +1,7 @@
-package io.test
+package io.test.service
 
+import io.test.PatchableTest
+import io.test.Test
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
@@ -10,7 +12,9 @@ import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 
+@RegisterRestClient
 @Produces(value = ["application/json"])
 @Consumes(value = ["application/json"])
 public interface API {

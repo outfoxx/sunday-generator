@@ -16,13 +16,19 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.core.client.platform.model.document.BaseUnit
-import com.squareup.kotlinpoet.ClassName
-import io.outfoxx.sunday.generator.common.ResolutionContext
-import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.GenerationOptions
 
-data class KotlinResolutionContext(
-  override val unit: BaseUnit,
-  override val shapeIndex: ShapeIndex,
-  val suggestedTypeName: ClassName?,
-) : ResolutionContext
+/** Options for Kotlin/Sunday generation. */
+class KotlinSundayOptions(
+  val defaultServicePackageName: String?,
+  defaultProblemBaseUri: String,
+  defaultMediaTypes: List<String>,
+  serviceSuffix: String,
+  val aggregateServices: Boolean = false,
+  val aggregateServiceSuffix: String? = null,
+  val servicesFromTags: Boolean = false,
+) : GenerationOptions(
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+  )

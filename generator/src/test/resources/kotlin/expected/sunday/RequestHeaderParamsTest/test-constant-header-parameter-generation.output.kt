@@ -1,19 +1,25 @@
 package io.test.service
 
 import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.RequestFactory
+import io.outfoxx.sunday.Operation
+import io.outfoxx.sunday.OperationSpec
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.operation
 import io.test.Test
 import kotlin.String
+import kotlin.Unit
 import kotlin.collections.List
 
-public class API(
-  public val requestFactory: RequestFactory,
+public class API<Req : Request>(
+  public val transport: Transport<Req>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
 ) {
-  public suspend fun putTest(xCustom: String): Test = this.requestFactory
-    .result(
+  public fun putTest(xCustom: String): Operation<Unit, Test, Req> =
+      this.transport.operation<Unit, Test, Req>(
+    OperationSpec(
       method = Method.Put,
       pathTemplate = "/tests",
       acceptTypes = this.defaultAcceptTypes,
@@ -22,4 +28,5 @@ public class API(
         "x-custom" to xCustom
       )
     )
+  )
 }

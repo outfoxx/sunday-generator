@@ -16,13 +16,11 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.flags
 import io.outfoxx.sunday.generator.grouped
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.AddGeneratedAnnotation
@@ -100,7 +98,7 @@ abstract class KotlinGenerateCommand(
 
   protected open fun effectiveProblemRfc(): KotlinProblemRfc = problemRfc
 
-  override val typeRegistry: KotlinTypeRegistry by lazy {
+  val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
       modelPackageName ?: packageName,
       generatedAnnotationName,
@@ -112,15 +110,4 @@ abstract class KotlinGenerateCommand(
   }
 
   abstract val mode: GenerationMode
-
-  override fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-  ) = generatorFactory(document, shapeIndex, typeRegistry)
-
-  abstract fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-    typeRegistry: KotlinTypeRegistry,
-  ): KotlinGenerator
 }

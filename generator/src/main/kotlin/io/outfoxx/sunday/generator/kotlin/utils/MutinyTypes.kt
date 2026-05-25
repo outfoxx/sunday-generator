@@ -18,4 +18,5 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
 
+val MULTI = ClassName.bestGuess("io.smallrye.mutiny.Multi")
 val UNI = ClassName.bestGuess("io.smallrye.mutiny.Uni")

@@ -1,5 +1,7 @@
-package io.test
+package io.test.service
 
+import io.test.PatchableTest
+import io.test.Test
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET

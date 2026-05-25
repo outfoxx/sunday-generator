@@ -16,11 +16,8 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.parse
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerateCommand
-import io.outfoxx.sunday.generator.kotlin.KotlinGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
@@ -53,14 +50,6 @@ class KotlinCLITest {
   class KotlinGenerateCommandTest : KotlinGenerateCommand("Test", "testing command") {
     override val mode: GenerationMode
       get() = error("should not execute")
-
-    override fun generatorFactory(
-      document: Document,
-      shapeIndex: ShapeIndex,
-      typeRegistry: KotlinTypeRegistry,
-    ): KotlinGenerator {
-      error("should not execute")
-    }
 
     override fun run() {}
   }
@@ -109,7 +98,7 @@ class KotlinCLITest {
 
     val ex = assertThrows<GenerationException> { command.parse(options) }
 
-    assertThat(ex.message, containsStringIgnoringCase("no service package"))
+    assertThat(ex.message, containsStringIgnoringCase("no model package"))
   }
 
   @Test

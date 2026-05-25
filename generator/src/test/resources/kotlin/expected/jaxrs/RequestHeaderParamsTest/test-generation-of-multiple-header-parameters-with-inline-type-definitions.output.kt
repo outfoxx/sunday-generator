@@ -6,6 +6,7 @@ import javax.ws.rs.HeaderParam
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
+import kotlin.String
 
 @Produces(value = ["application/json"])
 @Consumes(value = ["application/json"])
@@ -15,13 +16,23 @@ public interface API {
   public fun fetchTest(@HeaderParam(value = "category") category: FetchTestCategoryHeaderParam,
       @HeaderParam(value = "type") type: FetchTestTypeHeaderParam): Response
 
-  public enum class FetchTestCategoryHeaderParam {
-    Politics,
-    Science,
+  public enum class FetchTestCategoryHeaderParam(
+    private val wireValue: String,
+  ) {
+    Politics("politics"),
+    Science("science"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestTypeHeaderParam {
-    All,
-    Limited,
+  public enum class FetchTestTypeHeaderParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 }

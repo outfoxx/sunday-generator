@@ -16,14 +16,15 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
 open class KotlinJAXRSGenerateCommand :
@@ -65,6 +66,22 @@ open class KotlinJAXRSGenerateCommand :
     help = "Service methods will always use the JAX-RS Response as the return type",
   ).flag(default = false)
 
+  val aggregateServices by option(
+    "-aggregate-services",
+    help = "Generate an aggregate JAX-RS service with subresource locator methods for grouped services",
+  ).flag(default = false)
+
+  val aggregateServiceSuffix by option(
+    "-aggregate-service-suffix",
+    "-aggregate-service-name",
+    help = "Aggregate JAX-RS service type name",
+  )
+
+  val servicesFromTags by option(
+    "-services-from-tags",
+    help = "Derive service grouping from source operation tags when x-sunday-service is not present",
+  ).flag(default = false)
+
   val quarkus by option(
     "-quarkus",
     help =
@@ -76,15 +93,29 @@ open class KotlinJAXRSGenerateCommand :
       """.trimIndent(),
   ).flag(default = false)
 
-  override fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-    typeRegistry: KotlinTypeRegistry,
-  ) = KotlinJAXRSGenerator(
-    document,
-    shapeIndex,
-    typeRegistry,
-    KotlinJAXRSGenerator.Options(
+  override fun run() {
+    println("Generating ${this.outputCategories} types")
+    println("Processing ${files.joinToString()}")
+
+    val api =
+      GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
+        .export(files.map { file -> file.toURI() })
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, kotlinJaxrsOptions())
+      .generateServiceTypes()
+
+    typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())
+  }
+
+  override fun effectiveProblemLibrary(): KotlinProblemLibrary =
+    if (!quarkus && problemLibrary == KotlinProblemLibrary.QUARKUS) {
+      KotlinProblemLibrary.ZALANDO
+    } else {
+      problemLibrary
+    }
+
+  private fun kotlinJaxrsOptions(): KotlinJAXRSOptions =
+    KotlinJAXRSOptions(
       coroutineFlowMethods,
       coroutineServiceMethods,
       reactiveResponseType,
@@ -96,6 +127,8 @@ open class KotlinJAXRSGenerateCommand :
       mediaTypes.toList(),
       serviceSuffix,
       quarkus,
-    ),
-  )
+      aggregateServices,
+      aggregateServiceSuffix,
+      servicesFromTags,
+    )
 }

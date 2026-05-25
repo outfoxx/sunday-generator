@@ -6,7 +6,9 @@ import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 
+@RegisterRestClient
 @Produces(value = ["application/json"])
 @Consumes(value = ["application/json"])
 public interface API {

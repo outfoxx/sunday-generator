@@ -19,10 +19,12 @@
 package io.outfoxx.sunday.generator.kotlin.tools
 
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.utils.Compilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.io.ByteArrayOutputStream
@@ -32,9 +34,10 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
   val fileSpecs =
     types.entries
       .filter { it.key.topLevelClassName() == it.key }
-      .map { FileSpec.get(it.key.packageName, it.value) }
+      .map { kotlinFileSpec(it.key.packageName, it.value) }
 
   val out = ByteArrayOutputStream()
+  CompiledGeneratedSources.beginCompile()
 
   val result =
     KotlinCompilation()
@@ -53,7 +56,17 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
         messageOutputStream = out
       }.compile()
 
-  if (result.exitCode != KotlinCompilation.ExitCode.OK) {
+  if (result.exitCode == KotlinCompilation.ExitCode.OK) {
+    fileSpecs.forEach { fileSpec ->
+      val builder = StringBuilder()
+      fileSpec.writeTo(builder)
+      CompiledGeneratedSources.record(
+        GeneratedCodeLanguage.Kotlin,
+        "${fileSpec.packageName.replace('.', '/')}/${fileSpec.name}.kt",
+        builder.toString(),
+      )
+    }
+  } else {
 
     val files =
       fileSpecs.associate { fileSpec ->

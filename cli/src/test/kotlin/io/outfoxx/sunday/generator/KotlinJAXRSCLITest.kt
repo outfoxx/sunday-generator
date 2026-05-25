@@ -18,11 +18,16 @@ package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.parse
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import kotlin.io.path.createTempDirectory
 
 class KotlinJAXRSCLITest {
 
@@ -132,5 +137,102 @@ class KotlinJAXRSCLITest {
     val commandWithFalse = KotlinJAXRSGenerateCommandTest()
     assertDoesNotThrow { commandWithFalse.parse(requiredOptions) }
     assertThat(commandWithFalse.quarkus, equalTo(false))
+  }
+
+  @Test
+  fun `non-Quarkus defaults to Zalando problem library`() {
+
+    val command = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { command.parse(requiredOptions) }
+
+    assertThat(command.typeRegistry.problemLibrary, equalTo(KotlinProblemLibrary.ZALANDO))
+  }
+
+  @Test
+  fun `Quarkus defaults to Quarkus problem library`() {
+
+    val command = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow { command.parse(arrayOf("-quarkus", *requiredOptions)) }
+
+    assertThat(command.typeRegistry.problemLibrary, equalTo(KotlinProblemLibrary.QUARKUS))
+  }
+
+  @Test
+  fun `aggregate and services from tags options`() {
+
+    val command = KotlinJAXRSGenerateCommandTest()
+    assertDoesNotThrow {
+      command.parse(
+        arrayOf(
+          "-services-from-tags",
+          "-aggregate-services",
+          "-aggregate-service-name",
+          "TurnPostAPI",
+          *requiredOptions,
+        ),
+      )
+    }
+
+    assertThat(command.servicesFromTags, equalTo(true))
+    assertThat(command.aggregateServices, equalTo(true))
+    assertThat(command.aggregateServiceSuffix, equalTo("TurnPostAPI"))
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "client,false",
+    "client,true",
+    "server,false",
+    "server,true",
+  )
+  fun `generates composed OpenAPI and AsyncAPI JAX-RS services from CLI`(
+    mode: String,
+    quarkus: Boolean,
+  ) {
+
+    val openApi = KotlinJAXRSCLITest::class.java.getResource("/openapi-composed.yaml")!!.toURI()!!
+    val asyncApi = KotlinJAXRSCLITest::class.java.getResource("/asyncapi-composed.yaml")!!.toURI()!!
+    val tempDir = createTempDirectory("sunday-jaxrs-cli").toFile()
+    tempDir.deleteOnExit()
+
+    val args =
+      buildList {
+        add("-mode")
+        add(mode)
+        add("-services-from-tags")
+        add("-aggregate-services")
+        add("-aggregate-service-name")
+        add("TurnPostAPI")
+        add("-pkg")
+        add("io.test")
+        add("-out")
+        add(tempDir.absolutePath)
+        if (quarkus) {
+          add("-quarkus")
+        }
+        add(openApi.path)
+        add(asyncApi.path)
+      }
+
+    assertDoesNotThrow { KotlinJAXRSGenerateCommand().parse(args.toTypedArray()) }
+
+    val outputPackageDir = tempDir.resolve("io/test")
+    val aggregateApi = outputPackageDir.resolve("TurnPostAPI.kt")
+    val projectsApi = outputPackageDir.resolve("ProjectsAPI.kt")
+    val eventsApi = outputPackageDir.resolve("EventsAPI.kt")
+    assertTrue(aggregateApi.isFile)
+    assertTrue(projectsApi.isFile)
+    assertTrue(eventsApi.isFile)
+    assertTrue(outputPackageDir.resolve("Project.kt").isFile)
+    assertTrue(outputPackageDir.resolve("EventEnvelope.kt").isFile)
+    assertTrue(outputPackageDir.resolve("ProjectCreatedData.kt").isFile)
+
+    assertTrue(eventsApi.readText().contains("@GET"))
+    assertTrue(eventsApi.readText().contains("fun streamEvents"))
+    if (quarkus) {
+      assertTrue(aggregateApi.readText().contains("RestPath"))
+    } else {
+      assertTrue(aggregateApi.readText().contains("PathParam"))
+    }
   }
 }

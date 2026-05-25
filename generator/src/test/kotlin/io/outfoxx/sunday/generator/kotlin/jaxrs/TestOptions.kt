@@ -16,10 +16,10 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 
 val kotlinJAXRSTestOptions =
-  KotlinJAXRSGenerator.Options(
+  KotlinJAXRSOptions(
     coroutineFlowMethods = false,
     coroutineServiceMethods = false,
     null,

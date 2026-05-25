@@ -16,11 +16,11 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.common.ShapeIndex
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 
 open class KotlinSundayGenerateCommand :
@@ -28,9 +28,20 @@ open class KotlinSundayGenerateCommand :
 
   override val mode = GenerationMode.Client
 
-  val useResultResponseReturn by option(
-    "-use-result-response-return",
-    help = "Service methods will return results wrapped in a response",
+  val aggregateServices by option(
+    "-aggregate-services",
+    help = "Generate a root API that exposes split services as properties",
+  ).flag(default = false)
+
+  val aggregateServiceSuffix by option(
+    "-aggregate-service-suffix",
+    "-aggregate-service-name",
+    help = "Name for the aggregate root API service",
+  )
+
+  val servicesFromTags by option(
+    "-services-from-tags",
+    help = "Use the first operation tag as the generated service when no x-sunday-service is present",
   ).flag(default = false)
 
   override fun effectiveProblemLibrary(): KotlinProblemLibrary =
@@ -40,20 +51,28 @@ open class KotlinSundayGenerateCommand :
       problemLibrary
     }
 
-  override fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-    typeRegistry: KotlinTypeRegistry,
-  ) = KotlinSundayGenerator(
-    document,
-    shapeIndex,
-    typeRegistry,
-    KotlinSundayGenerator.Options(
-      useResultResponseReturn,
+  override fun run() {
+    println("Generating ${this.outputCategories} types")
+    println("Processing ${files.joinToString()}")
+
+    val api =
+      GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
+        .export(files.map { file -> file.toURI() })
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayOptions())
+      .generateServiceTypes()
+
+    typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())
+  }
+
+  private fun kotlinSundayOptions(): KotlinSundayOptions =
+    KotlinSundayOptions(
       servicePackageName ?: packageName,
       problemBaseUri,
       mediaTypes.toList(),
       serviceSuffix,
-    ),
-  )
+      aggregateServices,
+      aggregateServiceSuffix,
+      servicesFromTags,
+    )
 }

@@ -1,5 +1,7 @@
-package io.test
+package io.test.service
 
+import io.test.PatchableTest
+import io.test.Test
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.GET

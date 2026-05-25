@@ -18,11 +18,11 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
@@ -59,26 +59,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -100,26 +97,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -141,26 +135,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -182,26 +173,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -223,26 +211,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            true,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          true,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -264,26 +249,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -305,26 +287,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -346,26 +325,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            CompletionStage::class.qualifiedName,
-            false,
-            null,
-            true,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          CompletionStage::class.qualifiedName,
+          false,
+          null,
+          true,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -387,26 +363,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            UNI.canonicalName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          UNI.canonicalName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -428,26 +401,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            RXSINGLE3.canonicalName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          RXSINGLE3.canonicalName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -469,26 +439,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            RXOBSERVABLE3.canonicalName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          RXOBSERVABLE3.canonicalName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -510,26 +477,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            RXSINGLE2.canonicalName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          RXSINGLE2.canonicalName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -551,26 +515,23 @@ class RequestReactiveMethodsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            RXOBSERVABLE2.canonicalName,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          RXOBSERVABLE2.canonicalName,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          false,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
