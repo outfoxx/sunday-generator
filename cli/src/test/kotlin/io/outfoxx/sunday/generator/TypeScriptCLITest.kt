@@ -16,11 +16,8 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.parse
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.typescript.TypeScriptGenerateCommand
-import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
@@ -46,14 +43,6 @@ class TypeScriptCLITest {
   }
 
   class TypeScriptGenerateCommandTest : TypeScriptGenerateCommand("Test", "testing command") {
-    override fun generatorFactory(
-      document: Document,
-      shapeIndex: ShapeIndex,
-      typeRegistry: TypeScriptTypeRegistry,
-    ): TypeScriptGenerator {
-      error("should not execute")
-    }
-
     override fun run() {}
   }
 

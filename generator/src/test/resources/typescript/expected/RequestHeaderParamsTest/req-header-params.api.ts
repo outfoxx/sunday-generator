@@ -1,14 +1,22 @@
 import {Test, TestSchema} from './test';
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(obj: Test, strReq: string, int: number | undefined): Operation<void, Test, Factory>;
+
+  deleteTest(): Operation<void, void, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -16,10 +24,10 @@ export class API {
         options?.defaultAcceptTypes ?? [MediaType.JSON];
   }
 
-  fetchTest(obj: Test, strReq: string, int: number | undefined = undefined,
-      signal?: AbortSignal): Promise<Test> {
-    return this.requestFactory.result(
-        {
+  fetchTest(obj: Test, strReq: string,
+      int: number | undefined = undefined): Operation<void, Test, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests',
           acceptTypes: this.defaultAcceptTypes,
@@ -28,22 +36,27 @@ export class API {
             'str-req': strReq,
             int: int ?? 5
           },
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
-  deleteTest(signal?: AbortSignal): Promise<void> {
-    return this.requestFactory.result(
-        {
+  deleteTest(): Operation<void, void, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'DELETE',
           pathTemplate: '/tests',
-          signal: signal,
         }
-    );
+    });
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestReturnType: SchemaLike<Test> = TestSchema;

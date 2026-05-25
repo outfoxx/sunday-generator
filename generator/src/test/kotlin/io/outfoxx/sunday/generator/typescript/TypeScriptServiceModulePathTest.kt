@@ -19,7 +19,7 @@ package io.outfoxx.sunday.generator.typescript
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class TypeScriptGeneratorTest {
+class TypeScriptServiceModulePathTest {
 
   @Test
   fun `resolveServiceModulePath defaults to kebab-case service name when document has no module annotation`() {

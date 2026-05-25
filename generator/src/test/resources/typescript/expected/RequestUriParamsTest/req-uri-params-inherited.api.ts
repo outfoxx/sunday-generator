@@ -1,14 +1,21 @@
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(obj: Record<string, unknown>, str: string, def: string,
+      int: number): Operation<void, Record<string, unknown>, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -16,15 +23,10 @@ export class API {
         options?.defaultAcceptTypes ?? [MediaType.JSON];
   }
 
-  fetchTest(
-      obj: Record<string, unknown>,
-      str: string,
-      def: string,
-      int: number,
-      signal?: AbortSignal
-  ): Promise<Record<string, unknown>> {
-    return this.requestFactory.result(
-        {
+  fetchTest(obj: Record<string, unknown>, str: string, def: string,
+      int: number): Operation<void, Record<string, unknown>, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests/{obj}/{str}/{int}/{def}',
           pathParameters: {
@@ -34,12 +36,18 @@ export class API {
             int
           },
           acceptTypes: this.defaultAcceptTypes,
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestReturnType: SchemaLike<Record<string, unknown>> = z.record(z.string(), z.unknown());

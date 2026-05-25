@@ -16,15 +16,14 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
-import amf.core.client.platform.model.document.Document
-import io.outfoxx.sunday.generator.GenerationMode.Client
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.typescript.TypeScriptGenerator
-import io.outfoxx.sunday.generator.typescript.TypeScriptResolutionContext
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
+import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
+import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
+import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.typescriptpoet.AnyTypeSpec
-import io.outfoxx.typescriptpoet.ClassSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -46,42 +45,20 @@ fun findNestedType(
     ?.let { findNestedType(it, *names.dropLast(1).toTypedArray()) }
     ?: typeModSpec.members.filterIsInstance<AnyTypeSpec>().firstOrNull { it.name == names.first() }
 
-fun generateTypes(
+fun generateSunday(
   uri: URI,
   typeRegistry: TypeScriptTypeRegistry,
   compiler: TypeScriptCompiler,
-  includeIndex: Boolean = false,
+  options: TypeScriptSundayOptions = typeScriptSundayTestOptions,
 ): Map<TypeName.Standard, ModuleSpec> {
 
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
+  val result = TestAPIProcessing.process(uri)
+  val api =
+    RamlToGeneratedApi(options = GeneratedApiIrOptions(deriveServicesFromTags = options.servicesFromTags))
+      .convert(result)
 
-  val apiTypeName = TypeName.namedImport("API", "!api")
-  typeRegistry.addServiceType(apiTypeName, ClassSpec.builder(apiTypeName))
-
-  TestAPIProcessing.generateTypes(document, shapeIndex, Client, typeRegistry::defineProblemType) { name, schema ->
-    val context = TypeScriptResolutionContext(document, shapeIndex, apiTypeName.nested(name))
-    typeRegistry.resolveTypeName(schema, context)
-  }
-
-  val builtTypes = typeRegistry.buildTypes()
-
-  assertTrue(compileTypes(compiler, builtTypes, generateIndex = includeIndex))
-
-  return builtTypes
-}
-
-fun generate(
-  uri: URI,
-  typeRegistry: TypeScriptTypeRegistry,
-  compiler: TypeScriptCompiler,
-  generatorFactory: (Document, ShapeIndex) -> TypeScriptGenerator,
-): Map<TypeName.Standard, ModuleSpec> {
-
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
-
-  val generator = generatorFactory(document, shapeIndex)
-
-  generator.generateServiceTypes()
+  TypeScriptSundayIrGenerator(api, typeRegistry, options)
+    .generateServiceTypes()
 
   val builtTypes = typeRegistry.buildTypes()
 

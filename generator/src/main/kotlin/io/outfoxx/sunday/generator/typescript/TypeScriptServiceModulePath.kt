@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.typescript.tools
+package io.outfoxx.sunday.generator.typescript
 
-import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
-import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
-import io.outfoxx.sunday.generator.tools.assertSnapshotAt
-import java.nio.file.Path
+import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 
-private val snapshotsRoot: Path =
-  Path.of("src", "test", "resources", "typescript", "expected")
-
-fun assertSnapshot(
-  snapshotPath: String,
-  actual: String,
-) {
-  CompiledGeneratedSources.requireCompiled(GeneratedCodeLanguage.TypeScript, actual)
-  assertSnapshotAt(snapshotsRoot, snapshotPath, actual)
-}
+/** Resolve the output module path for a generated TypeScript service. */
+internal fun resolveServiceModulePath(
+  serviceSimpleName: String,
+  explicitModulePath: String?,
+): String =
+  when {
+    explicitModulePath == null -> serviceSimpleName.camelCaseToKebabCase()
+    explicitModulePath.endsWith(".ts") -> explicitModulePath.removeSuffix(".ts")
+    else -> "$explicitModulePath/${serviceSimpleName.camelCaseToKebabCase()}"
+  }

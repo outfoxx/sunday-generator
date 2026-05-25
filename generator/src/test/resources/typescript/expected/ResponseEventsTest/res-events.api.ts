@@ -1,16 +1,24 @@
 import {Test1, Test1Schema} from './test1';
 import {Test2, Test2Schema} from './test2';
 import {Test3, Test3Schema} from './test3';
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, SchemaLike, Transport} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchEventsSimple(signal?: AbortSignal): AsyncIterable<Test1>;
+
+  fetchEventsDiscriminated(signal?: AbortSignal): AsyncIterable<Test1 | Test2 | Test3>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -19,7 +27,7 @@ export class API {
   }
 
   fetchEventsSimple(signal?: AbortSignal): AsyncIterable<Test1> {
-    return this.requestFactory.eventStream<Test1>(
+    return this.transport.eventStream<Test1>(
         {
           method: 'GET',
           pathTemplate: '/test1',
@@ -31,7 +39,7 @@ export class API {
   }
 
   fetchEventsDiscriminated(signal?: AbortSignal): AsyncIterable<Test1 | Test2 | Test3> {
-    return this.requestFactory.eventStream<Test1 | Test2 | Test3>(
+    return this.transport.eventStream<Test1 | Test2 | Test3>(
         {
           method: 'GET',
           pathTemplate: '/test2',
@@ -52,6 +60,13 @@ export class API {
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchEventsSimpleEventType: SchemaLike<Test1> = Test1Schema;
 const fetchEventsDiscriminatedEventType1: SchemaLike<Test1> = Test1Schema;

@@ -16,13 +16,18 @@
 
 package io.outfoxx.sunday.generator.typescript
 
-import amf.core.client.platform.model.document.BaseUnit
-import io.outfoxx.sunday.generator.common.ResolutionContext
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.typescriptpoet.TypeName
+import io.outfoxx.sunday.generator.GenerationOptions
 
-data class TypeScriptResolutionContext(
-  override val unit: BaseUnit,
-  override val shapeIndex: ShapeIndex,
-  val suggestedTypeName: TypeName.Standard?,
-) : ResolutionContext
+/** Options for TypeScript/Sunday generation. */
+class TypeScriptSundayOptions(
+  defaultProblemBaseUri: String,
+  defaultMediaTypes: List<String>,
+  serviceSuffix: String,
+  val aggregateServices: Boolean = false,
+  val aggregateServiceSuffix: String? = null,
+  val servicesFromTags: Boolean = false,
+) : GenerationOptions(
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+  )

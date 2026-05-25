@@ -1,14 +1,26 @@
 import {Test, TestSchema} from './test';
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(
+      obj: Test | undefined,
+      str: string | undefined,
+      int: number | null,
+      def1: string | undefined,
+      def2: number | null | undefined
+  ): Operation<void, Test, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -21,11 +33,10 @@ export class API {
       str: string | undefined = undefined,
       int: number | null = null,
       def1: string | undefined = undefined,
-      def2: number | null | undefined = undefined,
-      signal?: AbortSignal
-  ): Promise<Test> {
-    return this.requestFactory.result(
-        {
+      def2: number | null | undefined = undefined
+  ): Operation<void, Test, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests',
           queryParameters: {
@@ -36,12 +47,18 @@ export class API {
             def2: def2 ?? 10
           },
           acceptTypes: this.defaultAcceptTypes,
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestReturnType: SchemaLike<Test> = TestSchema;

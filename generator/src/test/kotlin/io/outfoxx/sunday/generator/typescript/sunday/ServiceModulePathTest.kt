@@ -16,12 +16,11 @@
 
 package io.outfoxx.sunday.generator.typescript.sunday
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
-import io.outfoxx.sunday.generator.typescript.tools.generate
+import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.hamcrest.MatcherAssert.assertThat
@@ -45,14 +44,7 @@ class ServiceModulePathTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf(), TypeScriptTypeRegistry.ImportStyle.NodeNext)
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!explicit/client/api.js", builtTypes)
     val output =
@@ -62,7 +54,7 @@ class ServiceModulePathTest {
           .writeTo(this)
       }
 
-    assertThat(output, containsString("export class API"))
+    assertThat(output, containsString("export interface API"))
   }
 
   @Test
@@ -74,14 +66,7 @@ class ServiceModulePathTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf(), TypeScriptTypeRegistry.ImportStyle.NodeNext)
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!explicit/client.js", builtTypes)
     val output =
@@ -93,7 +78,7 @@ class ServiceModulePathTest {
 
     assertFalse(output.contains("import {API as API_} from './client';"))
     assertFalse(output.contains("import {API as API_} from './client.js';"))
-    assertTrue(output.contains("Promise<API.FetchTestResponseBody>"))
+    assertTrue(output.contains("Operation<void, API.FetchTestResponseBody, Factory>"))
     assertTrue(output.contains("SchemaLike<API.FetchTestResponseBody> = API.FetchTestResponseBodySchema"))
   }
 }

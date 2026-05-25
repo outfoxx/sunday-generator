@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.FileSpec
@@ -32,6 +34,7 @@ fun compileTypes(
   generateIndex: Boolean = false,
 ): Boolean {
   try {
+    CompiledGeneratedSources.beginCompile()
     val indexBuilder = FileSpec.builder("index")
 
     val fileSpecs =
@@ -83,6 +86,18 @@ fun compileTypes(
         }
 
       Compilation.printFailure(files, output)
+    }
+
+    if (result == 0) {
+      fileSpecs.forEach {
+        val builder = StringBuilder()
+        it.writeTo(builder)
+        CompiledGeneratedSources.record(
+          GeneratedCodeLanguage.TypeScript,
+          "${normalizeModulePath(it.modulePath)}.ts",
+          builder.toString(),
+        )
+      }
     }
 
     return result == 0

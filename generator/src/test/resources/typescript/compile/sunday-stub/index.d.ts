@@ -126,8 +126,10 @@ export type SchemaDef<S extends AnySchema = AnySchema> = {
 	readonly debugName?: string;
 	readonly [SchemaDefType]: true;
 };
-export type SchemaLike<T = unknown> = z.ZodType<T> | SchemaDef<z.ZodType<T>>;
-export type ResolvedSchema<S> = S extends SchemaDef<infer TSchema> ? TSchema : S;
+export type SchemaLike<Output = unknown, Input = unknown> = z.ZodType<Output, Input> | SchemaDef<z.ZodType<Output, Input>>;
+export type ResolvedSchema<S> = S extends SchemaDef<infer TSchema> ? TSchema : S extends AnySchema ? S : never;
+export type SchemaInput<S extends SchemaLike> = z.input<ResolvedSchema<S>>;
+export type SchemaOutput<S extends SchemaLike> = z.output<ResolvedSchema<S>>;
 export declare function defineSchema<S extends AnySchema>(builder: (runtime: SchemaRuntime) => S, options?: {
 	id?: symbol;
 	debugName?: string;
@@ -182,9 +184,27 @@ export interface MediaTypeDecoder {
 export interface TextMediaTypeDecoder extends MediaTypeDecoder {
 	decodeText<T>(text: string, type: SchemaLike<T>): T;
 }
-export interface ResultResponse<R> {
+export interface ResponseHeaderEntry {
+	readonly name: string;
+	readonly value: string;
+}
+export declare class ResponseHeaders {
+	readonly entries: readonly ResponseHeaderEntry[];
+	constructor(entries: readonly ResponseHeaderEntry[]);
+	static from(headers: Headers): ResponseHeaders;
+	getAll(name: string): readonly string[];
+	get(name: string): string | undefined;
+	get contentType(): MediaType | undefined;
+}
+export declare class OperationResponse<R> {
 	readonly result: R;
-	readonly response: Response;
+	readonly transportResponse: Response;
+	readonly status: number;
+	readonly headers: ResponseHeaders;
+	constructor(result: R, transportResponse: Response);
+	getHeaders(name: string): readonly string[];
+	getHeader(name: string): string | undefined;
+	get contentType(): MediaType | undefined;
 }
 export declare class URLTemplate {
 	template: string;
@@ -200,14 +220,50 @@ export interface Logger {
 	warn?(...data: unknown[]): void;
 	error?(...data: unknown[]): void;
 }
-export interface RequestFactory {
+export type TransportRequest<Factory> = Factory extends Transport<infer NativeRequest> ? NativeRequest : never;
+export interface BuildRequestOptions {
+	readonly signal?: AbortSignal;
+}
+export interface ExecuteOptions {
+	readonly signal?: AbortSignal;
+}
+export interface OperationSpec<RequestBody, ResponseBody> {
+	readonly request: RequestSpec<RequestBody>;
+	readonly responseType?: SchemaLike<ResponseBody>;
+}
+export interface VoidOperationSpec<RequestBody = void> extends OperationSpec<RequestBody, void> {
+	readonly responseType?: undefined;
+}
+export interface TypedOperationSpec<RequestBody, ResponseBody> extends OperationSpec<RequestBody, ResponseBody> {
+	readonly responseType: SchemaLike<ResponseBody>;
+}
+export interface Operation<RequestBody, ResponseBody, Factory extends Transport<unknown> = Transport> {
+	readonly spec: OperationSpec<RequestBody, ResponseBody>;
+	execute(options?: ExecuteOptions): Promise<ResponseBody>;
+	response(options?: ExecuteOptions): Promise<OperationResponse<ResponseBody>>;
+	transportRequest(options?: BuildRequestOptions): Promise<TransportRequest<Factory>>;
+	transportResponse(options?: ExecuteOptions): Promise<Response>;
+}
+export interface NullifySpec {
+	readonly statuses: readonly number[];
+	readonly problemTypes: readonly ProblemMatcher[];
+}
+export interface NullableOperation<RequestBody, ResponseBody, Factory extends Transport<unknown> = Transport> extends Operation<RequestBody, ResponseBody, Factory> {
+	readonly nullify: NullifySpec;
+	executeOrNull(options?: ExecuteOptions): Promise<ResponseBody | null>;
+}
+export declare function createOperation<RequestBody = void, ResponseBody = void, Factory extends Transport<unknown> = Transport>(transport: Factory, spec: TypedOperationSpec<RequestBody, ResponseBody>): Operation<RequestBody, ResponseBody, Factory>;
+export declare function createOperation<RequestBody = void, Factory extends Transport<unknown> = Transport>(transport: Factory, spec: VoidOperationSpec<RequestBody>): Operation<RequestBody, void, Factory>;
+export declare function createNullableOperation<RequestBody = void, ResponseBody = void, Factory extends Transport<unknown> = Transport>(transport: Factory, spec: TypedOperationSpec<RequestBody, ResponseBody>, nullify: NullifySpec): NullableOperation<RequestBody, ResponseBody, Factory>;
+export declare function createNullableOperation<RequestBody = void, Factory extends Transport<unknown> = Transport>(transport: Factory, spec: VoidOperationSpec<RequestBody>, nullify: NullifySpec): NullableOperation<RequestBody, void, Factory>;
+export interface Transport<NativeRequest = Request> {
 	readonly baseUrl: URLTemplate;
 	registerProblem(type: URL | string, problemType: SchemaLike<Problem>): void;
-	request(requestSpec: RequestSpec<unknown>): Promise<Request>;
-	response(request: Request, dataExpected?: boolean): Promise<Response>;
-	response<B>(requestSpec: RequestSpec<B>, dataExpected?: boolean): Promise<Response>;
-	resultResponse<B, R>(requestSpec: RequestSpec<B>, resultType: SchemaLike<R>): Promise<ResultResponse<R>>;
-	resultResponse<B>(requestSpec: RequestSpec<B>): Promise<ResultResponse<void>>;
+	transportRequest(requestSpec: RequestSpec<unknown>): Promise<NativeRequest>;
+	transportResponse(request: NativeRequest, dataExpected?: boolean): Promise<Response>;
+	transportResponse<B>(requestSpec: RequestSpec<B>, dataExpected?: boolean): Promise<Response>;
+	response<B, R>(requestSpec: RequestSpec<B>, resultType: SchemaLike<R>): Promise<OperationResponse<R>>;
+	response<B>(requestSpec: RequestSpec<B>): Promise<OperationResponse<void>>;
 	result<B, R>(requestSpec: RequestSpec<B>, resultType: SchemaLike<R>): Promise<R>;
 	result<B>(requestSpec: RequestSpec<B>): Promise<void>;
 	eventSource(requestSpec: RequestSpec<void>): ExtEventSource;
