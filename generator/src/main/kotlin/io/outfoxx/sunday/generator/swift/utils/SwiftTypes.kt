@@ -18,9 +18,11 @@ package io.outfoxx.sunday.generator.swift.utils
 
 import io.outfoxx.swiftpoet.ANY
 import io.outfoxx.swiftpoet.ARRAY
+import io.outfoxx.swiftpoet.DATA
 import io.outfoxx.swiftpoet.DICTIONARY
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 import io.outfoxx.swiftpoet.STRING
+import io.outfoxx.swiftpoet.TypeName
 import io.outfoxx.swiftpoet.parameterizedBy
 
 const val SWIFT_MODULE = "Swift"
@@ -33,6 +35,9 @@ val DECODING_ERROR = typeName("$SWIFT_MODULE.DecodingError")
 val ENCODER = typeName("$SWIFT_MODULE.Encoder")
 val ENCODING_ERROR = typeName("$SWIFT_MODULE.EncodingError")
 val CODING_KEY = typeName("$SWIFT_MODULE.CodingKey")
+val IDENTIFIABLE = typeName("$SWIFT_MODULE.Identifiable")
+val SENDABLE = typeName("$SWIFT_MODULE.Sendable")
+val UNCHECKED_SENDABLE = typeName(".@unchecked Sendable")
 
 val CUSTOM_STRING_CONVERTIBLE = typeName("$SWIFT_MODULE.CustomDebugStringConvertible")
 
@@ -48,5 +53,30 @@ const val FOUNDATION_MODULE = "Foundation"
 val DATE = typeName("$FOUNDATION_MODULE.Date")
 val DECIMAL = typeName("$FOUNDATION_MODULE.Decimal")
 val URL = typeName("$FOUNDATION_MODULE.URL")
+val UUID = typeName("$FOUNDATION_MODULE.UUID")
 val URL_REQUEST = typeName("$FOUNDATION_MODULE.URLRequest")
 val HTTP_URL_RESPONSE = typeName("$FOUNDATION_MODULE.HTTPURLResponse")
+
+fun swiftStringFormatTypeName(format: String?): TypeName? =
+  when (format?.lowercase()) {
+    "date",
+    "full-date",
+    "time",
+    "partial-time",
+    "datetime",
+    "date-time",
+    "datetime-only",
+    "date-time-only",
+    -> DATE
+
+    "uri",
+    "url",
+    "uri-reference",
+    "iri",
+    "iri-reference",
+    -> URL
+
+    "uuid" -> UUID
+    "byte", "binary" -> DATA
+    else -> null
+  }

@@ -16,11 +16,8 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.parse
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.swift.SwiftGenerateCommand
-import io.outfoxx.sunday.generator.swift.SwiftGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.utils.camelCaseToKebabCase
 import org.hamcrest.MatcherAssert.assertThat
@@ -44,14 +41,6 @@ class SwiftCLITest {
   }
 
   class SwiftGenerateCommandTest : SwiftGenerateCommand("Test", "testing command") {
-    override fun generatorFactory(
-      document: Document,
-      shapeIndex: ShapeIndex,
-      typeRegistry: SwiftTypeRegistry,
-    ): SwiftGenerator {
-      error("should not execute")
-    }
-
     override fun run() {}
   }
 

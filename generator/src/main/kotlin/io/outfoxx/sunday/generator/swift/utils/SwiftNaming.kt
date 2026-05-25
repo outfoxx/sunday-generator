@@ -16,38 +16,24 @@
 
 package io.outfoxx.sunday.generator.swift.utils
 
-import amf.apicontract.client.platform.model.domain.Operation
-import amf.apicontract.client.platform.model.domain.Parameter
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.operationId
-import io.outfoxx.sunday.generator.utils.parameterName
-import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
-val Shape.swiftTypeName: String get() = name!!.toUpperCamelCase()
+private val enumSplitRegex = """[^A-Za-z0-9]+""".toRegex()
 
-val PropertyShape.swiftIdentifierName: String get() = name!!.toLowerCamelCase()
-
-val ScalarNode.swiftIdentifierName: String get() = stringValue!!.toLowerCamelCase()
-
-private val enumSplitRegex = """\W""".toRegex()
-
-val ScalarNode.swiftEnumName: String
+val String.swiftEnumCaseName: String
   get() =
-    stringValue!!
-      .split(enumSplitRegex)
-      .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
-      .toLowerCamelCase()
+    split(enumSplitRegex)
+      .filter { segment -> segment.isNotBlank() }
+      .joinToString("") { segment -> segment.normalizedEnumSegment().replaceFirstChar { it.titlecase() } }
+      .replaceFirstChar { it.lowercase() }
 
-val Parameter.swiftTypeName: String get() = parameterName!!.toUpperCamelCase()
-val Parameter.swiftIdentifierName: String get() = parameterName!!.toLowerCamelCase()
-
-val Operation.swiftTypeName: String? get() = (operationId ?: name)?.toUpperCamelCase()
-val Operation.swiftIdentifierName: String? get() = (operationId ?: name)?.toLowerCamelCase()
+private fun String.normalizedEnumSegment(): String =
+  if (any { it.isLetter() } && all { !it.isLetter() || it.isUpperCase() }) {
+    lowercase()
+  } else {
+    this
+  }
 
 val String.swiftTypeName: String get() = toUpperCamelCase()
 val String.swiftIdentifierName: String get() = toLowerCamelCase()

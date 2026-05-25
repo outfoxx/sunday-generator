@@ -16,12 +16,11 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
-import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
-import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.swift.tools.generateSunday
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
@@ -42,14 +41,7 @@ class BuilderMethodsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 
@@ -72,14 +64,7 @@ class BuilderMethodsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 

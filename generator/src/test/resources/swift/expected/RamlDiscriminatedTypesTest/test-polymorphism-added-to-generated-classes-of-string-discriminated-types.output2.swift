@@ -1,13 +1,13 @@
 import Sunday
 
-public class Child1 : Parent {
+public struct Child1 : Parent {
 
-  public override var type: String {
+  public var type: String {
     return "Child1"
   }
-  public var value: String?
-  public var value1: Int
-  public override var debugDescription: String {
+  public let value: String?
+  public let value1: Int
+  public var debugDescription: String {
     return DescriptionBuilder(Child1.self)
         .add(type, named: "type")
         .add(value, named: "value")
@@ -18,19 +18,17 @@ public class Child1 : Parent {
   public init(value: String? = nil, value1: Int) {
     self.value = value
     self.value1 = value1
-    super.init()
   }
 
-  public required init(from decoder: Decoder) throws {
+  public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     self.value = try container.decodeIfPresent(String.self, forKey: .value)
     self.value1 = try container.decode(Int.self, forKey: .value1)
-    try super.init(from: decoder)
   }
 
-  public override func encode(to encoder: Encoder) throws {
-    try super.encode(to: encoder)
+  public func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(self.type, forKey: .type)
     try container.encodeIfPresent(self.value, forKey: .value)
     try container.encode(self.value1, forKey: .value1)
   }
@@ -45,6 +43,7 @@ public class Child1 : Parent {
 
   fileprivate enum CodingKeys : String, CodingKey {
 
+    case type = "type"
     case value = "value"
     case value1 = "value1"
 

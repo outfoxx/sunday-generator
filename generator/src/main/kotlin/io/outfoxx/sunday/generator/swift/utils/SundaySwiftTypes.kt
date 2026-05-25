@@ -17,21 +17,27 @@
 package io.outfoxx.sunday.generator.swift.utils
 
 import io.outfoxx.swiftpoet.ARRAY
-import io.outfoxx.swiftpoet.DATA
+import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.qualifiedTypeName
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
-import io.outfoxx.swiftpoet.TupleTypeName
 import io.outfoxx.swiftpoet.parameterizedBy
 
 const val SUNDAY_MODULE = "Sunday"
-val REQUEST_FACTORY = typeName("$SUNDAY_MODULE.RequestFactory")
+val TRANSPORT = typeName("$SUNDAY_MODULE.Transport")
+val TRANSPORT_REQUEST = typeName(".TransportType.Request")
+val TRANSPORT_RESPONSE = typeName(".TransportType.Response")
 val EVENT_SOURCE = typeName("$SUNDAY_MODULE.EventSource")
 val MEDIA_TYPE = typeName("$SUNDAY_MODULE.MediaType")
 val MEDIA_TYPE_ARRAY = ARRAY.parameterizedBy(MEDIA_TYPE)
 val URI_TEMPLATE = typeName("$SUNDAY_MODULE.URI.Template")
 val PROBLEM = typeName("$SUNDAY_MODULE.Problem")
+val QUALIFIED_PROBLEM = qualifiedTypeName("$SUNDAY_MODULE.Problem")
+val GENERIC_PROBLEM = typeName("$SUNDAY_MODULE.GenericProblem")
+val PROBLEM_REGISTRATION = typeName("$SUNDAY_MODULE.ProblemRegistration")
 val DESCRIPTION_BUILDER = typeName("$SUNDAY_MODULE.DescriptionBuilder")
 val HTTP_METHOD = typeName("$SUNDAY_MODULE.HTTP.Method")
 val EMPTY = typeName("$SUNDAY_MODULE.Empty")
-val RESULT_RESPONSE = typeName("$SUNDAY_MODULE.ResultResponse")
-
-val DATA_RESPONSE = TupleTypeName.of("" to DATA.makeOptional(), "" to HTTP_URL_RESPONSE)
+val OPERATION = qualifiedTypeName("$SUNDAY_MODULE.Operation")
+val OPERATION_SPEC = qualifiedTypeName("$SUNDAY_MODULE.OperationSpec")
+val NILABLE_OPERATION = qualifiedTypeName("$SUNDAY_MODULE.NilableOperation")
+val NILIFY_SPEC = qualifiedTypeName("$SUNDAY_MODULE.NilifySpec")
+val PARAMETER_VALUES = typeName("$SUNDAY_MODULE.ParameterValues")

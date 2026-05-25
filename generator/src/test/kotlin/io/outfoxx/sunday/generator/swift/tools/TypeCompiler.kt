@@ -16,16 +16,21 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.TypeSpec
+import java.nio.file.Files
+import java.nio.file.Path
 
 fun compileTypes(
   compiler: SwiftCompiler,
   types: Map<DeclaredTypeName, TypeSpec>,
 ): Boolean {
   try {
+    CompiledGeneratedSources.beginCompile()
     val fileSpecs =
       types.map { (typeName, typeSpec) ->
         FileSpec.get(typeName.moduleName, typeSpec)
@@ -35,7 +40,9 @@ fun compileTypes(
 
     val (result, output) = compiler.compile()
 
-    if (result != 0) {
+    val generatedWarnings = output.containsGeneratedWarnings(compiler.srcDir)
+
+    if (result != 0 || generatedWarnings) {
 
       val files =
         fileSpecs.associate {
@@ -47,8 +54,73 @@ fun compileTypes(
       Compilation.printFailure(files, output)
     }
 
-    return result == 0
+    if (result == 0 && !generatedWarnings) {
+      fileSpecs.forEach { fileSpec ->
+        val builder = StringBuilder()
+        fileSpec.writeTo(builder)
+        CompiledGeneratedSources.record(GeneratedCodeLanguage.Swift, "${fileSpec.name}.swift", builder.toString())
+      }
+    }
+
+    return result == 0 && !generatedWarnings
   } finally {
     compiler.srcDir.toFile().deleteRecursively()
   }
 }
+
+fun compileGeneratedFiles(compiler: SwiftCompiler): Boolean {
+  try {
+    CompiledGeneratedSources.beginCompile()
+    val (result, output) = compiler.compile()
+
+    val generatedWarnings = output.containsGeneratedWarnings(compiler.srcDir)
+
+    if (result != 0 || generatedWarnings) {
+      val files =
+        Files
+          .walk(compiler.srcDir)
+          .use { paths ->
+            paths
+              .filter { path -> Files.isRegularFile(path) && path.fileName.toString().endsWith(".swift") }
+              .toList()
+          }.associate { path ->
+            compiler.srcDir.relativize(path).toString() to Files.readString(path)
+          }
+
+      Compilation.printFailure(files, output)
+    }
+
+    if (result == 0 && !generatedWarnings) {
+      val files =
+        Files
+          .walk(compiler.srcDir)
+          .use { paths ->
+            paths
+              .filter { path -> Files.isRegularFile(path) && path.fileName.toString().endsWith(".swift") }
+              .toList()
+          }.associateWith { path -> Files.readString(path) }
+      CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.Swift, compiler.srcDir, files)
+    }
+
+    return result == 0 && !generatedWarnings
+  } finally {
+    compiler.srcDir.toFile().deleteRecursively()
+  }
+}
+
+private fun String.containsGeneratedWarnings(srcDir: Path): Boolean {
+  val localSrcDir = Regex.escape(srcDir.toAbsolutePath().normalize().toString())
+  val dockerSrcDir = Regex.escape("/work/src")
+  return lineSequence()
+    .filter { line ->
+      Regex("""^(?:$localSrcDir|$dockerSrcDir|.*[/\\]src[/\\]).*:\d+:\d+: warning:""")
+        .containsMatchIn(line)
+    }.any { line -> !line.isAllowedGeneratedWarning() }
+}
+
+private fun String.isAllowedGeneratedWarning(): Boolean =
+  // Published Sunday versions used by the compile fixture do not yet declare Problem's unchecked
+  // Sendable boundary. Generated problem hierarchies restate the conformance over immutable
+  // stored fields; remove this allowlist after the fixture consumes the updated Sunday release.
+  contains("warning: non-final class '") &&
+    contains("cannot conform to the 'Sendable' protocol")

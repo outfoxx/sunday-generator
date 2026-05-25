@@ -16,13 +16,16 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.core.client.platform.model.document.BaseUnit
-import io.outfoxx.sunday.generator.common.ResolutionContext
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.swiftpoet.DeclaredTypeName
+import io.outfoxx.sunday.generator.GenerationOptions
 
-data class SwiftResolutionContext(
-  override val unit: BaseUnit,
-  override val shapeIndex: ShapeIndex,
-  val suggestedTypeName: DeclaredTypeName?,
-) : ResolutionContext
+/**
+ * Options for Swift/Sunday generation.
+ */
+class SwiftSundayOptions(
+  defaultProblemBaseUri: String,
+  defaultMediaTypes: List<String>,
+  serviceSuffix: String,
+  val aggregateServices: Boolean = false,
+  val aggregateServiceSuffix: String? = null,
+  val servicesFromTags: Boolean = false,
+) : GenerationOptions(defaultProblemBaseUri, defaultMediaTypes, serviceSuffix)

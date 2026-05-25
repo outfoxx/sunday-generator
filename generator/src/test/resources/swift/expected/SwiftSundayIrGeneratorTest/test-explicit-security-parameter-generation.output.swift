@@ -1,4 +1,3 @@
-import PotentCodables
 import Sunday
 
 public final class API<TransportType : Transport> : Sendable {
@@ -22,37 +21,24 @@ public final class API<TransportType : Transport> : Sendable {
     problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchTest(category: FetchTestCategoryUriParam, type: FetchTestTypeUriParam) throws -> Sunday.Operation<Empty, [String : AnyValue], TransportType> {
+  public func fetchTest(bearerAuthorization: String, id: String) throws -> Sunday.Operation<Empty, String, TransportType> {
     return Sunday.Operation(
       transport: self.transport,
       spec: Sunday.OperationSpec(
         method: .get,
-        pathTemplate: "/tests/{category}/{type}",
+        pathTemplate: "/tests/{id}",
         pathParameters: [
-          "category": try ParameterValues.encode(category),
-          "type": try ParameterValues.encode(type)
+          "id": try ParameterValues.encode(id)
         ],
         queryParameters: nil,
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: [
+          "Authorization": try ParameterValues.encode(bearerAuthorization)
+        ]
       )
     )
-  }
-
-  public enum FetchTestCategoryUriParam : String, CaseIterable, Codable, Sendable {
-
-    case politics = "politics"
-    case science = "science"
-
-  }
-
-  public enum FetchTestTypeUriParam : String, CaseIterable, Codable, Sendable {
-
-    case all = "all"
-    case limited = "limited"
-
   }
 
 }

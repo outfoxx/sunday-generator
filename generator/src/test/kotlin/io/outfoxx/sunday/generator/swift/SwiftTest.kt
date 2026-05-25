@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSourcesExtension
 import io.outfoxx.sunday.test.extensions.DiffingExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
@@ -26,5 +27,10 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @Execution(ExecutionMode.CONCURRENT)
 @ResourceLock("Swift")
-@ExtendWith(ResourceExtension::class, SwiftCompilerExtension::class, DiffingExtension::class)
+@ExtendWith(
+  ResourceExtension::class,
+  SwiftCompilerExtension::class,
+  DiffingExtension::class,
+  CompiledGeneratedSourcesExtension::class,
+)
 annotation class SwiftTest

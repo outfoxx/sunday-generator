@@ -16,9 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
-import amf.core.client.platform.model.document.Document
 import io.outfoxx.sunday.generator.CommonGenerateCommand
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import io.outfoxx.sunday.generator.flags
 import io.outfoxx.sunday.generator.grouped
 import io.outfoxx.sunday.generator.provideDelegate
@@ -35,18 +33,7 @@ abstract class SwiftGenerateCommand(
     DefaultIdentifiableTypes to "Conform any types with an `id` parameter to `Identifiable`".default(true)
   }.grouped("Model Generation Options")
 
-  override val typeRegistry: SwiftTypeRegistry by lazy {
+  val typeRegistry: SwiftTypeRegistry by lazy {
     SwiftTypeRegistry(options)
   }
-
-  override fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-  ) = generatorFactory(document, shapeIndex, typeRegistry)
-
-  abstract fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-    typeRegistry: SwiftTypeRegistry,
-  ): SwiftGenerator
 }

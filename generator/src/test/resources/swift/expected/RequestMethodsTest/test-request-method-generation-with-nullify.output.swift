@@ -1,140 +1,136 @@
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return [
+      ProblemRegistration(type: TestNotFoundProblem.type, problemType: TestNotFoundProblem.self),
+      ProblemRegistration(type: AnotherNotFoundProblem.type, problemType: AnotherNotFoundProblem.self)
+    ]
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
-    requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
-    requestFactory.registerProblem(type: "http://example.com/another_not_found", problemType: AnotherNotFoundProblem.self)
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchTest1OrNil(limit: Int) async throws -> Test? {
-    return try await nilifyResponse(
+  public func fetchTest1(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
+    return Sunday.NilableOperation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test1",
+        pathParameters: nil,
+        queryParameters: [
+          "limit": try ParameterValues.encode(limit)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      ),
+      nilify: Sunday.NilifySpec(
         statuses: [404, 405],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      ) {
-        try await fetchTest1(limit: limit)
-      }
-  }
-
-  public func fetchTest1(limit: Int) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/test1",
-      pathParameters: nil,
-      queryParameters: [
-        "limit": limit
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      )
     )
   }
 
-  public func fetchTest2OrNil(limit: Int) async throws -> Test? {
-    return try await nilifyResponse(
+  public func fetchTest2(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
+    return Sunday.NilableOperation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test2",
+        pathParameters: nil,
+        queryParameters: [
+          "limit": try ParameterValues.encode(limit)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      ),
+      nilify: Sunday.NilifySpec(
         statuses: [404],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      ) {
-        try await fetchTest2(limit: limit)
-      }
-  }
-
-  public func fetchTest2(limit: Int) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/test2",
-      pathParameters: nil,
-      queryParameters: [
-        "limit": limit
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      )
     )
   }
 
-  public func fetchTest3OrNil(limit: Int) async throws -> Test? {
-    return try await nilifyResponse(
+  public func fetchTest3(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
+    return Sunday.NilableOperation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test3",
+        pathParameters: nil,
+        queryParameters: [
+          "limit": try ParameterValues.encode(limit)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      ),
+      nilify: Sunday.NilifySpec(
         statuses: [],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      ) {
-        try await fetchTest3(limit: limit)
-      }
-  }
-
-  public func fetchTest3(limit: Int) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/test3",
-      pathParameters: nil,
-      queryParameters: [
-        "limit": limit
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      )
     )
   }
 
-  public func fetchTest4OrNil(limit: Int) async throws -> Test? {
-    return try await nilifyResponse(
+  public func fetchTest4(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
+    return Sunday.NilableOperation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test4",
+        pathParameters: nil,
+        queryParameters: [
+          "limit": try ParameterValues.encode(limit)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      ),
+      nilify: Sunday.NilifySpec(
         statuses: [404, 405],
         problemTypes: []
-      ) {
-        try await fetchTest4(limit: limit)
-      }
-  }
-
-  public func fetchTest4(limit: Int) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/test4",
-      pathParameters: nil,
-      queryParameters: [
-        "limit": limit
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      )
     )
   }
 
-  public func fetchTest5OrNil(limit: Int) async throws -> Test? {
-    return try await nilifyResponse(
+  public func fetchTest5(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
+    return Sunday.NilableOperation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test5",
+        pathParameters: nil,
+        queryParameters: [
+          "limit": try ParameterValues.encode(limit)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      ),
+      nilify: Sunday.NilifySpec(
         statuses: [404],
         problemTypes: []
-      ) {
-        try await fetchTest5(limit: limit)
-      }
-  }
-
-  public func fetchTest5(limit: Int) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/test5",
-      pathParameters: nil,
-      queryParameters: [
-        "limit": limit
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      )
     )
   }
 

@@ -16,12 +16,11 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
-import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
-import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.swift.tools.generateSunday
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
@@ -42,54 +41,12 @@ class RequestMethodsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 
     assertSwiftSnapshot(
       "RequestMethodsTest/test-request-method-generation.output.swift",
-      buildString {
-        FileSpec
-          .get("", typeSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test request method generation with result response`(
-    compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = SwiftTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          SwiftSundayGenerator.Options(
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findType("API", builtTypes)
-
-    assertSwiftSnapshot(
-      "RequestMethodsTest/test-request-method-generation-with-result-response.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)
@@ -107,54 +64,12 @@ class RequestMethodsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 
     assertSwiftSnapshot(
       "RequestMethodsTest/test-request-method-generation-with-nullify.output.swift",
-      buildString {
-        FileSpec
-          .get("", typeSpec)
-          .writeTo(this)
-      },
-    )
-  }
-
-  @Test
-  fun `test request method generation with nullify and result response`(
-    compiler: SwiftCompiler,
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = SwiftTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          SwiftSundayGenerator.Options(
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findType("API", builtTypes)
-
-    assertSwiftSnapshot(
-      "RequestMethodsTest/test-request-method-generation-with-nullify-and-result-response.output.swift",
       buildString {
         FileSpec
           .get("", typeSpec)

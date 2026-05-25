@@ -1,20 +1,25 @@
 import PotentCodables
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
   public func fetchTest(
@@ -22,21 +27,24 @@ public class API {
     str: String,
     def: String,
     int: Int
-  ) async throws -> [String : AnyValue] {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
-      pathParameters: [
-        "obj": obj,
-        "str": str,
-        "def": def,
-        "int": int
-      ],
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+  ) throws -> Sunday.Operation<Empty, [String : AnyValue], TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests/{obj}/{str}/{int}/{def}",
+        pathParameters: [
+          "obj": try ParameterValues.encode(obj),
+          "str": try ParameterValues.encode(str),
+          "def": try ParameterValues.encode(def),
+          "int": try ParameterValues.encode(int)
+        ],
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      )
     )
   }
 
