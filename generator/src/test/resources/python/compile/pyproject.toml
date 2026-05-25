@@ -1,0 +1,32 @@
+[project]
+name = "sunday-python-generated-test"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.28",
+  "litestar>=2.18",
+  "pydantic>=2.12",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18",
+  "pytest>=9",
+  "ruff>=0.14",
+]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+pretty = false
+mypy_path = "src"
+plugins = ["pydantic.mypy"]
