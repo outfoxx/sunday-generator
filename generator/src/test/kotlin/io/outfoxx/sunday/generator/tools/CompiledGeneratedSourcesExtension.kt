@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Outfox, Inc.
+ * Copyright 2026 Outfox, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,15 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.utils
+package io.outfoxx.sunday.generator.tools
 
-import io.outfoxx.sunday.generator.common.APIProcessor
-import org.junit.jupiter.api.fail
-import java.net.URI
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
 
-object TestAPIProcessing : APIProcessor() {
+/** Clears generated compile records before each test so snapshots cannot reuse another test's compile. */
+class CompiledGeneratedSourcesExtension : BeforeEachCallback {
 
-  override fun process(uri: URI): Result {
-
-    val result = super.process(uri)
-
-    if (!result.isValid) {
-      val log =
-        result.validationLog.joinToString("\n") { entry ->
-          "${entry.file}:${entry.line}: ${entry.message}"
-        }
-
-      fail("Invalid file\n$log")
-    }
-
-    return result
+  override fun beforeEach(context: ExtensionContext) {
+    CompiledGeneratedSources.clear()
   }
 }

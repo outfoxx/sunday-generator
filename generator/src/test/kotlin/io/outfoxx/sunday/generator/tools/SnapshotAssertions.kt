@@ -58,10 +58,14 @@ private val kotlinSnapshotsRoot: Path =
 private val swiftSnapshotsRoot: Path =
   Path.of("src", "test", "resources", "swift", "expected")
 
+private val pythonSnapshotsRoot: Path =
+  Path.of("src", "test", "resources", "python", "expected")
+
 fun assertKotlinSnapshot(
   snapshotPath: String,
   actual: String,
 ) {
+  CompiledGeneratedSources.requireCompiled(GeneratedCodeLanguage.Kotlin, actual)
   assertSnapshotAt(kotlinSnapshotsRoot, snapshotPath, actual)
 }
 
@@ -83,5 +87,14 @@ fun assertSwiftSnapshot(
   snapshotPath: String,
   actual: String,
 ) {
+  CompiledGeneratedSources.requireCompiled(GeneratedCodeLanguage.Swift, actual)
   assertSnapshotAt(swiftSnapshotsRoot, snapshotPath, actual)
+}
+
+fun assertPythonSnapshot(
+  snapshotPath: String,
+  actual: String,
+) {
+  CompiledGeneratedSources.requireCompiled(GeneratedCodeLanguage.Python, actual)
+  assertSnapshotAt(pythonSnapshotsRoot, snapshotPath, actual)
 }
