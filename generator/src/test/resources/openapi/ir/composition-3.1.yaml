@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: Composition API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /work-items/{itemId}:
+    get:
+      operationId: getWorkItem
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Work item response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+  /activity:
+    get:
+      operationId: getActivity
+      responses:
+        "200":
+          description: Activity response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+  /activity/inline:
+    get:
+      operationId: getInlineActivity
+      responses:
+        "200":
+          description: Inline activity response.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Bug"
+                  - $ref: "#/components/schemas/Feature"
+components:
+  schemas:
+    WorkItem:
+      type: object
+      required:
+        - kind
+        - id
+      discriminator:
+        propertyName: kind
+        mapping:
+          bug: "#/components/schemas/Bug"
+          feature: "#/components/schemas/Feature"
+      properties:
+        kind:
+          type: string
+        id:
+          type: string
+    Bug:
+      allOf:
+        - $ref: "#/components/schemas/WorkItem"
+        - type: object
+          required:
+            - severity
+          properties:
+            severity:
+              type: string
+    Feature:
+      allOf:
+        - $ref: "#/components/schemas/WorkItem"
+        - type: object
+          required:
+            - rollout-stage
+          properties:
+            rollout-stage:
+              type: string
+    Activity:
+      oneOf:
+        - $ref: "#/components/schemas/Bug"
+        - $ref: "#/components/schemas/Feature"
+      discriminator:
+        propertyName: kind
+        mapping:
+          bug: "#/components/schemas/Bug"
+          feature: "#/components/schemas/Feature"

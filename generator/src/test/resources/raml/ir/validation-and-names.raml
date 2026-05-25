@@ -1,0 +1,48 @@
+#%RAML 1.0
+title: Validation and Names API
+mediaType:
+- application/json
+
+types:
+  ProjectSearch:
+    type: object
+    properties:
+      page-size?:
+        type: integer
+        minimum: 1
+        maximum: 100
+      display-name:
+        type: string
+        minLength: 3
+        maxLength: 80
+        pattern: "^[A-Za-z].*$"
+      labels?:
+        type: string[]
+        minItems: 1
+        maxItems: 10
+        uniqueItems: true
+
+/projects:
+  get:
+    displayName: listProjects
+    queryParameters:
+      page-size?:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      search-term?:
+        type: string
+        minLength: 2
+        maxLength: 50
+        pattern: "^[a-z].*$"
+    headers:
+      X-Trace-Id?:
+        type: string
+        minLength: 8
+        maxLength: 64
+    responses:
+      200:
+        body:
+          application/json:
+            type: ProjectSearch

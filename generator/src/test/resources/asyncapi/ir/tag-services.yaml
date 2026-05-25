@@ -1,0 +1,24 @@
+asyncapi: 2.6.0
+info:
+  title: Tagged Events API
+  version: 1.0.0
+channels:
+  project.changed:
+    subscribe:
+      operationId: projectChanged
+      tags:
+        - name: projects
+      message:
+        name: ProjectChanged
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectChanged"
+components:
+  schemas:
+    ProjectChanged:
+      type: object
+      required:
+        - projectId
+      properties:
+        projectId:
+          type: string

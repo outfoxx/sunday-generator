@@ -1,0 +1,164 @@
+irVersion: "1"
+name: "Target Overrides API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "TargetOverridesService"
+  operations:
+  - id: "getUser"
+    method: "GET"
+    path: "/users/{userId}"
+    parameters:
+    - name: "userId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "User"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "User"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "displayName"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    targets:
+      kotlin:
+        implementation:
+          code: "return %T::class.qualifiedName + %S"
+          parameters:
+          - type: "Type"
+            value: "kotlin.String"
+          - type: "String"
+            value: "-display"
+      kotlinClient:
+        implementation:
+          code: "return %T::class.qualifiedName + %S"
+          parameters:
+          - type: "Type"
+            value: "kotlin.String"
+          - type: "String"
+            value: "-display"
+      kotlinServer:
+        implementation:
+          code: "return %T::class.qualifiedName + %S"
+          parameters:
+          - type: "Type"
+            value: "kotlin.String"
+          - type: "String"
+            value: "-display"
+      swift:
+        implementation:
+          code: "return %T(describing: %T.self) + %S"
+          parameters:
+          - type: "Type"
+            value: "Swift.String"
+          - type: "Type"
+            value: "Foundation.Data"
+          - type: "String"
+            value: "-display"
+      typescript:
+        implementation:
+          code: "return %T.name + %S"
+          parameters:
+          - type: "Type"
+            value: "UserValue@@user-models"
+          - type: "String"
+            value: "-display"
+  targets:
+    kotlin:
+      modelPackageName: "io.example.custom.models"
+      typeName: "io.example.custom.UserValue"
+    kotlinClient:
+      modelPackageName: "io.example.custom.models"
+      typeName: "io.example.client.UserValue"
+    kotlinServer:
+      modelPackageName: "io.example.custom.models"
+      typeName: "io.example.server.UserValue"
+    swift:
+      modelModuleName: "UserModels"
+      typeName: "UserModels.UserValue"
+    typescript:
+      modelModuleName: "user-models"
+      typeName: "UserValue"
+- name: "UserPatch"
+  kind: "OBJECT"
+  properties:
+  - name: "displayName"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  patchable: true
+- name: "UserPreference"
+  kind: "OBJECT"
+  properties:
+  - name: "theme"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  nested:
+    enclosedIn:
+      kind: "NAMED"
+      name: "User"
+    name: "Preference"
+- name: "UserPreference-Option"
+  kind: "OBJECT"
+  properties:
+  - name: "value"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  nested:
+    strategy: "DASHED"
+    enclosedIn:
+      kind: "NAMED"
+      name: "UserPreference"
+    name: "Option"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"
+targets:
+  kotlin:
+    packageName: "io.example.api"
+    modelPackageName: "io.example.models"
+  kotlinClient:
+    packageName: "io.example.client"
+    modelPackageName: "io.example.client.models"
+  kotlinServer:
+    packageName: "io.example.server"
+    modelPackageName: "io.example.server.models"
+  swift:
+    moduleName: "TargetAPI"
+    modelModuleName: "TargetModels"
+  typescript:
+    moduleName: "services"
+    modelModuleName: "models"

@@ -1,0 +1,57 @@
+asyncapi: "2.6.0"
+info:
+  title: Craft Events API
+  version: "1.0.0"
+x-sunday-apiId: craft
+servers:
+  broker:
+    url: broker.example.com:5672
+    protocol: amqp
+  sse:
+    url: https://api.example.com
+    protocol: http
+channels:
+  /events:
+    servers:
+      - sse
+    subscribe:
+      operationId: streamProjectEvents
+      message:
+        name: ProjectEvent
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectEvent"
+  platform.events:
+    servers:
+      - broker
+    subscribe:
+      operationId: consumePlatformEvent
+      message:
+        name: ProjectEvent
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectEvent"
+  /broker/events:
+    servers:
+      - broker
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: broker.events
+          type: topic
+    subscribe:
+      operationId: consumeBrokerPathEvent
+      message:
+        name: ProjectEvent
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectEvent"
+components:
+  schemas:
+    ProjectEvent:
+      type: object
+      required: [projectId]
+      properties:
+        projectId:
+          type: string

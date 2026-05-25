@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Single AllOf API
+  version: 1.0.0
+paths:
+  /branches:
+    patch:
+      operationId: updateBranch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchRequest"
+      responses:
+        "204":
+          description: Updated
+components:
+  schemas:
+    UpdateBranchRequest:
+      type: object
+      properties:
+        visibility:
+          allOf:
+            - $ref: "#/components/schemas/BranchVisibility"
+          description: Omit to leave the branch visibility unchanged.
+    BranchVisibility:
+      type: string
+      enum:
+        - PUBLIC
+        - PRIVATE

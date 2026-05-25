@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Lifecycle API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /legacy-projects:
+    get:
+      operationId: listLegacyProjects
+      deprecated: true
+      parameters:
+        - name: include-archived
+          in: query
+          deprecated: true
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Legacy project response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegacyProject"
+components:
+  schemas:
+    LegacyProject:
+      type: object
+      deprecated: true
+      required:
+        - id
+        - name
+        - legacy-secret
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        legacy-secret:
+          type: string
+          writeOnly: true
+          deprecated: true

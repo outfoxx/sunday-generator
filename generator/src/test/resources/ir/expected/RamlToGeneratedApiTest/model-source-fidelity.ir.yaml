@@ -1,0 +1,88 @@
+irVersion: "1"
+name: "Model Source Fidelity API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ModelSourceFidelityService"
+  operations:
+  - id: "getEvent"
+    method: "GET"
+    path: "/events/{eventId}"
+    parameters:
+    - name: "eventId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "AuditEvent"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "AuditEvent"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "createdAt"
+    type:
+      kind: "SCALAR"
+      name: "datetime-only"
+    required: true
+  - name: "priority"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+      format: "int16"
+    required: true
+  - name: "tags"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "string"
+      collection: "SET"
+    required: true
+    validation:
+      uniqueItems: "true"
+  closed: true
+- name: "DynamicLabels"
+  kind: "MAP"
+  aliases:
+  - kind: "SCALAR"
+    name: "string"
+  patternProperties:
+  - pattern: "^[a-z][a-z0-9-]*$"
+    type:
+      kind: "SCALAR"
+      name: "string"
+- name: "TagSet"
+  kind: "ARRAY"
+  aliases:
+  - kind: "SCALAR"
+    name: "string"
+  collection: "SET"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

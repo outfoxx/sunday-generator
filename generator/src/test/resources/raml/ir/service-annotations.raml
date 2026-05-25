@@ -1,0 +1,41 @@
+#%RAML 1.0
+title: Service Annotations API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.name): Craft
+
+types:
+  Project:
+    type: object
+    properties:
+      id: string
+      name: string
+
+/projects:
+  get:
+    displayName: listProjects
+    responses:
+      200:
+        body:
+          application/json:
+            type: array
+            items: Project
+  delete:
+    displayName: deleteProjects
+    (sunday.exclude): true
+    responses:
+      204:
+
+/admin:
+  (sunday.group): Admin
+  /projects:
+    get:
+      displayName: listAdminProjects
+      responses:
+        200:
+          body:
+            application/json:
+              type: Project[]

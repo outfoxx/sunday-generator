@@ -1,0 +1,122 @@
+irVersion: "1"
+name: "Extensions API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ExtensionsService"
+  baseUri: "https://api.example.com/{version}"
+  baseUriParameters:
+  - name: "version"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    defaultValue: "v1"
+  operations:
+  - id: "createProject"
+    method: "POST"
+    path: "/projects"
+    responses:
+    - status: 201
+      documentation:
+        description: "Created."
+    - status: 400
+      documentation:
+        description: "Invalid project."
+    problems:
+    - kind: "NAMED"
+      name: "InvalidProjectProblem"
+    nullify:
+      problems:
+      - kind: "NAMED"
+        name: "InvalidProjectProblem"
+      statuses:
+      - 404
+    auth:
+      zanzibar:
+        permission: "project.write"
+        resourceType: "project"
+    media: {}
+    policy:
+      timeout: "PT5S"
+      retry:
+        maxRetries: "3"
+        delay: "PT1S"
+      circuitBreaker:
+        requestVolumeThreshold: "10"
+      clientRateLimit:
+        value: "20"
+        window: "PT1S"
+      serverRateLimit:
+        value: "100"
+        window: "PT1M"
+      source: "openapi"
+  auth:
+    zanzibar:
+      permission: "project.create"
+      resourceType: "project"
+  media: {}
+problems:
+- name: "InvalidProjectProblem"
+  sourceName: "invalid_project"
+  source:
+    kind: "OPENAPI"
+    location: "SOURCE_LOCATION"
+  typeUri: "https://errors.example.com/v2/invalid_project"
+  status: 400
+  title: "Invalid Project"
+  detail: "Project input is invalid."
+  statusBindings:
+  - status: 400
+    typeUri: "https://errors.example.com/v2/invalid_project"
+    title: "Invalid Project"
+    detail: "Project input is invalid."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "InvalidProjectProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "reason"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  fields:
+  - name: "reason"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  documentation:
+    summary: "Invalid Project"
+    description: "Project input is invalid."
+auth:
+  zanzibar:
+    permission: "project.create"
+    resourceType: "project"
+media: {}

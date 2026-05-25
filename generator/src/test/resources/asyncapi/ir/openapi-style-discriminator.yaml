@@ -1,0 +1,55 @@
+asyncapi: 2.6.0
+info:
+  title: Identity Events API
+  version: 1.0.0
+x-sunday-apiId: identity
+channels:
+  identity.changed:
+    x-sunday-service: identities
+    subscribe:
+      operationId: identityChanged
+      message:
+        name: IdentityChanged
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/IdentityChanged"
+components:
+  schemas:
+    IdentityChanged:
+      type: object
+      required:
+        - identity
+      properties:
+        identity:
+          $ref: "#/components/schemas/EventIdentity"
+    EventIdentity:
+      oneOf:
+        - $ref: "#/components/schemas/UserIdentity"
+        - $ref: "#/components/schemas/ServiceIdentity"
+      discriminator:
+        propertyName: kind
+        mapping:
+          user: "#/components/schemas/UserIdentity"
+          service: "#/components/schemas/ServiceIdentity"
+    UserIdentity:
+      type: object
+      required:
+        - kind
+        - userId
+      properties:
+        kind:
+          type: string
+          const: user
+        userId:
+          type: string
+    ServiceIdentity:
+      type: object
+      required:
+        - kind
+        - serviceId
+      properties:
+        kind:
+          type: string
+          const: service
+        serviceId:
+          type: string

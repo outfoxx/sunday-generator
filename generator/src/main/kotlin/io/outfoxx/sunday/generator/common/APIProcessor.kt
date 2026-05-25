@@ -66,6 +66,7 @@ open class APIProcessor {
     val document: Document,
     val shapeIndex: ShapeIndex,
     private val validationResults: List<AMFValidationResult>,
+    val serviceDocument: Document = document,
   ) {
 
     enum class Level {
@@ -249,6 +250,11 @@ class InheritanceTransformationStep(
   }
 
   private fun fixInheritance(node: InternalNodeShape): InternalNodeShape {
+    val existingInherits =
+      node
+        .inherits()
+        .asList
+        .filterIsInstance<InternalNodeShape>()
     val inheritsViaAnnotation =
       node
         .annotations()
@@ -258,12 +264,15 @@ class InheritanceTransformationStep(
         ?.asList
         ?.mapNotNull { internalElements[it] as? InternalNodeShape }
         ?: listOf()
-    node.withInherits(inheritsViaAnnotation.asScalaSeq)
+    val inheritedShapes =
+      (existingInherits + inheritsViaAnnotation)
+        .distinctBy { it.sourceId() }
+    node.withInherits(inheritedShapes.asScalaSeq)
 
-    val inheritsViaProperties = fixPropertyInheritance(node)
+    val inheritsViaProperties = fixPropertyInheritance(node, inheritedShapes)
 
     val finalInheriting =
-      (inheritsViaProperties + inheritsViaAnnotation)
+      (inheritsViaProperties + inheritedShapes)
         .distinctBy { it.sourceId() }
         .filter { it.sourceId() != node.sourceId() }
     for (inherited in finalInheriting) {
@@ -273,7 +282,10 @@ class InheritanceTransformationStep(
     return node
   }
 
-  private fun fixPropertyInheritance(node: InternalNodeShape): List<InternalNodeShape> {
+  private fun fixPropertyInheritance(
+    node: InternalNodeShape,
+    inheritedShapes: List<InternalNodeShape>,
+  ): List<InternalNodeShape> {
     val properties = node.properties().asList
     val originalPropertyNames = resolveOriginalPropertyNames(node)
 
@@ -289,28 +301,41 @@ class InheritanceTransformationStep(
         ?.let { provenance ->
           val inherited =
             internalElements[provenance] as? InternalNodeShape
-              ?: error("Provenance element not found: $provenance")
-          inherits.add(inherited)
-          if (inherited.uniqueId() != provenance) {
-            property
-              .annotations()
-              .reject { it is InheritanceProvenance }
-              .`$plus$eq`(InheritanceProvenance(node.uniqueId()))
+              ?: inheritedShapes.find { inherited -> inherited.hasProperty(property.name().value()) }
+          if (inherited != null) {
+            inherits.add(inherited)
+            if (inherited.uniqueId() != provenance) {
+              property.markLocalTo(node)
+            }
+          } else {
+            property.markLocalTo(node)
           }
         }
-        ?: error("Inherited property missing provenance: ${property.id()}")
+        ?: inheritedShapes
+          .find { inherited -> inherited.hasProperty(property.name().value()) }
+          ?.let { inherited -> inherits.add(inherited) }
+        ?: property.markLocalTo(node)
     }
     for (propertyName in originalPropertyNames) {
       val found = properties.first { it.name().value() == propertyName }
       found
-        .annotations()
-        .reject { it is InheritanceProvenance }
-        .`$plus$eq`(InheritanceProvenance(node.uniqueId()))
+        .markLocalTo(node)
       orderedProperties.add(found)
     }
     node.withProperties(orderedProperties.asScalaSeq)
     return inherits.toList()
   }
+
+  private fun InternalPropertyShape.markLocalTo(node: InternalNodeShape) {
+    annotations()
+      .reject { it is InheritanceProvenance }
+      .`$plus$eq`(InheritanceProvenance(node.uniqueId()))
+  }
+
+  private fun InternalNodeShape.hasProperty(name: String): Boolean =
+    properties()
+      .asList
+      .any { property -> property.name().value() == name }
 
   private fun resolveOriginalPropertyNames(node: amf.shapes.client.scala.model.domain.NodeShape): List<String> {
     val originalElement = findOriginal(node)

@@ -1,0 +1,45 @@
+#%RAML 1.0
+title: External Discriminator API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+types:
+  Animal:
+    type: object
+    discriminator: kind
+    (sunday.externallyDiscriminated): true
+    properties:
+      kind: string
+
+  Cat:
+    type: Animal
+    discriminatorValue: cat
+    properties:
+      hunting-skill: string
+
+  Dog:
+    type: Animal
+    discriminatorValue: dog
+    properties:
+      pack-size: integer
+
+  AnimalEnvelope:
+    type: object
+    properties:
+      animal:
+        type: Animal
+        (sunday.externalDiscriminator): kind
+      kind: string
+
+/animals/{animalId}:
+  uriParameters:
+    animalId: string
+  get:
+    displayName: getAnimal
+    responses:
+      200:
+        body:
+          application/json:
+            type: AnimalEnvelope

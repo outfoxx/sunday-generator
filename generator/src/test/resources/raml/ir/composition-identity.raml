@@ -1,0 +1,28 @@
+#%RAML 1.0
+title: Craft HTTP API
+annotationTypes:
+  sunday.apiId: string
+  sunday.group: string
+  sunday.operationId: string
+
+(sunday.apiId): craft
+
+types:
+  Project:
+    type: object
+    properties:
+      id: string
+
+/projects:
+  (sunday.group): Projects
+  /{projectId}:
+    uriParameters:
+      projectId: string
+    get:
+      displayName: fetchProject
+      (sunday.operationId): getProject
+      responses:
+        200:
+          body:
+            application/json:
+              type: Project

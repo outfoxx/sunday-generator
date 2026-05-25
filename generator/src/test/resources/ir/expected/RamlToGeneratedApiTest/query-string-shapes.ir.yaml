@@ -1,0 +1,141 @@
+irVersion: "1"
+name: "Query String Shapes API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "QueryStringShapesService"
+  operations:
+  - id: "searchProjects"
+    method: "GET"
+    path: "/projects"
+    queryString:
+      kind: "NAMED"
+      name: "SearchProjectsQueryString"
+      scope:
+        service: "QueryStringShapesService"
+        operation: "searchProjects"
+        usage: "QUERY_STRING"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "SearchProjectsResponseBody"
+        scope:
+          service: "QueryStringShapesService"
+          operation: "searchProjects"
+          usage: "RESPONSE_BODY"
+          status: 200
+      mediaTypes:
+      - "application/json"
+    auth:
+      schemes:
+      - "signed"
+      requirements:
+      - schemes:
+        - "signed"
+      securitySchemes:
+      - name: "signed"
+        type: "Pass Through"
+        queryString:
+          kind: "NAMED"
+          name: "SignedQueryString"
+          scope:
+            securityScheme: "signed"
+            usage: "SECURITY_QUERY_STRING"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  auth:
+    schemes:
+    - "signed"
+    requirements:
+    - schemes:
+      - "signed"
+    securitySchemes:
+    - name: "signed"
+      type: "Pass Through"
+      queryString:
+        kind: "NAMED"
+        name: "SignedQueryString"
+        scope:
+          securityScheme: "signed"
+          usage: "SECURITY_QUERY_STRING"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "SearchProjectsQueryString"
+  kind: "OBJECT"
+  scope:
+    service: "QueryStringShapesService"
+    operation: "searchProjects"
+    usage: "QUERY_STRING"
+  properties:
+  - name: "q"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "labels"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "string"
+  documentation:
+    description: "Project search query object."
+- name: "SearchProjectsResponseBody"
+  kind: "OBJECT"
+  scope:
+    service: "QueryStringShapesService"
+    operation: "searchProjects"
+    usage: "RESPONSE_BODY"
+    status: 200
+  properties:
+  - name: "total"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+    required: true
+- name: "SignedQueryString"
+  kind: "OBJECT"
+  scope:
+    securityScheme: "signed"
+    usage: "SECURITY_QUERY_STRING"
+  properties:
+  - name: "signature"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "expires"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+    required: true
+auth:
+  schemes:
+  - "signed"
+  requirements:
+  - schemes:
+    - "signed"
+  securitySchemes:
+  - name: "signed"
+    type: "Pass Through"
+    queryString:
+      kind: "NAMED"
+      name: "SignedQueryString"
+      scope:
+        securityScheme: "signed"
+        usage: "SECURITY_QUERY_STRING"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

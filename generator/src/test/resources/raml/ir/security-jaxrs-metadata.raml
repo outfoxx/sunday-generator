@@ -1,0 +1,57 @@
+#%RAML 1.0
+title: Security JAXRS Metadata API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+securitySchemes:
+  bearer:
+    type: Pass Through
+    description: Bearer token authentication.
+    describedBy:
+      headers:
+        Authorization:
+          description: Bearer token.
+          type: string
+          required: true
+          pattern: "^Bearer .+$"
+  apiKey:
+    type: Pass Through
+    describedBy:
+      queryParameters:
+        api-key:
+          type: string
+          required: true
+          enum: [internal]
+
+types:
+  Project:
+    type: object
+    properties:
+      id: string
+
+  ProjectCreate:
+    type: object
+    properties:
+      name: string
+
+/projects/{projectId}:
+  uriParameters:
+    projectId: string
+  post:
+    displayName: secureProject
+    securedBy: [bearer, apiKey]
+    (sunday.asynchronous): true
+    (sunday.reactive): true
+    (sunday.sse:server): true
+    (sunday.jsonBody:client): true
+    (sunday.jaxrsContext): [uriInfo, securityContext]
+    body:
+      application/json:
+        type: ProjectCreate
+    responses:
+      202:
+        body:
+          application/json:
+            type: Project

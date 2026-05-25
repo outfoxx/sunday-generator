@@ -1,0 +1,139 @@
+irVersion: "1"
+name: "Metadata API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "MetadataService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "createProject"
+    method: "POST"
+    path: "/projects"
+    parameters:
+    - name: "xTraceId"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      serializationName: "X-Trace-Id"
+      encoding:
+        style: "simple"
+      examples:
+      - value: "trace-123"
+        strict: true
+      documentation:
+        description: "Trace identifier."
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectCreate"
+      mediaTypes:
+      - "application/json"
+      examples:
+      - name: "create"
+        mediaType: "application/json"
+        value:
+          name: "Build IR"
+        strict: true
+        documentation:
+          summary: "Create project example"
+          description: "Minimal project creation payload."
+      documentation:
+        description: "Project creation request."
+    responses:
+    - status: 201
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      headers:
+      - name: "location"
+        location: "HEADER"
+        type:
+          kind: "SCALAR"
+          name: "string"
+        serializationName: "Location"
+        encoding:
+          style: "simple"
+        examples:
+        - value: "/projects/project-1"
+          strict: true
+        documentation:
+          description: "Created project location."
+      examples:
+      - name: "created"
+        mediaType: "application/json"
+        value:
+          id: "project-1"
+          name: "Build IR"
+        strict: true
+        documentation:
+          summary: "Created project example"
+      documentation:
+        description: "Project created response."
+    media: {}
+    tags:
+    - "projects"
+    documentation:
+      summary: "Create project"
+      description: "Creates a project from metadata-rich input."
+  media: {}
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    examples:
+    - value: "project-1"
+      strict: true
+    documentation:
+      description: "Project identifier."
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    examples:
+    - value: "Build IR"
+      strict: true
+    documentation:
+      description: "Project display name."
+  examples:
+  - value:
+      id: "project-1"
+      name: "Build IR"
+    strict: true
+  documentation:
+    description: "Project response payload."
+- name: "ProjectCreate"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    examples:
+    - value: "Build IR"
+      strict: true
+    documentation:
+      description: "Project display name."
+  examples:
+  - value:
+      name: "Build IR"
+    strict: true
+  documentation:
+    description: "Project creation payload."
+media: {}
+tags:
+- name: "projects"
+  documentation:
+    description: "Project operations."
+documentation:
+  description: "Metadata API documentation."

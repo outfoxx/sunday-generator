@@ -1,0 +1,35 @@
+#%RAML 1.0
+title: Inline Local Shapes API
+mediaType: application/json
+
+/projects/{projectId}:
+  uriParameters:
+    projectId:
+      description: Project id family.
+      enum: [alpha, beta]
+  put:
+    displayName: fetchProject
+    queryParameters:
+      state:
+        description: Project state.
+        enum: [active, archived]
+    headers:
+      X-Mode:
+        description: Projection mode.
+        enum: [summary, full]
+    body:
+      application/json:
+        description: Project update body.
+        type: object
+        properties:
+          name: string
+          labels?: string[]
+    responses:
+      200:
+        body:
+          application/json:
+            description: Project response body.
+            type: object
+            properties:
+              id: string
+              name: string

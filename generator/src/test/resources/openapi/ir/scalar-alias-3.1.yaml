@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Scalar Alias API
+  version: 1.0.0
+paths:
+  /scope:
+    get:
+      operationId: getScope
+      responses:
+        "200":
+          description: Scope update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NarrativeScopeUpdate"
+components:
+  schemas:
+    UniqueId:
+      type: string
+      pattern: ^[A-Z2-7]{26}$
+      description: Unique platform identifier.
+    NarrativeScopeUpdate:
+      type: object
+      properties:
+        location:
+          $ref: "#/components/schemas/UniqueId"

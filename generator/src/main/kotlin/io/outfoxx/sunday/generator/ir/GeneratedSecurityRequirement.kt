@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.common
+package io.outfoxx.sunday.generator.ir
 
-import amf.apicontract.client.platform.model.domain.EndPoint
-import amf.apicontract.client.platform.model.domain.Operation
-
-interface NameGenerator {
-
-  fun generate(
-    endPoint: EndPoint,
-    operation: Operation,
-  ): String
-
-  companion object {
-
-    fun createDefaultGenerator() = SimpleNameGenerator()
-  }
-}
+/**
+ * Security requirement alternative for a generated API, service, or operation.
+ */
+data class GeneratedSecurityRequirement(
+  val schemes: List<String> = listOf(),
+)

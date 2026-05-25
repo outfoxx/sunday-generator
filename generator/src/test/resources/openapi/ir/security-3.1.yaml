@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Security API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+security:
+  - bearerAuth: []
+paths:
+  /projects:
+    get:
+      operationId: listProjects
+      security:
+        - bearerAuth: []
+          traceKey: []
+        - queryKey: []
+      responses:
+        "200":
+          description: Project list response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication.
+    traceKey:
+      type: apiKey
+      in: header
+      name: X-Trace-Key
+      description: Required trace key.
+    queryKey:
+      type: apiKey
+      in: query
+      name: api_key
+      description: Query API key.
+  schemas:
+    Project:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string

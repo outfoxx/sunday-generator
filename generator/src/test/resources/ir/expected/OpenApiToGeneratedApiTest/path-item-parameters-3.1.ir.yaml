@@ -1,0 +1,80 @@
+irVersion: "1"
+name: "Repo Path Parameters API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "RepoPathParametersService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "getRepo"
+    method: "GET"
+    path: "/repos/{repoId}"
+    parameters:
+    - name: "repoId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Repo"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Repository response."
+    media: {}
+  - id: "getBranch"
+    method: "GET"
+    path: "/repos/{repoId}/branches/{branchId}"
+    parameters:
+    - name: "repoId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    - name: "branchId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Branch"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Branch response."
+    media: {}
+  media: {}
+models:
+- name: "Branch"
+  kind: "OBJECT"
+  properties:
+  - name: "branchId"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "Repo"
+  kind: "OBJECT"
+  properties:
+  - name: "repoId"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media: {}

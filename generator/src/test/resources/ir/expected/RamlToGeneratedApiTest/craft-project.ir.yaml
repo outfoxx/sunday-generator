@@ -1,0 +1,133 @@
+irVersion: "1"
+name: "Projects API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ProjectsService"
+  operations:
+  - id: "getProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    problems:
+    - kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    auth:
+      schemes:
+      - "oauth2"
+      requirements:
+      - schemes:
+        - "oauth2"
+      securitySchemes:
+      - name: "oauth2"
+        type: "OAuth 2.0"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  auth:
+    schemes:
+    - "oauth2"
+    requirements:
+    - schemes:
+      - "oauth2"
+    securitySchemes:
+    - name: "oauth2"
+      type: "OAuth 2.0"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+problems:
+- name: "ProjectNotFoundProblem"
+  sourceName: "project_not_found"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "project_not_found"
+  status: 404
+  title: "Project Not Found"
+  detail: "The requested project does not exist."
+  statusBindings:
+  - status: 404
+    typeUri: "project_not_found"
+    title: "Project Not Found"
+    detail: "The requested project does not exist."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  documentation:
+    summary: "Project Not Found"
+    description: "The requested project does not exist."
+auth:
+  schemes:
+  - "oauth2"
+  requirements:
+  - schemes:
+    - "oauth2"
+  securitySchemes:
+  - name: "oauth2"
+    type: "OAuth 2.0"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

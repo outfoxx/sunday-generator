@@ -1,0 +1,50 @@
+#%RAML 1.0
+title: Examples API
+mediaType:
+- application/json
+
+types:
+  ProjectCreate:
+    type: object
+    properties:
+      name: string
+
+  Project:
+    type: object
+    examples:
+      sample:
+        value:
+          id: project-1
+          name: Build IR
+    properties:
+      id: string
+      name:
+        type: string
+        example: Build IR
+
+/projects:
+  post:
+    displayName: createProject
+    queryParameters:
+      include-archived:
+        type: boolean
+        examples:
+          include:
+            value: false
+    body:
+      application/json:
+        type: ProjectCreate
+        examples:
+          create:
+            value:
+              name: Build IR
+    responses:
+      201:
+        body:
+          application/json:
+            type: Project
+            examples:
+              created:
+                value:
+                  id: project-1
+                  name: Build IR

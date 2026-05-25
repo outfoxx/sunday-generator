@@ -1,0 +1,150 @@
+irVersion: "1"
+name: "Request Shapes API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "RequestShapesService"
+  operations:
+  - id: "updateProject"
+    method: "PATCH"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "includeArchived"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "boolean"
+      defaultValue: false
+    - name: "token"
+      location: "QUERY"
+      type:
+        kind: "NAMED"
+        name: "SearchToken"
+    - name: "state"
+      location: "QUERY"
+      type:
+        kind: "NAMED"
+        name: "ProjectState"
+      defaultValue: "active"
+    - name: "labels"
+      location: "QUERY"
+      type:
+        kind: "ARRAY"
+        name: "array"
+        arguments:
+        - kind: "SCALAR"
+          name: "string"
+      defaultValue:
+      - "api"
+      - "generator"
+    - name: "options"
+      location: "QUERY"
+      type:
+        kind: "NAMED"
+        name: "SearchOptions"
+      defaultValue:
+        archived: false
+        labels:
+        - "api"
+    - name: "xTraceId"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      serializationName: "X-Trace-Id"
+      defaultValue: "generated"
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectPatch"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "ProjectPatch"
+      mediaTypes:
+      - "application/json"
+    - status: 202
+      type:
+        kind: "NAMED"
+        name: "ProjectTagList"
+      mediaTypes:
+      - "application/cbor"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "ProjectPatch"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  - name: "state"
+    type:
+      kind: "NAMED"
+      name: "ProjectState"
+  - name: "tags"
+    type:
+      kind: "NAMED"
+      name: "ProjectTagList"
+  - name: "metadata"
+    type:
+      kind: "SCALAR"
+      name: "string"
+      nullable: true
+- name: "ProjectState"
+  kind: "ENUM"
+  values:
+  - "active"
+  - "archived"
+- name: "ProjectTagList"
+  kind: "ARRAY"
+  aliases:
+  - kind: "SCALAR"
+    name: "string"
+- name: "SearchOptions"
+  kind: "OBJECT"
+  properties:
+  - name: "archived"
+    type:
+      kind: "SCALAR"
+      name: "boolean"
+    required: true
+  - name: "labels"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "string"
+    required: true
+- name: "SearchToken"
+  kind: "UNION"
+  aliases:
+  - kind: "SCALAR"
+    name: "string"
+  - kind: "SCALAR"
+    name: "integer"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

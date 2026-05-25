@@ -1,0 +1,35 @@
+#%RAML 1.0
+title: Inheritance API
+mediaType:
+- application/json
+
+types:
+  Animal:
+    type: object
+    discriminator: kind
+    properties:
+      kind: string
+      id: string
+
+  Cat:
+    type: Animal
+    discriminatorValue: cat
+    properties:
+      hunting-skill: string
+
+  Dog:
+    type: Animal
+    discriminatorValue: dog
+    properties:
+      pack-size: integer
+
+/animals/{animalId}:
+  uriParameters:
+    animalId: string
+  get:
+    displayName: getAnimal
+    responses:
+      200:
+        body:
+          application/json:
+            type: Animal

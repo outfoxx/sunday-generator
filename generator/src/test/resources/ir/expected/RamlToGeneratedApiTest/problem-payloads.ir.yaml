@@ -1,0 +1,110 @@
+irVersion: "1"
+name: "Problem Payloads API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ProblemPayloadsService"
+  operations:
+  - id: "fetchProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    problems:
+    - kind: "NAMED"
+      name: "InvalidIdProblem"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+problems:
+- name: "InvalidIdProblem"
+  sourceName: "invalid_id"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "invalid_id"
+  status: 400
+  title: "Invalid Id"
+  detail: "The id contains one or more invalid characters."
+  statusBindings:
+  - status: 400
+    typeUri: "invalid_id"
+    title: "Invalid Id"
+    detail: "The id contains one or more invalid characters."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "InvalidIdProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "offending_id"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  fields:
+  - name: "offending_id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  documentation:
+    summary: "Invalid Id"
+    description: "The id contains one or more invalid characters."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

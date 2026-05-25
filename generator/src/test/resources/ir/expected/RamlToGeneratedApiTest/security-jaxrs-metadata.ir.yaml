@@ -1,0 +1,184 @@
+irVersion: "1"
+name: "Security JAXRS Metadata API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "SecurityJAXRSMetadataService"
+  operations:
+  - id: "secureProject"
+    method: "POST"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectCreate"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 202
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    auth:
+      schemes:
+      - "bearer"
+      - "apiKey"
+      requirements:
+      - schemes:
+        - "bearer"
+      - schemes:
+        - "apiKey"
+      securitySchemes:
+      - name: "bearer"
+        type: "Pass Through"
+        headers:
+        - name: "authorization"
+          location: "HEADER"
+          type:
+            kind: "SCALAR"
+            name: "string"
+          required: true
+          serializationName: "Authorization"
+          validation:
+            pattern: "^Bearer .+$"
+          documentation:
+            description: "Bearer token."
+        documentation:
+          description: "Bearer token authentication."
+      - name: "apiKey"
+        type: "Pass Through"
+        queryParameters:
+        - name: "apiKey"
+          location: "QUERY"
+          type:
+            kind: "SCALAR"
+            name: "string"
+          required: true
+          serializationName: "api-key"
+          constantValue: "internal"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+    jaxrs:
+      asynchronous: true
+      reactive: true
+      sse:
+        server: true
+      jsonBody:
+        client: true
+      context:
+      - "uriInfo"
+      - "securityContext"
+  auth:
+    schemes:
+    - "bearer"
+    - "apiKey"
+    requirements:
+    - schemes:
+      - "bearer"
+    - schemes:
+      - "apiKey"
+    securitySchemes:
+    - name: "bearer"
+      type: "Pass Through"
+      headers:
+      - name: "authorization"
+        location: "HEADER"
+        type:
+          kind: "SCALAR"
+          name: "string"
+        required: true
+        serializationName: "Authorization"
+        validation:
+          pattern: "^Bearer .+$"
+        documentation:
+          description: "Bearer token."
+      documentation:
+        description: "Bearer token authentication."
+    - name: "apiKey"
+      type: "Pass Through"
+      queryParameters:
+      - name: "apiKey"
+        location: "QUERY"
+        type:
+          kind: "SCALAR"
+          name: "string"
+        required: true
+        serializationName: "api-key"
+        constantValue: "internal"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectCreate"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+auth:
+  schemes:
+  - "bearer"
+  - "apiKey"
+  requirements:
+  - schemes:
+    - "bearer"
+  - schemes:
+    - "apiKey"
+  securitySchemes:
+  - name: "bearer"
+    type: "Pass Through"
+    headers:
+    - name: "authorization"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      serializationName: "Authorization"
+      validation:
+        pattern: "^Bearer .+$"
+      documentation:
+        description: "Bearer token."
+    documentation:
+      description: "Bearer token authentication."
+  - name: "apiKey"
+    type: "Pass Through"
+    queryParameters:
+    - name: "apiKey"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      serializationName: "api-key"
+      constantValue: "internal"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

@@ -1,0 +1,75 @@
+irVersion: "1"
+name: "Service Annotations API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "CraftService"
+  operations:
+  - id: "listProjects"
+    method: "GET"
+    path: "/projects"
+    responses:
+    - status: 200
+      type:
+        kind: "ARRAY"
+        name: "array"
+        arguments:
+        - kind: "NAMED"
+          name: "Project"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+- name: "AdminService"
+  operations:
+  - id: "listAdminProjects"
+    method: "GET"
+    path: "/admin/projects"
+    responses:
+    - status: 200
+      type:
+        kind: "ARRAY"
+        name: "array"
+        arguments:
+        - kind: "NAMED"
+          name: "Project"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

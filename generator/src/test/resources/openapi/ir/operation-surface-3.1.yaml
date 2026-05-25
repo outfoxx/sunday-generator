@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info:
+  title: Project Surface API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /projects/{projectId}:
+    patch:
+      operationId: updateProject
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/IncludeArchived"
+        - $ref: "#/components/parameters/TraceHeader"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated project response.
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+    IncludeArchived:
+      name: includeArchived
+      in: query
+      schema:
+        type: boolean
+        default: false
+    TraceHeader:
+      name: X-Trace-Id
+      in: header
+      required: true
+      schema:
+        type: string
+  schemas:
+    ProjectUpdate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    Project:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string

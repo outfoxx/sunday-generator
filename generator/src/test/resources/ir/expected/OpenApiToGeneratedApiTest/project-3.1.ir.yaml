@@ -1,0 +1,47 @@
+irVersion: "1"
+name: "Projects API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ProjectsService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "getProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Project response."
+    media: {}
+  media: {}
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media: {}

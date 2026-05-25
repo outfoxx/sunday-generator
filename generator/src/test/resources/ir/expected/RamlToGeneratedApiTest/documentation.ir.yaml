@@ -1,0 +1,125 @@
+irVersion: "1"
+name: "Documentation API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "DocsService"
+  operations:
+  - id: "listProjects"
+    method: "GET"
+    path: "/docs/projects"
+    parameters:
+    - name: "includeArchived"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "boolean"
+      required: true
+      documentation:
+        description: "Include archived query documentation description."
+    responses:
+    - status: 200
+      type:
+        kind: "ARRAY"
+        name: "array"
+        arguments:
+        - kind: "NAMED"
+          name: "Project"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Project list response documentation description."
+    problems:
+    - kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+    documentation:
+      description: "Operation documentation description."
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+  documentation:
+    description: "Service documentation description."
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    documentation:
+      description: "Project id documentation description."
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    documentation:
+      description: "Project name documentation description."
+  documentation:
+    description: "Project model documentation description."
+problems:
+- name: "ProjectNotFoundProblem"
+  sourceName: "project_not_found"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "project_not_found"
+  status: 404
+  title: "Project Not Found"
+  detail: "Project problem documentation description."
+  statusBindings:
+  - status: 404
+    typeUri: "project_not_found"
+    title: "Project Not Found"
+    detail: "Project problem documentation description."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  documentation:
+    summary: "Project Not Found"
+    description: "Project problem documentation description."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"
+documentation:
+  description: "API documentation description."

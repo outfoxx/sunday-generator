@@ -1,0 +1,97 @@
+irVersion: "1"
+name: "Validation and Names API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ValidationAndNamesService"
+  operations:
+  - id: "listProjects"
+    method: "GET"
+    path: "/projects"
+    parameters:
+    - name: "pageSize"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      serializationName: "page-size"
+      defaultValue: 25
+      validation:
+        minimum: "1"
+        maximum: "100"
+    - name: "searchTerm"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      serializationName: "search-term"
+      validation:
+        minLength: "2"
+        maxLength: "50"
+        pattern: "^[a-z].*$"
+    - name: "xTraceId"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      serializationName: "X-Trace-Id"
+      validation:
+        minLength: "8"
+        maxLength: "64"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "ProjectSearch"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "ProjectSearch"
+  kind: "OBJECT"
+  properties:
+  - name: "pageSize"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+    serializationName: "page-size"
+    validation:
+      minimum: "1"
+      maximum: "100"
+  - name: "displayName"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    serializationName: "display-name"
+    validation:
+      minLength: "3"
+      maxLength: "80"
+      pattern: "^[A-Za-z].*$"
+  - name: "labels"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "string"
+      collection: "SET"
+    validation:
+      minItems: "1"
+      maxItems: "10"
+      uniqueItems: "true"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

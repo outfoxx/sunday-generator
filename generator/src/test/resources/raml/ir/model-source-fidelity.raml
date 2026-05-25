@@ -1,0 +1,39 @@
+#%RAML 1.0
+title: Model Source Fidelity API
+mediaType:
+- application/json
+
+types:
+  AuditEvent:
+    type: object
+    additionalProperties: false
+    properties:
+      id: string
+      createdAt:
+        type: datetime-only
+      priority:
+        type: integer
+        format: int16
+      tags:
+        type: string[]
+        uniqueItems: true
+
+  TagSet:
+    type: string[]
+    uniqueItems: true
+
+  DynamicLabels:
+    type: object
+    properties:
+      /^[a-z][a-z0-9-]*$/:
+        type: string
+
+/events/{eventId}:
+  uriParameters:
+    eventId: string
+  get:
+    displayName: getEvent
+    responses:
+      200:
+        body:
+          type: AuditEvent

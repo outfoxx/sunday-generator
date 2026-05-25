@@ -1,0 +1,24 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+channels:
+  project.changed:
+    x-sunday-service: projects
+    subscribe:
+      operationId: projectChanged
+      summary: Project changed
+      message:
+        name: ProjectChanged
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - projectId
+            - name
+          properties:
+            projectId:
+              type: string
+            name:
+              type: string

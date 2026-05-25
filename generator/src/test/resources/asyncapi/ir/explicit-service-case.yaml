@@ -1,0 +1,24 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+channels:
+  scripts.{scriptId}.events:
+    x-sunday-service: Script
+    parameters:
+      scriptId:
+        schema:
+          type: string
+    subscribe:
+      operationId: streamEvents
+      message:
+        name: ScriptEvent
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - scriptId
+          properties:
+            scriptId:
+              type: string

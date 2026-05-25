@@ -12,6 +12,9 @@ dependencies {
   api(libs.typeScriptPoet)
   api(libs.swiftPoet)
 
+  api(libs.jacksonYaml)
+  api(libs.jacksonKotlin)
+
   //
   // TESTING
   //

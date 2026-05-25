@@ -1,0 +1,307 @@
+irVersion: "1"
+name: "Sunday Behavior API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "SundayBehaviorService"
+  operations:
+  - id: "fetchProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    problems:
+    - kind: "NAMED"
+      name: "InvalidIdProblem"
+    - kind: "NAMED"
+      name: "UnavailableProblem"
+    nullify:
+      problems:
+      - kind: "NAMED"
+        name: "InvalidIdProblem"
+      statuses:
+      - 404
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  - id: "createProjectRequest"
+    method: "POST"
+    path: "/projects/{projectId}/request"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 202
+    exchange: "REQUEST"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  - id: "fetchProjectResponse"
+    method: "GET"
+    path: "/projects/{projectId}/response"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    exchange: "RESPONSE"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  - id: "fetchProjectEvents"
+    method: "GET"
+    path: "/projects/{projectId}/events/source"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "UNION"
+        name: "union"
+        arguments:
+        - kind: "NAMED"
+          name: "ProjectCreated"
+        - kind: "NAMED"
+          name: "ProjectDeleted"
+      mediaTypes:
+      - "text/event-stream"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+    streaming:
+      kind: "EVENT_SOURCE"
+  - id: "streamProjectEvents"
+    method: "GET"
+    path: "/projects/{projectId}/events/stream"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "UNION"
+        name: "union"
+        arguments:
+        - kind: "NAMED"
+          name: "ProjectCreated"
+        - kind: "NAMED"
+          name: "ProjectDeleted"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+    streaming:
+      kind: "EVENT_STREAM"
+      eventMode: "DISCRIMINATED"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectCreated"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectDeleted"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+problems:
+- name: "InvalidIdProblem"
+  sourceName: "invalid_id"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "invalid_id"
+  status: 400
+  title: "Invalid Id"
+  detail: "The id contains one or more invalid characters."
+  statusBindings:
+  - status: 400
+    typeUri: "invalid_id"
+    title: "Invalid Id"
+    detail: "The id contains one or more invalid characters."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "InvalidIdProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "offending_id"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  fields:
+  - name: "offending_id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  documentation:
+    summary: "Invalid Id"
+    description: "The id contains one or more invalid characters."
+- name: "UnavailableProblem"
+  sourceName: "unavailable"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "unavailable"
+  status: 503
+  title: "Unavailable"
+  detail: "The service is temporarily unavailable."
+  statusBindings:
+  - status: 503
+    typeUri: "unavailable"
+    title: "Unavailable"
+    detail: "The service is temporarily unavailable."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "UnavailableProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "retry_after"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+  fields:
+  - name: "retry_after"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+  documentation:
+    summary: "Unavailable"
+    description: "The service is temporarily unavailable."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

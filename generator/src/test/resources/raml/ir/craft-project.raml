@@ -1,0 +1,38 @@
+#%RAML 1.0
+title: Projects API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+securitySchemes:
+  oauth2:
+    type: OAuth 2.0
+
+securedBy:
+- oauth2
+
+(sunday.problemTypes):
+  project_not_found:
+    status: 404
+    title: Project Not Found
+    detail: The requested project does not exist.
+
+types:
+  Project:
+    type: object
+    properties:
+      id: string
+      name: string
+
+/projects/{projectId}:
+  uriParameters:
+    projectId: string
+  get:
+    displayName: getProject
+    (sunday.problems): [project_not_found]
+    responses:
+      200:
+        body:
+          application/json:
+            type: Project

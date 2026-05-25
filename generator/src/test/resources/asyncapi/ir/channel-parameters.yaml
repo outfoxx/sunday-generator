@@ -1,0 +1,42 @@
+asyncapi: 3.1.0
+info:
+  title: Narrative Events API
+  version: 1.0.0
+x-sunday-apiId: narrative
+channels:
+  narrativeIqRepoEvents:
+    address: /niq/v0/repos/{repoId}/events
+    x-sunday-service: narrative-iq
+    parameters:
+      repoId:
+        description: Repository id whose narrative events are streamed.
+    messages:
+      narrativeChange:
+        $ref: "#/components/messages/NarrativeChangeMessage"
+    bindings:
+      http:
+        type: response
+        method: GET
+operations:
+  streamNarrativeIqRepoEvents:
+    action: receive
+    summary: Stream narrative changes
+    channel:
+      $ref: "#/channels/narrativeIqRepoEvents"
+    messages:
+      - $ref: "#/channels/narrativeIqRepoEvents/messages/narrativeChange"
+components:
+  messages:
+    NarrativeChangeMessage:
+      name: NarrativeChange
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/NarrativeChange"
+  schemas:
+    NarrativeChange:
+      type: object
+      required:
+        - repoId
+      properties:
+        repoId:
+          type: string

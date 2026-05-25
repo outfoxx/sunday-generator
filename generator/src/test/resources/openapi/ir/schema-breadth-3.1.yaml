@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: Schema Breadth API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /projects:
+    get:
+      operationId: listProjects
+      parameters:
+        - name: page-size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: X-Trace-Id
+          in: header
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 64
+      responses:
+        "200":
+          description: Project page response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectPage"
+components:
+  schemas:
+    ProjectStatus:
+      type: string
+      enum:
+        - active
+        - archived
+    ProjectLabels:
+      type: array
+      minItems: 1
+      maxItems: 10
+      uniqueItems: true
+      items:
+        type: string
+    Metadata:
+      type: object
+      additionalProperties:
+        type: string
+    Project:
+      type: object
+      required:
+        - id
+        - display-name
+        - status
+      properties:
+        id:
+          type: string
+        display-name:
+          type: string
+          minLength: 3
+          maxLength: 80
+          pattern: "^[A-Za-z].*$"
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        owner:
+          type:
+            - string
+            - "null"
+        labels:
+          $ref: "#/components/schemas/ProjectLabels"
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+        scope:
+          type: object
+          required:
+            - repoId
+            - userId
+          properties:
+            repoId:
+              type: string
+            userId:
+              type: string
+    ProjectPage:
+      type: object
+      required:
+        - items
+      properties:
+        page-size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"

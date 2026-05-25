@@ -1,0 +1,48 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+servers:
+  production:
+    url: broker.example.com:9092
+    protocol: kafka
+channels:
+  project.changed:
+    x-sunday-service: projects
+    servers:
+      - production
+    subscribe:
+      operationId: projectChanged
+      message:
+        name: ProjectChanged
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectChanged"
+  user.changed:
+    x-sunday-service: users
+    servers:
+      - production
+    subscribe:
+      operationId: userChanged
+      message:
+        name: UserChanged
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/UserChanged"
+components:
+  schemas:
+    ProjectChanged:
+      type: object
+      required:
+        - projectId
+      properties:
+        projectId:
+          type: string
+    UserChanged:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string

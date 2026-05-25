@@ -191,6 +191,7 @@ val WebApi.license: License? get() = this.license()
 val WebApi.documentations: List<CreativeWork> get() = this.documentations()
 val WebApi.servers: List<Server> get() = this.servers()
 val WebApi.security: List<SecurityRequirement> get() = this.security()
+val WebApi.tags: List<Tag> get() = this.tags()
 
 //
 val EndPoint.description: String? get() = this.description().value
@@ -228,6 +229,9 @@ val Operation.bindings: OperationBindings get() = this.bindings()
 val Operation.operationId: String? get() = this.operationId().value()
 
 val Operation.operationName: String get() = this.operationId ?: this.name ?: ""
+
+//
+val Tag.description: String? get() = this.description().value
 
 val Operation.successes: List<Response>
   get() =
@@ -285,6 +289,7 @@ val Request.cookieParameters: List<Parameter> get() = this.cookieParameters()
 
 //
 val Response.statusCode: String get() = this.statusCode().value()
+val Response.description: String? get() = this.description().value
 val Response.headers: List<Parameter> get() = this.headers()
 val Response.links: List<TemplatedLink> get() = this.links()
 
@@ -298,6 +303,15 @@ val Payload.schemaMediaType: String? get() = this.schemaMediaType().value
 val Payload.schema: Shape? get() = this.schema()
 val Payload.examples: List<Example> get() = this.examples()
 val Payload.encodings: List<Encoding> get() = this.encodings()
+
+//
+val Example.name: String? get() = this.name().value
+val Example.displayName: String? get() = this.displayName().value
+val Example.description: String? get() = this.description().value
+val Example.value: String? get() = this.value().value
+val Example.structuredValue: DataNode? get() = this.structuredValue()
+val Example.strict: Boolean? get() = this.strict().value
+val Example.mediaType: String? get() = this.mediaType().value
 
 //
 val Parameter.parameterName: String? get() = this.parameterName().value
@@ -444,7 +458,12 @@ val UnionShape.nullableType: Shape get() = anyOf.first { it !is NilShape }
 val UnionShape.flattened: List<Shape> get() = this.anyOf.flatMap { if (it is UnionShape) it.flattened else listOf(it) }
 
 //
+val IriTemplateMapping.templateVariable: String? get() = this.templateVariable().value
+val IriTemplateMapping.linkExpression: String? get() = this.linkExpression().value
+
+//
 val PropertyShape.path: String? get() = this.path().value
+val PropertyShape.description: String? get() = this.description().value
 val PropertyShape.range: Shape get() = this.range()
 val PropertyShape.minCount: Int? get() = this.minCount().value
 val PropertyShape.maxCount: Int? get() = this.maxCount().value
