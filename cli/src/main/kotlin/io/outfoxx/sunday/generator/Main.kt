@@ -20,13 +20,20 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerateCommand
+import io.outfoxx.sunday.generator.python.PythonHttpxGenerateCommand
+import io.outfoxx.sunday.generator.python.PythonLitestarGenerateCommand
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerateCommand
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerateCommand
 
-fun main(args: Array<String>) =
+fun sundayCommand() =
   GenerateCommand()
+    .subcommands(IrCommand())
     .subcommands(KotlinJAXRSGenerateCommand(), KotlinSundayGenerateCommand())
     .subcommands(SwiftSundayGenerateCommand())
     .subcommands(TypeScriptSundayGenerateCommand())
+    .subcommands(PythonHttpxGenerateCommand(), PythonLitestarGenerateCommand())
     .versionOption()
+
+fun main(args: Array<String>) =
+  sundayCommand()
     .main(args)

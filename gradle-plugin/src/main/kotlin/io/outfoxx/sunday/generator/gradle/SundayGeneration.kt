@@ -19,7 +19,7 @@
 package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection

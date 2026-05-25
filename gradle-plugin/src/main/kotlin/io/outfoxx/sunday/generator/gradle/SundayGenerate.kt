@@ -21,10 +21,12 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.common.APIProcessor
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator.Options.BaseUriMode
-import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.KotlinSundayIrGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
@@ -42,7 +44,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -187,13 +188,7 @@ abstract class SundayGenerate
         .directoryProperty()
         .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
 
-    @get:Internal
-    val rootDir: Property<Directory> =
-      objects
-        .directoryProperty()
-        .convention(project.layout.projectDirectory)
-
-    private val apiProcessor = APIProcessor()
+    private val apiExporter = GeneratedApiIrExporter()
 
     @TaskAction
     fun generate() {
@@ -246,80 +241,66 @@ abstract class SundayGenerate
           generationTimestamp = generationTimestamp.orNull,
         )
 
-      source
-        .filter { it.extension == "raml" && it.isFile }
-        .forEach { file ->
-          processFile(file, typeRegistry)
-        }
+      processFiles(
+        source.filter { it.isFile },
+        typeRegistry,
+      )
 
       typeRegistry.generateFiles(categories, outputDirFile.toPath())
     }
 
-    private fun processFile(
-      file: File,
+    private fun processFiles(
+      files: Iterable<File>,
       typeRegistry: KotlinTypeRegistry,
     ) {
 
-      val processed = apiProcessor.process(file.toURI())
-
-      processed.validationLog.forEach {
-        val level =
-          when (it.level) {
-            APIProcessor.Result.Level.Error -> LogLevel.ERROR
-            APIProcessor.Result.Level.Warning -> LogLevel.WARN
-            APIProcessor.Result.Level.Info -> LogLevel.INFO
+      files.forEach { file ->
+        val api =
+          try {
+            apiExporter.export(file.toURI())
+          } catch (x: IllegalArgumentException) {
+            logger.log(LogLevel.ERROR, x.message.orEmpty())
+            throw InvalidUserDataException("Sunday source files are invalid")
           }
-        val errorFile = File(it.file).relativeToOrSelf(rootDir.get().asFile)
-        logger.log(level, "$errorFile:${it.line}: ${it.message}")
-      }
 
-      if (!processed.isValid) {
-        throw InvalidUserDataException("$file is invalid")
-      }
+        try {
+          when (framework.get()) {
+            TargetFramework.JAXRS ->
+              KotlinJAXRSIrGenerator(
+                api,
+                typeRegistry,
+                KotlinJAXRSOptions(
+                  flowCoroutines.get(),
+                  coroutines.get(),
+                  reactiveResponseType.orNull,
+                  explicitSecurityParameters.get(),
+                  baseUriMode.orNull,
+                  alwaysUseResponseReturn.get(),
+                  servicePkgName.get(),
+                  problemBaseUri.get(),
+                  defaultMediaTypes.get(),
+                  serviceSuffix.get(),
+                  quarkus.get(),
+                ),
+              ).generateServiceTypes()
 
-      val generator =
-        when (framework.get()) {
-          TargetFramework.JAXRS ->
-            KotlinJAXRSGenerator(
-              processed.document,
-              processed.shapeIndex,
-              typeRegistry,
-              KotlinJAXRSGenerator.Options(
-                flowCoroutines.get(),
-                coroutines.get(),
-                reactiveResponseType.orNull,
-                explicitSecurityParameters.get(),
-                baseUriMode.orNull,
-                alwaysUseResponseReturn.get(),
-                servicePkgName.get(),
-                problemBaseUri.get(),
-                defaultMediaTypes.get(),
-                serviceSuffix.get(),
-                quarkus.get(),
-              ),
-            )
-
-          TargetFramework.Sunday ->
-            KotlinSundayGenerator(
-              processed.document,
-              processed.shapeIndex,
-              typeRegistry,
-              KotlinSundayGenerator.Options(
-                useResultResponseReturn.orNull ?: false,
-                servicePkgName.get(),
-                problemBaseUri.get(),
-                defaultMediaTypes.get(),
-                serviceSuffix.get(),
-              ),
-            )
+            TargetFramework.Sunday ->
+              KotlinSundayIrGenerator(
+                api,
+                typeRegistry,
+                KotlinSundayOptions(
+                  useResultResponseReturn.orNull ?: false,
+                  servicePkgName.get(),
+                  problemBaseUri.get(),
+                  defaultMediaTypes.get(),
+                  serviceSuffix.get(),
+                ),
+              ).generateServiceTypes()
+          }
+        } catch (x: GenerationException) {
+          logger.error("${x.file}:${x.line}: ${x.message}")
+          throw InvalidUserDataException("Sunday source files are invalid")
         }
-
-      try {
-
-        generator.generateServiceTypes()
-      } catch (x: GenerationException) {
-        logger.error("${x.file}:${x.line}: ${x.message}")
-        throw InvalidUserDataException("$file is invalid")
       }
     }
   }
