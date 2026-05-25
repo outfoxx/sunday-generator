@@ -31,6 +31,7 @@ class LocalSwiftCompiler(
 
     val localPkgFile =
       Paths.get(SwiftCompiler::class.java.getResource("/swift/compile/local/Package.swift")!!.toURI())
+    val localPkgDir = localPkgFile.parent
 
     val buildDir = localPkgFile.resolve("../../../../../../../build").normalize()
 
@@ -43,7 +44,21 @@ class LocalSwiftCompiler(
         workDir
       }
 
-    Files.copy(localPkgFile, workDir.resolve("Package.swift"))
+    val packageFile = workDir.resolve("Package.swift")
+    Files.copy(localPkgFile, packageFile)
+
+    val localSundaySwift = localPkgDir.resolve("../../../../../../../../sunday-swift").normalize()
+    if (Files.isDirectory(localSundaySwift)) {
+      Files.writeString(
+        packageFile,
+        Files
+          .readString(packageFile)
+          .replace(
+            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", branch: \"next\")",
+            ".package(path: \"${localSundaySwift.toAbsolutePath()}\")",
+          ),
+      )
+    }
   }
 
   override fun compile(): Pair<Int, String> {
