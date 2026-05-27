@@ -33,6 +33,9 @@ jobs:
       with:
         node-version: '18'
 
+    - name: Setup uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
     - name: Build & Test
       run: ./gradlew check sonar
       env:
