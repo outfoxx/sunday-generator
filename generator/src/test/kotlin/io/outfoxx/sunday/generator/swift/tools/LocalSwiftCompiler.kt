@@ -25,7 +25,8 @@ class LocalSwiftCompiler(
   workDir: Path,
 ) : SwiftCompiler(workDir) {
 
-  private val swiftBuildDir: Path
+  private val swiftBuildRoot: Path
+  private val swiftCacheDir: Path
   private val resolvedDependencyBuild: Boolean
 
   init {
@@ -36,14 +37,20 @@ class LocalSwiftCompiler(
 
     val buildDir = localPkgFile.resolve("../../../../../../../build").normalize()
 
-    swiftBuildDir =
+    val validationDir =
       if (Files.isDirectory(buildDir) && System.getenv("CI").isNullOrBlank()) {
         val cacheDir = buildDir.resolve("validation/swift").toAbsolutePath()
         Files.createDirectories(cacheDir)
         cacheDir
       } else {
-        workDir
+        workDir.resolve("validation").toAbsolutePath()
       }
+    Files.createDirectories(validationDir)
+
+    swiftBuildRoot = workDir.resolve("build").toAbsolutePath()
+    swiftCacheDir = validationDir.resolve("package-cache")
+    Files.createDirectories(swiftBuildRoot)
+    Files.createDirectories(swiftCacheDir)
 
     val packageFile = workDir.resolve("Package.swift")
     Files.copy(localPkgFile, packageFile)
@@ -71,16 +78,18 @@ class LocalSwiftCompiler(
       buildList {
         add(command)
         add("build")
+        add("--package-path")
+        add("$workDir")
         add("--manifest-cache")
         add("local")
         add("--disable-index-store")
         if (resolvedDependencyBuild) {
-          add("--disable-automatic-resolution")
+          add("--only-use-versions-from-resolved-file")
         }
-        add("--build-path")
-        add("${swiftBuildDir.resolve("build")}")
+        add("--scratch-path")
+        add("$swiftBuildRoot")
         add("--cache-path")
-        add("${swiftBuildDir.resolve("cache")}")
+        add("$swiftCacheDir")
       }
 
     val buildPkg =
