@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -881,6 +882,29 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(aggregateSource.contains("@RegisterRestClient(baseUri = \"http://localhost:9080\")"), aggregateSource)
     assertFalse(aggregateSource.contains("@Path(value = \"http://localhost:9080\")"), aggregateSource)
     assertFalse(usersSource.contains("@RegisterRestClient"), usersSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `treats OpenAPI empty schemas as Any in Kotlin JAX-RS`(
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = clientTypeRegistry()
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, kotlinJAXRSTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val holderSource = kotlinSource("io.test", findType("io.test.AnyHolder", builtTypes))
+    val serviceSource = kotlinSource("io.test.service", findType("io.test.service.API", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(holderSource.contains("public val `value`: Any?"), holderSource)
+    assertTrue(holderSource.contains("public val `documented`: Any?"), holderSource)
+    assertTrue(holderSource.contains("public val `named`: Any?"), holderSource)
+    assertTrue(serviceSource.contains("body: Any"), serviceSource)
+    assertTrue(serviceSource.contains("public fun updateValue("), serviceSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

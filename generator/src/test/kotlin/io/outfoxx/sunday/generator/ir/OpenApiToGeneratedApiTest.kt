@@ -202,6 +202,38 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI empty schemas to any JSON values`(
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+    val operation =
+      api
+        .services
+        .single()
+        .operations
+        .single()
+    val anyJson = api.models.single { model -> model.name == "AnyJson" }
+    val anyHolder = api.models.single { model -> model.name == "AnyHolder" }
+
+    assertEquals(GeneratedTypeRef.scalar("any"), operation.requestBody?.type)
+    assertEquals(GeneratedTypeRef.named("AnyJson"), operation.responses.single().type)
+    assertEquals(GeneratedModel.Kind.SCALAR_ALIAS, anyJson.kind)
+    assertEquals(listOf(GeneratedTypeRef.scalar("any")), anyJson.aliases)
+    assertEquals(
+      GeneratedTypeRef.scalar("any"),
+      anyHolder.properties.single { property -> property.name == "value" }.type,
+    )
+    assertEquals(
+      GeneratedTypeRef.scalar("any"),
+      anyHolder.properties.single { property -> property.name == "documented" }.type,
+    )
+    assertEquals(
+      GeneratedTypeRef.named("AnyJson"),
+      anyHolder.properties.single { property -> property.name == "named" }.type,
+    )
+  }
+
+  @Test
   fun `maps OpenAPI 3_1 composition and discriminators to generated API IR`(
     @ResourceUri("openapi/ir/composition-3.1.yaml") testUri: URI,
   ) {

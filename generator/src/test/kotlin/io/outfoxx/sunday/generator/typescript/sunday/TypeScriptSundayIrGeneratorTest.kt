@@ -45,6 +45,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
+import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -535,6 +536,44 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(updateSource.contains("'location': z.string().regex(/^[A-Z2-7]{26}$/).nullish()"), updateSource)
     assertFalse(updateSource.contains("z.record(z.string(), z.unknown()).regex"), updateSource)
+  }
+
+  @Test
+  fun `treats OpenAPI empty schemas as unknown in TypeScript Sunday`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val holderSource =
+      buildString {
+        FileSpec
+          .get(findTypeMod("AnyHolder@!any-holder", builtTypes), "any-holder")
+          .writeTo(this)
+      }
+    val serviceSource =
+      builtTypes
+        .map { (typeName, moduleSpec) ->
+          val imported = typeName.base as SymbolSpec.Imported
+          val modulePath = imported.source.removePrefix("!")
+          buildString {
+            FileSpec
+              .get(moduleSpec, modulePath)
+              .writeTo(this)
+          }
+        }.single { source -> source.contains("updateValue") }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(holderSource.contains("'value': z.unknown().nullish()"), holderSource)
+    assertTrue(holderSource.contains("'documented': z.unknown().nullish()"), holderSource)
+    assertTrue(holderSource.contains("'named': z.unknown().nullish()"), holderSource)
+    assertTrue(serviceSource.contains("body: unknown"), serviceSource)
+    assertTrue(serviceSource.contains("Operation<unknown, unknown, Factory>"), serviceSource)
   }
 
   @Test

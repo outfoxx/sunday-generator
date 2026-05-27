@@ -1159,6 +1159,39 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `treats OpenAPI empty schemas as Any in Kotlin Sunday`(
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val holderSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.AnyHolder", builtTypes))
+          .writeTo(this)
+      }
+    val serviceSource =
+      buildString {
+        FileSpec
+          .get("io.test.service", findType("io.test.service.API", builtTypes))
+          .writeTo(this)
+      }
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertContains(holderSource, "public val `value`: Any?")
+    assertContains(holderSource, "public val `documented`: Any?")
+    assertContains(holderSource, "public val `named`: Any?")
+    assertContains(serviceSource, "body: Any")
+    assertContains(serviceSource, "Operation<Any, Any, Req>")
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `lowers supported IR scalar formats to Kotlin temporal and identity types`() {
     val typeRegistry = typeRegistry()
     val api =

@@ -190,6 +190,24 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `Swift Sunday generated files treat OpenAPI empty schemas as AnyValue`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
+  ) {
+    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
+
+    val holderSource = Files.readString(compiler.srcDir.resolve("Models").resolve("AnyHolder.swift"))
+    val serviceSource = Files.readString(compiler.srcDir.resolve("API.swift"))
+
+    assertTrue(compileGeneratedFiles(compiler))
+    assertTrue(holderSource.contains("public let value: AnyValue?"), holderSource)
+    assertTrue(holderSource.contains("public let documented: AnyValue?"), holderSource)
+    assertTrue(holderSource.contains("public let named: AnyValue?"), holderSource)
+    assertTrue(serviceSource.contains("body: AnyValue"), serviceSource)
+    assertTrue(serviceSource.contains("Operation<AnyValue, AnyValue, TransportType>"), serviceSource)
+  }
+
+  @Test
   fun `Swift Sunday generated files compile from AsyncAPI source`(
     compiler: SwiftCompiler,
     @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") testUri: URI,

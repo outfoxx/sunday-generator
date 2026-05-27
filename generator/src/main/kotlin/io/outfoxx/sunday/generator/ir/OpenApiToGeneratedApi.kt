@@ -272,8 +272,12 @@ class OpenApiToGeneratedApi(
       )
     }
 
-    val type = schema.schemaType()
     val nullable = schema.isNullable()
+    if (schema.isUnconstrainedSchema()) {
+      return scalar("any", nullable = nullable)
+    }
+
+    val type = schema.schemaType()
     return when (type) {
       "array" ->
         GeneratedTypeRef(
@@ -354,6 +358,17 @@ class OpenApiToGeneratedApi(
           scope = scope,
           values = resolved.listValue("enum").mapNotNull { it?.toString() },
           documentation = documentation(description = resolved["description"] as? String),
+        )
+
+      resolved.isUnconstrainedSchema() ->
+        GeneratedModel(
+          name = name,
+          kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          scope = scope,
+          aliases = listOf(scalar("any", nullable = resolved.isNullable())),
+          documentation = documentation(description = resolved["description"] as? String),
+          examples = resolved.examples(),
+          deprecated = resolved["deprecated"] == true,
         )
 
       resolved.schemaType() == "array" ->
@@ -888,6 +903,11 @@ class OpenApiToGeneratedApi(
         }
     }
 
+  private fun Map<*, *>.isUnconstrainedSchema(): Boolean =
+    keys.all { key ->
+      key is String && (key in unconstrainedSchemaKeys || key.startsWith("x-"))
+    }
+
   private fun Map<*, *>.isNullable(): Boolean =
     this["nullable"] == true || (this["type"] as? List<*>)?.contains("null") == true
 
@@ -1037,6 +1057,27 @@ class OpenApiToGeneratedApi(
   private companion object {
 
     val httpMethods = setOf("get", "put", "post", "delete", "options", "head", "patch", "trace")
+    val unconstrainedSchemaKeys =
+      setOf(
+        "\$anchor",
+        "\$comment",
+        "\$defs",
+        "\$dynamicAnchor",
+        "\$id",
+        "\$schema",
+        "default",
+        "definitions",
+        "deprecated",
+        "description",
+        "example",
+        "examples",
+        "externalDocs",
+        "nullable",
+        "readOnly",
+        "title",
+        "writeOnly",
+        "xml",
+      )
     val yamlMapper = ObjectMapper(YAMLFactory())
     var activeDocument: OpenApiSourceDocument? = null
   }

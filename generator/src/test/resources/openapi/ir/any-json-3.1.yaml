@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Any JSON API
+  version: 1.0.0
+paths:
+  /values:
+    post:
+      operationId: updateValue
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnyJson'
+components:
+  schemas:
+    AnyJson: {}
+    AnyHolder:
+      type: object
+      properties:
+        value: {}
+        documented:
+          description: Any documented value
+        named:
+          $ref: '#/components/schemas/AnyJson'
