@@ -178,6 +178,7 @@
          <trusted-key id="F3184BCD55F4D016E30D4C9BF42E87F9665015C9" group="org.jsoup" name="jsoup" version="1.16.1"/>
          <trusted-key id="FA77DCFEF2EE6EB2DEBEDD2C012579464D01C06A" group="^org[.]apache($|([.].*))" regex="true"/>
          <trusted-key id="FA7929F83AD44C4590F6CC6815C71C0A4E0B8EDD" group="net.java.dev.jna" name="jna"/>
+         <trusted-key id="FCD3779E399C53D995FC82A35171BA3E54493550" group="org.apache.avro" name="avro" version="1.11.4"/>
          <trusted-key id="FF6E2C001948C5F2F38B0CC385911F425EC61B51">
             <trusting group="org.apiguardian"/>
             <trusting group="^org[.]junit($|([.].*))" regex="true"/>
