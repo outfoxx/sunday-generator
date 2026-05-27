@@ -26,6 +26,7 @@ class LocalSwiftCompiler(
 ) : SwiftCompiler(workDir) {
 
   private val swiftBuildDir: Path
+  private val resolvedDependencyBuild: Boolean
 
   init {
 
@@ -36,7 +37,7 @@ class LocalSwiftCompiler(
     val buildDir = localPkgFile.resolve("../../../../../../../build").normalize()
 
     swiftBuildDir =
-      if (Files.isDirectory(buildDir)) {
+      if (Files.isDirectory(buildDir) && System.getenv("CI").isNullOrBlank()) {
         val cacheDir = buildDir.resolve("validation/swift").toAbsolutePath()
         Files.createDirectories(cacheDir)
         cacheDir
@@ -48,7 +49,10 @@ class LocalSwiftCompiler(
     Files.copy(localPkgFile, packageFile)
 
     val localSundaySwift = localPkgDir.resolve("../../../../../../../../sunday-swift").normalize()
-    if (Files.isDirectory(localSundaySwift)) {
+    resolvedDependencyBuild = !Files.isDirectory(localSundaySwift)
+    if (resolvedDependencyBuild) {
+      Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
+    } else {
       Files.writeString(
         packageFile,
         Files
@@ -63,17 +67,27 @@ class LocalSwiftCompiler(
 
   override fun compile(): Pair<Int, String> {
 
+    val buildCommand =
+      buildList {
+        add(command)
+        add("build")
+        add("--manifest-cache")
+        add("local")
+        add("--disable-index-store")
+        if (resolvedDependencyBuild) {
+          add("--disable-automatic-resolution")
+        }
+        add("--build-path")
+        add("${swiftBuildDir.resolve("build")}")
+        add("--cache-path")
+        add("${swiftBuildDir.resolve("cache")}")
+      }
+
     val buildPkg =
       ProcessBuilder()
         .directory(workDir.toFile())
-        .command(
-          command,
-          "build",
-          "--build-path",
-          "${swiftBuildDir.resolve("build")}",
-          "--cache-path",
-          "${swiftBuildDir.resolve("cache")}",
-        ).redirectErrorStream(true)
+        .command(buildCommand)
+        .redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()
