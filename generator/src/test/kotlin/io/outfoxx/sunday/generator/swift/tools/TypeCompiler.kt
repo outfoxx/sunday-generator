@@ -22,10 +22,19 @@ import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.TypeSpec
+import org.opentest4j.AssertionFailedError
 import java.nio.file.Files
 import java.nio.file.Path
 
 fun compileTypes(
+  compiler: SwiftCompiler,
+  types: Map<DeclaredTypeName, TypeSpec>,
+): Boolean =
+  compiler.synchronizeCompilation {
+    compileTypesUnsafe(compiler, types)
+  }
+
+private fun compileTypesUnsafe(
   compiler: SwiftCompiler,
   types: Map<DeclaredTypeName, TypeSpec>,
 ): Boolean {
@@ -52,6 +61,7 @@ fun compileTypes(
         }
 
       Compilation.printFailure(files, output)
+      throw AssertionFailedError("Swift compilation failed:\n$output")
     }
 
     if (result == 0 && !generatedWarnings) {
@@ -68,7 +78,12 @@ fun compileTypes(
   }
 }
 
-fun compileGeneratedFiles(compiler: SwiftCompiler): Boolean {
+fun compileGeneratedFiles(compiler: SwiftCompiler): Boolean =
+  compiler.synchronizeCompilation {
+    compileGeneratedFilesUnsafe(compiler)
+  }
+
+private fun compileGeneratedFilesUnsafe(compiler: SwiftCompiler): Boolean {
   try {
     CompiledGeneratedSources.beginCompile()
     val (result, output) = compiler.compile()
@@ -88,6 +103,7 @@ fun compileGeneratedFiles(compiler: SwiftCompiler): Boolean {
           }
 
       Compilation.printFailure(files, output)
+      throw AssertionFailedError("Swift compilation failed:\n$output")
     }
 
     if (result == 0 && !generatedWarnings) {

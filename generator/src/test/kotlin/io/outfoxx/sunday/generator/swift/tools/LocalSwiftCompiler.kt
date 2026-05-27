@@ -38,7 +38,7 @@ class LocalSwiftCompiler(
     val buildDir = localPkgFile.resolve("../../../../../../../build").normalize()
 
     val validationDir =
-      if (Files.isDirectory(buildDir) && System.getenv("CI").isNullOrBlank()) {
+      if (Files.isDirectory(buildDir)) {
         val cacheDir = buildDir.resolve("validation/swift").toAbsolutePath()
         Files.createDirectories(cacheDir)
         cacheDir

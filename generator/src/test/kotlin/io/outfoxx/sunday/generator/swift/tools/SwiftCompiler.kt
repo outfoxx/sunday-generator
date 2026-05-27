@@ -19,6 +19,8 @@ package io.outfoxx.sunday.generator.swift.tools
 import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.io.Closeable
 import java.nio.file.Path
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.text.RegexOption.IGNORE_CASE
 
 abstract class SwiftCompiler(
@@ -62,4 +64,8 @@ abstract class SwiftCompiler(
   val srcDir: Path = workDir.resolve("src")
 
   abstract fun compile(): Pair<Int, String>
+
+  internal fun <T> synchronizeCompilation(action: () -> T): T = lock.withLock(action)
+
+  private val lock = ReentrantLock()
 }
