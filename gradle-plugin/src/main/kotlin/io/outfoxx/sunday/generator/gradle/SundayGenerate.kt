@@ -289,11 +289,10 @@ abstract class SundayGenerate
                 api,
                 typeRegistry,
                 KotlinSundayOptions(
-                  useResultResponseReturn.orNull ?: false,
-                  servicePkgName.get(),
-                  problemBaseUri.get(),
-                  defaultMediaTypes.get(),
-                  serviceSuffix.get(),
+                  defaultServicePackageName = servicePkgName.get(),
+                  defaultProblemBaseUri = problemBaseUri.get(),
+                  defaultMediaTypes = defaultMediaTypes.get(),
+                  serviceSuffix = serviceSuffix.get(),
                 ),
               ).generateServiceTypes()
           }

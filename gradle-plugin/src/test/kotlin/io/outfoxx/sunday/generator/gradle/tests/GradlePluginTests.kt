@@ -85,7 +85,7 @@ class GradlePluginTests {
     }
 
     dependencies {
-      implementation "io.outfoxx.sunday:sunday-core:1.0.0-beta.25"
+      implementation "io.outfoxx.sunday:sunday-core:2.0.0-beta.1"
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
       implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
@@ -159,7 +159,7 @@ class GradlePluginTests {
     }
 
     dependencies {
-      implementation "io.outfoxx.sunday:sunday-core:1.0.0-beta.25"
+      implementation "io.outfoxx.sunday:sunday-core:2.0.0-beta.1"
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
       implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
