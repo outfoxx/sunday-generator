@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedDocumentation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -194,15 +195,44 @@ class SwiftSundayIrGeneratorTest {
     compiler: SwiftCompiler,
     @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
   ) {
-    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
+    generateSwiftSundayFiles(
+      compiler,
+      GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = true)).export(testUri),
+    )
 
     val holderSource = Files.readString(compiler.srcDir.resolve("Models").resolve("AnyHolder.swift"))
-    val serviceSource = Files.readString(compiler.srcDir.resolve("API.swift"))
+    val entityStatePropertyValueSource =
+      Files.readString(
+        compiler.srcDir
+          .resolve("Narrative")
+          .resolve("Models")
+          .resolve("EntityStatePropertyValue.swift"),
+      )
+    val entityStatePropertyRefSource =
+      Files.readString(
+        compiler.srcDir
+          .resolve("Narrative")
+          .resolve("Models")
+          .resolve("EntityStatePropertyRef.swift"),
+      )
+    val serviceSource = Files.readString(compiler.srcDir.resolve("NarrativeAPI.swift"))
 
     assertTrue(compileGeneratedFiles(compiler))
     assertTrue(holderSource.contains("public let value: AnyValue?"), holderSource)
     assertTrue(holderSource.contains("public let documented: AnyValue?"), holderSource)
     assertTrue(holderSource.contains("public let named: AnyValue?"), holderSource)
+    assertTrue(
+      entityStatePropertyValueSource.contains("public struct EntityStatePropertyValue : EntityStateProperty"),
+      entityStatePropertyValueSource,
+    )
+    assertTrue(
+      entityStatePropertyValueSource.contains("public let value: AnyValue?"),
+      entityStatePropertyValueSource,
+    )
+    assertTrue(
+      entityStatePropertyRefSource.contains("case value(EntityStatePropertyValue)"),
+      entityStatePropertyRefSource,
+    )
     assertTrue(serviceSource.contains("body: AnyValue"), serviceSource)
     assertTrue(serviceSource.contains("Operation<AnyValue, AnyValue, TransportType>"), serviceSource)
   }
