@@ -2,32 +2,40 @@ import Foundation
 import PotentCodables
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchTest(body: Data) async throws -> [String : AnyValue] {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: body,
-      contentTypes: [.octetStream],
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+  public func fetchTest(body: Data) throws -> Sunday.Operation<Data, [String : AnyValue], TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: body,
+        contentTypes: [.octetStream],
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      )
     )
   }
 

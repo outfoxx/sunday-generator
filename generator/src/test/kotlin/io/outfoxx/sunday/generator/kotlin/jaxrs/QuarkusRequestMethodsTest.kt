@@ -18,11 +18,10 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -54,14 +53,7 @@ class QuarkusRequestMethodsTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
     val generated =

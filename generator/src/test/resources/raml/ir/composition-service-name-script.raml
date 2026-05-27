@@ -1,0 +1,22 @@
+#%RAML 1.0
+title: TurnPost API - Script
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+  common: composition-common-problems.raml
+mediaType:
+- application/json
+
+(sunday.name): Script
+(sunday.problemBaseUri): https://errors.example.com/script/problems/
+(sunday.problemTypes):
+  shared_local:
+    status: 404
+    title: Shared Local
+    detail: Script-local problem with a shared source name.
+
+/scripts:
+  get:
+    displayName: listScripts
+    (sunday.problems): [shared_local]
+    responses:
+      204:

@@ -1,8 +1,9 @@
 package io.test.service
 
 import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.RequestFactory
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.Request
 import io.test.Test1
 import io.test.Test2
 import io.test.Test3
@@ -11,12 +12,12 @@ import kotlin.collections.List
 import kotlin.reflect.typeOf
 import kotlinx.coroutines.flow.Flow
 
-public class API(
-  public val requestFactory: RequestFactory,
+public class API<Req : Request>(
+  public val transport: Transport<Req>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(),
 ) {
-  public fun fetchEventsSimple(): Flow<Test1> = this.requestFactory
+  public fun fetchEventsSimple(): Flow<Test1> = this.transport
     .eventStream(
       method = Method.Get,
       pathTemplate = "/test1",
@@ -24,7 +25,7 @@ public class API(
       decoder = { decoder, _, _, data, _ -> decoder.decode<Test1>(data, typeOf<Test1>()) }
     )
 
-  public fun fetchEventsDiscriminated(): Flow<Any> = this.requestFactory
+  public fun fetchEventsDiscriminated(): Flow<Any> = this.transport
     .eventStream(
       method = Method.Get,
       pathTemplate = "/test2",

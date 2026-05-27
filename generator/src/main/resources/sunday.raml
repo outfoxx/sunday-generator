@@ -29,6 +29,11 @@ types:
     type: string
     pattern: '^[a-z0-9_]+$'
 
+  ProblemUriParams:
+    type: object
+    properties:
+      /^.+$/: string
+
   TypeImplementation:
     type: object
     properties:
@@ -80,6 +85,10 @@ types:
     ]
 
 annotationTypes:
+
+  apiId:
+    type: string
+    allowedTargets: [API]
 
   name:
     type: string
@@ -203,8 +212,8 @@ annotationTypes:
   problemBaseUri:
     type: string
     allowedTargets: [Library, API, Overlay]
-  problemBaseUriParams:
-    type: object
+  problemUriParams:
+    type: ProblemUriParams
     allowedTargets: [Library, API, Overlay]
   problemTypes:
     type: ResponseProblemTypes

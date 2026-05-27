@@ -1,23 +1,28 @@
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = []
+    defaultAcceptTypes: [MediaType] = [],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchEventsSimple() -> AsyncStream<Base> {
-    return self.requestFactory.eventStream(
+  public func fetchEventsSimple() -> AsyncStream<any Base> {
+    return self.transport.eventStream(
       method: .get,
       pathTemplate: "/test1",
       pathParameters: nil,
@@ -26,12 +31,12 @@ public class API {
       contentTypes: nil,
       acceptTypes: [.eventStream],
       headers: nil,
-      decoder: { decoder, _, _, data, _ in try decoder.decode(Base.AnyRef.self, from: data).value }
+      decoder: { decoder, _, _, data, _ in try decoder.decode(BaseRef.self, from: data).value }
     )
   }
 
-  public func fetchEventsDiscriminated() -> AsyncStream<Base> {
-    return self.requestFactory.eventStream(
+  public func fetchEventsDiscriminated() -> AsyncStream<any Base> {
+    return self.transport.eventStream(
       method: .get,
       pathTemplate: "/test2",
       pathParameters: nil,

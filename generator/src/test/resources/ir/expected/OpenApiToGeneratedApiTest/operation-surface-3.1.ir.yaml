@@ -1,0 +1,99 @@
+irVersion: "1"
+name: "Project Surface API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ProjectSurfaceService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "updateProject"
+    method: "PATCH"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    - name: "includeArchived"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "boolean"
+      defaultValue: false
+      encoding:
+        style: "form"
+        explode: true
+    - name: "xTraceId"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      serializationName: "X-Trace-Id"
+      encoding:
+        style: "simple"
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectUpdate"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      payloads:
+      - type:
+          kind: "NAMED"
+          name: "Project"
+        mediaTypes:
+        - "application/json"
+      - type:
+          kind: "SCALAR"
+          name: "string"
+        mediaTypes:
+        - "text/plain"
+      headers:
+      - name: "eTag"
+        location: "HEADER"
+        type:
+          kind: "SCALAR"
+          name: "string"
+        serializationName: "ETag"
+        encoding:
+          style: "simple"
+      documentation:
+        description: "Updated project response."
+    media: {}
+  media: {}
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectUpdate"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media: {}

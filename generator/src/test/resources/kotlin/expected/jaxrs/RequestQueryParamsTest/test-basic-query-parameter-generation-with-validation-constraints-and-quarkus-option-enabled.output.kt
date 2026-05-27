@@ -7,6 +7,7 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import javax.validation.Valid
+import javax.validation.constraints.NotNull
 import kotlin.Int
 import kotlin.String
 import org.jboss.resteasy.reactive.RestQuery
@@ -18,8 +19,8 @@ public interface API {
   @GET
   @Path(value = "/tests")
   public fun fetchTest(
-    @RestQuery @Valid obj: Test,
-    @RestQuery strReq: String,
+    @RestQuery @NotNull @Valid obj: Test,
+    @RestQuery @NotNull strReq: String,
     @RestQuery @DefaultValue(value = "5") int: Int,
   ): RestResponse<Test>
 }

@@ -1,0 +1,98 @@
+irVersion: "1"
+name: "External Discriminator API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ExternalDiscriminatorService"
+  operations:
+  - id: "getAnimal"
+    method: "GET"
+    path: "/animals/{animalId}"
+    parameters:
+    - name: "animalId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "AnimalEnvelope"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Animal"
+  kind: "OBJECT"
+  properties:
+  - name: "kind"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  discriminator: "kind"
+  externallyDiscriminated: true
+  discriminatorMappings:
+    cat:
+      kind: "NAMED"
+      name: "Cat"
+    dog:
+      kind: "NAMED"
+      name: "Dog"
+- name: "AnimalEnvelope"
+  kind: "OBJECT"
+  properties:
+  - name: "animal"
+    type:
+      kind: "NAMED"
+      name: "Animal"
+    required: true
+    externalDiscriminator: "kind"
+  - name: "kind"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "Cat"
+  kind: "OBJECT"
+  properties:
+  - name: "huntingSkill"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    serializationName: "hunting-skill"
+  inherits:
+  - kind: "NAMED"
+    name: "Animal"
+  discriminatorValue: "cat"
+- name: "Dog"
+  kind: "OBJECT"
+  properties:
+  - name: "packSize"
+    type:
+      kind: "SCALAR"
+      name: "integer"
+    required: true
+    serializationName: "pack-size"
+  inherits:
+  - kind: "NAMED"
+    name: "Animal"
+  discriminatorValue: "dog"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

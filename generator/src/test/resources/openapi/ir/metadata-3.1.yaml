@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: Metadata API
+  version: 1.0.0
+  description: Metadata API documentation.
+tags:
+  - name: projects
+    description: Project operations.
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /projects:
+    post:
+      operationId: createProject
+      tags:
+        - projects
+      summary: Create project
+      description: Creates a project from metadata-rich input.
+      parameters:
+        - name: X-Trace-Id
+          in: header
+          description: Trace identifier.
+          schema:
+            type: string
+          example: trace-123
+      requestBody:
+        description: Project creation request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreate"
+            examples:
+              create:
+                summary: Create project example
+                description: Minimal project creation payload.
+                value:
+                  name: Build IR
+      responses:
+        "201":
+          description: Project created response.
+          headers:
+            Location:
+              description: Created project location.
+              schema:
+                type: string
+              example: /projects/project-1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+              examples:
+                created:
+                  summary: Created project example
+                  value:
+                    id: project-1
+                    name: Build IR
+components:
+  schemas:
+    ProjectCreate:
+      type: object
+      description: Project creation payload.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Project display name.
+          example: Build IR
+      example:
+        name: Build IR
+    Project:
+      type: object
+      description: Project response payload.
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Project identifier.
+          example: project-1
+        name:
+          type: string
+          description: Project display name.
+          example: Build IR
+      example:
+        id: project-1
+        name: Build IR

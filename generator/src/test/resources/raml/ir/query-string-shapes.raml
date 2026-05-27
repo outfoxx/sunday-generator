@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: Query String Shapes API
+mediaType: application/json
+
+securitySchemes:
+  signed:
+    type: Pass Through
+    describedBy:
+      queryString:
+        type: object
+        properties:
+          signature: string
+          expires: integer
+
+/projects:
+  get:
+    displayName: searchProjects
+    securedBy: [signed]
+    queryString:
+      description: Project search query object.
+      type: object
+      properties:
+        q: string
+        labels?: string[]
+    responses:
+      200:
+        body:
+          application/json:
+            type: object
+            properties:
+              total: integer

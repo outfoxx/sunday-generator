@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: File Payloads API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.problemTypes):
+  upload_failed:
+    status: 400
+    title: Upload Failed
+    detail: The uploaded archive could not be processed.
+    custom:
+      archive: file
+
+/archives:
+  post:
+    displayName: uploadArchive
+    (sunday.problems): [upload_failed]
+    body:
+      application/octet-stream:
+        type: file
+    responses:
+      200:
+        body:
+          application/octet-stream:
+            type: file

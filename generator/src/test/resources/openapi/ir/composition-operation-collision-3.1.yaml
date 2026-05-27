@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Craft HTTP API
+  version: 1.0.0
+x-sunday-apiId: craft
+paths:
+  /project-changes:
+    x-sunday-service: projects
+    get:
+      operationId: projectChanged
+      responses:
+        "200":
+          description: Project change response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string

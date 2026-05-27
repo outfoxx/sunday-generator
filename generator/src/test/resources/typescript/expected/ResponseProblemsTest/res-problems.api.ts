@@ -1,37 +1,49 @@
 import {InvalidIdProblemSchema} from './invalid-id-problem';
 import {Test, TestSchema} from './test';
 import {TestNotFoundProblemSchema} from './test-not-found-problem';
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(): Operation<void, Test, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
         options?.defaultAcceptTypes ?? [MediaType.JSON];
-    requestFactory.registerProblem('http://example.com/invalid_id', InvalidIdProblemSchema);
-    requestFactory.registerProblem('http://example.com/test_not_found', TestNotFoundProblemSchema);
+    transport.registerProblem('http://example.com/invalid_id', InvalidIdProblemSchema);
+    transport.registerProblem('http://example.com/test_not_found', TestNotFoundProblemSchema);
   }
 
-  fetchTest(signal?: AbortSignal): Promise<Test> {
-    return this.requestFactory.result(
-        {
+  fetchTest(): Operation<void, Test, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests',
           acceptTypes: this.defaultAcceptTypes,
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestReturnType: SchemaLike<Test> = TestSchema;

@@ -1,0 +1,168 @@
+irVersion: "1"
+name: "Inline Local Shapes API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "InlineLocalShapesService"
+  operations:
+  - id: "fetchProject"
+    method: "PUT"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "NAMED"
+        name: "FetchProjectProjectIdUriParam"
+        scope:
+          service: "InlineLocalShapesService"
+          operation: "fetchProject"
+          usage: "PARAMETER"
+          name: "projectId"
+      required: true
+      documentation:
+        description: "Project id family."
+    - name: "state"
+      location: "QUERY"
+      type:
+        kind: "NAMED"
+        name: "FetchProjectStateQueryParam"
+        scope:
+          service: "InlineLocalShapesService"
+          operation: "fetchProject"
+          usage: "PARAMETER"
+          name: "state"
+      required: true
+      documentation:
+        description: "Project state."
+    - name: "xMode"
+      location: "HEADER"
+      type:
+        kind: "NAMED"
+        name: "FetchProjectXModeHeaderParam"
+        scope:
+          service: "InlineLocalShapesService"
+          operation: "fetchProject"
+          usage: "PARAMETER"
+          name: "xMode"
+      required: true
+      serializationName: "X-Mode"
+      documentation:
+        description: "Projection mode."
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "FetchProjectRequestBody"
+        scope:
+          service: "InlineLocalShapesService"
+          operation: "fetchProject"
+          usage: "REQUEST_BODY"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "FetchProjectResponseBody"
+        scope:
+          service: "InlineLocalShapesService"
+          operation: "fetchProject"
+          usage: "RESPONSE_BODY"
+          status: 200
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "FetchProjectProjectIdUriParam"
+  kind: "ENUM"
+  scope:
+    service: "InlineLocalShapesService"
+    operation: "fetchProject"
+    usage: "PARAMETER"
+    name: "projectId"
+  values:
+  - "alpha"
+  - "beta"
+  documentation:
+    description: "Project id family."
+- name: "FetchProjectRequestBody"
+  kind: "OBJECT"
+  scope:
+    service: "InlineLocalShapesService"
+    operation: "fetchProject"
+    usage: "REQUEST_BODY"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "labels"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "string"
+  documentation:
+    description: "Project update body."
+- name: "FetchProjectResponseBody"
+  kind: "OBJECT"
+  scope:
+    service: "InlineLocalShapesService"
+    operation: "fetchProject"
+    usage: "RESPONSE_BODY"
+    status: 200
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  documentation:
+    description: "Project response body."
+- name: "FetchProjectStateQueryParam"
+  kind: "ENUM"
+  scope:
+    service: "InlineLocalShapesService"
+    operation: "fetchProject"
+    usage: "PARAMETER"
+    name: "state"
+  values:
+  - "active"
+  - "archived"
+  documentation:
+    description: "Project state."
+- name: "FetchProjectXModeHeaderParam"
+  kind: "ENUM"
+  scope:
+    service: "InlineLocalShapesService"
+    operation: "fetchProject"
+    usage: "PARAMETER"
+    name: "xMode"
+  values:
+  - "summary"
+  - "full"
+  serializationName: "X-Mode"
+  documentation:
+    description: "Projection mode."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

@@ -16,16 +16,13 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
-import amf.core.client.platform.model.document.Document
-import io.outfoxx.sunday.generator.APIAnnotationName
-import io.outfoxx.sunday.generator.GenerationMode.Client
-import io.outfoxx.sunday.generator.common.ShapeIndex
-import io.outfoxx.sunday.generator.swift.SwiftGenerator
-import io.outfoxx.sunday.generator.swift.SwiftResolutionContext
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
+import io.outfoxx.sunday.generator.swift.SwiftSundayIrGenerator
+import io.outfoxx.sunday.generator.swift.SwiftSundayOptions
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
+import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
-import io.outfoxx.sunday.generator.utils.encodes
-import io.outfoxx.sunday.generator.utils.findStringAnnotation
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.TypeSpec
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -37,48 +34,20 @@ fun findType(
   types: Map<DeclaredTypeName, TypeSpec>,
 ): TypeSpec = types[DeclaredTypeName.typeName(".$name")] ?: fail("Type '$name' not defined")
 
-fun generateTypes(
+fun generateSunday(
   uri: URI,
   typeRegistry: SwiftTypeRegistry,
   compiler: SwiftCompiler,
+  options: SwiftSundayOptions = swiftSundayTestOptions,
 ): Map<DeclaredTypeName, TypeSpec> {
 
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
+  val result = TestAPIProcessing.process(uri)
+  val api =
+    RamlToGeneratedApi(options = GeneratedApiIrOptions(deriveServicesFromTags = options.servicesFromTags))
+      .convert(result)
 
-  val apiModuleName =
-    document.encodes.findStringAnnotation(APIAnnotationName.SwiftModule, null)
-      ?: ""
-
-  val apiTypeName = DeclaredTypeName.typeName("$apiModuleName.API")
-  typeRegistry.addServiceType(apiTypeName, TypeSpec.classBuilder(apiTypeName))
-
-  TestAPIProcessing.generateTypes(document, shapeIndex, Client, typeRegistry::defineProblemType) { name, shape ->
-    val context = SwiftResolutionContext(document, shapeIndex, apiTypeName.nestedType(name))
-    typeRegistry.resolveTypeName(shape, context)
-  }
-
-  val builtTypes =
-    typeRegistry
-      .buildTypes()
-      .filter { it.key.enclosingTypeName() == null }
-
-  assertTrue(compileTypes(compiler, builtTypes))
-
-  return builtTypes
-}
-
-fun generate(
-  uri: URI,
-  typeRegistry: SwiftTypeRegistry,
-  compiler: SwiftCompiler,
-  generatorFactory: (Document, ShapeIndex) -> SwiftGenerator,
-): Map<DeclaredTypeName, TypeSpec> {
-
-  val (document, shapeIndex) = TestAPIProcessing.process(uri)
-
-  val generator = generatorFactory(document, shapeIndex)
-
-  generator.generateServiceTypes()
+  SwiftSundayIrGenerator(api, typeRegistry, options)
+    .generateServiceTypes()
 
   val builtTypes =
     typeRegistry

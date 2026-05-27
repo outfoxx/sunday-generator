@@ -1,0 +1,13 @@
+#%RAML 1.0 Library
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.kotlinModelPackage): io.example.library
+(sunday.swiftModelModule): LibraryModels
+(sunday.typeScriptModelModule): library-models
+
+types:
+  Test:
+    type: object
+    properties:
+      libraryValue: string

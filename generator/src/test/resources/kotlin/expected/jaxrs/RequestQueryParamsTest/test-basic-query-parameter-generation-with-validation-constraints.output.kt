@@ -2,6 +2,7 @@ package io.test.service
 
 import io.test.Test
 import javax.validation.Valid
+import javax.validation.constraints.NotNull
 import javax.ws.rs.Consumes
 import javax.ws.rs.DefaultValue
 import javax.ws.rs.GET
@@ -18,8 +19,8 @@ public interface API {
   @GET
   @Path(value = "/tests")
   public fun fetchTest(
-    @QueryParam(value = "obj") @Valid obj: Test,
-    @QueryParam(value = "str-req") strReq: String,
+    @QueryParam(value = "obj") @NotNull @Valid obj: Test,
+    @QueryParam(value = "str-req") @NotNull strReq: String,
     @QueryParam(value = "int") @DefaultValue(value = "5") int: Int,
   ): Response
 }

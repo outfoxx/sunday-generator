@@ -17,5 +17,32 @@
 package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.TypeSpec
 
 val QUARKUS_HTTP_PROBLEM = ClassName.bestGuess("io.quarkiverse.resteasy.problem.HttpProblem")
+
+const val QUARKUS_HTTP_PROBLEM_ALIAS = "QuarkusHttpProblem"
+
+/** Marker tag for generated Kotlin types that reference Quarkus' HttpProblem base type. */
+object QuarkusHttpProblemAlias
+
+/** Adds the Quarkus HttpProblem import alias marker to a type builder. */
+fun TypeSpec.Builder.addQuarkusHttpProblemAlias(): TypeSpec.Builder =
+  tag(QuarkusHttpProblemAlias::class, QuarkusHttpProblemAlias)
+
+/** Creates a KotlinPoet file with generated import aliases needed by the type. */
+fun kotlinFileSpec(
+  packageName: String,
+  typeSpec: TypeSpec,
+): FileSpec {
+  val builder = FileSpec.builder(packageName, typeSpec.name ?: "Generated")
+
+  if (typeSpec.tag(QuarkusHttpProblemAlias::class) != null) {
+    builder.addAliasedImport(QUARKUS_HTTP_PROBLEM, QUARKUS_HTTP_PROBLEM_ALIAS)
+  }
+
+  return builder
+    .addType(typeSpec)
+    .build()
+}

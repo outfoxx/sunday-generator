@@ -1,24 +1,28 @@
-import Foundation
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchTest() async throws -> URLRequest {
-    return try await self.requestFactory.request(
+  public func fetchTest() async throws -> TransportType.Request {
+    return try await self.transport.transportRequest(
       method: .get,
       pathTemplate: "/test/request",
       pathParameters: nil,

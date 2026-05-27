@@ -16,21 +16,12 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.asTypeName
-import io.outfoxx.sunday.generator.ProblemTypeDefinition
-import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.DETAIL
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.INSTANCE
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.TITLE
 import io.outfoxx.sunday.generator.kotlin.utils.ProblemField.TYPE
-import java.net.URI
 
 enum class KotlinProblemLibrary(
   val id: String,
@@ -63,14 +54,6 @@ interface KotlinProblemLibrarySupport {
   val throwableType: TypeName
 
   fun statusCodeAccess(varName: String): String
-
-  fun configureProblemType(
-    problemTypeBuilder: TypeSpec.Builder,
-    problemTypeName: ClassName,
-    problemTypeDefinition: ProblemTypeDefinition,
-    customProperties: List<ProblemCustomProperty>,
-    constructorBuilder: FunSpec.Builder,
-  )
 
   fun validateRfcCompliance() {
     ProblemRfcCompliance.validate(
@@ -119,74 +102,6 @@ private class QuarkusProblemLibrarySupport(
   override val throwableType: TypeName = QUARKUS_HTTP_PROBLEM
 
   override fun statusCodeAccess(varName: String): String = "$varName.statusCode"
-
-  override fun configureProblemType(
-    problemTypeBuilder: TypeSpec.Builder,
-    problemTypeName: ClassName,
-    problemTypeDefinition: ProblemTypeDefinition,
-    customProperties: List<ProblemCustomProperty>,
-    constructorBuilder: FunSpec.Builder,
-  ) {
-
-    constructorBuilder
-      .addParameter(
-        ParameterSpec
-          .builder(
-            "instance",
-            URI::class.asTypeName().copy(nullable = true),
-          ).defaultValue("null")
-          .build(),
-      ).addParameter(
-        ParameterSpec
-          .builder(
-            "cause",
-            Throwable::class.asTypeName().copy(nullable = true),
-          ).defaultValue("null")
-          .build(),
-      )
-
-    problemTypeBuilder
-      .superclass(QUARKUS_HTTP_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
-      .addSuperclassConstructorParameter("%L", buildBuilderCode(problemTypeDefinition, customProperties))
-
-    problemTypeBuilder.addInitializerBlock(
-      CodeBlock
-        .builder()
-        .beginControlFlow("if (cause != null)")
-        .addStatement("initCause(cause)")
-        .endControlFlow()
-        .build(),
-    )
-  }
-
-  private fun buildBuilderCode(
-    problemTypeDefinition: ProblemTypeDefinition,
-    customProperties: List<ProblemCustomProperty>,
-  ): CodeBlock {
-    val codeBuilder = CodeBlock.builder()
-    codeBuilder.add("run {\n").indent()
-    codeBuilder.addStatement("val builder = %T.builder()", QUARKUS_HTTP_PROBLEM)
-    codeBuilder.addStatement("builder.withType(TYPE_URI)")
-    codeBuilder.addStatement("builder.withTitle(%S)", problemTypeDefinition.title)
-    codeBuilder.addStatement("builder.withStatus(%L)", problemTypeDefinition.status)
-    codeBuilder.addStatement("builder.withDetail(%S)", problemTypeDefinition.detail)
-    codeBuilder.beginControlFlow("if (instance != null)")
-    codeBuilder.addStatement("builder.withInstance(instance)")
-    codeBuilder.endControlFlow()
-    customProperties.forEach { property ->
-      if (property.typeName.isNullable) {
-        codeBuilder.beginControlFlow("if (%N != null)", property.paramName)
-        codeBuilder.addStatement("builder.with(%S, %N)", property.jsonName, property.paramName)
-        codeBuilder.endControlFlow()
-      } else {
-        codeBuilder.addStatement("builder.with(%S, %N)", property.jsonName, property.paramName)
-      }
-    }
-    codeBuilder.addStatement("builder")
-    codeBuilder.unindent().add("}")
-    return codeBuilder.build()
-  }
 }
 
 private class SundayProblemLibrarySupport(
@@ -205,34 +120,6 @@ private class SundayProblemLibrarySupport(
   override val throwableType: TypeName = SUNDAY_HTTP_PROBLEM
 
   override fun statusCodeAccess(varName: String): String = "$varName.status"
-
-  override fun configureProblemType(
-    problemTypeBuilder: TypeSpec.Builder,
-    problemTypeName: ClassName,
-    problemTypeDefinition: ProblemTypeDefinition,
-    customProperties: List<ProblemCustomProperty>,
-    constructorBuilder: FunSpec.Builder,
-  ) {
-
-    constructorBuilder
-      .addParameter(
-        ParameterSpec
-          .builder(
-            "instance",
-            URI::class.asTypeName().copy(nullable = true),
-          ).defaultValue("null")
-          .build(),
-      )
-
-    problemTypeBuilder
-      .superclass(SUNDAY_HTTP_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
-      .addSuperclassConstructorParameter("TYPE_URI")
-      .addSuperclassConstructorParameter("%S", problemTypeDefinition.title)
-      .addSuperclassConstructorParameter("%L", problemTypeDefinition.status)
-      .addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
-      .addSuperclassConstructorParameter("instance")
-  }
 }
 
 private class ZalandoProblemLibrarySupport(
@@ -251,52 +138,4 @@ private class ZalandoProblemLibrarySupport(
   override val throwableType: TypeName = ZALANDO_THROWABLE_PROBLEM
 
   override fun statusCodeAccess(varName: String): String = "$varName.status?.statusCode"
-
-  override fun configureProblemType(
-    problemTypeBuilder: TypeSpec.Builder,
-    problemTypeName: ClassName,
-    problemTypeDefinition: ProblemTypeDefinition,
-    customProperties: List<ProblemCustomProperty>,
-    constructorBuilder: FunSpec.Builder,
-  ) {
-
-    constructorBuilder
-      .addParameter(
-        ParameterSpec
-          .builder(
-            "instance",
-            URI::class.asTypeName().copy(nullable = true),
-          ).defaultValue("null")
-          .build(),
-      ).addParameter(
-        ParameterSpec
-          .builder(
-            "cause",
-            ZALANDO_THROWABLE_PROBLEM.copy(nullable = true),
-          ).defaultValue("null")
-          .build(),
-      )
-
-    problemTypeBuilder
-      .superclass(ZALANDO_ABSTRACT_THROWABLE_PROBLEM)
-      .primaryConstructor(constructorBuilder.build())
-      .addSuperclassConstructorParameter("TYPE_URI")
-      .addSuperclassConstructorParameter("%S", problemTypeDefinition.title)
-      .addSuperclassConstructorParameter(
-        "%T.%L",
-        ZALANDO_STATUS,
-        HttpStatus.valueOf(problemTypeDefinition.status).name,
-      ).addSuperclassConstructorParameter("%S", problemTypeDefinition.detail)
-      .addSuperclassConstructorParameter("instance")
-      .addSuperclassConstructorParameter("cause")
-      .addFunction(
-        FunSpec
-          .builder("getCause")
-          .addAnnotation(JACKSON_JSON_IGNORE)
-          .returns(ZALANDO_EXCEPTIONAL.copy(nullable = true))
-          .addModifiers(com.squareup.kotlinpoet.KModifier.OVERRIDE)
-          .addCode("return super.cause")
-          .build(),
-      )
-  }
 }

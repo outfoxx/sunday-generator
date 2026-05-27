@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Source Order Media API
+  version: 1.0.0
+paths:
+  /users/{userId}:
+    patch:
+      operationId: updateUser
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: User updated.
+    delete:
+      operationId: deleteUser
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: User deleted.
+  /users/{userId}/avatar:
+    get:
+      operationId: getUserAvatar
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Avatar image.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string

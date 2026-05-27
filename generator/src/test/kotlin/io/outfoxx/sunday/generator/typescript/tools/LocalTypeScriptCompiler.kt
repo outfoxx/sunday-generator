@@ -31,7 +31,7 @@ class LocalTypeScriptCompiler(
     val buildPkg =
       ProcessBuilder()
         .directory(workDir.toFile())
-        .command(command, "install")
+        .command(command, "ci", "--ignore-scripts", "--no-audit", "--no-fund")
         .apply {
           environment().putAll(env)
         }.redirectErrorStream(true)
@@ -49,7 +49,7 @@ class LocalTypeScriptCompiler(
     val buildPkg =
       ProcessBuilder()
         .directory(workDir.toFile())
-        .command(command, "run", "build")
+        .command(tscCommand())
         .apply {
           environment().putAll(env)
         }.redirectErrorStream(true)
@@ -59,6 +59,19 @@ class LocalTypeScriptCompiler(
 
     return result to buildPkg.inputStream.readAllBytes().decodeToString()
   }
+
+  private fun tscCommand(): List<String> =
+    listOf(
+      workDir.resolve("node_modules/.bin/tsc").toString(),
+      "--project",
+      "tsconfig.json",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "--incremental",
+      "false",
+      "--noErrorTruncation",
+    )
 
   override fun close() {
   }

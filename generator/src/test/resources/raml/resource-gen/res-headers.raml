@@ -1,0 +1,23 @@
+#%RAML 1.0
+title: Test API
+mediaType:
+- application/json
+
+types:
+
+  Test:
+    type: object
+    properties:
+      value: string
+
+
+/tests:
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        headers:
+          Location: string
+          X-Rate-Limit-Remaining:
+            type: integer
+        body: Test

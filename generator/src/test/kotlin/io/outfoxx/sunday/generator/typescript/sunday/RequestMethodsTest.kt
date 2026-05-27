@@ -16,13 +16,12 @@
 
 package io.outfoxx.sunday.generator.typescript.sunday
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
-import io.outfoxx.sunday.generator.typescript.tools.generate
+import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
@@ -42,14 +41,7 @@ class RequestMethodsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
     val output =
@@ -63,111 +55,6 @@ class RequestMethodsTest {
   }
 
   @Test
-  fun `test promise request method generation`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            false,
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods.promises.api.ts", output)
-  }
-
-  @Test
-  fun `test request method generation with result response`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            true,
-            false,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods.result-response.api.ts", output)
-  }
-
-  @Test
-  fun `test request method generation with promise result response`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            true,
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods.promise-result-response.api.ts", output)
-  }
-
-  @Test
   fun `test request method generation with nullify`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
@@ -176,14 +63,7 @@ class RequestMethodsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
     val output =
@@ -194,110 +74,5 @@ class RequestMethodsTest {
       }
 
     assertSnapshot("RequestMethodsTest/req-methods-nullify.default.api.ts", output)
-  }
-
-  @Test
-  fun `test request method generation with nullify and promise results`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            false,
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods-nullify.promises.api.ts", output)
-  }
-
-  @Test
-  fun `test request method generation with nullify and result response`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            true,
-            false,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods-nullify.result-response.api.ts", output)
-  }
-
-  @Test
-  fun `test request method generation with nullify and promise result response`(
-    compiler: TypeScriptCompiler,
-    @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
-  ) {
-
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          TypeScriptSundayGenerator.Options(
-            true,
-            true,
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-          ),
-        )
-      }
-
-    val typeSpec = findTypeMod("API@!api", builtTypes)
-    val output =
-      buildString {
-        FileSpec
-          .get(typeSpec)
-          .writeTo(this)
-      }
-
-    assertSnapshot("RequestMethodsTest/req-methods-nullify.promise-result-response.api.ts", output)
   }
 }

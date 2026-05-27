@@ -1,13 +1,14 @@
+import {Child1Schema} from './child1';
+import {Child2Schema} from './child2';
+import {SchemaOutput, SchemaRuntime, defineSchema} from '@outfoxx/sunday';
+import {z} from 'zod';
 
-export interface ParentSpec {
-}
 
-export abstract class Parent implements ParentSpec {
+export type Parent = SchemaOutput<typeof ParentSchema>;
 
-  readonly abstract type: string;
-
-  toString(): string {
-    return `Parent()`;
-  }
-
-}
+export const ParentSchema = defineSchema((runtime: SchemaRuntime) => {
+  return z.union([
+    runtime.resolveSchema(Child1Schema),
+    runtime.resolveSchema(Child2Schema)
+  ]);
+});

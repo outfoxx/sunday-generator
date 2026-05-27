@@ -1,0 +1,45 @@
+#%RAML 1.0
+title: Operation Headers Media API
+mediaType:
+- application/json
+
+types:
+  ProjectCreate:
+    type: object
+    properties:
+      name: string
+
+  Project:
+    type: object
+    properties:
+      id: string
+      name: string
+
+/projects:
+  post:
+    displayName: createProject
+    queryParameters:
+      client:
+        type: string
+        enum: [sunday]
+        required: true
+    headers:
+      Request-Id:
+        type: string
+        minLength: 8
+        maxLength: 64
+      Client-Version:
+        type: string
+        enum: ["2026-05"]
+        required: true
+    body:
+      type: ProjectCreate
+    responses:
+      201:
+        headers:
+          Location: string
+          Retry-After?:
+            type: integer
+        body:
+          application/json:
+            type: Project

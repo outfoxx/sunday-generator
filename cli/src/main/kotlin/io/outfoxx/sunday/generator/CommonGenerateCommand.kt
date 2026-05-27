@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.document.Document
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
@@ -29,10 +28,7 @@ import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
-import io.outfoxx.sunday.generator.common.APIProcessor
-import io.outfoxx.sunday.generator.common.ShapeIndex
 import java.net.URI
-import kotlin.system.exitProcess
 
 abstract class CommonGenerateCommand(
   name: String,
@@ -72,42 +68,7 @@ abstract class CommonGenerateCommand(
     .validate { URI(it) }
 
   val files by argument(
-    help = "RAML source files",
+    help = "Source files",
   ).file(mustExist = true, canBeFile = true, canBeDir = false)
     .multiple(required = true)
-
-  abstract val typeRegistry: TypeRegistry
-
-  abstract fun generatorFactory(
-    document: Document,
-    shapeIndex: ShapeIndex,
-  ): Generator
-
-  override fun run() {
-    println("Generating ${this.outputCategories} types")
-
-    val apiProcessor = APIProcessor()
-
-    files.forEach { file ->
-
-      println("Processing $file")
-
-      val processed = apiProcessor.process(file.toURI())
-
-      processed.validationLog.forEach {
-        val out = if (it.level == APIProcessor.Result.Level.Error) System.err else System.out
-        out.println("${it.level.toString().lowercase()}| ${it.file}:${it.line}: ${it.message}")
-      }
-
-      if (!processed.isValid) {
-        exitProcess(1)
-      }
-
-      val generator = generatorFactory(processed.document, processed.shapeIndex)
-
-      generator.generateServiceTypes()
-    }
-
-    typeRegistry.generateFiles(outputCategories.toSet(), outputDirectory.toPath())
-  }
 }

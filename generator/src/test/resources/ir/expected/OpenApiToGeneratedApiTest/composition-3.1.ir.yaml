@@ -1,0 +1,131 @@
+irVersion: "1"
+name: "Composition API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "CompositionService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "getWorkItem"
+    method: "GET"
+    path: "/work-items/{itemId}"
+    parameters:
+    - name: "itemId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      encoding:
+        style: "simple"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "WorkItem"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Work item response."
+    media: {}
+  - id: "getActivity"
+    method: "GET"
+    path: "/activity"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Activity"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Activity response."
+    media: {}
+  - id: "getInlineActivity"
+    method: "GET"
+    path: "/activity/inline"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "GetInlineActivityResponseBody"
+        scope:
+          service: "CompositionService"
+          operation: "getInlineActivity"
+          usage: "RESPONSE_BODY"
+          status: 200
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Inline activity response."
+    media: {}
+  media: {}
+models:
+- name: "Activity"
+  kind: "UNION"
+  aliases:
+  - kind: "NAMED"
+    name: "Bug"
+  - kind: "NAMED"
+    name: "Feature"
+  discriminator: "kind"
+  discriminatorMappings:
+    bug:
+      kind: "NAMED"
+      name: "Bug"
+    feature:
+      kind: "NAMED"
+      name: "Feature"
+- name: "Bug"
+  kind: "OBJECT"
+  properties:
+  - name: "severity"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  inherits:
+  - kind: "NAMED"
+    name: "WorkItem"
+  discriminatorValue: "bug"
+- name: "Feature"
+  kind: "OBJECT"
+  properties:
+  - name: "rolloutStage"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    serializationName: "rollout-stage"
+  inherits:
+  - kind: "NAMED"
+    name: "WorkItem"
+  discriminatorValue: "feature"
+- name: "GetInlineActivityResponseBody"
+  kind: "UNION"
+  scope:
+    service: "CompositionService"
+    operation: "getInlineActivity"
+    usage: "RESPONSE_BODY"
+    status: 200
+  aliases:
+  - kind: "NAMED"
+    name: "Bug"
+  - kind: "NAMED"
+    name: "Feature"
+- name: "WorkItem"
+  kind: "OBJECT"
+  properties:
+  - name: "kind"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  discriminator: "kind"
+media: {}

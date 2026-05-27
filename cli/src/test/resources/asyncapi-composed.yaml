@@ -1,0 +1,45 @@
+asyncapi: 3.1.0
+info:
+  title: CLI Composed Events API
+  version: 1.0.0
+x-sunday-apiId: cli-composed
+channels:
+  events:
+    address: /events
+    messages:
+      eventEnvelope:
+        $ref: "#/components/messages/EventEnvelopeMessage"
+operations:
+  streamEvents:
+    action: receive
+    x-sunday-service: Events
+    channel:
+      $ref: "#/channels/events"
+    messages:
+    - $ref: "#/channels/events/messages/eventEnvelope"
+components:
+  messages:
+    EventEnvelopeMessage:
+      name: EventEnvelope
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/EventEnvelope"
+  schemas:
+    EventEnvelope:
+      type: object
+      required: [id, type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+    ProjectCreatedData:
+      type: object
+      description: Data for `project.created`.
+      required: [projectId]
+      properties:
+        projectId:
+          type: string

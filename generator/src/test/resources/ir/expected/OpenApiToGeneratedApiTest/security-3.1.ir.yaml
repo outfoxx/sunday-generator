@@ -1,0 +1,104 @@
+irVersion: "1"
+name: "Security API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "SecurityService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "listProjects"
+    method: "GET"
+    path: "/projects"
+    responses:
+    - status: 200
+      type:
+        kind: "ARRAY"
+        name: "array"
+        arguments:
+        - kind: "NAMED"
+          name: "Project"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Project list response."
+    auth:
+      schemes:
+      - "bearerAuth"
+      - "traceKey"
+      - "queryKey"
+      requirements:
+      - schemes:
+        - "bearerAuth"
+        - "traceKey"
+      - schemes:
+        - "queryKey"
+      securitySchemes:
+      - name: "bearerAuth"
+        type: "http"
+        scheme: "bearer"
+        bearerFormat: "JWT"
+        documentation:
+          description: "Bearer token authentication."
+      - name: "traceKey"
+        type: "Api Key"
+        headers:
+        - name: "xTraceKey"
+          location: "HEADER"
+          type:
+            kind: "SCALAR"
+            name: "string"
+          required: true
+          serializationName: "X-Trace-Key"
+        documentation:
+          description: "Required trace key."
+      - name: "queryKey"
+        type: "Api Key"
+        queryParameters:
+        - name: "apiKey"
+          location: "QUERY"
+          type:
+            kind: "SCALAR"
+            name: "string"
+          required: true
+          serializationName: "api_key"
+        documentation:
+          description: "Query API key."
+    media: {}
+  auth:
+    schemes:
+    - "bearerAuth"
+    requirements:
+    - schemes:
+      - "bearerAuth"
+    securitySchemes:
+    - name: "bearerAuth"
+      type: "http"
+      scheme: "bearer"
+      bearerFormat: "JWT"
+      documentation:
+        description: "Bearer token authentication."
+  media: {}
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+auth:
+  schemes:
+  - "bearerAuth"
+  requirements:
+  - schemes:
+    - "bearerAuth"
+  securitySchemes:
+  - name: "bearerAuth"
+    type: "http"
+    scheme: "bearer"
+    bearerFormat: "JWT"
+    documentation:
+      description: "Bearer token authentication."
+media: {}

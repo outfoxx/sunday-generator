@@ -18,12 +18,12 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
@@ -42,14 +42,7 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -71,14 +64,7 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -100,14 +86,7 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -129,14 +108,7 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -158,26 +130,23 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          null,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          quarkus = true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -199,26 +168,23 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf(ValidationConstraints))
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          null,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          quarkus = true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -240,26 +206,23 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          null,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          quarkus = true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -281,26 +244,23 @@ class RequestQueryParamsTest {
     val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
+      generateJaxrs(
+        testUri,
+        typeRegistry,
+        KotlinJAXRSOptions(
+          coroutineFlowMethods = false,
+          coroutineServiceMethods = false,
+          null,
+          false,
+          null,
+          false,
+          "io.test.service",
+          "http://example.com/",
+          listOf("application/json"),
+          "API",
+          quarkus = true,
+        ),
+      )
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 

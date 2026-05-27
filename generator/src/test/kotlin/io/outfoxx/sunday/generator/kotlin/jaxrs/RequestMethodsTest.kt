@@ -16,15 +16,15 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
-import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
-import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
@@ -52,25 +52,11 @@ class RequestMethodsTest {
 
     val typeRegistry = typeRegistry()
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-server-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -89,25 +75,11 @@ class RequestMethodsTest {
         problemRfc = KotlinProblemRfc.RFC7807,
       )
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-client-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -126,25 +98,11 @@ class RequestMethodsTest {
         problemRfc = KotlinProblemRfc.RFC7807,
       )
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-client-mode-with-nullify.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -163,37 +121,27 @@ class RequestMethodsTest {
         problemRfc = KotlinProblemRfc.RFC7807,
       )
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            true,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            false,
-          ),
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(
+      testUri,
+      typeRegistry,
+      KotlinJAXRSOptions(
+        coroutineFlowMethods = false,
+        coroutineServiceMethods = false,
+        null,
+        false,
+        null,
+        true,
+        "io.test.service",
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        false,
+      ),
+    )
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-client-mode-with-nullify-and-response.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -204,37 +152,27 @@ class RequestMethodsTest {
 
     val typeRegistry = typeRegistry()
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(
+      testUri,
+      typeRegistry,
+      KotlinJAXRSOptions(
+        coroutineFlowMethods = false,
+        coroutineServiceMethods = false,
+        null,
+        false,
+        null,
+        false,
+        "io.test.service",
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        quarkus = true,
+      ),
+    )
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-server-mode-with-quarkus-option-enabled.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -253,37 +191,30 @@ class RequestMethodsTest {
         problemRfc = KotlinProblemRfc.RFC7807,
       )
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          KotlinJAXRSGenerator.Options(
-            coroutineFlowMethods = false,
-            coroutineServiceMethods = false,
-            null,
-            false,
-            null,
-            false,
-            "io.test.service",
-            "http://example.com/",
-            listOf("application/json"),
-            "API",
-            quarkus = true,
-          ),
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(
+      testUri,
+      typeRegistry,
+      KotlinJAXRSOptions(
+        coroutineFlowMethods = false,
+        coroutineServiceMethods = false,
+        null,
+        false,
+        null,
+        false,
+        "io.test.service",
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        quarkus = true,
+      ),
+    )
 
     assertKotlinJaxrsSnapshot(
       "RequestMethodsTest/test-request-method-generation-in-client-mode-with-quarkus-option-enabled.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
+
+  private fun compiledServiceSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
 }

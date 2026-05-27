@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Extensions API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/{version}
+    variables:
+      version:
+        default: v1
+x-sunday-problemBaseUri: https://errors.example.com/{version}/
+x-sunday-problemUriParams:
+  version: v2
+x-sunday-problemTypes:
+  invalid_project:
+    status: 400
+    title: Invalid Project
+    detail: Project input is invalid.
+    custom:
+      reason: string
+x-sunday-zanzibar:
+  permission: project.create
+  resourceType: project
+paths:
+  /projects:
+    post:
+      operationId: createProject
+      x-sunday-problems:
+        - invalid_project
+      x-sunday-nullify:
+        - invalid_project
+        - 404
+      x-sunday-zanzibar:
+        permission: project.write
+      x-sunday-policy:
+        timeout: PT5S
+        retry:
+          maxRetries: "3"
+          delay: PT1S
+        circuitBreaker:
+          requestVolumeThreshold: "10"
+        clientRateLimit:
+          value: "20"
+          window: PT1S
+        serverRateLimit:
+          value: "100"
+          window: PT1M
+        source: openapi
+      responses:
+        "201":
+          description: Created.
+        "400":
+          description: Invalid project.

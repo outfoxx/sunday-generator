@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: Avatar API
+  version: 1.0.0
+paths:
+  /projects/{projectId}/avatar:
+    put:
+      tags: [Projects]
+      operationId: putProjectAvatar
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/AvatarType"
+      requestBody:
+        $ref: "#/components/requestBodies/AvatarImage"
+      responses:
+        "204":
+          description: Avatar stored.
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+    AvatarType:
+      name: contentType
+      in: header
+      required: true
+      schema:
+        $ref: "#/components/schemas/AvatarContentType"
+  requestBodies:
+    AvatarImage:
+      required: true
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+  schemas:
+    AvatarContentType:
+      type: string
+      enum:
+        - image/png
+        - image/jpeg
+        - image/webp

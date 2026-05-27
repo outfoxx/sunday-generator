@@ -124,6 +124,7 @@ interface JaxRsTypes {
 
   // Client Only
   val clientHeaderParam: ClassName? get() = null
+  val registerRestClient: ClassName? get() = null
 
   fun httpMethod(method: String): ClassName? =
     try {
@@ -294,5 +295,6 @@ interface JaxRsTypes {
     override val dateFormat = ClassName(pkg, "DateFormat")
 
     override val clientHeaderParam = ClassName("org.eclipse.microprofile.rest.client.annotation", "ClientHeaderParam")
+    override val registerRestClient = ClassName("org.eclipse.microprofile.rest.client.inject", "RegisterRestClient")
   }
 }

@@ -4,7 +4,7 @@ javaLanguage = "21"
 # @keep language version
 kotlinLanguage = "2.3"
 ##
-amfClient = "5.4.0"
+amfClient = "5.6.4"
 clikt = "5.0.1"
 diffutils = "4.12"
 dockerJava = "3.4.0"
@@ -16,6 +16,7 @@ githubRelease = "2.5.2"
 graalNative = "0.11.1"
 hamcrest = "3.0"
 jackson = "2.21.0"
+jacksonKotlin = "2.21.0"
 jakartaJaxrs = "4.0.0"
 javaxJaxrs = "2.0.2.Final"
 jcolor = "5.5.1"
@@ -36,7 +37,7 @@ rxJava3 = "3.1.9"
 shadow = "9.3.1"
 slf4j = "2.0.17"
 sonarqube = "7.2.2.6593"
-sundayKt = "1.0.0-beta.25"
+sundayKt = "2.0.0-beta.1"
 swiftPoet = "1.6.6"
 typeScriptPoet = "1.1.2"
 vanniktechMavenPublish = "0.36.0"
@@ -69,6 +70,8 @@ dockerJava = { module = "com.github.docker-java:docker-java-core", version.ref =
 dockerJavaTransport = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "dockerJava" }
 hamcrest = { module = "org.hamcrest:hamcrest-library", version.ref = "hamcrest" }
 jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonKotlin" }
+jacksonYaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
 jakartaJaxrs = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakartaJaxrs" }
 javaxJaxrs = { module = "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec", version.ref = "javaxJaxrs" }
 jcolor = { module = "com.diogonunes:JColor", version.ref = "jcolor" }

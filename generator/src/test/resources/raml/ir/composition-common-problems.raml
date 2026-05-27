@@ -1,0 +1,11 @@
+#%RAML 1.0 Library
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.problemBaseUri): https://errors.example.com/common/problems/
+
+(sunday.problemTypes):
+  invalid_team_id:
+    status: 400
+    title: Invalid Team Id
+    detail: The team id is invalid.

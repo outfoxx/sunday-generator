@@ -1,0 +1,101 @@
+irVersion: "1"
+name: "Operation Headers Media API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "OperationHeadersMediaService"
+  operations:
+  - id: "createProject"
+    method: "POST"
+    path: "/projects"
+    parameters:
+    - name: "client"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      constantValue: "sunday"
+    - name: "requestId"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      serializationName: "Request-Id"
+      validation:
+        minLength: "8"
+        maxLength: "64"
+    - name: "clientVersion"
+      location: "HEADER"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      serializationName: "Client-Version"
+      constantValue: "2026-05"
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectCreate"
+      mediaTypes:
+      - "application/json"
+    responses:
+    - status: 201
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      headers:
+      - name: "location"
+        location: "HEADER"
+        type:
+          kind: "SCALAR"
+          name: "string"
+        required: true
+        serializationName: "Location"
+      - name: "retryAfter"
+        location: "HEADER"
+        type:
+          kind: "SCALAR"
+          name: "integer"
+        serializationName: "Retry-After"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectCreate"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

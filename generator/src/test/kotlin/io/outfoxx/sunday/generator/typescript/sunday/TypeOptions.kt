@@ -16,12 +16,10 @@
 
 package io.outfoxx.sunday.generator.typescript.sunday
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
+import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 
 val typeScriptSundayTestOptions =
-  TypeScriptSundayGenerator.Options(
-    false,
-    false,
+  TypeScriptSundayOptions(
     "http://example.com/",
     listOf("application/json"),
     "API",

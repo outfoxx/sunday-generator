@@ -122,24 +122,6 @@ class TypeScriptTypeRegistryTest {
   }
 
   @Test
-  fun `externalDiscriminatedPropertySchema supports nullable and optional properties`() {
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-    val propertyType = TypeName.standard("Payload").nullable.undefinable
-
-    val helperMethod =
-      typeRegistry.javaClass.getDeclaredMethod(
-        "externalDiscriminatedPropertySchema",
-        TypeName::class.java,
-      )
-    helperMethod.isAccessible = true
-    val schema = helperMethod.invoke(typeRegistry, propertyType).toString()
-
-    assertThat(schema, containsString("z.custom<Payload>()"))
-    assertThat(schema, containsString(".nullable()"))
-    assertThat(schema, containsString(".optional()"))
-  }
-
-  @Test
   fun `generateExportedTypeFiles sorts companion schema members deterministically by type name`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val modulePath = "models-schema"
@@ -183,26 +165,6 @@ class TypeScriptTypeRegistryTest {
     assertTrue(childIndex >= 0 && alphaIndex >= 0 && parentIndex >= 0)
     assertTrue(alphaIndex < childIndex)
     assertTrue(childIndex < parentIndex)
-  }
-
-  @Test
-  fun `importedType resolves implicit symbols from mapped imports`() {
-    val typeRegistry = TypeScriptTypeRegistry(setOf())
-
-    val typeNameMappingsField = typeRegistry.javaClass.getDeclaredField("typeNameMappings")
-    typeNameMappingsField.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val typeNameMappings = typeNameMappingsField.get(typeRegistry) as MutableMap<String, TypeName>
-    typeNameMappings["shared"] = TypeName.namedImport("SharedType", "!shared-type")
-
-    val importedTypeMethod = typeRegistry.javaClass.getDeclaredMethod("importedType", TypeName.Standard::class.java)
-    importedTypeMethod.isAccessible = true
-
-    val implicitShared = TypeName.standard(SymbolSpec.implicit("SharedType"))
-    val imported = importedTypeMethod.invoke(typeRegistry, implicitShared) as SymbolSpec.Imported
-
-    assertThat(imported.value, equalTo("SharedType"))
-    assertThat(imported.source, equalTo("!shared-type"))
   }
 
   @Test

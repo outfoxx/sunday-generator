@@ -7,8 +7,10 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import kotlin.String
 import org.eclipse.microprofile.rest.client.`annotation`.ClientHeaderParam
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 import org.jboss.resteasy.reactive.RestHeader
 
+@RegisterRestClient
 @Produces(value = ["application/json"])
 @Consumes(value = ["application/json"])
 public interface API {

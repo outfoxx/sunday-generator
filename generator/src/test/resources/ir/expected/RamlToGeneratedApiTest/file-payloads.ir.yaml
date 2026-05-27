@@ -1,0 +1,100 @@
+irVersion: "1"
+name: "File Payloads API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "FilePayloadsService"
+  operations:
+  - id: "uploadArchive"
+    method: "POST"
+    path: "/archives"
+    requestBody:
+      type:
+        kind: "SCALAR"
+        name: "file"
+      mediaTypes:
+      - "application/octet-stream"
+    responses:
+    - status: 200
+      type:
+        kind: "SCALAR"
+        name: "file"
+      mediaTypes:
+      - "application/octet-stream"
+    problems:
+    - kind: "NAMED"
+      name: "UploadFailedProblem"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+problems:
+- name: "UploadFailedProblem"
+  sourceName: "upload_failed"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "upload_failed"
+  status: 400
+  title: "Upload Failed"
+  detail: "The uploaded archive could not be processed."
+  statusBindings:
+  - status: 400
+    typeUri: "upload_failed"
+    title: "Upload Failed"
+    detail: "The uploaded archive could not be processed."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "UploadFailedProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "archive"
+      type:
+        kind: "SCALAR"
+        name: "file"
+  fields:
+  - name: "archive"
+    type:
+      kind: "SCALAR"
+      name: "file"
+  documentation:
+    summary: "Upload Failed"
+    description: "The uploaded archive could not be processed."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

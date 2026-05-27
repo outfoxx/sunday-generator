@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: Discriminated Update API
+  version: 1.0.0
+paths:
+  /entities/{entityId}:
+    put:
+      operationId: updateEntity
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityUpdate"
+      responses:
+        "204":
+          description: Entity updated.
+components:
+  schemas:
+    EntityType:
+      type: string
+      enum:
+        - character
+        - prop
+        - location
+    EntityUpdate:
+      type: object
+      required:
+        - type
+        - label
+      discriminator:
+        propertyName: type
+        mapping:
+          character: "#/components/schemas/CharacterUpdate"
+          prop: "#/components/schemas/PropUpdate"
+          location: "#/components/schemas/LocationUpdate"
+      properties:
+        type:
+          $ref: "#/components/schemas/EntityType"
+        label:
+          type: string
+    CharacterUpdate:
+      allOf:
+        - $ref: "#/components/schemas/EntityUpdate"
+        - type: object
+          properties:
+            knownAliases:
+              type: array
+              items:
+                type: string
+    PropUpdate:
+      allOf:
+        - $ref: "#/components/schemas/EntityUpdate"
+        - type: object
+    LocationUpdate:
+      allOf:
+        - $ref: "#/components/schemas/EntityUpdate"
+        - type: object
+          properties:
+            parent:
+              type: string

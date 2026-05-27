@@ -1,0 +1,77 @@
+irVersion: "1"
+name: "Imported Declarations API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ImportedDeclarationsService"
+  operations:
+  - id: "fetchTest"
+    method: "GET"
+    path: "/tests/{id}"
+    parameters:
+    - name: "id"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Test"
+      mediaTypes:
+      - "application/json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Test"
+  kind: "OBJECT"
+  properties:
+  - name: "localValue"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  inherits:
+  - kind: "NAMED"
+    name: "Test"
+    source:
+      kind: "RAML"
+      location: "SOURCE_LOCATION_REFERENCE"
+- name: "Test"
+  kind: "OBJECT"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION_REFERENCE"
+  properties:
+  - name: "libraryValue"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  targets:
+    kotlin:
+      modelPackageName: "io.example.library"
+    kotlinClient:
+      modelPackageName: "io.example.library"
+    kotlinServer:
+      modelPackageName: "io.example.library"
+    swift:
+      modelModuleName: "LibraryModels"
+    typescript:
+      modelModuleName: "library-models"
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

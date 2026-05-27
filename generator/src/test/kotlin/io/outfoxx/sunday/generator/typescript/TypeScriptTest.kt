@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSourcesExtension
 import io.outfoxx.sunday.test.extensions.DiffingExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
@@ -26,5 +27,10 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @Execution(CONCURRENT)
 @ResourceLock("TypeScript")
-@ExtendWith(ResourceExtension::class, TypeScriptCompilerExtension::class, DiffingExtension::class)
+@ExtendWith(
+  ResourceExtension::class,
+  TypeScriptCompilerExtension::class,
+  DiffingExtension::class,
+  CompiledGeneratedSourcesExtension::class,
+)
 annotation class TypeScriptTest

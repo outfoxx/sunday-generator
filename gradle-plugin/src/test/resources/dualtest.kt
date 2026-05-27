@@ -17,4 +17,4 @@
 import io.outfoxx.test.client.api.SimpleAPI as SimpleAPIClient
 import io.outfoxx.test.server.SimpleAPI as SimpleAPIServer
 
-class Test(val client: SimpleAPIClient, val server: SimpleAPIServer)
+class Test(val client: SimpleAPIClient<*>, val server: SimpleAPIServer)

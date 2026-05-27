@@ -1,0 +1,78 @@
+{
+  "originHash" : "a358b07261ce89aab3119968b8186883e48db2b8606a8163d3f57c1d1990afd9",
+  "pins" : [
+    {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
+        "version" : "5.7.0"
+      }
+    },
+    {
+      "identity" : "float16",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SusanDoggie/Float16.git",
+      "state" : {
+        "revision" : "936ae66adccf1c91bcaeeb9c0cddde78a13695c3",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "potentcodables",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/outfoxx/PotentCodables.git",
+      "state" : {
+        "revision" : "be0593a39fa3c8203dd10bdbad3803435517c100",
+        "version" : "3.5.3"
+      }
+    },
+    {
+      "identity" : "regex",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sharplet/Regex.git",
+      "state" : {
+        "revision" : "76c2b73d4281d77fc3118391877efd1bf972f515",
+        "version" : "2.1.1"
+      }
+    },
+    {
+      "identity" : "sunday-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/outfoxx/sunday-swift.git",
+      "state" : {
+        "revision" : "b2782201b962fa632144cfb2a6bebe7fc4289c49",
+        "version" : "2.0.0-beta.2"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections.git",
+      "state" : {
+        "revision" : "fea17c02d767f46b23070fdfdacc28a03a39232a",
+        "version" : "1.5.1"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "uritemplate",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SwiftScream/URITemplate.git",
+      "state" : {
+        "revision" : "3a6acca43ac7aa3f58474e6c8f686809b3660d6a",
+        "version" : "4.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}

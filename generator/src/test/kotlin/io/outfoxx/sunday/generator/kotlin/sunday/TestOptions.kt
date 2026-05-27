@@ -16,11 +16,10 @@
 
 package io.outfoxx.sunday.generator.kotlin.sunday
 
-import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
+import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 
 val kotlinSundayTestOptions =
-  KotlinSundayGenerator.Options(
-    false,
+  KotlinSundayOptions(
     "io.test.service",
     "http://example.com/",
     listOf("application/json"),

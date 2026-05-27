@@ -17,16 +17,15 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -59,25 +58,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(GenerationMode.Server, setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-api-problem-registration-in-server-mode-when-no-problems-referenced.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -88,25 +73,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(GenerationMode.Client, setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-api-problem-registration-in-client-mode-when-no-problems-referenced.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -117,25 +88,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(GenerationMode.Server, setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-api-problem-registration-in-server-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -155,22 +112,9 @@ class ResponseProblemsTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-    val generated =
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      }
+    val generated = compiledProblemSource()
 
     assertTrue(generated.contains("import io.outfoxx.sunday.problems.SundayHttpProblem"), generated)
     assertTrue(generated.contains("class InvalidIdProblem"), generated)
@@ -185,25 +129,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(GenerationMode.Client, setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-api-problem-registration-in-client-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -215,27 +145,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-in-server-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -247,27 +164,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Client)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-in-client-mode.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -279,27 +183,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -311,27 +202,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-absolute-problem-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -343,27 +221,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-relative-problem-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -375,27 +240,20 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry(GenerationMode.Server)
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinJAXRSGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinJAXRSTestOptions,
-        )
-      }
+      generateJaxrs(testUri, typeRegistry, kotlinJAXRSTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinJaxrsSnapshot(
       "ResponseProblemsTest/test-problem-type-generation-locates-problems-in-libraries.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
+
+  private fun compiledServiceSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
+
+  private fun compiledProblemSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/InvalidIdProblem.kt")
 }

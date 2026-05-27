@@ -1,60 +1,68 @@
 import PotentCodables
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
   public func fetchTest(
     type: FetchTestTypeUriParam,
     type_: FetchTestTypeQueryParam,
     type__: FetchTestTypeHeaderParam
-  ) async throws -> [String : AnyValue] {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests/{type}",
-      pathParameters: [
-        "type": type
-      ],
-      queryParameters: [
-        "type": type_
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: [
-        "type": type__
-      ]
+  ) throws -> Sunday.Operation<Empty, [String : AnyValue], TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests/{type}",
+        pathParameters: [
+          "type": try ParameterValues.encode(type)
+        ],
+        queryParameters: [
+          "type": try ParameterValues.encode(type_)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: [
+          "type": try ParameterValues.encode(type__)
+        ]
+      )
     )
   }
 
-  public enum FetchTestTypeUriParam : String, CaseIterable, Codable {
+  public enum FetchTestTypeUriParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"
 
   }
 
-  public enum FetchTestTypeQueryParam : String, CaseIterable, Codable {
+  public enum FetchTestTypeQueryParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"
 
   }
 
-  public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable {
+  public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"

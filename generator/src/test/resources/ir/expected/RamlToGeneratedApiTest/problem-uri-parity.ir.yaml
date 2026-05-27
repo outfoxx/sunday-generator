@@ -1,0 +1,161 @@
+irVersion: "1"
+name: "Problem URI Parity API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ProblemURIParityService"
+  baseUri: "https://api.example.com/v1/"
+  operations:
+  - id: "fetchProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+    problems:
+    - kind: "NAMED"
+      name: "InvalidIdProblem"
+    - kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+problems:
+- name: "InvalidIdProblem"
+  sourceName: "invalid_id"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION_REFERENCE"
+  typeUri: "https://errors.example.com/v2/invalid_id"
+  status: 400
+  title: "Invalid Id"
+  detail: "The id contains one or more invalid characters."
+  statusBindings:
+  - status: 400
+    typeUri: "https://errors.example.com/v2/invalid_id"
+    title: "Invalid Id"
+    detail: "The id contains one or more invalid characters."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "InvalidIdProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    - name: "offending_id"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  fields:
+  - name: "offending_id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  documentation:
+    summary: "Invalid Id"
+    description: "The id contains one or more invalid characters."
+- name: "ProjectNotFoundProblem"
+  sourceName: "project_not_found"
+  source:
+    kind: "RAML"
+    location: "SOURCE_LOCATION"
+  typeUri: "https://errors.example.com/v2/project_not_found"
+  status: 404
+  title: "Project Not Found"
+  detail: "The requested project does not exist."
+  statusBindings:
+  - status: 404
+    typeUri: "https://errors.example.com/v2/project_not_found"
+    title: "Project Not Found"
+    detail: "The requested project does not exist."
+  payload:
+    type:
+      kind: "NAMED"
+      name: "ProjectNotFoundProblem"
+    mediaTypes:
+    - "application/problem+json"
+    fields:
+    - name: "type"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "title"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "status"
+      type:
+        kind: "SCALAR"
+        name: "integer"
+      required: true
+    - name: "detail"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    - name: "instance"
+      type:
+        kind: "SCALAR"
+        name: "string"
+  documentation:
+    summary: "Project Not Found"
+    description: "The requested project does not exist."
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

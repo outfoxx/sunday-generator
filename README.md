@@ -10,6 +10,20 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [Read the Documentation](https://outfoxx.github.io/sunday)
 
+### [Sunday IR Format](docs/sunday-ir-format.md)
+
+### [Sunday IR Emitter Readiness Audit](docs/ir-emitter-readiness-audit.md)
+
+### [OpenAPI 3.1 IR Exit Audit](docs/openapi-ir-exit-audit.md)
+
+### [AsyncAPI IR Exit Audit](docs/asyncapi-ir-exit-audit.md)
+
+### [Kotlin/Sunday IR Path](docs/kotlin-sunday-ir-path.md)
+
+### [IR Emitter Helper Extraction Plan](docs/ir-emitter-helper-extraction.md)
+
+### [TypeScript/Sunday Runtime Notes](docs/typescript-sunday-runtime.md)
+
 Gradle Plugin Cache Notes
 -------------------------
 

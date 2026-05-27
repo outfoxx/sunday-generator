@@ -1,0 +1,95 @@
+irVersion: "1"
+name: "Examples API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ExamplesService"
+  operations:
+  - id: "createProject"
+    method: "POST"
+    path: "/projects"
+    parameters:
+    - name: "includeArchived"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "boolean"
+      required: true
+      serializationName: "include-archived"
+      examples:
+      - name: "include"
+        value: false
+        strict: true
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectCreate"
+      mediaTypes:
+      - "application/json"
+      examples:
+      - name: "create"
+        mediaType: "application/json"
+        value:
+          name: "Build IR"
+        strict: true
+    responses:
+    - status: 201
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      examples:
+      - name: "created"
+        mediaType: "application/json"
+        value:
+          id: "project-1"
+          name: "Build IR"
+        strict: true
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    examples:
+    - value: "Build IR"
+      strict: true
+  examples:
+  - name: "sample"
+    value:
+      id: "project-1"
+      name: "Build IR"
+    strict: true
+- name: "ProjectCreate"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

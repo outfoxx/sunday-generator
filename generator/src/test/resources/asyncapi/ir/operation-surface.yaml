@@ -1,0 +1,74 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+channels:
+  project.commands:
+    x-sunday-service: projects
+    publish:
+      operationId: publishProjectCommand
+      x-sunday-operationId: sendProjectCommand
+      summary: Send project command
+      description: Publishes project command messages.
+      message:
+        name: ProjectCommand
+        contentType: application/json
+        headers:
+          type: object
+          required:
+            - x-request-id
+          properties:
+            x-request-id:
+              type: string
+        payload:
+          $ref: "#/components/schemas/ProjectCommand"
+        examples:
+          - name: rename
+            summary: Rename project
+            payload:
+              commandId: cmd-1
+              projectId: project-1
+              name: Renamed
+  project.command.accepted:
+    x-sunday-service: projects
+    subscribe:
+      operationId: projectCommandAccepted
+      summary: Project command accepted
+      message:
+        name: ProjectCommandAccepted
+        contentType: application/json
+        headers:
+          type: object
+          required:
+            - x-trace-id
+          properties:
+            x-trace-id:
+              type: string
+        payload:
+          $ref: "#/components/schemas/ProjectCommandAccepted"
+components:
+  schemas:
+    ProjectCommand:
+      type: object
+      required:
+        - commandId
+        - projectId
+        - name
+      properties:
+        commandId:
+          type: string
+        projectId:
+          type: string
+        name:
+          type: string
+    ProjectCommandAccepted:
+      type: object
+      required:
+        - commandId
+        - acceptedAt
+      properties:
+        commandId:
+          type: string
+        acceptedAt:
+          type: string

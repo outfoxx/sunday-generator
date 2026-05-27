@@ -17,16 +17,15 @@
 package io.outfoxx.sunday.generator.kotlin.sunday
 
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
-import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateSunday
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -56,25 +55,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-api-problem-registration.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -85,25 +70,11 @@ class ResponseProblemsTest {
 
     val typeRegistry = typeRegistry(setOf(JacksonAnnotations))
 
-    val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
-
-    val typeSpec = findType("io.test.service.API", builtTypes)
+    generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-api-problem-registration-when-no-problems.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -115,27 +86,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry()
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-problem-type-generation.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -155,22 +113,9 @@ class ResponseProblemsTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-    val generated =
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      }
+    val generated = compiledProblemSource()
 
     assertTrue(generated.contains("import io.outfoxx.sunday.problems.SundayHttpProblem"), generated)
     assertTrue(generated.contains("class InvalidIdProblem"), generated)
@@ -186,27 +131,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry()
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -218,27 +150,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry()
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-absolute-problem-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -250,27 +169,14 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry()
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-problem-type-generation-using-relative-problem-base-uri.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
 
@@ -282,27 +188,20 @@ class ResponseProblemsTest {
     val typeRegistry = typeRegistry()
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(ClassName.bestGuess("io.test.CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(ClassName.bestGuess("io.test.TestNotFoundProblem")))
 
-    val typeSpec = findType("io.test.InvalidIdProblem", builtTypes)
-
     assertKotlinSundaySnapshot(
       "ResponseProblemsTest/test-problem-type-generation-locates-problems-in-libraries.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledProblemSource(),
     )
   }
+
+  private fun compiledServiceSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
+
+  private fun compiledProblemSource(): String =
+    CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/InvalidIdProblem.kt")
 }

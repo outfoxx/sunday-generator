@@ -1,0 +1,60 @@
+irVersion: "1"
+name: "Lifecycle API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "LifecycleService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "listLegacyProjects"
+    method: "GET"
+    path: "/legacy-projects"
+    parameters:
+    - name: "includeArchived"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "boolean"
+      serializationName: "include-archived"
+      encoding:
+        style: "form"
+        explode: true
+      deprecated: true
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "LegacyProject"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Legacy project response."
+    media: {}
+    deprecated: true
+  media: {}
+models:
+- name: "LegacyProject"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    readOnly: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "legacySecret"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    serializationName: "legacy-secret"
+    writeOnly: true
+    deprecated: true
+  deprecated: true
+media: {}

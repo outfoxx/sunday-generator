@@ -16,13 +16,12 @@
 
 package io.outfoxx.sunday.generator.typescript.sunday
 
-import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
-import io.outfoxx.sunday.generator.typescript.tools.generate
+import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
@@ -42,14 +41,7 @@ class ResponseEventsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
     val output =
@@ -71,14 +63,7 @@ class ResponseEventsTest {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        TypeScriptSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          typeScriptSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, typeScriptSundayTestOptions)
 
     val typeSpec = findTypeMod("API@!api", builtTypes)
     val output =

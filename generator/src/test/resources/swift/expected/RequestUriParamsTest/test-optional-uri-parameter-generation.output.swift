@@ -1,19 +1,24 @@
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
   public func fetchTest(
@@ -23,23 +28,26 @@ public class API {
     def1: String? = "test",
     int: Int? = nil,
     def: String
-  ) async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
-      pathParameters: [
-        "def2": def2 as Any?,
-        "obj": obj as Any?,
-        "str": str as Any?,
-        "def1": def1 as Any?,
-        "int": int as Any?,
-        "def": def as Any?
-      ].filter { $0.value != nil },
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+  ) throws -> Sunday.Operation<Empty, Test, TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}",
+        pathParameters: [
+          "def2": try ParameterValues.encode(def2),
+          "obj": try ParameterValues.encode(obj),
+          "str": try ParameterValues.encode(str),
+          "def1": try ParameterValues.encode(def1),
+          "int": try ParameterValues.encode(int),
+          "def": try ParameterValues.encode(def)
+        ].filter { $0.value != nil },
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      )
     )
   }
 

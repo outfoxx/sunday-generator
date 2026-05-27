@@ -25,8 +25,10 @@ class BeanValidationTypes(
   val valid = ClassName.bestGuess("$basePackage.validation.Valid")
   val decimalMax = ClassName.bestGuess("$basePackage.validation.constraints.DecimalMax")
   val decimalMin = ClassName.bestGuess("$basePackage.validation.constraints.DecimalMin")
+  val email = ClassName.bestGuess("$basePackage.validation.constraints.Email")
   val max = ClassName.bestGuess("$basePackage.validation.constraints.Max")
   val min = ClassName.bestGuess("$basePackage.validation.constraints.Min")
+  val notNull = ClassName.bestGuess("$basePackage.validation.constraints.NotNull")
   val pattern = ClassName.bestGuess("$basePackage.validation.constraints.Pattern")
   val size = ClassName.bestGuess("$basePackage.validation.constraints.Size")
 

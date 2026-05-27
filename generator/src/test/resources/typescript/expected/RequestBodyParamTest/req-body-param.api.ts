@@ -1,14 +1,20 @@
 import {Test, TestSchema} from './test';
-import {MediaType, RequestFactory, SchemaLike} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(body: Test): Operation<Test, Test, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [MediaType.JSON];
@@ -16,22 +22,28 @@ export class API {
         options?.defaultAcceptTypes ?? [MediaType.JSON];
   }
 
-  fetchTest(body: Test, signal?: AbortSignal): Promise<Test> {
-    return this.requestFactory.result(
-        {
+  fetchTest(body: Test): Operation<Test, Test, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests',
           body: body,
           bodyType: fetchTestBodyType,
           contentTypes: this.defaultContentTypes,
           acceptTypes: this.defaultAcceptTypes,
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestBodyType: SchemaLike<Test> = TestSchema;
 const fetchTestReturnType: SchemaLike<Test> = TestSchema;

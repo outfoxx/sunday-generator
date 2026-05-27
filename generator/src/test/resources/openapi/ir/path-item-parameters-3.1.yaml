@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Repo Path Parameters API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /repos/{repoId}:
+    parameters:
+      - $ref: "#/components/parameters/RepoId"
+    get:
+      operationId: getRepo
+      responses:
+        "200":
+          description: Repository response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repo"
+  /repos/{repoId}/branches/{branchId}:
+    parameters:
+      - $ref: "#/components/parameters/RepoId"
+      - $ref: "#/components/parameters/BranchId"
+    get:
+      operationId: getBranch
+      responses:
+        "200":
+          description: Branch response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+components:
+  parameters:
+    RepoId:
+      name: repoId
+      in: path
+      required: true
+      schema:
+        type: string
+    BranchId:
+      name: branchId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    Repo:
+      type: object
+      required: [repoId]
+      properties:
+        repoId:
+          type: string
+    Branch:
+      type: object
+      required: [branchId]
+      properties:
+        branchId:
+          type: string

@@ -1,0 +1,51 @@
+#%RAML 1.0
+title: Operation Transport Fidelity API
+version: v1
+baseUri: https://{region}.api.example.com/{version}
+baseUriParameters:
+  region:
+    type: string
+    default: us
+mediaType:
+- application/json
+
+types:
+  ProjectCreateJson:
+    type: object
+    properties:
+      name: string
+
+  ProjectCreatePatch:
+    type: object
+    properties:
+      name?: string
+
+  Project:
+    type: object
+    properties:
+      id: string
+      name: string
+
+  ProjectSummary:
+    type: object
+    properties:
+      id: string
+
+/projects:
+  post:
+    displayName: createProject
+    queryParameters:
+      include?:
+        type: string
+    body:
+      application/json:
+        type: ProjectCreateJson
+      application/merge-patch+json:
+        type: ProjectCreatePatch
+    responses:
+      200:
+        body:
+          application/json:
+            type: Project
+          application/vnd.project-summary+json:
+            type: ProjectSummary

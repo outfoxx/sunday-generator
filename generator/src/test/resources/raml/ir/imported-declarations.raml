@@ -1,0 +1,22 @@
+#%RAML 1.0
+title: Imported Declarations API
+uses:
+  lib: imported-declaration-lib.raml
+mediaType:
+- application/json
+
+types:
+  Test:
+    type: lib.Test
+    properties:
+      localValue: string
+
+/tests/{id}:
+  uriParameters:
+    id: string
+  get:
+    displayName: fetchTest
+    responses:
+      200:
+        body:
+          type: Test

@@ -1,0 +1,85 @@
+#%RAML 1.0
+title: Target Overrides API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+(sunday.kotlinPackage): io.example.api
+(sunday.kotlinPackage:client): io.example.client
+(sunday.kotlinPackage:server): io.example.server
+(sunday.kotlinModelPackage): io.example.models
+(sunday.kotlinModelPackage:client): io.example.client.models
+(sunday.kotlinModelPackage:server): io.example.server.models
+(sunday.swiftModule): TargetAPI
+(sunday.swiftModelModule): TargetModels
+(sunday.typeScriptModule): services
+(sunday.typeScriptModelModule): models
+
+types:
+  User:
+    (sunday.kotlinModelPackage): io.example.custom.models
+    (sunday.kotlinType): io.example.custom.UserValue
+    (sunday.kotlinType:client): io.example.client.UserValue
+    (sunday.kotlinType:server): io.example.server.UserValue
+    (sunday.swiftModelModule): UserModels
+    (sunday.swiftType): UserModels.UserValue
+    (sunday.typeScriptModelModule): user-models
+    (sunday.typeScriptType): UserValue
+    type: object
+    properties:
+      id: string
+      displayName:
+        type: string
+        (sunday.kotlinImplementation):
+          code: 'return %T::class.qualifiedName + %S'
+          parameters:
+          - type: Type
+            value: kotlin.String
+          - type: String
+            value: '-display'
+        (sunday.swiftImplementation):
+          code: 'return %T(describing: %T.self) + %S'
+          parameters:
+          - type: Type
+            value: Swift.String
+          - type: Type
+            value: Foundation.Data
+          - type: String
+            value: '-display'
+        (sunday.typeScriptImplementation):
+          code: 'return %T.name + %S'
+          parameters:
+          - type: Type
+            value: UserValue@@user-models
+          - type: String
+            value: '-display'
+
+  UserPreference:
+    (sunday.nested):
+      enclosedIn: User
+      name: Preference
+    type: object
+    properties:
+      theme: string
+
+  UserPreference-Option:
+    (sunday.nested): dashed
+    type: object
+    properties:
+      value: string
+
+  UserPatch:
+    (sunday.patchable): true
+    type: object
+    properties:
+      displayName?: string
+
+/users/{userId}:
+  uriParameters:
+    userId: string
+  get:
+    displayName: getUser
+    responses:
+      200:
+        body:
+          type: User

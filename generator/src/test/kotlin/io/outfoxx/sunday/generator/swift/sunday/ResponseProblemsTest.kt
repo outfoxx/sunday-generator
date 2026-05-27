@@ -16,12 +16,11 @@
 
 package io.outfoxx.sunday.generator.swift.sunday
 
-import io.outfoxx.sunday.generator.swift.SwiftSundayGenerator
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.findType
-import io.outfoxx.sunday.generator.swift.tools.generate
+import io.outfoxx.sunday.generator.swift.tools.generateSunday
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
@@ -45,14 +44,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 
@@ -75,14 +67,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     val typeSpec = findType("API", builtTypes)
 
@@ -105,14 +90,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(typeName(".CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(typeName(".TestNotFoundProblem")))
@@ -138,14 +116,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(typeName(".CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(typeName(".TestNotFoundProblem")))
@@ -171,14 +142,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(typeName(".CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(typeName(".TestNotFoundProblem")))
@@ -204,14 +168,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(typeName(".CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(typeName(".TestNotFoundProblem")))
@@ -237,14 +194,7 @@ class ResponseProblemsTest {
     val typeRegistry = SwiftTypeRegistry(setOf())
 
     val builtTypes =
-      generate(testUri, typeRegistry, compiler) { document, shapeIndex ->
-        SwiftSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          swiftSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
     assertFalse(builtTypes.containsKey(typeName(".CreateFailedProblem")))
     assertTrue(builtTypes.containsKey(typeName(".TestNotFoundProblem")))

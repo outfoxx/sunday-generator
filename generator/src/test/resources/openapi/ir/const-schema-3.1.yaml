@@ -1,0 +1,28 @@
+openapi: "3.1.0"
+info:
+  title: Const Schema API
+  version: "1.0.0"
+paths:
+  /problems/bad-request:
+    get:
+      tags: [Problems]
+      operationId: getBadRequest
+      responses:
+        "200":
+          description: Bad request problem payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequest"
+components:
+  schemas:
+    BadRequest:
+      type: object
+      required: [title, status]
+      properties:
+        title:
+          type: string
+          const: Bad request
+        status:
+          type: integer
+          const: 400

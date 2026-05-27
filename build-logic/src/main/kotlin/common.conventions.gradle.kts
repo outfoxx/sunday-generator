@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
   `java-library`
@@ -40,6 +41,7 @@ kotlin {
 tasks {
   test {
     useJUnitPlatform()
+    failFast = !System.getenv("CI").isNullOrBlank()
     systemProperty("junit.jupiter.execution.parallel.enabled", "true")
     systemProperty("junit.jupiter.execution.parallel.default", "concurrent")
     systemProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
@@ -47,6 +49,7 @@ tasks {
 
     testLogging {
       events("passed", "skipped", "failed")
+      exceptionFormat = TestExceptionFormat.FULL
     }
   }
 

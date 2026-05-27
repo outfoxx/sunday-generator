@@ -1,0 +1,22 @@
+#%RAML 1.0
+title: TurnPost API - Asset
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+  common: composition-common-problems.raml
+mediaType:
+- application/json
+
+(sunday.name): Asset
+(sunday.problemBaseUri): https://errors.example.com/asset/problems/
+(sunday.problemTypes):
+  shared_local:
+    status: 404
+    title: Shared Local
+    detail: Asset-local problem with a shared source name.
+
+/assets:
+  get:
+    displayName: listAssets
+    (sunday.problems): [shared_local]
+    responses:
+      204:

@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertSnapshotAt
 import java.nio.file.Path
 
@@ -26,5 +28,6 @@ fun assertSnapshot(
   snapshotPath: String,
   actual: String,
 ) {
+  CompiledGeneratedSources.requireCompiled(GeneratedCodeLanguage.TypeScript, actual)
   assertSnapshotAt(snapshotsRoot, snapshotPath, actual)
 }

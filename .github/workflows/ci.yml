@@ -28,10 +28,28 @@ jobs:
     - name: Select Xcode
       run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
+    - name: Show Xcode and Swift versions
+      run: |
+        xcodebuild -version
+        swift --version
+
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: npm
+        cache-dependency-path: generator/src/test/resources/typescript/compile/package-lock.json
+
+    - name: Cache SwiftPM validation dependencies
+      uses: actions/cache@v4
+      with:
+        path: generator/build/validation/swift/package-cache
+        key: ${{ runner.os }}-swiftpm-validation-${{ hashFiles('generator/src/test/resources/swift/compile/local/Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-swiftpm-validation-
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
     - name: Build & Test
       run: ./gradlew check sonar

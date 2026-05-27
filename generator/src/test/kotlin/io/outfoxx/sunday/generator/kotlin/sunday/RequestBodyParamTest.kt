@@ -18,11 +18,10 @@ package io.outfoxx.sunday.generator.kotlin.sunday
 
 import com.squareup.kotlinpoet.FileSpec
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.findType
-import io.outfoxx.sunday.generator.kotlin.tools.generate
+import io.outfoxx.sunday.generator.kotlin.tools.generateSunday
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
@@ -51,14 +50,7 @@ class RequestBodyParamTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -88,14 +80,7 @@ class RequestBodyParamTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 
@@ -125,14 +110,7 @@ class RequestBodyParamTest {
       )
 
     val builtTypes =
-      generate(testUri, typeRegistry) { document, shapeIndex ->
-        KotlinSundayGenerator(
-          document,
-          shapeIndex,
-          typeRegistry,
-          kotlinSundayTestOptions,
-        )
-      }
+      generateSunday(testUri, typeRegistry, kotlinSundayTestOptions)
 
     val typeSpec = findType("io.test.service.API", builtTypes)
 

@@ -1,0 +1,18 @@
+#%RAML 1.0
+title: Any Shapes API
+mediaType: application/json
+
+types:
+  AnyHolder:
+    type: object
+    properties:
+      value: any?
+
+/values:
+  get:
+    displayName: getAnyHolder
+    responses:
+      200:
+        body:
+          application/json:
+            type: AnyHolder

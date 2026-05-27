@@ -1,13 +1,19 @@
-import {MediaType, RequestFactory} from '@outfoxx/sunday';
+import {MediaType, Transport} from '@outfoxx/sunday';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchEvents(signal?: AbortSignal): EventSource;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -16,7 +22,7 @@ export class API {
   }
 
   fetchEvents(signal?: AbortSignal): EventSource {
-    return this.requestFactory.eventSource(
+    return this.transport.eventSource(
         {
           method: 'GET',
           pathTemplate: '/tests',
@@ -27,3 +33,10 @@ export class API {
   }
 
 }
+
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
+type SundayTransport = Transport<unknown>;

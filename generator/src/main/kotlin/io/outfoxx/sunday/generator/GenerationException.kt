@@ -16,9 +16,6 @@
 
 package io.outfoxx.sunday.generator
 
-import amf.core.client.platform.model.domain.DomainElement
-import io.outfoxx.sunday.generator.utils.location
-
 class GenerationException(
   message: String,
   val file: String,
@@ -29,18 +26,4 @@ class GenerationException(
   override fun toString(): String = "$file:$line: $message"
 }
 
-fun genError(
-  message: String,
-  element: DomainElement? = null,
-): Nothing {
-  if (element == null) {
-    throw GenerationException(message, "", 0, 0)
-  }
-
-  throw GenerationException(
-    message,
-    element.annotations().location,
-    element.position().start().line(),
-    element.position().start().column(),
-  )
-}
+fun genError(message: String): Nothing = throw GenerationException(message, "", 0, 0)

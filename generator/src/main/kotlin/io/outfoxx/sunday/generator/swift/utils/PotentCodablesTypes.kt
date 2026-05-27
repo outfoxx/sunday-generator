@@ -20,3 +20,4 @@ import io.outfoxx.swiftpoet.DeclaredTypeName.Companion.typeName
 
 const val PC_MODULE = "PotentCodables"
 val ANY_VALUE = typeName("$PC_MODULE.AnyValue")
+val ANY_VALUE_DECODER = typeName("$PC_MODULE.AnyValueDecoder")

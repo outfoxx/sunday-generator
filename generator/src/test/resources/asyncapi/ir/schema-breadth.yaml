@@ -1,0 +1,56 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+channels:
+  project.snapshots:
+    x-sunday-service: projects
+    subscribe:
+      operationId: projectSnapshot
+      summary: Project snapshot published
+      message:
+        name: ProjectSnapshot
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/ProjectSnapshot"
+components:
+  schemas:
+    ProjectSnapshot:
+      type: object
+      required:
+        - project-id
+        - occurredAt
+        - status
+        - tags
+      properties:
+        project-id:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: "^[a-z0-9-]+$"
+        occurredAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        tags:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+        nickname:
+          oneOf:
+            - type: string
+            - type: "null"
+    ProjectStatus:
+      type: string
+      enum:
+        - active
+        - archived

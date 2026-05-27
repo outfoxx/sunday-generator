@@ -18,13 +18,23 @@ public interface API {
   public fun fetchTest(@RestHeader(value = "category") category: FetchTestCategoryHeaderParam,
       @RestHeader(value = "type") type: FetchTestTypeHeaderParam): RestResponse<Map<String, Any>>
 
-  public enum class FetchTestCategoryHeaderParam {
-    Politics,
-    Science,
+  public enum class FetchTestCategoryHeaderParam(
+    private val wireValue: String,
+  ) {
+    Politics("politics"),
+    Science("science"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestTypeHeaderParam {
-    All,
-    Limited,
+  public enum class FetchTestTypeHeaderParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 }

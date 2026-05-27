@@ -16,36 +16,8 @@
 
 package io.outfoxx.sunday.generator.typescript.utils
 
-import amf.apicontract.client.platform.model.domain.Operation
-import amf.apicontract.client.platform.model.domain.Parameter
-import amf.core.client.platform.model.domain.PropertyShape
-import amf.core.client.platform.model.domain.ScalarNode
-import amf.core.client.platform.model.domain.Shape
-import io.outfoxx.sunday.generator.utils.name
-import io.outfoxx.sunday.generator.utils.operationId
-import io.outfoxx.sunday.generator.utils.parameterName
-import io.outfoxx.sunday.generator.utils.stringValue
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
-
-val Shape.typeScriptTypeName: String get() = name!!.toUpperCamelCase()
-
-val PropertyShape.typeScriptIdentifierName: String get() = name!!.toLowerCamelCase()
-
-private val enumSplitRegex = """\W""".toRegex()
-
-val ScalarNode.typeScriptEnumName: String
-  get() =
-    stringValue!!
-      .split(enumSplitRegex)
-      .joinToString("") { s -> s.replaceFirstChar { it.titlecase() } }
-      .toUpperCamelCase()
-
-val Parameter.typeScriptTypeName: String get() = parameterName!!.toUpperCamelCase()
-val Parameter.typeScriptIdentifierName: String get() = parameterName!!.toLowerCamelCase()
-
-val Operation.typeScriptTypeName: String? get() = (operationId ?: name)?.toUpperCamelCase()
-val Operation.typeScriptIdentifierName: String? get() = (operationId ?: name)?.toLowerCamelCase()
 
 val String.typeScriptIdentifierName: String get() = toLowerCamelCase()
 val String.typeScriptTypeName: String get() = toUpperCamelCase()

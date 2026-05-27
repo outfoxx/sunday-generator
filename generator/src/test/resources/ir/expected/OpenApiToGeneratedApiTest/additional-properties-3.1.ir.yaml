@@ -1,0 +1,84 @@
+irVersion: "1"
+name: "Additional Properties API"
+source:
+  kind: "OPENAPI"
+  location: "SOURCE_LOCATION"
+services:
+- name: "AdditionalPropertiesService"
+  baseUri: "https://api.example.com/v1"
+  operations:
+  - id: "getContainer"
+    method: "GET"
+    path: "/containers"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Container"
+      mediaTypes:
+      - "application/json"
+      documentation:
+        description: "Container response."
+    media: {}
+  media: {}
+models:
+- name: "Container"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "typedLabels"
+    type:
+      kind: "NAMED"
+      name: "TypedLabels"
+    required: true
+  - name: "freeformLabels"
+    type:
+      kind: "NAMED"
+      name: "FreeformLabels"
+    required: true
+  - name: "freeformItems"
+    type:
+      kind: "ARRAY"
+      name: "array"
+      arguments:
+      - kind: "SCALAR"
+        name: "object"
+    required: true
+  - name: "sealedLabels"
+    type:
+      kind: "NAMED"
+      name: "SealedLabels"
+    required: true
+- name: "FreeformLabels"
+  kind: "OBJECT"
+  additionalProperties:
+    allowed: true
+- name: "SealedLabels"
+  kind: "OBJECT"
+  properties:
+  - name: "owner"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  closed: true
+  additionalProperties:
+    allowed: false
+- name: "TypedLabels"
+  kind: "OBJECT"
+  properties:
+  - name: "owner"
+    type:
+      kind: "SCALAR"
+      name: "string"
+  additionalProperties:
+    allowed: true
+    type:
+      kind: "SCALAR"
+      name: "string"
+    validation:
+      minLength: "1"
+media: {}

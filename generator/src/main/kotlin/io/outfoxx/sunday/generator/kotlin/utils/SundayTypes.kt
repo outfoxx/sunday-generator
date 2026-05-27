@@ -18,15 +18,18 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ClassName
 
-val RESULT_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.ResultResponse")
+val OPERATION_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.OperationResponse")
+val SUNDAY_OPERATION = ClassName.bestGuess("io.outfoxx.sunday.Operation")
+val SUNDAY_OPERATION_SPEC = ClassName.bestGuess("io.outfoxx.sunday.OperationSpec")
+val SUNDAY_NULLABLE_OPERATION = ClassName.bestGuess("io.outfoxx.sunday.NullableOperation")
+val SUNDAY_NULLIFY_SPEC = ClassName.bestGuess("io.outfoxx.sunday.NullifySpec")
 val SUNDAY_EVENT_SOURCE = ClassName.bestGuess("io.outfoxx.sunday.EventSource")
 val SUNDAY_METHOD = ClassName.bestGuess("io.outfoxx.sunday.http.Method")
 val SUNDAY_REQUEST = ClassName.bestGuess("io.outfoxx.sunday.http.Request")
 val SUNDAY_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.Response")
-val SUNDAY_RESULT_RESPONSE = ClassName.bestGuess("io.outfoxx.sunday.http.ResultResponse")
 
 val MEDIA_TYPE = ClassName.bestGuess("io.outfoxx.sunday.MediaType")
-val REQUEST_FACTORY = ClassName.bestGuess("io.outfoxx.sunday.RequestFactory")
+val TRANSPORT = ClassName.bestGuess("io.outfoxx.sunday.Transport")
 val URI_TEMPLATE = ClassName.bestGuess("io.outfoxx.sunday.URITemplate")
 
 val SUNDAY_HTTP_PROBLEM = ClassName.bestGuess("io.outfoxx.sunday.problems.SundayHttpProblem")

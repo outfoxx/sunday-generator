@@ -1,0 +1,46 @@
+#%RAML 1.0
+title: Documentation API
+description: API documentation description.
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType:
+- application/json
+
+(sunday.problemTypes):
+  project_not_found:
+    status: 404
+    title: Project Not Found
+    detail: Project problem documentation description.
+
+types:
+  Project:
+    description: Project model documentation description.
+    type: object
+    properties:
+      id:
+        description: Project id documentation description.
+        type: string
+      name:
+        description: Project name documentation description.
+        type: string
+
+/docs:
+  (sunday.group): Docs
+  description: Service documentation description.
+  /projects:
+    get:
+      displayName: listProjects
+      description: Operation documentation description.
+      (sunday.problems): [project_not_found]
+      queryParameters:
+        includeArchived:
+          description: Include archived query documentation description.
+          type: boolean
+      responses:
+        200:
+          description: Project list response documentation description.
+          body:
+            application/json:
+              description: Project list payload documentation description.
+              type: array
+              items: Project

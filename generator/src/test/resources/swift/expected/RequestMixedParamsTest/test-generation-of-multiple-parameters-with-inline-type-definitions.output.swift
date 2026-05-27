@@ -1,60 +1,68 @@
 import PotentCodables
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return []
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
   public func fetchTest(
     select: FetchTestSelectUriParam,
     page: FetchTestPageQueryParam,
     xType: FetchTestXTypeHeaderParam
-  ) async throws -> [String : AnyValue] {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests/{select}",
-      pathParameters: [
-        "select": select
-      ],
-      queryParameters: [
-        "page": page
-      ],
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: [
-        "x-type": xType
-      ]
+  ) throws -> Sunday.Operation<Empty, [String : AnyValue], TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests/{select}",
+        pathParameters: [
+          "select": try ParameterValues.encode(select)
+        ],
+        queryParameters: [
+          "page": try ParameterValues.encode(page)
+        ],
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: [
+          "x-type": try ParameterValues.encode(xType)
+        ]
+      )
     )
   }
 
-  public enum FetchTestSelectUriParam : String, CaseIterable, Codable {
+  public enum FetchTestSelectUriParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"
 
   }
 
-  public enum FetchTestPageQueryParam : String, CaseIterable, Codable {
+  public enum FetchTestPageQueryParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"
 
   }
 
-  public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable {
+  public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable, Sendable {
 
     case all = "all"
     case limited = "limited"

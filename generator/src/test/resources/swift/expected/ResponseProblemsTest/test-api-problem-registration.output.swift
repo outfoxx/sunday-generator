@@ -1,33 +1,42 @@
 import Sunday
 
-public class API {
+public final class API<TransportType : Transport> : Sendable {
 
-  public let requestFactory: RequestFactory
+  public static var problemTypes: [ProblemRegistration] {
+    return [
+      ProblemRegistration(type: InvalidIdProblem.type, problemType: InvalidIdProblem.self),
+      ProblemRegistration(type: TestNotFoundProblem.type, problemType: TestNotFoundProblem.self)
+    ]
+  }
+  public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
 
   public init(
-    requestFactory: RequestFactory,
+    transport: TransportType,
     defaultContentTypes: [MediaType] = [],
-    defaultAcceptTypes: [MediaType] = [.json]
+    defaultAcceptTypes: [MediaType] = [.json],
+    problemTypes: [ProblemRegistration] = API.problemTypes
   ) {
-    self.requestFactory = requestFactory
+    self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
-    requestFactory.registerProblem(type: "http://example.com/invalid_id", problemType: InvalidIdProblem.self)
-    requestFactory.registerProblem(type: "http://example.com/test_not_found", problemType: TestNotFoundProblem.self)
+    problemTypes.forEach { $0.register(on: transport) }
   }
 
-  public func fetchTest() async throws -> Test {
-    return try await self.requestFactory.result(
-      method: .get,
-      pathTemplate: "/tests",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+  public func fetchTest() throws -> Sunday.Operation<Empty, Test, TransportType> {
+    return Sunday.Operation(
+      transport: self.transport,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/tests",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil
+      )
     )
   }
 

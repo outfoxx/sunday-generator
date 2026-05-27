@@ -25,40 +25,103 @@ class LocalSwiftCompiler(
   workDir: Path,
 ) : SwiftCompiler(workDir) {
 
-  private val swiftBuildDir: Path
+  private val swiftBuildRoot: Path
+  private val swiftCacheDir: Path
+  private val resolvedDependencyBuild: Boolean
 
   init {
 
     val localPkgFile =
       Paths.get(SwiftCompiler::class.java.getResource("/swift/compile/local/Package.swift")!!.toURI())
+    val localPkgDir = localPkgFile.parent
 
     val buildDir = localPkgFile.resolve("../../../../../../../build").normalize()
 
-    swiftBuildDir =
+    val validationDir =
       if (Files.isDirectory(buildDir)) {
         val cacheDir = buildDir.resolve("validation/swift").toAbsolutePath()
         Files.createDirectories(cacheDir)
         cacheDir
       } else {
-        workDir
+        workDir.resolve("validation").toAbsolutePath()
       }
+    Files.createDirectories(validationDir)
 
-    Files.copy(localPkgFile, workDir.resolve("Package.swift"))
+    swiftBuildRoot = workDir.resolve("build").toAbsolutePath()
+    swiftCacheDir = validationDir.resolve("package-cache")
+    Files.createDirectories(swiftBuildRoot)
+    Files.createDirectories(swiftCacheDir)
+
+    val packageFile = workDir.resolve("Package.swift")
+    Files.copy(localPkgFile, packageFile)
+
+    val localSundaySwift = localPkgDir.resolve("../../../../../../../../sunday-swift").normalize()
+    resolvedDependencyBuild = !Files.isDirectory(localSundaySwift)
+    if (resolvedDependencyBuild) {
+      Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
+      resolveDependencies()
+    } else {
+      Files.writeString(
+        packageFile,
+        Files
+          .readString(packageFile)
+          .replace(
+            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", exact: \"2.0.0-beta.2\")",
+            ".package(path: \"${localSundaySwift.toAbsolutePath()}\")",
+          ),
+      )
+    }
   }
 
-  override fun compile(): Pair<Int, String> {
-
-    val buildPkg =
+  private fun resolveDependencies() {
+    val resolvePkg =
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(
           command,
-          "build",
-          "--build-path",
-          "${swiftBuildDir.resolve("build")}",
+          "package",
+          "--package-path",
+          "$workDir",
+          "--manifest-cache",
+          "local",
           "--cache-path",
-          "${swiftBuildDir.resolve("cache")}",
+          "$swiftCacheDir",
+          "--only-use-versions-from-resolved-file",
+          "resolve",
         ).redirectErrorStream(true)
+        .start()
+
+    val result = resolvePkg.waitFor()
+    if (result != 0) {
+      error("Swift package resolution failed:\n${resolvePkg.inputStream.readAllBytes().decodeToString()}")
+    }
+  }
+
+  override fun compile(): Pair<Int, String> {
+
+    val buildCommand =
+      buildList {
+        add(command)
+        add("build")
+        add("--package-path")
+        add("$workDir")
+        add("--manifest-cache")
+        add("local")
+        add("--disable-index-store")
+        if (resolvedDependencyBuild) {
+          add("--only-use-versions-from-resolved-file")
+        }
+        add("--scratch-path")
+        add("$swiftBuildRoot")
+        add("--cache-path")
+        add("$swiftCacheDir")
+      }
+
+    val buildPkg =
+      ProcessBuilder()
+        .directory(workDir.toFile())
+        .command(buildCommand)
+        .redirectErrorStream(true)
         .start()
 
     val result = buildPkg.waitFor()

@@ -1,0 +1,48 @@
+asyncapi: 2.6.0
+info:
+  title: Craft Events API
+  version: 1.0.0
+x-sunday-apiId: craft
+servers:
+  production:
+    url: broker.example.com:9092
+    protocol: kafka
+    protocolVersion: "3.6"
+    security:
+      - userPassword: []
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema.example.com
+        schemaRegistryVendor: confluent
+channels:
+  project.secured:
+    x-sunday-service: projects
+    servers:
+      - production
+    bindings:
+      kafka:
+        topic: projects
+        partitions: 12
+        replicas: 3
+    subscribe:
+      operationId: securedProjectChanged
+      bindings:
+        kafka:
+          groupId:
+            type: string
+          clientId:
+            type: string
+      message:
+        name: ProjectSecured
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - projectId
+          properties:
+            projectId:
+              type: string
+components:
+  securitySchemes:
+    userPassword:
+      type: userPassword

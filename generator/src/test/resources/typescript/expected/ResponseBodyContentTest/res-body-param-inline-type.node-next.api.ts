@@ -1,14 +1,20 @@
-import {MediaType, RequestFactory, SchemaLike, SchemaRuntime, defineSchema} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, SchemaOutput, SchemaRuntime, Transport, createOperation, defineSchema} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
-export class API {
+export interface API<Factory extends SundayTransport> {
+
+  fetchTest(): Operation<void, API.FetchTestResponseBody, Factory>;
+
+}
+
+class APIClient<Factory extends SundayTransport> {
 
   defaultContentTypes: Array<MediaType>;
 
   defaultAcceptTypes: Array<MediaType>;
 
-  constructor(public requestFactory: RequestFactory,
+  constructor(public transport: Factory,
       options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
@@ -16,60 +22,37 @@ export class API {
         options?.defaultAcceptTypes ?? [MediaType.JSON];
   }
 
-  fetchTest(signal?: AbortSignal): Promise<API.FetchTestResponseBody> {
-    return this.requestFactory.result(
-        {
+  fetchTest(): Operation<void, API.FetchTestResponseBody, Factory> {
+    return createOperation(this.transport, {
+        request: {
           method: 'GET',
           pathTemplate: '/tests',
           acceptTypes: this.defaultAcceptTypes,
-          signal: signal,
         },
-        fetchTestReturnType
-    );
+        responseType: fetchTestReturnType
+    });
   }
 
 }
 
+export function createAPI<Factory extends SundayTransport>(transport: Factory,
+    options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined): API<Factory> {
+  return new APIClient(transport, options);
+}
+
 export namespace API {
 
-  export interface FetchTestResponseBodySpec {
-
-    value: string;
-
-  }
-
-  export class FetchTestResponseBody implements FetchTestResponseBodySpec {
-
-    value: string;
-
-    constructor(init: FetchTestResponseBodySpec) {
-      this.value = init.value;
-    }
-
-    copy(changes: Partial<FetchTestResponseBodySpec>): FetchTestResponseBody {
-      return new FetchTestResponseBody(Object.assign({}, this, changes));
-    }
-
-    toString(): string {
-      return `API.FetchTestResponseBody(value='${this.value}')`;
-    }
-
-  }
+  export type FetchTestResponseBody = SchemaOutput<typeof FetchTestResponseBodySchema>;
 
   export const FetchTestResponseBodySchema = defineSchema((runtime: SchemaRuntime) => {
     const wireSchema = z.looseObject({
       'value': z.string()
     });
-    return z.codec(wireSchema, z.instanceof(FetchTestResponseBody), {
-      decode: (value) => new FetchTestResponseBody({
-        value: value['value'],
-      }),
-      encode: (value) => ({
-        'value': value.value,
-      }) as z.infer<typeof wireSchema>,
-    });
+    return wireSchema;
   });
 
 }
+
+type SundayTransport = Transport<unknown>;
 
 const fetchTestReturnType: SchemaLike<API.FetchTestResponseBody> = API.FetchTestResponseBodySchema;

@@ -1,4 +1,4 @@
-package io.test.service
+package io.test
 
 import com.fasterxml.jackson.`annotation`.JsonIgnore
 import com.fasterxml.jackson.`annotation`.JsonProperty

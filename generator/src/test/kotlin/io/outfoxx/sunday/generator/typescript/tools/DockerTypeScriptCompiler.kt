@@ -112,7 +112,7 @@ class DockerTypeScriptCompiler(
     val execId =
       dockerClient
         .execCreateCmd(containerId)
-        .withCmd("npm", "install")
+        .withCmd("npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund")
         .withWorkingDir("/work")
         .withAttachStdout(true)
         .withAttachStderr(true)
@@ -130,7 +130,7 @@ class DockerTypeScriptCompiler(
     val execId =
       dockerClient
         .execCreateCmd(containerId)
-        .withCmd("npm", "run", "build")
+        .withCmd(*tscCommand())
         .withWorkingDir("/work")
         .withAttachStdout(true)
         .withAttachStderr(true)
@@ -153,6 +153,19 @@ class DockerTypeScriptCompiler(
 
     return resultCode to out.toByteArray().decodeToString()
   }
+
+  private fun tscCommand(): Array<String> =
+    arrayOf(
+      "/work/node_modules/.bin/tsc",
+      "--project",
+      "tsconfig.json",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "--incremental",
+      "false",
+      "--noErrorTruncation",
+    )
 
   override fun close() {
     println("### Stopping TypeScript Compiler")

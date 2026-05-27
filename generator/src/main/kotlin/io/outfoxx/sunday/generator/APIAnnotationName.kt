@@ -21,6 +21,11 @@ enum class APIAnnotationName(
   private val modeSpecific: Boolean,
 ) {
 
+  ApiId("apiId", false),
+  Service("service", false),
+  OperationId("operationId", false),
+  ModelName("modelName", false),
+
   ServiceName("name", false),
   ServiceGroup("group", false),
 
@@ -55,6 +60,8 @@ enum class APIAnnotationName(
   Problems("problems", false),
 
   Nullify("nullify", false),
+  Policy("policy", false),
+  Zanzibar("zanzibar", false),
 
   Exclude("exclude", true),
 
@@ -79,9 +86,11 @@ enum class APIAnnotationName(
     test: String,
     generationMode: GenerationMode? = null,
   ) = if (modeSpecific && generationMode != null) {
-    test == "$id:${generationMode.name.lowercase()}" || test == "sunday-$id-${generationMode.name.lowercase()}"
+    test == "$id:${generationMode.name.lowercase()}" ||
+      test == "sunday-$id-${generationMode.name.lowercase()}" ||
+      test == "sunday.$id.${generationMode.name.lowercase()}"
   } else {
-    test == id || test == "sunday-$id"
+    test == id || test == "sunday-$id" || test == "sunday.$id"
   }
 
   override fun toString() = id

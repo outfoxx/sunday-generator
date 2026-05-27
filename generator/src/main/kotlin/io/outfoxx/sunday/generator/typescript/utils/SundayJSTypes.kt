@@ -21,8 +21,9 @@ import io.outfoxx.typescriptpoet.TypeName
 
 const val SUNDAY_PKG = "@outfoxx/sunday"
 const val ZOD_PKG = "zod"
-val REQUEST_FACTORY = TypeName.namedImport("RequestFactory", SUNDAY_PKG)
+val TRANSPORT = TypeName.namedImport("Transport", SUNDAY_PKG)
 val SCHEMA_LIKE = TypeName.namedImport("SchemaLike", SUNDAY_PKG)
+val SCHEMA_OUTPUT = TypeName.namedImport("SchemaOutput", SUNDAY_PKG)
 val SCHEMA_RUNTIME = TypeName.namedImport("SchemaRuntime", SUNDAY_PKG)
 val DEFINE_SCHEMA = SymbolSpec.importsName("defineSchema", SUNDAY_PKG)
 val CREATE_PROBLEM_CODEC = SymbolSpec.importsName("createProblemCodec", SUNDAY_PKG)
@@ -56,6 +57,9 @@ val DURATION = TypeName.namedImport("Duration", SUNDAY_PKG)
 val PROBLEM = TypeName.namedImport("Problem", SUNDAY_PKG)
 val MEDIA_TYPE = TypeName.namedImport("MediaType", SUNDAY_PKG)
 val URL_TEMPLATE = TypeName.namedImport("URLTemplate", SUNDAY_PKG)
-val RESULT_RESPONSE = TypeName.namedImport("ResultResponse", SUNDAY_PKG)
+val OPERATION = TypeName.namedImport("Operation", SUNDAY_PKG)
+val NULLABLE_OPERATION = TypeName.namedImport("NullableOperation", SUNDAY_PKG)
+val TRANSPORT_REQUEST = TypeName.namedImport("TransportRequest", SUNDAY_PKG)
 
-val NULLIFY_PROBLEM = SymbolSpec.importsName("nullifyProblem", SUNDAY_PKG)
+val CREATE_OPERATION = SymbolSpec.importsName("createOperation", SUNDAY_PKG)
+val CREATE_NULLABLE_OPERATION = SymbolSpec.importsName("createNullableOperation", SUNDAY_PKG)

@@ -1,0 +1,118 @@
+irVersion: "1"
+name: "Operation Transport Fidelity API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "OperationTransportFidelityService"
+  baseUri: "https://{region}.api.example.com/{version}"
+  baseUriParameters:
+  - name: "region"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    defaultValue: "us"
+  - name: "version"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    defaultValue: "v1"
+  operations:
+  - id: "createProject"
+    method: "POST"
+    path: "/projects"
+    parameters:
+    - name: "include"
+      location: "QUERY"
+      type:
+        kind: "SCALAR"
+        name: "string"
+    requestBody:
+      type:
+        kind: "NAMED"
+        name: "ProjectCreateJson"
+      mediaTypes:
+      - "application/json"
+      payloads:
+      - type:
+          kind: "NAMED"
+          name: "ProjectCreateJson"
+        mediaTypes:
+        - "application/json"
+      - type:
+          kind: "NAMED"
+          name: "ProjectCreatePatch"
+        mediaTypes:
+        - "application/merge-patch+json"
+    responses:
+    - status: 200
+      type:
+        kind: "NAMED"
+        name: "Project"
+      mediaTypes:
+      - "application/json"
+      payloads:
+      - type:
+          kind: "NAMED"
+          name: "Project"
+        mediaTypes:
+        - "application/json"
+      - type:
+          kind: "NAMED"
+          name: "ProjectSummary"
+        mediaTypes:
+        - "application/vnd.project-summary+json"
+    media:
+      request:
+      - "application/json"
+      response:
+      - "application/json"
+  media:
+    request:
+    - "application/json"
+    response:
+    - "application/json"
+models:
+- name: "Project"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectCreateJson"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+- name: "ProjectCreatePatch"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+- name: "ProjectSummary"
+  kind: "OBJECT"
+  properties:
+  - name: "id"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+media:
+  request:
+  - "application/json"
+  response:
+  - "application/json"

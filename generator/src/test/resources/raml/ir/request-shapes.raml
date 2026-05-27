@@ -1,0 +1,69 @@
+#%RAML 1.0
+title: Request Shapes API
+mediaType:
+- application/json
+
+types:
+  ProjectState:
+    type: string
+    enum:
+    - active
+    - archived
+
+  ProjectTagList:
+    type: string[]
+
+  ProjectPatch:
+    type: object
+    properties:
+      name?: string
+      state?: ProjectState
+      tags?: ProjectTagList
+      metadata?: nil | string
+
+  SearchToken:
+    type: string | integer
+
+  SearchOptions:
+    type: object
+    properties:
+      archived: boolean
+      labels: string[]
+
+/projects/{projectId}:
+  uriParameters:
+    projectId: string
+  patch:
+    displayName: updateProject
+    queryParameters:
+      includeArchived?:
+        type: boolean
+        default: false
+      token?: SearchToken
+      state?:
+        type: ProjectState
+        default: active
+      labels?:
+        type: ProjectTagList
+        default: [api, generator]
+      options?:
+        type: SearchOptions
+        default:
+          archived: false
+          labels: [api]
+    headers:
+      X-Trace-Id?:
+        type: string
+        default: generated
+    body:
+      application/json:
+        type: ProjectPatch
+    responses:
+      200:
+        body:
+          application/json:
+            type: ProjectPatch
+      202:
+        body:
+          application/cbor:
+            type: ProjectTagList

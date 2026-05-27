@@ -18,13 +18,23 @@ public interface API {
   public fun fetchTest(@RestQuery category: FetchTestCategoryQueryParam, @RestQuery
       type: FetchTestTypeQueryParam): RestResponse<Map<String, Any>>
 
-  public enum class FetchTestCategoryQueryParam {
-    Politics,
-    Science,
+  public enum class FetchTestCategoryQueryParam(
+    private val wireValue: String,
+  ) {
+    Politics("politics"),
+    Science("science"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestTypeQueryParam {
-    All,
-    Limited,
+  public enum class FetchTestTypeQueryParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 }
