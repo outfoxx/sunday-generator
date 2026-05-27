@@ -65,7 +65,7 @@ class LocalSwiftCompiler(
         Files
           .readString(packageFile)
           .replace(
-            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", exact: \"2.0.0-beta.1\")",
+            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", exact: \"2.0.0-beta.2\")",
             ".package(path: \"${localSundaySwift.toAbsolutePath()}\")",
           ),
       )
