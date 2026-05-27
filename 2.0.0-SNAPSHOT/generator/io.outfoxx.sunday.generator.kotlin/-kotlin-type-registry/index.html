@@ -94,7 +94,7 @@
   <div class="breadcrumbs"><a href="../../index.html">generator</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.generator.kotlin</a><span class="delimiter">/</span><span class="current">KotlinTypeRegistry</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Kotlin</span><wbr><span>Type</span><wbr><span><span>Registry</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">KotlinTypeRegistry</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>defaultModelPackageName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">generatedAnnotationName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>generationMode<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generation-mode/index.html">GenerationMode</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>options<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="-option/index.html">KotlinTypeRegistry.Option</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>problemLibrary<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library/index.html">KotlinProblemLibrary</a><span class="token operator"> = </span>KotlinProblemLibrary.QUARKUS<span class="token punctuation">, </span></span><span class="parameter ">problemRfc<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-rfc/index.html">KotlinProblemRfc</a><span class="token operator"> = </span>KotlinProblemRfc.RFC9457<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>validateProblemRfc<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span><span class="token punctuation">, </span></span><span class="parameter ">generationTimestamp<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)</span></span><span class="token punctuation">)</span> : <a href="../../io.outfoxx.sunday.generator/-type-registry/index.html">TypeRegistry</a></div></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">KotlinTypeRegistry</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>defaultModelPackageName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">generatedAnnotationName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>generationMode<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generation-mode/index.html">GenerationMode</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>options<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="-option/index.html">KotlinTypeRegistry.Option</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>problemLibrary<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library/index.html">KotlinProblemLibrary</a><span class="token operator"> = </span>KotlinProblemLibrary.QUARKUS<span class="token punctuation">, </span></span><span class="parameter ">problemRfc<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-rfc/index.html">KotlinProblemRfc</a><span class="token operator"> = </span>KotlinProblemRfc.RFC9457<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>validateProblemRfc<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span><span class="token punctuation">, </span></span><span class="parameter ">generationTimestamp<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>LocalDateTime.now().format(ISO_LOCAL_DATE_TIME)</span></span><span class="token punctuation">)</span> : <a href="../-kotlin-type-output-registry/index.html">KotlinTypeOutputRegistry</a></div></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -139,7 +139,22 @@
       </div>
       <div data-togglable="PROPERTY">
         <h2 class="tableheader">Properties</h2>
-        <div class="table"><a data-name="393433911%2FProperties%2F-1790917311" anchor-label="defaultModelPackageName" id="393433911%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+        <div class="table"><a data-name="-1206699440%2FProperties%2F-1790917311" anchor-label="beanValidationTypes" id="-1206699440%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="bean-validation-types.html"><span>bean</span><wbr><span>Validation</span><wbr><span><span>Types</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1206699440%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="bean-validation-types.html">beanValidationTypes</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-bean-validation-types/index.html">BeanValidationTypes</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="393433911%2FProperties%2F-1790917311" anchor-label="defaultModelPackageName" id="393433911%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
@@ -149,7 +164,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="default-model-package-name.html">defaultModelPackageName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="default-model-package-name.html">defaultModelPackageName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -164,7 +179,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="generation-mode.html">generationMode</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generation-mode/index.html">GenerationMode</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="generation-mode.html">generationMode</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-generation-mode/index.html">GenerationMode</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -194,7 +209,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="options.html">options</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="-option/index.html">KotlinTypeRegistry.Option</a><span class="token operator">&gt;</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="options.html">options</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="-option/index.html">KotlinTypeRegistry.Option</a><span class="token operator">&gt;</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -209,7 +224,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="problem-library.html">problemLibrary</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library/index.html">KotlinProblemLibrary</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="problem-library.html">problemLibrary</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library/index.html">KotlinProblemLibrary</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -224,7 +239,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="problem-library-support.html">problemLibrarySupport</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library-support/index.html">KotlinProblemLibrarySupport</a></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="problem-library-support.html">problemLibrarySupport</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.kotlin.utils/-kotlin-problem-library-support/index.html">KotlinProblemLibrarySupport</a></div></div></div>
                 </div>
               </div>
             </div>
@@ -258,7 +273,22 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="add-generated-to.html"><span class="token function">addGeneratedTo</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">builder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">verbose<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="add-generated-to.html"><span class="token function">addGeneratedTo</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">builder<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span><span class="token punctuation">, </span></span><span class="parameter ">verbose<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="539172234%2FFunctions%2F-1790917311" anchor-label="addModelType" id="539172234%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="add-model-type.html"><span>add</span><wbr><span>Model</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="539172234%2FFunctions%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="add-model-type.html"><span class="token function">addModelType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">className<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">modelType<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Registers an IR-generated model type.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -273,22 +303,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="add-service-type.html"><span class="token function">addServiceType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">className<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">serviceType<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-229445463%2FFunctions%2F-1790917311" anchor-label="applyUseSiteAnnotations" id="-229445463%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="apply-use-site-annotations.html"><span>apply</span><wbr><span>Use</span><wbr><span>Site</span><wbr><span><span>Annotations</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-229445463%2FFunctions%2F-1790917311"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="apply-use-site-annotations.html"><span class="token function">applyUseSiteAnnotations</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">use<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">typeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span><span class="token punctuation">, </span></span><span class="parameter ">applicator<span class="token operator">: </span><span class="token punctuation">(</span><span data-unresolved-link="com.squareup.kotlinpoet/AnnotationSpec///PointingToDeclaration/">AnnotationSpec</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="add-service-type.html"><span class="token function">addServiceType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">className<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span><span class="token punctuation">, </span></span><span class="parameter ">serviceType<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeSpec.Builder///PointingToDeclaration/">TypeSpec.Builder</span></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -308,21 +323,6 @@
               </div>
             </div>
           </div>
-<a data-name="1940154172%2FFunctions%2F-1790917311" anchor-label="defineProblemType" id="1940154172%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="define-problem-type.html"><span>define</span><wbr><span>Problem</span><wbr><span><span>Type</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1940154172%2FFunctions%2F-1790917311"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="define-problem-type.html"><span class="token function">defineProblemType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">problemCode<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">problemTypeDefinition<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator/-problem-type-definition/index.html">ProblemTypeDefinition</a><span class="token punctuation">, </span></span><span class="parameter ">shapeIndex<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.common/-shape-index/index.html">ShapeIndex</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/ClassName///PointingToDeclaration/">ClassName</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 <a data-name="-2147439239%2FFunctions%2F-1790917311" anchor-label="generateFiles" id="-2147439239%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
           <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
             <div class="main-subrow keyValue ">
@@ -333,37 +333,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="generate-files.html"><span class="token function">generateFiles</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">categories<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="../../io.outfoxx.sunday.generator/-generated-type-category/index.html">GeneratedTypeCategory</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">outputDirectory<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Path.html">Path</a></span></span><span class="token punctuation">)</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="-1148616404%2FFunctions%2F-1790917311" anchor-label="resolveTypeName" id="-1148616404%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="resolve-type-name.html"><span>resolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1148616404%2FFunctions%2F-1790917311"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="resolve-type-name.html"><span class="token function">resolveTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">shapeRef<span class="token operator">: </span><span data-unresolved-link="amf.core.client.platform.model.domain/Shape///PointingToDeclaration/">Shape</span><span class="token punctuation">, </span></span><span class="parameter ">context<span class="token operator">: </span><a href="../-kotlin-resolution-context/index.html">KotlinResolutionContext</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-<a data-name="147142829%2FFunctions%2F-1790917311" anchor-label="unresolveTypeName" id="147142829%2FFunctions%2F-1790917311" data-filterable-set=":generator/main"></a>
-          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
-            <div class="main-subrow keyValue ">
-              <div class=""><span class="inline-flex">
-                  <div><a href="unresolve-type-name.html"><span>unresolve</span><wbr><span>Type</span><wbr><span><span>Name</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="147142829%2FFunctions%2F-1790917311"></span>
-                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
-                  </span></span></div>
-              <div>
-                <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="unresolve-type-name.html"><span class="token function">unresolveTypeName</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeName<span class="token operator">: </span><span data-unresolved-link="com.squareup.kotlinpoet/TypeName///PointingToDeclaration/">TypeName</span></span></span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="generate-files.html"><span class="token function">generateFiles</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">categories<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="../../io.outfoxx.sunday.generator/-generated-type-category/index.html">GeneratedTypeCategory</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">outputDirectory<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Path.html">Path</a></span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>

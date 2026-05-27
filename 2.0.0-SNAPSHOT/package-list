@@ -4,13 +4,17 @@ $dokka.linkExtension:html
 module:cli
 io.outfoxx.sunday.generator
 io.outfoxx.sunday.generator.kotlin
+io.outfoxx.sunday.generator.python
 io.outfoxx.sunday.generator.swift
 io.outfoxx.sunday.generator.typescript
 module:generator
 io.outfoxx.sunday.generator
 io.outfoxx.sunday.generator.common
+io.outfoxx.sunday.generator.ir
+io.outfoxx.sunday.generator.ir.emit
 io.outfoxx.sunday.generator.kotlin
 io.outfoxx.sunday.generator.kotlin.utils
+io.outfoxx.sunday.generator.python
 io.outfoxx.sunday.generator.swift
 io.outfoxx.sunday.generator.swift.utils
 io.outfoxx.sunday.generator.typescript
