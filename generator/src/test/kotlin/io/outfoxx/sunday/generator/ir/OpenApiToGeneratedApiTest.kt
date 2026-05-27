@@ -209,11 +209,11 @@ class OpenApiToGeneratedApiTest {
     val operation =
       api
         .services
-        .single()
-        .operations
-        .single()
+        .flatMap { service -> service.operations }
+        .single { operation -> operation.id == "updateValue" }
     val anyJson = api.models.single { model -> model.name == "AnyJson" }
     val anyHolder = api.models.single { model -> model.name == "AnyHolder" }
+    val entityStatePropertyValue = api.models.single { model -> model.name == "EntityStatePropertyValue" }
 
     assertEquals(GeneratedTypeRef.scalar("any"), operation.requestBody?.type)
     assertEquals(GeneratedTypeRef.named("AnyJson"), operation.responses.single().type)
@@ -230,6 +230,13 @@ class OpenApiToGeneratedApiTest {
     assertEquals(
       GeneratedTypeRef.named("AnyJson"),
       anyHolder.properties.single { property -> property.name == "named" }.type,
+    )
+    assertEquals(GeneratedModel.Kind.OBJECT, entityStatePropertyValue.kind)
+    assertEquals(listOf(GeneratedTypeRef.named("EntityStateProperty")), entityStatePropertyValue.inherits)
+    assertEquals("value", entityStatePropertyValue.discriminatorValue)
+    assertEquals(
+      GeneratedTypeRef.scalar("any"),
+      entityStatePropertyValue.properties.single { property -> property.name == "value" }.type,
     )
   }
 

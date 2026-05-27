@@ -5,6 +5,8 @@ info:
 paths:
   /values:
     post:
+      tags:
+        - Narrative
       operationId: updateValue
       requestBody:
         content:
@@ -17,6 +19,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnyJson'
+  /properties:
+    put:
+      tags:
+        - Narrative
+      operationId: updateProperty
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityStatePropertyMap'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityStatePropertyMap'
 components:
   schemas:
     AnyJson: {}
@@ -28,3 +47,43 @@ components:
           description: Any documented value
         named:
           $ref: '#/components/schemas/AnyJson'
+    EntityStatePropertyType:
+      type: string
+      enum:
+        - value
+        - map
+    EntityStateProperty:
+      type: object
+      required:
+        - type
+      discriminator:
+        propertyName: type
+        mapping:
+          value: '#/components/schemas/EntityStatePropertyValue'
+          map: '#/components/schemas/EntityStatePropertyMap'
+      properties:
+        type:
+          $ref: '#/components/schemas/EntityStatePropertyType'
+    EntityStatePropertyValue:
+      allOf:
+        - $ref: '#/components/schemas/EntityStateProperty'
+        - type: object
+          required:
+            - enhancers
+          properties:
+            value: {}
+            enhancers:
+              type: array
+              items:
+                type: string
+    EntityStatePropertyMap:
+      allOf:
+        - $ref: '#/components/schemas/EntityStateProperty'
+        - type: object
+          required:
+            - properties
+          properties:
+            properties:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/EntityStateProperty'

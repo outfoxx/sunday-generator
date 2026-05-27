@@ -237,14 +237,20 @@ class SwiftSundayIrGenerator(
     api
       .models
       .filter { model -> model.scope == null }
-      .mapNotNull { model -> model.swiftTypeSpecBuilderOrNull()?.let { model to it } }
-      .forEach { (model, typeBuilder) ->
+      .mapNotNull { model ->
+        val outputDirectory = model.swiftOutputDirectory(model.swiftModelKey() in eventModelKeys)
+        val outputGroup = modelOutputGroups[model.swiftModelKey()]
+        model
+          .swiftTypeSpecBuilderOrNull(outputDirectory, outputGroup)
+          ?.let { typeBuilder -> GeneratedSwiftModel(model, outputDirectory, outputGroup, typeBuilder) }
+      }.forEach { generatedModel ->
+        val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
         val typeName = model.swiftDeclaredTypeName()
         typeRegistry.addModelType(
           typeName,
           typeBuilder,
-          outputDirectory = model.swiftOutputDirectory(model.swiftModelKey() in eventModelKeys),
-          outputGroup = modelOutputGroups[model.swiftModelKey()],
+          outputDirectory = outputDirectory,
+          outputGroup = outputGroup,
         )
       }
   }
@@ -273,17 +279,89 @@ class SwiftSundayIrGenerator(
 
   private fun List<GeneratedService>.modelOutputGroups(
     serviceOutputGroups: Map<GeneratedService, String>,
-  ): Map<SwiftModelKey, String> =
-    flatMap { service ->
-      service.operations.flatMap { operation ->
-        val outputGroup = serviceOutputGroups[service] ?: operation.swiftOutputGroup()
-        operation
-          .referencedTopLevelModels()
-          .mapNotNull { model -> outputGroup?.let { group -> model.swiftModelKey() to group } }
+  ): Map<SwiftModelKey, String> {
+    val referencedGroups =
+      flatMap { service ->
+        service.operations.flatMap { operation ->
+          val outputGroup = serviceOutputGroups[service] ?: operation.swiftOutputGroup()
+          operation
+            .referencedTopLevelModels()
+            .mapNotNull { model -> outputGroup?.let { group -> model.swiftModelKey() to group } }
+        }
       }
-    }.groupBy({ (modelKey) -> modelKey }, { (_, group) -> group })
-      .mapNotNull { (modelKey, groups) -> groups.distinct().singleOrNull()?.let { group -> modelKey to group } }
-      .toMap()
+    val directGroups =
+      referencedGroups
+        .groupBy({ (modelKey) -> modelKey }, { (_, group) -> group })
+        .mapNotNull { (modelKey, groups) -> groups.distinct().singleOrNull()?.let { group -> modelKey to group } }
+        .toMap()
+
+    return directGroups.withDiscriminatorFamilyGroups()
+  }
+
+  private fun Map<SwiftModelKey, String>.withDiscriminatorFamilyGroups(): Map<SwiftModelKey, String> {
+    val outputGroups = toMutableMap()
+    val modelKeys =
+      api
+        .models
+        .filter { model -> model.scope == null }
+        .associateBy { model -> model.swiftModelKey() }
+
+    var changed = true
+    while (changed) {
+      changed = false
+
+      api
+        .models
+        .filter { model -> model.scope == null }
+        .forEach { model ->
+          val familyKeys = model.discriminatorFamilyKeys(modelKeys)
+          val familyGroups = familyKeys.mapNotNull { modelKey -> outputGroups[modelKey] }.distinct()
+          if (familyGroups.size != 1) {
+            // Ambiguous shared families stay ungrouped unless every grouped reference agrees on the same group.
+            return@forEach
+          }
+
+          val familyGroup = familyGroups.single()
+          familyKeys.forEach { modelKey ->
+            if (modelKey !in outputGroups) {
+              outputGroups[modelKey] = familyGroup
+              changed = true
+            }
+          }
+        }
+    }
+
+    return outputGroups
+  }
+
+  private fun GeneratedModel.discriminatorFamilyKeys(
+    modelKeys: Map<SwiftModelKey, GeneratedModel>,
+  ): Set<SwiftModelKey> =
+    buildSet {
+      add(swiftModelKey())
+
+      inherits
+        .mapNotNull { type -> type.modelOrNull(apiIndex)?.takeIf { model -> model.scope == null } }
+        .forEach { model -> add(model.swiftModelKey()) }
+
+      discriminatorMappings
+        .values
+        .mapNotNull { type -> type.modelOrNull(apiIndex)?.takeIf { model -> model.scope == null } }
+        .forEach { model -> add(model.swiftModelKey()) }
+
+      discriminator
+        ?.let { discriminatorName -> properties.firstOrNull { property -> property.name == discriminatorName } }
+        ?.type
+        ?.modelOrNull(apiIndex)
+        ?.takeIf { model -> model.scope == null }
+        ?.let { model -> add(model.swiftModelKey()) }
+
+      val modelKey = swiftModelKey()
+      modelKeys
+        .values
+        .filter { model -> model.inherits.any { type -> type.modelOrNull(apiIndex)?.swiftModelKey() == modelKey } }
+        .forEach { model -> add(model.swiftModelKey()) }
+    }
 
   private fun List<GeneratedService>.problemOutputGroups(
     serviceOutputGroups: Map<GeneratedService, String>,
@@ -401,6 +479,13 @@ class SwiftSundayIrGenerator(
   private data class GeneratedSwiftService(
     val service: GeneratedService,
     val typeName: DeclaredTypeName,
+  )
+
+  private data class GeneratedSwiftModel(
+    val model: GeneratedModel,
+    val outputDirectory: OutputDirectory,
+    val outputGroup: String?,
+    val typeBuilder: TypeSpec.Builder,
   )
 
   private data class UnionPropertyBranch(
@@ -700,7 +785,10 @@ class SwiftSundayIrGenerator(
       .referencedScopedModels(this)
       .mapNotNull { model -> model.swiftTypeSpecBuilderOrNull()?.build() }
 
-  private fun GeneratedModel.swiftTypeSpecBuilderOrNull(): TypeSpec.Builder? =
+  private fun GeneratedModel.swiftTypeSpecBuilderOrNull(
+    outputDirectory: OutputDirectory = OutputDirectory.Models,
+    outputGroup: String? = null,
+  ): TypeSpec.Builder? =
     when (kind) {
       GeneratedModel.Kind.ENUM ->
         TypeSpec
@@ -719,7 +807,7 @@ class SwiftSundayIrGenerator(
           ?: when {
             isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
             isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
-            else -> swiftObjectTypeSpec()
+            else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
           }
 
       GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
@@ -1499,7 +1587,10 @@ class SwiftSundayIrGenerator(
       }.build()
   }
 
-  private fun GeneratedModel.swiftObjectTypeSpec(): TypeSpec.Builder {
+  private fun GeneratedModel.swiftObjectTypeSpec(
+    outputDirectory: OutputDirectory = OutputDirectory.Models,
+    outputGroup: String? = null,
+  ): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
     val inheritedModel = inherits.firstOrNull()?.modelOrNull(apiIndex)
     val inheritedTypeName = inheritedModel?.swiftDeclaredTypeName()
@@ -1690,7 +1781,7 @@ class SwiftSundayIrGenerator(
         )
       }
     }
-    referenceTypeOrNull(typeName)?.let { referenceType ->
+    referenceTypeOrNull(typeName, outputDirectory, outputGroup)?.let { referenceType ->
       if (!isProtocolModel) {
         typeBuilder.addType(referenceType)
       }
@@ -2009,7 +2100,11 @@ class SwiftSundayIrGenerator(
       }.build()
   }
 
-  private fun GeneratedModel.referenceTypeOrNull(typeName: DeclaredTypeName): TypeSpec? {
+  private fun GeneratedModel.referenceTypeOrNull(
+    typeName: DeclaredTypeName,
+    outputDirectory: OutputDirectory,
+    outputGroup: String?,
+  ): TypeSpec? {
     if (discriminator == null || externallyDiscriminated || inherits.isNotEmpty()) {
       return null
     }
@@ -2148,7 +2243,12 @@ class SwiftSundayIrGenerator(
         }
 
     if (isProtocolHierarchyRootModel || isProblemHierarchyProtocolModel) {
-      typeRegistry.addModelType(anyRefTypeName, referenceType)
+      typeRegistry.addModelType(
+        anyRefTypeName,
+        referenceType,
+        outputDirectory = outputDirectory,
+        outputGroup = outputGroup,
+      )
       return null
     }
 
