@@ -79,6 +79,32 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  fun `OpenAPI empty schemas emit object typed Python models and clients`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/any-json-3.1.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modules = api.httpxModules()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = modules.importModuleNames(),
+      ),
+    )
+    val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/models.py")
+    val clientSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/any_json.py")
+
+    assertTrue(modelSource.contains("AnyJson = object"), modelSource)
+    assertTrue(modelSource.contains("value: object | None = None"), modelSource)
+    assertTrue(modelSource.contains("documented: object | None = None"), modelSource)
+    assertTrue(modelSource.contains("named: AnyJson | None = None"), modelSource)
+    assertTrue(clientSource.contains("body: object"), clientSource)
+    assertTrue(clientSource.contains("Operation[AnyJson]"), clientSource)
+  }
+
+  @Test
   fun `AsyncAPI source emits compile-backed client and server snapshots`(
     compiler: PythonCompiler,
     @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") sourceUri: URI,
