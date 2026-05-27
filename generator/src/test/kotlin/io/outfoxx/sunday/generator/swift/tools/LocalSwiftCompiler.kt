@@ -59,6 +59,7 @@ class LocalSwiftCompiler(
     resolvedDependencyBuild = !Files.isDirectory(localSundaySwift)
     if (resolvedDependencyBuild) {
       Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
+      resolveDependencies()
     } else {
       Files.writeString(
         packageFile,
@@ -69,6 +70,30 @@ class LocalSwiftCompiler(
             ".package(path: \"${localSundaySwift.toAbsolutePath()}\")",
           ),
       )
+    }
+  }
+
+  private fun resolveDependencies() {
+    val resolvePkg =
+      ProcessBuilder()
+        .directory(workDir.toFile())
+        .command(
+          command,
+          "package",
+          "--package-path",
+          "$workDir",
+          "--manifest-cache",
+          "local",
+          "--cache-path",
+          "$swiftCacheDir",
+          "--only-use-versions-from-resolved-file",
+          "resolve",
+        ).redirectErrorStream(true)
+        .start()
+
+    val result = resolvePkg.waitFor()
+    if (result != 0) {
+      error("Swift package resolution failed:\n${resolvePkg.inputStream.readAllBytes().decodeToString()}")
     }
   }
 
