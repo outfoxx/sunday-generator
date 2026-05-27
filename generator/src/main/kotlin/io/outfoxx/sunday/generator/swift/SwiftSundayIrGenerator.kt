@@ -242,14 +242,15 @@ class SwiftSundayIrGenerator(
         val outputGroup = modelOutputGroups[model.swiftModelKey()]
         model
           .swiftTypeSpecBuilderOrNull(outputDirectory, outputGroup)
-          ?.let { typeBuilder -> Triple(model, outputDirectory, typeBuilder) }
-      }.forEach { (model, outputDirectory, typeBuilder) ->
+          ?.let { typeBuilder -> GeneratedSwiftModel(model, outputDirectory, outputGroup, typeBuilder) }
+      }.forEach { generatedModel ->
+        val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
         val typeName = model.swiftDeclaredTypeName()
         typeRegistry.addModelType(
           typeName,
           typeBuilder,
           outputDirectory = outputDirectory,
-          outputGroup = modelOutputGroups[model.swiftModelKey()],
+          outputGroup = outputGroup,
         )
       }
   }
@@ -316,6 +317,7 @@ class SwiftSundayIrGenerator(
           val familyKeys = model.discriminatorFamilyKeys(modelKeys)
           val familyGroups = familyKeys.mapNotNull { modelKey -> outputGroups[modelKey] }.distinct()
           if (familyGroups.size != 1) {
+            // Ambiguous shared families stay ungrouped unless every grouped reference agrees on the same group.
             return@forEach
           }
 
@@ -477,6 +479,13 @@ class SwiftSundayIrGenerator(
   private data class GeneratedSwiftService(
     val service: GeneratedService,
     val typeName: DeclaredTypeName,
+  )
+
+  private data class GeneratedSwiftModel(
+    val model: GeneratedModel,
+    val outputDirectory: OutputDirectory,
+    val outputGroup: String?,
+    val typeBuilder: TypeSpec.Builder,
   )
 
   private data class UnionPropertyBranch(
