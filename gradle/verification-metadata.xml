@@ -130,6 +130,7 @@
          </trusted-key>
          <trusted-key id="8569C95CADC508B09FE90F3002216ED811210DAA" group="io.github.detekt.sarif4k"/>
          <trusted-key id="86616CD3C4F0803E73374A434DBF5995D492505D" group="org.json" name="json" version="20230227"/>
+         <trusted-key id="FB35C8D02B4724DADA23DE0AFD116C1969FCCFF3" group="org.json" name="json" version="20240303"/>
          <trusted-key id="8756C4F765C9AC3CB6B85D62379CE192D401AB61">
             <trusting group="com.google.re2j"/>
             <trusting group="org.jetbrains.intellij.deps"/>
