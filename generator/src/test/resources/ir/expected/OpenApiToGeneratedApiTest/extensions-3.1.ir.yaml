@@ -37,6 +37,12 @@ services:
       zanzibar:
         permission: "project.write"
         resourceType: "project"
+      zanzibarUserSource:
+        jwt:
+          claims:
+          - "azp"
+          - "sub"
+          principalFallback: true
     media: {}
     policy:
       timeout: "PT5S"
@@ -119,4 +125,10 @@ auth:
   zanzibar:
     permission: "project.create"
     resourceType: "project"
+  zanzibarUserSource:
+    jwt:
+      claims:
+      - "azp"
+      - "sub"
+      principalFallback: true
 media: {}

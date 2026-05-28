@@ -19,16 +19,19 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedPolicy
 import io.outfoxx.sunday.generator.ir.GeneratedProtocol
 import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -36,6 +39,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -58,6 +63,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -793,6 +799,343 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates Quarkus fault tolerance annotations from IR policy metadata`() {
+    listOf(
+      GenerationMode.Client to "value = 20",
+      GenerationMode.Server to "value = 100",
+    ).forEach { (mode, rateLimitValue) ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          mode,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.QUARKUS,
+          problemRfc = KotlinProblemRfc.RFC9457,
+        )
+
+      KotlinJAXRSIrGenerator(
+        policyApi(),
+        typeRegistry,
+        testOptions(quarkus = true),
+      ).generateServiceTypes()
+
+      val builtTypes = typeRegistry.buildTypes()
+      val source = kotlinSource("io.test.service", findType("io.test.service.GuardedAPI", builtTypes))
+
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+      assertTrue(source.contains("import io.smallrye.faulttolerance.api.RateLimit"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.CircuitBreaker"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.Retry"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.Timeout"), source)
+      assertTrue(source.contains("import java.time.temporal.ChronoUnit"), source)
+      assertTrue(source.contains("@Timeout("), source)
+      assertTrue(source.contains("value = 5"), source)
+      assertTrue(source.contains("unit = ChronoUnit.SECONDS"), source)
+      assertTrue(source.contains("maxRetries = 3"), source)
+      assertTrue(source.contains("delay = 1"), source)
+      assertTrue(source.contains("delayUnit = ChronoUnit.SECONDS"), source)
+      assertTrue(source.contains("jitter = 100"), source)
+      assertTrue(source.contains("jitterDelayUnit = ChronoUnit.MILLIS"), source)
+      assertTrue(source.contains("requestVolumeThreshold = 10"), source)
+      assertTrue(source.contains("failureRatio = 0.75"), source)
+      assertTrue(source.contains("window = 1"), source)
+      assertTrue(source.contains("windowUnit = ChronoUnit.MINUTES"), source)
+      assertTrue(source.contains(rateLimitValue), source)
+    }
+  }
+
+  @Test
+  fun `rejects unsupported Quarkus fault tolerance policy metadata`() {
+    listOf(
+      GeneratedPolicy(
+        retry = mapOf("maximumRetries" to "3"),
+      ) to "Unsupported Quarkus retry policy key(s): maximumRetries",
+      GeneratedPolicy(circuitBreaker = mapOf("requestVolume" to "10")) to
+        "Unsupported Quarkus circuitBreaker policy key(s): requestVolume",
+      GeneratedPolicy(serverRateLimit = mapOf("window" to "PT1M")) to
+        "Quarkus rateLimit policy requires integer key 'value'",
+      GeneratedPolicy(timeout = "100") to
+        "Quarkus timeout policy key 'value' must be an ISO-8601 duration " +
+        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+      GeneratedPolicy(retry = mapOf("delay" to "100")) to
+        "Quarkus retry policy key 'delay' must be an ISO-8601 duration " +
+        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+    ).forEach { (policy, expectedMessage) ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          GenerationMode.Server,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.QUARKUS,
+          problemRfc = KotlinProblemRfc.RFC9457,
+        )
+
+      val error =
+        assertThrows(GenerationException::class.java) {
+          KotlinJAXRSIrGenerator(
+            policyApi(policy),
+            typeRegistry,
+            testOptions(quarkus = true),
+          ).generateServiceTypes()
+        }
+
+      assertTrue(error.message?.contains(expectedMessage) == true, error.message)
+    }
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates Quarkus Zanzibar annotations from IR auth metadata in server mode`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(),
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ProjectsAPI", builtTypes))
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAHeaderObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAIgnore"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAPathObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAQueryObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGARelation"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGARequestObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAUserType"), source)
+    assertTrue(source.contains("@FGAPathObject("), source)
+    assertTrue(source.contains("param = \"projectId\""), source)
+    assertTrue(source.contains("type = \"project\""), source)
+    assertTrue(source.contains("@FGARelation(\"can_read\")"), source)
+    assertTrue(source.contains("@FGAUserType(\"user\")"), source)
+    assertTrue(source.contains("@FGAQueryObject("), source)
+    assertTrue(source.contains("param = \"teamId\""), source)
+    assertTrue(source.contains("type = \"team\""), source)
+    assertTrue(source.contains("@FGAHeaderObject("), source)
+    assertTrue(source.contains("name = \"X-Account-Id\""), source)
+    assertTrue(source.contains("type = \"account\""), source)
+    assertTrue(source.contains("@FGARequestObject("), source)
+    assertTrue(source.contains("property = \"requestProjectId\""), source)
+    assertTrue(source.contains("@FGAObject("), source)
+    assertTrue(source.contains("id = \"public\""), source)
+    assertTrue(source.contains("type = \"workspace\""), source)
+    assertTrue(source.contains("@FGARelation(FGARelation.ANY)"), source)
+    assertTrue(source.contains("@FGAIgnore"), source)
+    assertTrue(userExtractorSource.contains("import io.quarkiverse.zanzibar.UserExtractor"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("import jakarta.enterprise.context.ApplicationScoped"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("import org.eclipse.microprofile.jwt.JsonWebToken"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("@ApplicationScoped"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("public class ZanzibarJwtUserExtractor"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("jwt.getClaim<String>(\"azp\")"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("jwt.subject"), userExtractorSource)
+    assertFalse(userExtractorSource.contains("principal.name"), userExtractorSource)
+  }
+
+  @Test
+  fun `rejects Zanzibar object type without object id source`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          zanzibarApi(
+            operationZanzibar =
+              mapOf(
+                "resourceType" to "project",
+                "permission" to "can_read",
+              ),
+          ),
+          typeRegistry,
+          testOptions(quarkus = true),
+        ).generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message?.contains(
+        "Zanzibar object type 'project' requires one of objectId, pathParam, queryParam, header, or requestProperty",
+      ) == true,
+      error.message,
+    )
+  }
+
+  @Test
+  fun `reports conflicting Zanzibar user source metadata`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+    val api = zanzibarApi()
+    val conflictingApi =
+      api.copy(
+        services =
+          listOf(
+            api.services.single().copy(
+              auth =
+                GeneratedAuth(
+                  zanzibarUserSource =
+                    GeneratedZanzibarUserSource(
+                      jwt = GeneratedZanzibarJwtUserSource(claims = listOf("email")),
+                    ),
+                ),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          conflictingApi,
+          typeRegistry,
+          testOptions(quarkus = true),
+        ).generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message?.contains(
+        "Cannot generate more than one Zanzibar user source: " +
+          "jwt(claims=[azp, sub], principalFallback=false); jwt(claims=[email], principalFallback=false)",
+      ) == true,
+      error.message,
+    )
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates strict opt-in principal fallback for Quarkus Zanzibar JWT user extractors`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(principalFallback = true),
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(userExtractorSource.contains(" ?: principal.name.takeIf { it.isNotBlank() }"), userExtractorSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates principal fallback directly for empty Quarkus Zanzibar JWT claim lists`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+    val api =
+      zanzibarApi().copy(
+        auth =
+          GeneratedAuth(
+            zanzibarUserSource =
+              GeneratedZanzibarUserSource(
+                jwt =
+                  GeneratedZanzibarJwtUserSource(
+                    claims = emptyList(),
+                    principalFallback = true,
+                  ),
+              ),
+          ),
+      )
+
+    KotlinJAXRSIrGenerator(
+      api,
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(
+      userExtractorSource.contains("val userId = principal.name.takeIf { it.isNotBlank() }"),
+      userExtractorSource,
+    )
+    assertFalse(userExtractorSource.contains("null ?: principal.name"), userExtractorSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `does not generate Quarkus Zanzibar annotations in client mode`() {
+    val clientRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(),
+      clientRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = clientRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ProjectsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertFalse(source.contains("FGA"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates aggregate JAX-RS subresources from IR with client and server modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->
@@ -1367,6 +1710,176 @@ class KotlinJAXRSIrGeneratorTest {
                   name = "displayName",
                   type = GeneratedTypeRef.scalar("string"),
                   required = true,
+                ),
+              ),
+          ),
+        ),
+    )
+
+  private fun policyApi(
+    policy: GeneratedPolicy =
+      GeneratedPolicy(
+        timeout = "PT5S",
+        retry =
+          mapOf(
+            "maxRetries" to "3",
+            "delay" to "PT1S",
+            "jitter" to "PT100MS",
+          ),
+        circuitBreaker =
+          mapOf(
+            "requestVolumeThreshold" to "10",
+            "failureRatio" to "0.75",
+            "delay" to "PT30S",
+          ),
+        clientRateLimit =
+          mapOf(
+            "value" to "20",
+            "window" to "PT1M",
+          ),
+        serverRateLimit =
+          mapOf(
+            "value" to "100",
+            "window" to "PT1M",
+          ),
+      ),
+  ): GeneratedApi =
+    GeneratedApi(
+      name = "Guarded API",
+      source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://guarded"),
+      services =
+        listOf(
+          GeneratedService(
+            name = "Guarded",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "guarded",
+                  method = "GET",
+                  path = "/guarded",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  policy = policy,
+                ),
+              ),
+          ),
+        ),
+    )
+
+  private fun zanzibarApi(
+    principalFallback: Boolean = false,
+    operationZanzibar: Map<String, String> =
+      mapOf(
+        "resourceType" to "project",
+        "pathParam" to "projectId",
+        "permission" to "can_read",
+        "userType" to "user",
+      ),
+  ): GeneratedApi =
+    GeneratedApi(
+      name = "Projects API",
+      source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://projects"),
+      auth =
+        GeneratedAuth(
+          zanzibarUserSource =
+            GeneratedZanzibarUserSource(
+              jwt =
+                GeneratedZanzibarJwtUserSource(
+                  claims = listOf("azp", "sub"),
+                  principalFallback = principalFallback,
+                ),
+            ),
+        ),
+      services =
+        listOf(
+          GeneratedService(
+            name = "Projects",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "getProject",
+                  method = "GET",
+                  path = "/projects/{projectId}",
+                  parameters =
+                    listOf(
+                      GeneratedParameter(
+                        name = "projectId",
+                        location = GeneratedParameter.Location.PATH,
+                        type = GeneratedTypeRef.scalar("string"),
+                        required = true,
+                      ),
+                    ),
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar = operationZanzibar,
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getTeam",
+                  method = "GET",
+                  path = "/teams",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "objectType" to "team",
+                          "queryParam" to "teamId",
+                          "relation" to "member",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getAccount",
+                  method = "GET",
+                  path = "/account",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "account",
+                          "header" to "X-Account-Id",
+                          "permission" to "viewer",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getRequestProject",
+                  method = "GET",
+                  path = "/request-project",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "project",
+                          "requestProperty" to "requestProjectId",
+                          "permission" to "viewer",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getPublicWorkspace",
+                  method = "GET",
+                  path = "/public-workspace",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "workspace",
+                          "resourceId" to "public",
+                          "permission" to "*",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "ignored",
+                  method = "GET",
+                  path = "/ignored",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth = GeneratedAuth(zanzibar = mapOf("ignore" to "true")),
                 ),
               ),
           ),

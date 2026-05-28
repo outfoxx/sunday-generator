@@ -69,6 +69,54 @@ types:
   Nullify:
     type: (string | number)[]
 
+  Zanzibar:
+    type: object
+    properties:
+      permission?: string
+      relation?: string
+      resourceType?: string
+      objectType?: string
+      resourceId?: string
+      objectId?: string
+      pathParam?: string
+      pathParameter?: string
+      objectIdPathParam?: string
+      resourceIdPathParam?: string
+      param?: string
+      queryParam?: string
+      queryParameter?: string
+      objectIdQueryParam?: string
+      resourceIdQueryParam?: string
+      header?: string
+      headerName?: string
+      objectIdHeader?: string
+      resourceIdHeader?: string
+      requestProperty?: string
+      property?: string
+      objectIdRequestProperty?: string
+      resourceIdRequestProperty?: string
+      userType?: string
+      ignore?: boolean
+      ignored?: boolean
+      user-source?: ZanzibarUserSource
+      userSource?: ZanzibarUserSource
+
+  ZanzibarUserSource:
+    type: object
+    properties:
+      jwt?: ZanzibarJwtUserSource
+    additionalProperties: false
+
+  ZanzibarJwtUserSource:
+    type: object
+    properties:
+      claims?:
+        type: string[]
+        uniqueItems: true
+      principal-fallback?: boolean
+      principalFallback?: boolean
+    additionalProperties: false
+
   JaxrsContextType:
     type: string
     enum: [
@@ -232,6 +280,10 @@ annotationTypes:
   nullify:
     type: Nullify
     allowedTargets: [Method, Trait]
+
+  zanzibar:
+    type: Zanzibar
+    allowedTargets: [API, Method, Trait]
 
   exclude:
     type: boolean

@@ -1,0 +1,56 @@
+irVersion: "1"
+name: "Zanzibar API"
+source:
+  kind: "RAML"
+  location: "SOURCE_LOCATION"
+services:
+- name: "ZanzibarService"
+  operations:
+  - id: "getProject"
+    method: "GET"
+    path: "/projects/{projectId}"
+    parameters:
+    - name: "projectId"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+    responses:
+    - status: 204
+    auth:
+      zanzibar:
+        resourceType: "project"
+        pathParam: "projectId"
+        permission: "can_read"
+      zanzibarUserSource:
+        jwt:
+          claims:
+          - "azp"
+          - "sub"
+          principalFallback: true
+    media: {}
+  auth:
+    zanzibar:
+      resourceType: "project"
+      pathParam: "projectId"
+      permission: "can_read"
+    zanzibarUserSource:
+      jwt:
+        claims:
+        - "azp"
+        - "sub"
+        principalFallback: true
+  media: {}
+auth:
+  zanzibar:
+    resourceType: "project"
+    pathParam: "projectId"
+    permission: "can_read"
+  zanzibarUserSource:
+    jwt:
+      claims:
+      - "azp"
+      - "sub"
+      principalFallback: true
+media: {}

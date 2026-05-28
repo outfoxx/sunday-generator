@@ -96,6 +96,17 @@ class RamlToGeneratedApiTest {
   }
 
   @Test
+  fun `maps RAML Zanzibar JWT user source metadata to generated API IR`(
+    @ResourceUri("raml/ir/zanzibar-user-source.raml") testUri: URI,
+  ) {
+
+    val result = TestAPIProcessing.process(testUri)
+    val api = RamlToGeneratedApi().convert(result)
+
+    assertEquals(expectedYaml("zanzibar-user-source.ir.yaml"), normalizedYaml(api))
+  }
+
+  @Test
   fun `derives RAML composition identity from title without service name suffix`(
     @ResourceUri("raml/ir/composition-service-name-script.raml") scriptUri: URI,
     @ResourceUri("raml/ir/composition-service-name-asset.raml") assetUri: URI,

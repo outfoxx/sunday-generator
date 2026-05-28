@@ -59,6 +59,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
@@ -127,10 +129,13 @@ import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
+import java.security.Principal
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletionStage
@@ -177,6 +182,7 @@ class KotlinJAXRSIrGenerator(
 
     generateModelTypes()
     generateProblemTypes(services)
+    generateZanzibarUserExtractorType()
 
     val serviceTypes =
       services.map { service ->
@@ -246,6 +252,123 @@ class KotlinJAXRSIrGenerator(
     referencedProblems.forEach { problem ->
       typeRegistry.addModelType(problem.typeName(), problem.problemType())
     }
+  }
+
+  private fun generateZanzibarUserExtractorType() {
+    if (!options.quarkus || generationMode != Server) {
+      return
+    }
+
+    val userSource = api.zanzibarUserSourceOrNull() ?: return
+    userSource.jwt?.let { jwtUserSource ->
+      typeRegistry.addServiceType(zanzibarJwtUserExtractorTypeName(), jwtUserSource.zanzibarJwtUserExtractorType())
+    }
+  }
+
+  private fun GeneratedApi.zanzibarUserSourceOrNull(): GeneratedZanzibarUserSource? {
+    val sources =
+      (
+        listOfNotNull(auth?.zanzibarUserSource) +
+          services.flatMap { service ->
+            listOfNotNull(service.auth?.zanzibarUserSource) +
+              service.operations.mapNotNull { operation -> operation.auth?.zanzibarUserSource }
+          }
+      ).distinct()
+
+    if (sources.size > 1) {
+      genError(
+        "Cannot generate more than one Zanzibar user source: " +
+          sources.joinToString("; ") { it.diagnosticDescription() },
+      )
+    }
+
+    return sources.singleOrNull()
+  }
+
+  private fun GeneratedZanzibarUserSource.diagnosticDescription(): String =
+    listOfNotNull(
+      jwt?.let { jwt -> "jwt(${jwt.diagnosticDescription()})" },
+    ).takeIf { it.isNotEmpty() }?.joinToString()
+      ?: toString()
+
+  private fun GeneratedZanzibarJwtUserSource.diagnosticDescription(): String =
+    "claims=${claims.distinct()}, principalFallback=$principalFallback"
+
+  private fun GeneratedZanzibarJwtUserSource.zanzibarJwtUserExtractorType(): TypeSpec.Builder {
+    val principalParameterName = if (principalFallback) "principal" else "_principal"
+    val claimExpressions =
+      claims
+        .distinct()
+        .map { claim ->
+          if (claim == "sub") {
+            CodeBlock.of("jwt.subject")
+          } else {
+            CodeBlock.of("jwt.getClaim<String>(%S)", claim)
+          }
+        }
+    val fallbackExpression =
+      if (principalFallback) {
+        CodeBlock.of("principal.name.takeIf·{·it.isNotBlank()·}")
+      } else {
+        CodeBlock.of("null")
+      }
+    val userIdExpression =
+      CodeBlock
+        .builder()
+        .apply {
+          if (claimExpressions.isEmpty()) {
+            add("%L", fallbackExpression)
+          } else {
+            add("listOfNotNull(\n")
+            indent()
+            claimExpressions.forEach { claimExpression -> add("%L,\n", claimExpression) }
+            unindent()
+            add(").firstOrNull·{·it.isNotBlank()·}")
+            if (principalFallback) {
+              add("·?:·%L", fallbackExpression)
+            }
+          }
+        }.build()
+
+    val extractUser =
+      FunSpec
+        .builder("extractUser")
+        .addModifiers(KModifier.OVERRIDE)
+        .addParameter(principalParameterName, Principal::class.asTypeName())
+        .addParameter("discoveredUserType", STRING.copy(nullable = true))
+        .returns(OPTIONAL.parameterizedBy(fgaUser))
+        .addCode(
+          CodeBlock
+            .builder()
+            .add("val userId =·%L\n", userIdExpression)
+            .add("val userType = discoveredUserType ?: return %T.empty()\n", OPTIONAL)
+            .add("return userId?.let·{·%T.of(%T(userType,·it))·}·?:·%T.empty()\n", OPTIONAL, fgaUser, OPTIONAL)
+            .build(),
+        ).build()
+
+    return TypeSpec
+      .classBuilder(zanzibarJwtUserExtractorTypeName())
+      .addAnnotation(applicationScopedAnnotation)
+      .primaryConstructor(
+        FunSpec
+          .constructorBuilder()
+          .addParameter("jwt", jsonWebToken)
+          .build(),
+      ).addProperty(
+        PropertySpec
+          .builder("jwt", jsonWebToken, KModifier.PRIVATE)
+          .initializer("jwt")
+          .build(),
+      ).addSuperinterface(userExtractor)
+      .addFunction(extractUser)
+  }
+
+  private fun zanzibarJwtUserExtractorTypeName(): ClassName {
+    val servicePackageName =
+      api.target(preferredTargetId, "kotlin")?.packageName
+        ?: options.defaultServicePackageName
+        ?: genError("No service package specified, one must be specified via options or in source IR")
+    return ClassName.bestGuess("$servicePackageName.ZanzibarJwtUserExtractor")
   }
 
   private fun GeneratedService.serviceType(
@@ -523,6 +646,8 @@ class KotlinJAXRSIrGenerator(
     if (path.isNotEmpty()) {
       functionBuilder.addAnnotation(jaxRsTypes.path, path)
     }
+    addQuarkusFaultToleranceAnnotations(functionBuilder)
+    addQuarkusZanzibarAnnotations(service, functionBuilder)
 
     val names = NameAllocator()
 
@@ -640,6 +765,286 @@ class KotlinJAXRSIrGenerator(
       }
     }
   }
+
+  private fun GeneratedOperation.addQuarkusFaultToleranceAnnotations(functionBuilder: FunSpec.Builder) {
+    if (!options.quarkus) {
+      return
+    }
+
+    val effectivePolicy = policy ?: return
+
+    effectivePolicy.timeout
+      ?.durationAnnotation(timeoutAnnotation, "value", "unit")
+      ?.let(functionBuilder::addAnnotation)
+
+    effectivePolicy.retry.retryAnnotation()?.let(functionBuilder::addAnnotation)
+    effectivePolicy.circuitBreaker.circuitBreakerAnnotation()?.let(functionBuilder::addAnnotation)
+
+    val rateLimit =
+      when (generationMode) {
+        Client -> effectivePolicy.clientRateLimit
+        Server -> effectivePolicy.serverRateLimit
+      }
+    rateLimit.rateLimitAnnotation()?.let(functionBuilder::addAnnotation)
+  }
+
+  private fun GeneratedOperation.addQuarkusZanzibarAnnotations(
+    service: GeneratedService,
+    functionBuilder: FunSpec.Builder,
+  ) {
+    if (!options.quarkus || generationMode != Server) {
+      return
+    }
+
+    val zanzibar = api.effectiveAuth(service, this)?.zanzibar.orEmpty()
+    if (zanzibar.isEmpty()) {
+      return
+    }
+
+    if (zanzibar.booleanValue("ignore", "ignored")) {
+      functionBuilder.addAnnotation(fgaIgnoreAnnotation)
+      return
+    }
+
+    zanzibar.objectAnnotation()?.let(functionBuilder::addAnnotation)
+    zanzibar.relationAnnotation()?.let(functionBuilder::addAnnotation)
+    zanzibar["userType"]?.let { userType ->
+      functionBuilder.addAnnotation(
+        AnnotationSpec
+          .builder(fgaUserTypeAnnotation)
+          .addMember("%S", userType)
+          .build(),
+      )
+    }
+  }
+
+  private fun Map<String, String>.objectAnnotation(): AnnotationSpec? {
+    val type = value("objectType", "resourceType") ?: return null
+    return value("objectId", "resourceId")
+      ?.let { id ->
+        AnnotationSpec
+          .builder(fgaObjectAnnotation)
+          .addMember("id = %S", id)
+          .addMember("type = %S", type)
+          .build()
+      }
+      ?: value("pathParam", "pathParameter", "objectIdPathParam", "resourceIdPathParam", "param")
+        ?.let { parameter ->
+          AnnotationSpec
+            .builder(fgaPathObjectAnnotation)
+            .addMember("param = %S", parameter)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("queryParam", "queryParameter", "objectIdQueryParam", "resourceIdQueryParam")
+        ?.let { parameter ->
+          AnnotationSpec
+            .builder(fgaQueryObjectAnnotation)
+            .addMember("param = %S", parameter)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("header", "headerName", "objectIdHeader", "resourceIdHeader")
+        ?.let { header ->
+          AnnotationSpec
+            .builder(fgaHeaderObjectAnnotation)
+            .addMember("name = %S", header)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("requestProperty", "property", "objectIdRequestProperty", "resourceIdRequestProperty")
+        ?.let { property ->
+          AnnotationSpec
+            .builder(fgaRequestObjectAnnotation)
+            .addMember("property = %S", property)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: genError(
+        "Zanzibar object type '$type' requires one of objectId, pathParam, queryParam, header, or requestProperty",
+      )
+  }
+
+  private fun Map<String, String>.relationAnnotation(): AnnotationSpec? {
+    val relation = value("relation", "permission") ?: return null
+    val relationMember =
+      if (relation.equals("any", ignoreCase = true) || relation == "*") {
+        CodeBlock.of("%T.ANY", fgaRelationAnnotation)
+      } else {
+        CodeBlock.of("%S", relation)
+      }
+    return AnnotationSpec
+      .builder(fgaRelationAnnotation)
+      .addMember("%L", relationMember)
+      .build()
+  }
+
+  private fun Map<String, String>.value(vararg names: String): String? =
+    names.firstNotNullOfOrNull { name -> this[name]?.takeIf { it.isNotBlank() } }
+
+  private fun Map<String, String>.booleanValue(vararg names: String): Boolean =
+    value(*names)?.toBooleanStrictOrNull() == true
+
+  private fun String.durationAnnotation(
+    annotation: ClassName,
+    valueMember: String,
+    unitMember: String,
+  ): AnnotationSpec =
+    runCatching { toPolicyDuration() }
+      .getOrElse {
+        genError(
+          "Quarkus timeout policy key '$valueMember' must be an ISO-8601 duration " +
+            "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+        )
+      }.let { duration ->
+        AnnotationSpec
+          .builder(annotation)
+          .addMember("$valueMember = %L", duration.value)
+          .addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
+          .build()
+      }
+
+  private fun Map<String, String>.retryAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+    validatePolicyKeys("retry", retryPolicyKeys)
+
+    return AnnotationSpec
+      .builder(retryAnnotation)
+      .apply {
+        intValue("retry", "maxRetries")?.let { addMember("maxRetries = %L", it) }
+        durationValue("retry", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+        durationValue("retry", "maxDuration")?.let { addDurationMembers("maxDuration", "durationUnit", it) }
+        durationValue("retry", "jitter")?.let { addDurationMembers("jitter", "jitterDelayUnit", it) }
+      }.build()
+  }
+
+  private fun Map<String, String>.circuitBreakerAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+    validatePolicyKeys("circuitBreaker", circuitBreakerPolicyKeys)
+
+    return AnnotationSpec
+      .builder(circuitBreakerAnnotation)
+      .apply {
+        intValue("circuitBreaker", "requestVolumeThreshold")?.let { addMember("requestVolumeThreshold = %L", it) }
+        intValue("circuitBreaker", "successThreshold")?.let { addMember("successThreshold = %L", it) }
+        doubleValue("circuitBreaker", "failureRatio")?.let { addMember("failureRatio = %L", it) }
+        durationValue("circuitBreaker", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+      }.build()
+  }
+
+  private fun Map<String, String>.rateLimitAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+    validatePolicyKeys("rateLimit", rateLimitPolicyKeys)
+    val value = intValue("rateLimit", "value") ?: genError("Quarkus rateLimit policy requires integer key 'value'")
+
+    return AnnotationSpec
+      .builder(rateLimitAnnotation)
+      .apply {
+        addMember("value = %L", value)
+        durationValue("rateLimit", "window")?.let { addDurationMembers("window", "windowUnit", it) }
+        durationValue("rateLimit", "minSpacing")?.let { addDurationMembers("minSpacing", "minSpacingUnit", it) }
+        this@rateLimitAnnotation["type"]?.let { type ->
+          if (type.enumMemberName() !in rateLimitTypes) {
+            genError("Quarkus rateLimit policy key 'type' must be one of ${rateLimitTypes.joinToString()}")
+          }
+          addMember("type = %T.%L", rateLimitType, type.enumMemberName())
+        }
+      }.build()
+  }
+
+  private fun AnnotationSpec.Builder.addDurationMembers(
+    valueMember: String,
+    unitMember: String,
+    duration: PolicyDuration,
+  ) {
+    addMember("$valueMember = %L", duration.value)
+    addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
+  }
+
+  private fun Map<String, String>.validatePolicyKeys(
+    policyName: String,
+    supportedKeys: Set<String>,
+  ) {
+    val unsupportedKeys = keys - supportedKeys
+    if (unsupportedKeys.isNotEmpty()) {
+      genError("Unsupported Quarkus $policyName policy key(s): ${unsupportedKeys.sorted().joinToString(", ")}")
+    }
+  }
+
+  private fun Map<String, String>.intValue(
+    policyName: String,
+    name: String,
+  ): Int? =
+    this[name]?.let { value ->
+      value.toIntOrNull()
+        ?: genError("Quarkus $policyName policy key '$name' must be an integer")
+    }
+
+  private fun Map<String, String>.doubleValue(
+    policyName: String,
+    name: String,
+  ): Double? =
+    this[name]?.let { value ->
+      value.toDoubleOrNull()
+        ?: genError("Quarkus $policyName policy key '$name' must be a number")
+    }
+
+  private fun Map<String, String>.durationValue(
+    policyName: String,
+    name: String,
+  ): PolicyDuration? =
+    this[name]?.let { value ->
+      runCatching { value.toPolicyDuration() }
+        .getOrElse {
+          genError(
+            "Quarkus $policyName policy key '$name' must be an ISO-8601 duration " +
+              "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+          )
+        }
+    }
+
+  private fun String.toPolicyDuration(): PolicyDuration {
+    val duration = parsePolicyDuration()
+    val millis = duration.toMillis()
+    return when {
+      millis % ChronoUnit.HOURS.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.HOURS.duration.toMillis(),
+          ChronoUnit.HOURS,
+        )
+      millis % ChronoUnit.MINUTES.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.MINUTES.duration.toMillis(),
+          ChronoUnit.MINUTES,
+        )
+      millis % ChronoUnit.SECONDS.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.SECONDS.duration.toMillis(),
+          ChronoUnit.SECONDS,
+        )
+      else -> PolicyDuration(millis, ChronoUnit.MILLIS)
+    }
+  }
+
+  private fun String.parsePolicyDuration(): Duration =
+    runCatching { Duration.parse(this) }
+      .getOrElse {
+        policyMillisRegex
+          .matchEntire(this)
+          ?.groupValues
+          ?.get(1)
+          ?.toLongOrNull()
+          ?.let(Duration::ofMillis)
+          ?: throw it
+      }
+
+  private fun String.enumMemberName(): String = replace(enumMemberSplitRegex, "_").uppercase()
 
   private fun GeneratedService.expandedBaseUri(): String? {
     val baseUri = baseUri ?: return null
@@ -2471,8 +2876,40 @@ class KotlinJAXRSIrGenerator(
   private companion object {
     const val SSE_CONTENT_TYPE = "text/event-stream"
 
+    val CHRONO_UNIT = ChronoUnit::class.asTypeName()
+    val timeoutAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Timeout")
+    val retryAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Retry")
+    val circuitBreakerAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "CircuitBreaker")
+    val rateLimitAnnotation = ClassName("io.smallrye.faulttolerance.api", "RateLimit")
+    val rateLimitType = ClassName("io.smallrye.faulttolerance.api", "RateLimitType")
+    val fgaHeaderObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAHeaderObject")
+    val fgaIgnoreAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAIgnore")
+    val fgaObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAObject")
+    val fgaPathObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAPathObject")
+    val fgaQueryObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAQueryObject")
+    val fgaRelationAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARelation")
+    val fgaRequestObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARequestObject")
+    val fgaUserTypeAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAUserType")
+    val applicationScopedAnnotation = ClassName("jakarta.enterprise.context", "ApplicationScoped")
+    val jsonWebToken = ClassName("org.eclipse.microprofile.jwt", "JsonWebToken")
+    val userExtractor = ClassName("io.quarkiverse.zanzibar", "UserExtractor")
+    val fgaUser = userExtractor.nestedClass("User")
+    val OPTIONAL = ClassName("java.util", "Optional")
+
+    val retryPolicyKeys = setOf("maxRetries", "delay", "maxDuration", "jitter")
+    val circuitBreakerPolicyKeys = setOf("requestVolumeThreshold", "successThreshold", "failureRatio", "delay")
+    val rateLimitPolicyKeys = setOf("value", "window", "minSpacing", "type")
+    val rateLimitTypes = setOf("FIXED", "ROLLING", "SMOOTH")
+
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
     val enumSplitRegex = """\W""".toRegex()
+    val enumMemberSplitRegex = """\W+""".toRegex()
+    val policyMillisRegex = """PT(\d+)MS""".toRegex(RegexOption.IGNORE_CASE)
   }
+
+  private data class PolicyDuration(
+    val value: Long,
+    val unit: ChronoUnit,
+  )
 }

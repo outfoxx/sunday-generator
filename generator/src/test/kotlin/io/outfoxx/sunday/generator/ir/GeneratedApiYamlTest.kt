@@ -38,6 +38,8 @@ class GeneratedApiYamlTest {
     assertThat(yaml, containsString("irVersion: \"1\""))
     assertThat(yaml, containsString("name: \"Projects\""))
     assertThat(yaml, containsString("zanzibar:"))
+    assertThat(yaml, containsString("zanzibarUserSource:"))
+    assertThat(yaml, containsString("principalFallback: true"))
     assertThat(yaml, containsString("policy:"))
     assertThat(yaml, containsString("nullify:"))
     assertThat(yaml, containsString("streaming:"))
@@ -1109,6 +1111,14 @@ class GeneratedApiYamlTest {
         GeneratedAuth(
           schemes = listOf("oauth2"),
           zanzibar = mapOf("permission" to "project.read"),
+          zanzibarUserSource =
+            GeneratedZanzibarUserSource(
+              jwt =
+                GeneratedZanzibarJwtUserSource(
+                  claims = listOf("azp", "sub"),
+                  principalFallback = true,
+                ),
+            ),
         ),
       media =
         GeneratedMedia(
