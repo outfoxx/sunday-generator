@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.gradle.tests
 
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
@@ -23,6 +24,7 @@ import org.hamcrest.CoreMatchers.anyOf
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.not
+import org.hamcrest.Matcher
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
@@ -34,6 +36,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.appendText
+import kotlin.streams.toList
 
 class GradlePluginTests {
 
@@ -41,6 +44,8 @@ class GradlePluginTests {
     """
     import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
     import static io.outfoxx.sunday.generator.GenerationMode.*
+    import static io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary.*
+    import static io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc.*
 
     plugins {
       id 'org.jetbrains.kotlin.jvm' version '2.3.10'
@@ -63,6 +68,12 @@ class GradlePluginTests {
         generateModel.set(true)
         generateService.set(true)
         serviceSuffix.set('API')
+        aggregateServices.set(false)
+        aggregateServiceName.set('RootAPI')
+        servicesFromTags.set(false)
+        problemBaseUri.set('https://example.com/problems/')
+        problemLibrary.set(SUNDAY)
+        problemRfc.set(RFC9457)
         disableValidationConstraints.set(false)
         disableJacksonAnnotations.set(false)
         disableModelImplementations.set(false)
@@ -116,6 +127,8 @@ class GradlePluginTests {
     """
     import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
     import static io.outfoxx.sunday.generator.GenerationMode.*
+    import static io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary.*
+    import static io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc.*
 
     plugins {
       id 'org.jetbrains.kotlin.jvm' version '2.3.10'
@@ -137,6 +150,12 @@ class GradlePluginTests {
         generateModel.set(true)
         generateService.set(true)
         serviceSuffix.set('API')
+        aggregateServices.set(false)
+        aggregateServiceName.set('RootAPI')
+        servicesFromTags.set(false)
+        problemBaseUri.set('https://example.com/problems/')
+        problemLibrary.set(SUNDAY)
+        problemRfc.set(RFC9457)
         disableValidationConstraints.set(false)
         disableJacksonAnnotations.set(false)
         disableModelImplementations.set(false)
@@ -244,32 +263,50 @@ class GradlePluginTests {
       """.trimIndent(),
     )
 
-    listOf(TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE, TaskOutcome.FROM_CACHE).forEach { outcome ->
-      println("Executing build expecting outcome: $outcome")
+    fun runBuild() =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
+        .withDebug(true)
+        .forwardOutput()
+        .build()
 
-      if (outcome == TaskOutcome.FROM_CACHE) {
-        // Delete build directory to test loading from cache
-        testProjectDir.resolve("build").deleteRecursively()
-      }
-
-      val result =
-        GradleRunner
-          .create()
-          .withProjectDir(testProjectDir)
-          .withPluginClasspath()
-          .withArguments("build", "--stacktrace", "--debug", "--build-cache")
-          .withDebug(true)
-          .forwardOutput()
-          .build()
-
-      val genClientTask = result.task(":sundayGenerate_client")
-      assertThat(genClientTask?.outcome, equalTo(outcome))
-
-      val genServerTask = result.task(":sundayGenerate_server")
-      assertThat(genServerTask?.outcome, equalTo(outcome))
+    runBuild().also { result ->
+      val resolverOutcome = anyOf(equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE))
+      assertGenerationOutcome(result, "client", resolverOutcome, equalTo(TaskOutcome.SUCCESS))
+      assertGenerationOutcome(result, "server", resolverOutcome, equalTo(TaskOutcome.SUCCESS))
 
       val kotlinTask = result.task(":compileKotlin")
-      assertThat(kotlinTask?.outcome, equalTo(outcome))
+      assertThat(kotlinTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+    }
+
+    runBuild().also { result ->
+      val resolverOutcome = anyOf(equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE))
+      assertGenerationOutcome(result, "client", resolverOutcome, equalTo(TaskOutcome.UP_TO_DATE))
+      assertGenerationOutcome(result, "server", resolverOutcome, equalTo(TaskOutcome.UP_TO_DATE))
+
+      val kotlinTask = result.task(":compileKotlin")
+      assertThat(kotlinTask?.outcome, equalTo(TaskOutcome.UP_TO_DATE))
+    }
+
+    runBuild().also { result ->
+      assertGenerationOutcome(result, "client", equalTo(TaskOutcome.UP_TO_DATE), equalTo(TaskOutcome.UP_TO_DATE))
+      assertGenerationOutcome(result, "server", equalTo(TaskOutcome.UP_TO_DATE), equalTo(TaskOutcome.UP_TO_DATE))
+
+      val kotlinTask = result.task(":compileKotlin")
+      assertThat(kotlinTask?.outcome, equalTo(TaskOutcome.UP_TO_DATE))
+    }
+
+    testProjectDir.resolve("build").deleteRecursively()
+
+    runBuild().also { result ->
+      assertGenerationOutcome(result, "client", equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.FROM_CACHE))
+      assertGenerationOutcome(result, "server", equalTo(TaskOutcome.FROM_CACHE), equalTo(TaskOutcome.FROM_CACHE))
+
+      val kotlinTask = result.task(":compileKotlin")
+      assertThat(kotlinTask?.outcome, equalTo(TaskOutcome.FROM_CACHE))
     }
   }
 
@@ -330,6 +367,111 @@ class GradlePluginTests {
   }
 
   @Test
+  fun `Sunday client supports service tags and aggregate service options`() {
+
+    val openApi = testProjectDir.resolve("src/main/sunday/tagged-api.yaml")
+    openApi.parentFile.mkdirs()
+    openApi.writeText(
+      """
+      openapi: 3.1.0
+      info:
+        title: Tagged API
+        version: 1.0.0
+      paths:
+        /users/{userId}:
+          get:
+            operationId: getUser
+            tags: [Users]
+            parameters:
+              - name: userId
+                in: path
+                required: true
+                schema:
+                  type: string
+            responses:
+              '200':
+                description: User
+                content:
+                  application/json:
+                    schema:
+                      type: string
+        /projects/{projectId}:
+          get:
+            operationId: getProject
+            tags: [Projects]
+            parameters:
+              - name: projectId
+                in: path
+                required: true
+                schema:
+                  type: string
+            responses:
+              '200':
+                description: Project
+                content:
+                  application/json:
+                    schema:
+                      type: string
+      """.trimIndent(),
+    )
+
+    buildFile.writeText(
+      """
+      import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
+      import static io.outfoxx.sunday.generator.GenerationMode.*
+
+      plugins {
+        id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+        id 'io.outfoxx.sunday-generator'
+      }
+
+      repositories {
+        mavenCentral()
+      }
+
+      sundayGenerations {
+        client {
+          source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
+          framework.set(Sunday)
+          mode.set(Client)
+          pkgName.set('io.outfoxx.test.client')
+          servicePkgName.set('io.outfoxx.test.client.api')
+          servicesFromTags.set(true)
+          aggregateServices.set(true)
+          aggregateServiceName.set('TaggedAPI')
+          defaultMediaTypes.set(["application/json"])
+        }
+      }
+      """.trimIndent(),
+    )
+
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("sundayGenerate_client", "--stacktrace")
+        .withDebug(true)
+        .build()
+
+    val genClientTask = result.task(":sundayGenerate_client")
+    assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+
+    val outputDir = testProjectDir.resolve("build/generated/sources/sunday/sundayGenerate_client")
+    val generatedFiles =
+      Files.walk(outputDir.toPath()).use { paths ->
+        paths
+          .filter { path -> path.toFile().isFile }
+          .map { path -> path.fileName.toString() }
+          .toList()
+      }
+
+    assertThat(generatedFiles.contains("UsersAPI.kt"), equalTo(true))
+    assertThat(generatedFiles.contains("ProjectsAPI.kt"), equalTo(true))
+    assertThat(generatedFiles.contains("TaggedAPI.kt"), equalTo(true))
+  }
+
+  @Test
   fun `generate sources for kotlin are regenerated when sources changes`() {
 
     copy("/dualtest.kt", testProjectDir.resolve("src/main/kotlin"))
@@ -350,9 +492,6 @@ class GradlePluginTests {
     listOf(TaskOutcome.SUCCESS, TaskOutcome.SUCCESS).forEach { outcome ->
       println("Executing build expecting outcome: $outcome")
 
-      // Delete build directory to test loading from cache
-      testProjectDir.resolve("build").deleteRecursively()
-
       // Change contents of test.raml to force regeneration
       testProjectDir.resolve("src/main/sunday/test.raml").toPath().appendText("\n# Added comment\n")
 
@@ -366,11 +505,8 @@ class GradlePluginTests {
           .forwardOutput()
           .build()
 
-      val genClientTask = result.task(":sundayGenerate_client")
-      assertThat(genClientTask?.outcome, equalTo(outcome))
-
-      val genServerTask = result.task(":sundayGenerate_server")
-      assertThat(genServerTask?.outcome, equalTo(outcome))
+      assertGenerationInvalidated(result, "client")
+      assertGenerationInvalidated(result, "server")
 
       val kotlinTask = result.task(":compileKotlin")
       assertThat(
@@ -454,8 +590,6 @@ class GradlePluginTests {
     ).forEach { (file, label) ->
       println("Executing build after updating $label file")
 
-      testProjectDir.resolve("build").deleteRecursively()
-
       file.appendText("\n# Updated $label\n")
 
       val result =
@@ -468,11 +602,8 @@ class GradlePluginTests {
           .forwardOutput()
           .build()
 
-      val genClientTask = result.task(":sundayGenerate_client")
-      assertThat(genClientTask?.outcome, equalTo(TaskOutcome.SUCCESS))
-
-      val genServerTask = result.task(":sundayGenerate_server")
-      assertThat(genServerTask?.outcome, equalTo(TaskOutcome.SUCCESS))
+      assertGenerationInvalidated(result, "client")
+      assertGenerationInvalidated(result, "server")
 
       val kotlinTask = result.task(":compileKotlin")
       assertThat(
@@ -579,5 +710,30 @@ class GradlePluginTests {
     val srcPath = Paths.get(GradlePluginTests::class.java.getResource(src)?.toURI() ?: error("Resource not found"))
     val dstPath = dstDir.toPath()
     Files.copy(srcPath, dstPath.resolve(srcPath.fileName))
+  }
+
+  private fun assertGenerationOutcome(
+    result: BuildResult,
+    generationName: String,
+    resolverOutcome: Matcher<TaskOutcome>,
+    generatorOutcome: Matcher<TaskOutcome>,
+  ) {
+    val discoverTask = result.task(":sundayDiscoverIncludes_$generationName")
+    assertThat(discoverTask?.outcome, resolverOutcome)
+
+    val generateTask = result.task(":sundayGenerate_$generationName")
+    assertThat(generateTask?.outcome, generatorOutcome)
+  }
+
+  private fun assertGenerationInvalidated(
+    result: BuildResult,
+    generationName: String,
+  ) {
+    assertGenerationOutcome(
+      result,
+      generationName,
+      anyOf(equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE)),
+      anyOf(equalTo(TaskOutcome.SUCCESS), equalTo(TaskOutcome.FROM_CACHE)),
+    )
   }
 }

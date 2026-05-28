@@ -45,11 +45,26 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
     generationsContainer.configureEach { gen ->
 
-      val includesIndex = project.layout.buildDirectory.file("generated/sunday/includes/${gen.name}.txt")
-      val discoveredIncludes =
+      val rootsIndex = project.layout.buildDirectory.file("generated/sunday/roots/${gen.name}.txt")
+      val allSourcesIndex = project.layout.buildDirectory.file("generated/sunday/all-sources/${gen.name}.txt")
+      val resolvedRoots =
         project.files(
           Callable {
-            val indexFile = includesIndex.get().asFile
+            val indexFile = rootsIndex.get().asFile
+            if (!indexFile.exists()) {
+              emptyList<File>()
+            } else {
+              indexFile
+                .readLines()
+                .filter { it.isNotBlank() }
+                .map { File(it) }
+            }
+          },
+        )
+      val resolvedAllSources =
+        project.files(
+          Callable {
+            val indexFile = allSourcesIndex.get().asFile
             if (!indexFile.exists()) {
               emptyList<File>()
             } else {
@@ -65,15 +80,16 @@ class SundayGeneratorPlugin : Plugin<Project> {
         project.tasks.register("sundayDiscoverIncludes_${gen.name}", SundayDiscoverIncludes::class.java) { task ->
           task.group = "code-generation"
           task.source(gen.source)
-          task.includesIndexFile.set(includesIndex)
-          task.bootstrapIncludes.set(discoveredIncludes)
+          task.rootsIndexFile.set(rootsIndex)
+          task.allSourcesIndexFile.set(allSourcesIndex)
+          task.bootstrapAllSources.set(resolvedAllSources)
         }
 
       val genTask =
         project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
           genTask.group = "code-generation"
-          genTask.source(gen.source)
-          genTask.includes.set(discoveredIncludes)
+          genTask.source(resolvedRoots)
+          genTask.allSources.set(resolvedAllSources)
           genTask.dependsOn(discoverTask)
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
@@ -82,7 +98,13 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.pkgName.takeIf { it.isPresent }?.let { genTask.pkgName.set(it) }
           gen.servicePkgName.takeIf { it.isPresent }?.let { genTask.servicePkgName.set(it) }
           gen.serviceSuffix.takeIf { it.isPresent }?.let { genTask.serviceSuffix.set(it) }
+          gen.aggregateServices.takeIf { it.isPresent }?.let { genTask.aggregateServices.set(it) }
+          gen.aggregateServiceName.takeIf { it.isPresent }?.let { genTask.aggregateServiceName.set(it) }
+          gen.servicesFromTags.takeIf { it.isPresent }?.let { genTask.servicesFromTags.set(it) }
           gen.modelPkgName.takeIf { it.isPresent }?.let { genTask.modelPkgName.set(it) }
+          gen.problemBaseUri.takeIf { it.isPresent }?.let { genTask.problemBaseUri.set(it) }
+          gen.problemLibrary.takeIf { it.isPresent }?.let { genTask.problemLibrary.set(it) }
+          gen.problemRfc.takeIf { it.isPresent }?.let { genTask.problemRfc.set(it) }
           gen.disableValidationConstraints.takeIf { it.isPresent }?.let { genTask.disableValidationConstraints.set(it) }
           gen.disableContainerElementValid.takeIf { it.isPresent }?.let { genTask.disableContainerElementValid.set(it) }
           gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
