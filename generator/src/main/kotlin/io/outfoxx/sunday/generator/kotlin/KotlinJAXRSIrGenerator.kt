@@ -842,6 +842,9 @@ class KotlinJAXRSIrGenerator(
             .addMember("type = %S", type)
             .build()
         }
+      ?: genError(
+        "Zanzibar object type '$type' requires one of objectId, pathParam, queryParam, header, or requestProperty",
+      )
   }
 
   private fun Map<String, String>.relationAnnotation(): AnnotationSpec? {
@@ -881,14 +884,15 @@ class KotlinJAXRSIrGenerator(
     if (isEmpty()) {
       return null
     }
+    validatePolicyKeys("retry", retryPolicyKeys)
 
     return AnnotationSpec
       .builder(retryAnnotation)
       .apply {
-        intValue("maxRetries")?.let { addMember("maxRetries = %L", it) }
-        durationValue("delay")?.let { addDurationMembers("delay", "delayUnit", it) }
-        durationValue("maxDuration")?.let { addDurationMembers("maxDuration", "durationUnit", it) }
-        durationValue("jitter")?.let { addDurationMembers("jitter", "jitterDelayUnit", it) }
+        intValue("retry", "maxRetries")?.let { addMember("maxRetries = %L", it) }
+        durationValue("retry", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+        durationValue("retry", "maxDuration")?.let { addDurationMembers("maxDuration", "durationUnit", it) }
+        durationValue("retry", "jitter")?.let { addDurationMembers("jitter", "jitterDelayUnit", it) }
       }.build()
   }
 
@@ -896,14 +900,15 @@ class KotlinJAXRSIrGenerator(
     if (isEmpty()) {
       return null
     }
+    validatePolicyKeys("circuitBreaker", circuitBreakerPolicyKeys)
 
     return AnnotationSpec
       .builder(circuitBreakerAnnotation)
       .apply {
-        intValue("requestVolumeThreshold")?.let { addMember("requestVolumeThreshold = %L", it) }
-        intValue("successThreshold")?.let { addMember("successThreshold = %L", it) }
-        doubleValue("failureRatio")?.let { addMember("failureRatio = %L", it) }
-        durationValue("delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+        intValue("circuitBreaker", "requestVolumeThreshold")?.let { addMember("requestVolumeThreshold = %L", it) }
+        intValue("circuitBreaker", "successThreshold")?.let { addMember("successThreshold = %L", it) }
+        doubleValue("circuitBreaker", "failureRatio")?.let { addMember("failureRatio = %L", it) }
+        durationValue("circuitBreaker", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
       }.build()
   }
 
@@ -911,14 +916,19 @@ class KotlinJAXRSIrGenerator(
     if (isEmpty()) {
       return null
     }
+    validatePolicyKeys("rateLimit", rateLimitPolicyKeys)
+    val value = intValue("rateLimit", "value") ?: genError("Quarkus rateLimit policy requires integer key 'value'")
 
     return AnnotationSpec
       .builder(rateLimitAnnotation)
       .apply {
-        intValue("value")?.let { addMember("value = %L", it) }
-        durationValue("window")?.let { addDurationMembers("window", "windowUnit", it) }
-        durationValue("minSpacing")?.let { addDurationMembers("minSpacing", "minSpacingUnit", it) }
+        addMember("value = %L", value)
+        durationValue("rateLimit", "window")?.let { addDurationMembers("window", "windowUnit", it) }
+        durationValue("rateLimit", "minSpacing")?.let { addDurationMembers("minSpacing", "minSpacingUnit", it) }
         this@rateLimitAnnotation["type"]?.let { type ->
+          if (type.enumMemberName() !in rateLimitTypes) {
+            genError("Quarkus rateLimit policy key 'type' must be one of ${rateLimitTypes.joinToString()}")
+          }
           addMember("type = %T.%L", rateLimitType, type.enumMemberName())
         }
       }.build()
@@ -933,11 +943,44 @@ class KotlinJAXRSIrGenerator(
     addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
   }
 
-  private fun Map<String, String>.intValue(name: String): Int? = this[name]?.toIntOrNull()
+  private fun Map<String, String>.validatePolicyKeys(
+    policyName: String,
+    supportedKeys: Set<String>,
+  ) {
+    val unsupportedKeys = keys - supportedKeys
+    if (unsupportedKeys.isNotEmpty()) {
+      genError("Unsupported Quarkus $policyName policy key(s): ${unsupportedKeys.sorted().joinToString(", ")}")
+    }
+  }
 
-  private fun Map<String, String>.doubleValue(name: String): Double? = this[name]?.toDoubleOrNull()
+  private fun Map<String, String>.intValue(
+    policyName: String,
+    name: String,
+  ): Int? =
+    this[name]?.let { value ->
+      value.toIntOrNull()
+        ?: genError("Quarkus $policyName policy key '$name' must be an integer")
+    }
 
-  private fun Map<String, String>.durationValue(name: String): PolicyDuration? = this[name]?.toPolicyDuration()
+  private fun Map<String, String>.doubleValue(
+    policyName: String,
+    name: String,
+  ): Double? =
+    this[name]?.let { value ->
+      value.toDoubleOrNull()
+        ?: genError("Quarkus $policyName policy key '$name' must be a number")
+    }
+
+  private fun Map<String, String>.durationValue(
+    policyName: String,
+    name: String,
+  ): PolicyDuration? =
+    this[name]?.let { value ->
+      runCatching { value.toPolicyDuration() }
+        .getOrElse {
+          genError("Quarkus $policyName policy key '$name' must be an ISO-8601 duration or milliseconds value")
+        }
+    }
 
   private fun String.toPolicyDuration(): PolicyDuration {
     val duration = parsePolicyDuration()
@@ -2825,6 +2868,11 @@ class KotlinJAXRSIrGenerator(
     val userExtractor = ClassName("io.quarkiverse.zanzibar", "UserExtractor")
     val fgaUser = userExtractor.nestedClass("User")
     val OPTIONAL = ClassName("java.util", "Optional")
+
+    val retryPolicyKeys = setOf("maxRetries", "delay", "maxDuration", "jitter")
+    val circuitBreakerPolicyKeys = setOf("requestVolumeThreshold", "successThreshold", "failureRatio", "delay")
+    val rateLimitPolicyKeys = setOf("value", "window", "minSpacing", "type")
+    val rateLimitTypes = setOf("FIXED", "ROLLING", "SMOOTH")
 
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

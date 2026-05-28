@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
@@ -62,6 +63,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -843,6 +845,40 @@ class KotlinJAXRSIrGeneratorTest {
     }
   }
 
+  @Test
+  fun `rejects unsupported Quarkus fault tolerance policy metadata`() {
+    listOf(
+      GeneratedPolicy(
+        retry = mapOf("maximumRetries" to "3"),
+      ) to "Unsupported Quarkus retry policy key(s): maximumRetries",
+      GeneratedPolicy(circuitBreaker = mapOf("requestVolume" to "10")) to
+        "Unsupported Quarkus circuitBreaker policy key(s): requestVolume",
+      GeneratedPolicy(serverRateLimit = mapOf("window" to "PT1M")) to
+        "Quarkus rateLimit policy requires integer key 'value'",
+    ).forEach { (policy, expectedMessage) ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          GenerationMode.Server,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.QUARKUS,
+          problemRfc = KotlinProblemRfc.RFC9457,
+        )
+
+      val error =
+        assertThrows(GenerationException::class.java) {
+          KotlinJAXRSIrGenerator(
+            policyApi(policy),
+            typeRegistry,
+            testOptions(quarkus = true),
+          ).generateServiceTypes()
+        }
+
+      assertTrue(error.message?.contains(expectedMessage) == true, error.message)
+    }
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @Test
   fun `generates Quarkus Zanzibar annotations from IR auth metadata in server mode`() {
@@ -905,6 +941,41 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(userExtractorSource.contains("jwt.getClaim<String>(\"azp\")"), userExtractorSource)
     assertTrue(userExtractorSource.contains("jwt.subject"), userExtractorSource)
     assertFalse(userExtractorSource.contains("principal.name"), userExtractorSource)
+  }
+
+  @Test
+  fun `rejects Zanzibar object type without object id source`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          zanzibarApi(
+            operationZanzibar =
+              mapOf(
+                "resourceType" to "project",
+                "permission" to "can_read",
+              ),
+          ),
+          typeRegistry,
+          testOptions(quarkus = true),
+        ).generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message?.contains(
+        "Zanzibar object type 'project' requires one of objectId, pathParam, queryParam, header, or requestProperty",
+      ) == true,
+      error.message,
+    )
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -1545,7 +1616,34 @@ class KotlinJAXRSIrGeneratorTest {
         ),
     )
 
-  private fun policyApi(): GeneratedApi =
+  private fun policyApi(
+    policy: GeneratedPolicy =
+      GeneratedPolicy(
+        timeout = "PT5S",
+        retry =
+          mapOf(
+            "maxRetries" to "3",
+            "delay" to "PT1S",
+            "jitter" to "PT100MS",
+          ),
+        circuitBreaker =
+          mapOf(
+            "requestVolumeThreshold" to "10",
+            "failureRatio" to "0.75",
+            "delay" to "PT30S",
+          ),
+        clientRateLimit =
+          mapOf(
+            "value" to "20",
+            "window" to "PT1M",
+          ),
+        serverRateLimit =
+          mapOf(
+            "value" to "100",
+            "window" to "PT1M",
+          ),
+      ),
+  ): GeneratedApi =
     GeneratedApi(
       name = "Guarded API",
       source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://guarded"),
@@ -1560,39 +1658,23 @@ class KotlinJAXRSIrGeneratorTest {
                   method = "GET",
                   path = "/guarded",
                   responses = listOf(GeneratedResponse(status = 204)),
-                  policy =
-                    GeneratedPolicy(
-                      timeout = "PT5S",
-                      retry =
-                        mapOf(
-                          "maxRetries" to "3",
-                          "delay" to "PT1S",
-                          "jitter" to "PT100MS",
-                        ),
-                      circuitBreaker =
-                        mapOf(
-                          "requestVolumeThreshold" to "10",
-                          "failureRatio" to "0.75",
-                          "delay" to "PT30S",
-                        ),
-                      clientRateLimit =
-                        mapOf(
-                          "value" to "20",
-                          "window" to "PT1M",
-                        ),
-                      serverRateLimit =
-                        mapOf(
-                          "value" to "100",
-                          "window" to "PT1M",
-                        ),
-                    ),
+                  policy = policy,
                 ),
               ),
           ),
         ),
     )
 
-  private fun zanzibarApi(principalFallback: Boolean = false): GeneratedApi =
+  private fun zanzibarApi(
+    principalFallback: Boolean = false,
+    operationZanzibar: Map<String, String> =
+      mapOf(
+        "resourceType" to "project",
+        "pathParam" to "projectId",
+        "permission" to "can_read",
+        "userType" to "user",
+      ),
+  ): GeneratedApi =
     GeneratedApi(
       name = "Projects API",
       source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://projects"),
@@ -1629,13 +1711,7 @@ class KotlinJAXRSIrGeneratorTest {
                   responses = listOf(GeneratedResponse(status = 204)),
                   auth =
                     GeneratedAuth(
-                      zanzibar =
-                        mapOf(
-                          "resourceType" to "project",
-                          "pathParam" to "projectId",
-                          "permission" to "can_read",
-                          "userType" to "user",
-                        ),
+                      zanzibar = operationZanzibar,
                     ),
                 ),
                 GeneratedOperation(
