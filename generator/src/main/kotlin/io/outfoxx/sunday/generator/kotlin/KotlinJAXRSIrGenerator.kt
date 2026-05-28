@@ -81,6 +81,7 @@ import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.sseEnabled
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.ir.mergeWith
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementModel
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
@@ -1103,20 +1104,6 @@ class KotlinJAXRSIrGenerator(
           )
         }
       }
-  }
-
-  private fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {
-    if (this == null) {
-      return other
-    }
-    if (other == null) {
-      return this
-    }
-    return GeneratedJaxrsRestClient(
-      configKey = other.configKey ?: configKey,
-      oidcClient = other.oidcClient ?: oidcClient,
-      providers = (providers + other.providers).distinct(),
-    ).takeUnless { it == GeneratedJaxrsRestClient() }
   }
 
   private fun uniqueContextParameterName(

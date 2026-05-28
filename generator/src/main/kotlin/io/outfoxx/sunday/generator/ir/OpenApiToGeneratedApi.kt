@@ -95,18 +95,14 @@ class OpenApiToGeneratedApi(
           .takeIf { it.isNotEmpty() }
           ?.let {
             val serviceName = serviceName(seed.serviceLabel)
-            val serviceJaxrs =
+            val serviceJaxrsValues =
               fragments
                 .mapNotNull { fragment -> fragment.serviceJaxrs }
                 .distinct()
-                .singleOrNull()
-                ?: run {
-                  require(fragments.mapNotNull { fragment -> fragment.serviceJaxrs }.distinct().size <= 1) {
-                    "OpenAPI service '$serviceName' has conflicting x-sunday-jaxrs metadata. " +
-                      "Move REST client metadata to the API root, a single service tag, or align the operation metadata."
-                  }
-                  null
-                }
+            require(serviceJaxrsValues.size <= 1) {
+              "OpenAPI service '$serviceName' has conflicting x-sunday-jaxrs metadata. " +
+                "Move REST client metadata to the API root, a single service tag, or align the operation metadata."
+            }
             ServiceFragment(
               service =
                 GeneratedService(
@@ -115,7 +111,7 @@ class OpenApiToGeneratedApi(
                   baseUriParameters = servers.firstOrNull()?.serverVariables().orEmpty(),
                   operations = operations,
                   auth = auth(zanzibar = rootZanzibar()),
-                  jaxrs = serviceJaxrs,
+                  jaxrs = serviceJaxrsValues.singleOrNull(),
                   media = GeneratedMedia(),
                 ),
               identity = seed.identity,
@@ -928,31 +924,6 @@ class OpenApiToGeneratedApi(
       oidcClient = stringValue("oidc-client") ?: stringValue("oidcClient"),
       providers = listValue("providers").mapNotNull { provider -> (provider as? String)?.trimToNull() }.distinct(),
     ).takeUnless { it == GeneratedJaxrsRestClient() }
-
-  private fun GeneratedJaxrs?.mergeWith(other: GeneratedJaxrs?): GeneratedJaxrs? {
-    if (this == null) {
-      return other
-    }
-    if (other == null) {
-      return this
-    }
-    val restClient = restClient.mergeWith(other.restClient)
-    return copy(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
-  }
-
-  private fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {
-    if (this == null) {
-      return other
-    }
-    if (other == null) {
-      return this
-    }
-    return GeneratedJaxrsRestClient(
-      configKey = other.configKey ?: configKey,
-      oidcClient = other.oidcClient ?: oidcClient,
-      providers = (providers + other.providers).distinct(),
-    ).takeUnless { it == GeneratedJaxrsRestClient() }
-  }
 
   private fun Map<*, *>.serverVariables(): List<GeneratedParameter> =
     mapValue("variables").orEmpty().mapNotNull { (nameValue, value) ->

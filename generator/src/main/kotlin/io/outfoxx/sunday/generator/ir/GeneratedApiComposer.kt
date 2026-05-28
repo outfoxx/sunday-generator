@@ -72,6 +72,7 @@ class GeneratedApiComposer {
       models = models.values.map { it.model },
       problems = problems.values.map { it.problem },
       auth = fragments.firstNotNullOfOrNull { it.api.auth },
+      jaxrs = fragments.firstNotNullOfOrNull { it.api.jaxrs },
       protocol = fragments.firstNotNullOfOrNull { it.api.protocol },
       media = fragments.firstNotNullOfOrNull { it.api.media },
       targets = targets,

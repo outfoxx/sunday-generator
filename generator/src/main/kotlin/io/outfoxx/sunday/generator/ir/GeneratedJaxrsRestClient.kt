@@ -24,3 +24,28 @@ data class GeneratedJaxrsRestClient(
   val oidcClient: String? = null,
   val providers: List<String> = listOf(),
 )
+
+internal fun GeneratedJaxrs?.mergeWith(other: GeneratedJaxrs?): GeneratedJaxrs? {
+  if (this == null) {
+    return other
+  }
+  if (other == null) {
+    return this
+  }
+  val restClient = restClient.mergeWith(other.restClient)
+  return copy(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
+}
+
+internal fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {
+  if (this == null) {
+    return other
+  }
+  if (other == null) {
+    return this
+  }
+  return GeneratedJaxrsRestClient(
+    configKey = other.configKey ?: configKey,
+    oidcClient = other.oidcClient ?: oidcClient,
+    providers = (providers + other.providers).distinct(),
+  ).takeUnless { it == GeneratedJaxrsRestClient() }
+}
