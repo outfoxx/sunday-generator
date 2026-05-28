@@ -20,6 +20,8 @@ package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
@@ -52,7 +54,13 @@ class SundayGeneration(
   val pkgName: Property<String> = objects.property(String::class.java)
   val servicePkgName: Property<String> = objects.property(String::class.java)
   val serviceSuffix: Property<String> = objects.property(String::class.java)
+  val aggregateServices: Property<Boolean> = objects.property(Boolean::class.java)
+  val aggregateServiceName: Property<String> = objects.property(String::class.java)
+  val servicesFromTags: Property<Boolean> = objects.property(Boolean::class.java)
   val modelPkgName: Property<String> = objects.property(String::class.java)
+  val problemBaseUri: Property<String> = objects.property(String::class.java)
+  val problemLibrary: Property<KotlinProblemLibrary> = objects.property(KotlinProblemLibrary::class.java)
+  val problemRfc: Property<KotlinProblemRfc> = objects.property(KotlinProblemRfc::class.java)
   val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
   val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java)
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)

@@ -18,6 +18,9 @@
 
 package io.outfoxx.sunday.generator.gradle
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.common.APIProcessor
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.location
@@ -53,61 +56,174 @@ abstract class SundayDiscoverIncludes
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     @Optional
-    val bootstrapIncludes: Property<FileCollection> = objects.property(FileCollection::class.java)
+    val bootstrapAllSources: Property<FileCollection> = objects.property(FileCollection::class.java)
 
     @OutputFile
-    val includesIndexFile: RegularFileProperty = objects.fileProperty()
+    val rootsIndexFile: RegularFileProperty = objects.fileProperty()
+
+    @OutputFile
+    val allSourcesIndexFile: RegularFileProperty = objects.fileProperty()
 
     private val apiProcessor = APIProcessor()
 
     @TaskAction
     fun discover() {
       val roots =
-        source.files.filter { file ->
-          if (!file.isFile || file.extension != "raml") {
-            return@filter false
-          }
-          val header = file.bufferedReader().use { it.readLine() }?.trim() ?: return@filter false
-          header == "#%RAML 1.0" ||
-            header.startsWith("#%RAML 1.0 Overlay") ||
-            header.startsWith("#%RAML 1.0 Extension")
-        }
+        source.files
+          .filter { file -> file.isFile && file.isRootSourceDocument() }
+          .map { file -> file.canonicalFile }
+          .toSortedSet(compareBy { file -> file.absolutePath })
 
-      val includes = mutableSetOf<File>()
+      val allSources = roots.toMutableSet()
 
       roots.forEach { file ->
-        val processed = apiProcessor.process(file.toURI())
-        processed.validationLog.forEach {
-          val level =
-            when (it.level) {
-              APIProcessor.Result.Level.Error -> LogLevel.ERROR
-              APIProcessor.Result.Level.Warning -> LogLevel.WARN
-              APIProcessor.Result.Level.Info -> LogLevel.INFO
-            }
-          logger.log(level, "${it.file}:${it.line}: ${it.message}")
-        }
-
-        processed
-          .document
-          .allUnits
-          .mapNotNull { unit -> unit.location }
-          .mapNotNull { location ->
-            when {
-              location.startsWith("file:", ignoreCase = true) -> runCatching { File(URI(location)) }.getOrNull()
-              location.isNotBlank() -> File(location)
-              else -> null
-            }
-          }.filter { it.exists() }
-          .forEach { includes.add(it.canonicalFile) }
+        val discovered =
+          when (file.extension.lowercase()) {
+            "raml" -> discoverRamlSources(file)
+            else -> discoverNativeSources(file)
+          }
+        discovered.forEach { allSources.add(it) }
       }
 
-      val outputFile = includesIndexFile.get().asFile
+      writeIndex(rootsIndexFile.get().asFile, roots)
+      writeIndex(allSourcesIndexFile.get().asFile, allSources)
+    }
+
+    private fun File.isRootSourceDocument(): Boolean =
+      when (extension.lowercase()) {
+        "raml" -> isRootRamlDocument()
+        "yaml", "yml", "json" -> isNativeRootSourceDocument()
+        else -> false
+      }
+
+    private fun File.isRootRamlDocument(): Boolean {
+      val header = bufferedReader().use { it.readLine() }?.trim() ?: return false
+      return header == "#%RAML 1.0" ||
+        header.startsWith("#%RAML 1.0 Overlay") ||
+        header.startsWith("#%RAML 1.0 Extension")
+    }
+
+    private fun File.isNativeRootSourceDocument(): Boolean =
+      runCatching {
+        val root = yamlMapper.readTree(this)
+        root?.has("openapi") == true || root?.has("asyncapi") == true
+      }.getOrDefault(false)
+
+    private fun discoverRamlSources(file: File): Set<File> {
+      val processed = apiProcessor.process(file.toURI())
+      processed.validationLog.forEach {
+        val level =
+          when (it.level) {
+            APIProcessor.Result.Level.Error -> LogLevel.ERROR
+            APIProcessor.Result.Level.Warning -> LogLevel.WARN
+            APIProcessor.Result.Level.Info -> LogLevel.INFO
+          }
+        logger.log(level, "${it.file}:${it.line}: ${it.message}")
+      }
+
+      return processed
+        .document
+        .allUnits
+        .mapNotNull { unit -> unit.location }
+        .mapNotNull { location ->
+          when {
+            location.startsWith("file:", ignoreCase = true) -> runCatching { File(URI(location)) }.getOrNull()
+            location.isNotBlank() -> File(location)
+            else -> null
+          }
+        }.filter { it.exists() }
+        .map { it.canonicalFile }
+        .toSet()
+    }
+
+    private fun discoverNativeSources(file: File): Set<File> {
+      val discovered = linkedSetOf<File>()
+      val visited = mutableSetOf<File>()
+      val pending = ArrayDeque<File>()
+      pending.add(file.canonicalFile)
+
+      while (pending.isNotEmpty()) {
+        val current = pending.removeFirst()
+        if (!visited.add(current)) {
+          continue
+        }
+
+        findNativeReferences(current).forEach { referenced ->
+          if (discovered.add(referenced)) {
+            pending.add(referenced)
+          }
+        }
+      }
+
+      return discovered
+    }
+
+    private fun findNativeReferences(file: File): Set<File> {
+      val root = runCatching { yamlMapper.readTree(file) }.getOrNull() ?: return emptySet()
+      val references = linkedSetOf<File>()
+
+      root.visitReferences { reference ->
+        resolveNativeReference(file, reference)?.let { references.add(it) }
+      }
+
+      return references
+    }
+
+    private fun JsonNode.visitReferences(visit: (String) -> Unit) {
+      when {
+        isObject -> {
+          properties().forEach { (name, value) ->
+            if (name == "\$ref" && value.isTextual) {
+              visit(value.asText())
+            }
+            value.visitReferences(visit)
+          }
+        }
+
+        isArray -> elements().forEachRemaining { element -> element.visitReferences(visit) }
+      }
+    }
+
+    private fun resolveNativeReference(
+      sourceFile: File,
+      reference: String,
+    ): File? {
+      val referencedPath = reference.substringBefore('#')
+      if (referencedPath.isBlank()) {
+        return null
+      }
+
+      val referencedFile =
+        runCatching {
+          val uri = URI(referencedPath)
+          when {
+            uri.isAbsolute && uri.scheme.equals("file", ignoreCase = true) -> File(uri)
+            uri.isAbsolute -> null
+            else -> sourceFile.parentFile.resolve(referencedPath)
+          }
+        }.getOrElse {
+          sourceFile.parentFile.resolve(referencedPath)
+        } ?: return null
+
+      return referencedFile
+        .takeIf { it.isFile }
+        ?.canonicalFile
+    }
+
+    private fun writeIndex(
+      outputFile: File,
+      files: Iterable<File>,
+    ) {
       outputFile.parentFile.mkdirs()
       outputFile.writeText(
-        includes
+        files
           .map { it.absolutePath }
           .sorted()
           .joinToString("\n"),
       )
+    }
+
+    companion object {
+      private val yamlMapper = ObjectMapper(YAMLFactory())
     }
   }

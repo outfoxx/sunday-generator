@@ -294,7 +294,7 @@ class KotlinSundayIrGenerator(
 
   private fun aggregateServiceTypeName(): ClassName {
     val servicePackageName = servicePackageName()
-    val serviceName = (options.aggregateServiceSuffix ?: options.serviceSuffix).ifBlank { "API" }
+    val serviceName = (options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }
     return ClassName.bestGuess("$servicePackageName.$serviceName")
   }
 

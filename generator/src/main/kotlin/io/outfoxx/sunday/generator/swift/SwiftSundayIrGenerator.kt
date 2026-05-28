@@ -511,7 +511,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun aggregateServiceTypeName(): DeclaredTypeName =
-    DeclaredTypeName.typeName(".${(options.aggregateServiceSuffix ?: options.serviceSuffix).ifBlank { "API" }}")
+    DeclaredTypeName.typeName(".${(options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }}")
 
   private fun generateAggregateServiceType(
     aggregateTypeName: DeclaredTypeName,

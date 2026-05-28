@@ -812,7 +812,7 @@ class KotlinJAXRSIrGeneratorTest {
           testOptions(
             quarkus = quarkus,
             aggregateServices = true,
-            aggregateServiceSuffix = "TurnPostAPI",
+            aggregateServiceName = "TurnPostAPI",
           ),
         ).generateServiceTypes()
 
@@ -870,7 +870,7 @@ class KotlinJAXRSIrGeneratorTest {
       testOptions(
         quarkus = true,
         aggregateServices = true,
-        aggregateServiceSuffix = "TurnPostAPI",
+        aggregateServiceName = "TurnPostAPI",
       ),
     ).generateServiceTypes()
 
@@ -946,7 +946,7 @@ class KotlinJAXRSIrGeneratorTest {
       testOptions(
         quarkus = true,
         aggregateServices = true,
-        aggregateServiceSuffix = "TurnPostAPI",
+        aggregateServiceName = "TurnPostAPI",
       ),
     ).generateServiceTypes()
 
@@ -1316,7 +1316,7 @@ class KotlinJAXRSIrGeneratorTest {
     alwaysUseResponseReturn: Boolean = false,
     quarkus: Boolean = false,
     aggregateServices: Boolean = false,
-    aggregateServiceSuffix: String? = null,
+    aggregateServiceName: String? = null,
   ): KotlinJAXRSOptions =
     KotlinJAXRSOptions(
       coroutineFlowMethods = coroutineFlowMethods,
@@ -1331,7 +1331,7 @@ class KotlinJAXRSIrGeneratorTest {
       serviceSuffix = "API",
       quarkus = quarkus,
       aggregateServices = aggregateServices,
-      aggregateServiceSuffix = aggregateServiceSuffix,
+      aggregateServiceName = aggregateServiceName,
     )
 
   private fun clientModelApi(): GeneratedApi =

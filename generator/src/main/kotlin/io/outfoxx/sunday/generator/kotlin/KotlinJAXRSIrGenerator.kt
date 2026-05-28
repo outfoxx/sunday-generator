@@ -292,7 +292,7 @@ class KotlinJAXRSIrGenerator(
       api.target(preferredTargetId, "kotlin")?.packageName
         ?: options.defaultServicePackageName
         ?: genError("No service package specified, one must be specified via options or in source IR")
-    val serviceName = (options.aggregateServiceSuffix ?: options.serviceSuffix).ifBlank { "API" }
+    val serviceName = (options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }
     return ClassName.bestGuess("$servicePackageName.$serviceName")
   }
 

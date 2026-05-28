@@ -22,6 +22,8 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
@@ -68,7 +70,7 @@ abstract class SundayGenerate
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     @get:Optional
-    val includes: Property<FileCollection> = objects.property(FileCollection::class.java)
+    val allSources: Property<FileCollection> = objects.property(FileCollection::class.java)
 
     @get:Input
     val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
@@ -99,6 +101,18 @@ abstract class SundayGenerate
     @get:Input
     @get:Optional
     val serviceSuffix: Property<String> = objects.property(String::class.java).convention("API")
+
+    @get:Input
+    @get:Optional
+    val aggregateServices: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
+    @get:Input
+    @get:Optional
+    val aggregateServiceName: Property<String> = objects.property(String::class.java).convention(null as String?)
+
+    @get:Input
+    @get:Optional
+    val servicesFromTags: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
     @get:Input
     @get:Optional
@@ -188,12 +202,10 @@ abstract class SundayGenerate
         .directoryProperty()
         .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
 
-    private val apiExporter = GeneratedApiIrExporter()
-
     @TaskAction
     fun generate() {
       logger.debug("Source: {}", source.files.joinToString())
-      logger.debug("Includes: {}", includes.orNull?.files?.joinToString() ?: "none")
+      logger.debug("All sources: {}", allSources.orNull?.files?.joinToString() ?: "none")
 
       val mode = this.mode.get()
       val outputDirFile = outputDir.get().asFile
@@ -254,10 +266,31 @@ abstract class SundayGenerate
       typeRegistry: KotlinTypeRegistry,
     ) {
 
-      files.forEach { file ->
+      val sourceFiles =
+        files
+          .toList()
+          .sortedBy { file ->
+            file
+              .toPath()
+              .toAbsolutePath()
+              .normalize()
+              .toString()
+          }
+      val exporter = GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags.get()))
+      val apiGroups =
+        try {
+          sourceFiles
+            .map { file -> GeneratedApiIrSource(file.toURI()) }
+            .groupBy { source -> exporter.exportWithIdentity(listOf(source)).apiId }
+        } catch (x: IllegalArgumentException) {
+          logger.log(LogLevel.ERROR, x.message.orEmpty())
+          throw InvalidUserDataException("Sunday source files are invalid")
+        }
+
+      apiGroups.values.forEach { groupSources ->
         val api =
           try {
-            apiExporter.export(file.toURI())
+            exporter.export(groupSources)
           } catch (x: IllegalArgumentException) {
             logger.log(LogLevel.ERROR, x.message.orEmpty())
             throw InvalidUserDataException("Sunday source files are invalid")
@@ -270,17 +303,20 @@ abstract class SundayGenerate
                 api,
                 typeRegistry,
                 KotlinJAXRSOptions(
-                  flowCoroutines.get(),
-                  coroutines.get(),
-                  reactiveResponseType.orNull,
-                  explicitSecurityParameters.get(),
-                  baseUriMode.orNull,
-                  alwaysUseResponseReturn.get(),
-                  servicePkgName.get(),
-                  problemBaseUri.get(),
-                  defaultMediaTypes.get(),
-                  serviceSuffix.get(),
-                  quarkus.get(),
+                  coroutineFlowMethods = flowCoroutines.get(),
+                  coroutineServiceMethods = coroutines.get(),
+                  reactiveResponseType = reactiveResponseType.orNull,
+                  explicitSecurityParameters = explicitSecurityParameters.get(),
+                  baseUriMode = baseUriMode.orNull,
+                  alwaysUseResponseReturn = alwaysUseResponseReturn.get(),
+                  defaultServicePackageName = servicePkgName.get(),
+                  defaultProblemBaseUri = problemBaseUri.get(),
+                  defaultMediaTypes = defaultMediaTypes.get(),
+                  serviceSuffix = serviceSuffix.get(),
+                  quarkus = quarkus.get(),
+                  aggregateServices = aggregateServices.get(),
+                  aggregateServiceName = aggregateServiceName.orNull,
+                  servicesFromTags = servicesFromTags.get(),
                 ),
               ).generateServiceTypes()
 
@@ -293,6 +329,9 @@ abstract class SundayGenerate
                   defaultProblemBaseUri = problemBaseUri.get(),
                   defaultMediaTypes = defaultMediaTypes.get(),
                   serviceSuffix = serviceSuffix.get(),
+                  aggregateServices = aggregateServices.get(),
+                  aggregateServiceName = aggregateServiceName.orNull,
+                  servicesFromTags = servicesFromTags.get(),
                 ),
               ).generateServiceTypes()
           }
