@@ -30,6 +30,7 @@ dependencies {
   testImplementation(libs.quarkiverseProblem)
   testImplementation(libs.mutiny)
   testImplementation(libs.microprofileFaultTolerance)
+  testImplementation(libs.microprofileJwt)
   testImplementation(libs.smallryeFaultTolerance)
   testImplementation(libs.rxJava3)
   testImplementation(libs.rxJava2)

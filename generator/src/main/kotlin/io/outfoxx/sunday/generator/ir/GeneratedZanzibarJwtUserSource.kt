@@ -17,12 +17,9 @@
 package io.outfoxx.sunday.generator.ir
 
 /**
- * Authentication metadata shared by services and operations.
+ * JWT-backed Zanzibar user extraction metadata.
  */
-data class GeneratedAuth(
-  val schemes: List<String> = listOf(),
-  val requirements: List<GeneratedSecurityRequirement> = listOf(),
-  val securitySchemes: List<GeneratedSecurityScheme> = listOf(),
-  val zanzibar: Map<String, String> = mapOf(),
-  val zanzibarUserSource: GeneratedZanzibarUserSource? = null,
+data class GeneratedZanzibarJwtUserSource(
+  val claims: List<String> = listOf(),
+  val principalFallback: Boolean = false,
 )

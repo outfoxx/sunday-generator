@@ -31,7 +31,12 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
  * True when the auth metadata carries no security, scheme, or Zanzibar data.
  */
 val GeneratedAuth.isEmpty: Boolean
-  get() = schemes.isEmpty() && requirements.isEmpty() && securitySchemes.isEmpty() && zanzibar.isEmpty()
+  get() =
+    schemes.isEmpty() &&
+      requirements.isEmpty() &&
+      securitySchemes.isEmpty() &&
+      zanzibar.isEmpty() &&
+      zanzibarUserSource == null
 
 /**
  * Returns auth metadata using operation, service, then API precedence.

@@ -38,6 +38,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -862,6 +864,11 @@ class KotlinJAXRSIrGeneratorTest {
 
     val builtTypes = serverRegistry.buildTypes()
     val source = kotlinSource("io.test.service", findType("io.test.service.ProjectsAPI", builtTypes))
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAHeaderObject"), source)
@@ -890,6 +897,44 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(source.contains("type = \"workspace\""), source)
     assertTrue(source.contains("@FGARelation(FGARelation.ANY)"), source)
     assertTrue(source.contains("@FGAIgnore"), source)
+    assertTrue(userExtractorSource.contains("import io.quarkiverse.zanzibar.UserExtractor"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("import jakarta.enterprise.context.ApplicationScoped"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("import org.eclipse.microprofile.jwt.JsonWebToken"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("@ApplicationScoped"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("public class ZanzibarJwtUserExtractor"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("jwt.getClaim<String>(\"azp\")"), userExtractorSource)
+    assertTrue(userExtractorSource.contains("jwt.subject"), userExtractorSource)
+    assertFalse(userExtractorSource.contains("principal.name"), userExtractorSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates strict opt-in principal fallback for Quarkus Zanzibar JWT user extractors`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(principalFallback = true),
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(userExtractorSource.contains(" ?: principal.name"), userExtractorSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -1547,10 +1592,21 @@ class KotlinJAXRSIrGeneratorTest {
         ),
     )
 
-  private fun zanzibarApi(): GeneratedApi =
+  private fun zanzibarApi(principalFallback: Boolean = false): GeneratedApi =
     GeneratedApi(
       name = "Projects API",
       source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://projects"),
+      auth =
+        GeneratedAuth(
+          zanzibarUserSource =
+            GeneratedZanzibarUserSource(
+              jwt =
+                GeneratedZanzibarJwtUserSource(
+                  claims = listOf("azp", "sub"),
+                  principalFallback = principalFallback,
+                ),
+            ),
+        ),
       services =
         listOf(
           GeneratedService(

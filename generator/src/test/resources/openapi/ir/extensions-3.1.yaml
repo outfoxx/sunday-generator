@@ -20,6 +20,10 @@ x-sunday-problemTypes:
 x-sunday-zanzibar:
   permission: project.create
   resourceType: project
+  user-source:
+    jwt:
+      claims: [azp, sub]
+      principal-fallback: true
 paths:
   /projects:
     post:

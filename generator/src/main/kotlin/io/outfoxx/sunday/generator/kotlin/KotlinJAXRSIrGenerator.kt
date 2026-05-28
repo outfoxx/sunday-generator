@@ -59,6 +59,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
+import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
@@ -127,6 +129,7 @@ import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
+import java.security.Principal
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -179,6 +182,7 @@ class KotlinJAXRSIrGenerator(
 
     generateModelTypes()
     generateProblemTypes(services)
+    generateZanzibarUserExtractorType()
 
     val serviceTypes =
       services.map { service ->
@@ -248,6 +252,105 @@ class KotlinJAXRSIrGenerator(
     referencedProblems.forEach { problem ->
       typeRegistry.addModelType(problem.typeName(), problem.problemType())
     }
+  }
+
+  private fun generateZanzibarUserExtractorType() {
+    if (!options.quarkus || generationMode != Server) {
+      return
+    }
+
+    val userSource = api.zanzibarUserSourceOrNull() ?: return
+    userSource.jwt?.let { jwtUserSource ->
+      typeRegistry.addServiceType(zanzibarJwtUserExtractorTypeName(), jwtUserSource.zanzibarJwtUserExtractorType())
+    }
+  }
+
+  private fun GeneratedApi.zanzibarUserSourceOrNull(): GeneratedZanzibarUserSource? {
+    val sources =
+      (
+        listOfNotNull(auth?.zanzibarUserSource) +
+          services.flatMap { service ->
+            listOfNotNull(service.auth?.zanzibarUserSource) +
+              service.operations.mapNotNull { operation -> operation.auth?.zanzibarUserSource }
+          }
+      ).distinct()
+
+    if (sources.size > 1) {
+      genError("Cannot generate more than one Zanzibar user source")
+    }
+
+    return sources.singleOrNull()
+  }
+
+  private fun GeneratedZanzibarJwtUserSource.zanzibarJwtUserExtractorType(): TypeSpec.Builder {
+    val principalParameterName = if (principalFallback) "principal" else "_principal"
+    val claimExpressions =
+      claims
+        .distinct()
+        .map { claim ->
+          if (claim == "sub") {
+            CodeBlock.of("jwt.subject")
+          } else {
+            CodeBlock.of("jwt.getClaim<String>(%S)", claim)
+          }
+        }
+    val fallbackExpression =
+      if (principalFallback) {
+        CodeBlock.of(" ?: principal.name")
+      } else {
+        CodeBlock.of("")
+      }
+
+    val extractUser =
+      FunSpec
+        .builder("extractUser")
+        .addModifiers(KModifier.OVERRIDE)
+        .addParameter(principalParameterName, Principal::class.asTypeName())
+        .addParameter("discoveredUserType", STRING.copy(nullable = true))
+        .returns(OPTIONAL.parameterizedBy(fgaUser))
+        .addCode(
+          CodeBlock
+            .builder()
+            .add("val userId =·")
+            .apply {
+              if (claimExpressions.isEmpty()) {
+                add("null")
+              } else {
+                add("listOfNotNull(\n")
+                indent()
+                claimExpressions.forEach { claimExpression -> add("%L,\n", claimExpression) }
+                unindent()
+                add(").firstOrNull·{·it.isNotBlank()·}")
+              }
+            }.add("%L\n", fallbackExpression)
+            .add("val userType = discoveredUserType ?: return %T.empty()\n", OPTIONAL)
+            .add("return userId?.let·{·%T.of(%T(userType,·it))·}·?:·%T.empty()\n", OPTIONAL, fgaUser, OPTIONAL)
+            .build(),
+        ).build()
+
+    return TypeSpec
+      .classBuilder(zanzibarJwtUserExtractorTypeName())
+      .addAnnotation(applicationScopedAnnotation)
+      .primaryConstructor(
+        FunSpec
+          .constructorBuilder()
+          .addParameter("jwt", jsonWebToken)
+          .build(),
+      ).addProperty(
+        PropertySpec
+          .builder("jwt", jsonWebToken, KModifier.PRIVATE)
+          .initializer("jwt")
+          .build(),
+      ).addSuperinterface(userExtractor)
+      .addFunction(extractUser)
+  }
+
+  private fun zanzibarJwtUserExtractorTypeName(): ClassName {
+    val servicePackageName =
+      api.target(preferredTargetId, "kotlin")?.packageName
+        ?: options.defaultServicePackageName
+        ?: genError("No service package specified, one must be specified via options or in source IR")
+    return ClassName.bestGuess("$servicePackageName.ZanzibarJwtUserExtractor")
   }
 
   private fun GeneratedService.serviceType(
@@ -2717,6 +2820,11 @@ class KotlinJAXRSIrGenerator(
     val fgaRelationAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARelation")
     val fgaRequestObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARequestObject")
     val fgaUserTypeAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAUserType")
+    val applicationScopedAnnotation = ClassName("jakarta.enterprise.context", "ApplicationScoped")
+    val jsonWebToken = ClassName("org.eclipse.microprofile.jwt", "JsonWebToken")
+    val userExtractor = ClassName("io.quarkiverse.zanzibar", "UserExtractor")
+    val fgaUser = userExtractor.nestedClass("User")
+    val OPTIONAL = ClassName("java.util", "Optional")
 
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

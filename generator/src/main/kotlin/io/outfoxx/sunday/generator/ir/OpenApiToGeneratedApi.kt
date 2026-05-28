@@ -46,7 +46,12 @@ class OpenApiToGeneratedApi(
       }
 
       val serviceFragments = document.serviceFragments(localModels)
-      val auth = document.auth(document.security, zanzibar = document.rootZanzibar())
+      val auth =
+        document.auth(
+          document.security,
+          zanzibar = document.rootZanzibar(),
+          zanzibarUserSource = document.rootZanzibarUserSource(),
+        )
       val generatedApi =
         GeneratedApi(
           name = document.title,
@@ -566,6 +571,7 @@ class OpenApiToGeneratedApi(
   private fun OpenApiSourceDocument.auth(
     security: List<Any?> = this.security,
     zanzibar: Map<String, String> = mapOf(),
+    zanzibarUserSource: GeneratedZanzibarUserSource? = null,
   ): GeneratedAuth? {
     val requirements = security.mapNotNull { requirement -> (requirement as? Map<*, *>)?.securityRequirement() }
     val schemeNames = requirements.flatMap { requirement -> requirement.schemes }.distinct()
@@ -575,6 +581,7 @@ class OpenApiToGeneratedApi(
       requirements = requirements,
       securitySchemes = schemes,
       zanzibar = zanzibar,
+      zanzibarUserSource = zanzibarUserSource,
     ).takeUnless { it == GeneratedAuth() }
   }
 
@@ -730,11 +737,19 @@ class OpenApiToGeneratedApi(
       }.takeIf { it }
       ?.let { GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM) }
 
-  private fun OpenApiSourceDocument.rootZanzibar(): Map<String, String> = mapValue("x-sunday-zanzibar").stringMap()
+  private fun OpenApiSourceDocument.rootZanzibar(): Map<String, String> = mapValue("x-sunday-zanzibar").zanzibarMap()
+
+  private fun OpenApiSourceDocument.rootZanzibarUserSource(): GeneratedZanzibarUserSource? =
+    mapValue("x-sunday-zanzibar").zanzibarUserSource()
 
   private fun Map<*, *>.auth(security: List<Any?>): GeneratedAuth? =
     activeDocument?.let { document ->
-      document.auth(security, zanzibar = document.rootZanzibar() + mapValue("x-sunday-zanzibar").stringMap())
+      val zanzibar = mapValue("x-sunday-zanzibar")
+      document.auth(
+        security,
+        zanzibar = document.rootZanzibar() + zanzibar.zanzibarMap(),
+        zanzibarUserSource = zanzibar.zanzibarUserSource() ?: document.rootZanzibarUserSource(),
+      )
     }
 
   private fun OpenApiSourceDocument.discriminatorValues(): Map<String, String> =
@@ -931,6 +946,31 @@ class OpenApiToGeneratedApi(
       .orEmpty()
       .mapNotNull { (key, value) -> (key as? String)?.let { it to value.toString() } }
       .toMap()
+
+  private fun Map<*, *>?.zanzibarMap(): Map<String, String> =
+    this
+      .orEmpty()
+      .filterKeys { key -> key !in listOf("user-source", "userSource") }
+      .stringMap()
+
+  private fun Map<*, *>?.zanzibarUserSource(): GeneratedZanzibarUserSource? {
+    val userSource = this?.mapValue("user-source") ?: this?.mapValue("userSource") ?: return null
+    val jwt = userSource.mapValue("jwt")?.zanzibarJwtUserSource()
+    return GeneratedZanzibarUserSource(jwt = jwt).takeUnless { it == GeneratedZanzibarUserSource() }
+  }
+
+  private fun Map<*, *>.zanzibarJwtUserSource(): GeneratedZanzibarJwtUserSource? {
+    val claims = listMember("claims").mapNotNull { value -> value as? String }
+    val principalFallback = booleanValue("principal-fallback") ?: booleanValue("principalFallback") ?: false
+    return GeneratedZanzibarJwtUserSource(
+      claims = claims,
+      principalFallback = principalFallback,
+    ).takeUnless { it == GeneratedZanzibarJwtUserSource() }
+  }
+
+  private fun Map<*, *>?.listMember(name: String): List<*> = this?.get(name) as? List<*> ?: listOf<Any?>()
+
+  private fun Map<*, *>?.booleanValue(name: String): Boolean? = this?.get(name) as? Boolean
 
   private fun scalar(
     name: String,

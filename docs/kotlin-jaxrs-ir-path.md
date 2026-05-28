@@ -57,6 +57,7 @@ Current seventh slice:
 - Preserves explicit security parameter wire names for Quarkus `@RestHeader` output.
 - Covers Quarkus SSE element type annotation parity through the direct IR path.
 - Lowers Quarkus SmallRye Fault Tolerance policy metadata and server-side Quarkiverse Zanzibar authorization metadata from IR.
+- Generates a Quarkus CDI `UserExtractor` bean for explicit Zanzibar JWT user-source metadata, using configured claims in order and only falling back to the request principal when `principalFallback` is explicitly enabled.
 
 Current eighth slice:
 

@@ -182,6 +182,7 @@ class RamlToGeneratedApi(
           },
         localModels = localModels,
         zanzibar = api.zanzibar(),
+        zanzibarUserSource = api.zanzibarUserSource(),
       )
     val server = api.servers.firstOrNull()
     val services =
@@ -334,6 +335,8 @@ class RamlToGeneratedApi(
         localModels = localModels,
         zanzibar = operation.zanzibar(),
         inheritedZanzibar = inheritedAuth?.zanzibar.orEmpty(),
+        zanzibarUserSource = operation.zanzibarUserSource(),
+        inheritedZanzibarUserSource = inheritedAuth?.zanzibarUserSource,
       ) ?: inheritedAuth
 
     val operationId = operation.generatedOperationId(endPoint.path)
@@ -1681,7 +1684,10 @@ class RamlToGeneratedApi(
       }?.takeUnless { it == GeneratedPolicy() }
 
   private fun CustomizableElement.zanzibar(): Map<String, String> =
-    (findAnnotation(APIAnnotationName.Zanzibar, null) as? ObjectNode)?.stringMap().orEmpty()
+    (findAnnotation(APIAnnotationName.Zanzibar, null) as? ObjectNode)?.zanzibarMap().orEmpty()
+
+  private fun CustomizableElement.zanzibarUserSource(): GeneratedZanzibarUserSource? =
+    (findAnnotation(APIAnnotationName.Zanzibar, null) as? ObjectNode)?.zanzibarUserSource()
 
   private fun ObjectNode.stringMap(propertyName: String): Map<String, String> =
     get<ObjectNode>(propertyName)?.stringMap().orEmpty()
@@ -1690,6 +1696,31 @@ class RamlToGeneratedApi(
     properties().mapValues { (_, value) ->
       value.rawScalarValue ?: value.anyValue?.toString() ?: ""
     }
+
+  private fun ObjectNode.zanzibarMap(): Map<String, String> =
+    properties()
+      .filterKeys { key -> key !in listOf("user-source", "userSource") }
+      .mapValues { (_, value) -> value.rawScalarValue ?: value.anyValue?.toString() ?: "" }
+
+  private fun ObjectNode.zanzibarUserSource(): GeneratedZanzibarUserSource? {
+    val userSource = objectValue("user-source") ?: objectValue("userSource") ?: return null
+    val jwt = userSource.objectValue("jwt")?.zanzibarJwtUserSource()
+    return GeneratedZanzibarUserSource(jwt = jwt).takeUnless { it == GeneratedZanzibarUserSource() }
+  }
+
+  private fun Map<*, *>.zanzibarJwtUserSource(): GeneratedZanzibarJwtUserSource? {
+    val claims = (this["claims"] as? List<*>)?.mapNotNull { value -> value as? String }.orEmpty()
+    val principalFallback =
+      this["principal-fallback"] as? Boolean
+        ?: this["principalFallback"] as? Boolean
+        ?: false
+    return GeneratedZanzibarJwtUserSource(claims = claims, principalFallback = principalFallback)
+      .takeUnless { it == GeneratedZanzibarJwtUserSource() }
+  }
+
+  private fun ObjectNode.objectValue(name: String): Map<*, *>? = get<ObjectNode>(name)?.anyValue as? Map<*, *>
+
+  private fun Map<*, *>.objectValue(name: String): Map<*, *>? = this[name] as? Map<*, *>
 
   private fun typeRef(
     shape: Shape,
@@ -2232,6 +2263,8 @@ class RamlToGeneratedApi(
     localModels: LocalModelRegistry,
     zanzibar: Map<String, String> = mapOf(),
     inheritedZanzibar: Map<String, String> = mapOf(),
+    zanzibarUserSource: GeneratedZanzibarUserSource? = null,
+    inheritedZanzibarUserSource: GeneratedZanzibarUserSource? = null,
   ): GeneratedAuth? {
     val requirements =
       securityRequirements
@@ -2255,6 +2288,7 @@ class RamlToGeneratedApi(
       requirements = requirements,
       securitySchemes = securitySchemes,
       zanzibar = inheritedZanzibar + zanzibar,
+      zanzibarUserSource = zanzibarUserSource ?: inheritedZanzibarUserSource,
     ).takeUnless { it == GeneratedAuth() }
   }
 

@@ -1,0 +1,21 @@
+#%RAML 1.0
+title: Zanzibar API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+
+(sunday.zanzibar):
+  resourceType: project
+  pathParam: projectId
+  permission: can_read
+  user-source:
+    jwt:
+      claims: [azp, sub]
+      principal-fallback: true
+
+/projects/{projectId}:
+  uriParameters:
+    projectId: string
+  get:
+    displayName: getProject
+    responses:
+      204:
