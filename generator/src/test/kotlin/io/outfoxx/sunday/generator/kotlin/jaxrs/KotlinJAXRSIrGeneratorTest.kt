@@ -1062,6 +1062,54 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates principal fallback directly for empty Quarkus Zanzibar JWT claim lists`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+    val api =
+      zanzibarApi().copy(
+        auth =
+          GeneratedAuth(
+            zanzibarUserSource =
+              GeneratedZanzibarUserSource(
+                jwt =
+                  GeneratedZanzibarJwtUserSource(
+                    claims = emptyList(),
+                    principalFallback = true,
+                  ),
+              ),
+          ),
+      )
+
+    KotlinJAXRSIrGenerator(
+      api,
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val userExtractorSource =
+      kotlinSource(
+        "io.test.service",
+        findType("io.test.service.ZanzibarJwtUserExtractor", builtTypes),
+      )
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(
+      userExtractorSource.contains("val userId = principal.name.takeIf { it.isNotBlank() }"),
+      userExtractorSource,
+    )
+    assertFalse(userExtractorSource.contains("null ?: principal.name"), userExtractorSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `does not generate Quarkus Zanzibar annotations in client mode`() {
     val clientRegistry =
       KotlinTypeRegistry(

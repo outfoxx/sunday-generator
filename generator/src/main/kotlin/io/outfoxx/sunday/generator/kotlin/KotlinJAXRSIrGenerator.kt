@@ -308,10 +308,27 @@ class KotlinJAXRSIrGenerator(
         }
     val fallbackExpression =
       if (principalFallback) {
-        CodeBlock.of(" ?: principal.name.takeIf·{·it.isNotBlank()·}")
+        CodeBlock.of("principal.name.takeIf·{·it.isNotBlank()·}")
       } else {
-        CodeBlock.of("")
+        CodeBlock.of("null")
       }
+    val userIdExpression =
+      CodeBlock
+        .builder()
+        .apply {
+          if (claimExpressions.isEmpty()) {
+            add("%L", fallbackExpression)
+          } else {
+            add("listOfNotNull(\n")
+            indent()
+            claimExpressions.forEach { claimExpression -> add("%L,\n", claimExpression) }
+            unindent()
+            add(").firstOrNull·{·it.isNotBlank()·}")
+            if (principalFallback) {
+              add("·?:·%L", fallbackExpression)
+            }
+          }
+        }.build()
 
     val extractUser =
       FunSpec
@@ -323,18 +340,7 @@ class KotlinJAXRSIrGenerator(
         .addCode(
           CodeBlock
             .builder()
-            .add("val userId =·")
-            .apply {
-              if (claimExpressions.isEmpty()) {
-                add("null")
-              } else {
-                add("listOfNotNull(\n")
-                indent()
-                claimExpressions.forEach { claimExpression -> add("%L,\n", claimExpression) }
-                unindent()
-                add(").firstOrNull·{·it.isNotBlank()·}")
-              }
-            }.add("%L\n", fallbackExpression)
+            .add("val userId =·%L\n", userIdExpression)
             .add("val userType = discoveredUserType ?: return %T.empty()\n", OPTIONAL)
             .add("return userId?.let·{·%T.of(%T(userType,·it))·}·?:·%T.empty()\n", OPTIONAL, fgaUser, OPTIONAL)
             .build(),
