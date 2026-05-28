@@ -127,10 +127,12 @@ import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletionStage
@@ -523,6 +525,7 @@ class KotlinJAXRSIrGenerator(
     if (path.isNotEmpty()) {
       functionBuilder.addAnnotation(jaxRsTypes.path, path)
     }
+    addQuarkusFaultToleranceAnnotations(functionBuilder)
 
     val names = NameAllocator()
 
@@ -640,6 +643,140 @@ class KotlinJAXRSIrGenerator(
       }
     }
   }
+
+  private fun GeneratedOperation.addQuarkusFaultToleranceAnnotations(functionBuilder: FunSpec.Builder) {
+    if (!options.quarkus) {
+      return
+    }
+
+    val effectivePolicy = policy ?: return
+
+    effectivePolicy.timeout
+      ?.durationAnnotation(timeoutAnnotation, "value", "unit")
+      ?.let(functionBuilder::addAnnotation)
+
+    effectivePolicy.retry.retryAnnotation()?.let(functionBuilder::addAnnotation)
+    effectivePolicy.circuitBreaker.circuitBreakerAnnotation()?.let(functionBuilder::addAnnotation)
+
+    val rateLimit =
+      when (generationMode) {
+        Client -> effectivePolicy.clientRateLimit
+        Server -> effectivePolicy.serverRateLimit
+      }
+    rateLimit.rateLimitAnnotation()?.let(functionBuilder::addAnnotation)
+  }
+
+  private fun String.durationAnnotation(
+    annotation: ClassName,
+    valueMember: String,
+    unitMember: String,
+  ): AnnotationSpec =
+    toPolicyDuration().let { duration ->
+      AnnotationSpec
+        .builder(annotation)
+        .addMember("$valueMember = %L", duration.value)
+        .addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
+        .build()
+    }
+
+  private fun Map<String, String>.retryAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+
+    return AnnotationSpec
+      .builder(retryAnnotation)
+      .apply {
+        intValue("maxRetries")?.let { addMember("maxRetries = %L", it) }
+        durationValue("delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+        durationValue("maxDuration")?.let { addDurationMembers("maxDuration", "durationUnit", it) }
+        durationValue("jitter")?.let { addDurationMembers("jitter", "jitterDelayUnit", it) }
+      }.build()
+  }
+
+  private fun Map<String, String>.circuitBreakerAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+
+    return AnnotationSpec
+      .builder(circuitBreakerAnnotation)
+      .apply {
+        intValue("requestVolumeThreshold")?.let { addMember("requestVolumeThreshold = %L", it) }
+        intValue("successThreshold")?.let { addMember("successThreshold = %L", it) }
+        doubleValue("failureRatio")?.let { addMember("failureRatio = %L", it) }
+        durationValue("delay")?.let { addDurationMembers("delay", "delayUnit", it) }
+      }.build()
+  }
+
+  private fun Map<String, String>.rateLimitAnnotation(): AnnotationSpec? {
+    if (isEmpty()) {
+      return null
+    }
+
+    return AnnotationSpec
+      .builder(rateLimitAnnotation)
+      .apply {
+        intValue("value")?.let { addMember("value = %L", it) }
+        durationValue("window")?.let { addDurationMembers("window", "windowUnit", it) }
+        durationValue("minSpacing")?.let { addDurationMembers("minSpacing", "minSpacingUnit", it) }
+        this@rateLimitAnnotation["type"]?.let { type ->
+          addMember("type = %T.%L", rateLimitType, type.enumMemberName())
+        }
+      }.build()
+  }
+
+  private fun AnnotationSpec.Builder.addDurationMembers(
+    valueMember: String,
+    unitMember: String,
+    duration: PolicyDuration,
+  ) {
+    addMember("$valueMember = %L", duration.value)
+    addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
+  }
+
+  private fun Map<String, String>.intValue(name: String): Int? = this[name]?.toIntOrNull()
+
+  private fun Map<String, String>.doubleValue(name: String): Double? = this[name]?.toDoubleOrNull()
+
+  private fun Map<String, String>.durationValue(name: String): PolicyDuration? = this[name]?.toPolicyDuration()
+
+  private fun String.toPolicyDuration(): PolicyDuration {
+    val duration = parsePolicyDuration()
+    val millis = duration.toMillis()
+    return when {
+      millis % ChronoUnit.HOURS.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.HOURS.duration.toMillis(),
+          ChronoUnit.HOURS,
+        )
+      millis % ChronoUnit.MINUTES.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.MINUTES.duration.toMillis(),
+          ChronoUnit.MINUTES,
+        )
+      millis % ChronoUnit.SECONDS.duration.toMillis() == 0L ->
+        PolicyDuration(
+          millis / ChronoUnit.SECONDS.duration.toMillis(),
+          ChronoUnit.SECONDS,
+        )
+      else -> PolicyDuration(millis, ChronoUnit.MILLIS)
+    }
+  }
+
+  private fun String.parsePolicyDuration(): Duration =
+    runCatching { Duration.parse(this) }
+      .getOrElse {
+        policyMillisRegex
+          .matchEntire(this)
+          ?.groupValues
+          ?.get(1)
+          ?.toLongOrNull()
+          ?.let(Duration::ofMillis)
+          ?: throw it
+      }
+
+  private fun String.enumMemberName(): String = replace(enumMemberSplitRegex, "_").uppercase()
 
   private fun GeneratedService.expandedBaseUri(): String? {
     val baseUri = baseUri ?: return null
@@ -2471,8 +2608,22 @@ class KotlinJAXRSIrGenerator(
   private companion object {
     const val SSE_CONTENT_TYPE = "text/event-stream"
 
+    val CHRONO_UNIT = ChronoUnit::class.asTypeName()
+    val timeoutAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Timeout")
+    val retryAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Retry")
+    val circuitBreakerAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "CircuitBreaker")
+    val rateLimitAnnotation = ClassName("io.smallrye.faulttolerance.api", "RateLimit")
+    val rateLimitType = ClassName("io.smallrye.faulttolerance.api", "RateLimitType")
+
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
     val enumSplitRegex = """\W""".toRegex()
+    val enumMemberSplitRegex = """\W+""".toRegex()
+    val policyMillisRegex = """PT(\d+)MS""".toRegex(RegexOption.IGNORE_CASE)
   }
+
+  private data class PolicyDuration(
+    val value: Long,
+    val unit: ChronoUnit,
+  )
 }

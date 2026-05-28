@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedPolicy
 import io.outfoxx.sunday.generator.ir.GeneratedProtocol
 import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -793,6 +794,54 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates Quarkus fault tolerance annotations from IR policy metadata`() {
+    listOf(
+      GenerationMode.Client to "value = 20",
+      GenerationMode.Server to "value = 100",
+    ).forEach { (mode, rateLimitValue) ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          mode,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.QUARKUS,
+          problemRfc = KotlinProblemRfc.RFC9457,
+        )
+
+      KotlinJAXRSIrGenerator(
+        policyApi(),
+        typeRegistry,
+        testOptions(quarkus = true),
+      ).generateServiceTypes()
+
+      val builtTypes = typeRegistry.buildTypes()
+      val source = kotlinSource("io.test.service", findType("io.test.service.GuardedAPI", builtTypes))
+
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+      assertTrue(source.contains("import io.smallrye.faulttolerance.api.RateLimit"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.CircuitBreaker"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.Retry"), source)
+      assertTrue(source.contains("import org.eclipse.microprofile.faulttolerance.Timeout"), source)
+      assertTrue(source.contains("import java.time.temporal.ChronoUnit"), source)
+      assertTrue(source.contains("@Timeout("), source)
+      assertTrue(source.contains("value = 5"), source)
+      assertTrue(source.contains("unit = ChronoUnit.SECONDS"), source)
+      assertTrue(source.contains("maxRetries = 3"), source)
+      assertTrue(source.contains("delay = 1"), source)
+      assertTrue(source.contains("delayUnit = ChronoUnit.SECONDS"), source)
+      assertTrue(source.contains("jitter = 100"), source)
+      assertTrue(source.contains("jitterDelayUnit = ChronoUnit.MILLIS"), source)
+      assertTrue(source.contains("requestVolumeThreshold = 10"), source)
+      assertTrue(source.contains("failureRatio = 0.75"), source)
+      assertTrue(source.contains("window = 1"), source)
+      assertTrue(source.contains("windowUnit = ChronoUnit.MINUTES"), source)
+      assertTrue(source.contains(rateLimitValue), source)
+    }
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates aggregate JAX-RS subresources from IR with client and server modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->
@@ -1367,6 +1416,53 @@ class KotlinJAXRSIrGeneratorTest {
                   name = "displayName",
                   type = GeneratedTypeRef.scalar("string"),
                   required = true,
+                ),
+              ),
+          ),
+        ),
+    )
+
+  private fun policyApi(): GeneratedApi =
+    GeneratedApi(
+      name = "Guarded API",
+      source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://guarded"),
+      services =
+        listOf(
+          GeneratedService(
+            name = "Guarded",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "guarded",
+                  method = "GET",
+                  path = "/guarded",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  policy =
+                    GeneratedPolicy(
+                      timeout = "PT5S",
+                      retry =
+                        mapOf(
+                          "maxRetries" to "3",
+                          "delay" to "PT1S",
+                          "jitter" to "PT100MS",
+                        ),
+                      circuitBreaker =
+                        mapOf(
+                          "requestVolumeThreshold" to "10",
+                          "failureRatio" to "0.75",
+                          "delay" to "PT30S",
+                        ),
+                      clientRateLimit =
+                        mapOf(
+                          "value" to "20",
+                          "window" to "PT1M",
+                        ),
+                      serverRateLimit =
+                        mapOf(
+                          "value" to "100",
+                          "window" to "PT1M",
+                        ),
+                    ),
                 ),
               ),
           ),

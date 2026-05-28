@@ -29,6 +29,8 @@ dependencies {
   testImplementation(libs.zalandoProblem)
   testImplementation(libs.quarkiverseProblem)
   testImplementation(libs.mutiny)
+  testImplementation(libs.microprofileFaultTolerance)
+  testImplementation(libs.smallryeFaultTolerance)
   testImplementation(libs.rxJava3)
   testImplementation(libs.rxJava2)
   testImplementation(libs.quarkusRest)
