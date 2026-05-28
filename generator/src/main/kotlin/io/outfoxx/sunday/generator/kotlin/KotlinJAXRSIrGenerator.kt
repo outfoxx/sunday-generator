@@ -884,13 +884,19 @@ class KotlinJAXRSIrGenerator(
     valueMember: String,
     unitMember: String,
   ): AnnotationSpec =
-    toPolicyDuration().let { duration ->
-      AnnotationSpec
-        .builder(annotation)
-        .addMember("$valueMember = %L", duration.value)
-        .addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
-        .build()
-    }
+    runCatching { toPolicyDuration() }
+      .getOrElse {
+        genError(
+          "Quarkus timeout policy key '$valueMember' must be an ISO-8601 duration " +
+            "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+        )
+      }.let { duration ->
+        AnnotationSpec
+          .builder(annotation)
+          .addMember("$valueMember = %L", duration.value)
+          .addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
+          .build()
+      }
 
   private fun Map<String, String>.retryAnnotation(): AnnotationSpec? {
     if (isEmpty()) {

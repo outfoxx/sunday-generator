@@ -855,6 +855,9 @@ class KotlinJAXRSIrGeneratorTest {
         "Unsupported Quarkus circuitBreaker policy key(s): requestVolume",
       GeneratedPolicy(serverRateLimit = mapOf("window" to "PT1M")) to
         "Quarkus rateLimit policy requires integer key 'value'",
+      GeneratedPolicy(timeout = "100") to
+        "Quarkus timeout policy key 'value' must be an ISO-8601 duration " +
+        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
       GeneratedPolicy(retry = mapOf("delay" to "100")) to
         "Quarkus retry policy key 'delay' must be an ISO-8601 duration " +
         "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
