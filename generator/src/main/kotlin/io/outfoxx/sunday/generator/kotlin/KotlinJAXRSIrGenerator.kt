@@ -1093,7 +1093,7 @@ class KotlinJAXRSIrGenerator(
     restClient
       ?.providers
       .orEmpty()
-      .map { provider -> ClassName.bestGuess(provider) }
+      .map { provider -> provider.providerClassName() }
       .forEach { provider ->
         jaxRsTypes.registerProvider?.let { registerProvider ->
           addAnnotation(
@@ -1105,6 +1105,13 @@ class KotlinJAXRSIrGenerator(
         }
       }
   }
+
+  private fun String.providerClassName(): ClassName =
+    try {
+      ClassName.bestGuess(this)
+    } catch (error: IllegalArgumentException) {
+      genError("Invalid provider class name '$this' in REST client metadata: ${error.message}")
+    }
 
   private fun uniqueContextParameterName(
     contextParameter: String,

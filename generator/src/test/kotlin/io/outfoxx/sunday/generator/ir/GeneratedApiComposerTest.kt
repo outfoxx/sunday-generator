@@ -102,6 +102,45 @@ class GeneratedApiComposerTest {
   }
 
   @Test
+  fun `merges jaxrs metadata without dropping non rest client fields`() {
+
+    val merged =
+      GeneratedJaxrs(
+        asynchronous = true,
+        reactive = false,
+        sse = GeneratedModeFlag(client = true),
+        context = listOf("uriInfo"),
+        restClient = GeneratedJaxrsRestClient(configKey = "api", providers = listOf("io.test.ApiFilter")),
+      ).mergeWith(
+        GeneratedJaxrs(
+          reactive = true,
+          jsonBody = GeneratedModeFlag(server = true),
+          context = listOf("request"),
+          restClient = GeneratedJaxrsRestClient(oidcClient = "graphs", providers = listOf("io.test.GraphsFilter")),
+        ),
+      )
+
+    assertThat(
+      merged,
+      equalTo(
+        GeneratedJaxrs(
+          asynchronous = true,
+          reactive = true,
+          sse = GeneratedModeFlag(client = true),
+          jsonBody = GeneratedModeFlag(server = true),
+          context = listOf("uriInfo", "request"),
+          restClient =
+            GeneratedJaxrsRestClient(
+              configKey = "api",
+              oidcClient = "graphs",
+              providers = listOf("io.test.ApiFilter", "io.test.GraphsFilter"),
+            ),
+        ),
+      ),
+    )
+  }
+
+  @Test
   fun `rejects api id mismatches with api id override guidance`() {
 
     val failure =

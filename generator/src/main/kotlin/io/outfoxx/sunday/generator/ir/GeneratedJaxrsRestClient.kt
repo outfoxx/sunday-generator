@@ -33,7 +33,14 @@ internal fun GeneratedJaxrs?.mergeWith(other: GeneratedJaxrs?): GeneratedJaxrs? 
     return this
   }
   val restClient = restClient.mergeWith(other.restClient)
-  return copy(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
+  return GeneratedJaxrs(
+    asynchronous = other.asynchronous ?: asynchronous,
+    reactive = other.reactive ?: reactive,
+    sse = other.sse ?: sse,
+    jsonBody = other.jsonBody ?: jsonBody,
+    context = (context + other.context).distinct(),
+    restClient = restClient,
+  ).takeUnless { it == GeneratedJaxrs() }
 }
 
 internal fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {

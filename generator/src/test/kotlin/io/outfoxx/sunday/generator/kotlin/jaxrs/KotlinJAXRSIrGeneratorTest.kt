@@ -1268,6 +1268,35 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(usersSource.contains("@RegisterProvider(GraphsClientFilter::class)"), usersSource)
   }
 
+  @Test
+  fun `reports invalid Quarkus REST client provider class names`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          aggregateServicesApi(
+            serviceRestClient = GeneratedJaxrsRestClient(providers = listOf("not-a-class")),
+          ),
+          typeRegistry,
+          testOptions(quarkus = true),
+        ).generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message?.contains("Invalid provider class name 'not-a-class' in REST client metadata") == true,
+      error.message,
+    )
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @Test
   fun `generates aggregate Quarkus REST client metadata from root only`() {
