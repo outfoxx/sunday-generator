@@ -32,7 +32,7 @@ class KotlinJAXRSOptions(
   serviceSuffix: String,
   val quarkus: Boolean,
   val aggregateServices: Boolean = false,
-  val aggregateServiceSuffix: String? = null,
+  val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
 ) : GenerationOptions(
     defaultProblemBaseUri,

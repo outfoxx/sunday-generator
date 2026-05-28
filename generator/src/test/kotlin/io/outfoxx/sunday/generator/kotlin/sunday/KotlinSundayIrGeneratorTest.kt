@@ -1033,7 +1033,7 @@ class KotlinSundayIrGeneratorTest {
         defaultMediaTypes = listOf("application/json"),
         serviceSuffix = "API",
         aggregateServices = true,
-        aggregateServiceSuffix = "TurnPostAPI",
+        aggregateServiceName = "TurnPostAPI",
       ),
     ).generateServiceTypes()
 

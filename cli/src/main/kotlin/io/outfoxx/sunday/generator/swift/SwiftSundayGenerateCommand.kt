@@ -29,8 +29,7 @@ open class SwiftSundayGenerateCommand :
     help = "Generate a root API that exposes split services as properties",
   ).flag(default = false)
 
-  val aggregateServiceSuffix by option(
-    "-aggregate-service-suffix",
+  val aggregateServiceName by option(
     "-aggregate-service-name",
     help = "Name for the aggregate root API service",
   )
@@ -60,7 +59,7 @@ open class SwiftSundayGenerateCommand :
       mediaTypes.toList(),
       serviceSuffix,
       aggregateServices,
-      aggregateServiceSuffix,
+      aggregateServiceName,
       servicesFromTags,
     )
 }

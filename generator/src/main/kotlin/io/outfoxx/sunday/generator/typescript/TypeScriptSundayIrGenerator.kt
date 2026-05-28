@@ -429,7 +429,7 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun aggregateServiceTypeName(): TypeName.Standard {
-    val serviceName = (options.aggregateServiceSuffix ?: options.serviceSuffix).ifBlank { "API" }
+    val serviceName = (options.aggregateServiceName ?: options.serviceSuffix).ifBlank { "API" }
     return typeRegistry.generatedTypeName(serviceName, serviceName.camelCaseToKebabCase())
   }
 

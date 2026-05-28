@@ -44,7 +44,6 @@ abstract class PythonGenerateCommand(
 
   val aggregateServiceName by option(
     "-aggregate-service-name",
-    "-aggregate-service-suffix",
     help = "Name for the aggregate root API type or router factory",
   )
 

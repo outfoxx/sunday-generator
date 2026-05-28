@@ -33,8 +33,7 @@ open class KotlinSundayGenerateCommand :
     help = "Generate a root API that exposes split services as properties",
   ).flag(default = false)
 
-  val aggregateServiceSuffix by option(
-    "-aggregate-service-suffix",
+  val aggregateServiceName by option(
     "-aggregate-service-name",
     help = "Name for the aggregate root API service",
   )
@@ -72,7 +71,7 @@ open class KotlinSundayGenerateCommand :
       mediaTypes.toList(),
       serviceSuffix,
       aggregateServices,
-      aggregateServiceSuffix,
+      aggregateServiceName,
       servicesFromTags,
     )
 }

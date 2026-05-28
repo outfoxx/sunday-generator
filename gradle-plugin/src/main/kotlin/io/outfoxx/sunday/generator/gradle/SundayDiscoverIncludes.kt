@@ -18,6 +18,7 @@
 
 package io.outfoxx.sunday.generator.gradle
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.common.APIProcessor
@@ -76,11 +77,12 @@ abstract class SundayDiscoverIncludes
       val allSources = roots.toMutableSet()
 
       roots.forEach { file ->
-        if (file.extension != "raml") {
-          return@forEach
-        }
-
-        discoverRamlSources(file).forEach { allSources.add(it) }
+        val discovered =
+          when (file.extension.lowercase()) {
+            "raml" -> discoverRamlSources(file)
+            else -> discoverNativeSources(file)
+          }
+        discovered.forEach { allSources.add(it) }
       }
 
       writeIndex(rootsIndexFile.get().asFile, roots)
@@ -132,6 +134,80 @@ abstract class SundayDiscoverIncludes
         }.filter { it.exists() }
         .map { it.canonicalFile }
         .toSet()
+    }
+
+    private fun discoverNativeSources(file: File): Set<File> {
+      val discovered = linkedSetOf<File>()
+      val visited = mutableSetOf<File>()
+      val pending = ArrayDeque<File>()
+      pending.add(file.canonicalFile)
+
+      while (pending.isNotEmpty()) {
+        val current = pending.removeFirst()
+        if (!visited.add(current)) {
+          continue
+        }
+
+        findNativeReferences(current).forEach { referenced ->
+          if (discovered.add(referenced)) {
+            pending.add(referenced)
+          }
+        }
+      }
+
+      return discovered
+    }
+
+    private fun findNativeReferences(file: File): Set<File> {
+      val root = runCatching { yamlMapper.readTree(file) }.getOrNull() ?: return emptySet()
+      val references = linkedSetOf<File>()
+
+      root.visitReferences { reference ->
+        resolveNativeReference(file, reference)?.let { references.add(it) }
+      }
+
+      return references
+    }
+
+    private fun JsonNode.visitReferences(visit: (String) -> Unit) {
+      when {
+        isObject -> {
+          properties().forEach { (name, value) ->
+            if (name == "\$ref" && value.isTextual) {
+              visit(value.asText())
+            }
+            value.visitReferences(visit)
+          }
+        }
+
+        isArray -> elements().forEachRemaining { element -> element.visitReferences(visit) }
+      }
+    }
+
+    private fun resolveNativeReference(
+      sourceFile: File,
+      reference: String,
+    ): File? {
+      val referencedPath = reference.substringBefore('#')
+      if (referencedPath.isBlank()) {
+        return null
+      }
+
+      val referencedFile =
+        runCatching {
+          val uri = URI(referencedPath)
+          when {
+            uri.isAbsolute && uri.scheme.equals("file", ignoreCase = true) -> File(uri)
+            uri.isAbsolute -> null
+            else -> sourceFile.parentFile.resolve(referencedPath)
+          }
+        }.getOrElse {
+          sourceFile.parentFile.resolve(referencedPath)
+        } ?: return null
+
+      return referencedFile
+        .takeIf { it.isFile }
+        ?.canonicalFile
     }
 
     private fun writeIndex(

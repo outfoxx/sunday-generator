@@ -71,8 +71,7 @@ open class KotlinJAXRSGenerateCommand :
     help = "Generate an aggregate JAX-RS service with subresource locator methods for grouped services",
   ).flag(default = false)
 
-  val aggregateServiceSuffix by option(
-    "-aggregate-service-suffix",
+  val aggregateServiceName by option(
     "-aggregate-service-name",
     help = "Aggregate JAX-RS service type name",
   )
@@ -128,7 +127,7 @@ open class KotlinJAXRSGenerateCommand :
       serviceSuffix,
       quarkus,
       aggregateServices,
-      aggregateServiceSuffix,
+      aggregateServiceName,
       servicesFromTags,
     )
 }

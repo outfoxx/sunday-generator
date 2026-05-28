@@ -35,8 +35,8 @@ import java.io.FileNotFoundException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
+import java.util.stream.Collectors
 import kotlin.io.path.appendText
-import kotlin.streams.toList
 
 class GradlePluginTests {
 
@@ -463,12 +463,113 @@ class GradlePluginTests {
         paths
           .filter { path -> path.toFile().isFile }
           .map { path -> path.fileName.toString() }
-          .toList()
+          .collect(Collectors.toList())
       }
 
     assertThat(generatedFiles.contains("UsersAPI.kt"), equalTo(true))
     assertThat(generatedFiles.contains("ProjectsAPI.kt"), equalTo(true))
     assertThat(generatedFiles.contains("TaggedAPI.kt"), equalTo(true))
+  }
+
+  @Test
+  fun `generate sources for kotlin are regenerated when native refs change`() {
+
+    val sourceDir = testProjectDir.resolve("src/main/sunday")
+    sourceDir.mkdirs()
+    val schemaDir = testProjectDir.resolve("src/main/sunday-schemas")
+    schemaDir.mkdirs()
+
+    val schemaFile = schemaDir.resolve("user.yaml")
+    schemaFile.writeUserSchema(includeDisplayName = false)
+
+    sourceDir.resolve("openapi.yaml").writeText(
+      """
+      openapi: 3.1.0
+      info:
+        title: Native Ref API
+        version: 1.0.0
+      paths:
+        /users/{userId}:
+          get:
+            operationId: getUser
+            tags: [Users]
+            parameters:
+              - name: userId
+                in: path
+                required: true
+                schema:
+                  type: string
+            responses:
+              '200':
+                description: User
+                content:
+                  application/json:
+                    schema:
+                      ${'$'}ref: '../sunday-schemas/user.yaml'
+      """.trimIndent(),
+    )
+
+    buildFile.writeText(
+      """
+      import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
+      import static io.outfoxx.sunday.generator.GenerationMode.*
+
+      plugins {
+        id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+        id 'io.outfoxx.sunday-generator'
+      }
+
+      repositories {
+        mavenCentral()
+      }
+
+      sundayGenerations {
+        client {
+          source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
+          framework.set(Sunday)
+          mode.set(Client)
+          pkgName.set('io.outfoxx.test.client')
+          servicePkgName.set('io.outfoxx.test.client.api')
+          defaultMediaTypes.set(["application/json"])
+        }
+      }
+      """.trimIndent(),
+    )
+
+    testProjectDir.resolve("settings.gradle.kts").writeText(
+      """
+      buildCache {
+        local {
+          directory = file("${testProjectDir.resolve("local-cache")}")
+        }
+      }
+      """.trimIndent(),
+    )
+
+    GradleRunner
+      .create()
+      .withProjectDir(testProjectDir)
+      .withPluginClasspath()
+      .withArguments("sundayGenerate_client", "--stacktrace", "--debug", "--build-cache")
+      .withDebug(true)
+      .build()
+
+    val allSourcesIndex = testProjectDir.resolve("build/generated/sunday/all-sources/client.txt")
+    assertThat(allSourcesIndex.readText(), containsString(schemaFile.canonicalPath))
+
+    schemaFile.writeUserSchema(includeDisplayName = true)
+
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("sundayGenerate_client", "--stacktrace", "--debug", "--build-cache")
+        .withDebug(true)
+        .forwardOutput()
+        .build()
+
+    assertGenerationInvalidated(result, "client")
   }
 
   @Test
@@ -710,6 +811,22 @@ class GradlePluginTests {
     val srcPath = Paths.get(GradlePluginTests::class.java.getResource(src)?.toURI() ?: error("Resource not found"))
     val dstPath = dstDir.toPath()
     Files.copy(srcPath, dstPath.resolve(srcPath.fileName))
+  }
+
+  private fun File.writeUserSchema(includeDisplayName: Boolean) {
+    writeText(
+      buildString {
+        appendLine("type: object")
+        appendLine("required: [id]")
+        appendLine("properties:")
+        appendLine("  id:")
+        appendLine("    type: string")
+        if (includeDisplayName) {
+          appendLine("  displayName:")
+          appendLine("    type: string")
+        }
+      },
+    )
   }
 
   private fun assertGenerationOutcome(

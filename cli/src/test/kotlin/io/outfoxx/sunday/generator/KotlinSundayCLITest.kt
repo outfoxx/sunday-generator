@@ -67,19 +67,19 @@ class KotlinSundayCLITest {
       commandWithTrue.parse(
         arrayOf(
           "-aggregate-services",
-          "-aggregate-service-suffix",
+          "-aggregate-service-name",
           "TurnPostAPI",
           *requiredOptions,
         ),
       )
     }
     assertThat(commandWithTrue.aggregateServices, equalTo(true))
-    assertThat(commandWithTrue.aggregateServiceSuffix, equalTo("TurnPostAPI"))
+    assertThat(commandWithTrue.aggregateServiceName, equalTo("TurnPostAPI"))
 
     val commandWithFalse = KotlinSundayGenerateCommandTest()
     assertDoesNotThrow { commandWithFalse.parse(requiredOptions) }
     assertThat(commandWithFalse.aggregateServices, equalTo(false))
-    assertThat(commandWithFalse.aggregateServiceSuffix, equalTo(null))
+    assertThat(commandWithFalse.aggregateServiceName, equalTo(null))
   }
 
   @Test
@@ -190,7 +190,7 @@ class KotlinSundayCLITest {
             "-pkg",
             "io.test",
             "-aggregate-services",
-            "-aggregate-service-suffix",
+            "-aggregate-service-name",
             "TurnPostAPI",
             "-out",
             output.toString(),

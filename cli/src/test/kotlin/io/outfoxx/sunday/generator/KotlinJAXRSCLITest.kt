@@ -175,7 +175,7 @@ class KotlinJAXRSCLITest {
 
     assertThat(command.servicesFromTags, equalTo(true))
     assertThat(command.aggregateServices, equalTo(true))
-    assertThat(command.aggregateServiceSuffix, equalTo("TurnPostAPI"))
+    assertThat(command.aggregateServiceName, equalTo("TurnPostAPI"))
   }
 
   @ParameterizedTest
