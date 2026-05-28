@@ -56,7 +56,7 @@ Current seventh slice:
 - Emits `sunday.jaxrsContext` parameters from IR and avoids duplicates with implicit `201 Created` `UriInfo`.
 - Preserves explicit security parameter wire names for Quarkus `@RestHeader` output.
 - Covers Quarkus SSE element type annotation parity through the direct IR path.
-- Leaves Fault Tolerance and Zanzibar policy annotations non-emitted until real source annotation/dependency mapping exists.
+- Lowers Quarkus SmallRye Fault Tolerance policy metadata and server-side Quarkiverse Zanzibar authorization metadata from IR.
 
 Current eighth slice:
 

@@ -526,6 +526,7 @@ class KotlinJAXRSIrGenerator(
       functionBuilder.addAnnotation(jaxRsTypes.path, path)
     }
     addQuarkusFaultToleranceAnnotations(functionBuilder)
+    addQuarkusZanzibarAnnotations(service, functionBuilder)
 
     val names = NameAllocator()
 
@@ -665,6 +666,100 @@ class KotlinJAXRSIrGenerator(
       }
     rateLimit.rateLimitAnnotation()?.let(functionBuilder::addAnnotation)
   }
+
+  private fun GeneratedOperation.addQuarkusZanzibarAnnotations(
+    service: GeneratedService,
+    functionBuilder: FunSpec.Builder,
+  ) {
+    if (!options.quarkus || generationMode != Server) {
+      return
+    }
+
+    val zanzibar = api.effectiveAuth(service, this)?.zanzibar.orEmpty()
+    if (zanzibar.isEmpty()) {
+      return
+    }
+
+    if (zanzibar.booleanValue("ignore", "ignored")) {
+      functionBuilder.addAnnotation(fgaIgnoreAnnotation)
+      return
+    }
+
+    zanzibar.objectAnnotation()?.let(functionBuilder::addAnnotation)
+    zanzibar.relationAnnotation()?.let(functionBuilder::addAnnotation)
+    zanzibar["userType"]?.let { userType ->
+      functionBuilder.addAnnotation(
+        AnnotationSpec
+          .builder(fgaUserTypeAnnotation)
+          .addMember("%S", userType)
+          .build(),
+      )
+    }
+  }
+
+  private fun Map<String, String>.objectAnnotation(): AnnotationSpec? {
+    val type = value("objectType", "resourceType") ?: return null
+    return value("objectId", "resourceId")
+      ?.let { id ->
+        AnnotationSpec
+          .builder(fgaObjectAnnotation)
+          .addMember("id = %S", id)
+          .addMember("type = %S", type)
+          .build()
+      }
+      ?: value("pathParam", "pathParameter", "objectIdPathParam", "resourceIdPathParam", "param")
+        ?.let { parameter ->
+          AnnotationSpec
+            .builder(fgaPathObjectAnnotation)
+            .addMember("param = %S", parameter)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("queryParam", "queryParameter", "objectIdQueryParam", "resourceIdQueryParam")
+        ?.let { parameter ->
+          AnnotationSpec
+            .builder(fgaQueryObjectAnnotation)
+            .addMember("param = %S", parameter)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("header", "headerName", "objectIdHeader", "resourceIdHeader")
+        ?.let { header ->
+          AnnotationSpec
+            .builder(fgaHeaderObjectAnnotation)
+            .addMember("name = %S", header)
+            .addMember("type = %S", type)
+            .build()
+        }
+      ?: value("requestProperty", "property", "objectIdRequestProperty", "resourceIdRequestProperty")
+        ?.let { property ->
+          AnnotationSpec
+            .builder(fgaRequestObjectAnnotation)
+            .addMember("property = %S", property)
+            .addMember("type = %S", type)
+            .build()
+        }
+  }
+
+  private fun Map<String, String>.relationAnnotation(): AnnotationSpec? {
+    val relation = value("relation", "permission") ?: return null
+    val relationMember =
+      if (relation.equals("any", ignoreCase = true) || relation == "*") {
+        CodeBlock.of("%T.ANY", fgaRelationAnnotation)
+      } else {
+        CodeBlock.of("%S", relation)
+      }
+    return AnnotationSpec
+      .builder(fgaRelationAnnotation)
+      .addMember("%L", relationMember)
+      .build()
+  }
+
+  private fun Map<String, String>.value(vararg names: String): String? =
+    names.firstNotNullOfOrNull { name -> this[name]?.takeIf { it.isNotBlank() } }
+
+  private fun Map<String, String>.booleanValue(vararg names: String): Boolean =
+    value(*names)?.toBooleanStrictOrNull() == true
 
   private fun String.durationAnnotation(
     annotation: ClassName,
@@ -2614,6 +2709,14 @@ class KotlinJAXRSIrGenerator(
     val circuitBreakerAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "CircuitBreaker")
     val rateLimitAnnotation = ClassName("io.smallrye.faulttolerance.api", "RateLimit")
     val rateLimitType = ClassName("io.smallrye.faulttolerance.api", "RateLimitType")
+    val fgaHeaderObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAHeaderObject")
+    val fgaIgnoreAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAIgnore")
+    val fgaObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAObject")
+    val fgaPathObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAPathObject")
+    val fgaQueryObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAQueryObject")
+    val fgaRelationAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARelation")
+    val fgaRequestObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGARequestObject")
+    val fgaUserTypeAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAUserType")
 
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

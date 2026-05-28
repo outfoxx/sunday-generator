@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -842,6 +843,83 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates Quarkus Zanzibar annotations from IR auth metadata in server mode`() {
+    val serverRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(),
+      serverRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = serverRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ProjectsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAHeaderObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAIgnore"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAPathObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAQueryObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGARelation"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGARequestObject"), source)
+    assertTrue(source.contains("import io.quarkiverse.zanzibar.annotations.FGAUserType"), source)
+    assertTrue(source.contains("@FGAPathObject("), source)
+    assertTrue(source.contains("param = \"projectId\""), source)
+    assertTrue(source.contains("type = \"project\""), source)
+    assertTrue(source.contains("@FGARelation(\"can_read\")"), source)
+    assertTrue(source.contains("@FGAUserType(\"user\")"), source)
+    assertTrue(source.contains("@FGAQueryObject("), source)
+    assertTrue(source.contains("param = \"teamId\""), source)
+    assertTrue(source.contains("type = \"team\""), source)
+    assertTrue(source.contains("@FGAHeaderObject("), source)
+    assertTrue(source.contains("name = \"X-Account-Id\""), source)
+    assertTrue(source.contains("type = \"account\""), source)
+    assertTrue(source.contains("@FGARequestObject("), source)
+    assertTrue(source.contains("property = \"requestProjectId\""), source)
+    assertTrue(source.contains("@FGAObject("), source)
+    assertTrue(source.contains("id = \"public\""), source)
+    assertTrue(source.contains("type = \"workspace\""), source)
+    assertTrue(source.contains("@FGARelation(FGARelation.ANY)"), source)
+    assertTrue(source.contains("@FGAIgnore"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `does not generate Quarkus Zanzibar annotations in client mode`() {
+    val clientRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+
+    KotlinJAXRSIrGenerator(
+      zanzibarApi(),
+      clientRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = clientRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ProjectsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertFalse(source.contains("FGA"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates aggregate JAX-RS subresources from IR with client and server modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->
@@ -1463,6 +1541,113 @@ class KotlinJAXRSIrGeneratorTest {
                           "window" to "PT1M",
                         ),
                     ),
+                ),
+              ),
+          ),
+        ),
+    )
+
+  private fun zanzibarApi(): GeneratedApi =
+    GeneratedApi(
+      name = "Projects API",
+      source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://projects"),
+      services =
+        listOf(
+          GeneratedService(
+            name = "Projects",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "getProject",
+                  method = "GET",
+                  path = "/projects/{projectId}",
+                  parameters =
+                    listOf(
+                      GeneratedParameter(
+                        name = "projectId",
+                        location = GeneratedParameter.Location.PATH,
+                        type = GeneratedTypeRef.scalar("string"),
+                        required = true,
+                      ),
+                    ),
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "project",
+                          "pathParam" to "projectId",
+                          "permission" to "can_read",
+                          "userType" to "user",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getTeam",
+                  method = "GET",
+                  path = "/teams",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "objectType" to "team",
+                          "queryParam" to "teamId",
+                          "relation" to "member",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getAccount",
+                  method = "GET",
+                  path = "/account",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "account",
+                          "header" to "X-Account-Id",
+                          "permission" to "viewer",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getRequestProject",
+                  method = "GET",
+                  path = "/request-project",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "project",
+                          "requestProperty" to "requestProjectId",
+                          "permission" to "viewer",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "getPublicWorkspace",
+                  method = "GET",
+                  path = "/public-workspace",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth =
+                    GeneratedAuth(
+                      zanzibar =
+                        mapOf(
+                          "resourceType" to "workspace",
+                          "resourceId" to "public",
+                          "permission" to "*",
+                        ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "ignored",
+                  method = "GET",
+                  path = "/ignored",
+                  responses = listOf(GeneratedResponse(status = 204)),
+                  auth = GeneratedAuth(zanzibar = mapOf("ignore" to "true")),
                 ),
               ),
           ),
