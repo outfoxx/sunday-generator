@@ -855,6 +855,9 @@ class KotlinJAXRSIrGeneratorTest {
         "Unsupported Quarkus circuitBreaker policy key(s): requestVolume",
       GeneratedPolicy(serverRateLimit = mapOf("window" to "PT1M")) to
         "Quarkus rateLimit policy requires integer key 'value'",
+      GeneratedPolicy(retry = mapOf("delay" to "100")) to
+        "Quarkus retry policy key 'delay' must be an ISO-8601 duration " +
+        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
     ).forEach { (policy, expectedMessage) ->
       val typeRegistry =
         KotlinTypeRegistry(
@@ -978,6 +981,52 @@ class KotlinJAXRSIrGeneratorTest {
     )
   }
 
+  @Test
+  fun `reports conflicting Zanzibar user source metadata`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.QUARKUS,
+        problemRfc = KotlinProblemRfc.RFC9457,
+      )
+    val api = zanzibarApi()
+    val conflictingApi =
+      api.copy(
+        services =
+          listOf(
+            api.services.single().copy(
+              auth =
+                GeneratedAuth(
+                  zanzibarUserSource =
+                    GeneratedZanzibarUserSource(
+                      jwt = GeneratedZanzibarJwtUserSource(claims = listOf("email")),
+                    ),
+                ),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(
+          conflictingApi,
+          typeRegistry,
+          testOptions(quarkus = true),
+        ).generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message?.contains(
+        "Cannot generate more than one Zanzibar user source: " +
+          "jwt(claims=[azp, sub], principalFallback=false); jwt(claims=[email], principalFallback=false)",
+      ) == true,
+      error.message,
+    )
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @Test
   fun `generates strict opt-in principal fallback for Quarkus Zanzibar JWT user extractors`() {
@@ -1005,7 +1054,7 @@ class KotlinJAXRSIrGeneratorTest {
       )
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertTrue(userExtractorSource.contains(" ?: principal.name"), userExtractorSource)
+    assertTrue(userExtractorSource.contains(" ?: principal.name.takeIf { it.isNotBlank() }"), userExtractorSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

@@ -276,11 +276,23 @@ class KotlinJAXRSIrGenerator(
       ).distinct()
 
     if (sources.size > 1) {
-      genError("Cannot generate more than one Zanzibar user source")
+      genError(
+        "Cannot generate more than one Zanzibar user source: " +
+          sources.joinToString("; ") { it.diagnosticDescription() },
+      )
     }
 
     return sources.singleOrNull()
   }
+
+  private fun GeneratedZanzibarUserSource.diagnosticDescription(): String =
+    listOfNotNull(
+      jwt?.let { jwt -> "jwt(${jwt.diagnosticDescription()})" },
+    ).takeIf { it.isNotEmpty() }?.joinToString()
+      ?: toString()
+
+  private fun GeneratedZanzibarJwtUserSource.diagnosticDescription(): String =
+    "claims=${claims.distinct()}, principalFallback=$principalFallback"
 
   private fun GeneratedZanzibarJwtUserSource.zanzibarJwtUserExtractorType(): TypeSpec.Builder {
     val principalParameterName = if (principalFallback) "principal" else "_principal"
@@ -296,7 +308,7 @@ class KotlinJAXRSIrGenerator(
         }
     val fallbackExpression =
       if (principalFallback) {
-        CodeBlock.of(" ?: principal.name")
+        CodeBlock.of(" ?: principal.name.takeIf·{·it.isNotBlank()·}")
       } else {
         CodeBlock.of("")
       }
@@ -978,7 +990,10 @@ class KotlinJAXRSIrGenerator(
     this[name]?.let { value ->
       runCatching { value.toPolicyDuration() }
         .getOrElse {
-          genError("Quarkus $policyName policy key '$name' must be an ISO-8601 duration or milliseconds value")
+          genError(
+            "Quarkus $policyName policy key '$name' must be an ISO-8601 duration " +
+              "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+          )
         }
     }
 
