@@ -25,4 +25,5 @@ data class GeneratedJaxrs(
   val sse: GeneratedModeFlag? = null,
   val jsonBody: GeneratedModeFlag? = null,
   val context: List<String> = listOf(),
+  val restClient: GeneratedJaxrsRestClient? = null,
 )

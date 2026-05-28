@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.ir
+package org.eclipse.microprofile.rest.client.annotation
 
-/**
- * Generated service declaration.
- */
-data class GeneratedService(
-  val name: String,
-  val baseUri: String? = null,
-  val baseUriParameters: List<GeneratedParameter> = listOf(),
-  val group: String? = null,
-  val operations: List<GeneratedOperation> = listOf(),
-  val auth: GeneratedAuth? = null,
-  val jaxrs: GeneratedJaxrs? = null,
-  val protocol: GeneratedProtocol? = null,
-  val media: GeneratedMedia? = null,
-  val documentation: GeneratedDocumentation? = null,
+import kotlin.reflect.KClass
+
+// MicroProfile Rest Client annotations to skip the dependency on the MicroProfile Rest Client API
+
+@Target(AnnotationTarget.CLASS)
+annotation class RegisterProvider(
+  val value: KClass<*>,
 )

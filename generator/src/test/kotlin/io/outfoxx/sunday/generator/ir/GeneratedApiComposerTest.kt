@@ -80,6 +80,67 @@ class GeneratedApiComposerTest {
   }
 
   @Test
+  fun `composes api level jaxrs metadata from later fragments`() {
+
+    val restClient =
+      GeneratedJaxrsRestClient(
+        configKey = "platform",
+        oidcClient = "graphs",
+        providers = listOf("io.test.client.GraphsClientFilter"),
+      )
+    val openApi = fragment(apiName = "Craft HTTP API")
+    val asyncApi =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        apiName = "Craft Events API",
+        apiJaxrs = GeneratedJaxrs(restClient = restClient),
+      )
+
+    val api = GeneratedApiComposer().compose(listOf(openApi, asyncApi))
+
+    assertThat(api.jaxrs, equalTo(GeneratedJaxrs(restClient = restClient)))
+  }
+
+  @Test
+  fun `merges jaxrs metadata without dropping non rest client fields`() {
+
+    val merged =
+      GeneratedJaxrs(
+        asynchronous = true,
+        reactive = false,
+        sse = GeneratedModeFlag(client = true),
+        context = listOf("uriInfo"),
+        restClient = GeneratedJaxrsRestClient(configKey = "api", providers = listOf("io.test.ApiFilter")),
+      ).mergeWith(
+        GeneratedJaxrs(
+          reactive = true,
+          jsonBody = GeneratedModeFlag(server = true),
+          context = listOf("request"),
+          restClient = GeneratedJaxrsRestClient(oidcClient = "graphs", providers = listOf("io.test.GraphsFilter")),
+        ),
+      )
+
+    assertThat(
+      merged,
+      equalTo(
+        GeneratedJaxrs(
+          asynchronous = true,
+          reactive = true,
+          sse = GeneratedModeFlag(client = true),
+          jsonBody = GeneratedModeFlag(server = true),
+          context = listOf("uriInfo", "request"),
+          restClient =
+            GeneratedJaxrsRestClient(
+              configKey = "api",
+              oidcClient = "graphs",
+              providers = listOf("io.test.ApiFilter", "io.test.GraphsFilter"),
+            ),
+        ),
+      ),
+    )
+  }
+
+  @Test
   fun `rejects api id mismatches with api id override guidance`() {
 
     val failure =
@@ -340,6 +401,7 @@ class GeneratedApiComposerTest {
     operationIdentities: Map<GeneratedOperationIdentityKey, GeneratedIdentity> = mapOf(),
     models: List<GeneratedModel> = listOf(),
     modelIdentities: Map<String, GeneratedIdentity> = mapOf(),
+    apiJaxrs: GeneratedJaxrs? = null,
   ): GeneratedApiFragment =
     GeneratedApiFragment(
       api =
@@ -348,6 +410,7 @@ class GeneratedApiComposerTest {
           source = GeneratedSourceSpec(kind = kind, location = "$apiName.yaml"),
           services = services,
           models = models,
+          jaxrs = apiJaxrs,
         ),
       apiId = apiId,
       serviceIdentities = serviceIdentities,

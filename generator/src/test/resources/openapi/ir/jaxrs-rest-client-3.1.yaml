@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Platform API
+  version: 1.0.0
+x-sunday-jaxrs:
+  rest-client:
+    config-key: platform
+servers:
+  - url: http://localhost:9080
+tags:
+  - name: Graphs
+    x-sunday-jaxrs:
+      rest-client:
+        config-key: graphs
+        oidc-client: graphs
+        providers:
+          - io.test.client.GraphsClientFilter
+paths:
+  /graphs:
+    get:
+      tags: [Graphs]
+      operationId: listGraphs
+      responses:
+        '204':
+          description: No content

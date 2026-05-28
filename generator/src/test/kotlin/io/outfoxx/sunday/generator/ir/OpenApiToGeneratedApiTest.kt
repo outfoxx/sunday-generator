@@ -202,6 +202,34 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI JAX-RS REST client metadata from root and service tags`(
+    @ResourceUri("openapi/ir/jaxrs-rest-client-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi(GeneratedApiIrOptions(deriveServicesFromTags = true)).convert(testUri)
+
+    assertEquals(
+      GeneratedJaxrs(restClient = GeneratedJaxrsRestClient(configKey = "platform")),
+      api.jaxrs,
+    )
+    assertEquals(
+      GeneratedJaxrs(
+        restClient =
+          GeneratedJaxrsRestClient(
+            configKey = "graphs",
+            oidcClient = "graphs",
+            providers = listOf("io.test.client.GraphsClientFilter"),
+          ),
+      ),
+      api.services.single().jaxrs,
+    )
+    assertEquals(api.services.single().name, "GraphsService")
+    assertEquals(
+      api.services.single().jaxrs,
+      api.tags.single().jaxrs,
+    )
+  }
+
+  @Test
   fun `maps OpenAPI empty schemas to any JSON values`(
     @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
   ) {

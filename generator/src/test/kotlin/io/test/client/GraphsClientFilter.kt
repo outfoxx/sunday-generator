@@ -14,20 +14,7 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.ir
+package io.test.client
 
-/**
- * Generated service declaration.
- */
-data class GeneratedService(
-  val name: String,
-  val baseUri: String? = null,
-  val baseUriParameters: List<GeneratedParameter> = listOf(),
-  val group: String? = null,
-  val operations: List<GeneratedOperation> = listOf(),
-  val auth: GeneratedAuth? = null,
-  val jaxrs: GeneratedJaxrs? = null,
-  val protocol: GeneratedProtocol? = null,
-  val media: GeneratedMedia? = null,
-  val documentation: GeneratedDocumentation? = null,
-)
+/** Test provider used by generated REST client annotation compile checks. */
+class GraphsClientFilter

@@ -125,6 +125,8 @@ interface JaxRsTypes {
   // Client Only
   val clientHeaderParam: ClassName? get() = null
   val registerRestClient: ClassName? get() = null
+  val registerProvider: ClassName? get() = null
+  val oidcClientFilter: ClassName? get() = null
 
   fun httpMethod(method: String): ClassName? =
     try {
@@ -296,5 +298,7 @@ interface JaxRsTypes {
 
     override val clientHeaderParam = ClassName("org.eclipse.microprofile.rest.client.annotation", "ClientHeaderParam")
     override val registerRestClient = ClassName("org.eclipse.microprofile.rest.client.inject", "RegisterRestClient")
+    override val registerProvider = ClassName("org.eclipse.microprofile.rest.client.annotation", "RegisterProvider")
+    override val oidcClientFilter = ClassName("io.quarkus.oidc.client.filter", "OidcClientFilter")
   }
 }

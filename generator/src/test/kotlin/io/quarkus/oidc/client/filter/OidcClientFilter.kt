@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.ir
+package io.quarkus.oidc.client.filter
 
-/**
- * Generated service declaration.
- */
-data class GeneratedService(
-  val name: String,
-  val baseUri: String? = null,
-  val baseUriParameters: List<GeneratedParameter> = listOf(),
-  val group: String? = null,
-  val operations: List<GeneratedOperation> = listOf(),
-  val auth: GeneratedAuth? = null,
-  val jaxrs: GeneratedJaxrs? = null,
-  val protocol: GeneratedProtocol? = null,
-  val media: GeneratedMedia? = null,
-  val documentation: GeneratedDocumentation? = null,
+// Quarkus OIDC client filter annotation to skip the dependency on Quarkus OIDC in generator tests
+
+@Target(AnnotationTarget.CLASS)
+annotation class OidcClientFilter(
+  val value: String = "",
 )
