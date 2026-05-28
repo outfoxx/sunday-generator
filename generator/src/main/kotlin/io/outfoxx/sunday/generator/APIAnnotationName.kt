@@ -79,6 +79,7 @@ enum class APIAnnotationName(
   JsonBody("jsonBody", true),
 
   JaxrsContext("jaxrsContext", false),
+  JaxrsRestClient("jaxrsRestClient", false),
 
   ;
 

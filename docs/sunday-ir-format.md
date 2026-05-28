@@ -27,7 +27,7 @@ This composition boundary lets OpenAPI and AsyncAPI describe different parts of 
 
 The AsyncAPI reader maps subscribe operations as event-stream responses on composed services and publish operations as request-only message sends. It currently covers API identity, service identity, operation identity, channel operations, JSON message payload media, object payload models, message headers, component schema refs, operation/message documentation, message examples, arrays, enums, maps, nullable unions, validation constraints, wire-name preservation, servers, security requirements, security schemes, and server/channel/operation bindings. Broader protocol-specific binding interpretation remains source-reader follow-up work.
 
-Composition keeps the first fragment's API-level metadata by default and fills missing metadata such as `auth`, `protocol`, `media`, targets, tags, and documentation from later fragments. When services merge by identity, service-level metadata such as `baseUri`, `auth`, `protocol`, `media`, and documentation is also preserved from the first fragment that provides it.
+Composition keeps the first fragment's API-level metadata by default and fills missing metadata such as `auth`, `jaxrs`, `protocol`, `media`, targets, tags, and documentation from later fragments. When services merge by identity, service-level metadata such as `baseUri`, `auth`, `jaxrs`, `protocol`, `media`, and documentation is also preserved from the first fragment that provides it.
 
 ## Top-Level Fields
 
@@ -93,7 +93,7 @@ Auth metadata preserves source scheme names in `schemes`, resolved security requ
 
 Operations may carry `policy` metadata for target-independent policy inputs. The OpenAPI reader maps `x-sunday-policy` into `timeout`, `retry`, `circuitBreaker`, `clientRateLimit`, `serverRateLimit`, and `source` fields. These fields remain source metadata until target emitters decide whether to generate runtime policy data, Quarkus Fault Tolerance annotations, or no output. Kotlin/JAX-RS Quarkus output lowers supported policy fields to SmallRye Fault Tolerance annotations.
 
-Operations may carry `jaxrs` metadata for Quarkus/JAX-RS parity. This includes `asynchronous`, `reactive`, mode-specific `sse` and `jsonBody` flags, and requested JAX-RS `context` parameters. This metadata is target-specific source metadata, not a recommendation that non-JAX-RS clients expose these concepts.
+APIs, services, tags, and operations may carry `jaxrs` metadata for Quarkus/JAX-RS parity. Operation metadata includes `asynchronous`, `reactive`, mode-specific `sse` and `jsonBody` flags, and requested JAX-RS `context` parameters. API, service, and tag metadata may include `restClient` metadata for Quarkus REST Client output: `configKey`, `oidcClient`, and `providers`. In aggregated JAX-RS client output, only API-level `restClient` metadata is lowered onto the registered aggregate client; tag/service metadata remains available for non-aggregated service client generation. This metadata is target-specific source metadata, not a recommendation that non-JAX-RS clients expose these concepts.
 
 ## Examples
 

@@ -48,6 +48,7 @@ import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
+import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -381,7 +382,10 @@ class KotlinJAXRSIrGenerator(
       servicePath()
         ?.takeIf { path -> path.isNotEmpty() }
         ?.let { path -> typeBuilder.addAnnotation(jaxRsTypes.path, path) }
-      typeBuilder.addRegisterRestClientAnnotation(expandedBaseUri())
+      typeBuilder.addQuarkusRestClientAnnotations(
+        expandedBaseUri(),
+        api.jaxrs?.restClient.mergeWith(jaxrs?.restClient),
+      )
     }
 
     if (defaultMediaTypes.isNotEmpty()) {
@@ -430,10 +434,11 @@ class KotlinJAXRSIrGenerator(
         .addModifiers(KModifier.PUBLIC)
 
     typeBuilder.addAnnotation(jaxRsTypes.path, aggregateServicePath(services))
-    typeBuilder.addRegisterRestClientAnnotation(
+    typeBuilder.addQuarkusRestClientAnnotations(
       services.firstNotNullOfOrNull { service ->
         service.service.expandedBaseUri()
       },
+      api.jaxrs?.restClient,
     )
 
     if (defaultMediaTypes.isNotEmpty()) {
@@ -1057,7 +1062,10 @@ class KotlinJAXRSIrGenerator(
     return UriTemplate.buildFromTemplate(baseUri).build().expand(parameterValues)
   }
 
-  private fun TypeSpec.Builder.addRegisterRestClientAnnotation(baseUri: String?) {
+  private fun TypeSpec.Builder.addQuarkusRestClientAnnotations(
+    baseUri: String?,
+    restClient: GeneratedJaxrsRestClient?,
+  ) {
     if (generationMode != Client || !options.quarkus) {
       return
     }
@@ -1067,9 +1075,48 @@ class KotlinJAXRSIrGenerator(
       AnnotationSpec
         .builder(annotation)
         .apply {
+          restClient?.configKey?.let { value -> addMember("configKey = %S", value) }
           baseUri?.let { value -> addMember("baseUri = %S", value) }
         }.build(),
     )
+    restClient?.oidcClient?.let { clientName ->
+      jaxRsTypes.oidcClientFilter?.let { oidcClientFilter ->
+        addAnnotation(
+          AnnotationSpec
+            .builder(oidcClientFilter)
+            .addMember("%S", clientName)
+            .build(),
+        )
+      }
+    }
+    restClient
+      ?.providers
+      .orEmpty()
+      .map { provider -> ClassName.bestGuess(provider) }
+      .forEach { provider ->
+        jaxRsTypes.registerProvider?.let { registerProvider ->
+          addAnnotation(
+            AnnotationSpec
+              .builder(registerProvider)
+              .addMember("%T::class", provider)
+              .build(),
+          )
+        }
+      }
+  }
+
+  private fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {
+    if (this == null) {
+      return other
+    }
+    if (other == null) {
+      return this
+    }
+    return GeneratedJaxrsRestClient(
+      configKey = other.configKey ?: configKey,
+      oidcClient = other.oidcClient ?: oidcClient,
+      providers = (providers + other.providers).distinct(),
+    ).takeUnless { it == GeneratedJaxrsRestClient() }
   }
 
   private fun uniqueContextParameterName(

@@ -21,5 +21,6 @@ package io.outfoxx.sunday.generator.ir
  */
 data class GeneratedTag(
   val name: String,
+  val jaxrs: GeneratedJaxrs? = null,
   val documentation: GeneratedDocumentation? = null,
 )

@@ -21,4 +21,5 @@ package org.eclipse.microprofile.rest.client.inject
 @Target(AnnotationTarget.CLASS)
 annotation class RegisterRestClient(
   val baseUri: String = "",
+  val configKey: String = "",
 )

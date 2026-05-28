@@ -26,6 +26,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
+import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
+import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -1229,6 +1231,92 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates Quarkus REST client metadata on non-aggregate services`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+
+    KotlinJAXRSIrGenerator(
+      aggregateServicesApi(
+        baseUri = "http://localhost:9080",
+        apiRestClient = GeneratedJaxrsRestClient(configKey = "platform"),
+        serviceRestClient =
+          GeneratedJaxrsRestClient(
+            configKey = "graphs",
+            oidcClient = "graphs",
+            providers = listOf("io.test.client.GraphsClientFilter"),
+          ),
+      ),
+      typeRegistry,
+      testOptions(quarkus = true),
+    ).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val usersSource = kotlinSource("io.test.service", findType("io.test.service.UsersAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(usersSource.contains("@RegisterRestClient("), usersSource)
+    assertTrue(usersSource.contains("configKey = \"graphs\""), usersSource)
+    assertTrue(usersSource.contains("baseUri = \"http://localhost:9080\""), usersSource)
+    assertTrue(usersSource.contains("@OidcClientFilter(\"graphs\")"), usersSource)
+    assertTrue(usersSource.contains("@RegisterProvider(GraphsClientFilter::class)"), usersSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates aggregate Quarkus REST client metadata from root only`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+
+    KotlinJAXRSIrGenerator(
+      aggregateServicesApi(
+        baseUri = "http://localhost:9080",
+        apiRestClient =
+          GeneratedJaxrsRestClient(
+            configKey = "platform",
+            oidcClient = "public",
+            providers = listOf("io.test.client.GraphsClientFilter"),
+          ),
+        serviceRestClient = GeneratedJaxrsRestClient(configKey = "graphs", oidcClient = "graphs"),
+      ),
+      typeRegistry,
+      testOptions(
+        quarkus = true,
+        aggregateServices = true,
+        aggregateServiceName = "TurnPostAPI",
+      ),
+    ).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val aggregateSource = kotlinSource("io.test.service", findType("io.test.service.TurnPostAPI", builtTypes))
+    val usersSource = kotlinSource("io.test.service", findType("io.test.service.UsersAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(aggregateSource.contains("@RegisterRestClient("), aggregateSource)
+    assertTrue(aggregateSource.contains("configKey = \"platform\""), aggregateSource)
+    assertTrue(aggregateSource.contains("baseUri = \"http://localhost:9080\""), aggregateSource)
+    assertTrue(aggregateSource.contains("@OidcClientFilter(\"public\")"), aggregateSource)
+    assertTrue(aggregateSource.contains("@RegisterProvider(GraphsClientFilter::class)"), aggregateSource)
+    assertFalse(usersSource.contains("@RegisterRestClient"), usersSource)
+    assertFalse(usersSource.contains("@OidcClientFilter"), usersSource)
+    assertFalse(usersSource.contains("@RegisterProvider"), usersSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `treats OpenAPI empty schemas as Any in Kotlin JAX-RS`(
     @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
   ) {
@@ -2136,16 +2224,22 @@ class KotlinJAXRSIrGeneratorTest {
         ),
     )
 
-  private fun aggregateServicesApi(baseUri: String? = null): GeneratedApi =
+  private fun aggregateServicesApi(
+    baseUri: String? = null,
+    apiRestClient: GeneratedJaxrsRestClient? = null,
+    serviceRestClient: GeneratedJaxrsRestClient? = null,
+  ): GeneratedApi =
     GeneratedApi(
       name = "TurnPost API",
       source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://turnpost"),
+      jaxrs = apiRestClient?.let { restClient -> GeneratedJaxrs(restClient = restClient) },
       services =
         listOf(
           GeneratedService(
             name = "UsersService",
             baseUri = baseUri,
             group = "Users",
+            jaxrs = serviceRestClient?.let { restClient -> GeneratedJaxrs(restClient = restClient) },
             operations =
               listOf(
                 GeneratedOperation(

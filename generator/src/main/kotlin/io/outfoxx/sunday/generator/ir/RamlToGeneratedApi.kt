@@ -216,6 +216,7 @@ class RamlToGeneratedApi(
       models = models(document, api, shapeIndex, rootLocation, localModels),
       problems = problems(document, api),
       auth = apiAuth,
+      jaxrs = api.jaxrs(),
       media = apiMedia,
       targets = api.targets(),
       tags = api.tags.mapNotNull { tag -> tag.generatedTag() },
@@ -306,6 +307,7 @@ class RamlToGeneratedApi(
           baseUriParameters = baseUriParameters,
           operations = operations,
           auth = apiAuth,
+          jaxrs = endPoints.serviceJaxrs(),
           media = apiMedia,
           documentation = endPoints.firstOrNull()?.root?.let { documentation(it.summary, it.description) },
         )
@@ -727,6 +729,34 @@ class RamlToGeneratedApi(
           ?.distinct()
           .orEmpty(),
     ).takeUnless { it == GeneratedJaxrs() }
+
+  private fun CustomizableElement.jaxrs(): GeneratedJaxrs? =
+    GeneratedJaxrs(restClient = jaxrsRestClient()).takeUnless { it == GeneratedJaxrs() }
+
+  private fun List<EndPoint>.serviceJaxrs(): GeneratedJaxrs? {
+    val values = mapNotNull { endPoint -> endPoint.root.jaxrs() }.distinct()
+    require(values.size <= 1) {
+      "RAML service endpoints have conflicting sunday.jaxrsRestClient metadata. " +
+        "Move REST client metadata to the API root or align endpoint metadata."
+    }
+    return values.singleOrNull()
+  }
+
+  private fun CustomizableElement.jaxrsRestClient(): GeneratedJaxrsRestClient? =
+    (findAnnotation(APIAnnotationName.JaxrsRestClient, null) as? ObjectNode)
+      ?.let { restClient ->
+        GeneratedJaxrsRestClient(
+          configKey = restClient.getValue("configKey") ?: restClient.getValue("config-key"),
+          oidcClient = restClient.getValue("oidcClient") ?: restClient.getValue("oidc-client"),
+          providers =
+            restClient
+              .get<ArrayNode>("providers")
+              ?.members()
+              ?.mapNotNull { provider -> provider.stringValue?.trimToNull() }
+              ?.distinct()
+              .orEmpty(),
+        )
+      }?.takeUnless { it == GeneratedJaxrsRestClient() }
 
   private fun Operation.modeFlag(name: APIAnnotationName): GeneratedModeFlag? =
     GeneratedModeFlag(

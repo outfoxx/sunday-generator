@@ -27,6 +27,7 @@ data class GeneratedApi(
   val models: List<GeneratedModel> = listOf(),
   val problems: List<GeneratedProblem> = listOf(),
   val auth: GeneratedAuth? = null,
+  val jaxrs: GeneratedJaxrs? = null,
   val protocol: GeneratedProtocol? = null,
   val media: GeneratedMedia? = null,
   val targets: Map<String, GeneratedTarget> = mapOf(),

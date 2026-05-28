@@ -237,6 +237,7 @@ class GeneratedApiComposer {
       baseUri = baseUri ?: other.baseUri,
       baseUriParameters = baseUriParameters.ifEmpty { other.baseUriParameters },
       auth = auth ?: other.auth,
+      jaxrs = jaxrs ?: other.jaxrs,
       protocol = protocol ?: other.protocol,
       media = media ?: other.media,
       documentation = documentation ?: other.documentation,

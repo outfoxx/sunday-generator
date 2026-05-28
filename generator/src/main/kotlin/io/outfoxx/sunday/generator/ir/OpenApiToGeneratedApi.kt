@@ -60,6 +60,7 @@ class OpenApiToGeneratedApi(
           models = localModels.values.sortedBy { model -> model.name },
           problems = document.problems(),
           auth = auth,
+          jaxrs = document.jaxrs(),
           media = GeneratedMedia(),
           tags = document.tags(),
           documentation = documentation(description = document.info["description"] as? String),
@@ -94,6 +95,18 @@ class OpenApiToGeneratedApi(
           .takeIf { it.isNotEmpty() }
           ?.let {
             val serviceName = serviceName(seed.serviceLabel)
+            val serviceJaxrs =
+              fragments
+                .mapNotNull { fragment -> fragment.serviceJaxrs }
+                .distinct()
+                .singleOrNull()
+                ?: run {
+                  require(fragments.mapNotNull { fragment -> fragment.serviceJaxrs }.distinct().size <= 1) {
+                    "OpenAPI service '$serviceName' has conflicting x-sunday-jaxrs metadata. " +
+                      "Move REST client metadata to the API root, a single service tag, or align the operation metadata."
+                  }
+                  null
+                }
             ServiceFragment(
               service =
                 GeneratedService(
@@ -102,6 +115,7 @@ class OpenApiToGeneratedApi(
                   baseUriParameters = servers.firstOrNull()?.serverVariables().orEmpty(),
                   operations = operations,
                   auth = auth(zanzibar = rootZanzibar()),
+                  jaxrs = serviceJaxrs,
                   media = GeneratedMedia(),
                 ),
               identity = seed.identity,
@@ -123,6 +137,7 @@ class OpenApiToGeneratedApi(
         val operation = pathItem.mapValue(method) ?: return@mapNotNull null
         val operationId = operation.generatedOperationId(method, path)
         val seed = serviceIdentitySeed(path, pathService, operation)
+        val serviceJaxrs = serviceJaxrs(seed.serviceTag, pathItem, operation)
         OperationFragment(
           operation =
             GeneratedOperation(
@@ -144,9 +159,27 @@ class OpenApiToGeneratedApi(
             ),
           identity = operation.compositionOperationIdentity(operationId),
           seed = seed,
+          serviceJaxrs = serviceJaxrs,
         )
       }
     }
+
+  private fun OpenApiSourceDocument.serviceJaxrs(
+    serviceTag: String?,
+    pathItem: Map<*, *>,
+    operation: Map<*, *>,
+  ): GeneratedJaxrs? =
+    tagJaxrs(serviceTag)
+      .mergeWith(pathItem.jaxrs())
+      .mergeWith(operation.jaxrs())
+
+  private fun OpenApiSourceDocument.tagJaxrs(serviceTag: String?): GeneratedJaxrs? =
+    serviceTag
+      ?.let { tagName ->
+        listValue("tags")
+          .mapNotNull { tag -> tag as? Map<*, *> }
+          .firstOrNull { tag -> tag["name"] == tagName }
+      }?.jaxrs()
 
   private fun OpenApiSourceDocument.parameter(value: Any?): GeneratedParameter? {
     val parameter = resolveParameter(value) ?: return null
@@ -656,7 +689,11 @@ class OpenApiToGeneratedApi(
 
     val taggedService = operation.taggedServiceLabel(path)
     if (taggedService != null) {
-      return ServiceIdentitySeed(taggedService, GeneratedIdentity.native(normalizedCompositionId(taggedService)))
+      return ServiceIdentitySeed(
+        taggedService,
+        GeneratedIdentity.native(normalizedCompositionId(taggedService)),
+        serviceTag = taggedService,
+      )
     }
 
     val serviceLabel = title.removeSuffix(" API")
@@ -873,9 +910,49 @@ class OpenApiToGeneratedApi(
       val tag = value as? Map<*, *> ?: return@mapNotNull null
       GeneratedTag(
         name = tag["name"] as? String ?: return@mapNotNull null,
+        jaxrs = tag.jaxrs(),
         documentation = documentation(description = tag["description"] as? String),
       )
     }
+
+  private fun Map<*, *>.jaxrs(): GeneratedJaxrs? {
+    val restClient = mapValue("x-sunday-jaxrs")?.mapValue("rest-client")?.restClient()
+    return GeneratedJaxrs(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
+  }
+
+  private fun OpenApiSourceDocument.jaxrs(): GeneratedJaxrs? = source.jaxrs()
+
+  private fun Map<*, *>.restClient(): GeneratedJaxrsRestClient? =
+    GeneratedJaxrsRestClient(
+      configKey = stringValue("config-key") ?: stringValue("configKey"),
+      oidcClient = stringValue("oidc-client") ?: stringValue("oidcClient"),
+      providers = listValue("providers").mapNotNull { provider -> (provider as? String)?.trimToNull() }.distinct(),
+    ).takeUnless { it == GeneratedJaxrsRestClient() }
+
+  private fun GeneratedJaxrs?.mergeWith(other: GeneratedJaxrs?): GeneratedJaxrs? {
+    if (this == null) {
+      return other
+    }
+    if (other == null) {
+      return this
+    }
+    val restClient = restClient.mergeWith(other.restClient)
+    return copy(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
+  }
+
+  private fun GeneratedJaxrsRestClient?.mergeWith(other: GeneratedJaxrsRestClient?): GeneratedJaxrsRestClient? {
+    if (this == null) {
+      return other
+    }
+    if (other == null) {
+      return this
+    }
+    return GeneratedJaxrsRestClient(
+      configKey = other.configKey ?: configKey,
+      oidcClient = other.oidcClient ?: oidcClient,
+      providers = (providers + other.providers).distinct(),
+    ).takeUnless { it == GeneratedJaxrsRestClient() }
+  }
 
   private fun Map<*, *>.serverVariables(): List<GeneratedParameter> =
     mapValue("variables").orEmpty().mapNotNull { (nameValue, value) ->
@@ -1024,12 +1101,14 @@ class OpenApiToGeneratedApi(
   private data class ServiceIdentitySeed(
     val serviceLabel: String,
     val identity: GeneratedIdentity,
+    val serviceTag: String? = null,
   )
 
   private data class OperationFragment(
     val operation: GeneratedOperation,
     val identity: GeneratedIdentity,
     val seed: ServiceIdentitySeed,
+    val serviceJaxrs: GeneratedJaxrs?,
   )
 
   private data class ServiceFragment(

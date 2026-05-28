@@ -17,17 +17,10 @@
 package io.outfoxx.sunday.generator.ir
 
 /**
- * Generated service declaration.
+ * Quarkus REST Client metadata for generated JAX-RS client interfaces.
  */
-data class GeneratedService(
-  val name: String,
-  val baseUri: String? = null,
-  val baseUriParameters: List<GeneratedParameter> = listOf(),
-  val group: String? = null,
-  val operations: List<GeneratedOperation> = listOf(),
-  val auth: GeneratedAuth? = null,
-  val jaxrs: GeneratedJaxrs? = null,
-  val protocol: GeneratedProtocol? = null,
-  val media: GeneratedMedia? = null,
-  val documentation: GeneratedDocumentation? = null,
+data class GeneratedJaxrsRestClient(
+  val configKey: String? = null,
+  val oidcClient: String? = null,
+  val providers: List<String> = listOf(),
 )
