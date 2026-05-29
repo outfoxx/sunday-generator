@@ -4,7 +4,7 @@ source:
   kind: "OPENAPI"
   location: "SOURCE_LOCATION"
 services:
-- name: "ExtensionsService"
+- name: "ProjectsService"
   baseUri: "https://api.example.com/{version}"
   baseUriParameters:
   - name: "version"
@@ -141,6 +141,7 @@ auth:
 media: {}
 tags:
 - name: "projects"
+  serviceGroup: true
   policy:
     timeout: "PT30S"
     retry:

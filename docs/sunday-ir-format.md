@@ -45,7 +45,7 @@ Every major IR level may carry `documentation` with `summary` and/or `descriptio
 
 ## Tags
 
-APIs may carry source-declared `tags`, each with a name and optional documentation. `GeneratedOperation.tags` carries operation tag references as source-fidelity metadata. Emitters can later decide whether tags affect service grouping, module placement, generated documentation, or no generated output.
+APIs may carry source-declared `tags`, each with a name and optional documentation. OpenAPI tags may set `x-sunday-service-group: true`, which maps to `GeneratedTag.serviceGroup` and marks that tag as an explicit service grouping tag. `GeneratedOperation.tags` carries operation tag references as source-fidelity metadata. The `-services-from-tags` option remains a broad convenience mode that treats every operation tag as a service grouping tag; without that option, OpenAPI service grouping only uses tags marked with `x-sunday-service-group: true`. Other tag metadata, such as `x-sunday-policy` and `x-sunday-jaxrs`, does not imply service grouping.
 
 ## Lifecycle Metadata
 
