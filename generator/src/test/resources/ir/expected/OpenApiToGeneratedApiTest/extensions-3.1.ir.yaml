@@ -48,6 +48,7 @@ services:
       timeout: "PT5S"
       retry:
         maxRetries: "3"
+        maxDuration: "PT30S"
         delay: "PT1S"
       circuitBreaker:
         requestVolumeThreshold: "10"
@@ -58,6 +59,8 @@ services:
         value: "100"
         window: "PT1M"
       source: "openapi"
+    tags:
+    - "projects"
   auth:
     zanzibar:
       permission: "project.create"
@@ -132,3 +135,16 @@ auth:
       - "sub"
       principalFallback: true
 media: {}
+tags:
+- name: "projects"
+  policy:
+    timeout: "PT30S"
+    retry:
+      maxRetries: "1"
+      maxDuration: "PT30S"
+    clientRateLimit:
+      value: "10"
+      window: "PT10S"
+    source: "tag"
+  documentation:
+    description: "Project operations."
