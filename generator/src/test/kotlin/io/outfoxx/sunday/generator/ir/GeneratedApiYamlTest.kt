@@ -66,6 +66,7 @@ class GeneratedApiYamlTest {
           listOf(
             GeneratedTag(
               name = "projects",
+              serviceGroup = true,
               policy =
                 GeneratedPolicy(
                   timeout = "PT5S",

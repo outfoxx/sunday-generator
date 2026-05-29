@@ -712,7 +712,7 @@ class OpenApiToGeneratedApi(
       return ServiceIdentitySeed(serviceLabel, GeneratedIdentity.native(normalizedCompositionId(serviceLabel)))
     }
 
-    val taggedService = operation.taggedServiceLabel(path)
+    val taggedService = taggedServiceLabel(operation, path)
     if (taggedService != null) {
       return ServiceIdentitySeed(
         taggedService,
@@ -725,17 +725,33 @@ class OpenApiToGeneratedApi(
     return ServiceIdentitySeed(serviceLabel, GeneratedIdentity.native(normalizedCompositionId(serviceLabel)))
   }
 
-  private fun Map<*, *>.taggedServiceLabel(path: String): String? {
-    if (!options.deriveServicesFromTags) {
-      return null
-    }
+  private fun OpenApiSourceDocument.taggedServiceLabel(
+    operation: Map<*, *>,
+    path: String,
+  ): String? {
+    val tags =
+      operation
+        .listValue("tags")
+        .mapNotNull { tag -> (tag as? String)?.trimToNull() }
+        .distinct()
+    val serviceTags =
+      if (options.deriveServicesFromTags) {
+        tags
+      } else {
+        val serviceGroupTags =
+          listValue("tags")
+            .mapNotNull { tag -> tag as? Map<*, *> }
+            .filter { tag -> tag.serviceGroup() }
+            .mapNotNull { tag -> (tag["name"] as? String)?.trimToNull() }
+            .toSet()
+        tags.filter { tag -> tag in serviceGroupTags }
+      }
 
-    val tags = listValue("tags").mapNotNull { tag -> (tag as? String)?.trimToNull() }.distinct()
-    require(tags.size <= 1) {
-      "OpenAPI path '$path' operation has multiple service tags (${tags.joinToString()}). " +
+    require(serviceTags.size <= 1) {
+      "OpenAPI path '$path' operation has multiple service tags (${serviceTags.joinToString()}). " +
         "Add x-sunday-service to select one generated service explicitly."
     }
-    return tags.singleOrNull()
+    return serviceTags.singleOrNull()
   }
 
   private fun Map<*, *>.generatedOperationId(
@@ -951,11 +967,14 @@ class OpenApiToGeneratedApi(
       val tag = value as? Map<*, *> ?: return@mapNotNull null
       GeneratedTag(
         name = tag["name"] as? String ?: return@mapNotNull null,
+        serviceGroup = tag.serviceGroup(),
         policy = tag.policy(),
         jaxrs = tag.jaxrs(),
         documentation = documentation(description = tag["description"] as? String),
       )
     }
+
+  private fun Map<*, *>.serviceGroup(): Boolean = booleanValue("x-sunday-service-group") == true
 
   private fun Map<*, *>.jaxrs(): GeneratedJaxrs? {
     val restClient = mapValue("x-sunday-jaxrs")?.mapValue("rest-client")?.restClient()

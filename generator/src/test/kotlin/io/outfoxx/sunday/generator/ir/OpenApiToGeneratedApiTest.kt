@@ -19,8 +19,10 @@ package io.outfoxx.sunday.generator.ir
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -205,7 +207,7 @@ class OpenApiToGeneratedApiTest {
   fun `maps OpenAPI JAX-RS REST client metadata from root and service tags`(
     @ResourceUri("openapi/ir/jaxrs-rest-client-3.1.yaml") testUri: URI,
   ) {
-    val api = OpenApiToGeneratedApi(GeneratedApiIrOptions(deriveServicesFromTags = true)).convert(testUri)
+    val api = OpenApiToGeneratedApi().convert(testUri)
 
     assertEquals(
       GeneratedJaxrs(restClient = GeneratedJaxrsRestClient(configKey = "platform")),
@@ -335,6 +337,46 @@ class OpenApiToGeneratedApiTest {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
     assertEquals(expectedYaml("extensions-3.1.ir.yaml"), normalizedYaml(api))
+  }
+
+  @Test
+  fun `rejects OpenAPI operations with multiple service group tags`(
+    @TempDir tempDir: Path,
+  ) {
+    val source = tempDir.resolve("sunday-openapi-service-tags.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.1.0
+      info:
+        title: Tagged API
+        version: 1.0.0
+      tags:
+        - name: users
+          x-sunday-service-group: true
+        - name: audit
+          x-sunday-service-group: true
+      paths:
+        /users:
+          get:
+            tags: [users, audit]
+            operationId: listUsers
+            responses:
+              "204":
+                description: No content.
+      """.trimIndent(),
+    )
+
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        OpenApiToGeneratedApi().convert(source.toUri())
+      }
+
+    assertEquals(
+      "OpenAPI path '/users' operation has multiple service tags (users, audit). " +
+        "Add x-sunday-service to select one generated service explicitly.",
+      error.message,
+    )
   }
 
   private fun normalizedYaml(api: GeneratedApi): String =

@@ -27,6 +27,7 @@ x-sunday-zanzibar:
 tags:
   - name: projects
     description: Project operations.
+    x-sunday-service-group: true
     x-sunday-policy:
       timeout: PT30S
       retry:

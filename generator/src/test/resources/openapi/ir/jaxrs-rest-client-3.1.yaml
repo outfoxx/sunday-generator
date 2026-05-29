@@ -9,6 +9,7 @@ servers:
   - url: http://localhost:9080
 tags:
   - name: Graphs
+    x-sunday-service-group: true
     x-sunday-jaxrs:
       rest-client:
         config-key: graphs
