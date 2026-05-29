@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.CommonGenerateCommand
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExport
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
@@ -29,6 +30,8 @@ abstract class PythonGenerateCommand(
   name: String,
   help: String,
 ) : CommonGenerateCommand(name, help) {
+
+  protected abstract val generationMode: GenerationMode
 
   val packageName by option(
     "-package",
@@ -53,8 +56,9 @@ abstract class PythonGenerateCommand(
   ).flag(default = false)
 
   protected fun exportApi(): GeneratedApiIrExport =
-    GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
-      .exportWithIdentity(files.map { file -> GeneratedApiIrSource(file.toURI()) })
+    GeneratedApiIrExporter(
+      GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = generationMode),
+    ).exportWithIdentity(files.map { file -> GeneratedApiIrSource(file.toURI()) })
 
   protected fun pythonOptions(export: GeneratedApiIrExport): PythonGeneratorOptions =
     PythonGeneratorOptions(

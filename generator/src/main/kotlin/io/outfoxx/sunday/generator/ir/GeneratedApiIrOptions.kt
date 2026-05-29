@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GenerationMode
+
 /**
  * Source-to-IR conversion options.
  */
@@ -24,4 +26,10 @@ data class GeneratedApiIrOptions(
    * Derive generated service grouping from the first operation tag when no explicit Sunday service extension is present.
    */
   val deriveServicesFromTags: Boolean = false,
+  /**
+   * Target mode used when applying source-level target-specific generation metadata.
+   *
+   * A null mode preserves target-neutral IR export behavior.
+   */
+  val generationMode: GenerationMode? = null,
 )

@@ -731,9 +731,7 @@ class KotlinJAXRSIrGenerator(
       )
     }
 
-    if (generationMode == Server) {
-      addContextParameters(functionBuilder)
-    }
+    addContextParameters(functionBuilder)
 
     return functionBuilder.build()
   }

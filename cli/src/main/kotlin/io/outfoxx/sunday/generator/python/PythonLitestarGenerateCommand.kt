@@ -16,9 +16,13 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GenerationMode
+
 /** CLI command that generates Python Litestar server stubs from supported source specs. */
 open class PythonLitestarGenerateCommand :
   PythonGenerateCommand(name = "python/litestar", help = "Generate Python Litestar server stubs") {
+
+  override val generationMode: GenerationMode = GenerationMode.Server
 
   override fun run() {
     println("Generating ${this.outputCategories} types")

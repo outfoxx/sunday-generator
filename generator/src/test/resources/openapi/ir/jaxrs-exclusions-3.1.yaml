@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: Archive API
+  version: 1.0.0
+tags:
+  - name: Imports
+    x-sunday-service-group: true
+  - name: Internal
+    x-sunday-service-group: true
+    x-sunday-exclude: server
+paths:
+  /repos/{repoId}/imports/archive:
+    parameters:
+      - name: repoId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: trace
+        in: query
+        x-sunday-exclude: server
+        schema:
+          type: string
+    post:
+      tags: [Imports]
+      operationId: importArchive
+      x-sunday-jaxrs:
+        context:
+          - type: routingContext
+            target: server
+          - type: headers
+            target: client
+      parameters:
+        - name: reset
+          in: query
+          schema:
+            type: boolean
+        - name: X-Import-Id
+          in: header
+          schema:
+            type: string
+        - name: X-Debug
+          in: header
+          x-sunday-exclude: true
+          schema:
+            type: string
+      requestBody:
+        x-sunday-exclude: server
+        content:
+          application/x-tar:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportAccepted'
+  /internal:
+    get:
+      tags: [Internal]
+      operationId: getInternal
+      responses:
+        '204':
+          description: No content
+  /skipped:
+    get:
+      operationId: getSkipped
+      x-sunday-exclude: true
+      responses:
+        '204':
+          description: No content
+components:
+  schemas:
+    ImportAccepted:
+      type: object
+      properties:
+        importId:
+          type: string

@@ -53,7 +53,7 @@ Current sixth slice:
 Current seventh slice:
 
 - Emits service-level base URI `@Path` from IR, including default expansion and client/server base URI modes.
-- Emits `sunday.jaxrsContext` parameters from IR and avoids duplicates with implicit `201 Created` `UriInfo`.
+- Emits target-aware JAX-RS context parameters from IR and avoids duplicates with implicit server `201 Created` `UriInfo`.
 - Preserves explicit security parameter wire names for Quarkus `@RestHeader` output.
 - Covers Quarkus SSE element type annotation parity through the direct IR path.
 - Lowers Quarkus SmallRye Fault Tolerance policy metadata and server-side Quarkiverse Zanzibar authorization metadata from IR.
