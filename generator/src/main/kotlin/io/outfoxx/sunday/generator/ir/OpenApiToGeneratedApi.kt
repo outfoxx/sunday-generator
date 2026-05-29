@@ -783,7 +783,7 @@ class OpenApiToGeneratedApi(
       clientRateLimit = policy.mapValue("clientRateLimit").stringMap(),
       serverRateLimit = policy.mapValue("serverRateLimit").stringMap(),
       source = policy["source"] as? String,
-    )
+    ).takeUnless { it == GeneratedPolicy() }
   }
 
   private fun GeneratedPolicy?.mergeWith(overrides: GeneratedPolicy?): GeneratedPolicy? {

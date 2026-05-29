@@ -49,18 +49,22 @@ services:
       retry:
         maxRetries: "3"
         maxDuration: "PT30S"
+        jitter: "PT50MS"
         delay: "PT1S"
       circuitBreaker:
+        failureRatio: "0.5"
         requestVolumeThreshold: "10"
       clientRateLimit:
         value: "20"
         window: "PT1S"
       serverRateLimit:
+        minSpacing: "PT100MS"
         value: "100"
         window: "PT1M"
       source: "openapi"
     tags:
     - "projects"
+    - "audit"
   auth:
     zanzibar:
       permission: "project.create"
@@ -148,3 +152,4 @@ tags:
     source: "tag"
   documentation:
     description: "Project operations."
+- name: "audit"
