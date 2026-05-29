@@ -253,6 +253,7 @@ class OpenApiToGeneratedApi(
     if ((this["requestBody"] as? Map<*, *>)?.excluded() == true) {
       return null
     }
+    val requestBodyReference = this["requestBody"] as? Map<*, *>
     val requestBody = document.resolveRequestBody(this["requestBody"]) ?: return null
     if (requestBody.excluded()) {
       return null
@@ -272,6 +273,7 @@ class OpenApiToGeneratedApi(
       mediaTypes = payloads.mapNotNull { payload -> payload.mediaTypes.firstOrNull() },
       payloads = payloads.takeIf { it.size > 1 }.orEmpty(),
       examples = content.flatMap { (mediaType, media) -> media.examples(mediaType) },
+      streaming = requestBodyReference?.modeFlag("x-sunday-streaming") ?: requestBody.modeFlag("x-sunday-streaming"),
       documentation = documentation(description = requestBody["description"] as? String),
     )
   }
@@ -1022,6 +1024,25 @@ class OpenApiToGeneratedApi(
       "server" -> options.generationMode == GenerationMode.Server
       else -> false
     }
+
+  private fun Map<*, *>.modeFlag(name: String): GeneratedModeFlag? =
+    when (val value = this[name]) {
+      true -> GeneratedModeFlag(all = true)
+      is String ->
+        when (value.trim().lowercase()) {
+          "", "true", "all", "both" -> GeneratedModeFlag(all = true)
+          "client" -> GeneratedModeFlag(client = true)
+          "server" -> GeneratedModeFlag(server = true)
+          else -> null
+        }
+      is Map<*, *> ->
+        GeneratedModeFlag(
+          all = value.booleanValue("all") ?: value.booleanValue("both"),
+          client = value.booleanValue("client"),
+          server = value.booleanValue("server"),
+        )
+      else -> null
+    }?.takeUnless { flag -> flag == GeneratedModeFlag() }
 
   private fun Map<*, *>.restClientJaxrs(): GeneratedJaxrs? {
     val restClient = mapValue("x-sunday-jaxrs")?.mapValue("rest-client")?.restClient()

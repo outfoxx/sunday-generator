@@ -24,5 +24,6 @@ data class GeneratedPayload(
   val mediaTypes: List<String> = listOf(),
   val payloads: List<GeneratedPayloadOption> = listOf(),
   val examples: List<GeneratedExample> = listOf(),
+  val streaming: GeneratedModeFlag? = null,
   val documentation: GeneratedDocumentation? = null,
 )

@@ -191,6 +191,31 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `Swift Sunday generated files use streaming operations for streaming request bodies`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/streaming-request-3.1.yaml") testUri: URI,
+  ) {
+    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
+
+    val source =
+      Files
+        .walk(compiler.srcDir)
+        .use { files ->
+          files
+            .filter { path -> path.fileName.toString().endsWith(".swift") }
+            .map { path -> Files.readString(path) }
+            .filter { content -> "importArchive" in content }
+            .findFirst()
+            .orElseThrow()
+        }
+
+    assertTrue("body: StreamingBody" in source)
+    assertTrue("Sunday.StreamingOperation<ImportAccepted, TransportType>" in source)
+    assertTrue("spec: Sunday.OperationSpec.streaming(" in source)
+    assertTrue(compileGeneratedFiles(compiler))
+  }
+
+  @Test
   fun `Swift Sunday generated files treat OpenAPI empty schemas as AnyValue`(
     compiler: SwiftCompiler,
     @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
