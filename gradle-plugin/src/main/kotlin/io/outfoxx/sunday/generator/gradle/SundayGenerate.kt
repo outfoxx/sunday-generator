@@ -276,7 +276,10 @@ abstract class SundayGenerate
               .normalize()
               .toString()
           }
-      val exporter = GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags.get()))
+      val exporter =
+        GeneratedApiIrExporter(
+          GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags.get(), generationMode = mode.get()),
+        )
       val apiGroups =
         try {
           sourceFiles

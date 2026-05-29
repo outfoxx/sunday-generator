@@ -234,7 +234,7 @@ interface JaxRsTypes {
 
   class Quarkus(
     pkg: String = RESTEASY,
-    base: JaxRsTypes,
+    private val base: JaxRsTypes,
   ) : JaxRsTypes {
 
     companion object {
@@ -300,5 +300,11 @@ interface JaxRsTypes {
     override val registerRestClient = ClassName("org.eclipse.microprofile.rest.client.inject", "RegisterRestClient")
     override val registerProvider = ClassName("org.eclipse.microprofile.rest.client.annotation", "RegisterProvider")
     override val oidcClientFilter = ClassName("io.quarkus.oidc.client.filter", "OidcClientFilter")
+
+    override fun contextType(type: String): ClassName? =
+      when (type) {
+        "routingContext" -> ClassName("io.vertx.ext.web", "RoutingContext")
+        else -> base.contextType(type)
+      }
   }
 }

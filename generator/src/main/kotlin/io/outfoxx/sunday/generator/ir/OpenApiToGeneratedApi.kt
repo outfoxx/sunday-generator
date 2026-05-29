@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.math.BigDecimal
@@ -60,7 +61,7 @@ class OpenApiToGeneratedApi(
           models = localModels.values.sortedBy { model -> model.name },
           problems = document.problems(),
           auth = auth,
-          jaxrs = document.jaxrs(),
+          jaxrs = document.restClientJaxrs(),
           media = GeneratedMedia(),
           tags = document.tags(),
           documentation = documentation(description = document.info["description"] as? String),
@@ -131,10 +132,14 @@ class OpenApiToGeneratedApi(
       val pathService = pathItem.stringValue("x-sunday-service")
       pathItem.operationMethods().mapNotNull { method ->
         val operation = pathItem.mapValue(method) ?: return@mapNotNull null
+        if (operation.excluded() || excludedByTag(operation)) {
+          return@mapNotNull null
+        }
         val operationId = operation.generatedOperationId(method, path)
         val seed = serviceIdentitySeed(path, pathService, operation)
         val serviceJaxrs = serviceJaxrs(seed.serviceTag, pathItem, operation)
         val operationPolicy = operationPolicy(operation, pathItem)
+        val operationJaxrs = pathItem.operationJaxrs().mergeWith(operation.operationJaxrs())
         OperationFragment(
           operation =
             GeneratedOperation(
@@ -149,6 +154,7 @@ class OpenApiToGeneratedApi(
               auth = operation.auth(operation.listValue("security")),
               media = GeneratedMedia(),
               policy = operationPolicy,
+              jaxrs = operationJaxrs,
               streaming = operation.streaming(),
               deprecated = operation["deprecated"] == true,
               tags = operation.listValue("tags").mapNotNull { tag -> tag as? String },
@@ -167,8 +173,8 @@ class OpenApiToGeneratedApi(
     operation: Map<*, *>,
   ): GeneratedJaxrs? =
     tagJaxrs(serviceTag)
-      .mergeWith(pathItem.jaxrs())
-      .mergeWith(operation.jaxrs())
+      .mergeWith(pathItem.restClientJaxrs())
+      .mergeWith(operation.restClientJaxrs())
 
   private fun OpenApiSourceDocument.tagJaxrs(serviceTag: String?): GeneratedJaxrs? =
     serviceTag
@@ -176,7 +182,7 @@ class OpenApiToGeneratedApi(
         listValue("tags")
           .mapNotNull { tag -> tag as? Map<*, *> }
           .firstOrNull { tag -> tag["name"] == tagName }
-      }?.jaxrs()
+      }?.restClientJaxrs()
 
   private fun OpenApiSourceDocument.operationPolicy(
     operation: Map<*, *>,
@@ -207,7 +213,13 @@ class OpenApiToGeneratedApi(
   }
 
   private fun OpenApiSourceDocument.parameter(value: Any?): GeneratedParameter? {
+    if ((value as? Map<*, *>)?.excluded() == true) {
+      return null
+    }
     val parameter = resolveParameter(value) ?: return null
+    if (parameter.excluded()) {
+      return null
+    }
     val wireName = parameter["name"] as? String ?: return null
     val generatedName = wireName.toLowerCamelCase()
     val schema = parameter.mapValue("schema").orEmpty()
@@ -238,7 +250,13 @@ class OpenApiToGeneratedApi(
 
   private fun Map<*, *>.requestBody(localModels: MutableMap<String, GeneratedModel>): GeneratedPayload? {
     val document = activeDocument ?: return null
+    if ((this["requestBody"] as? Map<*, *>)?.excluded() == true) {
+      return null
+    }
     val requestBody = document.resolveRequestBody(this["requestBody"]) ?: return null
+    if (requestBody.excluded()) {
+      return null
+    }
     val content = requestBody.content()
     val payloads =
       content.mapNotNull { (mediaType, media) ->
@@ -754,6 +772,20 @@ class OpenApiToGeneratedApi(
     return serviceTags.singleOrNull()
   }
 
+  private fun OpenApiSourceDocument.excludedByTag(operation: Map<*, *>): Boolean {
+    val tags =
+      operation
+        .listValue("tags")
+        .mapNotNull { tag -> (tag as? String)?.trimToNull() }
+        .toSet()
+    if (tags.isEmpty()) {
+      return false
+    }
+    return listValue("tags")
+      .mapNotNull { tag -> tag as? Map<*, *> }
+      .any { tag -> tag["name"] in tags && tag.excluded() }
+  }
+
   private fun Map<*, *>.generatedOperationId(
     method: String,
     path: String,
@@ -969,19 +1001,65 @@ class OpenApiToGeneratedApi(
         name = tag["name"] as? String ?: return@mapNotNull null,
         serviceGroup = tag.serviceGroup(),
         policy = tag.policy(),
-        jaxrs = tag.jaxrs(),
+        jaxrs = tag.restClientJaxrs(),
         documentation = documentation(description = tag["description"] as? String),
       )
     }
 
   private fun Map<*, *>.serviceGroup(): Boolean = booleanValue("x-sunday-service-group") == true
 
-  private fun Map<*, *>.jaxrs(): GeneratedJaxrs? {
+  private fun Map<*, *>.excluded(): Boolean =
+    when (val value = this["x-sunday-exclude"]) {
+      true -> true
+      is String -> enabledForTarget(value)
+      else -> false
+    }
+
+  private fun enabledForTarget(value: String?): Boolean =
+    when (value?.trim()?.lowercase()) {
+      null, "", "true", "all", "both" -> true
+      "client" -> options.generationMode == GenerationMode.Client
+      "server" -> options.generationMode == GenerationMode.Server
+      else -> false
+    }
+
+  private fun Map<*, *>.restClientJaxrs(): GeneratedJaxrs? {
     val restClient = mapValue("x-sunday-jaxrs")?.mapValue("rest-client")?.restClient()
     return GeneratedJaxrs(restClient = restClient).takeUnless { it == GeneratedJaxrs() }
   }
 
-  private fun OpenApiSourceDocument.jaxrs(): GeneratedJaxrs? = source.jaxrs()
+  private fun Map<*, *>.operationJaxrs(): GeneratedJaxrs? {
+    val jaxrs = mapValue("x-sunday-jaxrs") ?: return null
+    return GeneratedJaxrs(
+      context = jaxrs.contextParameters(),
+    ).takeUnless { it == GeneratedJaxrs() }
+  }
+
+  private fun OpenApiSourceDocument.restClientJaxrs(): GeneratedJaxrs? = source.restClientJaxrs()
+
+  private fun Map<*, *>.contextParameters(): List<String> =
+    listValue("context")
+      .flatMap(::contextParameterValues)
+      .distinct()
+
+  private fun contextParameterValues(value: Any?): List<String> =
+    when (value) {
+      is String -> listOf(value)
+      is Map<*, *> -> contextParameterValues(value)
+      else -> emptyList()
+    }
+
+  private fun contextParameterValues(value: Map<*, *>): List<String> {
+    val target = value.stringValue("target")
+    if (!enabledForTarget(target)) {
+      return emptyList()
+    }
+    return listOfNotNull(
+      value.stringValue("type"),
+      value.stringValue("name"),
+      value.stringValue("value"),
+    ).take(1)
+  }
 
   private fun Map<*, *>.restClient(): GeneratedJaxrsRestClient? =
     GeneratedJaxrsRestClient(

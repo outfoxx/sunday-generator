@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -229,6 +230,45 @@ class OpenApiToGeneratedApiTest {
       api.services.single().jaxrs,
       api.tags.single().jaxrs,
     )
+  }
+
+  @Test
+  fun `maps OpenAPI target-specific exclusions and JAX-RS context metadata for server targets`(
+    @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
+  ) {
+    val api =
+      OpenApiToGeneratedApi(GeneratedApiIrOptions(generationMode = GenerationMode.Server))
+        .convert(testUri)
+    val service = api.services.single()
+    val operation = service.operations.single()
+
+    assertEquals("importArchive", operation.id)
+    assertEquals(
+      listOf("repoId", "reset", "xImportId"),
+      operation.parameters.map { parameter -> parameter.name },
+    )
+    assertEquals(null, operation.requestBody)
+    assertEquals(GeneratedJaxrs(context = listOf("routingContext")), operation.jaxrs)
+    assertEquals(listOf("ImportsService"), api.services.map { service -> service.name })
+  }
+
+  @Test
+  fun `maps OpenAPI target-specific exclusions and JAX-RS context metadata for client targets`(
+    @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
+  ) {
+    val api =
+      OpenApiToGeneratedApi(GeneratedApiIrOptions(generationMode = GenerationMode.Client))
+        .convert(testUri)
+    val operations = api.services.flatMap { service -> service.operations }
+    val operation = operations.single { current -> current.id == "importArchive" }
+
+    assertEquals(
+      listOf("repoId", "trace", "reset", "xImportId"),
+      operation.parameters.map { parameter -> parameter.name },
+    )
+    assertEquals(GeneratedTypeRef.scalar("file", format = "binary"), operation.requestBody?.type)
+    assertEquals(GeneratedJaxrs(context = listOf("headers")), operation.jaxrs)
+    assertEquals(listOf("getInternal", "importArchive"), operations.map { current -> current.id }.sorted())
   }
 
   @Test

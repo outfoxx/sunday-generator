@@ -243,7 +243,7 @@ class RamlToGeneratedApi(
             serviceGroup.endPoints.flatMap { endPoint ->
               endPoint
                 .operations()
-                .filterNot { operation -> operation.findBoolAnnotation(APIAnnotationName.Exclude, null) == true }
+                .filterNot { operation -> operation.excluded() }
                 .map { operation ->
                   val operationId = operation.generatedOperationId(endPoint.path)
                   GeneratedOperationIdentityKey(serviceGroup.name, operationId) to
@@ -280,7 +280,7 @@ class RamlToGeneratedApi(
       endPoints.flatMap { endPoint ->
         endPoint
           .operations()
-          .filterNot { operation -> operation.findBoolAnnotation(APIAnnotationName.Exclude, null) == true }
+          .filterNot { operation -> operation.excluded() }
           .map { operation ->
             operation(
               operation,
@@ -724,7 +724,7 @@ class RamlToGeneratedApi(
       sse = modeFlag(APIAnnotationName.SSE),
       jsonBody = modeFlag(APIAnnotationName.JsonBody),
       context =
-        findArrayAnnotation(APIAnnotationName.JaxrsContext, null)
+        findArrayAnnotation(APIAnnotationName.JaxrsContext, options.generationMode)
           ?.mapNotNull { value -> value.stringValue }
           ?.distinct()
           .orEmpty(),
@@ -2408,6 +2408,9 @@ class RamlToGeneratedApi(
         )
       }
 
+  private fun Operation.excluded(): Boolean =
+    findBoolAnnotation(APIAnnotationName.Exclude, options.generationMode) == true
+
   private fun WebApi.serviceIdentitySeed(endPoint: EndPoint): ServiceIdentitySeed {
     val explicitService = endPoint.root.findStringAnnotation(APIAnnotationName.Service, null)?.trimToNull()
     if (explicitService != null) {
@@ -2464,7 +2467,7 @@ class RamlToGeneratedApi(
   private fun EndPoint.taggedServiceLabel(): String? {
     val tagNames =
       operations()
-        .filterNot { operation -> operation.findBoolAnnotation(APIAnnotationName.Exclude, null) == true }
+        .filterNot { operation -> operation.excluded() }
         .mapNotNull { operation -> operation.serviceTagName() }
         .distinct()
 

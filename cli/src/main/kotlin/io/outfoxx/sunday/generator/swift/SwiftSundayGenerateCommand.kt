@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.swift
 
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 
@@ -44,8 +45,9 @@ open class SwiftSundayGenerateCommand :
     println("Processing ${files.joinToString()}")
 
     val api =
-      GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
-        .export(files.map { file -> file.toURI() })
+      GeneratedApiIrExporter(
+        GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = GenerationMode.Client),
+      ).export(files.map { file -> file.toURI() })
 
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayOptions())
       .generateServiceTypes()

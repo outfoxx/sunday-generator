@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
@@ -25,6 +26,7 @@ import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
@@ -43,6 +45,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -488,6 +491,11 @@ class KotlinJAXRSIrGeneratorTest {
       setOf(),
       problemLibrary = KotlinProblemLibrary.ZALANDO,
       problemRfc = KotlinProblemRfc.RFC7807,
+    )
+
+  private fun routingContextStub(): Map<ClassName, TypeSpec> =
+    mapOf(
+      ClassName("io.vertx.ext.web", "RoutingContext") to TypeSpec.interfaceBuilder("RoutingContext").build(),
     )
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -1731,6 +1739,74 @@ class KotlinJAXRSIrGeneratorTest {
       filePackageName = "io.test.service",
       snapshotPath = "RequestContextParamTest/test-jaxrscontext-annotation-adds-context-parameters.output.kt",
     )
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates OpenAPI server-only Quarkus context parameters without excluded body parameter`(
+    @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(UseJakartaPackages),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api =
+      OpenApiToGeneratedApi(GeneratedApiIrOptions(generationMode = GenerationMode.Server))
+        .convert(testUri)
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions(quarkus = true))
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ImportsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes + routingContextStub()))
+    assertTrue(source.contains("import io.vertx.ext.web.RoutingContext"), source)
+    assertTrue(source.contains("@Context routingContext: RoutingContext"), source)
+    assertTrue(source.contains("reset: Boolean?"), source)
+    assertTrue(source.contains("xImportId: String?"), source)
+    assertFalse(source.contains("body:"), source)
+    assertFalse(source.contains("trace:"), source)
+    assertFalse(source.contains("xDebug"), source)
+    assertFalse(source.contains("X-Debug"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates OpenAPI client-only JAX-RS context parameters with client request body`(
+    @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(UseJakartaPackages),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api =
+      OpenApiToGeneratedApi(GeneratedApiIrOptions(generationMode = GenerationMode.Client))
+        .convert(testUri)
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.ImportsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(source.contains("import jakarta.ws.rs.core.HttpHeaders"), source)
+    assertTrue(source.contains("@Context headers: HttpHeaders"), source)
+    assertTrue(source.contains("trace: String?"), source)
+    assertTrue(source.contains("body: ByteArray"), source)
+    assertFalse(source.contains("routingContext"), source)
+    assertFalse(source.contains("xDebug"), source)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

@@ -16,9 +16,13 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GenerationMode
+
 /** CLI command that generates Python httpx clients from supported source specs. */
 open class PythonHttpxGenerateCommand :
   PythonGenerateCommand(name = "python/httpx", help = "Generate Python httpx client") {
+
+  override val generationMode: GenerationMode = GenerationMode.Client
 
   override fun run() {
     println("Generating ${this.outputCategories} types")
