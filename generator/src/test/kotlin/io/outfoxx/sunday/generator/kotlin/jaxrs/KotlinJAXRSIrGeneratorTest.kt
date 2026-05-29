@@ -1772,7 +1772,8 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(source.contains("xImportId: String?"), source)
     assertFalse(source.contains("body:"), source)
     assertFalse(source.contains("trace:"), source)
-    assertFalse(source.contains("XDebug"), source)
+    assertFalse(source.contains("xDebug"), source)
+    assertFalse(source.contains("X-Debug"), source)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

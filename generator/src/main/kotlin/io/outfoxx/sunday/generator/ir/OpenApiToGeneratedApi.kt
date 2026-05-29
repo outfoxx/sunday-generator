@@ -1050,7 +1050,7 @@ class OpenApiToGeneratedApi(
     }
 
   private fun contextParameterValues(value: Map<*, *>): List<String> {
-    val target = value.stringValue("target") ?: value.stringValue("mode")
+    val target = value.stringValue("target")
     if (!enabledForTarget(target)) {
       return emptyList()
     }
