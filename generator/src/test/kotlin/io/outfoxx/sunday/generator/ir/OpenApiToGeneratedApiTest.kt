@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -339,8 +340,10 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
-  fun `rejects OpenAPI operations with multiple service group tags`() {
-    val source = Files.createTempFile("sunday-openapi-service-tags", ".yaml")
+  fun `rejects OpenAPI operations with multiple service group tags`(
+    @TempDir tempDir: Path,
+  ) {
+    val source = tempDir.resolve("sunday-openapi-service-tags.yaml")
     Files.writeString(
       source,
       """
