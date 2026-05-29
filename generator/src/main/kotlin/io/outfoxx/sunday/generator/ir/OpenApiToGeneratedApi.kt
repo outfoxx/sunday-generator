@@ -134,6 +134,7 @@ class OpenApiToGeneratedApi(
         val operationId = operation.generatedOperationId(method, path)
         val seed = serviceIdentitySeed(path, pathService, operation)
         val serviceJaxrs = serviceJaxrs(seed.serviceTag, pathItem, operation)
+        val operationPolicy = operationPolicy(operation, pathItem)
         OperationFragment(
           operation =
             GeneratedOperation(
@@ -147,7 +148,7 @@ class OpenApiToGeneratedApi(
               nullify = operation.nullify(),
               auth = operation.auth(operation.listValue("security")),
               media = GeneratedMedia(),
-              policy = operation.policy(),
+              policy = operationPolicy,
               streaming = operation.streaming(),
               deprecated = operation["deprecated"] == true,
               tags = operation.listValue("tags").mapNotNull { tag -> tag as? String },
@@ -176,6 +177,34 @@ class OpenApiToGeneratedApi(
           .mapNotNull { tag -> tag as? Map<*, *> }
           .firstOrNull { tag -> tag["name"] == tagName }
       }?.jaxrs()
+
+  private fun OpenApiSourceDocument.operationPolicy(
+    operation: Map<*, *>,
+    pathItem: Map<*, *>,
+  ): GeneratedPolicy? =
+    tagPolicy(operation)
+      .mergeWith(pathItem.policy())
+      .mergeWith(operation.policy())
+
+  private fun OpenApiSourceDocument.tagPolicy(operation: Map<*, *>): GeneratedPolicy? {
+    val tagPolicies =
+      operation
+        .listValue("tags")
+        .mapNotNull { tag -> tag as? String }
+        .mapNotNull { tagName ->
+          listValue("tags")
+            .mapNotNull { tag -> tag as? Map<*, *> }
+            .firstOrNull { tag -> tag["name"] == tagName }
+            ?.policy()
+        }.distinct()
+
+    require(tagPolicies.size <= 1) {
+      "OpenAPI operation '${operation["operationId"] ?: "<unknown>"}' has multiple tag x-sunday-policy values. " +
+        "Move policy metadata to the operation or align the tag policies."
+    }
+
+    return tagPolicies.singleOrNull()
+  }
 
   private fun OpenApiSourceDocument.parameter(value: Any?): GeneratedParameter? {
     val parameter = resolveParameter(value) ?: return null
@@ -754,7 +783,23 @@ class OpenApiToGeneratedApi(
       clientRateLimit = policy.mapValue("clientRateLimit").stringMap(),
       serverRateLimit = policy.mapValue("serverRateLimit").stringMap(),
       source = policy["source"] as? String,
-    )
+    ).takeUnless { it == GeneratedPolicy() }
+  }
+
+  private fun GeneratedPolicy?.mergeWith(overrides: GeneratedPolicy?): GeneratedPolicy? {
+    val base = this ?: GeneratedPolicy()
+    if (overrides == null || overrides == GeneratedPolicy()) {
+      return base.takeUnless { it == GeneratedPolicy() }
+    }
+
+    return GeneratedPolicy(
+      timeout = overrides.timeout ?: base.timeout,
+      retry = base.retry + overrides.retry,
+      circuitBreaker = base.circuitBreaker + overrides.circuitBreaker,
+      clientRateLimit = base.clientRateLimit + overrides.clientRateLimit,
+      serverRateLimit = base.serverRateLimit + overrides.serverRateLimit,
+      source = overrides.source ?: base.source,
+    ).takeUnless { it == GeneratedPolicy() }
   }
 
   private fun Map<*, *>.streaming(): GeneratedStreaming? =
@@ -906,6 +951,7 @@ class OpenApiToGeneratedApi(
       val tag = value as? Map<*, *> ?: return@mapNotNull null
       GeneratedTag(
         name = tag["name"] as? String ?: return@mapNotNull null,
+        policy = tag.policy(),
         jaxrs = tag.jaxrs(),
         documentation = documentation(description = tag["description"] as? String),
       )

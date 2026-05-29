@@ -66,6 +66,11 @@ class GeneratedApiYamlTest {
           listOf(
             GeneratedTag(
               name = "projects",
+              policy =
+                GeneratedPolicy(
+                  timeout = "PT5S",
+                  retry = mapOf("maxRetries" to "3"),
+                ),
               documentation = GeneratedDocumentation(description = "Project operations."),
             ),
           ),

@@ -24,9 +24,31 @@ x-sunday-zanzibar:
     jwt:
       claims: [azp, sub]
       principal-fallback: true
+tags:
+  - name: projects
+    description: Project operations.
+    x-sunday-policy:
+      timeout: PT30S
+      retry:
+        maxRetries: "1"
+        maxDuration: PT30S
+      clientRateLimit:
+        value: "10"
+        window: PT10S
+      source: tag
+  - name: audit
+    x-sunday-policy: {}
 paths:
   /projects:
+    x-sunday-policy:
+      retry:
+        jitter: PT50MS
+      circuitBreaker:
+        failureRatio: "0.5"
+      serverRateLimit:
+        minSpacing: PT100MS
     post:
+      tags: [projects, audit]
       operationId: createProject
       x-sunday-problems:
         - invalid_project
