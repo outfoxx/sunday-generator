@@ -66,6 +66,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitAcceptTypes
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
@@ -115,6 +116,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_OPERATION
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_OPERATION_SPEC
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_REQUEST
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_RESPONSE
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_STREAMING_BODY
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_STREAMING_OPERATION
 import io.outfoxx.sunday.generator.kotlin.utils.TRANSPORT
 import io.outfoxx.sunday.generator.kotlin.utils.UPDATE_OP
 import io.outfoxx.sunday.generator.kotlin.utils.URI_TEMPLATE
@@ -1590,11 +1593,25 @@ class KotlinSundayIrGenerator(
           GeneratedExchange.REQUEST -> requestTypeVariable
           GeneratedExchange.RESPONSE -> SUNDAY_RESPONSE
           null ->
-            (if (isNullifyingOperation) SUNDAY_NULLABLE_OPERATION else SUNDAY_OPERATION).parameterizedBy(
-              requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT,
-              responseBodyTypeName(response),
-              requestTypeVariable,
-            )
+            when {
+              isNullifyingOperation ->
+                SUNDAY_NULLABLE_OPERATION.parameterizedBy(
+                  requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT,
+                  responseBodyTypeName(response),
+                  requestTypeVariable,
+                )
+              requestBody.isKotlinStreamingRequestBody ->
+                SUNDAY_STREAMING_OPERATION.parameterizedBy(
+                  responseBodyTypeName(response),
+                  requestTypeVariable,
+                )
+              else ->
+                SUNDAY_OPERATION.parameterizedBy(
+                  requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT,
+                  responseBodyTypeName(response),
+                  requestTypeVariable,
+                )
+            }
         }
     }
 
@@ -1745,11 +1762,16 @@ class KotlinSundayIrGenerator(
       ?: CodeBlock.of("this.defaultAcceptTypes")
 
   private fun GeneratedPayload.kotlinTypeName(): TypeName =
-    if (mediaTypes.firstOrNull() == "application/octet-stream") {
+    if (isKotlinStreamingRequestBody) {
+      SUNDAY_STREAMING_BODY
+    } else if (mediaTypes.firstOrNull() == "application/octet-stream") {
       BYTE_ARRAY
     } else {
       type.kotlinTypeName()
     }
+
+  private val GeneratedPayload?.isKotlinStreamingRequestBody: Boolean
+    get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
   private fun GeneratedTypeRef.kotlinTypeName(): TypeName {
     val typeName =
