@@ -1042,7 +1042,7 @@ class OpenApiToGeneratedApi(
           server = value.booleanValue("server"),
         )
       else -> null
-    }?.takeUnless { flag -> flag == GeneratedModeFlag() }
+    }?.takeUnless { flag -> flag.all != true && flag.client != true && flag.server != true }
 
   private fun Map<*, *>.restClientJaxrs(): GeneratedJaxrs? {
     val restClient = mapValue("x-sunday-jaxrs")?.mapValue("rest-client")?.restClient()
