@@ -68,6 +68,10 @@ class OpenApiStreamingRequestModeTest {
     )
     assertEquals(
       null,
+      operations.getValue("streamBlank").requestBody?.streaming,
+    )
+    assertEquals(
+      null,
       operations.getValue("streamEmptyMapped").requestBody?.streaming,
     )
   }

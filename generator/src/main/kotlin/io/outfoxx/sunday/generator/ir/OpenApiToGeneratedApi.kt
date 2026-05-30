@@ -1030,7 +1030,8 @@ class OpenApiToGeneratedApi(
       true -> GeneratedModeFlag(all = true)
       is String ->
         when (value.trim().lowercase()) {
-          "", "true", "all", "both" -> GeneratedModeFlag(all = true)
+          "" -> null
+          "true", "all", "both" -> GeneratedModeFlag(all = true)
           "client" -> GeneratedModeFlag(client = true)
           "server" -> GeneratedModeFlag(server = true)
           else -> null

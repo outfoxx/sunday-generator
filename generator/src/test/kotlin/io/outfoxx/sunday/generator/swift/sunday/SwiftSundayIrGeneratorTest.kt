@@ -211,7 +211,9 @@ class SwiftSundayIrGeneratorTest {
 
     assertTrue("body: StreamingBody" in source)
     assertTrue("Sunday.StreamingOperation<ImportAccepted, TransportType>" in source)
+    assertTrue("Sunday.NilableOperation<StreamingBody, ImportAccepted, TransportType>" in source)
     assertTrue("spec: Sunday.OperationSpec.streaming(" in source)
+    assertTrue("nilify: Sunday.NilifySpec(" in source)
     assertTrue(compileGeneratedFiles(compiler))
   }
 

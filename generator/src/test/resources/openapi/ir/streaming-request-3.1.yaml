@@ -20,6 +20,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImportAccepted"
+  /nullable-archives:
+    post:
+      operationId: importArchiveOrNil
+      x-sunday-nullify:
+        - 404
+      requestBody:
+        x-sunday-streaming: client
+        content:
+          application/x-tar:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "202":
+          description: Accepted import.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportAccepted"
+        "404":
+          description: Missing archive.
 components:
   schemas:
     ImportAccepted:

@@ -92,6 +92,19 @@ paths:
       responses:
         "204":
           description: No content.
+  /blank:
+    post:
+      operationId: streamBlank
+      requestBody:
+        x-sunday-streaming: ""
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
   /empty-mapped:
     post:
       operationId: streamEmptyMapped
