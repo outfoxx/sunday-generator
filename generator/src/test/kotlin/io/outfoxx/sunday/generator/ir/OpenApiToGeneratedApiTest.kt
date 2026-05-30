@@ -109,7 +109,7 @@ class OpenApiToGeneratedApiTest {
         .services
         .single()
         .operations
-        .single()
+        .single { operation -> operation.id == "importArchive" }
         .requestBody
 
     assertEquals(GeneratedModeFlag(client = true), requestBody?.streaming)
