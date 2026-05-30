@@ -99,6 +99,23 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI streaming request body metadata`(
+    @ResourceUri("openapi/ir/streaming-request-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    val requestBody =
+      api
+        .services
+        .single()
+        .operations
+        .single { operation -> operation.id == "importArchive" }
+        .requestBody
+
+    assertEquals(GeneratedModeFlag(client = true), requestBody?.streaming)
+  }
+
+  @Test
   fun `maps OpenAPI 3_1 path item parameters to generated API IR`(
     @ResourceUri("openapi/ir/path-item-parameters-3.1.yaml") testUri: URI,
   ) {

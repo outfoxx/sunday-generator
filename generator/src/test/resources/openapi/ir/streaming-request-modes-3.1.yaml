@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: Streaming Request Mode API
+  version: 1.0.0
+paths:
+  /client:
+    post:
+      operationId: streamClient
+      requestBody:
+        x-sunday-streaming: client
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /server:
+    post:
+      operationId: streamServer
+      requestBody:
+        x-sunday-streaming: server
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /both:
+    post:
+      operationId: streamBoth
+      requestBody:
+        x-sunday-streaming: both
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /true:
+    post:
+      operationId: streamTrue
+      requestBody:
+        x-sunday-streaming: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /mapped:
+    post:
+      operationId: streamMapped
+      requestBody:
+        x-sunday-streaming:
+          client: true
+          server: false
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /reference:
+    post:
+      operationId: streamReference
+      requestBody:
+        $ref: "#/components/requestBodies/StreamBody"
+        x-sunday-streaming: server
+      responses:
+        "204":
+          description: No content.
+  /invalid:
+    post:
+      operationId: streamInvalid
+      requestBody:
+        x-sunday-streaming: sometimes
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /blank:
+    post:
+      operationId: streamBlank
+      requestBody:
+        x-sunday-streaming: ""
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+  /empty-mapped:
+    post:
+      operationId: streamEmptyMapped
+      requestBody:
+        x-sunday-streaming:
+          client: false
+          server: false
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: No content.
+components:
+  requestBodies:
+    StreamBody:
+      x-sunday-streaming: client
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary

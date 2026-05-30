@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -41,6 +42,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
+import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitAcceptTypes
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
@@ -80,6 +82,8 @@ import io.outfoxx.sunday.generator.swift.utils.PROBLEM
 import io.outfoxx.sunday.generator.swift.utils.PROBLEM_REGISTRATION
 import io.outfoxx.sunday.generator.swift.utils.QUALIFIED_PROBLEM
 import io.outfoxx.sunday.generator.swift.utils.SENDABLE
+import io.outfoxx.sunday.generator.swift.utils.STREAMING_BODY
+import io.outfoxx.sunday.generator.swift.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.swift.utils.SUNDAY_MODULE
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_REQUEST
@@ -2775,7 +2779,7 @@ class SwiftSundayIrGenerator(
       .builder()
       .add("return %T(%>\n", if (isNilableOperation) NILABLE_OPERATION else OPERATION)
       .add("transport: self.transport,\n")
-      .add("spec: %T(%>\n", OPERATION_SPEC)
+      .add("spec: %T%L(%>\n", OPERATION_SPEC, if (requestBody.isSwiftStreamingRequestBody) ".streaming" else "")
       .add(requestCode(response, parameters))
       .add("%<\n)")
       .apply {
@@ -3089,6 +3093,12 @@ class SwiftSundayIrGenerator(
           ?: responseType,
       )
     }
+    if (!isNilableOperation && requestBody.isSwiftStreamingRequestBody) {
+      return STREAMING_OPERATION.parameterizedBy(
+        if (responseType == VOID || response?.status == 204) VOID else responseType,
+        transportTypeVariable,
+      )
+    }
     return (if (isNilableOperation) NILABLE_OPERATION else OPERATION).parameterizedBy(
       requestBody?.swiftRequestBodyTypeName() ?: EMPTY,
       if (responseType == VOID || response?.status == 204) VOID else responseType,
@@ -3156,11 +3166,16 @@ class SwiftSundayIrGenerator(
     }
 
   private fun GeneratedPayload.swiftRequestBodyTypeName(): TypeName =
-    if (mediaTypes.firstOrNull() == "application/octet-stream") {
+    if (isSwiftStreamingRequestBody) {
+      STREAMING_BODY
+    } else if (mediaTypes.firstOrNull() == "application/octet-stream") {
       DATA
     } else {
       type.swiftStoredTypeName()
     }
+
+  private val GeneratedPayload?.isSwiftStreamingRequestBody: Boolean
+    get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
   private fun GeneratedModel.swiftDeclaredTypeName(): DeclaredTypeName {
     if (scope != null) {
