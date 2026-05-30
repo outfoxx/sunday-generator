@@ -125,6 +125,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.rawType
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
@@ -2602,7 +2603,7 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedTypeRef.scalarTypeName(): TypeName =
-    formattedScalarTypeName() ?: when (name) {
+    kotlinIntegerScalarTypeName() ?: formattedScalarTypeName() ?: when (name) {
       "any" -> ANY
       "string" -> STRING
       "boolean" -> BOOLEAN

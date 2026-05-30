@@ -123,6 +123,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
@@ -1764,7 +1765,7 @@ class KotlinSundayIrGenerator(
   }
 
   private fun GeneratedTypeRef.scalarTypeName(): TypeName =
-    formattedScalarTypeName() ?: when (name) {
+    kotlinIntegerScalarTypeName() ?: formattedScalarTypeName() ?: when (name) {
       "any" -> ANY
       "string" -> STRING
       "boolean" -> BOOLEAN
