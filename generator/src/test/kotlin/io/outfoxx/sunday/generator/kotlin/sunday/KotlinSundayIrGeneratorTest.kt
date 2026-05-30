@@ -1246,6 +1246,96 @@ class KotlinSundayIrGeneratorTest {
                     type = GeneratedTypeRef.scalar("string", format = "binary"),
                     required = true,
                   ),
+                  GeneratedModelProperty(
+                    name = "anyValue",
+                    type = GeneratedTypeRef.scalar("any"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "title",
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "enabled",
+                    type = GeneratedTypeRef.scalar("boolean"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "defaultCount",
+                    type = GeneratedTypeRef.scalar("integer"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "smallCount",
+                    type = GeneratedTypeRef.scalar("integer", format = "int8"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "mediumCount",
+                    type = GeneratedTypeRef.scalar("integer", format = "int16"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "count",
+                    type = GeneratedTypeRef.scalar("integer", format = "int32"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "aliasCount",
+                    type = GeneratedTypeRef.scalar("integer", format = "int"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "largeCount",
+                    type = GeneratedTypeRef.scalar("integer", format = "int64"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "aliasLargeCount",
+                    type = GeneratedTypeRef.scalar("integer", format = "long"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "legacyCount",
+                    type = GeneratedTypeRef.scalar("int32"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "legacyLargeCount",
+                    type = GeneratedTypeRef.scalar("int64"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "directLongCount",
+                    type = GeneratedTypeRef.scalar("long"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "ratio",
+                    type = GeneratedTypeRef.scalar("number"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "preciseRatio",
+                    type = GeneratedTypeRef.scalar("double"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "filePayload",
+                    type = GeneratedTypeRef.scalar("file"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "emptyValue",
+                    type = GeneratedTypeRef.scalar("nil"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    name = "unknownValue",
+                    type = GeneratedTypeRef.scalar("unknown"),
+                    required = true,
+                  ),
                 ),
             ),
           ),
@@ -1271,6 +1361,24 @@ class KotlinSundayIrGeneratorTest {
     assertContains(source, "public val `requestId`: UUID")
     assertContains(source, "public val `callbackUrl`: URI")
     assertContains(source, "public val `payload`: ByteArray")
+    assertContains(source, "public val `anyValue`: Any")
+    assertContains(source, "public val `title`: String")
+    assertContains(source, "public val `enabled`: Boolean")
+    assertContains(source, "public val `defaultCount`: Int")
+    assertContains(source, "public val `smallCount`: Byte")
+    assertContains(source, "public val `mediumCount`: Short")
+    assertContains(source, "public val `count`: Int")
+    assertContains(source, "public val `aliasCount`: Int")
+    assertContains(source, "public val `largeCount`: Long")
+    assertContains(source, "public val `aliasLargeCount`: Long")
+    assertContains(source, "public val `legacyCount`: Int")
+    assertContains(source, "public val `legacyLargeCount`: Long")
+    assertContains(source, "public val `directLongCount`: Long")
+    assertContains(source, "public val `ratio`: Double")
+    assertContains(source, "public val `preciseRatio`: Double")
+    assertContains(source, "public val `filePayload`: ByteArray")
+    assertContains(source, "public val `emptyValue`: Unit")
+    assertContains(source, "public val `unknownValue`: String")
   }
 
   @OptIn(ExperimentalCompilerApi::class)

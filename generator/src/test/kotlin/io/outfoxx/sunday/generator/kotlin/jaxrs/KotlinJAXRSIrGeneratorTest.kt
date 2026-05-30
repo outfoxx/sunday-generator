@@ -805,6 +805,24 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(source.contains("public val startsAt: LocalTime"), source)
     assertTrue(source.contains("public val targetUrl: URI"), source)
     assertTrue(source.contains("public val id: UUID"), source)
+    assertTrue(source.contains("public val anyValue: Any"), source)
+    assertTrue(source.contains("public val title: String"), source)
+    assertTrue(source.contains("public val enabled: Boolean"), source)
+    assertTrue(source.contains("public val defaultCount: Int"), source)
+    assertTrue(source.contains("public val smallCount: Byte"), source)
+    assertTrue(source.contains("public val mediumCount: Short"), source)
+    assertTrue(source.contains("public val count: Int"), source)
+    assertTrue(source.contains("public val aliasCount: Int"), source)
+    assertTrue(source.contains("public val largeCount: Long"), source)
+    assertTrue(source.contains("public val aliasLargeCount: Long"), source)
+    assertTrue(source.contains("public val legacyCount: Int"), source)
+    assertTrue(source.contains("public val legacyLargeCount: Long"), source)
+    assertTrue(source.contains("public val directLongCount: Long"), source)
+    assertTrue(source.contains("public val ratio: Double"), source)
+    assertTrue(source.contains("public val preciseRatio: Double"), source)
+    assertTrue(source.contains("public val filePayload: ByteArray"), source)
+    assertTrue(source.contains("public val emptyValue: Unit"), source)
+    assertTrue(source.contains("public val unknownValue: String"), source)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -2324,6 +2342,44 @@ class KotlinJAXRSIrGeneratorTest {
                 GeneratedModelProperty("startsAt", GeneratedTypeRef.scalar("string", format = "time"), required = true),
                 GeneratedModelProperty("targetUrl", GeneratedTypeRef.scalar("string", format = "uri"), required = true),
                 GeneratedModelProperty("id", GeneratedTypeRef.scalar("string", format = "uuid"), required = true),
+                GeneratedModelProperty("anyValue", GeneratedTypeRef.scalar("any"), required = true),
+                GeneratedModelProperty("title", GeneratedTypeRef.scalar("string"), required = true),
+                GeneratedModelProperty("enabled", GeneratedTypeRef.scalar("boolean"), required = true),
+                GeneratedModelProperty("defaultCount", GeneratedTypeRef.scalar("integer"), required = true),
+                GeneratedModelProperty(
+                  "smallCount",
+                  GeneratedTypeRef.scalar("integer", format = "int8"),
+                  required = true,
+                ),
+                GeneratedModelProperty(
+                  "mediumCount",
+                  GeneratedTypeRef.scalar("integer", format = "int16"),
+                  required = true,
+                ),
+                GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer", format = "int32"), required = true),
+                GeneratedModelProperty(
+                  "aliasCount",
+                  GeneratedTypeRef.scalar("integer", format = "int"),
+                  required = true,
+                ),
+                GeneratedModelProperty(
+                  "largeCount",
+                  GeneratedTypeRef.scalar("integer", format = "int64"),
+                  required = true,
+                ),
+                GeneratedModelProperty(
+                  "aliasLargeCount",
+                  GeneratedTypeRef.scalar("integer", format = "long"),
+                  required = true,
+                ),
+                GeneratedModelProperty("legacyCount", GeneratedTypeRef.scalar("int32"), required = true),
+                GeneratedModelProperty("legacyLargeCount", GeneratedTypeRef.scalar("int64"), required = true),
+                GeneratedModelProperty("directLongCount", GeneratedTypeRef.scalar("long"), required = true),
+                GeneratedModelProperty("ratio", GeneratedTypeRef.scalar("number"), required = true),
+                GeneratedModelProperty("preciseRatio", GeneratedTypeRef.scalar("double"), required = true),
+                GeneratedModelProperty("filePayload", GeneratedTypeRef.scalar("file"), required = true),
+                GeneratedModelProperty("emptyValue", GeneratedTypeRef.scalar("nil"), required = true),
+                GeneratedModelProperty("unknownValue", GeneratedTypeRef.scalar("unknown"), required = true),
               ),
           ),
         ),
