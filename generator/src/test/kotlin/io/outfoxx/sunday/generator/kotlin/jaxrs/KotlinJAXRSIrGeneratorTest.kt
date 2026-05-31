@@ -33,6 +33,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
@@ -119,6 +120,7 @@ class KotlinJAXRSIrGeneratorTest {
           "streamClient" to true,
           "streamServer" to false,
           "streamAll" to true,
+          "streamNullable" to true,
           "uploadRegular" to false,
         ),
       GenerationMode.Server to
@@ -126,6 +128,7 @@ class KotlinJAXRSIrGeneratorTest {
           "streamClient" to false,
           "streamServer" to true,
           "streamAll" to true,
+          "streamNullable" to true,
           "uploadRegular" to false,
         ),
     ).forEach { (mode, expectations) ->
@@ -151,6 +154,9 @@ class KotlinJAXRSIrGeneratorTest {
       expectations.forEach { (operationId, streaming) ->
         val expectedBody = if (streaming) "body: Multi<Buffer>" else "body: ByteArray"
         assertTrue(source.contains("public fun $operationId($expectedBody)"), source)
+      }
+      if (mode == GenerationMode.Client) {
+        assertTrue(source.contains("public fun streamNullableOrNull(body: Multi<Buffer>)"), source)
       }
     }
   }
@@ -569,6 +575,12 @@ class KotlinJAXRSIrGeneratorTest {
                 streamingRequestBodyOperation("streamClient", GeneratedModeFlag(client = true)),
                 streamingRequestBodyOperation("streamServer", GeneratedModeFlag(server = true)),
                 streamingRequestBodyOperation("streamAll", GeneratedModeFlag(all = true)),
+                streamingRequestBodyOperation(
+                  "streamNullable",
+                  GeneratedModeFlag(all = true),
+                  nullify = GeneratedNullify(statuses = listOf(404)),
+                  responseBodyType = GeneratedTypeRef.scalar("string"),
+                ),
                 streamingRequestBodyOperation("uploadRegular", null),
               ),
           ),
@@ -578,6 +590,8 @@ class KotlinJAXRSIrGeneratorTest {
   private fun streamingRequestBodyOperation(
     id: String,
     streaming: GeneratedModeFlag?,
+    nullify: GeneratedNullify? = null,
+    responseBodyType: GeneratedTypeRef? = null,
   ): GeneratedOperation =
     GeneratedOperation(
       id = id,
@@ -589,7 +603,14 @@ class KotlinJAXRSIrGeneratorTest {
           mediaTypes = listOf("application/octet-stream"),
           streaming = streaming,
         ),
-      responses = listOf(GeneratedResponse(status = 204)),
+      responses =
+        listOf(
+          GeneratedResponse(
+            status = if (responseBodyType == null) 204 else 200,
+            type = responseBodyType,
+          ),
+        ),
+      nullify = nullify,
     )
 
   private fun clientTypeRegistry(): KotlinTypeRegistry =

@@ -1128,13 +1128,7 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
-    val typeName =
-      when {
-        // Streaming request bodies are raw transport streams; they intentionally bypass JSON body overrides.
-        isQuarkusStreamingRequestBody -> MULTI.parameterizedBy(VERTX_MUTINY_BUFFER)
-        jsonBodyEnabled -> JSON_NODE
-        else -> type.kotlinTypeName().withUseSiteValidationAnnotations(type)
-      }
+    val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = true)
     val builder = ParameterSpec.builder("body", typeName)
 
     if (typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
@@ -1150,6 +1144,18 @@ class KotlinJAXRSIrGenerator(
 
     return builder.build()
   }
+
+  private fun GeneratedPayload.bodyTypeName(
+    jsonBodyEnabled: Boolean,
+    includeValidationAnnotations: Boolean,
+  ): TypeName =
+    when {
+      // Streaming request bodies are raw transport streams; they intentionally bypass JSON body overrides.
+      isQuarkusStreamingRequestBody -> MULTI.parameterizedBy(VERTX_MUTINY_BUFFER)
+      jsonBodyEnabled -> JSON_NODE
+      includeValidationAnnotations -> type.kotlinTypeName().withUseSiteValidationAnnotations(type)
+      else -> type.kotlinTypeName()
+    }
 
   private val GeneratedPayload.isQuarkusStreamingRequestBody: Boolean
     get() = options.quarkus && streaming?.enabledFor(generationMode) == true
@@ -1171,9 +1177,12 @@ class KotlinJAXRSIrGenerator(
         .map { parameter -> parameter.nullifyParameterSpec() } +
         listOfNotNull(
           requestBody?.let { requestBody ->
-            ParameterSpec
-              .builder("body", requestBody.type.kotlinTypeName())
-              .build()
+            val typeName =
+              requestBody.bodyTypeName(
+                jaxrs?.jsonBodyEnabled(generationMode) == true,
+                includeValidationAnnotations = false,
+              )
+            ParameterSpec.builder("body", typeName).build()
           },
         )
     val problemTypeNames =
