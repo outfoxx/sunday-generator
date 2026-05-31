@@ -16,12 +16,14 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.enabledFor
 
 /** Renders the first Python client runtime and service method surface from IR. */
 class PythonClientRenderer(
@@ -37,6 +39,8 @@ class PythonClientRenderer(
     module.addExport("EventStream")
     module.addExport("MediaType")
     module.addExport("ResponseHeaders")
+    module.addExport("StreamingBody")
+    module.addExport("StreamingOperation")
     module.addExport("Transport")
     module.addExport("TransportRequest")
     module.addExport("TransportResponse")
@@ -49,6 +53,49 @@ class PythonClientRenderer(
         type Transport = %T
         type TransportRequest = %T
         type TransportResponse = %T
+        type StreamingBodyChunk = bytes | bytearray | memoryview
+        type StreamingBodyContent = bytes | %T[bytes] | %T[bytes]
+
+
+        def _streaming_chunk(chunk: StreamingBodyChunk) -> bytes:
+            return bytes(chunk)
+
+
+        def _streaming_iterable(chunks: %T[StreamingBodyChunk]) -> %T[bytes]:
+            for chunk in chunks:
+                yield _streaming_chunk(chunk)
+
+
+        async def _streaming_async_iterable(chunks: %T[StreamingBodyChunk]) -> %T[bytes]:
+            async for chunk in chunks:
+                yield _streaming_chunk(chunk)
+
+
+        @%T(frozen=True, slots=True)
+        class StreamingBody:
+            ${"\"\"\"A reusable streaming request body backed by a fresh content factory.\"\"\""}
+
+            factory: %T[[], StreamingBodyContent]
+
+            @classmethod
+            def bytes(cls, data: StreamingBodyChunk) -> StreamingBody:
+                ${"\"\"\"Create a streaming body from in-memory bytes.\"\"\""}
+                content = _streaming_chunk(data)
+                return cls(lambda: content)
+
+            @classmethod
+            def iterable(cls, factory: %T[[], %T[StreamingBodyChunk]]) -> StreamingBody:
+                ${"\"\"\"Create a streaming body from a fresh byte iterable factory.\"\"\""}
+                return cls(lambda: _streaming_iterable(factory()))
+
+            @classmethod
+            def async_iterable(cls, factory: %T[[], %T[StreamingBodyChunk]]) -> StreamingBody:
+                ${"\"\"\"Create a streaming body from a fresh async byte iterable factory.\"\"\""}
+                return cls(lambda: _streaming_async_iterable(factory()))
+
+            def content(self) -> StreamingBodyContent:
+                ${"\"\"\"Create the httpx request content for one request attempt.\"\"\""}
+                return self.factory()
 
 
         @%T(frozen=True, slots=True)
@@ -158,6 +205,33 @@ class PythonClientRenderer(
 
 
         @%T(frozen=True, slots=True)
+        class StreamingOperation[ResponseT]:
+            ${"\"\"\"A prepared streaming upload operation that builds a fresh request for each attempt.\"\"\""}
+
+            transport: Transport
+            build_request: %T[[], TransportRequest]
+            decode: %T[[%T], ResponseT]
+
+            async def execute(self) -> ResponseT:
+                ${"\"\"\"Send the request and decode the successful response body.\"\"\""}
+                return (await self.response()).result
+
+            async def response(self) -> OperationResponse[ResponseT]:
+                ${"\"\"\"Send the request and return the decoded response with metadata.\"\"\""}
+                response = await self.transport_response()
+                response.raise_for_status()
+                return OperationResponse(result=self.decode(response), transport_response=response)
+
+            def transport_request(self) -> TransportRequest:
+                ${"\"\"\"Return a fresh transport-specific request value.\"\"\""}
+                return self.build_request()
+
+            async def transport_response(self) -> TransportResponse:
+                ${"\"\"\"Send a fresh request and return the transport-specific response value.\"\"\""}
+                return await self.transport.send(self.build_request())
+
+
+        @%T(frozen=True, slots=True)
         class EventStream[EventT]:
             ${"\"\"\"A prepared HTTP SSE stream that decodes events as they arrive.\"\"\""}
 
@@ -226,11 +300,27 @@ class PythonClientRenderer(
         PythonSymbol("httpx", "AsyncClient"),
         PythonSymbol("httpx", "Request"),
         PythonSymbol("httpx", "Response"),
+        PythonSymbol("collections.abc", "Iterable"),
+        PythonSymbol("collections.abc", "AsyncIterable"),
+        PythonSymbol("collections.abc", "Iterable"),
+        PythonSymbol("collections.abc", "Iterator"),
+        PythonSymbol("collections.abc", "AsyncIterable"),
+        PythonSymbol("collections.abc", "AsyncIterator"),
+        PythonSymbol("dataclasses", "dataclass"),
+        PythonSymbol("collections.abc", "Callable"),
+        PythonSymbol("collections.abc", "Callable"),
+        PythonSymbol("collections.abc", "Iterable"),
+        PythonSymbol("collections.abc", "Callable"),
+        PythonSymbol("collections.abc", "AsyncIterable"),
         PythonSymbol("dataclasses", "dataclass"),
         PythonSymbol("dataclasses", "dataclass"),
         PythonSymbol("httpx", "Headers"),
         PythonSymbol("dataclasses", "dataclass"),
         PythonSymbol("dataclasses", "dataclass"),
+        PythonSymbol("collections.abc", "Callable"),
+        PythonSymbol("httpx", "Response"),
+        PythonSymbol("dataclasses", "dataclass"),
+        PythonSymbol("collections.abc", "Callable"),
         PythonSymbol("collections.abc", "Callable"),
         PythonSymbol("httpx", "Response"),
         PythonSymbol("dataclasses", "dataclass"),
@@ -297,6 +387,12 @@ class PythonClientRenderer(
     val responseType = response?.type ?: GeneratedTypeRef.scalar("nil")
     val decoderName = "_decode_${id.pythonIdentifierName}_response"
     val signatureParameters = renderClientSignatureParameterLines()
+    val operationType =
+      if (requestBody.isPythonStreamingRequestBody) {
+        PythonSymbol(".runtime", "StreamingOperation")
+      } else {
+        PythonSymbol(".runtime", "Operation")
+      }
 
     return if (hasClientSignatureParameters()) {
       PythonCodeBlock.of(
@@ -311,11 +407,15 @@ class PythonClientRenderer(
         """.trimMargin(),
         id.pythonIdentifierName,
         signatureParameters,
-        PythonSymbol(".runtime", "Operation"),
+        operationType,
         responseType.renderClientPythonType(),
         id,
-        renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "Operation"), decoderName),
+        if (requestBody.isPythonStreamingRequestBody) {
+          renderBuildStreamingRequestFunction()
+        } else {
+          renderBuildRequest()
+        },
+        renderOperationReturn(operationType, decoderName, requestBody.isPythonStreamingRequestBody),
       )
     } else {
       PythonCodeBlock.of(
@@ -326,11 +426,15 @@ class PythonClientRenderer(
         |%C
         """.trimMargin(),
         id.pythonIdentifierName,
-        PythonSymbol(".runtime", "Operation"),
+        operationType,
         responseType.renderClientPythonType(),
         id,
-        renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "Operation"), decoderName),
+        if (requestBody.isPythonStreamingRequestBody) {
+          renderBuildStreamingRequestFunction()
+        } else {
+          renderBuildRequest()
+        },
+        renderOperationReturn(operationType, decoderName, requestBody.isPythonStreamingRequestBody),
       )
     }
   }
@@ -357,7 +461,7 @@ class PythonClientRenderer(
         responseType.renderClientPythonType(),
         id,
         renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName),
+        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName, false),
       )
     } else {
       PythonCodeBlock.of(
@@ -372,7 +476,7 @@ class PythonClientRenderer(
         responseType.renderClientPythonType(),
         id,
         renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName),
+        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName, false),
       )
     }
   }
@@ -386,24 +490,58 @@ class PythonClientRenderer(
       |        )
       """.trimMargin(),
       httpMethod(),
-      renderPathTemplateArgument(),
-      renderBuildRequestArguments(),
+      renderPathTemplateArgument("            "),
+      renderBuildRequestArguments("            "),
+    )
+
+  private fun GeneratedOperation.renderBuildStreamingRequestFunction(): PythonCodeBlock =
+    PythonCodeBlock.of(
+      """
+      |
+      |        def build_request() -> %T:
+      |            return self._transport.build_request(
+      |                %S,
+      |%C%C
+      |            )
+      |
+      """.trimMargin(),
+      PythonSymbol(".runtime", "TransportRequest"),
+      httpMethod(),
+      renderPathTemplateArgument("                "),
+      renderBuildRequestArguments("                "),
     )
 
   private fun GeneratedOperation.renderOperationReturn(
     operationType: PythonSymbol,
     decoderName: String,
+    streamingRequestBody: Boolean,
   ): PythonCodeBlock =
     PythonCodeBlock.of(
       """
       |        return %T(
-      |            transport=self._transport,
-      |            request=request,
-      |            decode=%L,
+      |%C
       |        )
       """.trimMargin(),
       operationType,
-      decoderName,
+      if (streamingRequestBody) {
+        PythonCodeBlock.of(
+          """
+          |            transport=self._transport,
+          |            build_request=build_request,
+          |            decode=%L,
+          """.trimMargin(),
+          decoderName,
+        )
+      } else {
+        PythonCodeBlock.of(
+          """
+          |            transport=self._transport,
+          |            request=request,
+          |            decode=%L,
+          """.trimMargin(),
+          decoderName,
+        )
+      },
     )
 
   private fun GeneratedOperation.hasClientSignatureParameters(): Boolean =
@@ -482,7 +620,11 @@ class PythonClientRenderer(
   }
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
-    PythonCodeBlock.of("        body: %C,", type.renderClientPythonType(nullable = false))
+    if (isPythonStreamingRequestBody) {
+      PythonCodeBlock.of("        body: %T,", PythonSymbol(".runtime", "StreamingBody"))
+    } else {
+      PythonCodeBlock.of("        body: %C,", type.renderClientPythonType(nullable = false))
+    }
 
   private fun GeneratedParameter.renderOptionalParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
@@ -510,13 +652,14 @@ class PythonClientRenderer(
       else -> PythonCodeBlock.of("None")
     }
 
-  private fun GeneratedOperation.renderPathTemplateArgument(): PythonCodeBlock {
+  private fun GeneratedOperation.renderPathTemplateArgument(indent: String): PythonCodeBlock {
     val pathParameters = pathParameters()
     val inlineMap = pathParameters.renderInlinePathParameterMap()
     val inlineCall = "path_template(${path.pythonStringLiteral()}, $inlineMap),"
     return if (inlineCall.length <= 100) {
       PythonCodeBlock.of(
-        "            %T(%S, %L),",
+        "%L%T(%S, %L),",
+        indent,
         PythonSymbol(".runtime", "path_template"),
         path,
         inlineMap,
@@ -524,14 +667,17 @@ class PythonClientRenderer(
     } else {
       PythonCodeBlock.of(
         """
-        |            %T(
-        |                %S,
+        |%L%T(
+        |%L    %S,
         |%C
-        |            ),
+        |%L),
         """.trimMargin(),
+        indent,
         PythonSymbol(".runtime", "path_template"),
+        indent,
         path,
-        pathParameters.renderMultilinePathParameterMap(),
+        pathParameters.renderMultilinePathParameterMap(indent),
+        indent,
       )
     }
   }
@@ -545,29 +691,30 @@ class PythonClientRenderer(
       }
     }
 
-  private fun List<GeneratedParameter>.renderMultilinePathParameterMap(): PythonCodeBlock =
+  private fun List<GeneratedParameter>.renderMultilinePathParameterMap(indent: String): PythonCodeBlock =
     if (isEmpty()) {
-      PythonCodeBlock.of("                {},")
+      PythonCodeBlock.of("%L    {},", indent)
     } else {
       PythonCodeBlock.join(
-        listOf(PythonCodeBlock.of("                {")) +
+        listOf(PythonCodeBlock.of("%L    {", indent)) +
           map { parameter ->
             PythonCodeBlock.of(
-              "                    %S: %L,",
+              "%L        %S: %L,",
+              indent,
               parameter.wireName(),
               parameter.name.pythonIdentifierName,
             )
           } +
-          listOf(PythonCodeBlock.of("                },")),
+          listOf(PythonCodeBlock.of("%L    },", indent)),
       )
     }
 
-  private fun GeneratedOperation.renderBuildRequestArguments(): PythonCodeBlock {
+  private fun GeneratedOperation.renderBuildRequestArguments(indent: String): PythonCodeBlock {
     val arguments =
       listOfNotNull(
-        queryParameters().renderRequestParameters("params"),
-        headerParameters().renderRequestParameters("headers"),
-        requestBody?.renderRequestBodyArgument(),
+        queryParameters().renderRequestParameters("params", indent),
+        renderHeadersArgument(indent),
+        requestBody?.renderRequestBodyArgument(indent),
       )
 
     return if (arguments.isEmpty()) {
@@ -577,24 +724,63 @@ class PythonClientRenderer(
     }
   }
 
-  private fun GeneratedPayload.renderRequestBodyArgument(): PythonCodeBlock =
-    if (type.isBinaryPayload()) {
-      PythonCodeBlock.of("            content=body,")
-    } else {
-      PythonCodeBlock.of("            json=%T(body),", PythonSymbol(".runtime", "json_body"))
+  private fun GeneratedOperation.renderHeadersArgument(indent: String): PythonCodeBlock? {
+    val headerParameters = headerParameters()
+    val contentType =
+      if (headerParameters.any { parameter -> parameter.wireName().equals("Content-Type", ignoreCase = true) }) {
+        null
+      } else {
+        requestBody.contentTypeHeaderForContentBody()
+      }
+
+    if (headerParameters.isEmpty() && contentType == null) {
+      return null
+    }
+
+    return PythonCodeBlock.of(
+      "%Lheaders=%C,",
+      indent,
+      when {
+        headerParameters.isEmpty() ->
+          PythonCodeBlock.of("{%S: %S}", "Content-Type", contentType)
+        contentType == null ->
+          headerParameters.renderRequestParameterMap()
+        else ->
+          PythonCodeBlock.of(
+            "{**%C, %S: %S}",
+            headerParameters.renderRequestParameterMap(),
+            "Content-Type",
+            contentType,
+          )
+      },
+    )
+  }
+
+  private fun GeneratedPayload.renderRequestBodyArgument(indent: String): PythonCodeBlock =
+    when {
+      isPythonStreamingRequestBody ->
+        PythonCodeBlock.of("%Lcontent=body.content(),", indent)
+      type.isBinaryPayload() ->
+        PythonCodeBlock.of("%Lcontent=body,", indent)
+      else ->
+        PythonCodeBlock.of("%Ljson=%T(body),", indent, PythonSymbol(".runtime", "json_body"))
     }
 
   private fun GeneratedTypeRef.isBinaryPayload(): Boolean =
     kind == GeneratedTypeRef.Kind.SCALAR &&
       (name == "file" || name == "binary" || name == "byte")
 
-  private fun List<GeneratedParameter>.renderRequestParameters(argumentName: String): PythonCodeBlock? {
+  private fun List<GeneratedParameter>.renderRequestParameters(
+    argumentName: String,
+    indent: String,
+  ): PythonCodeBlock? {
     if (isEmpty()) {
       return null
     }
 
     return PythonCodeBlock.of(
-      "            %L=%T({%L}),",
+      "%L%L=%T({%L}),",
+      indent,
       argumentName,
       PythonSymbol(".runtime", "parameter_map"),
       joinToString(", ") { parameter ->
@@ -602,6 +788,26 @@ class PythonClientRenderer(
       },
     )
   }
+
+  private fun List<GeneratedParameter>.renderRequestParameterMap(): PythonCodeBlock =
+    PythonCodeBlock.of(
+      "%T({%L})",
+      PythonSymbol(".runtime", "parameter_map"),
+      joinToString(", ") { parameter ->
+        "${parameter.wireName().pythonStringLiteral()}: ${parameter.name.pythonIdentifierName}"
+      },
+    )
+
+  private fun GeneratedPayload?.contentTypeHeaderForContentBody(): String? {
+    if (this == null || mediaTypes.isEmpty() || !usesPythonContentRequestBody) {
+      return null
+    }
+
+    return mediaTypes.first()
+  }
+
+  private val GeneratedPayload.usesPythonContentRequestBody: Boolean
+    get() = isPythonStreamingRequestBody || type.isBinaryPayload()
 
   private fun GeneratedOperation.pathParameters(): List<GeneratedParameter> =
     parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.PATH }
@@ -674,4 +880,7 @@ class PythonClientRenderer(
           renderClientPythonType(nullable = false),
         )
     }
+
+  private val GeneratedPayload?.isPythonStreamingRequestBody: Boolean
+    get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 }

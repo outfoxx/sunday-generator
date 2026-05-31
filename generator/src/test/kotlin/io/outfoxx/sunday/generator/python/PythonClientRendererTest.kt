@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -229,6 +230,34 @@ class PythonClientRendererTest : PythonTest() {
                   ),
               ),
               GeneratedOperation(
+                id = "importProjectArchive",
+                method = "POST",
+                path = "/projects/{projectId}/archive",
+                parameters =
+                  listOf(
+                    GeneratedParameter(
+                      name = "projectId",
+                      location = GeneratedParameter.Location.PATH,
+                      type = GeneratedTypeRef.scalar("string"),
+                      required = true,
+                    ),
+                  ),
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.scalar("file"),
+                    mediaTypes = listOf("application/x-tar"),
+                    streaming = GeneratedModeFlag(client = true),
+                  ),
+                responses =
+                  listOf(
+                    GeneratedResponse(
+                      status = 200,
+                      type = GeneratedTypeRef.named("UniqueId"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  ),
+              ),
+              GeneratedOperation(
                 id = "createProjectRevision",
                 method = "POST",
                 path = "/projects/{projectId}/revisions",
@@ -292,6 +321,7 @@ class PythonClientRendererTest : PythonTest() {
           from turnpost_api.events import EventsClient
           from turnpost_api.models import ProjectCreatedData, UpdateProjectRequest
           from turnpost_api.projects import ProjectsClient
+          from turnpost_api.runtime import StreamingBody
 
 
           class EventByteStream(httpx.AsyncByteStream):
@@ -319,6 +349,12 @@ class PythonClientRendererTest : PythonTest() {
                   assert request.headers["Content-Type"] == "image/png"
                   assert request.content == b"avatar-bytes"
                   return httpx.Response(204)
+
+              if request.url.path == "/projects/project-1/archive":
+                  assert request.method == "POST"
+                  assert request.headers["Content-Type"] == "application/x-tar"
+                  assert request.content == b"archive-bytes"
+                  return httpx.Response(200, json="import-1")
 
               if request.url.path == "/projects/project-1/revisions":
                   assert request.method == "POST"
@@ -374,6 +410,17 @@ class PythonClientRendererTest : PythonTest() {
                       content_type="image/png",
                   ).execute()
                   assert avatar is None
+
+                  import_operation = ProjectsClient(http_client).import_project_archive(
+                      "project-1",
+                      StreamingBody.bytes(b"archive-bytes"),
+                  )
+                  import_request = import_operation.transport_request()
+                  assert import_request.method == "POST"
+                  assert import_request.url.path == "/projects/project-1/archive"
+
+                  import_id = await import_operation.execute()
+                  assert import_id == "import-1"
 
                   revision_id = await ProjectsClient(http_client).create_project_revision("project-1").execute()
                   assert revision_id == "revision-1"

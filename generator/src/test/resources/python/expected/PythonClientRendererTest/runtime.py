@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterable, AsyncIterator, Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from httpx import AsyncClient, Headers, Request, Response
 from pydantic import BaseModel
@@ -12,6 +12,8 @@ __all__ = [
     "EventStream",
     "MediaType",
     "ResponseHeaders",
+    "StreamingBody",
+    "StreamingOperation",
     "Transport",
     "TransportRequest",
     "TransportResponse",
@@ -24,6 +26,49 @@ __all__ = [
 type Transport = AsyncClient
 type TransportRequest = Request
 type TransportResponse = Response
+type StreamingBodyChunk = bytes | bytearray | memoryview
+type StreamingBodyContent = bytes | Iterable[bytes] | AsyncIterable[bytes]
+
+
+def _streaming_chunk(chunk: StreamingBodyChunk) -> bytes:
+    return bytes(chunk)
+
+
+def _streaming_iterable(chunks: Iterable[StreamingBodyChunk]) -> Iterator[bytes]:
+    for chunk in chunks:
+        yield _streaming_chunk(chunk)
+
+
+async def _streaming_async_iterable(chunks: AsyncIterable[StreamingBodyChunk]) -> AsyncIterator[bytes]:
+    async for chunk in chunks:
+        yield _streaming_chunk(chunk)
+
+
+@dataclass(frozen=True, slots=True)
+class StreamingBody:
+    """A reusable streaming request body backed by a fresh content factory."""
+
+    factory: Callable[[], StreamingBodyContent]
+
+    @classmethod
+    def bytes(cls, data: StreamingBodyChunk) -> StreamingBody:
+        """Create a streaming body from in-memory bytes."""
+        content = _streaming_chunk(data)
+        return cls(lambda: content)
+
+    @classmethod
+    def iterable(cls, factory: Callable[[], Iterable[StreamingBodyChunk]]) -> StreamingBody:
+        """Create a streaming body from a fresh byte iterable factory."""
+        return cls(lambda: _streaming_iterable(factory()))
+
+    @classmethod
+    def async_iterable(cls, factory: Callable[[], AsyncIterable[StreamingBodyChunk]]) -> StreamingBody:
+        """Create a streaming body from a fresh async byte iterable factory."""
+        return cls(lambda: _streaming_async_iterable(factory()))
+
+    def content(self) -> StreamingBodyContent:
+        """Create the httpx request content for one request attempt."""
+        return self.factory()
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +175,33 @@ class Operation[ResponseT]:
     async def transport_response(self) -> TransportResponse:
         """Send the request and return the transport-specific response value."""
         return await self.transport.send(self.request)
+
+
+@dataclass(frozen=True, slots=True)
+class StreamingOperation[ResponseT]:
+    """A prepared streaming upload operation that builds a fresh request for each attempt."""
+
+    transport: Transport
+    build_request: Callable[[], TransportRequest]
+    decode: Callable[[Response], ResponseT]
+
+    async def execute(self) -> ResponseT:
+        """Send the request and decode the successful response body."""
+        return (await self.response()).result
+
+    async def response(self) -> OperationResponse[ResponseT]:
+        """Send the request and return the decoded response with metadata."""
+        response = await self.transport_response()
+        response.raise_for_status()
+        return OperationResponse(result=self.decode(response), transport_response=response)
+
+    def transport_request(self) -> TransportRequest:
+        """Return a fresh transport-specific request value."""
+        return self.build_request()
+
+    async def transport_response(self) -> TransportResponse:
+        """Send a fresh request and return the transport-specific response value."""
+        return await self.transport.send(self.build_request())
 
 
 @dataclass(frozen=True, slots=True)
