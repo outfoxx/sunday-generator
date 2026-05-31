@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedExchange
@@ -34,6 +35,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
@@ -51,6 +53,7 @@ import io.outfoxx.sunday.generator.typescript.utils.ASYNC_ITERABLE
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_NULLABLE_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_PROBLEM_CODEC
+import io.outfoxx.sunday.generator.typescript.utils.CREATE_STREAMING_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.DEFINE_SCHEMA
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
@@ -67,6 +70,8 @@ import io.outfoxx.sunday.generator.typescript.utils.RESPONSE
 import io.outfoxx.sunday.generator.typescript.utils.SCHEMA_LIKE
 import io.outfoxx.sunday.generator.typescript.utils.SCHEMA_OUTPUT
 import io.outfoxx.sunday.generator.typescript.utils.SCHEMA_RUNTIME
+import io.outfoxx.sunday.generator.typescript.utils.STREAMING_BODY
+import io.outfoxx.sunday.generator.typescript.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
@@ -2161,8 +2166,14 @@ class TypeScriptSundayIrGenerator(
         GeneratedExchange.RESPONSE -> RESPONSE
         null ->
           if (streaming == null) {
-            (if (isNullableOperation) NULLABLE_OPERATION else OPERATION)
-              .parameterized(requestBodyType(serviceTypeName), responseType, transportTypeVariable)
+            when {
+              isNullableOperation ->
+                NULLABLE_OPERATION.parameterized(requestBodyType(serviceTypeName), responseType, transportTypeVariable)
+              requestBody.isTypeScriptStreamingRequestBody ->
+                STREAMING_OPERATION.parameterized(responseType, transportTypeVariable)
+              else ->
+                OPERATION.parameterized(requestBodyType(serviceTypeName), responseType, transportTypeVariable)
+            }
           } else {
             responseType
           }
@@ -2195,7 +2206,7 @@ class TypeScriptSundayIrGenerator(
     requestBody?.let { body ->
       val bodyParameter =
         ParameterSpec
-          .builder("body", body.type.typeName(serviceTypeName))
+          .builder("body", requestBodyType(serviceTypeName))
           .build()
       functionBuilder.addParameter(
         if (defaultOptionalParameters) {
@@ -2214,7 +2225,11 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun GeneratedOperation.requestBodyType(serviceTypeName: TypeName.Standard): TypeName =
-    requestBody?.type?.typeName(serviceTypeName)?.nonUndefinable ?: VOID
+    if (requestBody.isTypeScriptStreamingRequestBody) {
+      STREAMING_BODY
+    } else {
+      requestBody?.type?.typeName(serviceTypeName)?.nonUndefinable ?: VOID
+    }
 
   private fun responseBodyType(
     response: GeneratedResponse?,
@@ -2274,7 +2289,7 @@ class TypeScriptSundayIrGenerator(
     }
 
     val requestBodyTypeProperty =
-      requestBody?.type?.let { type ->
+      requestBody?.takeUnless { it.isTypeScriptStreamingRequestBody }?.type?.let { type ->
         val propertyName = "${id.typeScriptIdentifierName}BodyType"
         val typeName = type.typeName(serviceTypeName)
         addTypeProperty(
@@ -2313,7 +2328,7 @@ class TypeScriptSundayIrGenerator(
     typeBuilder: ClassSpec.Builder,
   ): CodeBlock {
     val requestBodyTypeProperty =
-      requestBody?.type?.let { type ->
+      requestBody?.takeUnless { it.isTypeScriptStreamingRequestBody }?.type?.let { type ->
         val propertyName = "${id.typeScriptIdentifierName}BodyType"
         val typeName = type.typeName(serviceTypeName)
         addTypeProperty(
@@ -2337,7 +2352,12 @@ class TypeScriptSundayIrGenerator(
         propertyName
       }
 
-    val createOperation = if (isNullableOperation) CREATE_NULLABLE_OPERATION else CREATE_OPERATION
+    val createOperation =
+      when {
+        isNullableOperation -> CREATE_NULLABLE_OPERATION
+        requestBody.isTypeScriptStreamingRequestBody -> CREATE_STREAMING_OPERATION
+        else -> CREATE_OPERATION
+      }
 
     val builder = CodeBlock.builder()
     builder.add("%[return %Q(this.transport, {\n", createOperation)
@@ -2873,6 +2893,9 @@ class TypeScriptSundayIrGenerator(
     } else {
       this
     }
+
+  private val GeneratedPayload?.isTypeScriptStreamingRequestBody: Boolean
+    get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
   private fun TypeName.modelPropertyType(property: io.outfoxx.sunday.generator.ir.GeneratedModelProperty): TypeName =
     if (!property.required) {
