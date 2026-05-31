@@ -354,6 +354,7 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(serviceSource.contains("NullableOperation<StreamingBody, ImportAccepted, Factory>"), serviceSource)
     assertTrue(serviceSource.contains("createStreamingOperation(this.transport"), serviceSource)
     assertFalse(serviceSource.contains("importArchiveBodyType"), serviceSource)
+    assertFalse(serviceSource.contains("importArchiveOrNilBodyType"), serviceSource)
   }
 
   @Test
