@@ -325,6 +325,40 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `generates streaming operations for streaming request bodies`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/streaming-request-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    assertTrue(compileTypes(compiler, builtTypes))
+
+    val serviceSource =
+      builtTypes
+        .map { (typeName, typeSpec) ->
+          buildString {
+            val imported = typeName.base as SymbolSpec.Imported
+            FileSpec
+              .get(typeSpec, imported.source.removePrefix("!"))
+              .writeTo(this)
+          }
+        }.single { source -> "importArchive(" in source }
+
+    assertTrue(serviceSource.contains("importArchive(body: StreamingBody)"), serviceSource)
+    assertTrue(serviceSource.contains("importArchiveOrNil(body: StreamingBody)"), serviceSource)
+    assertTrue(serviceSource.contains("StreamingOperation<ImportAccepted, Factory>"), serviceSource)
+    assertTrue(serviceSource.contains("NullableOperation<StreamingBody, ImportAccepted, Factory>"), serviceSource)
+    assertTrue(serviceSource.contains("createStreamingOperation(this.transport"), serviceSource)
+    assertFalse(serviceSource.contains("importArchiveBodyType"), serviceSource)
+    assertFalse(serviceSource.contains("importArchiveOrNilBodyType"), serviceSource)
+  }
+
+  @Test
   fun `generates event stream methods from IR with existing TypeScript Sunday output shape`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-events.raml") testUri: URI,
