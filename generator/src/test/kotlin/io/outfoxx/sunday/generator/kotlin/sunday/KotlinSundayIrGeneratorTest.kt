@@ -1192,6 +1192,36 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `uses streaming operations for streaming request bodies`(
+    @ResourceUri("openapi/ir/streaming-request-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+
+    val serviceSource = compiledServiceSource()
+
+    val compactServiceSource = serviceSource.compactWhitespace()
+
+    assertContains(
+      compactServiceSource,
+      "public fun importArchive(body: StreamingBody): StreamingOperation<ImportAccepted, Req>",
+    )
+    assertContains(
+      compactServiceSource,
+      "public fun importArchiveOrNil(body: StreamingBody): NullableOperation<StreamingBody, ImportAccepted, Req>",
+    )
+    assertContains(serviceSource, "this.transport.operation<StreamingBody, ImportAccepted, Req>")
+    assertContains(serviceSource, "this.transport.nullableOperation<StreamingBody, ImportAccepted, Req>")
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `lowers supported IR scalar formats to Kotlin temporal and identity types`() {
     val typeRegistry = typeRegistry()
     val api =
