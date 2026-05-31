@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
+import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -107,6 +108,76 @@ class KotlinJAXRSIrGeneratorTest {
     assertFalse(source.contains("amf.apicontract.client.platform.model.domain.Parameter"), source)
     assertFalse(source.contains("amf.apicontract.client.platform.model.domain.Response"), source)
     assertFalse(source.contains("amf.core.client.platform.model.domain.Shape"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates Quarkus streaming request bodies as Mutiny buffer streams by target mode`() {
+    listOf(
+      GenerationMode.Client to
+        mapOf(
+          "streamClient" to true,
+          "streamServer" to false,
+          "streamAll" to true,
+          "uploadRegular" to false,
+        ),
+      GenerationMode.Server to
+        mapOf(
+          "streamClient" to false,
+          "streamServer" to true,
+          "streamAll" to true,
+          "uploadRegular" to false,
+        ),
+    ).forEach { (mode, expectations) ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          mode,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.QUARKUS,
+          problemRfc = KotlinProblemRfc.RFC9457,
+        )
+
+      KotlinJAXRSIrGenerator(streamingRequestBodyApi(), typeRegistry, testOptions(quarkus = true))
+        .generateServiceTypes()
+
+      val builtTypes = typeRegistry.buildTypes()
+      val source = kotlinSource("io.test.service", findType("io.test.service.UploadsAPI", builtTypes))
+
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+      assertTrue(source.contains("import io.smallrye.mutiny.Multi"), source)
+      assertTrue(source.contains("import io.vertx.mutiny.core.buffer.Buffer"), source)
+      expectations.forEach { (operationId, streaming) ->
+        val expectedBody = if (streaming) "body: Multi<Buffer>" else "body: ByteArray"
+        assertTrue(source.contains("public fun $operationId($expectedBody)"), source)
+      }
+    }
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `keeps streaming request bodies as normal body parameters for non Quarkus JAX-RS`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+
+    KotlinJAXRSIrGenerator(streamingRequestBodyApi(), typeRegistry, testOptions(quarkus = false))
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val source = kotlinSource("io.test.service", findType("io.test.service.UploadsAPI", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertFalse(source.contains("Multi<Buffer>"), source)
+    assertTrue(source.contains("public fun streamServer(body: ByteArray): Response"), source)
+    assertTrue(source.contains("public fun streamAll(body: ByteArray): Response"), source)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -481,6 +552,42 @@ class KotlinJAXRSIrGeneratorTest {
               ),
           ),
         ),
+    )
+
+  private fun streamingRequestBodyApi(): GeneratedApi =
+    GeneratedApi(
+      name = "Uploads API",
+      source = GeneratedSourceSpec(kind = GeneratedSourceSpec.Kind.OPENAPI, location = "memory://uploads"),
+      services =
+        listOf(
+          GeneratedService(
+            name = "Uploads",
+            operations =
+              listOf(
+                streamingRequestBodyOperation("streamClient", GeneratedModeFlag(client = true)),
+                streamingRequestBodyOperation("streamServer", GeneratedModeFlag(server = true)),
+                streamingRequestBodyOperation("streamAll", GeneratedModeFlag(all = true)),
+                streamingRequestBodyOperation("uploadRegular", null),
+              ),
+          ),
+        ),
+    )
+
+  private fun streamingRequestBodyOperation(
+    id: String,
+    streaming: GeneratedModeFlag?,
+  ): GeneratedOperation =
+    GeneratedOperation(
+      id = id,
+      method = "PUT",
+      path = "/$id",
+      requestBody =
+        GeneratedPayload(
+          type = GeneratedTypeRef.scalar("file"),
+          mediaTypes = listOf("application/octet-stream"),
+          streaming = streaming,
+        ),
+      responses = listOf(GeneratedResponse(status = 204)),
     )
 
   private fun clientTypeRegistry(): KotlinTypeRegistry =

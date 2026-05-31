@@ -66,6 +66,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
+import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
@@ -118,6 +119,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE3
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_HTTP_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.UNI
+import io.outfoxx.sunday.generator.kotlin.utils.VERTX_MUTINY_BUFFER
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
@@ -1127,14 +1129,14 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
     val typeName =
-      if (jsonBodyEnabled) {
-        JSON_NODE
-      } else {
-        type.kotlinTypeName().withUseSiteValidationAnnotations(type)
+      when {
+        isQuarkusStreamingRequestBody -> MULTI.parameterizedBy(VERTX_MUTINY_BUFFER)
+        jsonBodyEnabled -> JSON_NODE
+        else -> type.kotlinTypeName().withUseSiteValidationAnnotations(type)
       }
     val builder = ParameterSpec.builder("body", typeName)
 
-    if (typeName != JSON_NODE) {
+    if (typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
       builder.addValidationAnnotations(
         GeneratedParameter(
           name = "body",
@@ -1147,6 +1149,9 @@ class KotlinJAXRSIrGenerator(
 
     return builder.build()
   }
+
+  private val GeneratedPayload.isQuarkusStreamingRequestBody: Boolean
+    get() = options.quarkus && streaming?.enabledFor(generationMode) == true
 
   private fun GeneratedOperation.nullifyFunction(operationParameters: List<GeneratedOperationParameter>): FunSpec? {
     if (generationMode != Client || options.alwaysUseResponseReturn) {

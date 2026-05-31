@@ -20,3 +20,4 @@ import com.squareup.kotlinpoet.ClassName
 
 val MULTI = ClassName.bestGuess("io.smallrye.mutiny.Multi")
 val UNI = ClassName.bestGuess("io.smallrye.mutiny.Uni")
+val VERTX_MUTINY_BUFFER = ClassName.bestGuess("io.vertx.mutiny.core.buffer.Buffer")

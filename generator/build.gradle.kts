@@ -29,6 +29,7 @@ dependencies {
   testImplementation(libs.zalandoProblem)
   testImplementation(libs.quarkiverseProblem)
   testImplementation(libs.mutiny)
+  testImplementation(libs.mutinyVertxCore)
   testImplementation(libs.microprofileFaultTolerance)
   testImplementation(libs.microprofileJwt)
   testImplementation(libs.smallryeFaultTolerance)
