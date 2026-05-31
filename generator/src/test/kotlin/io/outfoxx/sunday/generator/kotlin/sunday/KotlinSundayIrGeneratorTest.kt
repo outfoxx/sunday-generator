@@ -20,6 +20,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
@@ -58,6 +59,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -1188,6 +1190,107 @@ class KotlinSundayIrGeneratorTest {
     assertContains(holderSource, "public val `named`: Any?")
     assertContains(serviceSource, "body: Any")
     assertContains(serviceSource, "Operation<Any, Any, Req>")
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `uses OpenAPI enum varnames and wire values in Kotlin Sunday`(
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val notificationTypeSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.NotificationType", builtTypes))
+          .writeTo(this)
+      }
+    val fallbackTypeSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.FallbackType", builtTypes))
+          .writeTo(this)
+      }
+    val notificationSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.Notification", builtTypes))
+          .writeTo(this)
+      }
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertContains(notificationTypeSource, "PullRequestReviewRequested(\"notification.pull_request.review_requested\")")
+    assertContains(notificationTypeSource, "PullRequestMerged(\"notification.pull_request.merged\")")
+    assertContains(notificationTypeSource, "TeamMemberAdded(\"notification.team.member_added\")")
+    assertContains(notificationTypeSource, "@JsonValue")
+    assertContains(notificationTypeSource, "@JsonCreator")
+    assertContains(fallbackTypeSource, "OPEN(\"OPEN\")")
+    assertContains(fallbackTypeSource, "LowerSnake(\"lower_snake\")")
+    assertContains(fallbackTypeSource, "UpperInterCaps(\"UpperInterCaps\")")
+    assertContains(fallbackTypeSource, "LowerInterCaps(\"lowerInterCaps\")")
+    assertContains(fallbackTypeSource, "DottedCase(\"dotted.case\")")
+    assertContains(fallbackTypeSource, "MixedKebabCase(\"mixed-kebab.case\")")
+    assertContains(notificationSource, "public val `type`: NotificationType")
+  }
+
+  @Test
+  fun `rejects duplicate explicit Kotlin enum constant names`() {
+    val typeRegistry = typeRegistry()
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("one", "two"),
+              enumValueNames = listOf("same", "same"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertContains(error.message!!, "constant name 'Same' is used for multiple values")
+    assertContains(error.message!!, "x-enum-varnames")
+  }
+
+  @Test
+  fun `rejects unmappable Kotlin enum values without explicit names`() {
+    val typeRegistry = typeRegistry()
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertContains(error.message!!, "maps to invalid constant name '123'")
+    assertContains(error.message!!, "x-enum-varnames")
   }
 
   @OptIn(ExperimentalCompilerApi::class)

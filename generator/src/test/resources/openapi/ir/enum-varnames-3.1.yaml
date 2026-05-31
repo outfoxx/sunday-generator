@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Enum API
+  version: 1.0.0
+paths:
+  /notifications/{type}:
+    get:
+      operationId: getNotification
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+      responses:
+        "200":
+          description: Notification response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+components:
+  schemas:
+    NotificationType:
+      type: string
+      enum:
+        - notification.pull_request.review_requested
+        - notification.pull_request.merged
+        - notification.team.member_added
+      x-enum-varnames:
+        - pullRequestReviewRequested
+        - pullRequestMerged
+        - teamMemberAdded
+    FallbackType:
+      type: string
+      enum:
+        - OPEN
+        - lower_snake
+        - UpperInterCaps
+        - lowerInterCaps
+        - dotted.case
+        - mixed-kebab.case
+    Notification:
+      type: object
+      required: [type, fallback]
+      properties:
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        fallback:
+          $ref: "#/components/schemas/FallbackType"

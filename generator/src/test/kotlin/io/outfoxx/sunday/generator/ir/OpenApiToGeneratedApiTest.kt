@@ -192,6 +192,27 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI enum varnames to generated API IR`(
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    val notificationType = api.models.single { model -> model.name == "NotificationType" }
+    assertEquals(
+      listOf(
+        "notification.pull_request.review_requested",
+        "notification.pull_request.merged",
+        "notification.team.member_added",
+      ),
+      notificationType.values,
+    )
+    assertEquals(
+      listOf("pullRequestReviewRequested", "pullRequestMerged", "teamMemberAdded"),
+      notificationType.enumValueNames,
+    )
+  }
+
+  @Test
   fun `maps OpenAPI single allOf reference properties to referenced model types`(
     @ResourceUri("openapi/ir/single-allof-ref-3.1.yaml") testUri: URI,
   ) {
@@ -432,6 +453,72 @@ class OpenApiToGeneratedApiTest {
     assertEquals(
       "OpenAPI path '/users' operation has multiple service tags (users, audit). " +
         "Add x-sunday-service to select one generated service explicitly.",
+      error.message,
+    )
+  }
+
+  @Test
+  fun `rejects OpenAPI enum varnames length mismatch`(
+    @TempDir tempDir: Path,
+  ) {
+    val source = tempDir.resolve("sunday-openapi-enum-varnames.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.1.0
+      info:
+        title: Enum API
+        version: 1.0.0
+      paths: {}
+      components:
+        schemas:
+          NotificationType:
+            type: string
+            enum: [created, updated]
+            x-enum-varnames: [created]
+      """.trimIndent(),
+    )
+
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        OpenApiToGeneratedApi().convert(source.toUri())
+      }
+
+    assertEquals(
+      "OpenAPI enum model 'NotificationType' x-enum-varnames has 1 entries for 2 enum values.",
+      error.message,
+    )
+  }
+
+  @Test
+  fun `rejects blank OpenAPI enum varnames`(
+    @TempDir tempDir: Path,
+  ) {
+    val source = tempDir.resolve("sunday-openapi-enum-varnames.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.1.0
+      info:
+        title: Enum API
+        version: 1.0.0
+      paths: {}
+      components:
+        schemas:
+          NotificationType:
+            type: string
+            enum: [created, updated]
+            x-enum-varnames: [created, " "]
+      """.trimIndent(),
+    )
+
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        OpenApiToGeneratedApi().convert(source.toUri())
+      }
+
+    assertEquals(
+      "OpenAPI enum model 'NotificationType' x-enum-varnames entry 2 must be a non-blank string.",
       error.message,
     )
   }

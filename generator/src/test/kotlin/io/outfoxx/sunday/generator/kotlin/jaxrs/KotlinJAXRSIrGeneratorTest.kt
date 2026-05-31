@@ -1525,6 +1525,48 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `uses OpenAPI enum varnames and wire values in Kotlin JAX-RS`(
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, kotlinJAXRSTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val notificationTypeSource = kotlinSource("io.test", findType("io.test.NotificationType", builtTypes))
+    val fallbackTypeSource = kotlinSource("io.test", findType("io.test.FallbackType", builtTypes))
+    val notificationSource = kotlinSource("io.test", findType("io.test.Notification", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(
+      notificationTypeSource.contains("PullRequestReviewRequested(\"notification.pull_request.review_requested\")"),
+      notificationTypeSource,
+    )
+    assertTrue(notificationTypeSource.contains("PullRequestMerged(\"notification.pull_request.merged\")"))
+    assertTrue(notificationTypeSource.contains("TeamMemberAdded(\"notification.team.member_added\")"))
+    assertTrue(notificationTypeSource.contains("@JsonValue"), notificationTypeSource)
+    assertTrue(notificationTypeSource.contains("@JsonCreator"), notificationTypeSource)
+    assertTrue(fallbackTypeSource.contains("OPEN(\"OPEN\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("LowerSnake(\"lower_snake\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("UpperInterCaps(\"UpperInterCaps\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("LowerInterCaps(\"lowerInterCaps\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("DottedCase(\"dotted.case\")"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("MixedKebabCase(\"mixed-kebab.case\")"), fallbackTypeSource)
+    assertTrue(notificationSource.contains("public val `type`: NotificationType"), notificationSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates aggregate Quarkus client locators for AsyncAPI channel path parameters`(
     @ResourceUri("asyncapi/ir/channel-parameters.yaml") testUri: URI,
   ) {

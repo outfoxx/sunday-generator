@@ -16,9 +16,12 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+
+private val pythonEnumMemberIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 /** Renders IR models into a Python Pydantic models module. */
 class PythonModelRenderer(
@@ -100,8 +103,8 @@ class PythonModelRenderer(
 
   private fun GeneratedModel.renderEnumModel(): PythonCodeBlock {
     val body =
-      values
-        .joinToString("\n") { value -> "    ${value.pythonEnumMemberName} = ${value.pythonStringLiteral()}" }
+      pythonEnumEntries()
+        .joinToString("\n") { entry -> "    ${entry.name} = ${entry.value.pythonStringLiteral()}" }
         .ifBlank { "    pass" }
 
     return PythonCodeBlock.of(
@@ -114,6 +117,57 @@ class PythonModelRenderer(
       body,
     )
   }
+
+  private fun GeneratedModel.pythonEnumEntries(): List<PythonEnumEntry> {
+    if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
+      genError(
+        "Python enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
+          "Fix x-enum-varnames so it has one entry per enum value.",
+      )
+    }
+
+    val entries =
+      values.mapIndexed { index, value ->
+        val memberName =
+          if (enumValueNames.isNotEmpty()) {
+            enumValueNames[index].pythonEnumMemberName
+          } else {
+            value.pythonEnumMemberName
+          }
+        validatePythonEnumMemberName(memberName, value)
+        PythonEnumEntry(memberName, value)
+      }
+
+    entries
+      .groupBy { entry -> entry.name }
+      .filterValues { duplicates -> duplicates.size > 1 }
+      .forEach { (memberName, duplicates) ->
+        genError(
+          "Python enum '$name' member name '$memberName' is used for multiple values " +
+            duplicates.joinToString(", ") { entry -> "'${entry.value}'" } +
+            ". Add x-enum-varnames to disambiguate them.",
+        )
+      }
+
+    return entries
+  }
+
+  private fun GeneratedModel.validatePythonEnumMemberName(
+    memberName: String,
+    value: String,
+  ) {
+    if (!pythonEnumMemberIdentifierRegex.matches(memberName)) {
+      genError(
+        "Python enum '$name' value '$value' maps to invalid member name '$memberName'. " +
+          "Add x-enum-varnames with a valid Python enum member name.",
+      )
+    }
+  }
+
+  private data class PythonEnumEntry(
+    val name: String,
+    val value: String,
+  )
 
   private fun GeneratedModel.renderUnionModel(): PythonCodeBlock = renderUnionAliasModel()
 

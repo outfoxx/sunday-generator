@@ -26,6 +26,7 @@ data class GeneratedModel(
   val scope: GeneratedModelScope? = null,
   val properties: List<GeneratedModelProperty> = listOf(),
   val values: List<String> = listOf(),
+  val enumValueNames: List<String> = listOf(),
   val aliases: List<GeneratedTypeRef> = listOf(),
   val collection: GeneratedCollectionKind? = null,
   val closed: Boolean? = null,

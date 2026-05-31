@@ -126,6 +126,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumEntries
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
@@ -1831,12 +1832,12 @@ class KotlinJAXRSIrGenerator(
             if (typeRegistry.options.contains(JacksonAnnotations)) {
               addType(jsonCreatorCompanionType())
             }
-            values.forEach { value ->
+            kotlinEnumEntries().forEach { entry ->
               addEnumConstant(
-                value.enumConstantName(),
+                entry.name,
                 TypeSpec
                   .anonymousClassBuilder()
-                  .addSuperclassConstructorParameter("%S", value)
+                  .addSuperclassConstructorParameter("%S", entry.value)
                   .build(),
               )
             }
@@ -2923,11 +2924,6 @@ class KotlinJAXRSIrGenerator(
       map { wireName -> CodeBlock.of("tree.has(%S)", wireName) }.joinToCode(" $operator ")
     }
 
-  private fun String.enumConstantName(): String =
-    split(enumSplitRegex)
-      .joinToString("") { part -> part.replaceFirstChar { it.titlecase() } }
-      .toUpperCamelCase()
-
   private companion object {
     const val SSE_CONTENT_TYPE = "text/event-stream"
 
@@ -2958,7 +2954,6 @@ class KotlinJAXRSIrGenerator(
 
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
-    val enumSplitRegex = """\W""".toRegex()
     val enumMemberSplitRegex = """\W+""".toRegex()
     val policyMillisRegex = """PT(\d+)MS""".toRegex(RegexOption.IGNORE_CASE)
   }

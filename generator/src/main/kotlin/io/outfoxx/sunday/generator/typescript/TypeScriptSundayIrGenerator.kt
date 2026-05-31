@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedExchange
@@ -409,11 +410,13 @@ class TypeScriptSundayIrGenerator(
     value: Any,
   ): CodeBlock {
     val typeName = type.typeName(serviceTypeName)
-    return if (type.modelOrNull(index)?.kind == GeneratedModel.Kind.ENUM && value is String) {
-      CodeBlock.of("%T.%L", typeName, value.toUpperCamelCase())
-    } else {
-      literal(value)
+    val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
+    if (value is String && enumModel != null) {
+      enumModel.typeScriptEnumMemberNameForValue(value)?.let { memberName ->
+        return CodeBlock.of("%T.%L", typeName, memberName)
+      }
     }
+    return literal(value)
   }
 
   private fun GeneratedService.typeSimpleName(): String {
@@ -809,8 +812,8 @@ class TypeScriptSundayIrGenerator(
         .builder(typeName.simpleName())
         .addModifiers(Modifier.EXPORT)
 
-    model.values.forEach { value ->
-      enumBuilder.addConstant(value.typeScriptEnumConstantName(), CodeBlock.of("%S", value))
+    model.typeScriptEnumEntries().forEach { entry ->
+      enumBuilder.addConstant(entry.name, CodeBlock.of("%S", entry.value))
     }
 
     val schemaCode =
@@ -1250,23 +1253,39 @@ class TypeScriptSundayIrGenerator(
     discriminatorProperty: GeneratedModelProperty,
     discriminatorTypeName: TypeName,
     discriminatorValue: String,
-  ): CodeBlock =
-    if (discriminatorProperty.type.modelOrNull(index)?.kind == GeneratedModel.Kind.ENUM) {
-      CodeBlock.of("%T.%L", discriminatorTypeName, discriminatorValue.toUpperCamelCase())
-    } else {
-      CodeBlock.of("%S", discriminatorValue)
+  ): CodeBlock {
+    val enumModel =
+      discriminatorProperty.type
+        .modelOrNull(index)
+        ?.takeIf { model ->
+          model.kind == GeneratedModel.Kind.ENUM
+        }
+    if (enumModel != null) {
+      enumModel.typeScriptEnumMemberNameForValue(discriminatorValue)?.let { memberName ->
+        return CodeBlock.of("%T.%L", discriminatorTypeName, memberName)
+      }
     }
+    return CodeBlock.of("%S", discriminatorValue)
+  }
 
   private fun discriminatorLiteralSchema(
     discriminatorProperty: GeneratedModelProperty,
     discriminatorTypeName: TypeName,
     discriminatorValue: String,
-  ): CodeBlock =
-    if (discriminatorProperty.type.modelOrNull(index)?.kind == GeneratedModel.Kind.ENUM) {
-      CodeBlock.of("%T.literal(%T.%L)", Z, discriminatorTypeName, discriminatorValue.toUpperCamelCase())
-    } else {
-      CodeBlock.of("%T.literal(%S)", Z, discriminatorValue)
+  ): CodeBlock {
+    val enumModel =
+      discriminatorProperty.type
+        .modelOrNull(index)
+        ?.takeIf { model ->
+          model.kind == GeneratedModel.Kind.ENUM
+        }
+    if (enumModel != null) {
+      enumModel.typeScriptEnumMemberNameForValue(discriminatorValue)?.let { memberName ->
+        return CodeBlock.of("%T.literal(%T.%L)", Z, discriminatorTypeName, memberName)
+      }
     }
+    return CodeBlock.of("%T.literal(%S)", Z, discriminatorValue)
+  }
 
   private fun plainDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
@@ -2973,12 +2992,73 @@ class TypeScriptSundayIrGenerator(
       else -> CodeBlock.of("%T.from(%S)", MEDIA_TYPE, value)
     }
 
+  private fun GeneratedModel.typeScriptEnumMemberNameForValue(value: String): String? =
+    typeScriptEnumEntries().singleOrNull { entry -> entry.value == value }?.name
+
+  private fun GeneratedModel.typeScriptEnumEntries(): List<TypeScriptEnumEntry> {
+    if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
+      genError(
+        "TypeScript enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
+          "Fix x-enum-varnames so it has one entry per enum value.",
+      )
+    }
+
+    val entries =
+      values.mapIndexed { index, value ->
+        val memberName =
+          if (enumValueNames.isNotEmpty()) {
+            enumValueNames[index].trim()
+          } else {
+            value.typeScriptEnumConstantName()
+          }
+        validateTypeScriptEnumMemberName(memberName, value)
+        TypeScriptEnumEntry(memberName, value)
+      }
+
+    entries
+      .groupBy { entry -> entry.name }
+      .filterValues { duplicates -> duplicates.size > 1 }
+      .forEach { (memberName, duplicates) ->
+        genError(
+          "TypeScript enum '$name' member name '$memberName' is used for multiple values " +
+            duplicates.joinToString(", ") { entry -> "'${entry.value}'" } +
+            ". Add x-enum-varnames to disambiguate them.",
+        )
+      }
+
+    return entries
+  }
+
+  private fun GeneratedModel.validateTypeScriptEnumMemberName(
+    memberName: String,
+    value: String,
+  ) {
+    if (!typeScriptEnumMemberIdentifierRegex.matches(memberName) || memberName in typeScriptReservedWords) {
+      genError(
+        "TypeScript enum '$name' value '$value' maps to invalid member name '$memberName'. " +
+          "Add x-enum-varnames with a valid TypeScript enum member name.",
+      )
+    }
+  }
+
+  private data class TypeScriptEnumEntry(
+    val name: String,
+    val value: String,
+  )
+
   private fun String.typeScriptEnumConstantName(): String =
     split(enumNameDelimiter)
       .filter { part -> part.isNotBlank() }
       .joinToString("") { part ->
-        part.lowercase().replaceFirstChar { char -> char.titlecase() }
-      }.ifBlank { "Value" }
+        part.normalizedEnumSegment().replaceFirstChar { char -> char.titlecase() }
+      }
+
+  private fun String.normalizedEnumSegment(): String =
+    if (any { it.isLetter() } && all { !it.isLetter() || it.isUpperCase() }) {
+      lowercase()
+    } else {
+      this
+    }
 
   private fun literal(value: Any?): CodeBlock =
     when (value) {
@@ -2994,5 +3074,55 @@ class TypeScriptSundayIrGenerator(
     val requiredBaseProblemProperties = setOf("type", "title", "status")
     val optionalBaseProblemProperties = setOf("detail", "instance")
     val enumNameDelimiter = Regex("[^A-Za-z0-9]+")
+    val typeScriptEnumMemberIdentifierRegex = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
+    val typeScriptReservedWords =
+      setOf(
+        "break",
+        "case",
+        "catch",
+        "class",
+        "const",
+        "continue",
+        "debugger",
+        "default",
+        "delete",
+        "do",
+        "else",
+        "enum",
+        "export",
+        "extends",
+        "false",
+        "finally",
+        "for",
+        "function",
+        "if",
+        "import",
+        "in",
+        "instanceof",
+        "new",
+        "null",
+        "return",
+        "super",
+        "switch",
+        "this",
+        "throw",
+        "true",
+        "try",
+        "typeof",
+        "var",
+        "void",
+        "while",
+        "with",
+        "as",
+        "implements",
+        "interface",
+        "let",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "static",
+        "yield",
+      )
   }
 }

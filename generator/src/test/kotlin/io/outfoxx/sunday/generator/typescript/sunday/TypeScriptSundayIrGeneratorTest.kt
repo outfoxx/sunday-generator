@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript.sunday
 
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -48,6 +49,7 @@ import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -783,6 +785,110 @@ class TypeScriptSundayIrGeneratorTest {
       textUnionSource,
     )
     assertTrue(textUnionSource.contains("export const TextUnionSchema"), textUnionSource)
+  }
+
+  @Test
+  fun `uses OpenAPI enum varnames and wire values in TypeScript Sunday`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val notificationTypeSource =
+      buildString {
+        FileSpec
+          .get(findTypeMod("NotificationType@!notification-type", builtTypes), "notification-type")
+          .writeTo(this)
+      }
+    val fallbackTypeSource =
+      buildString {
+        FileSpec
+          .get(findTypeMod("FallbackType@!fallback-type", builtTypes), "fallback-type")
+          .writeTo(this)
+      }
+    val notificationSource =
+      buildString {
+        FileSpec
+          .get(findTypeMod("Notification@!notification", builtTypes), "notification")
+          .writeTo(this)
+      }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(
+      notificationTypeSource.contains(
+        "pullRequestReviewRequested = 'notification.pull_request.review_requested'",
+      ),
+      notificationTypeSource,
+    )
+    assertTrue(notificationTypeSource.contains("pullRequestMerged = 'notification.pull_request.merged'"))
+    assertTrue(notificationTypeSource.contains("teamMemberAdded = 'notification.team.member_added'"))
+    assertTrue(fallbackTypeSource.contains("Open = 'OPEN'"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("LowerSnake = 'lower_snake'"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("UpperInterCaps = 'UpperInterCaps'"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("LowerInterCaps = 'lowerInterCaps'"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("DottedCase = 'dotted.case'"), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("MixedKebabCase = 'mixed-kebab.case'"), fallbackTypeSource)
+    assertTrue(notificationSource.contains("'type': runtime.resolveSchema(NotificationTypeSchema)"), notificationSource)
+  }
+
+  @Test
+  fun `rejects duplicate explicit TypeScript enum member names`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("one", "two"),
+              enumValueNames = listOf("same", "same"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("member name 'same' is used for multiple values"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects unmappable TypeScript enum values without explicit names`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("maps to invalid member name '123'"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
   }
 
   @Test
