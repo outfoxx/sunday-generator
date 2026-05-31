@@ -350,6 +350,7 @@ class TypeScriptSundayIrGeneratorTest {
         }.single { source -> "importArchive(" in source }
 
     assertTrue(serviceSource.contains("importArchive(body: StreamingBody)"), serviceSource)
+    assertTrue(serviceSource.contains("importArchiveOrNil(body: StreamingBody)"), serviceSource)
     assertTrue(serviceSource.contains("StreamingOperation<ImportAccepted, Factory>"), serviceSource)
     assertTrue(serviceSource.contains("NullableOperation<StreamingBody, ImportAccepted, Factory>"), serviceSource)
     assertTrue(serviceSource.contains("createStreamingOperation(this.transport"), serviceSource)
