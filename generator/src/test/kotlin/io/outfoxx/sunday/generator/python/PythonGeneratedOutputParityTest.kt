@@ -105,6 +105,29 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  fun `OpenAPI streaming request bodies emit Python streaming operations`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/streaming-request-3.1.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modules = api.httpxModules()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = modules.importModuleNames(),
+      ),
+    )
+    val clientSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/streaming_request.py")
+
+    assertTrue(clientSource.contains("body: StreamingBody"), clientSource)
+    assertTrue(clientSource.contains("-> StreamingOperation[ImportAccepted]"), clientSource)
+    assertTrue(clientSource.contains("build_request=build_request"), clientSource)
+    assertTrue(clientSource.contains("content=body.content()"), clientSource)
+  }
+
+  @Test
   fun `AsyncAPI source emits compile-backed client and server snapshots`(
     compiler: PythonCompiler,
     @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") sourceUri: URI,

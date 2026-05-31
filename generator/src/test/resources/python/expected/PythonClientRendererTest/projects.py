@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from .models import ProjectView, UniqueId, UpdateProjectRequest
-from .runtime import Operation, Transport, json_body, parameter_map, path_template
+from .runtime import (
+    Operation,
+    StreamingBody,
+    StreamingOperation,
+    Transport,
+    TransportRequest,
+    json_body,
+    parameter_map,
+    path_template,
+)
 from httpx import Response
 from pydantic import TypeAdapter
 
@@ -81,6 +90,27 @@ class ProjectsClient:
             decode=_decode_put_project_avatar_response,
         )
 
+    def import_project_archive(
+        self,
+        project_id: str,
+        body: StreamingBody,
+    ) -> StreamingOperation[UniqueId]:
+        """Create the importProjectArchive operation."""
+
+        def build_request() -> TransportRequest:
+            return self._transport.build_request(
+                "POST",
+                path_template("/projects/{projectId}/archive", {"projectId": project_id}),
+                headers={"Content-Type": "application/x-tar"},
+                content=body.content(),
+            )
+
+        return StreamingOperation(
+            transport=self._transport,
+            build_request=build_request,
+            decode=_decode_import_project_archive_response,
+        )
+
     def create_project_revision(
         self,
         project_id: str,
@@ -111,6 +141,10 @@ def _decode_update_project_response(response: Response) -> ProjectView:
 
 def _decode_put_project_avatar_response(response: Response) -> None:
     return None
+
+
+def _decode_import_project_archive_response(response: Response) -> UniqueId:
+    return TypeAdapter(UniqueId).validate_python(response.json())
 
 
 def _decode_create_project_revision_response(response: Response) -> UniqueId:
