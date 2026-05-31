@@ -158,26 +158,28 @@ class KotlinJAXRSIrGeneratorTest {
   @OptIn(ExperimentalCompilerApi::class)
   @Test
   fun `keeps streaming request bodies as normal body parameters for non Quarkus JAX-RS`() {
-    val typeRegistry =
-      KotlinTypeRegistry(
-        "io.test",
-        null,
-        GenerationMode.Server,
-        setOf(),
-        problemLibrary = KotlinProblemLibrary.ZALANDO,
-        problemRfc = KotlinProblemRfc.RFC7807,
-      )
+    listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
+      val typeRegistry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          mode,
+          setOf(),
+          problemLibrary = KotlinProblemLibrary.ZALANDO,
+          problemRfc = KotlinProblemRfc.RFC7807,
+        )
 
-    KotlinJAXRSIrGenerator(streamingRequestBodyApi(), typeRegistry, testOptions(quarkus = false))
-      .generateServiceTypes()
+      KotlinJAXRSIrGenerator(streamingRequestBodyApi(), typeRegistry, testOptions(quarkus = false))
+        .generateServiceTypes()
 
-    val builtTypes = typeRegistry.buildTypes()
-    val source = kotlinSource("io.test.service", findType("io.test.service.UploadsAPI", builtTypes))
+      val builtTypes = typeRegistry.buildTypes()
+      val source = kotlinSource("io.test.service", findType("io.test.service.UploadsAPI", builtTypes))
 
-    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertFalse(source.contains("Multi<Buffer>"), source)
-    assertTrue(source.contains("public fun streamServer(body: ByteArray): Response"), source)
-    assertTrue(source.contains("public fun streamAll(body: ByteArray): Response"), source)
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+      assertFalse(source.contains("Multi<Buffer>"), source)
+      assertTrue(source.contains("public fun streamServer(body: ByteArray)"), source)
+      assertTrue(source.contains("public fun streamAll(body: ByteArray)"), source)
+    }
   }
 
   @OptIn(ExperimentalCompilerApi::class)

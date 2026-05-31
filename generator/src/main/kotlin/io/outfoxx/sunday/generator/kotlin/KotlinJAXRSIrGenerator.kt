@@ -1130,6 +1130,7 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
     val typeName =
       when {
+        // Streaming request bodies are raw transport streams; they intentionally bypass JSON body overrides.
         isQuarkusStreamingRequestBody -> MULTI.parameterizedBy(VERTX_MUTINY_BUFFER)
         jsonBodyEnabled -> JSON_NODE
         else -> type.kotlinTypeName().withUseSiteValidationAnnotations(type)
