@@ -401,4 +401,24 @@ class PythonModelRendererTest : PythonTest() {
     assertTrue(error.message!!.contains("maps to invalid member name '123'"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
   }
+
+  @Test
+  fun `rejects delimiter only Python enum values with tailored error`() {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api")
+          .renderModels(
+            listOf(
+              GeneratedModel(
+                name = "Status",
+                kind = GeneratedModel.Kind.ENUM,
+                values = listOf("---"),
+              ),
+            ),
+          )
+      }
+
+    assertTrue(error.message!!.contains("contains no valid identifier characters"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
 }

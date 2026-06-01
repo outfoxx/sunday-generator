@@ -141,6 +141,18 @@ class PythonModelRenderer(
           } else {
             value.pythonEnumMemberName
           }
+        if (memberName.isBlank()) {
+          if (enumValueNames.isNotEmpty()) {
+            genError(
+              "Python enum '$name' x-enum-varnames entry '${enumValueNames[index]}' for value '$value' " +
+                "contains no valid identifier characters. Fix x-enum-varnames with a valid Python enum member name.",
+            )
+          }
+          genError(
+            "Python enum '$name' value '$value' contains no valid identifier characters. " +
+              "Add x-enum-varnames with a valid Python enum member name.",
+          )
+        }
         validatePythonEnumMemberName(
           memberName,
           value,

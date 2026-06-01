@@ -413,9 +413,11 @@ class TypeScriptSundayIrGenerator(
     val typeName = type.typeName(serviceTypeName)
     val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (value is String && enumModel != null) {
-      enumModel.typeScriptEnumMemberNameForValue(value)?.let { memberName ->
-        return CodeBlock.of("%T.%L", typeName, memberName)
-      }
+      return CodeBlock.of(
+        "%T.%L",
+        typeName,
+        enumModel.requireTypeScriptEnumMemberNameForValue(value, "default"),
+      )
     }
     return literal(value)
   }
@@ -1281,9 +1283,11 @@ class TypeScriptSundayIrGenerator(
           model.kind == GeneratedModel.Kind.ENUM
         }
     if (enumModel != null) {
-      enumModel.typeScriptEnumMemberNameForValue(discriminatorValue)?.let { memberName ->
-        return CodeBlock.of("%T.%L", discriminatorTypeName, memberName)
-      }
+      return CodeBlock.of(
+        "%T.%L",
+        discriminatorTypeName,
+        enumModel.requireTypeScriptEnumMemberNameForValue(discriminatorValue, "discriminator"),
+      )
     }
     return CodeBlock.of("%S", discriminatorValue)
   }
@@ -1300,9 +1304,12 @@ class TypeScriptSundayIrGenerator(
           model.kind == GeneratedModel.Kind.ENUM
         }
     if (enumModel != null) {
-      enumModel.typeScriptEnumMemberNameForValue(discriminatorValue)?.let { memberName ->
-        return CodeBlock.of("%T.literal(%T.%L)", Z, discriminatorTypeName, memberName)
-      }
+      return CodeBlock.of(
+        "%T.literal(%T.%L)",
+        Z,
+        discriminatorTypeName,
+        enumModel.requireTypeScriptEnumMemberNameForValue(discriminatorValue, "discriminator"),
+      )
     }
     return CodeBlock.of("%T.literal(%S)", Z, discriminatorValue)
   }
@@ -3002,6 +3009,16 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.typeScriptEnumMemberNameForValue(value: String): String? =
     typeScriptEnumEntries().singleOrNull { entry -> entry.value == value }?.name
+
+  private fun GeneratedModel.requireTypeScriptEnumMemberNameForValue(
+    value: String,
+    usage: String,
+  ): String =
+    typeScriptEnumMemberNameForValue(value)
+      ?: genError(
+        "TypeScript enum '$name' $usage value '$value' does not match any enum value. " +
+          "Fix the $usage value or the enum definition.",
+      )
 
   private fun GeneratedModel.typeScriptEnumEntries(): List<TypeScriptEnumEntry> =
     typeScriptEnumEntriesByModel.getOrPut(this) {

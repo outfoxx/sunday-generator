@@ -970,6 +970,103 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `rejects enum parameter defaults that do not match enum entries`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum Default API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        services =
+          listOf(
+            GeneratedService(
+              name = "SearchService",
+              baseUri = "https://{status}.example.com",
+              baseUriParameters =
+                listOf(
+                  GeneratedParameter(
+                    "status",
+                    GeneratedParameter.Location.PATH,
+                    GeneratedTypeRef.named("Status"),
+                    defaultValue = "missing",
+                  ),
+                ),
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "search",
+                    method = "GET",
+                    path = "/search",
+                  ),
+                ),
+            ),
+          ),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("active"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("TypeScript enum 'Status' default value 'missing'"), error.message)
+    assertTrue(error.message!!.contains("does not match any enum value"), error.message)
+  }
+
+  @Test
+  fun `rejects enum discriminator values that do not match enum entries`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum Discriminator API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Kind",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("known"),
+            ),
+            GeneratedModel(
+              name = "Entity",
+              kind = GeneratedModel.Kind.OBJECT,
+              discriminator = "kind",
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "kind",
+                    GeneratedTypeRef.named("Kind"),
+                    required = true,
+                  ),
+                ),
+            ),
+            GeneratedModel(
+              name = "UnknownEntity",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("Entity")),
+              discriminatorValue = "unknown",
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("TypeScript enum 'Kind' discriminator value 'unknown'"), error.message)
+    assertTrue(error.message!!.contains("does not match any enum value"), error.message)
+  }
+
+  @Test
   fun `generates named discriminated union models directly from IR`(compiler: TypeScriptCompiler) {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val api =
