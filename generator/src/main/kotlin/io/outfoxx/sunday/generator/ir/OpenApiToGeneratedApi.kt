@@ -860,11 +860,7 @@ class OpenApiToGeneratedApi(
       .values
       .flatMap { response -> response.content().entries }
       .any { (mediaType, media) ->
-        mediaType == "text/event-stream" &&
-          media
-            .mapValue("schema")
-            .orEmpty()
-            .let { schema -> schema.schemaType() != "string" || schema.refName() != null }
+        mediaType == "text/event-stream"
       }.takeIf { it }
       ?.let { GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM) }
 

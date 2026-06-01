@@ -817,6 +817,23 @@ class TypeScriptSundayIrGeneratorTest {
           .get(findTypeMod("Notification@!notification", builtTypes), "notification")
           .writeTo(this)
       }
+    val activitySource =
+      buildString {
+        FileSpec
+          .get(findTypeMod("NotificationActivity@!notification-activity", builtTypes), "notification-activity")
+          .writeTo(this)
+      }
+    val reviewRequestedSource =
+      buildString {
+        FileSpec
+          .get(
+            findTypeMod(
+              "PullRequestReviewRequestedNotification@!pull-request-review-requested-notification",
+              builtTypes,
+            ),
+            "pull-request-review-requested-notification",
+          ).writeTo(this)
+      }
 
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(
@@ -834,6 +851,11 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(fallbackTypeSource.contains("DottedCase = 'dotted.case'"), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("MixedKebabCase = 'mixed-kebab.case'"), fallbackTypeSource)
     assertTrue(notificationSource.contains("'type': runtime.resolveSchema(NotificationTypeSchema)"), notificationSource)
+    assertTrue(activitySource.contains("z.union(["), activitySource)
+    assertTrue(
+      reviewRequestedSource.contains("'kind': z.literal(NotificationType.pullRequestReviewRequested)"),
+      reviewRequestedSource,
+    )
   }
 
   @Test
@@ -865,6 +887,35 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `rejects invalid explicit TypeScript enum member names`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("wire"),
+              enumValueNames = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("x-enum-varnames entry '123'"), error.message)
+    assertTrue(error.message!!.contains("for value 'wire'"), error.message)
+    assertTrue(error.message!!.contains("invalid member name '123'"), error.message)
+  }
+
+  @Test
   fun `rejects unmappable TypeScript enum values without explicit names`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val api =
@@ -888,6 +939,33 @@ class TypeScriptSundayIrGeneratorTest {
       }
 
     assertTrue(error.message!!.contains("maps to invalid member name '123'"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects delimiter only TypeScript enum values with tailored error`() {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("---"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("contains no valid identifier characters"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
   }
 

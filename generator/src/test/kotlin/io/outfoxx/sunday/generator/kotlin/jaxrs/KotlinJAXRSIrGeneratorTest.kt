@@ -1546,6 +1546,8 @@ class KotlinJAXRSIrGeneratorTest {
     val notificationTypeSource = kotlinSource("io.test", findType("io.test.NotificationType", builtTypes))
     val fallbackTypeSource = kotlinSource("io.test", findType("io.test.FallbackType", builtTypes))
     val notificationSource = kotlinSource("io.test", findType("io.test.Notification", builtTypes))
+    val eventSource = kotlinSource("io.test", findType("io.test.NotificationEvent", builtTypes))
+    val activitySource = kotlinSource("io.test", findType("io.test.NotificationActivity", builtTypes))
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(
@@ -1563,6 +1565,11 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(fallbackTypeSource.contains("DottedCase(\"dotted.case\")"), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("MixedKebabCase(\"mixed-kebab.case\")"), fallbackTypeSource)
     assertTrue(notificationSource.contains("public val `type`: NotificationType"), notificationSource)
+    assertTrue(eventSource.contains("public val `kind`: NotificationType"), eventSource)
+    assertTrue(
+      activitySource.contains("if (discriminatorValue == \"notification.pull_request.review_requested\")"),
+      activitySource,
+    )
   }
 
   @OptIn(ExperimentalCompilerApi::class)

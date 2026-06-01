@@ -202,6 +202,10 @@ class SwiftSundayIrGeneratorTest {
     val notificationTypeSource = Files.readString(compiler.srcDir.resolve("Models").resolve("NotificationType.swift"))
     val fallbackTypeSource = Files.readString(compiler.srcDir.resolve("Models").resolve("FallbackType.swift"))
     val notificationSource = Files.readString(compiler.srcDir.resolve("Models").resolve("Notification.swift"))
+    val notificationActivitySource =
+      Files.readString(compiler.srcDir.resolve("Models").resolve("NotificationActivity.swift"))
+    val reviewRequestedSource =
+      Files.readString(compiler.srcDir.resolve("Models").resolve("PullRequestReviewRequestedNotification.swift"))
 
     assertTrue(compileGeneratedFiles(compiler))
     assertTrue(
@@ -219,6 +223,14 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(fallbackTypeSource.contains("case dottedCase = \"dotted.case\""), fallbackTypeSource)
     assertTrue(fallbackTypeSource.contains("case mixedKebabCase = \"mixed-kebab.case\""), fallbackTypeSource)
     assertTrue(notificationSource.contains("public let type: NotificationType"), notificationSource)
+    assertTrue(
+      notificationActivitySource.contains("if discriminatorValue == \"notification.pull_request.review_requested\""),
+      notificationActivitySource,
+    )
+    assertTrue(
+      reviewRequestedSource.contains("return NotificationType.pullRequestReviewRequested"),
+      reviewRequestedSource,
+    )
   }
 
   @Test
@@ -530,8 +542,13 @@ class SwiftSundayIrGeneratorTest {
       eventEnvelopeSource,
     )
     assertTrue(eventEnvelopeSource.contains("if discriminatorValue == \"project.created\""), eventEnvelopeSource)
-    assertTrue(eventDataSource.contains("public protocol EventData"), eventDataSource)
-    assertTrue(projectCreatedSource.contains("public struct ProjectCreatedData : EventData"), projectCreatedSource)
+    assertTrue(eventEnvelopeSource.contains("return .projectCreatedData(value.data)"), eventEnvelopeSource)
+    assertTrue(
+      eventDataSource.contains("public enum EventData : Codable, CustomDebugStringConvertible, Sendable"),
+      eventDataSource,
+    )
+    assertTrue(eventDataSource.contains("case projectCreatedData(ProjectCreatedData)"), eventDataSource)
+    assertTrue(projectCreatedSource.contains("public struct ProjectCreatedData : Codable"), projectCreatedSource)
   }
 
   @Test
@@ -1427,6 +1444,35 @@ class SwiftSundayIrGeneratorTest {
 
     assertTrue(error.message!!.contains("case name 'same' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects invalid explicit Swift enum case names`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("wire"),
+              enumValueNames = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("x-enum-varnames entry '123'"), error.message)
+    assertTrue(error.message!!.contains("for value 'wire'"), error.message)
+    assertTrue(error.message!!.contains("invalid case name '123'"), error.message)
   }
 
   @Test

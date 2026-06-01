@@ -228,10 +228,15 @@ class KotlinJAXRSCLITest {
     assertTrue(outputPackageDir.resolve("ProjectCreatedData.kt").isFile)
 
     assertTrue(eventsApi.readText().contains("@GET"))
-    assertTrue(eventsApi.readText().contains("fun streamEvents"))
     if (quarkus) {
+      assertTrue(eventsApi.readText().contains("fun streamEvents(): Multi<EventEnvelope>"), eventsApi.readText())
       assertTrue(aggregateApi.readText().contains("RestPath"))
+    } else if (mode == "client") {
+      assertTrue(eventsApi.readText().contains("fun streamEvents(): SseEventSource"), eventsApi.readText())
+      assertTrue(aggregateApi.readText().contains("PathParam"))
     } else {
+      assertTrue(eventsApi.readText().contains("fun streamEvents(@Context sse: Sse"), eventsApi.readText())
+      assertTrue(eventsApi.readText().contains("@Context sseEvents: SseEventSink"), eventsApi.readText())
       assertTrue(aggregateApi.readText().contains("PathParam"))
     }
   }

@@ -19,11 +19,27 @@ package io.outfoxx.sunday.generator.kotlin.utils
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
+import java.util.IdentityHashMap
 
 internal data class KotlinEnumEntry(
   val name: String,
   val value: String,
 )
+
+internal class KotlinEnumEntriesResolver {
+
+  private val entriesByModel = IdentityHashMap<GeneratedModel, List<KotlinEnumEntry>>()
+
+  fun entries(model: GeneratedModel): List<KotlinEnumEntry> =
+    entriesByModel.getOrPut(model) {
+      model.kotlinEnumEntries()
+    }
+
+  fun constantNameForValue(
+    model: GeneratedModel,
+    value: String,
+  ): String? = entries(model).singleOrNull { entry -> entry.value == value }?.name
+}
 
 internal fun GeneratedModel.kotlinEnumEntries(): List<KotlinEnumEntry> {
   if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
@@ -41,7 +57,11 @@ internal fun GeneratedModel.kotlinEnumEntries(): List<KotlinEnumEntry> {
         } else {
           value.kotlinEnumConstantName()
         }
-      validateKotlinEnumConstantName(constantName, value)
+      validateKotlinEnumConstantName(
+        constantName,
+        value,
+        enumValueNames.getOrNull(index),
+      )
       KotlinEnumEntry(constantName, value)
     }
 
@@ -59,9 +79,6 @@ internal fun GeneratedModel.kotlinEnumEntries(): List<KotlinEnumEntry> {
   return entries
 }
 
-internal fun GeneratedModel.kotlinEnumConstantNameForValue(value: String): String? =
-  kotlinEnumEntries().singleOrNull { entry -> entry.value == value }?.name
-
 internal fun String.kotlinEnumConstantName(): String =
   split(enumSplitRegex)
     .joinToString("") { part -> part.replaceFirstChar { it.titlecase() } }
@@ -70,8 +87,16 @@ internal fun String.kotlinEnumConstantName(): String =
 private fun GeneratedModel.validateKotlinEnumConstantName(
   constantName: String,
   value: String,
+  explicitName: String?,
 ) {
   if (!kotlinEnumConstantIdentifierRegex.matches(constantName)) {
+    if (explicitName != null) {
+      genError(
+        "Kotlin enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+          "maps to invalid constant name '$constantName'. Fix x-enum-varnames with a valid " +
+          "Kotlin enum constant name.",
+      )
+    }
     genError(
       "Kotlin enum '$name' value '$value' maps to invalid constant name '$constantName'. " +
         "Add x-enum-varnames with a valid Kotlin enum constant name.",

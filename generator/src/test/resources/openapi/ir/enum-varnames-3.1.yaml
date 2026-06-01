@@ -19,6 +19,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Notification"
+  /activity:
+    get:
+      operationId: getActivity
+      responses:
+        "200":
+          description: Activity response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationActivity"
 components:
   schemas:
     NotificationType:
@@ -48,3 +58,41 @@ components:
           $ref: "#/components/schemas/NotificationType"
         fallback:
           $ref: "#/components/schemas/FallbackType"
+    NotificationEvent:
+      type: object
+      required: [kind, id]
+      discriminator:
+        propertyName: kind
+        mapping:
+          notification.pull_request.review_requested: "#/components/schemas/PullRequestReviewRequestedNotification"
+          notification.pull_request.merged: "#/components/schemas/PullRequestMergedNotification"
+      properties:
+        kind:
+          $ref: "#/components/schemas/NotificationType"
+        id:
+          type: string
+    PullRequestReviewRequestedNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationEvent"
+        - type: object
+          required: [reviewerId]
+          properties:
+            reviewerId:
+              type: string
+    PullRequestMergedNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationEvent"
+        - type: object
+          required: [mergedBy]
+          properties:
+            mergedBy:
+              type: string
+    NotificationActivity:
+      oneOf:
+        - $ref: "#/components/schemas/PullRequestReviewRequestedNotification"
+        - $ref: "#/components/schemas/PullRequestMergedNotification"
+      discriminator:
+        propertyName: kind
+        mapping:
+          notification.pull_request.review_requested: "#/components/schemas/PullRequestReviewRequestedNotification"
+          notification.pull_request.merged: "#/components/schemas/PullRequestMergedNotification"

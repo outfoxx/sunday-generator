@@ -1152,9 +1152,9 @@ class KotlinSundayIrGeneratorTest {
       envelopeSource,
       "JsonSubTypes.Type(value = ProjectCreatedData::class, name = \"project.created\")",
     )
-    assertContains(eventDataSource, "JsonTypeInfo.As.EXTERNAL_PROPERTY")
-    assertContains(eventDataSource, "property = \"type\"")
-    assertContains(eventDataSource, "JsonSubTypes.Type(value = ProjectCreatedData::class, name = \"project.created\")")
+    assertContains(eventDataSource, "public sealed interface EventData")
+    assertContains(eventDataSource, "using = EventData.Deserializer::class")
+    assertContains(eventDataSource, "ProjectCreatedData::class.java")
     assertContains(createdDataSource, "public interface ProjectCreatedData : EventData")
     assertFalse(envelopeSource.contains("Map<String, Any>"), envelopeSource)
   }
@@ -1197,7 +1197,7 @@ class KotlinSundayIrGeneratorTest {
   fun `uses OpenAPI enum varnames and wire values in Kotlin Sunday`(
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
   ) {
-    val typeRegistry = typeRegistry()
+    val typeRegistry = typeRegistry(setOf(KotlinTypeRegistry.Option.JacksonAnnotations))
     val api = GeneratedApiIrExporter().export(testUri)
 
     KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
@@ -1222,6 +1222,18 @@ class KotlinSundayIrGeneratorTest {
           .get("io.test", findType("io.test.Notification", builtTypes))
           .writeTo(this)
       }
+    val eventSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.NotificationEvent", builtTypes))
+          .writeTo(this)
+      }
+    val activitySource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.NotificationActivity", builtTypes))
+          .writeTo(this)
+      }
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertContains(notificationTypeSource, "PullRequestReviewRequested(\"notification.pull_request.review_requested\")")
@@ -1236,6 +1248,8 @@ class KotlinSundayIrGeneratorTest {
     assertContains(fallbackTypeSource, "DottedCase(\"dotted.case\")")
     assertContains(fallbackTypeSource, "MixedKebabCase(\"mixed-kebab.case\")")
     assertContains(notificationSource, "public val `type`: NotificationType")
+    assertContains(eventSource, "public val `kind`: NotificationType")
+    assertContains(activitySource, "if (discriminatorValue == \"notification.pull_request.review_requested\")")
   }
 
   @Test
@@ -1264,6 +1278,35 @@ class KotlinSundayIrGeneratorTest {
 
     assertContains(error.message!!, "constant name 'Same' is used for multiple values")
     assertContains(error.message!!, "x-enum-varnames")
+  }
+
+  @Test
+  fun `rejects invalid explicit Kotlin enum constant names`() {
+    val typeRegistry = typeRegistry()
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("wire"),
+              enumValueNames = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertContains(error.message!!, "x-enum-varnames entry '123'")
+    assertContains(error.message!!, "for value 'wire'")
+    assertContains(error.message!!, "invalid constant name '123'")
   }
 
   @Test

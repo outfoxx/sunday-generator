@@ -116,6 +116,22 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI text event stream responses to streaming operations`(
+    @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    val operation =
+      api
+        .services
+        .single()
+        .operations
+        .single()
+
+    assertEquals(GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM), operation.streaming)
+  }
+
+  @Test
   fun `maps OpenAPI 3_1 path item parameters to generated API IR`(
     @ResourceUri("openapi/ir/path-item-parameters-3.1.yaml") testUri: URI,
   ) {
@@ -209,6 +225,21 @@ class OpenApiToGeneratedApiTest {
     assertEquals(
       listOf("pullRequestReviewRequested", "pullRequestMerged", "teamMemberAdded"),
       notificationType.enumValueNames,
+    )
+    val notificationEvent = api.models.single { model -> model.name == "NotificationEvent" }
+    assertEquals(
+      GeneratedTypeRef.named("NotificationType"),
+      notificationEvent.properties.single { property -> property.name == "kind" }.type,
+    )
+    val notificationActivity = api.models.single { model -> model.name == "NotificationActivity" }
+    assertEquals("kind", notificationActivity.discriminator)
+    assertEquals(
+      mapOf(
+        "notification.pull_request.review_requested" to
+          GeneratedTypeRef.named("PullRequestReviewRequestedNotification"),
+        "notification.pull_request.merged" to GeneratedTypeRef.named("PullRequestMergedNotification"),
+      ),
+      notificationActivity.discriminatorMappings,
     )
   }
 

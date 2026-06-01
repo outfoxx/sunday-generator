@@ -131,6 +131,7 @@ class TypeScriptSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val index = GeneratedApiIndex(api)
+  private val typeScriptEnumEntriesByModel = mutableMapOf<GeneratedModel, List<TypeScriptEnumEntry>>()
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
@@ -1182,6 +1183,25 @@ class TypeScriptSundayIrGenerator(
       candidate.inherits.any { inherited -> inherited.modelOrNull(index) == this }
     }
 
+  private fun GeneratedModel.discriminatorCaseModels(): List<Pair<String?, GeneratedModel>> =
+    buildList {
+      val mappedDiscriminators =
+        discriminatorMappings
+          .mapNotNull { (discriminatorValue, typeRef) ->
+            val model = typeRef.modelOrNull(index) ?: return@mapNotNull null
+            model to discriminatorValue
+          }.toMap()
+      val childModels = childModels()
+      childModels.forEach { model -> add((mappedDiscriminators[model] ?: model.discriminatorValue) to model) }
+      discriminatorMappings.forEach { (discriminatorValue, typeRef) ->
+        val model = typeRef.modelOrNull(index) ?: return@forEach
+        if (model in childModels) {
+          return@forEach
+        }
+        add(discriminatorValue to model)
+      }
+    }
+
   private fun GeneratedModel.isRecursiveModel(): Boolean = referencesModel(this, mutableSetOf())
 
   private fun GeneratedModel.referencesModel(
@@ -1718,14 +1738,8 @@ class TypeScriptSundayIrGenerator(
         ?: return listOf()
     val discriminatedModel = discriminatedProperty.type.modelOrNull(index) ?: return listOf()
 
-    return discriminatedModel.childModels().map { childModel ->
+    return discriminatedModel.discriminatorCaseModels().map { (mappedDiscriminator, childModel) ->
       val childTypeName = childModel.typeName(childModel.name.toUpperCamelCase())
-      val mappedDiscriminator =
-        discriminatedModel
-          .discriminatorMappings
-          .entries
-          .firstOrNull { (_, mappedType) -> mappedType.modelOrNull(index) == childModel }
-          ?.key
       ExternalDiscriminatorTypedVariant(
         discriminatedProperty,
         discriminatorProperty,
@@ -1922,14 +1936,8 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     variantSchema: (CodeBlock, String) -> CodeBlock,
   ): List<Pair<String, CodeBlock>> =
-    childModels().map { childModel ->
+    discriminatorCaseModels().map { (mappedDiscriminator, childModel) ->
       val childTypeName = childModel.typeName(childModel.name.toUpperCamelCase())
-      val mappedDiscriminator =
-        discriminatorMappings
-          .entries
-          .firstOrNull { (_, mappedType) ->
-            mappedType.modelOrNull(index) == childModel
-          }?.key
       val discriminatorValue = childModel.discriminatorValue ?: mappedDiscriminator ?: childModel.name
       discriminatorValue to variantSchema(typeRegistry.schemaInitializer(childTypeName), discriminatorValue)
     }
@@ -2995,7 +3003,12 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.typeScriptEnumMemberNameForValue(value: String): String? =
     typeScriptEnumEntries().singleOrNull { entry -> entry.value == value }?.name
 
-  private fun GeneratedModel.typeScriptEnumEntries(): List<TypeScriptEnumEntry> {
+  private fun GeneratedModel.typeScriptEnumEntries(): List<TypeScriptEnumEntry> =
+    typeScriptEnumEntriesByModel.getOrPut(this) {
+      createTypeScriptEnumEntries()
+    }
+
+  private fun GeneratedModel.createTypeScriptEnumEntries(): List<TypeScriptEnumEntry> {
     if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
       genError(
         "TypeScript enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
@@ -3009,9 +3022,13 @@ class TypeScriptSundayIrGenerator(
           if (enumValueNames.isNotEmpty()) {
             enumValueNames[index].trim()
           } else {
-            value.typeScriptEnumConstantName()
+            typeScriptEnumMemberName(value)
           }
-        validateTypeScriptEnumMemberName(memberName, value)
+        validateTypeScriptEnumMemberName(
+          memberName,
+          value,
+          enumValueNames.getOrNull(index),
+        )
         TypeScriptEnumEntry(memberName, value)
       }
 
@@ -3032,8 +3049,16 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.validateTypeScriptEnumMemberName(
     memberName: String,
     value: String,
+    explicitName: String?,
   ) {
     if (!typeScriptEnumMemberIdentifierRegex.matches(memberName) || memberName in typeScriptReservedWords) {
+      if (explicitName != null) {
+        genError(
+          "TypeScript enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+            "maps to invalid member name '$memberName'. Fix x-enum-varnames with a valid " +
+            "TypeScript enum member name.",
+        )
+      }
       genError(
         "TypeScript enum '$name' value '$value' maps to invalid member name '$memberName'. " +
           "Add x-enum-varnames with a valid TypeScript enum member name.",
@@ -3045,6 +3070,14 @@ class TypeScriptSundayIrGenerator(
     val name: String,
     val value: String,
   )
+
+  private fun GeneratedModel.typeScriptEnumMemberName(value: String): String =
+    value.typeScriptEnumConstantName().ifBlank {
+      genError(
+        "TypeScript enum '$name' value '$value' contains no valid identifier characters. " +
+          "Add x-enum-varnames with a valid TypeScript enum member name.",
+      )
+    }
 
   private fun String.typeScriptEnumConstantName(): String =
     split(enumNameDelimiter)

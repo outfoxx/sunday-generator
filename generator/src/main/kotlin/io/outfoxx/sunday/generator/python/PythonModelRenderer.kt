@@ -29,11 +29,13 @@ class PythonModelRenderer(
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
+  private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
 
   /** Renders the given models into the package `models.py` module. */
   fun renderModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
     modelIndex = models.associateBy { model -> model.name }
+    pythonEnumEntriesByModel.clear()
 
     models
       .filter { model -> model.isSupportedModel() }
@@ -118,7 +120,12 @@ class PythonModelRenderer(
     )
   }
 
-  private fun GeneratedModel.pythonEnumEntries(): List<PythonEnumEntry> {
+  private fun GeneratedModel.pythonEnumEntries(): List<PythonEnumEntry> =
+    pythonEnumEntriesByModel.getOrPut(this) {
+      createPythonEnumEntries()
+    }
+
+  private fun GeneratedModel.createPythonEnumEntries(): List<PythonEnumEntry> {
     if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
       genError(
         "Python enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
@@ -134,7 +141,11 @@ class PythonModelRenderer(
           } else {
             value.pythonEnumMemberName
           }
-        validatePythonEnumMemberName(memberName, value)
+        validatePythonEnumMemberName(
+          memberName,
+          value,
+          enumValueNames.getOrNull(index),
+        )
         PythonEnumEntry(memberName, value)
       }
 
@@ -155,8 +166,16 @@ class PythonModelRenderer(
   private fun GeneratedModel.validatePythonEnumMemberName(
     memberName: String,
     value: String,
+    explicitName: String?,
   ) {
     if (!pythonEnumMemberIdentifierRegex.matches(memberName)) {
+      if (explicitName != null) {
+        genError(
+          "Python enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+            "maps to invalid member name '$memberName'. Fix x-enum-varnames with a valid " +
+            "Python enum member name.",
+        )
+      }
       genError(
         "Python enum '$name' value '$value' maps to invalid member name '$memberName'. " +
           "Add x-enum-varnames with a valid Python enum member name.",
@@ -175,7 +194,7 @@ class PythonModelRenderer(
     val aliases = unionAliases().ifEmpty { listOf(GeneratedTypeRef.scalar("any")) }
     val unionType = aliases.renderUnionType()
 
-    return if (discriminator == null || kind == GeneratedModel.Kind.OBJECT) {
+    return if (discriminator == null || kind == GeneratedModel.Kind.OBJECT || isExternallyDiscriminatedUnion()) {
       if (aliases.size > 3) {
         PythonCodeBlock.of(
           """
@@ -370,17 +389,31 @@ class PythonModelRenderer(
     modelIndex.values.firstNotNullOfOrNull { candidate ->
       candidate.discriminator
         ?.takeIf {
-          candidate.discriminatorMappings.values.any { mappedType ->
-            mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
-          }
+          !candidate.isExternallyDiscriminatedUnion() &&
+            candidate.discriminatorMappings.values.any { mappedType ->
+              mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
+            }
         }
     }
 
   private fun GeneratedModel.mappedDiscriminatorValue(): String? =
     modelIndex.values.firstNotNullOfOrNull { candidate ->
+      if (candidate.isExternallyDiscriminatedUnion()) {
+        return@firstNotNullOfOrNull null
+      }
       candidate.discriminatorMappings.entries
         .firstOrNull { (_, mappedType) ->
           mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
         }?.key
     }
+
+  private fun GeneratedModel.isExternallyDiscriminatedUnion(): Boolean =
+    kind == GeneratedModel.Kind.UNION &&
+      modelIndex.values.any { candidate ->
+        candidate.properties.any { property ->
+          property.externalDiscriminator != null &&
+            property.type.kind == GeneratedTypeRef.Kind.NAMED &&
+            property.type.name == name
+        }
+      }
 }

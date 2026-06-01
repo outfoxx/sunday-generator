@@ -104,6 +104,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH
@@ -126,8 +127,6 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumConstantNameForValue
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumEntries
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
@@ -151,6 +150,7 @@ class KotlinSundayIrGenerator(
 
   private val requestTypeVariable = TypeVariableName("Req", SUNDAY_REQUEST)
   private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable)
+  private val kotlinEnumEntries = KotlinEnumEntriesResolver()
 
   init {
     require(typeRegistry.problemLibrary != KotlinProblemLibrary.QUARKUS) {
@@ -498,7 +498,7 @@ class KotlinSundayIrGenerator(
     }
 
   private fun GeneratedModel.enumTypeSpec(): TypeSpec.Builder {
-    val entries = kotlinEnumEntries()
+    val entries = kotlinEnumEntries.entries(this)
     val customWireValues = entries.any { entry -> entry.name != entry.value }
 
     return TypeSpec
@@ -1397,7 +1397,7 @@ class KotlinSundayIrGenerator(
   ): CodeBlock {
     val enumModel = type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (defaultValue is String && enumModel != null) {
-      enumModel.kotlinEnumConstantNameForValue(defaultValue)?.let { constantName ->
+      kotlinEnumEntries.constantNameForValue(enumModel, defaultValue)?.let { constantName ->
         return CodeBlock.of("%T.%L", typeName, constantName)
       }
     }
@@ -1807,7 +1807,7 @@ class KotlinSundayIrGenerator(
         .modelOrNull(apiIndex)
         ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
         ?: return null
-    val entries = enumModel.kotlinEnumEntries()
+    val entries = kotlinEnumEntries.entries(enumModel)
     if (entries.isEmpty()) {
       return null
     }

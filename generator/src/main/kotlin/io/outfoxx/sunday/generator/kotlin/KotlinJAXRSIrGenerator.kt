@@ -108,6 +108,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -126,7 +127,6 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
-import io.outfoxx.sunday.generator.kotlin.utils.kotlinEnumEntries
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
@@ -157,6 +157,7 @@ class KotlinJAXRSIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val kotlinEnumEntries = KotlinEnumEntriesResolver()
   private val generationMode = typeRegistry.generationMode
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
   private val reactiveResponseType =
@@ -1803,7 +1804,8 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
     when (kind) {
-      GeneratedModel.Kind.ENUM ->
+      GeneratedModel.Kind.ENUM -> {
+        val entries = kotlinEnumEntries.entries(this)
         TypeSpec
           .enumBuilder(kotlinClassName())
           .addModifiers(KModifier.PUBLIC)
@@ -1832,7 +1834,7 @@ class KotlinJAXRSIrGenerator(
             if (typeRegistry.options.contains(JacksonAnnotations)) {
               addType(jsonCreatorCompanionType())
             }
-            kotlinEnumEntries().forEach { entry ->
+            entries.forEach { entry ->
               addEnumConstant(
                 entry.name,
                 TypeSpec
@@ -1842,6 +1844,7 @@ class KotlinJAXRSIrGenerator(
               )
             }
           }
+      }
 
       GeneratedModel.Kind.OBJECT ->
         objectTypeSpec()

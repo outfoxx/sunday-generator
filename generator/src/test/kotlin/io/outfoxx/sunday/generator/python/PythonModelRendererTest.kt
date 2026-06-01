@@ -292,7 +292,9 @@ class PythonModelRendererTest : PythonTest() {
         importModules = listOf("turnpost_api.models"),
         smokeCode =
           """
-          from turnpost_api.models import FallbackType, Notification, NotificationType
+          from pydantic import TypeAdapter
+
+          from turnpost_api.models import FallbackType, Notification, NotificationActivity, NotificationType, PullRequestReviewRequestedNotification
 
           notification = Notification.model_validate(
               {
@@ -304,6 +306,16 @@ class PythonModelRendererTest : PythonTest() {
           assert notification.type == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
           assert notification.type.value == "notification.pull_request.review_requested"
           assert notification.fallback == FallbackType.MIXED_KEBAB_CASE
+
+          activity = TypeAdapter(NotificationActivity).validate_python(
+              {
+                  "kind": "notification.pull_request.review_requested",
+                  "id": "notification-1",
+                  "reviewerId": "user-1",
+              },
+          )
+          assert isinstance(activity, PullRequestReviewRequestedNotification)
+          assert activity.kind == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
           """.trimIndent(),
       ),
     )
@@ -321,6 +333,10 @@ class PythonModelRendererTest : PythonTest() {
     assertTrue(modelSource.contains("LOWER_INTER_CAPS = \"lowerInterCaps\""), modelSource)
     assertTrue(modelSource.contains("DOTTED_CASE = \"dotted.case\""), modelSource)
     assertTrue(modelSource.contains("MIXED_KEBAB_CASE = \"mixed-kebab.case\""), modelSource)
+    assertTrue(
+      modelSource.contains("kind: Literal[\"notification.pull_request.review_requested\"]"),
+      modelSource,
+    )
   }
 
   @Test
@@ -342,6 +358,28 @@ class PythonModelRendererTest : PythonTest() {
 
     assertTrue(error.message!!.contains("member name 'SAME' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects invalid explicit Python enum member names`() {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api")
+          .renderModels(
+            listOf(
+              GeneratedModel(
+                name = "Status",
+                kind = GeneratedModel.Kind.ENUM,
+                values = listOf("wire"),
+                enumValueNames = listOf("123"),
+              ),
+            ),
+          )
+      }
+
+    assertTrue(error.message!!.contains("x-enum-varnames entry '123'"), error.message)
+    assertTrue(error.message!!.contains("for value 'wire'"), error.message)
+    assertTrue(error.message!!.contains("invalid member name '123'"), error.message)
   }
 
   @Test

@@ -225,8 +225,7 @@ class GeneratedApiComposer {
       path.startsWith("/")
 
   private fun GeneratedOperation.isEventStreamFramingPlaceholder(asyncEventStreamPaths: Set<String>): Boolean =
-    streaming == null &&
-      method == "GET" &&
+    method == "GET" &&
       path in asyncEventStreamPaths &&
       responses.any { response ->
         EVENT_STREAM_MEDIA_TYPE in response.mediaTypes &&
