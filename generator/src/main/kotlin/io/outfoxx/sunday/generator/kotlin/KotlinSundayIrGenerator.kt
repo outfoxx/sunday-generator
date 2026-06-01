@@ -500,6 +500,7 @@ class KotlinSundayIrGenerator(
   private fun GeneratedModel.enumTypeSpec(): TypeSpec.Builder {
     val entries = kotlinEnumEntries.entries(this)
     val customWireValues = entries.any { entry -> entry.name != entry.value }
+    val jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
 
     return TypeSpec
       .enumBuilder(kotlinClassName())
@@ -518,16 +519,19 @@ class KotlinSundayIrGenerator(
               .initializer("wireValue")
               .build(),
           )
-          addFunction(
+          val toStringFunction =
             FunSpec
               .builder("toString")
-              .addAnnotation(JACKSON_JSON_VALUE)
               .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
               .returns(STRING)
               .addStatement("return wireValue")
-              .build(),
-          )
-          addType(jsonCreatorCompanionType())
+          if (jacksonAnnotations) {
+            toStringFunction.addAnnotation(JACKSON_JSON_VALUE)
+          }
+          addFunction(toStringFunction.build())
+          if (jacksonAnnotations) {
+            addType(jsonCreatorCompanionType())
+          }
         }
 
         entries.forEach { entry ->

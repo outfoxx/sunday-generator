@@ -1252,6 +1252,43 @@ class KotlinSundayIrGeneratorTest {
     assertContains(activitySource, "if (discriminatorValue == \"notification.pull_request.review_requested\")")
   }
 
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `omits Jackson annotations for custom wire enum values when Jackson annotations are disabled`() {
+    val typeRegistry = typeRegistry()
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending-review"),
+              enumValueNames = listOf("pendingReview"),
+            ),
+          ),
+      )
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val statusSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.Status", builtTypes))
+          .writeTo(this)
+      }
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertContains(statusSource, "PendingReview(\"pending-review\")")
+    assertContains(statusSource, "public override fun toString(): String")
+    assertFalse(statusSource.contains("@JsonValue"), statusSource)
+    assertFalse(statusSource.contains("@JsonCreator"), statusSource)
+  }
+
   @Test
   fun `rejects duplicate explicit Kotlin enum constant names`() {
     val typeRegistry = typeRegistry()

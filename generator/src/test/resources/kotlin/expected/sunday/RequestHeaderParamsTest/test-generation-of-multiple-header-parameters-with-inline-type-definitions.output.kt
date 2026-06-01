@@ -1,7 +1,5 @@
 package io.test.service
 
-import com.fasterxml.jackson.`annotation`.JsonCreator
-import com.fasterxml.jackson.`annotation`.JsonValue
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.Operation
 import io.outfoxx.sunday.OperationSpec
@@ -9,13 +7,11 @@ import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
-import java.lang.IllegalArgumentException
 import kotlin.Any
 import kotlin.String
 import kotlin.Unit
 import kotlin.collections.List
 import kotlin.collections.Map
-import kotlin.jvm.JvmStatic
 
 public class API<Req : Request>(
   public val transport: Transport<Req>,
@@ -43,21 +39,7 @@ public class API<Req : Request>(
     Science("science"),
     ;
 
-    @JsonValue
     public override fun toString(): String = wireValue
-
-    public companion object {
-      @JsonCreator
-      @JvmStatic
-      public fun fromValue(rawValue: String): FetchTestCategoryHeaderParam {
-        for (entry in entries) {
-          if (entry.wireValue == rawValue) {
-            return entry
-          }
-        }
-        throw IllegalArgumentException("Unknown FetchTestCategoryHeaderParam value: " + rawValue)
-      }
-    }
   }
 
   public enum class FetchTestTypeHeaderParam(
@@ -67,20 +49,6 @@ public class API<Req : Request>(
     Limited("limited"),
     ;
 
-    @JsonValue
     public override fun toString(): String = wireValue
-
-    public companion object {
-      @JsonCreator
-      @JvmStatic
-      public fun fromValue(rawValue: String): FetchTestTypeHeaderParam {
-        for (entry in entries) {
-          if (entry.wireValue == rawValue) {
-            return entry
-          }
-        }
-        throw IllegalArgumentException("Unknown FetchTestTypeHeaderParam value: " + rawValue)
-      }
-    }
   }
 }
