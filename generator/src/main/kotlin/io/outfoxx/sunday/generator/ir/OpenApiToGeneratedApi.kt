@@ -434,14 +434,17 @@ class OpenApiToGeneratedApi(
           scope,
           localModels,
         )
-      resolved["enum"] is List<*> ->
+      resolved["enum"] is List<*> -> {
+        val values = resolved.listValue("enum").mapNotNull { it?.toString() }
         GeneratedModel(
           name = name,
           kind = GeneratedModel.Kind.ENUM,
           scope = scope,
-          values = resolved.listValue("enum").mapNotNull { it?.toString() },
+          values = values,
+          enumValueNames = resolved.enumValueNames(name, values),
           documentation = documentation(description = resolved["description"] as? String),
         )
+      }
 
       resolved.isUnconstrainedSchema() ->
         GeneratedModel(
@@ -857,11 +860,7 @@ class OpenApiToGeneratedApi(
       .values
       .flatMap { response -> response.content().entries }
       .any { (mediaType, media) ->
-        mediaType == "text/event-stream" &&
-          media
-            .mapValue("schema")
-            .orEmpty()
-            .let { schema -> schema.schemaType() != "string" || schema.refName() != null }
+        mediaType == "text/event-stream"
       }.takeIf { it }
       ?.let { GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM) }
 
@@ -1227,6 +1226,35 @@ class OpenApiToGeneratedApi(
   }
 
   private fun String.trimToNull(): String? = trim().takeIf { it.isNotEmpty() }
+
+  private fun Map<*, *>.enumValueNames(
+    modelName: String,
+    values: List<String>,
+  ): List<String> {
+    if (!containsKey("x-enum-varnames")) {
+      return emptyList()
+    }
+
+    val names =
+      this["x-enum-varnames"] as? List<*>
+        ?: throw IllegalArgumentException(
+          "OpenAPI enum model '$modelName' x-enum-varnames must be a list with one entry per enum value.",
+        )
+
+    if (names.size != values.size) {
+      throw IllegalArgumentException(
+        "OpenAPI enum model '$modelName' x-enum-varnames has ${names.size} entries for ${values.size} enum values.",
+      )
+    }
+
+    return names.mapIndexed { index, name ->
+      (name as? String)
+        ?.trimToNull()
+        ?: throw IllegalArgumentException(
+          "OpenAPI enum model '$modelName' x-enum-varnames entry ${index + 1} must be a non-blank string.",
+        )
+    }
+  }
 
   private fun Map<*, *>.mapValue(name: String): Map<*, *>? = this[name] as? Map<*, *>
 

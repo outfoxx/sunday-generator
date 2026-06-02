@@ -794,6 +794,16 @@ class GeneratedApiYamlTest {
         models =
           listOf(
             GeneratedModel(
+              name = "NotificationType",
+              kind = GeneratedModel.Kind.ENUM,
+              values =
+                listOf(
+                  "notification.pull_request.review_requested",
+                  "notification.pull_request.merged",
+                ),
+              enumValueNames = listOf("pullRequestReviewRequested", "pullRequestMerged"),
+            ),
+            GeneratedModel(
               name = "AuditEvent",
               kind = GeneratedModel.Kind.OBJECT,
               properties =

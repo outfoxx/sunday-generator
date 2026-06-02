@@ -35,18 +35,24 @@ components:
         type:
           type: string
         data:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/EventData"
+    EventData:
+      oneOf:
+        - $ref: "#/components/schemas/ProjectCreatedData"
+        - $ref: "#/components/schemas/ProjectDeletedData"
+      discriminator:
+        propertyName: type
+        mapping:
+          project.created: "#/components/schemas/ProjectCreatedData"
+          project.deleted: "#/components/schemas/ProjectDeletedData"
     ProjectCreatedData:
       type: object
-      description: Data for `project.created`.
       required: [projectId]
       properties:
         projectId:
           type: string
     ProjectDeletedData:
       type: object
-      description: Data for `project.deleted`.
       required: [projectId]
       properties:
         projectId:

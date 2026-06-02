@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.swift.sunday
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
@@ -50,6 +51,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.tag
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -188,6 +190,47 @@ class SwiftSundayIrGeneratorTest {
     generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
 
     assertTrue(compileGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `Swift Sunday generated files use OpenAPI enum varnames`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
+  ) {
+    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
+
+    val notificationTypeSource = Files.readString(compiler.srcDir.resolve("Models").resolve("NotificationType.swift"))
+    val fallbackTypeSource = Files.readString(compiler.srcDir.resolve("Models").resolve("FallbackType.swift"))
+    val notificationSource = Files.readString(compiler.srcDir.resolve("Models").resolve("Notification.swift"))
+    val notificationActivitySource =
+      Files.readString(compiler.srcDir.resolve("Models").resolve("NotificationActivity.swift"))
+    val reviewRequestedSource =
+      Files.readString(compiler.srcDir.resolve("Models").resolve("PullRequestReviewRequestedNotification.swift"))
+
+    assertTrue(compileGeneratedFiles(compiler))
+    assertTrue(
+      notificationTypeSource.contains(
+        "case pullRequestReviewRequested = \"notification.pull_request.review_requested\"",
+      ),
+      notificationTypeSource,
+    )
+    assertTrue(notificationTypeSource.contains("case pullRequestMerged = \"notification.pull_request.merged\""))
+    assertTrue(notificationTypeSource.contains("case teamMemberAdded = \"notification.team.member_added\""))
+    assertTrue(fallbackTypeSource.contains("case `open` = \"OPEN\""), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("case lowerSnake = \"lower_snake\""), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("case upperInterCaps = \"UpperInterCaps\""), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("case lowerInterCaps = \"lowerInterCaps\""), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("case dottedCase = \"dotted.case\""), fallbackTypeSource)
+    assertTrue(fallbackTypeSource.contains("case mixedKebabCase = \"mixed-kebab.case\""), fallbackTypeSource)
+    assertTrue(notificationSource.contains("public let type: NotificationType"), notificationSource)
+    assertTrue(
+      notificationActivitySource.contains("if discriminatorValue == \"notification.pull_request.review_requested\""),
+      notificationActivitySource,
+    )
+    assertTrue(
+      reviewRequestedSource.contains("return NotificationType.pullRequestReviewRequested"),
+      reviewRequestedSource,
+    )
   }
 
   @Test
@@ -499,8 +542,13 @@ class SwiftSundayIrGeneratorTest {
       eventEnvelopeSource,
     )
     assertTrue(eventEnvelopeSource.contains("if discriminatorValue == \"project.created\""), eventEnvelopeSource)
-    assertTrue(eventDataSource.contains("public protocol EventData"), eventDataSource)
-    assertTrue(projectCreatedSource.contains("public struct ProjectCreatedData : EventData"), projectCreatedSource)
+    assertTrue(eventEnvelopeSource.contains("return .projectCreatedData(value.data)"), eventEnvelopeSource)
+    assertTrue(
+      eventDataSource.contains("public enum EventData : Codable, CustomDebugStringConvertible, Sendable"),
+      eventDataSource,
+    )
+    assertTrue(eventDataSource.contains("case projectCreatedData(ProjectCreatedData)"), eventDataSource)
+    assertTrue(projectCreatedSource.contains("public struct ProjectCreatedData : Codable"), projectCreatedSource)
   }
 
   @Test
@@ -1368,6 +1416,141 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(containerSource.contains("public let set: Set<String>"), containerSource)
     assertTrue(containerSource.contains("public let map: [String : String]"), containerSource)
     assertTrue(containerSource.contains("public let union: AnyValue"), containerSource)
+  }
+
+  @Test
+  fun `rejects duplicate explicit Swift enum case names`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("one", "two"),
+              enumValueNames = listOf("same", "same"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("case name 'same' is used for multiple values"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects invalid explicit Swift enum case names`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("wire"),
+              enumValueNames = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("x-enum-varnames entry '123'"), error.message)
+    assertTrue(error.message!!.contains("for value 'wire'"), error.message)
+    assertTrue(error.message!!.contains("invalid case name '123'"), error.message)
+  }
+
+  @Test
+  fun `rejects unmappable Swift enum values without explicit names`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("123"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("maps to invalid case name '123'"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `rejects enum values that do not match enum entries`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum Default API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        services =
+          listOf(
+            GeneratedService(
+              name = "SearchService",
+              baseUri = "https://{status}.example.com",
+              baseUriParameters =
+                listOf(
+                  GeneratedParameter(
+                    "status",
+                    GeneratedParameter.Location.PATH,
+                    GeneratedTypeRef.named("Status"),
+                    defaultValue = "missing",
+                  ),
+                ),
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "search",
+                    method = "GET",
+                    path = "/search",
+                  ),
+                ),
+            ),
+          ),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("active"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("Swift enum 'Status' value 'missing'"), error.message)
+    assertTrue(error.message!!.contains("does not match any enum value"), error.message)
   }
 
   @Test

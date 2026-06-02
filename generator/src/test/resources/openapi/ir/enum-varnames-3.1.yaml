@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: Enum API
+  version: 1.0.0
+paths:
+  /notifications/{type}:
+    get:
+      operationId: getNotification
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+      responses:
+        "200":
+          description: Notification response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+  /activity:
+    get:
+      operationId: getActivity
+      responses:
+        "200":
+          description: Activity response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationActivity"
+components:
+  schemas:
+    NotificationType:
+      type: string
+      enum:
+        - notification.pull_request.review_requested
+        - notification.pull_request.merged
+        - notification.team.member_added
+      x-enum-varnames:
+        - pullRequestReviewRequested
+        - pullRequestMerged
+        - teamMemberAdded
+    FallbackType:
+      type: string
+      enum:
+        - OPEN
+        - lower_snake
+        - UpperInterCaps
+        - lowerInterCaps
+        - dotted.case
+        - mixed-kebab.case
+    Notification:
+      type: object
+      required: [type, fallback]
+      properties:
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        fallback:
+          $ref: "#/components/schemas/FallbackType"
+    NotificationEvent:
+      type: object
+      required: [kind, id]
+      discriminator:
+        propertyName: kind
+        mapping:
+          notification.pull_request.review_requested: "#/components/schemas/PullRequestReviewRequestedNotification"
+          notification.pull_request.merged: "#/components/schemas/PullRequestMergedNotification"
+      properties:
+        kind:
+          $ref: "#/components/schemas/NotificationType"
+        id:
+          type: string
+    PullRequestReviewRequestedNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationEvent"
+        - type: object
+          required: [reviewerId]
+          properties:
+            reviewerId:
+              type: string
+    PullRequestMergedNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationEvent"
+        - type: object
+          required: [mergedBy]
+          properties:
+            mergedBy:
+              type: string
+    NotificationActivity:
+      oneOf:
+        - $ref: "#/components/schemas/PullRequestReviewRequestedNotification"
+        - $ref: "#/components/schemas/PullRequestMergedNotification"
+      discriminator:
+        propertyName: kind
+        mapping:
+          notification.pull_request.review_requested: "#/components/schemas/PullRequestReviewRequestedNotification"
+          notification.pull_request.merged: "#/components/schemas/PullRequestMergedNotification"

@@ -82,8 +82,7 @@ val String.pythonEnumMemberName: String
       .replace(nonIdentifierChars, "_")
       .trim('_')
       .uppercase()
-      .ifBlank { "VALUE" }
-      .let { if (it.first().isDigit()) "_$it" else it }
+      .let { if (it.isNotEmpty() && it.first().isDigit()) "_$it" else it }
 
 internal val GeneratedService.pythonServiceBaseName: String
   get() = name.removeSuffix("Service").removeSuffix("API")

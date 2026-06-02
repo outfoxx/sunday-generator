@@ -143,6 +143,7 @@ class SwiftSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
   private val runtimeProblemTypeName: DeclaredTypeName =
     if (api.hasGeneratedSwiftTypeNamed(PROBLEM.simpleName)) {
       QUALIFIED_PROBLEM
@@ -444,7 +445,10 @@ class SwiftSundayIrGenerator(
     name == "EventEnvelope" ||
       name == "EventData" ||
       inherits.any { type -> type.name == "EventData" } ||
-      discriminatorMappings.values.any { type -> type.name == "EventData" || type.name.endsWith("Data") }
+      api.models.any { model ->
+        model.name == "EventData" &&
+          model.discriminatorMappings.values.any { type -> type.modelOrNull(apiIndex) == this }
+      }
 
   private fun GeneratedModel.swiftModelKey(): SwiftModelKey = SwiftModelKey(name, scope, source)
 
@@ -801,8 +805,8 @@ class SwiftSundayIrGenerator(
           .addSwiftDoc(documentation)
           .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, SENDABLE))
           .apply {
-            values.filterIsInstance<String>().forEach { value ->
-              addEnumCase(value.swiftEnumCaseName, value)
+            swiftEnumEntries().forEach { entry ->
+              addEnumCase(entry.name, entry.value)
             }
           }
 
@@ -883,7 +887,16 @@ class SwiftSundayIrGenerator(
           .apply {
             beginControlFlow("switch", "self")
             cases.forEach { case ->
-              addStatement("case .%N(let value):%Wreturn value.%N", case.caseName, property.name.swiftIdentifierName)
+              if (property == dataProperty && property.type.modelOrNull(apiIndex)?.kind == GeneratedModel.Kind.UNION) {
+                addStatement(
+                  "case .%N(let value):%Wreturn .%N(value.%N)",
+                  case.caseName,
+                  case.model.unionCaseName,
+                  property.name.swiftIdentifierName,
+                )
+              } else {
+                addStatement("case .%N(let value):%Wreturn value.%N", case.caseName, property.name.swiftIdentifierName)
+              }
             }
             endControlFlow("switch")
           }.build(),
@@ -3484,34 +3497,22 @@ class SwiftSundayIrGenerator(
     replace("/*", "/ *")
       .replace("*/", "* /")
 
-  companion object {
-
-    private val ANY_PATCH_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.AnyPatchOp")
-    private val UPDATE_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.UpdateOp")
-    private val PATCH_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.PatchOp")
-    private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
-    private val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
-    private val optionalBaseProblemProperties = setOf("detail", "instance")
-    private val requestModelUsages =
-      setOf(
-        GeneratedModelScope.Usage.PARAMETER,
-        GeneratedModelScope.Usage.QUERY_STRING,
-        GeneratedModelScope.Usage.REQUEST_BODY,
-        GeneratedModelScope.Usage.SECURITY_QUERY_STRING,
-      )
-  }
-
   private fun Any.swiftValueCode(
     typeName: TypeName,
     typeRef: GeneratedTypeRef?,
   ): CodeBlock =
     when (this) {
-      is String ->
-        if (typeRef?.modelOrNull(apiIndex)?.kind == GeneratedModel.Kind.ENUM) {
-          CodeBlock.of("%T.%N", typeName, swiftEnumCaseName)
+      is String -> {
+        val enumModel =
+          typeRef
+            ?.modelOrNull(apiIndex)
+            ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
+        if (enumModel != null) {
+          CodeBlock.of("%T.%N", typeName, enumModel.requireSwiftEnumCaseNameForValue(this))
         } else {
           CodeBlock.of("%S", this)
         }
+      }
 
       is Number -> CodeBlock.of("%L", this)
       is Boolean -> CodeBlock.of("%L", this)
@@ -3527,6 +3528,101 @@ class SwiftSundayIrGenerator(
 
       else -> CodeBlock.of("%S", toString())
     }
+
+  private fun GeneratedModel.swiftEnumCaseNameForValue(value: String): String? =
+    swiftEnumEntries().singleOrNull { entry -> entry.value == value }?.name
+
+  private fun GeneratedModel.requireSwiftEnumCaseNameForValue(value: String): String =
+    swiftEnumCaseNameForValue(value)
+      ?: genError(
+        "Swift enum '$name' value '$value' does not match any enum value. " +
+          "Fix the value or the enum definition.",
+      )
+
+  private fun GeneratedModel.swiftEnumEntries(): List<SwiftEnumEntry> =
+    swiftEnumEntriesByModel.getOrPut(this) {
+      createSwiftEnumEntries()
+    }
+
+  private fun GeneratedModel.createSwiftEnumEntries(): List<SwiftEnumEntry> {
+    if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
+      genError(
+        "Swift enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
+          "Fix x-enum-varnames so it has one entry per enum value.",
+      )
+    }
+
+    val entries =
+      values.mapIndexed { index, value ->
+        val caseName =
+          if (enumValueNames.isNotEmpty()) {
+            enumValueNames[index].trim()
+          } else {
+            value.swiftEnumCaseName
+          }
+        validateSwiftEnumCaseName(
+          caseName,
+          value,
+          enumValueNames.getOrNull(index),
+        )
+        SwiftEnumEntry(caseName, value)
+      }
+
+    entries
+      .groupBy { entry -> entry.name }
+      .filterValues { duplicates -> duplicates.size > 1 }
+      .forEach { (caseName, duplicates) ->
+        genError(
+          "Swift enum '$name' case name '$caseName' is used for multiple values " +
+            duplicates.joinToString(", ") { entry -> "'${entry.value}'" } +
+            ". Add x-enum-varnames to disambiguate them.",
+        )
+      }
+
+    return entries
+  }
+
+  private fun GeneratedModel.validateSwiftEnumCaseName(
+    caseName: String,
+    value: String,
+    explicitName: String?,
+  ) {
+    if (!swiftEnumCaseIdentifierRegex.matches(caseName)) {
+      if (explicitName != null) {
+        genError(
+          "Swift enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+            "maps to invalid case name '$caseName'. Fix x-enum-varnames with a valid Swift case name.",
+        )
+      }
+      genError(
+        "Swift enum '$name' value '$value' maps to invalid case name '$caseName'. " +
+          "Add x-enum-varnames with a valid Swift case name.",
+      )
+    }
+  }
+
+  private data class SwiftEnumEntry(
+    val name: String,
+    val value: String,
+  )
+
+  companion object {
+
+    private val ANY_PATCH_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.AnyPatchOp")
+    private val UPDATE_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.UpdateOp")
+    private val PATCH_OP = DeclaredTypeName.typeName("$SUNDAY_MODULE.PatchOp")
+    private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
+    private val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
+    private val optionalBaseProblemProperties = setOf("detail", "instance")
+    private val swiftEnumCaseIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
+    private val requestModelUsages =
+      setOf(
+        GeneratedModelScope.Usage.PARAMETER,
+        GeneratedModelScope.Usage.QUERY_STRING,
+        GeneratedModelScope.Usage.REQUEST_BODY,
+        GeneratedModelScope.Usage.SECURITY_QUERY_STRING,
+      )
+  }
 
   private fun mediaTypesArray(
     mimeTypes: List<String>,

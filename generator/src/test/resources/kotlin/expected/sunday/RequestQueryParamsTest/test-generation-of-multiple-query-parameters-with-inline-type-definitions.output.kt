@@ -32,13 +32,23 @@ public class API<Req : Request>(
     )
   )
 
-  public enum class FetchTestCategoryQueryParam {
-    Politics,
-    Science,
+  public enum class FetchTestCategoryQueryParam(
+    private val wireValue: String,
+  ) {
+    Politics("politics"),
+    Science("science"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestTypeQueryParam {
-    All,
-    Limited,
+  public enum class FetchTestTypeQueryParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 }

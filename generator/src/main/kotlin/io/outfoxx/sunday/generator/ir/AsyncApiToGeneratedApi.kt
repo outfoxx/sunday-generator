@@ -38,7 +38,6 @@ class AsyncApiToGeneratedApi(
       val localModels = linkedMapOf<String, GeneratedModel>()
       val servers = sourceDocument.servers().map { server -> server.generatedServer(sourceDocument) }
       val serviceFragments = sourceDocument.serviceFragments(sourceUri.toString(), localModels)
-      localModels.applyEventDataModels(sourceUri.toString(), sourceDocument, sourceDocument.eventDataTypes())
       val services = serviceFragments.map { fragment -> fragment.service }
       val generatedApi =
         GeneratedApi(
@@ -462,11 +461,13 @@ class AsyncApiToGeneratedApi(
             val wireName = propertyName as? String ?: return@mapNotNull null
             val propertySchemaMap = propertySchema as? Map<*, *> ?: return@mapNotNull null
             val generatedName = wireName.toLowerCamelCase()
+            val propertyType = schemaTypeRef(propertySchemaMap, generatedName.toUpperCamelCase(), location, localModels)
             GeneratedModelProperty(
               name = generatedName,
-              type = schemaTypeRef(propertySchemaMap, generatedName.toUpperCamelCase(), location, localModels),
+              type = propertyType,
               required = wireName in schema.requiredNames,
               serializationName = wireName.takeUnless { it == generatedName },
+              externalDiscriminator = schema.externalDiscriminatorName(wireName, propertyType, localModels),
               validation = validation(propertySchemaMap),
               documentation = documentation(description = propertySchemaMap["description"] as? String),
             )
@@ -475,67 +476,37 @@ class AsyncApiToGeneratedApi(
     )
   }
 
-  private fun MutableMap<String, GeneratedModel>.applyEventDataModels(
-    location: String,
-    sourceDocument: AsyncApiSourceDocument,
-    eventDataTypes: Map<String, String>,
-  ) {
-    if (eventDataTypes.isEmpty()) {
-      return
-    }
-
-    val eventDataRef = GeneratedTypeRef.named("EventData")
-    val mappings = eventDataTypes.mapValues { (_, modelName) -> GeneratedTypeRef.named(modelName) }
-
-    eventDataTypes.values.forEach { modelName ->
-      if (!containsKey(modelName)) {
-        sourceDocument.schemas()[modelName]?.let { schema ->
-          this[modelName] = generatedModel(modelName, schema, location, this)
-        }
-      }
-    }
-
-    this["EventData"] =
-      this["EventData"]
-        ?.copy(discriminatorMappings = this["EventData"]?.discriminatorMappings.orEmpty() + mappings)
-        ?: GeneratedModel(
-          name = "EventData",
-          kind = GeneratedModel.Kind.OBJECT,
-          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, location),
-          discriminatorMappings = mappings,
-        )
-
-    eventDataTypes.forEach { (eventType, modelName) ->
-      this[modelName]?.let { model ->
-        this[modelName] =
-          model.copy(
-            inherits = (model.inherits + eventDataRef).distinct(),
-            discriminatorValue = eventType,
-          )
-      }
-    }
-
-    entries
-      .mapNotNull { (modelName, model) ->
-        val properties =
-          model.properties.map { property ->
-            if (property.name == "data" && property.type.kind == GeneratedTypeRef.Kind.MAP) {
-              property.copy(type = eventDataRef, externalDiscriminator = "type")
-            } else {
-              property
-            }
-          }
-        if (properties == model.properties) null else modelName to model.copy(properties = properties)
-      }.forEach { (modelName, model) ->
-        this[modelName] = model
-      }
-  }
-
   private fun documentation(
     summary: String? = null,
     description: String? = null,
   ): GeneratedDocumentation? =
     GeneratedDocumentation(summary = summary, description = description).takeUnless { it == GeneratedDocumentation() }
+
+  private fun Map<*, *>.externalDiscriminatorName(
+    propertyWireName: String,
+    propertyType: GeneratedTypeRef,
+    localModels: Map<String, GeneratedModel>,
+  ): String? {
+    if (propertyType.kind != GeneratedTypeRef.Kind.NAMED) {
+      return null
+    }
+
+    val model = localModels[propertyType.name] ?: return null
+    if (model.kind != GeneratedModel.Kind.UNION || model.discriminatorMappings.isEmpty()) {
+      return null
+    }
+
+    val discriminator = model.discriminator ?: return null
+    if (discriminator == propertyWireName) {
+      return null
+    }
+
+    return discriminator
+      .takeIf { discriminatorName ->
+        mapValue("properties")
+          ?.containsKey(discriminatorName) == true
+      }?.toLowerCamelCase()
+  }
 
   private val currentSourceDocument: AsyncApiSourceDocument
     get() = activeSourceDocument ?: error("No active AsyncAPI source document")
@@ -742,7 +713,7 @@ class AsyncApiToGeneratedApi(
         when {
           containsKey("properties") || containsKey("additionalProperties") -> "object"
           containsKey("items") -> "array"
-          containsKey("enum") || !this["format"].toString().isBlank() -> "string"
+          containsKey("enum") || (this["format"] as? String)?.isNotBlank() == true -> "string"
           else -> "any"
         }
     }
@@ -1054,24 +1025,6 @@ class AsyncApiToGeneratedApi(
         ?.protocolBindings(GeneratedProtocolBinding.Kind.OPERATION)
         .orEmpty()
 
-    fun eventDataTypes(): Map<String, String> =
-      source
-        .mapValue("components")
-        ?.mapValue("schemas")
-        .orEmpty()
-        .mapNotNull { (name, value) ->
-          val modelName = name as? String ?: return@mapNotNull null
-          val schema = value as? Map<*, *> ?: return@mapNotNull null
-          val description = schema["description"] as? String ?: return@mapNotNull null
-          val eventType =
-            eventDataDescriptionRegex
-              .find(description)
-              ?.groupValues
-              ?.getOrNull(1)
-              ?: return@mapNotNull null
-          eventType to modelName
-        }.toMap()
-
     private fun Map<*, *>.listValue(name: String): List<Map<*, *>>? =
       when (val value = this[name]) {
         is List<*> -> value.filterIsInstance<Map<*, *>>()
@@ -1139,7 +1092,6 @@ class AsyncApiToGeneratedApi(
     companion object {
 
       private val yamlMapper = ObjectMapper(YAMLFactory())
-      private val eventDataDescriptionRegex = Regex("""\bData for `([^`]+)`""")
 
       fun read(location: String): AsyncApiSourceDocument =
         AsyncApiSourceDocument(

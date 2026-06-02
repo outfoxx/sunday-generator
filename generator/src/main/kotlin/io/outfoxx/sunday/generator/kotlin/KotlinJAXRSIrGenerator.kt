@@ -108,6 +108,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -156,6 +157,7 @@ class KotlinJAXRSIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val kotlinEnumEntries = KotlinEnumEntriesResolver()
   private val generationMode = typeRegistry.generationMode
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
   private val reactiveResponseType =
@@ -1802,7 +1804,8 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
     when (kind) {
-      GeneratedModel.Kind.ENUM ->
+      GeneratedModel.Kind.ENUM -> {
+        val entries = kotlinEnumEntries.entries(this)
         TypeSpec
           .enumBuilder(kotlinClassName())
           .addModifiers(KModifier.PUBLIC)
@@ -1831,16 +1834,17 @@ class KotlinJAXRSIrGenerator(
             if (typeRegistry.options.contains(JacksonAnnotations)) {
               addType(jsonCreatorCompanionType())
             }
-            values.forEach { value ->
+            entries.forEach { entry ->
               addEnumConstant(
-                value.enumConstantName(),
+                entry.name,
                 TypeSpec
                   .anonymousClassBuilder()
-                  .addSuperclassConstructorParameter("%S", value)
+                  .addSuperclassConstructorParameter("%S", entry.value)
                   .build(),
               )
             }
           }
+      }
 
       GeneratedModel.Kind.OBJECT ->
         objectTypeSpec()
@@ -2923,11 +2927,6 @@ class KotlinJAXRSIrGenerator(
       map { wireName -> CodeBlock.of("tree.has(%S)", wireName) }.joinToCode(" $operator ")
     }
 
-  private fun String.enumConstantName(): String =
-    split(enumSplitRegex)
-      .joinToString("") { part -> part.replaceFirstChar { it.titlecase() } }
-      .toUpperCamelCase()
-
   private companion object {
     const val SSE_CONTENT_TYPE = "text/event-stream"
 
@@ -2958,7 +2957,6 @@ class KotlinJAXRSIrGenerator(
 
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
-    val enumSplitRegex = """\W""".toRegex()
     val enumMemberSplitRegex = """\W+""".toRegex()
     val policyMillisRegex = """PT(\d+)MS""".toRegex(RegexOption.IGNORE_CASE)
   }

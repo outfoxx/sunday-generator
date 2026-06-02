@@ -39,18 +39,33 @@ public class API<Req : Request>(
     )
   )
 
-  public enum class FetchTestSelectUriParam {
-    All,
-    Limited,
+  public enum class FetchTestSelectUriParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestPageQueryParam {
-    All,
-    Limited,
+  public enum class FetchTestPageQueryParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 
-  public enum class FetchTestXTypeHeaderParam {
-    All,
-    Limited,
+  public enum class FetchTestXTypeHeaderParam(
+    private val wireValue: String,
+  ) {
+    All("all"),
+    Limited("limited"),
+    ;
+
+    public override fun toString(): String = wireValue
   }
 }

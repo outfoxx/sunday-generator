@@ -406,8 +406,14 @@ class AsyncApiToGeneratedApiTest {
       equalTo(
         GeneratedModel(
           name = "EventData",
-          kind = GeneratedModel.Kind.OBJECT,
+          kind = GeneratedModel.Kind.UNION,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
+          aliases =
+            listOf(
+              GeneratedTypeRef.named("ProjectCreatedData"),
+              GeneratedTypeRef.named("ProjectDeletedData"),
+            ),
+          discriminator = "type",
           discriminatorMappings =
             mapOf(
               "project.created" to GeneratedTypeRef.named("ProjectCreatedData"),
@@ -418,14 +424,14 @@ class AsyncApiToGeneratedApiTest {
     )
     assertThat(
       models["ProjectCreatedData"]?.inherits,
-      equalTo(listOf(GeneratedTypeRef.named("EventData"))),
+      equalTo(emptyList()),
     )
-    assertThat(models["ProjectCreatedData"]?.discriminatorValue, equalTo("project.created"))
+    assertThat(models["ProjectCreatedData"]?.discriminatorValue, equalTo(null))
     assertThat(
       models["ProjectDeletedData"]?.inherits,
-      equalTo(listOf(GeneratedTypeRef.named("EventData"))),
+      equalTo(emptyList()),
     )
-    assertThat(models["ProjectDeletedData"]?.discriminatorValue, equalTo("project.deleted"))
+    assertThat(models["ProjectDeletedData"]?.discriminatorValue, equalTo(null))
   }
 
   @Test
@@ -480,8 +486,8 @@ class AsyncApiToGeneratedApiTest {
         ),
       ),
     )
-    assertThat(models["ProjectCreatedData"]?.inherits, equalTo(listOf(GeneratedTypeRef.named("EventData"))))
-    assertThat(models["ProjectCreatedData"]?.discriminatorValue, equalTo("project.created"))
+    assertThat(models["ProjectCreatedData"]?.inherits, equalTo(emptyList()))
+    assertThat(models["ProjectCreatedData"]?.discriminatorValue, equalTo(null))
   }
 
   @Test

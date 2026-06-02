@@ -34,11 +34,16 @@ components:
         type:
           type: string
         data:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/EventData"
+    EventData:
+      oneOf:
+        - $ref: "#/components/schemas/ProjectCreatedData"
+      discriminator:
+        propertyName: type
+        mapping:
+          project.created: "#/components/schemas/ProjectCreatedData"
     ProjectCreatedData:
       type: object
-      description: Data for `project.created`.
       required: [projectId]
       properties:
         projectId:

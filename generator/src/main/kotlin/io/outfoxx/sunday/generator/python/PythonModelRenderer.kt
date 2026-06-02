@@ -16,9 +16,12 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+
+private val pythonEnumMemberIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 /** Renders IR models into a Python Pydantic models module. */
 class PythonModelRenderer(
@@ -26,11 +29,13 @@ class PythonModelRenderer(
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
+  private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
 
   /** Renders the given models into the package `models.py` module. */
   fun renderModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
     modelIndex = models.associateBy { model -> model.name }
+    pythonEnumEntriesByModel.clear()
 
     models
       .filter { model -> model.isSupportedModel() }
@@ -100,8 +105,8 @@ class PythonModelRenderer(
 
   private fun GeneratedModel.renderEnumModel(): PythonCodeBlock {
     val body =
-      values
-        .joinToString("\n") { value -> "    ${value.pythonEnumMemberName} = ${value.pythonStringLiteral()}" }
+      pythonEnumEntries()
+        .joinToString("\n") { entry -> "    ${entry.name} = ${entry.value.pythonStringLiteral()}" }
         .ifBlank { "    pass" }
 
     return PythonCodeBlock.of(
@@ -115,13 +120,93 @@ class PythonModelRenderer(
     )
   }
 
+  private fun GeneratedModel.pythonEnumEntries(): List<PythonEnumEntry> =
+    pythonEnumEntriesByModel.getOrPut(this) {
+      createPythonEnumEntries()
+    }
+
+  private fun GeneratedModel.createPythonEnumEntries(): List<PythonEnumEntry> {
+    if (enumValueNames.isNotEmpty() && enumValueNames.size != values.size) {
+      genError(
+        "Python enum '$name' has ${enumValueNames.size} enum value names for ${values.size} enum values. " +
+          "Fix x-enum-varnames so it has one entry per enum value.",
+      )
+    }
+
+    val entries =
+      values.mapIndexed { index, value ->
+        val memberName =
+          if (enumValueNames.isNotEmpty()) {
+            enumValueNames[index].pythonEnumMemberName
+          } else {
+            value.pythonEnumMemberName
+          }
+        if (memberName.isBlank()) {
+          if (enumValueNames.isNotEmpty()) {
+            genError(
+              "Python enum '$name' x-enum-varnames entry '${enumValueNames[index]}' for value '$value' " +
+                "contains no valid identifier characters. Fix x-enum-varnames with a valid Python enum member name.",
+            )
+          }
+          genError(
+            "Python enum '$name' value '$value' contains no valid identifier characters. " +
+              "Add x-enum-varnames with a valid Python enum member name.",
+          )
+        }
+        validatePythonEnumMemberName(
+          memberName,
+          value,
+          enumValueNames.getOrNull(index),
+        )
+        PythonEnumEntry(memberName, value)
+      }
+
+    entries
+      .groupBy { entry -> entry.name }
+      .filterValues { duplicates -> duplicates.size > 1 }
+      .forEach { (memberName, duplicates) ->
+        genError(
+          "Python enum '$name' member name '$memberName' is used for multiple values " +
+            duplicates.joinToString(", ") { entry -> "'${entry.value}'" } +
+            ". Add x-enum-varnames to disambiguate them.",
+        )
+      }
+
+    return entries
+  }
+
+  private fun GeneratedModel.validatePythonEnumMemberName(
+    memberName: String,
+    value: String,
+    explicitName: String?,
+  ) {
+    if (!pythonEnumMemberIdentifierRegex.matches(memberName)) {
+      if (explicitName != null) {
+        genError(
+          "Python enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+            "maps to invalid member name '$memberName'. Fix x-enum-varnames with a valid " +
+            "Python enum member name.",
+        )
+      }
+      genError(
+        "Python enum '$name' value '$value' maps to invalid member name '$memberName'. " +
+          "Add x-enum-varnames with a valid Python enum member name.",
+      )
+    }
+  }
+
+  private data class PythonEnumEntry(
+    val name: String,
+    val value: String,
+  )
+
   private fun GeneratedModel.renderUnionModel(): PythonCodeBlock = renderUnionAliasModel()
 
   private fun GeneratedModel.renderUnionAliasModel(): PythonCodeBlock {
     val aliases = unionAliases().ifEmpty { listOf(GeneratedTypeRef.scalar("any")) }
     val unionType = aliases.renderUnionType()
 
-    return if (discriminator == null || kind == GeneratedModel.Kind.OBJECT) {
+    return if (discriminator == null || kind == GeneratedModel.Kind.OBJECT || isExternallyDiscriminatedUnion()) {
       if (aliases.size > 3) {
         PythonCodeBlock.of(
           """
@@ -316,17 +401,31 @@ class PythonModelRenderer(
     modelIndex.values.firstNotNullOfOrNull { candidate ->
       candidate.discriminator
         ?.takeIf {
-          candidate.discriminatorMappings.values.any { mappedType ->
-            mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
-          }
+          !candidate.isExternallyDiscriminatedUnion() &&
+            candidate.discriminatorMappings.values.any { mappedType ->
+              mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
+            }
         }
     }
 
   private fun GeneratedModel.mappedDiscriminatorValue(): String? =
     modelIndex.values.firstNotNullOfOrNull { candidate ->
+      if (candidate.isExternallyDiscriminatedUnion()) {
+        return@firstNotNullOfOrNull null
+      }
       candidate.discriminatorMappings.entries
         .firstOrNull { (_, mappedType) ->
           mappedType.kind == GeneratedTypeRef.Kind.NAMED && mappedType.name == name
         }?.key
     }
+
+  private fun GeneratedModel.isExternallyDiscriminatedUnion(): Boolean =
+    kind == GeneratedModel.Kind.UNION &&
+      modelIndex.values.any { candidate ->
+        candidate.properties.any { property ->
+          property.externalDiscriminator != null &&
+            property.type.kind == GeneratedTypeRef.Kind.NAMED &&
+            property.type.name == name
+        }
+      }
 }

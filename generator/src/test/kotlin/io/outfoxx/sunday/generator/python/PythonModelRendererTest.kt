@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -24,8 +26,12 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.net.URI
 
 class PythonModelRendererTest : PythonTest() {
 
@@ -269,5 +275,154 @@ class PythonModelRendererTest : PythonTest() {
       "PythonModelRendererTest/models.py",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py"),
     )
+  }
+
+  @Test
+  fun `uses OpenAPI enum varnames and wire values in Python models`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(api.models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter
+
+          from turnpost_api.models import FallbackType, Notification, NotificationActivity, NotificationType, PullRequestReviewRequestedNotification
+
+          notification = Notification.model_validate(
+              {
+                  "type": "notification.pull_request.review_requested",
+                  "fallback": "mixed-kebab.case",
+              },
+          )
+
+          assert notification.type == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
+          assert notification.type.value == "notification.pull_request.review_requested"
+          assert notification.fallback == FallbackType.MIXED_KEBAB_CASE
+
+          activity = TypeAdapter(NotificationActivity).validate_python(
+              {
+                  "kind": "notification.pull_request.review_requested",
+                  "id": "notification-1",
+                  "reviewerId": "user-1",
+              },
+          )
+          assert isinstance(activity, PullRequestReviewRequestedNotification)
+          assert activity.kind == NotificationType.PULL_REQUEST_REVIEW_REQUESTED
+          """.trimIndent(),
+      ),
+    )
+
+    val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(
+      modelSource.contains("PULL_REQUEST_REVIEW_REQUESTED = \"notification.pull_request.review_requested\""),
+      modelSource,
+    )
+    assertTrue(modelSource.contains("PULL_REQUEST_MERGED = \"notification.pull_request.merged\""), modelSource)
+    assertTrue(modelSource.contains("TEAM_MEMBER_ADDED = \"notification.team.member_added\""), modelSource)
+    assertTrue(modelSource.contains("OPEN = \"OPEN\""), modelSource)
+    assertTrue(modelSource.contains("LOWER_SNAKE = \"lower_snake\""), modelSource)
+    assertTrue(modelSource.contains("UPPER_INTER_CAPS = \"UpperInterCaps\""), modelSource)
+    assertTrue(modelSource.contains("LOWER_INTER_CAPS = \"lowerInterCaps\""), modelSource)
+    assertTrue(modelSource.contains("DOTTED_CASE = \"dotted.case\""), modelSource)
+    assertTrue(modelSource.contains("MIXED_KEBAB_CASE = \"mixed-kebab.case\""), modelSource)
+    assertTrue(
+      modelSource.contains("kind: Literal[\"notification.pull_request.review_requested\"]"),
+      modelSource,
+    )
+  }
+
+  @Test
+  fun `rejects duplicate explicit Python enum member names`() {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api")
+          .renderModels(
+            listOf(
+              GeneratedModel(
+                name = "Status",
+                kind = GeneratedModel.Kind.ENUM,
+                values = listOf("one", "two"),
+                enumValueNames = listOf("same", "same"),
+              ),
+            ),
+          )
+      }
+
+    assertTrue(error.message!!.contains("member name 'SAME' is used for multiple values"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `prefixes digit leading Python enum member names`() {
+    assertEquals("_123", "123".pythonEnumMemberName)
+    assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)
+  }
+
+  @Test
+  fun `rejects blank explicit Python enum member names`() {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api")
+          .renderModels(
+            listOf(
+              GeneratedModel(
+                name = "Status",
+                kind = GeneratedModel.Kind.ENUM,
+                values = listOf("wire"),
+                enumValueNames = listOf("---"),
+              ),
+            ),
+          )
+      }
+
+    assertTrue(error.message!!.contains("x-enum-varnames entry '---'"), error.message)
+    assertTrue(error.message!!.contains("for value 'wire'"), error.message)
+    assertTrue(error.message!!.contains("contains no valid identifier characters"), error.message)
+  }
+
+  @Test
+  fun `generates digit leading Python enum values with prefixed member names`() {
+    val modelsModule =
+      PythonModelRenderer("turnpost_api")
+        .renderModels(
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("123"),
+            ),
+          ),
+        )
+
+    assertTrue(modelsModule.source.contains("_123 = \"123\""), modelsModule.source)
+  }
+
+  @Test
+  fun `rejects delimiter only Python enum values with tailored error`() {
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api")
+          .renderModels(
+            listOf(
+              GeneratedModel(
+                name = "Status",
+                kind = GeneratedModel.Kind.ENUM,
+                values = listOf("---"),
+              ),
+            ),
+          )
+      }
+
+    assertTrue(error.message!!.contains("contains no valid identifier characters"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
   }
 }

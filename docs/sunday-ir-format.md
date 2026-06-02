@@ -111,6 +111,8 @@ Object models may carry inheritance and discriminator metadata. `inherits` lists
 
 Externally discriminated root models carry `externallyDiscriminated`. Their discriminator value to model references are carried in `discriminatorMappings`. Model properties that are discriminated by a sibling wire field carry `externalDiscriminator` with the generated property name of that sibling discriminator field.
 
+Enum models carry wire values in `values`. When the source provides explicit generated enum member names, such as OpenAPI `x-enum-varnames`, those names are preserved positionally in `enumValueNames`; otherwise emitters derive target-language identifiers from the wire values.
+
 Models declared outside the root source document may carry `source` with the defining source location. Named type references may also carry `source` when the referenced declaration is imported. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
 
 ## Model Source Fidelity

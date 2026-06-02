@@ -102,7 +102,9 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_AS_EXTERNA
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH
@@ -148,6 +150,7 @@ class KotlinSundayIrGenerator(
 
   private val requestTypeVariable = TypeVariableName("Req", SUNDAY_REQUEST)
   private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable)
+  private val kotlinEnumEntries = KotlinEnumEntriesResolver()
 
   init {
     require(typeRegistry.problemLibrary != KotlinProblemLibrary.QUARKUS) {
@@ -485,14 +488,7 @@ class KotlinSundayIrGenerator(
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
     when (kind) {
       GeneratedModel.Kind.ENUM ->
-        TypeSpec
-          .enumBuilder(kotlinClassName())
-          .addModifiers(KModifier.PUBLIC)
-          .apply {
-            values.forEach { value ->
-              addEnumConstant(value.kotlinEnumConstantName())
-            }
-          }
+        enumTypeSpec()
 
       GeneratedModel.Kind.OBJECT -> objectTypeSpec()
 
@@ -500,6 +496,81 @@ class KotlinSundayIrGenerator(
 
       else -> null
     }
+
+  private fun GeneratedModel.enumTypeSpec(): TypeSpec.Builder {
+    val entries = kotlinEnumEntries.entries(this)
+    val customWireValues = entries.any { entry -> entry.name != entry.value }
+    val jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+
+    return TypeSpec
+      .enumBuilder(kotlinClassName())
+      .addModifiers(KModifier.PUBLIC)
+      .apply {
+        if (customWireValues) {
+          primaryConstructor(
+            FunSpec
+              .constructorBuilder()
+              .addParameter("wireValue", STRING)
+              .build(),
+          )
+          addProperty(
+            PropertySpec
+              .builder("wireValue", STRING, KModifier.PRIVATE)
+              .initializer("wireValue")
+              .build(),
+          )
+          val toStringFunction =
+            FunSpec
+              .builder("toString")
+              .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
+              .returns(STRING)
+              .addStatement("return wireValue")
+          if (jacksonAnnotations) {
+            toStringFunction.addAnnotation(JACKSON_JSON_VALUE)
+          }
+          addFunction(toStringFunction.build())
+          if (jacksonAnnotations) {
+            addType(jsonCreatorCompanionType())
+          }
+        }
+
+        entries.forEach { entry ->
+          if (customWireValues) {
+            addEnumConstant(
+              entry.name,
+              TypeSpec
+                .anonymousClassBuilder()
+                .addSuperclassConstructorParameter("%S", entry.value)
+                .build(),
+            )
+          } else {
+            addEnumConstant(entry.name)
+          }
+        }
+      }
+  }
+
+  private fun GeneratedModel.jsonCreatorCompanionType(): TypeSpec =
+    TypeSpec
+      .companionObjectBuilder()
+      .addFunction(
+        FunSpec
+          .builder("fromValue")
+          .addAnnotation(JACKSON_JSON_CREATOR)
+          .addAnnotation(ClassName("kotlin.jvm", "JvmStatic"))
+          .addParameter("rawValue", STRING)
+          .returns(kotlinClassName())
+          .beginControlFlow("for (entry in entries)")
+          .beginControlFlow("if (entry.wireValue == rawValue)")
+          .addStatement("return entry")
+          .endControlFlow()
+          .endControlFlow()
+          .addStatement(
+            "throw %T(%S + rawValue)",
+            IllegalArgumentException::class.asTypeName(),
+            "Unknown ${name.toUpperCamelCase()} value: ",
+          ).build(),
+      ).build()
 
   private fun GeneratedModel.objectTypeSpec(): TypeSpec.Builder {
     val inheritedProperties = inheritedModelProperties()
@@ -1328,8 +1399,13 @@ class KotlinSundayIrGenerator(
     defaultValue: Any,
     typeName: TypeName,
   ): CodeBlock {
-    if (defaultValue is String && type.modelOrNull(apiIndex)?.kind == GeneratedModel.Kind.ENUM) {
-      return CodeBlock.of("%T.%L", typeName, defaultValue.kotlinEnumConstantName())
+    val enumModel = type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
+    if (defaultValue is String && enumModel != null) {
+      return CodeBlock.of(
+        "%T.%L",
+        typeName,
+        kotlinEnumEntries.requireConstantNameForValue(enumModel, defaultValue, "default"),
+      )
     }
     return valueCode(defaultValue)
   }
@@ -1737,8 +1813,8 @@ class KotlinSundayIrGenerator(
         .modelOrNull(apiIndex)
         ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
         ?: return null
-    val values = enumModel.values.filterIsInstance<String>()
-    if (values.isEmpty()) {
+    val entries = kotlinEnumEntries.entries(enumModel)
+    if (entries.isEmpty()) {
       return null
     }
 
@@ -1747,8 +1823,8 @@ class KotlinSundayIrGenerator(
       .add("listOf(when (%N) {\n", name)
       .indent()
       .apply {
-        values.forEach { value ->
-          addStatement("%T.%L -> %L", type.kotlinTypeName(), value.kotlinEnumConstantName(), mediaType(value))
+        entries.forEach { entry ->
+          addStatement("%T.%L -> %L", type.kotlinTypeName(), entry.name, mediaType(entry.value))
         }
       }.unindent()
       .add("})")
@@ -2172,13 +2248,7 @@ class KotlinSundayIrGenerator(
       else -> CodeBlock.of("MediaType.from(%S)", value)
     }
 
-  private fun String.kotlinEnumConstantName(): String =
-    split(enumSplitRegex)
-      .joinToString("") { part -> part.replaceFirstChar { it.titlecase() } }
-      .toUpperCamelCase()
-
   private companion object {
-    val enumSplitRegex = """\W""".toRegex()
     val SUNDAY_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "operation")
     val SUNDAY_NULLABLE_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "nullableOperation")
     val TYPE_OF = MemberName("kotlin.reflect", "typeOf")
