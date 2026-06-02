@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -361,7 +362,13 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
-  fun `rejects invalid explicit Python enum member names`() {
+  fun `prefixes digit leading Python enum member names`() {
+    assertEquals("_123", "123".pythonEnumMemberName)
+    assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)
+  }
+
+  @Test
+  fun `rejects blank explicit Python enum member names`() {
     val error =
       assertThrows(GenerationException::class.java) {
         PythonModelRenderer("turnpost_api")
@@ -371,35 +378,32 @@ class PythonModelRendererTest : PythonTest() {
                 name = "Status",
                 kind = GeneratedModel.Kind.ENUM,
                 values = listOf("wire"),
-                enumValueNames = listOf("123"),
+                enumValueNames = listOf("---"),
               ),
             ),
           )
       }
 
-    assertTrue(error.message!!.contains("x-enum-varnames entry '123'"), error.message)
+    assertTrue(error.message!!.contains("x-enum-varnames entry '---'"), error.message)
     assertTrue(error.message!!.contains("for value 'wire'"), error.message)
-    assertTrue(error.message!!.contains("invalid member name '123'"), error.message)
+    assertTrue(error.message!!.contains("contains no valid identifier characters"), error.message)
   }
 
   @Test
-  fun `rejects unmappable Python enum values without explicit names`() {
-    val error =
-      assertThrows(GenerationException::class.java) {
-        PythonModelRenderer("turnpost_api")
-          .renderModels(
-            listOf(
-              GeneratedModel(
-                name = "Status",
-                kind = GeneratedModel.Kind.ENUM,
-                values = listOf("123"),
-              ),
+  fun `generates digit leading Python enum values with prefixed member names`() {
+    val modelsModule =
+      PythonModelRenderer("turnpost_api")
+        .renderModels(
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("123"),
             ),
-          )
-      }
+          ),
+        )
 
-    assertTrue(error.message!!.contains("maps to invalid member name '123'"), error.message)
-    assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+    assertTrue(modelsModule.source.contains("_123 = \"123\""), modelsModule.source)
   }
 
   @Test
