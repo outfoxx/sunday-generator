@@ -1503,6 +1503,57 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `rejects enum values that do not match enum entries`() {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Enum Default API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        services =
+          listOf(
+            GeneratedService(
+              name = "SearchService",
+              baseUri = "https://{status}.example.com",
+              baseUriParameters =
+                listOf(
+                  GeneratedParameter(
+                    "status",
+                    GeneratedParameter.Location.PATH,
+                    GeneratedTypeRef.named("Status"),
+                    defaultValue = "missing",
+                  ),
+                ),
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "search",
+                    method = "GET",
+                    path = "/search",
+                  ),
+                ),
+            ),
+          ),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("active"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(error.message!!.contains("Swift enum 'Status' value 'missing'"), error.message)
+    assertTrue(error.message!!.contains("does not match any enum value"), error.message)
+  }
+
+  @Test
   fun `generates object union enums directly from IR`(compiler: SwiftCompiler) {
     val typeRegistry = SwiftTypeRegistry(setOf())
     val api =

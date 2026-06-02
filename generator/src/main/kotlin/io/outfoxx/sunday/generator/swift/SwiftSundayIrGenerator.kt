@@ -3502,13 +3502,17 @@ class SwiftSundayIrGenerator(
     typeRef: GeneratedTypeRef?,
   ): CodeBlock =
     when (this) {
-      is String ->
-        typeRef
-          ?.modelOrNull(apiIndex)
-          ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
-          ?.swiftEnumCaseNameForValue(this)
-          ?.let { caseName -> CodeBlock.of("%T.%N", typeName, caseName) }
-          ?: CodeBlock.of("%S", this)
+      is String -> {
+        val enumModel =
+          typeRef
+            ?.modelOrNull(apiIndex)
+            ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
+        if (enumModel != null) {
+          CodeBlock.of("%T.%N", typeName, enumModel.requireSwiftEnumCaseNameForValue(this))
+        } else {
+          CodeBlock.of("%S", this)
+        }
+      }
 
       is Number -> CodeBlock.of("%L", this)
       is Boolean -> CodeBlock.of("%L", this)
@@ -3527,6 +3531,13 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedModel.swiftEnumCaseNameForValue(value: String): String? =
     swiftEnumEntries().singleOrNull { entry -> entry.value == value }?.name
+
+  private fun GeneratedModel.requireSwiftEnumCaseNameForValue(value: String): String =
+    swiftEnumCaseNameForValue(value)
+      ?: genError(
+        "Swift enum '$name' value '$value' does not match any enum value. " +
+          "Fix the value or the enum definition.",
+      )
 
   private fun GeneratedModel.swiftEnumEntries(): List<SwiftEnumEntry> =
     swiftEnumEntriesByModel.getOrPut(this) {

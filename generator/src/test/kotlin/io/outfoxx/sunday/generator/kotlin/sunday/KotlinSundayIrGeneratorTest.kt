@@ -1373,6 +1373,57 @@ class KotlinSundayIrGeneratorTest {
     assertContains(error.message!!, "x-enum-varnames")
   }
 
+  @Test
+  fun `rejects enum base URI defaults that do not match enum entries`() {
+    val typeRegistry = typeRegistry()
+    val api =
+      GeneratedApi(
+        name = "Enum Default API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        services =
+          listOf(
+            GeneratedService(
+              name = "SearchService",
+              baseUri = "https://{status}.example.com",
+              baseUriParameters =
+                listOf(
+                  GeneratedParameter(
+                    "status",
+                    GeneratedParameter.Location.PATH,
+                    GeneratedTypeRef.named("Status"),
+                    defaultValue = "missing",
+                  ),
+                ),
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "search",
+                    method = "GET",
+                    path = "/search",
+                  ),
+                ),
+            ),
+          ),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "Status",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("active"),
+            ),
+          ),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertContains(error.message!!, "Kotlin enum 'Status' default value 'missing'")
+    assertContains(error.message!!, "does not match any enum value")
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @Test
   fun `uses streaming operations for streaming request bodies`(

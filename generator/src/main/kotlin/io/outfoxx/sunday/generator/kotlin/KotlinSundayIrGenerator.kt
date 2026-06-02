@@ -1401,9 +1401,11 @@ class KotlinSundayIrGenerator(
   ): CodeBlock {
     val enumModel = type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (defaultValue is String && enumModel != null) {
-      kotlinEnumEntries.constantNameForValue(enumModel, defaultValue)?.let { constantName ->
-        return CodeBlock.of("%T.%L", typeName, constantName)
-      }
+      return CodeBlock.of(
+        "%T.%L",
+        typeName,
+        kotlinEnumEntries.requireConstantNameForValue(enumModel, defaultValue, "default"),
+      )
     }
     return valueCode(defaultValue)
   }

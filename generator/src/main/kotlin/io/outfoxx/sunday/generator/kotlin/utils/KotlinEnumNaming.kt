@@ -39,6 +39,17 @@ internal class KotlinEnumEntriesResolver {
     model: GeneratedModel,
     value: String,
   ): String? = entries(model).singleOrNull { entry -> entry.value == value }?.name
+
+  fun requireConstantNameForValue(
+    model: GeneratedModel,
+    value: String,
+    usage: String,
+  ): String =
+    constantNameForValue(model, value)
+      ?: genError(
+        "Kotlin enum '${model.name}' $usage value '$value' does not match any enum value. " +
+          "Fix the $usage value or the enum definition.",
+      )
 }
 
 internal fun GeneratedModel.kotlinEnumEntries(): List<KotlinEnumEntry> {
@@ -92,9 +103,9 @@ private fun GeneratedModel.validateKotlinEnumConstantName(
   if (!kotlinEnumConstantIdentifierRegex.matches(constantName)) {
     if (explicitName != null) {
       genError(
-        "Kotlin enum '$name' x-enum-varnames entry '$explicitName' for value '$value' " +
+        "Kotlin enum '$name' x-enum-varnames entry '$explicitName' " +
           "maps to invalid constant name '$constantName'. Fix x-enum-varnames with a valid " +
-          "Kotlin enum constant name.",
+          "Kotlin enum constant name for value '$value'.",
       )
     }
     genError(
