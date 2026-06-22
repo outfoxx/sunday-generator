@@ -2110,6 +2110,7 @@ class KotlinSundayIrGenerator(
     unionTypeName.nestedClass("${name.toUpperCamelCase()}Value")
 
   private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> {
+    val directUnionSupertypes = directUnionSupertypes()
     val inheritedProperties =
       inherits.flatMap { inherited ->
         inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty()
@@ -2117,10 +2118,10 @@ class KotlinSundayIrGenerator(
     val localProperties =
       localModelProperties(
         inheritedProperties,
-        allowOverrides = directUnionSupertypes().isNotEmpty(),
+        allowOverrides = directUnionSupertypes.isNotEmpty(),
       )
     val effectiveInheritedProperties =
-      if (directUnionSupertypes().isNotEmpty()) {
+      if (directUnionSupertypes.isNotEmpty()) {
         inheritedProperties.withoutOverridesFrom(localProperties)
       } else {
         inheritedProperties

@@ -143,12 +143,6 @@ class SwiftSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
   private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
-  private val runtimeProblemTypeName: DeclaredTypeName =
-    if (api.hasGeneratedSwiftTypeNamed(PROBLEM.simpleName)) {
-      QUALIFIED_PROBLEM
-    } else {
-      PROBLEM
-    }
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
@@ -464,14 +458,67 @@ class SwiftSundayIrGenerator(
     val source: GeneratedSourceSpec?,
   )
 
-  private val recursiveSwiftObjectModelKeys: Set<SwiftModelKey> by lazy {
-    val objectModels =
-      api.models
-        .filter { model -> model.kind == GeneratedModel.Kind.OBJECT }
-        .associateBy { model -> model.swiftModelKey() }
+  private val swiftObjectModelsByKey: Map<SwiftModelKey, GeneratedModel> by lazy {
+    api.models
+      .filter { model -> model.kind == GeneratedModel.Kind.OBJECT }
+      .associateBy { model -> model.swiftModelKey() }
+  }
 
+  private val swiftInheritingModelsByParentKey: Map<SwiftModelKey, List<GeneratedModel>> by lazy {
+    val inheritingModels = mutableMapOf<SwiftModelKey, MutableList<GeneratedModel>>()
+    swiftObjectModelsByKey.values.forEach { model ->
+      model.inherits
+        .mapNotNull { inherited -> inherited.modelOrNull(apiIndex)?.swiftModelKey() }
+        .forEach { inheritedKey ->
+          inheritingModels.getOrPut(inheritedKey) { mutableListOf() }.add(model)
+        }
+    }
+    inheritingModels
+  }
+
+  private val swiftHierarchyCaseModelsByRootKey: Map<SwiftModelKey, List<GeneratedModel>> by lazy {
+    swiftObjectModelsByKey.mapValues { (key, model) ->
+      (
+        swiftInheritingModelsByParentKey[key].orEmpty() +
+          model.discriminatorMappings.values.mapNotNull { type ->
+            type.modelOrNull(apiIndex)?.takeIf { mappedModel -> mappedModel.kind == GeneratedModel.Kind.OBJECT }
+          }
+      ).distinct()
+    }
+  }
+
+  private val protocolHierarchyRootModelKeys: Set<SwiftModelKey> by lazy {
+    val rootModels =
+      swiftObjectModelsByKey.values.filter { model ->
+        !model.patchable &&
+          model.discriminator != null &&
+          swiftHierarchyCaseModelsByRootKey[model.swiftModelKey()].orEmpty().isNotEmpty() &&
+          !model.isProblemModel
+      }
+    rootModels.mapTo(mutableSetOf()) { model -> model.swiftModelKey() }
+  }
+
+  private val protocolHierarchyValueModelKeys: Set<SwiftModelKey> by lazy {
+    val valueKeys = mutableSetOf<SwiftModelKey>()
+    val pendingModels =
+      protocolHierarchyRootModelKeys
+        .flatMap { rootKey -> swiftHierarchyCaseModelsByRootKey[rootKey].orEmpty() }
+        .toMutableList()
+    var index = 0
+    while (index < pendingModels.size) {
+      val model = pendingModels[index++]
+      if (model.patchable || model.isProblemModel) continue
+      val key = model.swiftModelKey()
+      if (valueKeys.add(key)) {
+        pendingModels.addAll(swiftInheritingModelsByParentKey[key].orEmpty())
+      }
+    }
+    valueKeys
+  }
+
+  private val recursiveSwiftObjectModelKeys: Set<SwiftModelKey> by lazy {
     val edges =
-      objectModels.mapValues { (_, model) ->
+      swiftObjectModelsByKey.mapValues { (_, model) ->
         model
           .properties
           .mapNotNull { property -> property.type.directNamedModelOrNull() }
@@ -480,8 +527,15 @@ class SwiftSundayIrGenerator(
           .toSet()
       }
 
-    objectModels.keys.filterTo(mutableSetOf()) { key -> key.reaches(key, edges, mutableSetOf()) }
+    swiftObjectModelsByKey.keys.filterTo(mutableSetOf()) { key -> key.reaches(key, edges, mutableSetOf()) }
   }
+
+  private val runtimeProblemTypeName: DeclaredTypeName =
+    if (api.hasGeneratedSwiftTypeNamed(PROBLEM.simpleName)) {
+      QUALIFIED_PROBLEM
+    } else {
+      PROBLEM
+    }
 
   private data class GeneratedSwiftService(
     val service: GeneratedService,
@@ -1164,26 +1218,10 @@ class SwiftSundayIrGenerator(
     get() = swiftModelKey() in recursiveSwiftObjectModelKeys
 
   private val GeneratedModel.isProtocolHierarchyRootModel: Boolean
-    get() =
-      kind == GeneratedModel.Kind.OBJECT &&
-        !patchable &&
-        discriminator != null &&
-        swiftHierarchyCaseModels().isNotEmpty() &&
-        !isProblemModel
+    get() = swiftModelKey() in protocolHierarchyRootModelKeys
 
   private val GeneratedModel.isProtocolHierarchyValueModel: Boolean
-    get() =
-      !patchable &&
-        !isProblemModel &&
-        (
-          inherits
-            .mapNotNull { inherited -> inherited.modelOrNull(apiIndex) }
-            .any { inherited -> inherited.isProtocolHierarchyRootModel || inherited.isProtocolHierarchyValueModel } ||
-            api.models.any { model ->
-              model.isProtocolHierarchyRootModel &&
-                model.discriminatorMappings.values.any { type -> type.modelOrNull(apiIndex) == this }
-            }
-        )
+    get() = !patchable && !isProblemModel && swiftModelKey() in protocolHierarchyValueModelKeys
 
   private val GeneratedModel.isProblemHierarchyProtocolModel: Boolean
     get() =
@@ -1975,14 +2013,7 @@ class SwiftSundayIrGenerator(
         (isRecursiveSwiftObjectModel && !hasInheritingModels)
 
   private fun GeneratedModel.swiftHierarchyCaseModels(): List<GeneratedModel> =
-    (
-      api.models.filter { model ->
-        model.inherits.any { inherited -> inherited.modelOrNull(apiIndex) == this }
-      } +
-        discriminatorMappings.values.mapNotNull { type ->
-          type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.OBJECT }
-        }
-    ).distinct()
+    swiftHierarchyCaseModelsByRootKey[swiftModelKey()].orEmpty()
 
   private fun GeneratedModel.unionCaseModels(): List<GeneratedModel> =
     aliases
