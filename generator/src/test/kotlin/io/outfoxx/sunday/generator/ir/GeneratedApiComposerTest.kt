@@ -256,6 +256,24 @@ class GeneratedApiComposerTest {
   }
 
   @Test
+  fun `dedupes OpenAPI and AsyncAPI discriminated models with referenced validation metadata`(
+    @ResourceUri("openapi/ir/composition-discriminated-dedupe-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/composition-discriminated-dedupe.yaml") asyncApiUri: URI,
+  ) {
+
+    val openApi = OpenApiToGeneratedApi().convertFragment(openApiUri)
+    val asyncApi = AsyncApiToGeneratedApi().convertFragment(asyncApiUri)
+
+    val api = GeneratedApiComposer().compose(listOf(openApi, asyncApi))
+    val scopeSummaries = api.models.filter { model -> model.name == "NarrativeScopeSummary" }
+    val idProperty = scopeSummaries.single().properties.single { property -> property.name == "id" }
+
+    assertThat(scopeSummaries.size, equalTo(1))
+    assertThat(idProperty.type, equalTo(GeneratedTypeRef.named("UniqueId")))
+    assertThat(idProperty.validation, equalTo(mapOf("pattern" to "^[A-Z2-7]{26}$")))
+  }
+
+  @Test
   fun `rejects real OpenAPI and AsyncAPI operation collisions with override guidance`(
     @ResourceUri("openapi/ir/composition-operation-collision-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/project-events.yaml") asyncApiUri: URI,
@@ -290,6 +308,66 @@ class GeneratedApiComposerTest {
 
     assertThat(failure.message, containsString("project"))
     assertThat(failure.message, containsString("Project"))
+    assertThat(failure.message, containsString("x-sunday-modelName"))
+  }
+
+  @Test
+  fun `dedupes model collisions with matching structural signatures`() {
+
+    val openApiSource = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "openapi.yaml")
+    val asyncApiSource = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "asyncapi.yaml")
+    val first =
+      fragment(
+        models =
+          listOf(
+            projectModelWithSource(
+              openApiSource,
+              GeneratedTypeRef.named("UniqueId", source = openApiSource),
+            ),
+          ),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+    val second =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        models =
+          listOf(
+            projectModelWithSource(
+              asyncApiSource,
+              GeneratedTypeRef.named("UniqueId", source = asyncApiSource),
+            ),
+          ),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+
+    val api = GeneratedApiComposer().compose(listOf(first, second))
+
+    assertThat(api.models.map { model -> model.name }, equalTo(listOf("Project")))
+    assertThat(api.models.single(), equalTo(first.api.models.single()))
+  }
+
+  @Test
+  fun `rejects model collisions with matching structural signatures but different generated names`() {
+
+    val first =
+      fragment(
+        models = listOf(projectModel()),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+    val second =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        models = listOf(projectModel().copy(name = "ProjectView")),
+        modelIdentities = mapOf("ProjectView" to GeneratedIdentity.generated("project")),
+      )
+
+    val failure =
+      assertThrows(GeneratedApiCompositionException::class.java) {
+        GeneratedApiComposer().compose(listOf(first, second))
+      }
+
+    assertThat(failure.message, containsString("project"))
+    assertThat(failure.message, containsString("ProjectView"))
     assertThat(failure.message, containsString("x-sunday-modelName"))
   }
 
@@ -367,6 +445,8 @@ class GeneratedApiComposerTest {
       }
 
     assertThat(failure.message, containsString("x-sunday-modelName"))
+    assertThat(failure.message, containsString("openapi 'Craft API.yaml'"))
+    assertThat(failure.message, containsString("asyncapi 'Craft API.yaml'"))
   }
 
   @Test
@@ -450,6 +530,25 @@ class GeneratedApiComposerTest {
             required = true,
           ),
         ) + extraProperties,
+    )
+
+  private fun projectModelWithSource(
+    source: GeneratedSourceSpec,
+    idType: GeneratedTypeRef,
+  ): GeneratedModel =
+    GeneratedModel(
+      name = "Project",
+      kind = GeneratedModel.Kind.OBJECT,
+      source = source,
+      properties =
+        listOf(
+          GeneratedModelProperty(
+            name = "id",
+            type = idType,
+            required = true,
+          ),
+        ),
+      documentation = GeneratedDocumentation(description = "Description from ${source.location}"),
     )
 
   private fun operationResponseModel(

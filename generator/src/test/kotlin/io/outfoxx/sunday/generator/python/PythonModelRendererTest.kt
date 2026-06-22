@@ -278,6 +278,57 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  fun `generates direct AsyncAPI discriminated event object unions in Python models`(
+    compiler: PythonCompiler,
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(api.models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter
+
+          from turnpost_api.models import AccountsTeamCreatedData, EventEnvelope
+
+          envelope = TypeAdapter(EventEnvelope).validate_python(
+              {
+                  "id": "event-1",
+                  "type": "accounts.team.created",
+                  "schemaVersion": "1",
+                  "occurredAt": "2026-06-01T12:00:00Z",
+                  "producer": {"kind": "service", "serviceId": "accounts"},
+                  "scope": {"organizationId": "org-1", "teamId": "team-1"},
+                  "correlationId": "corr-1",
+                  "authorization": {"policy": "allowed"},
+                  "data": {
+                      "teamId": "team-1",
+                      "ownerUserId": "user-1",
+                      "slug": "core",
+                      "name": "Core",
+                  },
+              },
+          )
+
+          assert envelope.id == "event-1"
+          assert isinstance(envelope.data, AccountsTeamCreatedData)
+          assert envelope.data.team_id == "team-1"
+          """.trimIndent(),
+      ),
+    )
+    assertTrue(modelsModule.source.contains("id: str"), modelsModule.source)
+    assertTrue(modelsModule.source.contains("occurred_at: datetime"), modelsModule.source)
+    assertTrue(modelsModule.source.contains("data: AccountsTeamCreatedData"), modelsModule.source)
+    assertTrue(modelsModule.source.contains("data: NotificationAnnouncementPublishedData"), modelsModule.source)
+  }
+
+  @Test
   fun `uses OpenAPI enum varnames and wire values in Python models`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") sourceUri: URI,

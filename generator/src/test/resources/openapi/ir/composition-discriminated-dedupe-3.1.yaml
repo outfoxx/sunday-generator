@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: Craft HTTP API
+  version: 1.0.0
+x-sunday-apiId: craft
+paths:
+  /scope/{scopeId}:
+    x-sunday-service: scopes
+    get:
+      operationId: getScope
+      parameters:
+        - name: scopeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UniqueId"
+      responses:
+        "200":
+          description: Scope response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NarrativeScopeSummary"
+components:
+  schemas:
+    UniqueId:
+      type: string
+      pattern: "^[A-Z2-7]{26}$"
+      description: Stable unique identifier.
+    NarrativeScopeLevel:
+      type: string
+      enum: [script, scene]
+    NarrativeScopeSummary:
+      type: object
+      required: [level, id, label]
+      discriminator:
+        propertyName: level
+        mapping:
+          script: "#/components/schemas/ScriptSummary"
+          scene: "#/components/schemas/SceneSummary"
+      properties:
+        level:
+          $ref: "#/components/schemas/NarrativeScopeLevel"
+        id:
+          $ref: "#/components/schemas/UniqueId"
+        label:
+          type: string
+    ScriptSummary:
+      allOf:
+        - $ref: "#/components/schemas/NarrativeScopeSummary"
+        - type: object
+          required: [title]
+          properties:
+            title:
+              type: string
+    SceneSummary:
+      allOf:
+        - $ref: "#/components/schemas/NarrativeScopeSummary"
+        - type: object
+          required: [scriptId]
+          properties:
+            scriptId:
+              $ref: "#/components/schemas/UniqueId"

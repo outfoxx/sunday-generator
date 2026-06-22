@@ -271,6 +271,38 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `flattens direct AsyncAPI discriminated event object unions in implement-model mode`(
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Server,
+        setOf(ImplementModel, JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api = GeneratedApiIrExporter().export(listOf(asyncApiUri))
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val accountsTeamCreatedEventSource =
+      kotlinSource("io.test", findType("io.test.AccountsTeamCreatedEvent", builtTypes))
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertTrue(accountsTeamCreatedEventSource.contains("public data class AccountsTeamCreatedEvent"))
+    assertTrue(accountsTeamCreatedEventSource.contains(": EventEnvelope"))
+    assertTrue(accountsTeamCreatedEventSource.contains("public val id: String"), accountsTeamCreatedEventSource)
+    assertTrue(accountsTeamCreatedEventSource.contains("public val `data`: AccountsTeamCreatedData"))
+    assertFalse(accountsTeamCreatedEventSource.contains(": BaseEventEnvelope("), accountsTeamCreatedEventSource)
+    assertFalse(accountsTeamCreatedEventSource.contains("Map<String, Any>"), accountsTeamCreatedEventSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates Quarkus throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(

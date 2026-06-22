@@ -574,16 +574,22 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedModel.objectTypeSpec(): TypeSpec.Builder {
     val inheritedProperties = inheritedModelProperties()
-    val localProperties = localModelProperties(inheritedProperties)
+    val directUnionSupertypes = directUnionSupertypes()
+    val flattensInheritedProperties = directUnionSupertypes.isNotEmpty()
+    val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
+    val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
 
     if (isProblemModel()) {
-      return classTypeSpec(inheritedProperties, localProperties)
+      return classTypeSpec(effectiveInheritedProperties, localProperties)
+    }
+    if (shouldGenerateClassModel && flattensInheritedProperties) {
+      return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
     }
     if (shouldGenerateDataClassModel && localProperties.isNotEmpty()) {
       return dataClassTypeSpec(localProperties)
     }
     if (shouldGenerateClassModel) {
-      return classTypeSpec(inheritedProperties, localProperties)
+      return classTypeSpec(effectiveInheritedProperties, localProperties)
     }
 
     return TypeSpec
@@ -600,13 +606,21 @@ class KotlinSundayIrGenerator(
               .build(),
           )
         }
-        inherits.forEach { inherited ->
-          addSuperinterface(inherited.kotlinTypeName())
+        if (!flattensInheritedProperties) {
+          inherits.forEach { inherited ->
+            addSuperinterface(inherited.kotlinTypeName())
+          }
         }
-        directUnionSupertypes().forEach { union ->
+        directUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
-        localProperties.forEach { property ->
+        val declaredProperties =
+          if (flattensInheritedProperties) {
+            effectiveInheritedProperties + localProperties
+          } else {
+            localProperties
+          }
+        declaredProperties.forEach { property ->
           addProperty(propertySpec(property))
         }
       }
@@ -2095,18 +2109,44 @@ class KotlinSundayIrGenerator(
   private fun GeneratedModel.unionCaseTypeName(unionTypeName: ClassName): ClassName =
     unionTypeName.nestedClass("${name.toUpperCamelCase()}Value")
 
-  private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> =
-    inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() } +
-      properties
+  private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> {
+    val inheritedProperties =
+      inherits.flatMap { inherited ->
+        inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty()
+      }
+    val localProperties =
+      localModelProperties(
+        inheritedProperties,
+        allowOverrides = directUnionSupertypes().isNotEmpty(),
+      )
+    val effectiveInheritedProperties =
+      if (directUnionSupertypes().isNotEmpty()) {
+        inheritedProperties.withoutOverridesFrom(localProperties)
+      } else {
+        inheritedProperties
+      }
+    return effectiveInheritedProperties + localProperties
+  }
 
   private fun GeneratedModel.inheritedModelProperties(): List<GeneratedModelProperty> =
     inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() }
 
   private fun GeneratedModel.localModelProperties(
     inheritedProperties: List<GeneratedModelProperty>,
+    allowOverrides: Boolean = false,
   ): List<GeneratedModelProperty> {
+    if (allowOverrides) {
+      return properties
+    }
     val inheritedWireNames = inheritedProperties.map { property -> property.wireName }.toSet()
     return properties.filterNot { property -> property.wireName in inheritedWireNames }
+  }
+
+  private fun List<GeneratedModelProperty>.withoutOverridesFrom(
+    properties: List<GeneratedModelProperty>,
+  ): List<GeneratedModelProperty> {
+    val overrideWireNames = properties.map { property -> property.wireName }.toSet()
+    return filterNot { property -> property.wireName in overrideWireNames }
   }
 
   private fun GeneratedModel.allWireNames(): Set<String> =

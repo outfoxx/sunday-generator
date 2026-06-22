@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -268,6 +269,7 @@ class TypeScriptSundayIrGeneratorTest {
               inherits = listOf(GeneratedTypeRef.named("HttpProblem")),
               properties =
                 listOf(
+                  GeneratedModelProperty("title", GeneratedTypeRef.scalar("string")),
                   GeneratedModelProperty(
                     "validation",
                     GeneratedTypeRef(
@@ -316,6 +318,8 @@ class TypeScriptSundayIrGeneratorTest {
       badRequestOutput.contains("export class BadRequestProblem extends HttpProblem implements BadRequestProblemSpec"),
       badRequestOutput,
     )
+    assertFalse(badRequestOutput.contains("title: string | null | undefined;"), badRequestOutput)
+    assertFalse(badRequestOutput.contains("this.title = init.title;"), badRequestOutput)
   }
 
   @Test
@@ -1759,7 +1763,7 @@ class TypeScriptSundayIrGeneratorTest {
       envelopeOutput,
     )
     assertTrue(envelopeOutput.contains("'description': z.string().nullish()"), envelopeOutput)
-    assertTrue(envelopeOutput.contains("z.discriminatedUnion('type'"), envelopeOutput)
+    assertTrue(envelopeOutput.contains("z.discriminatedUnion('type', ["), envelopeOutput)
     assertTrue(
       dataOutput.contains(
         "export type AccountsTeamCreatedData = SchemaOutput<typeof AccountsTeamCreatedDataSchema>;",
@@ -1776,6 +1780,66 @@ class TypeScriptSundayIrGeneratorTest {
     assertFalse(identityOutput.contains("z.discriminatedUnion("), identityOutput)
     assertTrue(serviceOutput.contains("Operation<void, EventEnvelope, Factory>"), serviceOutput)
     assertTrue(serviceOutput.contains("SchemaLike<EventEnvelope>"), serviceOutput)
+  }
+
+  @Test
+  fun `generates direct AsyncAPI discriminated event object unions from IR`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(listOf(asyncApiUri))
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val envelopeOutput =
+      buildString {
+        FileSpec
+          .get(findTypeMod("EventEnvelope@!event-envelope", builtTypes), "event-envelope")
+          .writeTo(this)
+      }
+    val accountsTeamCreatedEventOutput =
+      buildString {
+        FileSpec
+          .get(findTypeMod("AccountsTeamCreatedEvent@!accounts-team-created-event", builtTypes))
+          .writeTo(this)
+      }
+    val notificationEventType =
+      findTypeMod(
+        "NotificationsAnnouncementPublishedEvent@!notifications-announcement-published-event",
+        builtTypes,
+      )
+    val notificationEventOutput =
+      buildString {
+        FileSpec
+          .get(notificationEventType)
+          .writeTo(this)
+      }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(envelopeOutput.contains("z.union(["), envelopeOutput)
+    assertTrue(envelopeOutput.contains("AccountsTeamCreatedEventSchema"), envelopeOutput)
+    assertTrue(envelopeOutput.contains("NotificationsAnnouncementPublishedEventSchema"), envelopeOutput)
+    assertTrue(accountsTeamCreatedEventOutput.contains("'id': z.string()"), accountsTeamCreatedEventOutput)
+    assertTrue(
+      accountsTeamCreatedEventOutput.contains("'occurredAt': runtime.resolveSchema(OffsetDateTimeSchema)"),
+      accountsTeamCreatedEventOutput,
+    )
+    assertTrue(
+      accountsTeamCreatedEventOutput.contains("'data': runtime.resolveSchema(AccountsTeamCreatedDataSchema)"),
+      accountsTeamCreatedEventOutput,
+    )
+    assertTrue(notificationEventOutput.contains("'id': z.string()"), notificationEventOutput)
+    assertTrue(
+      notificationEventOutput.contains("'occurredAt': runtime.resolveSchema(OffsetDateTimeSchema)"),
+      notificationEventOutput,
+    )
+    assertTrue(
+      notificationEventOutput.contains("'data': runtime.resolveSchema(NotificationAnnouncementPublishedDataSchema)"),
+      notificationEventOutput,
+    )
   }
 
   private fun assertIrServiceSnapshot(

@@ -617,4 +617,185 @@ class AsyncApiToGeneratedApiTest {
       ),
     )
   }
+
+  @Test
+  fun `maps direct AsyncAPI discriminated event object unions without dropping branch fields`(
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") testUri: URI,
+  ) {
+    val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
+    val models = fragment.api.models.associateBy { model -> model.name }
+    val expectedEventFields =
+      setOf(
+        "id",
+        "type",
+        "schemaVersion",
+        "occurredAt",
+        "producer",
+        "actor",
+        "scope",
+        "correlationId",
+        "authorization",
+        "data",
+      )
+
+    fun GeneratedModel.effectivePropertyNames(): Set<String> =
+      properties.map { property -> property.name }.toSet() +
+        inherits
+          .mapNotNull { inherited -> models[inherited.name] }
+          .flatMap { model -> model.effectivePropertyNames() }
+
+    assertThat(
+      models["EventEnvelope"],
+      equalTo(
+        GeneratedModel(
+          name = "EventEnvelope",
+          kind = GeneratedModel.Kind.UNION,
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
+          aliases =
+            listOf(
+              GeneratedTypeRef.named("AccountsTeamCreatedEvent"),
+              GeneratedTypeRef.named("NotificationsAnnouncementPublishedEvent"),
+            ),
+          discriminator = "type",
+          discriminatorMappings =
+            mapOf(
+              "accounts.team.created" to GeneratedTypeRef.named("AccountsTeamCreatedEvent"),
+              "notifications.announcement.published" to
+                GeneratedTypeRef.named("NotificationsAnnouncementPublishedEvent"),
+            ),
+        ),
+      ),
+    )
+    assertThat(
+      models["AccountsTeamCreatedEvent"]?.inherits,
+      equalTo(listOf(GeneratedTypeRef.named("BaseEventEnvelope"))),
+    )
+    assertThat(
+      models["AccountsTeamCreatedEvent"]?.properties?.map { property -> property.name }?.toSet(),
+      equalTo(setOf("type", "data")),
+    )
+    assertThat(
+      models["AccountsTeamCreatedEvent"]?.effectivePropertyNames(),
+      equalTo(expectedEventFields),
+    )
+    assertThat(
+      models["NotificationsAnnouncementPublishedEvent"]?.effectivePropertyNames(),
+      equalTo(expectedEventFields),
+    )
+    assertThat(
+      models["AccountsTeamCreatedEvent"]
+        ?.properties
+        ?.firstOrNull { property ->
+          property.name == "data"
+        }?.type,
+      equalTo(GeneratedTypeRef.named("AccountsTeamCreatedData")),
+    )
+    assertThat(
+      models["NotificationsAnnouncementPublishedEvent"]
+        ?.properties
+        ?.firstOrNull { property ->
+          property.name == "data"
+        }?.type,
+      equalTo(GeneratedTypeRef.named("NotificationAnnouncementPublishedData")),
+    )
+    assertThat(models.containsKey("AccountsTeamCreatedData"), equalTo(true))
+    assertThat(models.containsKey("NotificationAnnouncementPublishedData"), equalTo(true))
+  }
+
+  @Test
+  fun `maps nullable AsyncAPI discriminated event object unions without shifting implicit mappings`(
+    @ResourceUri("asyncapi/ir/nullable-discriminated-event-union.yaml") testUri: URI,
+  ) {
+    val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
+    val eventEnvelope = fragment.api.models.single { model -> model.name == "EventEnvelope" }
+
+    assertThat(
+      eventEnvelope.aliases,
+      equalTo(
+        listOf(
+          GeneratedTypeRef.named("AccountsTeamCreatedEvent"),
+          GeneratedTypeRef.named("NotificationsAnnouncementPublishedEvent"),
+        ),
+      ),
+    )
+    assertThat(
+      eventEnvelope.discriminatorMappings,
+      equalTo(
+        mapOf(
+          "accounts.team.created" to GeneratedTypeRef.named("AccountsTeamCreatedEvent"),
+          "notifications.announcement.published" to
+            GeneratedTypeRef.named("NotificationsAnnouncementPublishedEvent"),
+        ),
+      ),
+    )
+  }
+
+  @Test
+  fun `maps AsyncAPI discriminated base model mappings for Swift Sendable references`(
+    @ResourceUri("asyncapi/ir/discriminated-base-sendable-regression.yaml") testUri: URI,
+  ) {
+    val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
+    val models = fragment.api.models.associateBy { model -> model.name }
+
+    assertThat(
+      models["NarrativeChangeEvent"]?.discriminator,
+      equalTo("type"),
+    )
+    assertThat(
+      models["NarrativeChangeEvent"]?.discriminatorMappings,
+      equalTo(
+        mapOf(
+          "script" to GeneratedTypeRef.named("ScriptChangeEvent"),
+          "scene" to GeneratedTypeRef.named("SceneChangeEvent"),
+        ),
+      ),
+    )
+    assertThat(
+      models["ScriptChangeEvent"]?.inherits,
+      equalTo(listOf(GeneratedTypeRef.named("NarrativeChangeEvent"))),
+    )
+    assertThat(
+      models["SceneChangeEvent"]?.inherits,
+      equalTo(listOf(GeneratedTypeRef.named("NarrativeChangeEvent"))),
+    )
+    assertThat(
+      models["ScriptChangeEvent"]?.discriminatorValue,
+      equalTo("script"),
+    )
+    assertThat(
+      models["SceneChangeEvent"]?.discriminatorValue,
+      equalTo("scene"),
+    )
+    assertThat(
+      models["ScriptChangeEvent"]?.properties?.map { property -> property.name },
+      equalTo(listOf("value")),
+    )
+    assertThat(
+      models["ScriptChangeEvent"]?.properties?.singleOrNull { property -> property.name == "value" }?.required,
+      equalTo(true),
+    )
+    assertThat(
+      models["NarrativeIqSceneUpdatedData"]
+        ?.properties
+        ?.singleOrNull { property -> property.name == "change" }
+        ?.type,
+      equalTo(GeneratedTypeRef.named("NarrativeChangeEvent")),
+    )
+  }
+
+  @Test
+  fun `maps AsyncAPI referenced property validation metadata`(
+    @ResourceUri("asyncapi/ir/composition-discriminated-dedupe.yaml") testUri: URI,
+  ) {
+    val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
+    val scopeSummary = fragment.api.models.single { model -> model.name == "NarrativeScopeSummary" }
+    val idProperty = scopeSummary.properties.single { property -> property.name == "id" }
+    val uniqueId = fragment.api.models.single { model -> model.name == "UniqueId" }
+
+    assertThat(idProperty.type, equalTo(GeneratedTypeRef.named("UniqueId")))
+    assertThat(idProperty.validation, equalTo(mapOf("pattern" to "^[A-Z2-7]{26}$")))
+    assertThat(uniqueId.kind, equalTo(GeneratedModel.Kind.SCALAR_ALIAS))
+    assertThat(uniqueId.aliases, equalTo(listOf(GeneratedTypeRef.scalar("string"))))
+    assertThat(uniqueId.validation, equalTo(mapOf("pattern" to "^[A-Z2-7]{26}$")))
+  }
 }

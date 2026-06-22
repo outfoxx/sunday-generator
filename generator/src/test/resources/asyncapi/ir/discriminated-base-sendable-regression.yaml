@@ -1,0 +1,95 @@
+asyncapi: "3.1.0"
+info:
+  title: Discriminated Base Sendable API
+  version: "1.0.0"
+x-sunday-apiId: narrative-events
+channels:
+  sceneUpdated:
+    address: /events
+    messages:
+      event:
+        $ref: "#/components/messages/SceneUpdatedMessage"
+operations:
+  streamSceneUpdates:
+    action: receive
+    x-sunday-service: Events
+    channel:
+      $ref: "#/channels/sceneUpdated"
+    messages:
+      - $ref: "#/channels/sceneUpdated/messages/event"
+components:
+  messages:
+    SceneUpdatedMessage:
+      name: NarrativeIqSceneUpdatedData
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/NarrativeIqSceneUpdatedData"
+  schemas:
+    NarrativeIqSceneUpdatedData:
+      type: object
+      required: [change]
+      properties:
+        change:
+          $ref: "#/components/schemas/NarrativeChangeEvent"
+    NarrativeChangeEvent:
+      type: object
+      required: [type, id, batchId, timestamp, reason]
+      discriminator:
+        propertyName: type
+        mapping:
+          script: "#/components/schemas/ScriptChangeEvent"
+          scene: "#/components/schemas/SceneChangeEvent"
+      properties:
+        type:
+          $ref: "#/components/schemas/NarrativeChangeEventType"
+        id:
+          type: string
+        batchId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          $ref: "#/components/schemas/NarrativeChangeReason"
+    ScriptChangeEvent:
+      required: [value]
+      allOf:
+        - $ref: "#/components/schemas/NarrativeChangeEvent"
+        - type: object
+          properties:
+            value:
+              $ref: "#/components/schemas/ScriptSummary"
+    SceneChangeEvent:
+      allOf:
+        - $ref: "#/components/schemas/NarrativeChangeEvent"
+        - type: object
+          required: [value]
+          properties:
+            value:
+              $ref: "#/components/schemas/SceneSummary"
+    NarrativeChangeEventType:
+      type: string
+      enum:
+        - script
+        - scene
+    NarrativeChangeReason:
+      type: string
+      enum:
+        - user
+        - system
+    ScriptSummary:
+      type: object
+      required: [scriptId, title]
+      properties:
+        scriptId:
+          type: string
+        title:
+          type: string
+    SceneSummary:
+      type: object
+      required: [sceneId, title]
+      properties:
+        sceneId:
+          type: string
+        title:
+          type: string
