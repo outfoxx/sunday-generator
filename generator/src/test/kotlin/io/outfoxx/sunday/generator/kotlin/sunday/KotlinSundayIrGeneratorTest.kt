@@ -1161,6 +1161,54 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates direct AsyncAPI discriminated event object unions from IR`(
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry =
+      typeRegistry(setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations))
+    val api = GeneratedApiIrExporter().export(listOf(asyncApiUri))
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val envelopeSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.EventEnvelope", builtTypes))
+          .writeTo(this)
+      }
+    val accountsTeamCreatedEventSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.AccountsTeamCreatedEvent", builtTypes))
+          .writeTo(this)
+      }
+    val notificationEventSource =
+      buildString {
+        FileSpec
+          .get("io.test", findType("io.test.NotificationsAnnouncementPublishedEvent", builtTypes))
+          .writeTo(this)
+      }
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertContains(envelopeSource, "public sealed interface EventEnvelope")
+    assertContains(envelopeSource, "tree.get(\"type\")?.asText()")
+    assertContains(envelopeSource, "if (discriminatorValue == \"accounts.team.created\")")
+    assertContains(accountsTeamCreatedEventSource, "public data class AccountsTeamCreatedEvent")
+    assertContains(accountsTeamCreatedEventSource, ": EventEnvelope")
+    assertContains(accountsTeamCreatedEventSource, "public val id: String")
+    assertContains(accountsTeamCreatedEventSource, "public val occurredAt: OffsetDateTime")
+    assertContains(accountsTeamCreatedEventSource, "public val `data`: AccountsTeamCreatedData")
+    assertContains(notificationEventSource, "public val id: String")
+    assertContains(notificationEventSource, "public val occurredAt: OffsetDateTime")
+    assertContains(notificationEventSource, "public val `data`: NotificationAnnouncementPublishedData")
+    assertFalse(accountsTeamCreatedEventSource.contains(": BaseEventEnvelope("), accountsTeamCreatedEventSource)
+    assertFalse(accountsTeamCreatedEventSource.contains("Map<String, Any>"), accountsTeamCreatedEventSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `treats OpenAPI empty schemas as Any in Kotlin Sunday`(
     @ResourceUri("openapi/ir/any-json-3.1.yaml") testUri: URI,
   ) {

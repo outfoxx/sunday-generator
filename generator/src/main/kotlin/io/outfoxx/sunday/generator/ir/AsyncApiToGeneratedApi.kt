@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
@@ -422,19 +423,18 @@ class AsyncApiToGeneratedApi(
     val oneOf = schema.schemaList("oneOf").ifEmpty { schema.schemaList("anyOf") }
     if (oneOf.isNotEmpty()) {
       val discriminator = schema.discriminatorName()
+      val nonNullBranches = oneOf.filterNot { branch -> branch.scalarTypeName() == "nil" }
+      val aliases =
+        nonNullBranches.mapIndexed { index, branch ->
+          unionBranchTypeRef(name, discriminator, branch, index, location, localModels)
+        }
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.UNION,
         source = source,
-        aliases =
-          oneOf
-            .filterNot { branch ->
-              branch.scalarTypeName() == "nil"
-            }.map { branch ->
-              schemaTypeRef(branch, null, location, localModels)
-            },
+        aliases = aliases,
         discriminator = discriminator,
-        discriminatorMappings = schema.discriminatorMappings(discriminator, oneOf),
+        discriminatorMappings = schema.discriminatorMappings(name, discriminator, nonNullBranches, aliases),
         documentation = documentation(description = schema["description"] as? String),
       )
     }
@@ -449,31 +449,163 @@ class AsyncApiToGeneratedApi(
       )
     }
 
+    val scalarTypeName = schema.scalarTypeName()
+    if (scalarTypeName != "object" && scalarTypeName != "array") {
+      return GeneratedModel(
+        name = name,
+        kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        source = source,
+        aliases = listOf(GeneratedTypeRef.scalar(scalarTypeName, format = schema["format"] as? String)),
+        validation = validation(schema),
+        documentation = documentation(description = schema["description"] as? String),
+      )
+    }
+
+    val allOf = schema.schemaList("allOf")
+    val inlineSchemas =
+      buildList {
+        if (schema.mapValue("properties")?.isNotEmpty() == true) {
+          add(schema)
+        }
+        addAll(allOf.filter { part -> part.refName() == null })
+      }.ifEmpty { listOf(schema) }
+    val discriminator = schema.discriminatorName()
+    val requiredNames =
+      (
+        schema.requiredNames +
+          inlineSchemas.flatMap { inlineSchema ->
+            inlineSchema.requiredNames
+          }
+      ).toSet()
+    val properties = mergedProperties(name, inlineSchemas, requiredNames, location, localModels)
+    val inherits =
+      allOf.mapNotNull { part ->
+        part.refName()?.let { inheritedName ->
+          materializedNamedTypeRef(inheritedName, location, localModels)
+        }
+      }
+
+    ensureObjectPropertiesPreserved(name, schema, properties, inherits, localModels)
+
+    val discriminatorValue =
+      schema.discriminatorValue(discriminator)
+        ?: currentSourceDocument.discriminatorValue(name).takeIf { inherits.isNotEmpty() }
+
     return GeneratedModel(
       name = name,
       kind = GeneratedModel.Kind.OBJECT,
       source = source,
-      properties =
+      properties = properties,
+      inherits = inherits,
+      discriminator = discriminator,
+      discriminatorMappings = schema.objectDiscriminatorMappings(location, localModels),
+      discriminatorValue = discriminatorValue,
+      documentation = documentation(description = schema["description"] as? String),
+    )
+  }
+
+  private fun unionBranchTypeRef(
+    unionName: String,
+    discriminator: String?,
+    branch: Map<*, *>,
+    index: Int,
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): GeneratedTypeRef {
+    branch.refName()?.let { name -> return materializedNamedTypeRef(name, location, localModels) }
+
+    val branchName =
+      branch.stringValue("title")
+        ?: branch.stringValue("name")
+        ?: branch.discriminatorValue(discriminator)?.let { value -> unionName + value.toUpperCamelCase() }
+        ?: "${unionName}Case${index + 1}"
+
+    if (!localModels.containsKey(branchName)) {
+      localModels[branchName] = generatedModel(branchName, branch, location, localModels)
+    }
+    return GeneratedTypeRef.named(branchName)
+  }
+
+  private fun mergedProperties(
+    modelName: String,
+    schemas: List<Map<*, *>>,
+    requiredNames: Set<String>,
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): List<GeneratedModelProperty> =
+    schemas
+      .flatMap { schema ->
         schema
           .mapValue("properties")
           .orEmpty()
           .mapNotNull { (propertyName, propertySchema) ->
             val wireName = propertyName as? String ?: return@mapNotNull null
             val propertySchemaMap = propertySchema as? Map<*, *> ?: return@mapNotNull null
-            val generatedName = wireName.toLowerCamelCase()
-            val propertyType = schemaTypeRef(propertySchemaMap, generatedName.toUpperCamelCase(), location, localModels)
-            GeneratedModelProperty(
-              name = generatedName,
-              type = propertyType,
-              required = wireName in schema.requiredNames,
-              serializationName = wireName.takeUnless { it == generatedName },
-              externalDiscriminator = schema.externalDiscriminatorName(wireName, propertyType, localModels),
-              validation = validation(propertySchemaMap),
-              documentation = documentation(description = propertySchemaMap["description"] as? String),
-            )
-          },
-      documentation = documentation(description = schema["description"] as? String),
-    )
+            wireName to propertySchemaMap
+          }
+      }.fold(linkedMapOf<String, Map<*, *>>()) { properties, (wireName, propertySchema) ->
+        properties[wireName] = propertySchema
+        properties
+      }.map { (wireName, propertySchemaMap) ->
+        val generatedName = wireName.toLowerCamelCase()
+        val propertyMetadata = propertySchemaMap.resolvedSchema()
+        val propertyType =
+          schemaTypeRef(
+            propertySchemaMap,
+            "$modelName${generatedName.toUpperCamelCase()}",
+            location,
+            localModels,
+          )
+        GeneratedModelProperty(
+          name = generatedName,
+          type = propertyType,
+          required = wireName in requiredNames,
+          serializationName = wireName.takeUnless { it == generatedName },
+          externalDiscriminator = schemas.externalDiscriminatorName(wireName, propertyType, localModels),
+          defaultValue = propertyMetadata["default"]?.toString(),
+          validation = validation(propertyMetadata),
+          readOnly = propertyMetadata["readOnly"] == true,
+          writeOnly = propertyMetadata["writeOnly"] == true,
+          deprecated = propertyMetadata["deprecated"] == true,
+          documentation = documentation(description = propertyMetadata["description"] as? String),
+        )
+      }
+
+  private fun ensureObjectPropertiesPreserved(
+    modelName: String,
+    schema: Map<*, *>,
+    properties: List<GeneratedModelProperty>,
+    inherits: List<GeneratedTypeRef>,
+    localModels: Map<String, GeneratedModel>,
+  ) {
+    val representedWireNames =
+      properties.map { property -> property.serializationName ?: property.name }.toSet() +
+        inherits
+          .flatMap { inherited -> inherited.representedPropertyWireNames(localModels) }
+          .toSet()
+    val sourcePropertyWireNames = schema.sourcePropertyWireNames()
+    val dropped = sourcePropertyWireNames.filterNot { wireName -> wireName in representedWireNames }
+    if (dropped.isNotEmpty()) {
+      genError(
+        "AsyncAPI model '$modelName' would drop source properties ${dropped.sorted().joinToString()}. " +
+          "Direct discriminated object unions must preserve all branch properties.",
+      )
+    }
+  }
+
+  private fun GeneratedModel.allPropertyWireNames(localModels: Map<String, GeneratedModel>): Set<String> =
+    properties.map { property -> property.serializationName ?: property.name }.toSet() +
+      inherits
+        .mapNotNull { inherited -> localModels[inherited.name] }
+        .flatMap { model -> model.allPropertyWireNames(localModels) }
+        .toSet()
+
+  private fun GeneratedTypeRef.representedPropertyWireNames(localModels: Map<String, GeneratedModel>): Set<String> {
+    val materializedWireNames = localModels[name]?.allPropertyWireNames(localModels).orEmpty()
+    if (materializedWireNames.isNotEmpty()) {
+      return materializedWireNames
+    }
+    return currentSourceDocument.schemas()[name]?.sourcePropertyWireNames(setOf(name)).orEmpty()
   }
 
   private fun documentation(
@@ -507,6 +639,15 @@ class AsyncApiToGeneratedApi(
           ?.containsKey(discriminatorName) == true
       }?.toLowerCamelCase()
   }
+
+  private fun List<Map<*, *>>.externalDiscriminatorName(
+    propertyWireName: String,
+    propertyType: GeneratedTypeRef,
+    localModels: Map<String, GeneratedModel>,
+  ): String? =
+    firstNotNullOfOrNull { schema ->
+      schema.externalDiscriminatorName(propertyWireName, propertyType, localModels)
+    }
 
   private val currentSourceDocument: AsyncApiSourceDocument
     get() = activeSourceDocument ?: error("No active AsyncAPI source document")
@@ -694,6 +835,31 @@ class AsyncApiToGeneratedApi(
 
   private fun Map<*, *>.enumValues(): List<Any> = (this["enum"] as? List<*>).orEmpty().filterNotNull()
 
+  private fun Map<*, *>.stringValue(name: String): String? = this[name] as? String
+
+  private fun Map<*, *>.resolvedSchema(): Map<*, *> =
+    refName()?.let { name -> currentSourceDocument.schemas()[name] } ?: this
+
+  private fun Map<*, *>.sourcePropertyWireNames(visitedRefs: Set<String> = setOf()): Set<String> {
+    val directWireNames =
+      mapValue("properties")
+        .orEmpty()
+        .keys
+        .filterIsInstance<String>()
+        .toSet()
+    val referencedWireNames =
+      refName()
+        ?.takeUnless { name -> name in visitedRefs }
+        ?.let { name ->
+          currentSourceDocument.schemas()[name]?.sourcePropertyWireNames(visitedRefs + name)
+        }.orEmpty()
+    val composedWireNames =
+      schemaList("allOf")
+        .flatMap { schema -> schema.sourcePropertyWireNames(visitedRefs) }
+        .toSet()
+    return directWireNames + referencedWireNames + composedWireNames
+  }
+
   private fun Map<*, *>.scalarTypeName(): String =
     when (val type = this["type"]) {
       "string" -> "string"
@@ -712,7 +878,12 @@ class AsyncApiToGeneratedApi(
       else ->
         when {
           containsKey("properties") || containsKey("additionalProperties") -> "object"
+          containsKey("allOf") -> "object"
           containsKey("items") -> "array"
+          this["const"] is String -> "string"
+          this["const"] is Boolean -> "boolean"
+          this["const"] is Int || this["const"] is Long -> "integer"
+          this["const"] is Number -> "number"
           containsKey("enum") || (this["format"] as? String)?.isNotBlank() == true -> "string"
           else -> "any"
         }
@@ -726,8 +897,10 @@ class AsyncApiToGeneratedApi(
     }
 
   private fun Map<*, *>.discriminatorMappings(
+    unionName: String,
     discriminatorName: String?,
     branches: List<Map<*, *>>,
+    aliases: List<GeneratedTypeRef>,
   ): Map<String, GeneratedTypeRef> {
     val explicitMappings =
       (this["discriminator"] as? Map<*, *>)
@@ -743,17 +916,66 @@ class AsyncApiToGeneratedApi(
     }
 
     discriminatorName ?: return mapOf()
+    if (branches.size != aliases.size) {
+      genError(
+        "AsyncAPI union '$unionName' has ${branches.size} non-null discriminator branches " +
+          "but ${aliases.size} aliases. " +
+          "Direct discriminated object unions must preserve branch-to-alias alignment.",
+      )
+    }
     return branches
-      .mapNotNull { branch ->
-        val modelName = branch.refName() ?: return@mapNotNull null
-        val schema = currentSourceDocument.schemas()[modelName] ?: return@mapNotNull null
-        val discriminatorSchema = schema.mapValue("properties")?.mapValue(discriminatorName) ?: return@mapNotNull null
-        val value =
-          discriminatorSchema["const"] as? String
-            ?: discriminatorSchema.enumValues().singleOrNull() as? String
-            ?: return@mapNotNull null
-        value to GeneratedTypeRef.named(modelName)
+      .zip(aliases)
+      .mapNotNull { (branch, alias) ->
+        val value = branch.discriminatorValue(discriminatorName) ?: return@mapNotNull null
+        if (alias.kind != GeneratedTypeRef.Kind.NAMED) {
+          genError(
+            "AsyncAPI union '$unionName' discriminator value '$value' maps to non-model branch '${alias.name}'. " +
+              "Direct discriminated object unions must preserve all branch properties.",
+          )
+        }
+        value to alias
       }.toMap()
+  }
+
+  private fun Map<*, *>.objectDiscriminatorMappings(
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): Map<String, GeneratedTypeRef> =
+    (this["discriminator"] as? Map<*, *>)
+      ?.mapValue("mapping")
+      .orEmpty()
+      .mapNotNull { (value, ref) ->
+        val discriminatorValue = value as? String ?: return@mapNotNull null
+        val modelName = (ref as? String)?.substringAfterLast('/') ?: return@mapNotNull null
+        discriminatorValue to materializedNamedTypeRef(modelName, location, localModels)
+      }.toMap()
+
+  private fun AsyncApiSourceDocument.discriminatorValue(modelName: String): String? =
+    schemas()
+      .values
+      .firstNotNullOfOrNull { schema ->
+        (schema["discriminator"] as? Map<*, *>)
+          ?.mapValue("mapping")
+          .orEmpty()
+          .firstNotNullOfOrNull { (value, ref) ->
+            val discriminatorValue = value as? String ?: return@firstNotNullOfOrNull null
+            val mappedModelName = (ref as? String)?.substringAfterLast('/') ?: return@firstNotNullOfOrNull null
+            discriminatorValue.takeIf { mappedModelName == modelName }
+          }
+      }
+
+  private fun Map<*, *>.discriminatorValue(discriminatorName: String?): String? {
+    discriminatorName ?: return null
+    refName()?.let { name ->
+      return currentSourceDocument.schemas()[name]?.discriminatorValue(discriminatorName)
+    }
+    mapValue("properties")
+      ?.mapValue(discriminatorName)
+      ?.let { discriminatorSchema ->
+        return discriminatorSchema["const"] as? String
+          ?: discriminatorSchema.enumValues().singleOrNull() as? String
+      }
+    return schemaList("allOf").firstNotNullOfOrNull { schema -> schema.discriminatorValue(discriminatorName) }
   }
 
   private fun GeneratedExampleSource.generatedExample(): GeneratedExample? =

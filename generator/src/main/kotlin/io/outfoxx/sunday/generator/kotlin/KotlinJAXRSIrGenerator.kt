@@ -1857,10 +1857,16 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModel.objectTypeSpec(): TypeSpec.Builder {
     val inheritedProperties = inheritedModelProperties()
-    val localProperties = localModelProperties(inheritedProperties)
+    val directUnionSupertypes = directUnionSupertypes()
+    val flattensInheritedProperties = directUnionSupertypes.isNotEmpty()
+    val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
+    val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
 
     if (typeRegistry.options.contains(ImplementModel) || isProblemModel()) {
-      return classTypeSpec(inheritedProperties, localProperties)
+      if (!isProblemModel() && flattensInheritedProperties) {
+        return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
+      }
+      return classTypeSpec(effectiveInheritedProperties, localProperties)
     }
 
     return TypeSpec
@@ -1868,14 +1874,59 @@ class KotlinJAXRSIrGenerator(
       .addModifiers(KModifier.PUBLIC)
       .apply {
         addJacksonPolymorphism(this@objectTypeSpec)
-        inherits.forEach { inherited ->
-          addSuperinterface(inherited.kotlinTypeName())
+        if (!flattensInheritedProperties) {
+          inherits.forEach { inherited ->
+            addSuperinterface(inherited.kotlinTypeName())
+          }
         }
+        directUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        val declaredProperties =
+          if (flattensInheritedProperties) {
+            effectiveInheritedProperties + localProperties
+          } else {
+            localProperties
+          }
+        declaredProperties.forEach { property ->
+          addProperty(property.propertySpec())
+        }
+      }
+  }
+
+  private fun GeneratedModel.dataClassTypeSpec(properties: List<GeneratedModelProperty>): TypeSpec.Builder {
+    val constructor =
+      FunSpec
+        .constructorBuilder()
+        .apply {
+          properties.forEach { property ->
+            addParameter(property.constructorParameterSpec())
+          }
+        }.build()
+
+    return TypeSpec
+      .classBuilder(kotlinClassName())
+      .addModifiers(KModifier.PUBLIC, KModifier.DATA)
+      .primaryConstructor(constructor)
+      .apply {
+        addJacksonPolymorphism(this@dataClassTypeSpec)
+        addJacksonUnionMemberDeserializerOverride(this@dataClassTypeSpec)
         directUnionSupertypes().forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
-        localProperties.forEach { property ->
-          addProperty(property.propertySpec())
+        properties.forEach { property ->
+          addProperty(
+            PropertySpec
+              .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
+              .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+              .addAnnotations(
+                property.validation.validationAnnotations(
+                  property.type,
+                  AnnotationSpec.UseSiteTarget.GET,
+                ),
+              ).initializer(property.name.kotlinIdentifierName)
+              .build(),
+          )
         }
       }
   }
@@ -2397,9 +2448,20 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModel.localModelProperties(
     inheritedProperties: List<GeneratedModelProperty>,
+    allowOverrides: Boolean = false,
   ): List<GeneratedModelProperty> {
+    if (allowOverrides) {
+      return properties
+    }
     val inheritedWireNames = inheritedProperties.map { property -> property.wireName }.toSet()
     return properties.filterNot { property -> property.wireName in inheritedWireNames }
+  }
+
+  private fun List<GeneratedModelProperty>.withoutOverridesFrom(
+    properties: List<GeneratedModelProperty>,
+  ): List<GeneratedModelProperty> {
+    val overrideWireNames = properties.map { property -> property.wireName }.toSet()
+    return filterNot { property -> property.wireName in overrideWireNames }
   }
 
   private val GeneratedModel.hasInheritors: Boolean

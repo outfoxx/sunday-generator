@@ -513,6 +513,7 @@ class OpenApiToGeneratedApi(
           additionalProperties = additionalProperties(resolved, localModels),
           inherits = allOf.mapNotNull { it.refName()?.let(GeneratedTypeRef::named) },
           discriminator = resolved.discriminatorProperty(),
+          discriminatorMappings = resolved.objectDiscriminatorMappings(),
           discriminatorValue = discriminatorValues[name],
           documentation = documentation(description = resolved["description"] as? String),
           examples = resolved.examples(),
@@ -545,6 +546,16 @@ class OpenApiToGeneratedApi(
           }.toMap(),
       documentation = documentation(description = schema["description"] as? String),
     )
+
+  private fun Map<*, *>.objectDiscriminatorMappings(): Map<String, GeneratedTypeRef> =
+    mapValue("discriminator")
+      ?.mapValue("mapping")
+      .orEmpty()
+      .mapNotNull { (value, ref) ->
+        val discriminatorValue = value as? String ?: return@mapNotNull null
+        val modelName = (ref as? String)?.substringAfterLast('/') ?: return@mapNotNull null
+        discriminatorValue to GeneratedTypeRef.named(modelName)
+      }.toMap()
 
   private fun Map<*, *>.properties(
     modelName: String,

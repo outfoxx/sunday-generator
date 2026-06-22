@@ -1,0 +1,156 @@
+asyncapi: "3.1.0"
+info:
+  title: Direct Event Union API
+  version: "1.0.0"
+x-sunday-apiId: direct-events
+channels:
+  events:
+    address: /events
+    messages:
+      eventEnvelope:
+        $ref: "#/components/messages/EventEnvelopeMessage"
+operations:
+  streamEvents:
+    action: receive
+    x-sunday-service: Events
+    channel:
+      $ref: "#/channels/events"
+    messages:
+      - $ref: "#/channels/events/messages/eventEnvelope"
+components:
+  messages:
+    EventEnvelopeMessage:
+      name: EventEnvelope
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/EventEnvelope"
+  schemas:
+    EventEnvelope:
+      oneOf:
+        - $ref: "#/components/schemas/AccountsTeamCreatedEvent"
+        - $ref: "#/components/schemas/NotificationsAnnouncementPublishedEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          accounts.team.created: "#/components/schemas/AccountsTeamCreatedEvent"
+          notifications.announcement.published: "#/components/schemas/NotificationsAnnouncementPublishedEvent"
+    BaseEventEnvelope:
+      type: object
+      required: [id, type, schemaVersion, occurredAt, producer, scope, correlationId, authorization, data]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/EventType"
+        schemaVersion:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        producer:
+          $ref: "#/components/schemas/ProducerIdentity"
+        actor:
+          $ref: "#/components/schemas/EventIdentity"
+        scope:
+          $ref: "#/components/schemas/ResourceScope"
+        correlationId:
+          type: string
+        authorization:
+          $ref: "#/components/schemas/EventAuthorization"
+        data:
+          type: object
+    AccountsTeamCreatedEvent:
+      allOf:
+        - $ref: "#/components/schemas/BaseEventEnvelope"
+        - type: object
+          required: [type, data]
+          properties:
+            type:
+              const: accounts.team.created
+            data:
+              $ref: "#/components/schemas/AccountsTeamCreatedData"
+    NotificationsAnnouncementPublishedEvent:
+      type: object
+      required: [id, type, schemaVersion, occurredAt, producer, scope, correlationId, authorization, data]
+      properties:
+        id:
+          type: string
+        type:
+          const: notifications.announcement.published
+        schemaVersion:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        producer:
+          $ref: "#/components/schemas/ProducerIdentity"
+        actor:
+          $ref: "#/components/schemas/EventIdentity"
+        scope:
+          $ref: "#/components/schemas/ResourceScope"
+        correlationId:
+          type: string
+        authorization:
+          $ref: "#/components/schemas/EventAuthorization"
+        data:
+          $ref: "#/components/schemas/NotificationAnnouncementPublishedData"
+    EventType:
+      type: string
+      enum:
+        - accounts.team.created
+        - notifications.announcement.published
+      x-enum-varnames:
+        - accountsTeamCreated
+        - notificationsAnnouncementPublished
+    ProducerIdentity:
+      type: object
+      required: [kind, serviceId]
+      properties:
+        kind:
+          type: string
+          const: service
+        serviceId:
+          type: string
+    EventIdentity:
+      type: object
+      required: [kind, userId]
+      properties:
+        kind:
+          type: string
+          const: user
+        userId:
+          type: string
+    ResourceScope:
+      type: object
+      required: [organizationId]
+      properties:
+        organizationId:
+          type: string
+        teamId:
+          type: string
+    EventAuthorization:
+      type: object
+      required: [policy]
+      properties:
+        policy:
+          type: string
+    AccountsTeamCreatedData:
+      type: object
+      required: [teamId, ownerUserId, slug, name]
+      properties:
+        teamId:
+          type: string
+        ownerUserId:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+    NotificationAnnouncementPublishedData:
+      type: object
+      required: [notificationId, message]
+      properties:
+        notificationId:
+          type: string
+        message:
+          type: string

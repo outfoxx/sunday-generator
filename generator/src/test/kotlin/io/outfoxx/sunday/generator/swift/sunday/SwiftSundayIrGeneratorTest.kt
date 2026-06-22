@@ -552,6 +552,141 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `generates direct AsyncAPI discriminated event object unions from IR`(
+    compiler: SwiftCompiler,
+    @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(listOf(asyncApiUri))
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val eventEnvelopeSource =
+      buildString {
+        FileSpec
+          .get("", findType("EventEnvelope", builtTypes))
+          .writeTo(this)
+      }
+    val accountsTeamCreatedEventSource =
+      buildString {
+        FileSpec
+          .get("", findType("AccountsTeamCreatedEvent", builtTypes))
+          .writeTo(this)
+      }
+    val notificationEventSource =
+      buildString {
+        FileSpec
+          .get("", findType("NotificationsAnnouncementPublishedEvent", builtTypes))
+          .writeTo(this)
+      }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(builtTypes.keys.any { typeName -> typeName.simpleName == "AccountsTeamCreatedData" })
+    assertTrue(builtTypes.keys.any { typeName -> typeName.simpleName == "NotificationAnnouncementPublishedData" })
+    assertTrue(
+      eventEnvelopeSource.contains("public enum EventEnvelope : Codable, CustomDebugStringConvertible, Sendable"),
+      eventEnvelopeSource,
+    )
+    assertTrue(
+      eventEnvelopeSource.contains("case accountsTeamCreatedEvent(AccountsTeamCreatedEvent)"),
+      eventEnvelopeSource,
+    )
+    assertTrue(
+      eventEnvelopeSource.contains(
+        "case notificationsAnnouncementPublishedEvent(NotificationsAnnouncementPublishedEvent)",
+      ),
+      eventEnvelopeSource,
+    )
+    assertTrue(
+      eventEnvelopeSource.contains("let discriminatorValue = try container.decode(String.self, forKey: .type)"),
+      eventEnvelopeSource,
+    )
+    assertTrue(eventEnvelopeSource.contains("if discriminatorValue == \"accounts.team.created\""), eventEnvelopeSource)
+    assertTrue(
+      eventEnvelopeSource.contains("self = .accountsTeamCreatedEvent(try AccountsTeamCreatedEvent(from: decoder))"),
+      eventEnvelopeSource,
+    )
+    assertFalse(
+      eventEnvelopeSource.contains("AnyValueDecoder.default.decode(AccountsTeamCreatedEvent.self, from: value)"),
+      eventEnvelopeSource,
+    )
+    assertTrue(accountsTeamCreatedEventSource.contains("public let id: String"), accountsTeamCreatedEventSource)
+    assertTrue(accountsTeamCreatedEventSource.contains("public let occurredAt: Date"), accountsTeamCreatedEventSource)
+    assertTrue(
+      accountsTeamCreatedEventSource.contains("public let data: AccountsTeamCreatedData"),
+      accountsTeamCreatedEventSource,
+    )
+    assertTrue(notificationEventSource.contains("public let id: String"), notificationEventSource)
+    assertTrue(notificationEventSource.contains("public let occurredAt: Date"), notificationEventSource)
+    assertTrue(
+      notificationEventSource.contains("public let data: NotificationAnnouncementPublishedData"),
+      notificationEventSource,
+    )
+  }
+
+  @Test
+  fun `generates Sendable references for AsyncAPI discriminated base models`(
+    compiler: SwiftCompiler,
+    @ResourceUri("asyncapi/ir/discriminated-base-sendable-regression.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(listOf(asyncApiUri))
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val narrativeChangeEventSource =
+      buildString {
+        FileSpec
+          .get("", findType("NarrativeChangeEvent", builtTypes))
+          .writeTo(this)
+      }
+    val narrativeChangeEventRefSource =
+      buildString {
+        FileSpec
+          .get("", findType("NarrativeChangeEventRef", builtTypes))
+          .writeTo(this)
+      }
+    val scriptChangeEventSource =
+      buildString {
+        FileSpec
+          .get("", findType("ScriptChangeEvent", builtTypes))
+          .writeTo(this)
+      }
+    val sceneUpdatedSource =
+      buildString {
+        FileSpec
+          .get("", findType("NarrativeIqSceneUpdatedData", builtTypes))
+          .writeTo(this)
+      }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(
+      narrativeChangeEventSource.contains(
+        "public protocol NarrativeChangeEvent : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      narrativeChangeEventSource,
+    )
+    assertFalse(narrativeChangeEventSource.contains("public class NarrativeChangeEvent"), narrativeChangeEventSource)
+    assertTrue(
+      narrativeChangeEventRefSource.contains(
+        "public enum NarrativeChangeEventRef : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      narrativeChangeEventRefSource,
+    )
+    assertTrue(narrativeChangeEventRefSource.contains("case script(ScriptChangeEvent)"))
+    assertTrue(narrativeChangeEventRefSource.contains("case scene(SceneChangeEvent)"))
+    assertTrue(
+      scriptChangeEventSource.contains("public struct ScriptChangeEvent : NarrativeChangeEvent"),
+      scriptChangeEventSource,
+    )
+    assertTrue(sceneUpdatedSource.contains("public let change: NarrativeChangeEventRef"), sceneUpdatedSource)
+  }
+
+  @Test
   fun `generates request methods from IR with existing Swift Sunday output shape`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
@@ -1899,10 +2034,13 @@ class SwiftSundayIrGeneratorTest {
       ),
       unionSource,
     )
-    assertTrue(unionSource.contains("let discriminatorValue = object[\"code\"]?.unwrapped as? String"), unionSource)
+    assertTrue(
+      unionSource.contains("let discriminatorValue = try container.decode(String.self, forKey: .code)"),
+      unionSource,
+    )
     assertTrue(unionSource.contains("if discriminatorValue == \"TPG-REPO-404\""), unionSource)
     assertTrue(
-      unionSource.contains("AnyValueDecoder.default.decode(RepoNotFoundProblem.self, from: value)"),
+      unionSource.contains("self = .repoNotFoundProblem(try RepoNotFoundProblem(from: decoder))"),
       unionSource,
     )
     assertTrue(unionSource.contains("if discriminatorValue == \"TPG-WG-404\""), unionSource)

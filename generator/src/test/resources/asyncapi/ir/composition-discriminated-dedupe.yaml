@@ -1,0 +1,65 @@
+asyncapi: "3.1.0"
+info:
+  title: Craft Events API
+  version: "1.0.0"
+x-sunday-apiId: craft
+channels:
+  scope.changed:
+    address: scope.changed
+    messages:
+      scopeChanged:
+        $ref: "#/components/messages/ScopeChangedMessage"
+operations:
+  streamScopeChanges:
+    action: receive
+    x-sunday-service: scopes
+    channel:
+      $ref: "#/channels/scope.changed"
+    messages:
+      - $ref: "#/channels/scope.changed/messages/scopeChanged"
+components:
+  messages:
+    ScopeChangedMessage:
+      name: ScopeChanged
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/NarrativeScopeSummary"
+  schemas:
+    UniqueId:
+      type: string
+      pattern: "^[A-Z2-7]{26}$"
+      description: Stable unique identifier.
+    NarrativeScopeLevel:
+      type: string
+      enum: [script, scene]
+    NarrativeScopeSummary:
+      type: object
+      required: [level, id, label]
+      discriminator:
+        propertyName: level
+        mapping:
+          script: "#/components/schemas/ScriptSummary"
+          scene: "#/components/schemas/SceneSummary"
+      properties:
+        level:
+          $ref: "#/components/schemas/NarrativeScopeLevel"
+        id:
+          $ref: "#/components/schemas/UniqueId"
+        label:
+          type: string
+    ScriptSummary:
+      allOf:
+        - $ref: "#/components/schemas/NarrativeScopeSummary"
+        - type: object
+          required: [title]
+          properties:
+            title:
+              type: string
+    SceneSummary:
+      allOf:
+        - $ref: "#/components/schemas/NarrativeScopeSummary"
+        - type: object
+          required: [scriptId]
+          properties:
+            scriptId:
+              $ref: "#/components/schemas/UniqueId"

@@ -148,16 +148,17 @@ class GeneratedApiComposer {
     val identity = fragment.modelIdentity(model)
     val existing = models[identity.id]
     if (existing == null) {
-      models[identity.id] = ModelState(model, identity)
+      models[identity.id] = ModelState(model, identity, fragment.modelSource(model))
       return
     }
 
-    if (existing.model == model) {
+    if (existing.model.name == model.name && existing.model.compositionSignature() == model.compositionSignature()) {
       return
     }
 
     throw GeneratedApiCompositionException(
-      "Model identity collision '${identity.id}' for model '${model.name}'. " +
+      "Model identity collision '${identity.id}' for model '${model.name}' between " +
+        "${existing.source.description()} and ${fragment.modelSource(model).description()}. " +
         "Add x-sunday-modelName to disambiguate default-derived models.",
     )
   }
@@ -199,6 +200,56 @@ class GeneratedApiComposer {
       ?.let { scope -> GeneratedIdentity.native(model.scopedModelIdentity(scope)) }
       ?: modelIdentities[model.name]
       ?: GeneratedIdentity.native(model.name)
+
+  private fun GeneratedApiFragment.modelSource(model: GeneratedModel): GeneratedSourceSpec = model.source ?: api.source
+
+  private fun GeneratedSourceSpec.description(): String = "${kind.name.lowercase()} '$location'"
+
+  private fun GeneratedModel.compositionSignature(): GeneratedModel =
+    copy(
+      source = null,
+      properties = properties.map { property -> property.compositionSignature() },
+      aliases = aliases.map { alias -> alias.compositionSignature() },
+      additionalProperties = additionalProperties?.compositionSignature(),
+      patternProperties = patternProperties.map { patternProperty -> patternProperty.compositionSignature() },
+      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
+      nested = nested?.compositionSignature(),
+      inherits = inherits.map { inherited -> inherited.compositionSignature() },
+      discriminatorMappings = discriminatorMappings.mapValues { (_, type) -> type.compositionSignature() },
+      examples = listOf(),
+      documentation = null,
+    )
+
+  private fun GeneratedModelProperty.compositionSignature(): GeneratedModelProperty =
+    copy(
+      type = type.compositionSignature(),
+      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
+      examples = listOf(),
+      documentation = null,
+    )
+
+  private fun GeneratedAdditionalProperties.compositionSignature(): GeneratedAdditionalProperties =
+    copy(
+      type = type?.compositionSignature(),
+      documentation = null,
+    )
+
+  private fun GeneratedPatternProperty.compositionSignature(): GeneratedPatternProperty =
+    copy(
+      type = type.compositionSignature(),
+      documentation = null,
+    )
+
+  private fun GeneratedNestedType.compositionSignature(): GeneratedNestedType =
+    copy(enclosedIn = enclosedIn?.compositionSignature())
+
+  private fun GeneratedTarget.compositionSignature(): GeneratedTarget = this
+
+  private fun GeneratedTypeRef.compositionSignature(): GeneratedTypeRef =
+    copy(
+      arguments = arguments.map { argument -> argument.compositionSignature() },
+      source = null,
+    )
 
   private fun GeneratedModel.scopedModelIdentity(scope: GeneratedModelScope): String =
     listOf(
@@ -257,6 +308,7 @@ class GeneratedApiComposer {
   private data class ModelState(
     val model: GeneratedModel,
     val identity: GeneratedIdentity,
+    val source: GeneratedSourceSpec,
   )
 
   private data class ProblemState(

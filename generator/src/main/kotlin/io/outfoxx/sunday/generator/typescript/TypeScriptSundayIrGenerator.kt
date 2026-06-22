@@ -876,11 +876,10 @@ class TypeScriptSundayIrGenerator(
 
     val rootDiscriminatorName = model.rootModel()?.discriminator
     val inheritedProperties = model.inheritedProperties(rootDiscriminatorName)
-    val inheritedPropertyNames = inheritedProperties.map { property -> property.name }.toSet()
     val declaredProperties =
       model.properties
-        .filterNot { property -> property.name == rootDiscriminatorName || property.name in inheritedPropertyNames }
-    val allSerializableProperties = inheritedProperties + declaredProperties
+        .filterNot { property -> property.name == rootDiscriminatorName }
+    val allSerializableProperties = inheritedProperties.withoutOverridesFrom(declaredProperties) + declaredProperties
     val childModels = model.childModels()
     val isDiscriminatorBase = rootDiscriminatorName != null && childModels.isNotEmpty()
     val isProblemModel = model.isProblemModel()
@@ -897,6 +896,7 @@ class TypeScriptSundayIrGenerator(
     val discriminatorTypeName = discriminatorProperty?.type?.typeName(ownerTypeName)
     val superTypeName = model.inherits.firstOrNull()?.typeName(ownerTypeName) as? TypeName.Standard
     val isRootProblemModel = isProblemModel && superTypeName == null
+    val inheritedPropertyNames = inheritedProperties.map { property -> property.name }.toSet()
 
     val interfaceBuilder =
       InterfaceSpec
@@ -941,8 +941,16 @@ class TypeScriptSundayIrGenerator(
           .optional(propertyType.isUndefinable)
           .build(),
       )
-      if (!(isRootProblemModel && property.isSatisfiedByBaseProblemClass())) {
-        classBuilder.addProperty(PropertySpec.builder(propertyName, propertyType).build())
+      if (
+        !(isRootProblemModel && property.isSatisfiedByBaseProblemClass()) &&
+        !(isProblemModel && superTypeName != null && property.name in inheritedPropertyNames)
+      ) {
+        classBuilder.addProperty(
+          PropertySpec
+            .builder(propertyName, propertyType.nonUndefinable)
+            .optional(propertyType.isUndefinable)
+            .build(),
+        )
       }
     }
 
@@ -981,7 +989,10 @@ class TypeScriptSundayIrGenerator(
 
       declaredProperties.forEach { property ->
         val propertyName = property.name.typeScriptIdentifierName
-        if (!(isRootProblemModel && property.isSatisfiedByBaseProblemClass())) {
+        if (
+          !(isRootProblemModel && property.isSatisfiedByBaseProblemClass()) &&
+          !(isProblemModel && superTypeName != null && property.name in inheritedPropertyNames)
+        ) {
           constructorBuilder.addStatement("this.%N = init.%N", propertyName, propertyName)
         }
       }
@@ -1051,11 +1062,10 @@ class TypeScriptSundayIrGenerator(
   ) {
     val rootDiscriminatorName = model.rootModel()?.discriminator
     val inheritedProperties = model.inheritedProperties(rootDiscriminatorName)
-    val inheritedPropertyNames = inheritedProperties.map { property -> property.name }.toSet()
     val declaredProperties =
       model.properties
-        .filterNot { property -> property.name == rootDiscriminatorName || property.name in inheritedPropertyNames }
-    val allSerializableProperties = inheritedProperties + declaredProperties
+        .filterNot { property -> property.name == rootDiscriminatorName }
+    val allSerializableProperties = inheritedProperties.withoutOverridesFrom(declaredProperties) + declaredProperties
     val childModels = model.childModels()
     val isDiscriminatorBase = rootDiscriminatorName != null && childModels.isNotEmpty()
     val leafDiscriminatorValue =
@@ -1267,8 +1277,17 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.inheritedProperties(discriminatorName: String?): List<GeneratedModelProperty> {
     val parent = inherits.firstOrNull()?.modelOrNull(index) ?: return emptyList()
-    return parent.inheritedProperties(discriminatorName) +
+    val parentProperties =
       parent.properties.filterNot { property -> property.name == discriminatorName }
+    return parent.inheritedProperties(discriminatorName).withoutOverridesFrom(parentProperties) +
+      parentProperties
+  }
+
+  private fun List<GeneratedModelProperty>.withoutOverridesFrom(
+    properties: List<GeneratedModelProperty>,
+  ): List<GeneratedModelProperty> {
+    val overrideWireNames = properties.map { property -> property.serializationName ?: property.name }.toSet()
+    return filterNot { property -> (property.serializationName ?: property.name) in overrideWireNames }
   }
 
   private fun discriminatorValueCode(

@@ -128,4 +128,11 @@ models:
       name: "string"
     required: true
   discriminator: "kind"
+  discriminatorMappings:
+    bug:
+      kind: "NAMED"
+      name: "Bug"
+    feature:
+      kind: "NAMED"
+      name: "Feature"
 media: {}

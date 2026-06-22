@@ -67,7 +67,16 @@ class PythonModelRenderer(
       return renderUnionAliasModel()
     }
 
-    val renderedProperties = syntheticDiscriminatorProperty()?.let { listOf(it) + properties } ?: properties
+    val effectiveProperties = effectiveModelProperties()
+    val renderedProperties =
+      syntheticDiscriminatorProperty()
+        ?.let { discriminatorProperty ->
+          val discriminatorWireName = discriminatorProperty.serializationName ?: discriminatorProperty.name
+          listOf(discriminatorProperty) +
+            effectiveProperties.filterNot { property ->
+              (property.serializationName ?: property.name) == discriminatorWireName
+            }
+        } ?: effectiveProperties
     val body =
       if (renderedProperties.isEmpty()) {
         PythonCodeBlock.of("    pass")
@@ -364,6 +373,21 @@ class PythonModelRenderer(
     } else {
       aliases
     }
+
+  private fun GeneratedModel.effectiveModelProperties(): List<GeneratedModelProperty> {
+    val inheritedProperties =
+      inherits
+        .mapNotNull { inherited -> modelIndex[inherited.name] }
+        .flatMap { model -> model.effectiveModelProperties() }
+    val overrideNames =
+      properties
+        .map { property -> property.serializationName ?: property.name }
+        .toSet()
+    return inheritedProperties
+      .filterNot { property ->
+        (property.serializationName ?: property.name) in overrideNames
+      } + properties
+  }
 
   private fun GeneratedModelProperty.discriminatorLiteralValue(model: GeneratedModel): String? {
     val discriminator = model.discriminatorPropertyName() ?: return null
