@@ -581,8 +581,7 @@ class AsyncApiToGeneratedApi(
     val representedWireNames =
       properties.map { property -> property.serializationName ?: property.name }.toSet() +
         inherits
-          .mapNotNull { inherited -> localModels[inherited.name] }
-          .flatMap { model -> model.allPropertyWireNames(localModels) }
+          .flatMap { inherited -> inherited.representedPropertyWireNames(localModels) }
           .toSet()
     val sourcePropertyWireNames = schema.sourcePropertyWireNames()
     val dropped = sourcePropertyWireNames.filterNot { wireName -> wireName in representedWireNames }
@@ -600,6 +599,14 @@ class AsyncApiToGeneratedApi(
         .mapNotNull { inherited -> localModels[inherited.name] }
         .flatMap { model -> model.allPropertyWireNames(localModels) }
         .toSet()
+
+  private fun GeneratedTypeRef.representedPropertyWireNames(localModels: Map<String, GeneratedModel>): Set<String> {
+    val materializedWireNames = localModels[name]?.allPropertyWireNames(localModels).orEmpty()
+    if (materializedWireNames.isNotEmpty()) {
+      return materializedWireNames
+    }
+    return currentSourceDocument.schemas()[name]?.sourcePropertyWireNames(setOf(name)).orEmpty()
+  }
 
   private fun documentation(
     summary: String? = null,
@@ -833,15 +840,25 @@ class AsyncApiToGeneratedApi(
   private fun Map<*, *>.resolvedSchema(): Map<*, *> =
     refName()?.let { name -> currentSourceDocument.schemas()[name] } ?: this
 
-  private fun Map<*, *>.sourcePropertyWireNames(): Set<String> =
-    mapValue("properties")
-      .orEmpty()
-      .keys
-      .filterIsInstance<String>()
-      .toSet() +
-      schemaList("allOf")
-        .flatMap { schema -> schema.sourcePropertyWireNames() }
+  private fun Map<*, *>.sourcePropertyWireNames(visitedRefs: Set<String> = setOf()): Set<String> {
+    val directWireNames =
+      mapValue("properties")
+        .orEmpty()
+        .keys
+        .filterIsInstance<String>()
         .toSet()
+    val referencedWireNames =
+      refName()
+        ?.takeUnless { name -> name in visitedRefs }
+        ?.let { name ->
+          currentSourceDocument.schemas()[name]?.sourcePropertyWireNames(visitedRefs + name)
+        }.orEmpty()
+    val composedWireNames =
+      schemaList("allOf")
+        .flatMap { schema -> schema.sourcePropertyWireNames(visitedRefs) }
+        .toSet()
+    return directWireNames + referencedWireNames + composedWireNames
+  }
 
   private fun Map<*, *>.scalarTypeName(): String =
     when (val type = this["type"]) {

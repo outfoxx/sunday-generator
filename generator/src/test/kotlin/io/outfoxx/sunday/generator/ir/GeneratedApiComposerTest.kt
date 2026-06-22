@@ -347,6 +347,110 @@ class GeneratedApiComposerTest {
   }
 
   @Test
+  fun `dedupes model collisions with matching target metadata`() {
+
+    val target = GeneratedTarget(typeName = "ProjectDTO")
+    val propertyTarget = GeneratedTarget(typeName = "ProjectId")
+    val model =
+      projectModel()
+        .copy(
+          targets = mapOf("swift" to target),
+          properties =
+            projectModel()
+              .properties
+              .map { property -> property.copy(targets = mapOf("swift" to propertyTarget)) },
+        )
+    val first =
+      fragment(
+        models = listOf(model),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+    val second =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        models = listOf(model),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+
+    val api = GeneratedApiComposer().compose(listOf(first, second))
+
+    assertThat(api.models.map { composedModel -> composedModel.name }, equalTo(listOf("Project")))
+    assertThat(api.models.single(), equalTo(model))
+  }
+
+  @Test
+  fun `rejects model collisions with different target metadata`() {
+
+    val firstModel =
+      projectModel()
+        .copy(targets = mapOf("swift" to GeneratedTarget(typeName = "ProjectDTO")))
+    val secondModel =
+      projectModel()
+        .copy(targets = mapOf("swift" to GeneratedTarget(typeName = "ProjectView")))
+    val first =
+      fragment(
+        models = listOf(firstModel),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+    val second =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        models = listOf(secondModel),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+
+    val failure =
+      assertThrows(GeneratedApiCompositionException::class.java) {
+        GeneratedApiComposer().compose(listOf(first, second))
+      }
+
+    assertThat(failure.message, containsString("project"))
+    assertThat(failure.message, containsString("Project"))
+    assertThat(failure.message, containsString("x-sunday-modelName"))
+  }
+
+  @Test
+  fun `rejects model collisions with different property target metadata`() {
+
+    val firstModel =
+      projectModel()
+        .copy(
+          properties =
+            projectModel()
+              .properties
+              .map { property -> property.copy(targets = mapOf("swift" to GeneratedTarget(typeName = "ProjectId"))) },
+        )
+    val secondModel =
+      projectModel()
+        .copy(
+          properties =
+            projectModel()
+              .properties
+              .map { property -> property.copy(targets = mapOf("swift" to GeneratedTarget(typeName = "ProjectID"))) },
+        )
+    val first =
+      fragment(
+        models = listOf(firstModel),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+    val second =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        models = listOf(secondModel),
+        modelIdentities = mapOf("Project" to GeneratedIdentity.generated("project")),
+      )
+
+    val failure =
+      assertThrows(GeneratedApiCompositionException::class.java) {
+        GeneratedApiComposer().compose(listOf(first, second))
+      }
+
+    assertThat(failure.message, containsString("project"))
+    assertThat(failure.message, containsString("Project"))
+    assertThat(failure.message, containsString("x-sunday-modelName"))
+  }
+
+  @Test
   fun `rejects model collisions with matching structural signatures but different generated names`() {
 
     val first =

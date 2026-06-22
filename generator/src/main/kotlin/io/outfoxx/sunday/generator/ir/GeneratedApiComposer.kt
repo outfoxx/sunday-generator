@@ -212,6 +212,7 @@ class GeneratedApiComposer {
       aliases = aliases.map { alias -> alias.compositionSignature() },
       additionalProperties = additionalProperties?.compositionSignature(),
       patternProperties = patternProperties.map { patternProperty -> patternProperty.compositionSignature() },
+      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
       nested = nested?.compositionSignature(),
       inherits = inherits.map { inherited -> inherited.compositionSignature() },
       discriminatorMappings = discriminatorMappings.mapValues { (_, type) -> type.compositionSignature() },
@@ -222,6 +223,7 @@ class GeneratedApiComposer {
   private fun GeneratedModelProperty.compositionSignature(): GeneratedModelProperty =
     copy(
       type = type.compositionSignature(),
+      targets = targets.mapValues { (_, target) -> target.compositionSignature() },
       examples = listOf(),
       documentation = null,
     )
@@ -240,6 +242,8 @@ class GeneratedApiComposer {
 
   private fun GeneratedNestedType.compositionSignature(): GeneratedNestedType =
     copy(enclosedIn = enclosedIn?.compositionSignature())
+
+  private fun GeneratedTarget.compositionSignature(): GeneratedTarget = this
 
   private fun GeneratedTypeRef.compositionSignature(): GeneratedTypeRef =
     copy(

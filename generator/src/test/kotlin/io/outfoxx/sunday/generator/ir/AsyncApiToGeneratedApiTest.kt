@@ -671,6 +671,18 @@ class AsyncApiToGeneratedApiTest {
       equalTo(listOf(GeneratedTypeRef.named("BaseEventEnvelope"))),
     )
     assertThat(
+      models["BaseEventEnvelope"]?.properties?.map { property -> property.name }?.toSet(),
+      equalTo(expectedEventFields),
+    )
+    assertThat(
+      models["BaseEventEnvelope"]
+        ?.properties
+        ?.filter { property -> property.required }
+        ?.map { property -> property.name }
+        ?.toSet(),
+      equalTo(expectedEventFields - "actor"),
+    )
+    assertThat(
       models["AccountsTeamCreatedEvent"]?.properties?.map { property -> property.name }?.toSet(),
       equalTo(setOf("type", "data")),
     )
