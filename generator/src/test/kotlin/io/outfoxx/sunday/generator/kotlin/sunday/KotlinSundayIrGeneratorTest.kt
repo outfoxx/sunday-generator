@@ -22,6 +22,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -33,6 +34,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
+import io.outfoxx.sunday.generator.ir.GeneratedProtocol
+import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
@@ -2689,6 +2692,89 @@ class KotlinSundayIrGeneratorTest {
   }
 
   @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates AMQP broker facades from AsyncAPI`(
+    @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+
+    val brokerSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/EventsBroker.kt")
+
+    assertTrue(brokerSource.contains("public class EventsBroker("), brokerSource)
+    assertTrue(brokerSource.contains("private val producer: BrokerProducer"), brokerSource)
+    assertTrue(brokerSource.contains("private val consumer: BrokerConsumer"), brokerSource)
+    assertTrue(brokerSource.contains("public suspend fun publishPlatformEvent("), brokerSource)
+    assertTrue(brokerSource.contains("this.producer.send("), brokerSource)
+    assertTrue(
+      brokerSource.contains("public fun consumePlatformEvents(): Flow<BrokerDelivery<PlatformEvent>>"),
+      brokerSource,
+    )
+    assertTrue(brokerSource.contains("this.consumer.consume(Specs.consumePlatformEvents)"), brokerSource)
+    assertTrue(brokerSource.contains("AmqpBrokerProtocolSpec("), brokerSource)
+    assertTrue(brokerSource.contains("exchange = \"platform.events\""), brokerSource)
+    assertTrue(brokerSource.contains("routingKeys = listOf(\"platform.#\")"), brokerSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates AMQP broker facades for mixed and unidirectional services`() {
+    val typeRegistry = typeRegistry()
+    val api = brokerEdgeCaseApi()
+
+    KotlinSundayIrGenerator(
+      api,
+      typeRegistry,
+      KotlinSundayOptions(
+        defaultServicePackageName = "io.test.service",
+        defaultProblemBaseUri = "http://example.com/",
+        defaultMediaTypes = listOf("application/json"),
+        serviceSuffix = "Broker",
+      ),
+    ).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+
+    val mixedHttpSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/service/EventsBroker.kt",
+      )
+    val mixedBrokerSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/service/EventsAmqpBroker.kt",
+      )
+    val publishOnlySource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/service/PublishOnlyBroker.kt",
+      )
+    val subscribeOnlySource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/service/SubscribeOnlyBroker.kt",
+      )
+
+    assertTrue(mixedHttpSource.contains("public class EventsBroker<Req : Request>("), mixedHttpSource)
+    assertTrue(mixedBrokerSource.contains("public class EventsAmqpBroker("), mixedBrokerSource)
+    assertTrue(mixedBrokerSource.contains("private val producer: BrokerProducer"), mixedBrokerSource)
+    assertFalse(mixedBrokerSource.contains("private val consumer: BrokerConsumer"), mixedBrokerSource)
+    assertTrue(publishOnlySource.contains("private val producer: BrokerProducer"), publishOnlySource)
+    assertFalse(publishOnlySource.contains("private val consumer: BrokerConsumer"), publishOnlySource)
+    assertFalse(subscribeOnlySource.contains("private val producer: BrokerProducer"), subscribeOnlySource)
+    assertTrue(subscribeOnlySource.contains("private val consumer: BrokerConsumer"), subscribeOnlySource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
   private fun generateServiceType(
     testUri: URI,
     options: KotlinSundayOptions = kotlinSundayTestOptions,
@@ -2720,6 +2806,109 @@ class KotlinSundayIrGeneratorTest {
 
   private fun compiledServiceSource(): String =
     CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
+
+  private fun brokerEdgeCaseApi(): GeneratedApi {
+    val scopedPayload =
+      GeneratedModelScope(
+        service = "EventsService",
+        operation = "sharedEventPayload",
+        usage = GeneratedModelScope.Usage.REQUEST_BODY,
+      )
+    val payloadRef = GeneratedTypeRef.named("SharedEventPayload", scope = scopedPayload)
+    val amqpProtocol =
+      GeneratedProtocol(
+        bindings =
+          listOf(
+            GeneratedProtocolBinding(
+              kind = GeneratedProtocolBinding.Kind.CHANNEL,
+              protocol = "amqp",
+              values =
+                mapOf(
+                  "exchange" to mapOf("name" to "events", "type" to "topic"),
+                  "routingKey" to "events.created",
+                ),
+            ),
+          ),
+      )
+
+    return GeneratedApi(
+      name = "Broker Edge API",
+      source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
+      services =
+        listOf(
+          GeneratedService(
+            name = "EventsService",
+            group = "Events",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "streamEvents",
+                  method = "GET",
+                  path = "/events",
+                  responses = listOf(GeneratedResponse(type = payloadRef, mediaTypes = listOf("application/json"))),
+                ),
+                GeneratedOperation(
+                  id = "publishEvents",
+                  method = "PUBLISH",
+                  path = "events",
+                  requestBody = GeneratedPayload(type = payloadRef, mediaTypes = listOf("application/json")),
+                  protocol = amqpProtocol,
+                ),
+              ),
+          ),
+          GeneratedService(
+            name = "PublishOnlyService",
+            group = "PublishOnly",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "publishOnly",
+                  method = "PUBLISH",
+                  path = "publish.only",
+                  requestBody =
+                    GeneratedPayload(
+                      type = GeneratedTypeRef.scalar("string"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  protocol = amqpProtocol,
+                ),
+              ),
+          ),
+          GeneratedService(
+            name = "SubscribeOnlyService",
+            group = "SubscribeOnly",
+            operations =
+              listOf(
+                GeneratedOperation(
+                  id = "subscribeOnly",
+                  method = "SUBSCRIBE",
+                  path = "subscribe.only",
+                  responses =
+                    listOf(
+                      GeneratedResponse(
+                        type = GeneratedTypeRef.scalar("string"),
+                        mediaTypes = listOf("application/json"),
+                      ),
+                    ),
+                  protocol = amqpProtocol,
+                ),
+              ),
+          ),
+        ),
+      models =
+        listOf(
+          GeneratedModel(
+            name = "SharedEventPayload",
+            kind = GeneratedModel.Kind.OBJECT,
+            scope = scopedPayload,
+            properties =
+              listOf(
+                GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true),
+              ),
+          ),
+        ),
+    )
+  }
 
   private fun avatarUploadApi(): GeneratedApi =
     GeneratedApi(

@@ -589,6 +589,53 @@ class AsyncApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps AsyncAPI AMQP broker message bindings to generated API fragment`(
+    @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
+  ) {
+    val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
+    val service = fragment.api.services.single()
+    val operation = service.operations.first { operation -> operation.id == "consumePlatformEvents" }
+
+    assertThat(
+      operation
+        .protocol
+        ?.bindings
+        .orEmpty()
+        .filter { binding -> binding.protocol == "amqp" },
+      equalTo(
+        listOf(
+          GeneratedProtocolBinding(
+            kind = GeneratedProtocolBinding.Kind.CHANNEL,
+            protocol = "amqp",
+            values =
+              mapOf(
+                "exchange" to
+                  mapOf(
+                    "name" to "platform.events",
+                    "type" to "topic",
+                    "durable" to true,
+                  ),
+                "queue" to
+                  mapOf(
+                    "name" to "platform-events",
+                    "durable" to true,
+                  ),
+                "routingKeys" to listOf("platform.#"),
+                "defaultRoutingKey" to "platform.event",
+                "deadLetterExchange" to "platform.events.dlx",
+              ),
+          ),
+          GeneratedProtocolBinding(
+            kind = GeneratedProtocolBinding.Kind.MESSAGE,
+            protocol = "amqp",
+            values = mapOf("messageType" to "platform.event"),
+          ),
+        ),
+      ),
+    )
+  }
+
+  @Test
   fun `maps OpenAPI-style AsyncAPI discriminator objects to generated union mappings`(
     @ResourceUri("asyncapi/ir/openapi-style-discriminator.yaml") testUri: URI,
   ) {

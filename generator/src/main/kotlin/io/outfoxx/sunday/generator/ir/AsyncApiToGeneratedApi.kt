@@ -180,7 +180,8 @@ class AsyncApiToGeneratedApi(
       GeneratedProtocol(
         bindings =
           bindings(GeneratedProtocolBinding.Kind.CHANNEL) +
-            operation.bindings(GeneratedProtocolBinding.Kind.OPERATION),
+            operation.bindings(GeneratedProtocolBinding.Kind.OPERATION) +
+            message.bindings(GeneratedProtocolBinding.Kind.MESSAGE),
       ).takeUnless { it == GeneratedProtocol() }
 
     return OperationFragment(
@@ -241,7 +242,8 @@ class AsyncApiToGeneratedApi(
       GeneratedProtocol(
         bindings =
           channel.bindings(GeneratedProtocolBinding.Kind.CHANNEL) +
-            bindings(GeneratedProtocolBinding.Kind.OPERATION),
+            bindings(GeneratedProtocolBinding.Kind.OPERATION) +
+            message.bindings(GeneratedProtocolBinding.Kind.MESSAGE),
       ).takeUnless { it == GeneratedProtocol() }
 
     return OperationFragment(
@@ -1440,6 +1442,9 @@ class AsyncApiToGeneratedApi(
               payload = example["payload"],
             )
           }
+
+    fun bindings(kind: GeneratedProtocolBinding.Kind): List<GeneratedProtocolBinding> =
+      source.mapValue("bindings").orEmpty().protocolBindings(kind)
   }
 
   private data class GeneratedExampleSource(

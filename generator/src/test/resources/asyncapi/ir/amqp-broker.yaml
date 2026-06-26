@@ -1,0 +1,58 @@
+asyncapi: 3.1.0
+info:
+  title: Broker Events API
+  version: 1.0.0
+x-sunday-apiId: broker-events
+servers:
+  rabbitmq:
+    host: broker.example.com
+    protocol: amqp
+channels:
+  platformEvents:
+    address: platform.events
+    x-sunday-service: Events
+    publish:
+      operationId: publishPlatformEvent
+      message:
+        name: PlatformEvent
+        contentType: application/json
+        bindings:
+          amqp:
+            messageType: platform.event
+        payload:
+          $ref: '#/components/schemas/PlatformEvent'
+    subscribe:
+      operationId: consumePlatformEvents
+      message:
+        name: PlatformEvent
+        contentType: application/json
+        bindings:
+          amqp:
+            messageType: platform.event
+        payload:
+          $ref: '#/components/schemas/PlatformEvent'
+    bindings:
+      amqp:
+        exchange:
+          name: platform.events
+          type: topic
+          durable: true
+        queue:
+          name: platform-events
+          durable: true
+        routingKeys:
+          - platform.#
+        defaultRoutingKey: platform.event
+        deadLetterExchange: platform.events.dlx
+components:
+  schemas:
+    PlatformEvent:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+        type:
+          type: string

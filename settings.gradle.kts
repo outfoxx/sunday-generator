@@ -42,6 +42,7 @@ if (localSundayKt.isDirectory) {
   includeBuild(localSundayKt) {
     dependencySubstitution {
       substitute(module("io.outfoxx.sunday:sunday-core")).using(project(":sunday-core"))
+      substitute(module("io.outfoxx.sunday:sunday-broker")).using(project(":sunday-broker"))
       substitute(module("io.outfoxx.sunday:sunday-problem")).using(project(":sunday-problem"))
     }
   }
