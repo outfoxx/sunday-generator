@@ -22,6 +22,7 @@ dependencies {
   // START: generated code dependencies
   testImplementation(libs.jackson)
   testImplementation(libs.sundayKt)
+  testImplementation(libs.sundayBroker)
   testImplementation(libs.sundayProblem)
   testImplementation(libs.javaxJaxrs)
   testImplementation(libs.jakartaJaxrs)

@@ -56,6 +56,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
+import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.ir.GeneratedService
@@ -109,6 +110,13 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_AMQP_BROKER_PROTOCOL_SPEC
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_CONSUMER
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_CONSUME_SPEC
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_DELIVERY
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_MESSAGE_CODEC
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_PRODUCER
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_SEND_SPEC
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_EVENT_SOURCE
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_HTTP_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_METHOD
@@ -183,8 +191,9 @@ class KotlinSundayIrGenerator(
    */
   fun generateServiceTypes() {
     val services = api.kotlinSundayServices()
+    val brokerServices = api.kotlinSundayBrokerServices()
 
-    generateModelTypes(services)
+    generateModelTypes(services + brokerServices)
     generateProblemTypes(services)
 
     val serviceTypes =
@@ -206,6 +215,14 @@ class KotlinSundayIrGenerator(
       }
       typeRegistry.addServiceType(aggregateTypeName, generateAggregateServiceType(aggregateTypeName, serviceTypes))
     }
+
+    brokerServices.forEach { service ->
+      val servicePackageName = servicePackageName()
+      val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName()}")
+      val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
+
+      typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
+    }
   }
 
   private fun GeneratedApi.kotlinSundayServices(): List<GeneratedService> =
@@ -220,6 +237,22 @@ class KotlinSundayIrGenerator(
   private fun GeneratedOperation.isKotlinSundayOperation(): Boolean =
     method !in asyncApiOperationMethods ||
       (path.startsWith("/") && !hasNonHttpProtocolBinding())
+
+  private fun GeneratedApi.kotlinSundayBrokerServices(): List<GeneratedService> =
+    services
+      .mapNotNull { service ->
+        service
+          .copy(operations = service.operations.filter { operation -> operation.isKotlinSundayBrokerOperation() })
+          .takeIf { filtered -> filtered.operations.isNotEmpty() }
+      }
+
+  private fun GeneratedOperation.isKotlinSundayBrokerOperation(): Boolean =
+    method in asyncApiOperationMethods &&
+      !path.startsWith("/") &&
+      protocol
+        ?.bindings
+        .orEmpty()
+        .any { binding -> binding.protocol.equals("amqp", ignoreCase = true) }
 
   private fun GeneratedService.withKotlinSundayBaseUri(): GeneratedService =
     takeUnless { service ->
@@ -278,20 +311,37 @@ class KotlinSundayIrGenerator(
   }
 
   private fun GeneratedService.typeSimpleName(): String {
+    val servicePrefix = servicePrefix()
+
+    return "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
+  }
+
+  private fun GeneratedService.brokerTypeSimpleName(): String {
+    val servicePrefix =
+      servicePrefix()
+        .ifBlank {
+          api.name
+            .removeSuffix(" API")
+            .split(Regex("\\s+"))
+            .joinToString("") { it.toUpperCamelCase() }
+        }
+
+    return "${servicePrefix.kotlinTypeName}Broker"
+  }
+
+  private fun GeneratedService.servicePrefix(): String {
     val defaultUngroupedName =
       api.name
         .removeSuffix(" API")
         .split(Regex("\\s+"))
         .joinToString("") { it.toUpperCamelCase() } + "Service"
-    val servicePrefix =
-      when {
-        group != null -> group
-        name == defaultUngroupedName -> ""
-        name.endsWith("Service") -> name.removeSuffix("Service")
-        else -> name
-      }
 
-    return "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
+    return when {
+      group != null -> group
+      name == defaultUngroupedName -> ""
+      name.endsWith("Service") -> name.removeSuffix("Service")
+      else -> name
+    }
   }
 
   private fun servicePackageName(): String =
@@ -484,6 +534,214 @@ class KotlinSundayIrGenerator(
 
     return serviceTypeBuilder
   }
+
+  private fun generateBrokerServiceType(
+    serviceTypeName: ClassName,
+    service: GeneratedService,
+  ): TypeSpec.Builder {
+    val serviceTypeBuilder =
+      TypeSpec
+        .classBuilder(serviceTypeName)
+        .primaryConstructor(
+          FunSpec
+            .constructorBuilder()
+            .addParameter("producer", SUNDAY_BROKER_PRODUCER)
+            .addParameter("consumer", SUNDAY_BROKER_CONSUMER)
+            .addParameter(
+              ParameterSpec
+                .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC)
+                .defaultValue("%T()", SUNDAY_BROKER_MESSAGE_CODEC)
+                .build(),
+            ).build(),
+        ).addProperty(
+          PropertySpec
+            .builder("producer", SUNDAY_BROKER_PRODUCER, KModifier.PRIVATE)
+            .initializer("producer")
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("consumer", SUNDAY_BROKER_CONSUMER, KModifier.PRIVATE)
+            .initializer("consumer")
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC, KModifier.PRIVATE)
+            .initializer("codec")
+            .build(),
+        )
+
+    serviceTypeBuilder.addType(generateBrokerSpecsType(serviceTypeName.nestedClass("Specs"), service))
+
+    service.operations.forEach { operation ->
+      serviceTypeBuilder.addFunction(operation.brokerOperationFunction(serviceTypeName.nestedClass("Specs")))
+    }
+
+    return serviceTypeBuilder
+  }
+
+  private fun generateBrokerSpecsType(
+    specsTypeName: ClassName,
+    service: GeneratedService,
+  ): TypeSpec =
+    TypeSpec
+      .objectBuilder(specsTypeName)
+      .apply {
+        service.operations.forEach { operation ->
+          addProperty(operation.brokerSpecProperty())
+        }
+      }.build()
+
+  private fun GeneratedOperation.brokerSpecProperty(): PropertySpec {
+    val specType =
+      when (method) {
+        "PUBLISH" -> SUNDAY_BROKER_SEND_SPEC
+        "SUBSCRIBE" -> SUNDAY_BROKER_CONSUME_SPEC
+        else -> genError("Unsupported broker operation method '$method' for operation '$id'")
+      }
+
+    return PropertySpec
+      .builder(id.kotlinIdentifierName, specType, KModifier.PUBLIC)
+      .initializer("%L", brokerSpecCode(specType))
+      .build()
+  }
+
+  private fun GeneratedOperation.brokerSpecCode(specType: ClassName): CodeBlock =
+    CodeBlock
+      .builder()
+      .add("%T(⇥\n", specType)
+      .add("id = %S,\n", id)
+      .add("channel = %S,\n", path)
+      .add("contentType = %S,\n", brokerContentType())
+      .add("protocol = %L", amqpProtocolSpecCode())
+      .add("⇤\n)")
+      .build()
+
+  private fun GeneratedOperation.brokerContentType(): String =
+    when (method) {
+      "PUBLISH" -> requestBody?.mediaTypes?.firstOrNull()
+      "SUBSCRIBE" -> primarySuccessResponse()?.mediaTypes?.firstOrNull()
+      else -> null
+    } ?: "application/json"
+
+  private fun GeneratedOperation.amqpProtocolSpecCode(): CodeBlock {
+    val binding = amqpProtocolBinding()
+    val values = binding?.values.orEmpty()
+    val exchange = values.mapValue("exchange")
+    val queue = values.mapValue("queue")
+    val routingKeys =
+      values.stringList("routingKeys") +
+        listOfNotNull(values.stringValue("routingKey"))
+
+    return CodeBlock
+      .builder()
+      .add("%T(⇥\n", SUNDAY_AMQP_BROKER_PROTOCOL_SPEC)
+      .add("exchange = %L,\n", (exchange?.stringValue("name") ?: values.stringValue("exchange")).stringLiteral())
+      .add("exchangeType = %L,\n", exchange?.stringValue("type").stringLiteral())
+      .add("queue = %L,\n", (queue?.stringValue("name") ?: values.stringValue("queue")).stringLiteral())
+      .add("routingKeys = %L,\n", routingKeys.stringListLiteral())
+      .add(
+        "defaultRoutingKey = %L,\n",
+        (values.stringValue("defaultRoutingKey") ?: values.stringValue("routingKey")).stringLiteral(),
+      ).add(
+        "durable = %L,\n",
+        (values.booleanValue("durable") ?: exchange?.booleanValue("durable") ?: queue?.booleanValue("durable"))
+          .booleanLiteral(),
+      ).add(
+        "autoDelete = %L,\n",
+        (values.booleanValue("autoDelete") ?: exchange?.booleanValue("autoDelete") ?: queue?.booleanValue("autoDelete"))
+          .booleanLiteral(),
+      ).add("deadLetterExchange = %L,\n", values.stringValue("deadLetterExchange").stringLiteral())
+      .add("deadLetterRoutingKey = %L", values.stringValue("deadLetterRoutingKey").stringLiteral())
+      .add("⇤\n)")
+      .build()
+  }
+
+  private fun GeneratedOperation.amqpProtocolBinding(): GeneratedProtocolBinding? =
+    protocol
+      ?.bindings
+      .orEmpty()
+      .firstOrNull { binding -> binding.protocol.equals("amqp", ignoreCase = true) }
+
+  private fun GeneratedOperation.brokerOperationFunction(specsTypeName: ClassName): FunSpec =
+    when (method) {
+      "PUBLISH" -> brokerPublishFunction(specsTypeName)
+      "SUBSCRIBE" -> brokerSubscribeFunction(specsTypeName)
+      else -> genError("Unsupported broker operation method '$method' for operation '$id'")
+    }
+
+  private fun GeneratedOperation.brokerPublishFunction(specsTypeName: ClassName): FunSpec {
+    val requestBody = requestBody ?: genError("Broker publish operation '$id' has no request body")
+
+    return FunSpec
+      .builder(id.kotlinIdentifierName)
+      .addModifiers(KModifier.PUBLIC, KModifier.SUSPEND)
+      .addParameter("body", requestBody.kotlinTypeName())
+      .addParameter(
+        ParameterSpec
+          .builder("routingKey", STRING.copy(nullable = true))
+          .defaultValue("null")
+          .build(),
+      ).returns(UNIT)
+      .addCode(
+        CodeBlock
+          .builder()
+          .add("return this.producer.send(⇥\n")
+          .add("%T.%N,\n", specsTypeName, id.kotlinIdentifierName)
+          .add(
+            "this.codec.encode(body, contentType = %S, routingKey = routingKey)",
+            brokerContentType(),
+          ).add("⇤\n)\n")
+          .build(),
+      ).build()
+  }
+
+  private fun GeneratedOperation.brokerSubscribeFunction(specsTypeName: ClassName): FunSpec {
+    val responseType =
+      primarySuccessResponse()
+        ?.type
+        ?.kotlinTypeName()
+        ?: genError("Broker subscribe operation '$id' has no response body")
+    val deliveryType = SUNDAY_BROKER_DELIVERY.parameterizedBy(responseType)
+
+    return FunSpec
+      .builder(id.kotlinIdentifierName)
+      .addModifiers(KModifier.PUBLIC)
+      .returns(FLOW.parameterizedBy(deliveryType))
+      .addCode(
+        CodeBlock
+          .builder()
+          .add("return this.consumer.consume(%T.%N)\n", specsTypeName, id.kotlinIdentifierName)
+          .add("  .%M { delivery ->\n", FLOW_MAP)
+          .add(
+            "    %T(this.codec.decode(delivery, %M<%T>()), delivery)\n",
+            SUNDAY_BROKER_DELIVERY,
+            TYPE_OF,
+            responseType,
+          ).add("  }\n")
+          .build(),
+      ).build()
+  }
+
+  private fun Map<*, *>.mapValue(name: String): Map<*, *>? = this[name] as? Map<*, *>
+
+  private fun Map<*, *>.stringValue(name: String): String? = this[name] as? String
+
+  private fun Map<*, *>.booleanValue(name: String): Boolean? = this[name] as? Boolean
+
+  private fun Map<*, *>.stringList(name: String): List<String> =
+    (this[name] as? List<*>)
+      .orEmpty()
+      .filterIsInstance<String>()
+
+  private fun String?.stringLiteral(): CodeBlock =
+    this?.let { value -> CodeBlock.of("%S", value) } ?: CodeBlock.of("null")
+
+  private fun Boolean?.booleanLiteral(): CodeBlock =
+    this?.let { value -> CodeBlock.of("%L", value) } ?: CodeBlock.of("null")
+
+  private fun List<String>.stringListLiteral(): CodeBlock =
+    map { value -> CodeBlock.of("%S", value) }
+      .joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
     when (kind) {
@@ -2292,6 +2550,7 @@ class KotlinSundayIrGenerator(
   private companion object {
     val SUNDAY_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "operation")
     val SUNDAY_NULLABLE_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "nullableOperation")
+    val FLOW_MAP = MemberName("kotlinx.coroutines.flow", "map")
     val TYPE_OF = MemberName("kotlin.reflect", "typeOf")
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

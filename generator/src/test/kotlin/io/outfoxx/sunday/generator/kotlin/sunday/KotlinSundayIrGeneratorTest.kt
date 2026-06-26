@@ -22,6 +22,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -2686,6 +2687,37 @@ class KotlinSundayIrGeneratorTest {
           .writeTo(this)
       },
     )
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates AMQP broker facades from AsyncAPI`(
+    @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+
+    val brokerSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/EventsBroker.kt")
+
+    assertTrue(brokerSource.contains("public class EventsBroker("), brokerSource)
+    assertTrue(brokerSource.contains("private val producer: BrokerProducer"), brokerSource)
+    assertTrue(brokerSource.contains("private val consumer: BrokerConsumer"), brokerSource)
+    assertTrue(brokerSource.contains("public suspend fun publishPlatformEvent("), brokerSource)
+    assertTrue(brokerSource.contains("this.producer.send("), brokerSource)
+    assertTrue(
+      brokerSource.contains("public fun consumePlatformEvents(): Flow<BrokerDelivery<PlatformEvent>>"),
+      brokerSource,
+    )
+    assertTrue(brokerSource.contains("this.consumer.consume(Specs.consumePlatformEvents)"), brokerSource)
+    assertTrue(brokerSource.contains("AmqpBrokerProtocolSpec("), brokerSource)
+    assertTrue(brokerSource.contains("exchange = \"platform.events\""), brokerSource)
+    assertTrue(brokerSource.contains("routingKeys = listOf(\"platform.#\")"), brokerSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

@@ -42,7 +42,7 @@ smallryeFaultTolerance = "6.9.1"
 shadow = "9.3.1"
 slf4j = "2.0.17"
 sonarqube = "7.2.2.6593"
-sundayKt = "2.0.0-beta.3"
+sundayKt = "2.0.0-SNAPSHOT"
 swiftPoet = "1.6.6"
 typeScriptPoet = "1.1.2"
 vanniktechMavenPublish = "0.36.0"
@@ -99,6 +99,7 @@ rxJava3 = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxJava3" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 smallryeFaultTolerance = { module = "io.smallrye:smallrye-fault-tolerance-api", version.ref = "smallryeFaultTolerance" }
 sundayKt = { module = "io.outfoxx.sunday:sunday-core", version.ref = "sundayKt" }
+sundayBroker = { module = "io.outfoxx.sunday:sunday-broker", version.ref = "sundayKt" }
 sundayProblem = { module = "io.outfoxx.sunday:sunday-problem", version.ref = "sundayKt" }
 swiftPoet = { module = "io.outfoxx:swiftpoet", version.ref = "swiftPoet" }
 typeScriptPoet = { module = "io.outfoxx:typescriptpoet", version.ref = "typeScriptPoet" }
