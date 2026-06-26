@@ -216,9 +216,10 @@ class KotlinSundayIrGenerator(
       typeRegistry.addServiceType(aggregateTypeName, generateAggregateServiceType(aggregateTypeName, serviceTypes))
     }
 
+    val serviceTypeNames = serviceTypes.map { serviceType -> serviceType.typeName.simpleName }.toSet()
     brokerServices.forEach { service ->
       val servicePackageName = servicePackageName()
-      val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName()}")
+      val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName(serviceTypeNames)}")
       val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
 
       typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
@@ -297,7 +298,9 @@ class KotlinSundayIrGenerator(
 
   private fun modelsForGeneration(services: List<GeneratedService>): List<GeneratedModel> =
     api.models.filter { model -> model.scope == null } +
-      services.flatMap { service -> apiIndex.referencedScopedModels(service) }
+      services
+        .flatMap { service -> apiIndex.referencedScopedModels(service) }
+        .distinctBy { model -> model.name to model.scope }
 
   private fun generateProblemTypes(services: List<GeneratedService>) {
     val referencedProblems =
@@ -316,7 +319,7 @@ class KotlinSundayIrGenerator(
     return "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
   }
 
-  private fun GeneratedService.brokerTypeSimpleName(): String {
+  private fun GeneratedService.brokerTypeSimpleName(serviceTypeNames: Set<String>): String {
     val servicePrefix =
       servicePrefix()
         .ifBlank {
@@ -326,7 +329,8 @@ class KotlinSundayIrGenerator(
             .joinToString("") { it.toUpperCamelCase() }
         }
 
-    return "${servicePrefix.kotlinTypeName}Broker"
+    val brokerName = "${servicePrefix.kotlinTypeName}Broker"
+    return brokerName.takeUnless { it in serviceTypeNames } ?: "${servicePrefix.kotlinTypeName}AmqpBroker"
   }
 
   private fun GeneratedService.servicePrefix(): String {
@@ -539,36 +543,50 @@ class KotlinSundayIrGenerator(
     serviceTypeName: ClassName,
     service: GeneratedService,
   ): TypeSpec.Builder {
+    val hasPublishOperations = service.operations.any { operation -> operation.method == "PUBLISH" }
+    val hasSubscribeOperations = service.operations.any { operation -> operation.method == "SUBSCRIBE" }
+    val constructorBuilder = FunSpec.constructorBuilder()
+
+    if (hasPublishOperations) {
+      constructorBuilder.addParameter("producer", SUNDAY_BROKER_PRODUCER)
+    }
+    if (hasSubscribeOperations) {
+      constructorBuilder.addParameter("consumer", SUNDAY_BROKER_CONSUMER)
+    }
+    constructorBuilder.addParameter(
+      ParameterSpec
+        .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC)
+        .defaultValue("%T()", SUNDAY_BROKER_MESSAGE_CODEC)
+        .build(),
+    )
+
     val serviceTypeBuilder =
       TypeSpec
         .classBuilder(serviceTypeName)
-        .primaryConstructor(
-          FunSpec
-            .constructorBuilder()
-            .addParameter("producer", SUNDAY_BROKER_PRODUCER)
-            .addParameter("consumer", SUNDAY_BROKER_CONSUMER)
-            .addParameter(
-              ParameterSpec
-                .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC)
-                .defaultValue("%T()", SUNDAY_BROKER_MESSAGE_CODEC)
-                .build(),
-            ).build(),
-        ).addProperty(
-          PropertySpec
-            .builder("producer", SUNDAY_BROKER_PRODUCER, KModifier.PRIVATE)
-            .initializer("producer")
-            .build(),
-        ).addProperty(
-          PropertySpec
-            .builder("consumer", SUNDAY_BROKER_CONSUMER, KModifier.PRIVATE)
-            .initializer("consumer")
-            .build(),
-        ).addProperty(
-          PropertySpec
-            .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC, KModifier.PRIVATE)
-            .initializer("codec")
-            .build(),
-        )
+        .primaryConstructor(constructorBuilder.build())
+
+    if (hasPublishOperations) {
+      serviceTypeBuilder.addProperty(
+        PropertySpec
+          .builder("producer", SUNDAY_BROKER_PRODUCER, KModifier.PRIVATE)
+          .initializer("producer")
+          .build(),
+      )
+    }
+    if (hasSubscribeOperations) {
+      serviceTypeBuilder.addProperty(
+        PropertySpec
+          .builder("consumer", SUNDAY_BROKER_CONSUMER, KModifier.PRIVATE)
+          .initializer("consumer")
+          .build(),
+      )
+    }
+    serviceTypeBuilder.addProperty(
+      PropertySpec
+        .builder("codec", SUNDAY_BROKER_MESSAGE_CODEC, KModifier.PRIVATE)
+        .initializer("codec")
+        .build(),
+    )
 
     serviceTypeBuilder.addType(generateBrokerSpecsType(serviceTypeName.nestedClass("Specs"), service))
 
