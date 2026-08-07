@@ -138,7 +138,7 @@ githubRelease {
   releaseName = "🚀 v$releaseVersion"
   generateReleaseNotes = true
   draft = false
-  prerelease = !releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex())
+  prerelease = !isReleaseVersion
   releaseAssets.from(
     moduleNames.flatMap { moduleName ->
       listOf("", "-javadoc", "-sources").map { suffix ->

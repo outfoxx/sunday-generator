@@ -174,6 +174,13 @@ class PythonClientRendererTest : PythonTest() {
                       defaultValue = false,
                     ),
                     GeneratedParameter(
+                      name = "revisionId",
+                      location = GeneratedParameter.Location.QUERY,
+                      type = GeneratedTypeRef.scalar("string"),
+                      serializationName = "revisionId",
+                      required = true,
+                    ),
+                    GeneratedParameter(
                       name = "xTraceId",
                       location = GeneratedParameter.Location.HEADER,
                       type = GeneratedTypeRef.scalar("string"),
@@ -363,6 +370,7 @@ class PythonClientRendererTest : PythonTest() {
               assert request.method == "PUT"
               assert request.url.path == "/projects/project-1"
               assert request.url.params["includeArchived"] == "true"
+              assert request.url.params["revisionId"] == "revision-1"
               assert request.headers["X-Trace-Id"] == "trace-1"
               assert json.loads(request.content) == {"displayName": "Updated"}
               return httpx.Response(200, json={"projectId": "project-1", "name": "Updated"})
@@ -396,6 +404,7 @@ class PythonClientRendererTest : PythonTest() {
                   update_operation = ProjectsClient(http_client).update_project(
                       "project-1",
                       UpdateProjectRequest(display_name="Updated", from_commit_id=None),
+                      revision_id="revision-1",
                       include_archived=True,
                       x_trace_id="trace-1",
                   )
@@ -404,12 +413,29 @@ class PythonClientRendererTest : PythonTest() {
                   assert updated_project.project_id == "project-1"
                   assert updated_project.name == "Updated"
 
+                  try:
+                      ProjectsClient(http_client).update_project(
+                          "project-1",
+                          UpdateProjectRequest(display_name="Updated", from_commit_id=None),
+                      )
+                  except TypeError:
+                      pass
+                  else:
+                      raise AssertionError("required query parameter was accepted as omitted")
+
                   avatar = await ProjectsClient(http_client).put_project_avatar(
                       "project-1",
                       b"avatar-bytes",
                       content_type="image/png",
                   ).execute()
                   assert avatar is None
+
+                  try:
+                      ProjectsClient(http_client).put_project_avatar("project-1", b"avatar-bytes")
+                  except TypeError:
+                      pass
+                  else:
+                      raise AssertionError("required header parameter was accepted as omitted")
 
                   import_operation = ProjectsClient(http_client).import_project_archive(
                       "project-1",
