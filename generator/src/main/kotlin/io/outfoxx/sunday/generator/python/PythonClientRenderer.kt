@@ -599,25 +599,33 @@ class PythonClientRenderer(
   private fun GeneratedParameter.wireName(): String = serializationName ?: name
 
   private fun GeneratedOperation.renderClientSignatureParameterLines(): PythonCodeBlock {
+    val queryAndHeaderParameters =
+      parameters.filter { parameter ->
+        parameter.location == GeneratedParameter.Location.QUERY ||
+          parameter.location == GeneratedParameter.Location.HEADER
+      }
     val requiredParameters =
-      pathParameters().map { parameter ->
-        PythonCodeBlock.of(
-          "        %L: %C,",
-          parameter.name.pythonIdentifierName,
-          parameter.type.renderClientPythonType(nullable = false),
-        )
-      } + listOfNotNull(requestBody?.renderRequestBodyParameter())
+      pathParameters().map { parameter -> parameter.renderRequiredParameter() } +
+        listOfNotNull(requestBody?.renderRequestBodyParameter()) +
+        queryAndHeaderParameters
+          .filter { parameter -> parameter.required }
+          .map { parameter -> parameter.renderRequiredParameter() }
     val optionalParameters =
-      parameters
-        .filter { parameter ->
-          parameter.location == GeneratedParameter.Location.QUERY ||
-            parameter.location == GeneratedParameter.Location.HEADER
-        }.map { parameter ->
+      queryAndHeaderParameters
+        .filterNot { parameter -> parameter.required }
+        .map { parameter ->
           parameter.renderOptionalParameter()
         }
 
     return PythonCodeBlock.join(requiredParameters + optionalParameters, separator = "\n")
   }
+
+  private fun GeneratedParameter.renderRequiredParameter(): PythonCodeBlock =
+    PythonCodeBlock.of(
+      "        %L: %C,",
+      name.pythonIdentifierName,
+      type.renderClientPythonType(nullable = false),
+    )
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
     if (isPythonStreamingRequestBody) {

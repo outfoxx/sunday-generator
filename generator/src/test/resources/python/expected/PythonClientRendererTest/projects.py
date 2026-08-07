@@ -54,6 +54,7 @@ class ProjectsClient:
         self,
         project_id: str,
         body: UpdateProjectRequest,
+        revision_id: str,
         include_archived: bool | None = False,
         x_trace_id: str | None = None,
     ) -> Operation[ProjectView]:
@@ -61,7 +62,7 @@ class ProjectsClient:
         request = self._transport.build_request(
             "PUT",
             path_template("/projects/{projectId}", {"projectId": project_id}),
-            params=parameter_map({"includeArchived": include_archived}),
+            params=parameter_map({"includeArchived": include_archived, "revisionId": revision_id}),
             headers=parameter_map({"X-Trace-Id": x_trace_id}),
             json=json_body(body),
         )
@@ -75,7 +76,7 @@ class ProjectsClient:
         self,
         project_id: str,
         body: bytes,
-        content_type: str | None = None,
+        content_type: str,
     ) -> Operation[None]:
         """Create the putProjectAvatar operation."""
         request = self._transport.build_request(
