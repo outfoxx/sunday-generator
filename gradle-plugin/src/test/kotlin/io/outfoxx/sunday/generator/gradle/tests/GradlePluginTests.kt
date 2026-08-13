@@ -472,6 +472,58 @@ class GradlePluginTests {
   }
 
   @Test
+  fun `parallel OpenAPI generations do not share document state`() {
+    val projectCount = 4
+    val sourceTypes = listOf("string", "integer", "number", "boolean")
+    val kotlinTypes = listOf("String", "Int", "Double", "Boolean")
+    val includedProjects = (0 until projectCount).joinToString(", ") { index -> "'project$index'" }
+    testProjectDir.resolve("settings.gradle").writeText(
+      buildString {
+        appendLine("rootProject.name = 'parallel-openapi'")
+        appendLine("include $includedProjects")
+      },
+    )
+
+    repeat(projectCount) { index ->
+      val projectDir = testProjectDir.resolve("project$index")
+      projectDir.mkdirs()
+      projectDir.resolve("build.gradle").writeText(parallelOpenApiBuildFile(index))
+      projectDir
+        .resolve("src/main/sunday/openapi.yaml")
+        .also { source ->
+          source.parentFile.mkdirs()
+          source.writeParallelOpenApi(index, sourceTypes[index])
+        }
+    }
+
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(testProjectDir)
+        .withPluginClasspath()
+        .withArguments("build", "--parallel", "--max-workers=4", "--rerun-tasks", "--stacktrace")
+        .build()
+
+    repeat(projectCount) { index ->
+      assertThat(result.task(":project$index:sundayGenerate_client")?.outcome, equalTo(TaskOutcome.SUCCESS))
+      assertThat(result.task(":project$index:compileKotlin")?.outcome, equalTo(TaskOutcome.SUCCESS))
+
+      val outputDir =
+        testProjectDir.resolve("project$index/build/generated/sources/sunday/sundayGenerate_client")
+      val sharedModel =
+        Files.walk(outputDir.toPath()).use { paths ->
+          paths
+            .filter { path -> path.fileName.toString() == "Shared.kt" }
+            .findFirst()
+            .orElseThrow { FileNotFoundException("Shared.kt not found under $outputDir") }
+        }
+      val sharedModelSource = sharedModel.toFile().readText()
+      assertThat(sharedModelSource, containsString("package io.outfoxx.test.parallel.project$index.model"))
+      assertThat(sharedModelSource, containsString("public val marker: ${kotlinTypes[index]}"))
+    }
+  }
+
+  @Test
   fun `generate sources for kotlin are regenerated when native refs change`() {
 
     val sourceDir = testProjectDir.resolve("src/main/sunday")
@@ -825,6 +877,77 @@ class GradlePluginTests {
           appendLine("  displayName:")
           appendLine("    type: string")
         }
+      },
+    )
+  }
+
+  private fun parallelOpenApiBuildFile(index: Int): String =
+    """
+    import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
+    import static io.outfoxx.sunday.generator.GenerationMode.*
+
+    plugins {
+      id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+      id 'io.outfoxx.sunday-generator'
+    }
+
+    repositories {
+      mavenCentral()
+    }
+
+    sundayGenerations {
+      client {
+        source.set(fileTree('src/main/sunday') { it.include('**/*.yaml') })
+        framework.set(Sunday)
+        mode.set(Client)
+        pkgName.set('io.outfoxx.test.parallel.project$index')
+        modelPkgName.set('io.outfoxx.test.parallel.project$index.model')
+        servicePkgName.set('io.outfoxx.test.parallel.project$index.api')
+        generateService.set(false)
+        disableValidationConstraints.set(true)
+        disableJacksonAnnotations.set(true)
+        generatedAnnotation.set(null)
+      }
+    }
+
+    java {
+      sourceCompatibility = "21"
+      targetCompatibility = "21"
+    }
+
+    compileKotlin {
+      kotlinOptions {
+        jvmTarget = "21"
+        suppressWarnings = true
+      }
+    }
+    """.trimIndent()
+
+  private fun File.writeParallelOpenApi(
+    index: Int,
+    sourceType: String,
+  ) {
+    writeText(
+      buildString {
+        appendLine("openapi: 3.1.0")
+        appendLine("info:")
+        appendLine("  title: Parallel $index API")
+        appendLine("  version: 1.0.0")
+        appendLine("paths: {}")
+        appendLine("components:")
+        appendLine("  schemas:")
+        appendLine("    Shared:")
+        appendLine("      type: object")
+        appendLine("      required: [marker]")
+        appendLine("      properties:")
+        appendLine("        marker:")
+        appendLine("          ${'$'}ref: '#/components/schemas/Referenced'")
+        repeat(150) { propertyIndex ->
+          appendLine("        filler$propertyIndex:")
+          appendLine("          type: string")
+        }
+        appendLine("    Referenced:")
+        appendLine("      type: $sourceType")
       },
     )
   }
