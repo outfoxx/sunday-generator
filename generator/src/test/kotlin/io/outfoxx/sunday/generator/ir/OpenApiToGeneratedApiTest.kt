@@ -27,9 +27,60 @@ import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @ExtendWith(ResourceExtension::class)
 class OpenApiToGeneratedApiTest {
+
+  @Test
+  fun `converts OpenAPI documents concurrently without sharing document state`(
+    @TempDir tempDir: Path,
+  ) {
+    val sourceTypes = listOf("string", "integer", "number", "boolean")
+    val sourceDefaults = listOf("first", "2", "3.5", "true")
+    val sources =
+      sourceTypes.mapIndexed { index, sourceType ->
+        tempDir.resolve("concurrent-$index.yaml").also { source ->
+          writeConcurrentOpenApi(source, index, sourceType, sourceDefaults[index])
+        }
+      }
+    val converter = OpenApiToGeneratedApi()
+    val barrier = CyclicBarrier(sources.size)
+    val executor = Executors.newFixedThreadPool(sources.size)
+
+    try {
+      val results =
+        sources
+          .map { source ->
+            executor.submit<List<GeneratedApi>> {
+              buildList {
+                repeat(5) {
+                  barrier.await(30, TimeUnit.SECONDS)
+                  add(converter.convert(source.toUri()))
+                }
+              }
+            }
+          }.map { result -> result.get(60, TimeUnit.SECONDS) }
+
+      results.forEachIndexed { index, apis ->
+        apis.forEach { api ->
+          assertEquals("Concurrent $index API", api.name)
+          val model = api.models.single { model -> model.name == "Shared" }
+          assertEquals(501, model.properties.size)
+          val marker = model.properties.single { property -> property.name == "marker" }
+          assertEquals(GeneratedTypeRef.named("Referenced"), marker.type)
+          assertEquals(sourceDefaults[index], marker.defaultValue)
+          val referenced = api.models.single { model -> model.name == "Referenced" }
+          assertEquals(listOf(GeneratedTypeRef.scalar(sourceTypes[index])), referenced.aliases)
+        }
+      }
+    } finally {
+      executor.shutdownNow()
+      executor.awaitTermination(10, TimeUnit.SECONDS)
+    }
+  }
 
   @Test
   fun `maps OpenAPI 3_1 document to generated API IR`(
@@ -567,6 +618,39 @@ class OpenApiToGeneratedApiTest {
             normalized.replace(location, "SOURCE_LOCATION_REFERENCE")
           }
       }
+
+  private fun writeConcurrentOpenApi(
+    source: Path,
+    index: Int,
+    sourceType: String,
+    sourceDefault: String,
+  ) {
+    Files.writeString(
+      source,
+      buildString {
+        appendLine("openapi: 3.1.0")
+        appendLine("info:")
+        appendLine("  title: Concurrent $index API")
+        appendLine("  version: 1.0.0")
+        appendLine("paths: {}")
+        appendLine("components:")
+        appendLine("  schemas:")
+        appendLine("    Shared:")
+        appendLine("      type: object")
+        appendLine("      required: [marker]")
+        appendLine("      properties:")
+        appendLine("        marker:")
+        appendLine("          ${'$'}ref: '#/components/schemas/Referenced'")
+        repeat(500) { propertyIndex ->
+          appendLine("        filler$propertyIndex:")
+          appendLine("          type: string")
+        }
+        appendLine("    Referenced:")
+        appendLine("      type: $sourceType")
+        appendLine("      default: $sourceDefault")
+      },
+    )
+  }
 
   private fun expectedYaml(name: String): String =
     Files.readString(
