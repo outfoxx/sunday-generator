@@ -256,7 +256,8 @@ class KotlinJAXRSIrGenerator(
     val fallback = discriminatorFallbacks[this] ?: return null
     val hierarchyTypeName = kotlinClassName()
     val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
-    val hierarchyIsClass = typeRegistry.options.contains(ImplementModel) || isProblemModel()
+    val hierarchyIsClass =
+      kind == GeneratedModel.Kind.OBJECT && (typeRegistry.options.contains(ImplementModel) || isProblemModel())
     val type =
       fallback.kotlinFallbackTypeSpec(
         fallbackTypeName,

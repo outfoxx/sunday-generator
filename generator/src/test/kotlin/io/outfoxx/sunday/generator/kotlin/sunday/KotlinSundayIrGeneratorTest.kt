@@ -1507,6 +1507,24 @@ class KotlinSundayIrGeneratorTest {
     assertContains(externalRootSource, "defaultImpl = EventDataUnknown::class")
     assertContains(externalFallbackSource, "public override val version: Int")
     assertContains(externalFallbackSource, "public val rawBody: ObjectNode")
+
+    val implementingTypeRegistry =
+      typeRegistry(
+        setOf(
+          KotlinTypeRegistry.Option.ImplementModel,
+          KotlinTypeRegistry.Option.JacksonAnnotations,
+        ),
+      )
+    KotlinSundayIrGenerator(api, implementingTypeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(implementingTypeRegistry.buildTypes()))
+    val implementingUnionSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEvent.kt")
+    val implementingUnionFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEventUnknown.kt")
+    assertContains(implementingUnionSource, "public sealed interface JobEvent")
+    assertContains(implementingUnionFallbackSource, ") : JobEvent {")
   }
 
   @Test

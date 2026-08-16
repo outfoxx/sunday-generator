@@ -1013,6 +1013,26 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(externalRootSource.contains("defaultImpl = EventDataUnknown::class"), externalRootSource)
     assertTrue(externalFallbackSource.contains("public override val version: Int"), externalFallbackSource)
     assertTrue(externalFallbackSource.contains("public val rawBody: ObjectNode"), externalFallbackSource)
+
+    val implementingTypeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(ImplementModel, JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    KotlinJAXRSIrGenerator(api, implementingTypeRegistry, testOptions())
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(implementingTypeRegistry.buildTypes()))
+    val implementingUnionSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEvent.kt")
+    val implementingUnionFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEventUnknown.kt")
+    assertTrue(implementingUnionSource.contains("public sealed interface JobEvent"), implementingUnionSource)
+    assertTrue(implementingUnionFallbackSource.contains(") : JobEvent {"), implementingUnionFallbackSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

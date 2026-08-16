@@ -322,7 +322,7 @@ class KotlinSundayIrGenerator(
     val fallback = discriminatorFallbacks[this] ?: return null
     val hierarchyTypeName = kotlinClassName()
     val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
-    val hierarchyIsClass = shouldGenerateClassModel || isProblemModel()
+    val hierarchyIsClass = kind == GeneratedModel.Kind.OBJECT && (shouldGenerateClassModel || isProblemModel())
     val type =
       fallback.kotlinFallbackTypeSpec(
         fallbackTypeName,
