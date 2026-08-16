@@ -889,6 +889,60 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates concrete fallback when discriminator is not the first property`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(ImplementModel, JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api =
+      GeneratedApi(
+        name = "Jobs API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "JobPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "JobProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "JobStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+              discriminatorValue = "started",
+            ),
+          ),
+      )
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobProgressUnknown.kt")
+    assertTrue(fallbackSource.contains("phase = phase"), fallbackSource)
+    assertTrue(fallbackSource.contains("jobId = jobId"), fallbackSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates tolerant discriminator hierarchy fallbacks`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -916,8 +970,8 @@ class KotlinJAXRSIrGeneratorTest {
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),

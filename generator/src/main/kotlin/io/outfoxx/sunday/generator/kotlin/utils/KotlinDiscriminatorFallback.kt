@@ -69,7 +69,11 @@ internal fun GeneratedDiscriminatorFallback.kotlinFallbackTypeSpec(
       if (hierarchyIsClass) {
         superclass(hierarchyTypeName)
         exposedProperties.forEach { property ->
-          addSuperclassConstructorParameter("%N", property.name.kotlinIdentifierName)
+          addSuperclassConstructorParameter(
+            "%N = %N",
+            property.name.kotlinIdentifierName,
+            property.name.kotlinIdentifierName,
+          )
         }
       } else {
         addSuperinterface(hierarchyTypeName)

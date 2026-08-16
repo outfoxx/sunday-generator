@@ -33,10 +33,10 @@ components:
         mapping:
           started: "#/components/schemas/JobStarted"
       properties:
-        phase:
-          $ref: "#/components/schemas/JobPhase"
         jobId:
           type: string
+        phase:
+          $ref: "#/components/schemas/JobPhase"
     JobStarted:
       allOf:
         - $ref: "#/components/schemas/JobProgress"
