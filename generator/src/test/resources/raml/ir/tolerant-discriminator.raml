@@ -13,8 +13,8 @@ types:
     type: object
     discriminator: phase
     properties:
-      phase: JobPhase
       jobId: string
+      phase: JobPhase
   JobStarted:
     type: JobProgress
     discriminatorValue: started

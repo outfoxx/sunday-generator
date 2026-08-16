@@ -51,8 +51,8 @@ class GeneratedDiscriminatorFallbackTest {
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                   GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
                 ),
               discriminator = "phase",
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
