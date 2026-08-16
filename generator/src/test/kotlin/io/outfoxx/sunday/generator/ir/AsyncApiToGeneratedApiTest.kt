@@ -20,12 +20,24 @@ import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
 class AsyncApiToGeneratedApiTest {
+
+  @Test
+  fun `maps AsyncAPI tolerant enum fallback to generated API IR`(
+    @ResourceUri("asyncapi/ir/tolerant-enum.yaml") testUri: URI,
+  ) {
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+
+    val taskState = api.models.single { model -> model.name == "TaskState" }
+    assertEquals(listOf("pending", "running", "unknown"), taskState.values)
+    assertEquals("unknown", taskState.unknownValue)
+  }
 
   @Test
   fun `maps AsyncAPI subscribe channel to generated API fragment`(

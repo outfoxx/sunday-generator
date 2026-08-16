@@ -1,0 +1,25 @@
+asyncapi: 2.6.0
+info:
+  title: Tolerant Enum API
+  version: 1.0.0
+channels:
+  task.changed:
+    subscribe:
+      operationId: taskChanged
+      message:
+        name: Task
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/Task"
+components:
+  schemas:
+    TaskState:
+      type: string
+      enum: [pending, running, unknown]
+      x-unknown-value: unknown
+    Task:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: "#/components/schemas/TaskState"

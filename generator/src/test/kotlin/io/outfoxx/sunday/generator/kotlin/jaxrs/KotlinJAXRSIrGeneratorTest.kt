@@ -851,6 +851,44 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates tolerant enums as raw-value sealed classes`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "running", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/TaskState.kt")
+    assertTrue(source.contains("public sealed class TaskState"), source)
+    assertTrue(source.contains("public data class Unknown("), source)
+    assertTrue(source.contains("else -> Unknown(rawValue)"), source)
+    assertTrue(source.contains("@get:JsonValue"), source)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates object unions and polymorphic event bases from IR across JAX-RS modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->

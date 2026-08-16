@@ -34,6 +34,17 @@ import java.nio.file.Path
 class RamlToGeneratedApiTest {
 
   @Test
+  fun `maps RAML tolerant enum fallback to generated API IR`(
+    @ResourceUri("raml/ir/tolerant-enum.raml") testUri: URI,
+  ) {
+    val api = RamlToGeneratedApi().convert(TestAPIProcessing.process(testUri))
+
+    val taskState = api.models.single { model -> model.name == "TaskState" }
+    assertEquals(listOf("pending", "running", "unknown"), taskState.values)
+    assertEquals("unknown", taskState.unknownValue)
+  }
+
+  @Test
   fun `maps RAML document to generated API IR`(
     @ResourceUri("raml/ir/craft-project.raml") testUri: URI,
   ) {

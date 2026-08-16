@@ -970,6 +970,7 @@ class RamlToGeneratedApi(
             source = source,
             scope = scope,
             values = values.mapNotNull { value -> value.rawScalarValue },
+            unknownValue = unknownEnumValue(modelName),
             validation = validation(this),
             serializationName = serializationName,
             examples =
@@ -1286,6 +1287,7 @@ class RamlToGeneratedApi(
             kind = GeneratedModel.Kind.ENUM,
             source = declaringUnit.sourceSpec(rootLocation),
             values = shape.values.mapNotNull { value -> value.rawScalarValue },
+            unknownValue = shape.unknownEnumValue(name),
             targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
             nested = shape.nested(),
             patchable = shape.patchable(shapeIndex),
@@ -2174,6 +2176,15 @@ class RamlToGeneratedApi(
   private fun Shape.patchable(shapeIndex: ShapeIndex): Boolean =
     findBoolAnnotation(APIAnnotationName.Patchable, null) == true ||
       shapeIndex.findInherited(this).any { inherited -> inherited.patchable(shapeIndex) }
+
+  private fun ScalarShape.unknownEnumValue(modelName: String): String? {
+    val unknownValue = findStringAnnotation(APIAnnotationName.UnknownValue, null) ?: return null
+    val values = values.mapNotNull { value -> value.rawScalarValue }
+    require(unknownValue in values) {
+      "RAML enum model '$modelName' unknownValue '$unknownValue' does not match any enum value."
+    }
+    return unknownValue
+  }
 
   private fun validation(shape: Shape): Map<String, String> =
     when (val constrained = shape.nonNullableType) {

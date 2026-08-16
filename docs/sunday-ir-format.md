@@ -113,6 +113,8 @@ Externally discriminated root models carry `externallyDiscriminated`. Their disc
 
 Enum models carry wire values in `values`. When the source provides explicit generated enum member names, such as OpenAPI `x-enum-varnames`, those names are preserved positionally in `enumValueNames`; otherwise emitters derive target-language identifiers from the wire values.
 
+An enum may opt into tolerant decoding by setting `unknownValue` to one of its declared wire values. OpenAPI and AsyncAPI map `x-unknown-value` to this field; RAML maps the `sunday.unknownValue` annotation. Emitters use the selected value's generated member name for a fallback arm that carries the unrecognized raw string and serializes that original string unchanged. Enums without `unknownValue` remain strict.
+
 Models declared outside the root source document may carry `source` with the defining source location. Named type references may also carry `source` when the referenced declaration is imported. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
 
 ## Model Source Fidelity

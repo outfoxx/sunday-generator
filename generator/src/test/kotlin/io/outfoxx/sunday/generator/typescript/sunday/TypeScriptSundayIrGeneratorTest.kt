@@ -17,8 +17,10 @@
 package io.outfoxx.sunday.generator.typescript.sunday
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -33,6 +35,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
@@ -888,6 +892,50 @@ class TypeScriptSundayIrGeneratorTest {
 
     assertTrue(error.message!!.contains("member name 'same' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `generates tolerant enum codecs that preserve raw values`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
+    @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/tolerant-enum.yaml") asyncApiUri: URI,
+  ) {
+    val composedApi =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "running", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+    val apis =
+      listOf(
+        RamlToGeneratedApi().convert(TestAPIProcessing.process(ramlUri)),
+        OpenApiToGeneratedApi().convert(openApiUri),
+        AsyncApiToGeneratedApi().convertFragment(asyncApiUri).api,
+        GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composedApi)),
+      )
+
+    apis.forEach { api ->
+      val typeRegistry = TypeScriptTypeRegistry(setOf())
+      TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+        .generateServiceTypes()
+      assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+    }
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "task-state.ts")
+    assertTrue(source.contains("export class TaskState"), source)
+    assertTrue(source.contains("static Unknown(rawValue: string): TaskState"), source)
+    assertTrue(source.contains("default: return TaskState.Unknown(rawValue)"), source)
+    assertTrue(source.contains("encode: (value) => value.rawValue"), source)
+    assertTrue(source.contains("readonly kind: 'Pending' | 'Running' | 'Unknown'"), source)
   }
 
   @Test

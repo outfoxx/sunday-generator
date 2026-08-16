@@ -138,6 +138,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
@@ -777,6 +778,10 @@ class KotlinSundayIrGenerator(
     val entries = kotlinEnumEntries.entries(this)
     val customWireValues = entries.any { entry -> entry.name != entry.value }
     val jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+
+    if (unknownValue != null) {
+      return tolerantEnumTypeSpec(kotlinClassName(), entries, jacksonAnnotations)
+    }
 
     return TypeSpec
       .enumBuilder(kotlinClassName())
@@ -1691,6 +1696,9 @@ class KotlinSundayIrGenerator(
   ): CodeBlock {
     val enumModel = type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (defaultValue is String && enumModel != null) {
+      if (enumModel.unknownValue != null) {
+        return CodeBlock.of("%T.fromValue(%S)", typeName, defaultValue)
+      }
       return CodeBlock.of(
         "%T.%L",
         typeName,
@@ -2106,6 +2114,9 @@ class KotlinSundayIrGenerator(
     val entries = kotlinEnumEntries.entries(enumModel)
     if (entries.isEmpty()) {
       return null
+    }
+    if (enumModel.unknownValue != null) {
+      return CodeBlock.of("listOf(%T.from(%N.wireValue))", MEDIA_TYPE, name)
     }
 
     return CodeBlock

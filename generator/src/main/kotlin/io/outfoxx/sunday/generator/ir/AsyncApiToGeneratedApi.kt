@@ -442,11 +442,13 @@ class AsyncApiToGeneratedApi(
     }
 
     if (schema.enumValues().isNotEmpty()) {
+      val values = schema.enumValues().map { value -> value.toString() }
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.ENUM,
         source = source,
-        values = schema.enumValues().map { value -> value.toString() },
+        values = values,
+        unknownValue = schema.unknownEnumValue(name, values),
         documentation = documentation(description = schema["description"] as? String),
       )
     }
@@ -1028,6 +1030,26 @@ class AsyncApiToGeneratedApi(
         val name = key as? String ?: return@mapNotNull null
         name to value.generatedValue()
       }.toMap()
+
+  private fun Map<*, *>.unknownEnumValue(
+    modelName: String,
+    values: List<String>,
+  ): String? {
+    if (!containsKey("x-unknown-value")) {
+      return null
+    }
+
+    val unknownValue =
+      this["x-unknown-value"] as? String
+        ?: throw IllegalArgumentException(
+          "AsyncAPI enum model '$modelName' x-unknown-value must be a string matching an enum value.",
+        )
+
+    require(unknownValue in values) {
+      "AsyncAPI enum model '$modelName' x-unknown-value '$unknownValue' does not match any enum value."
+    }
+    return unknownValue
+  }
 
   private fun Any?.generatedValue(): Any? =
     when (this) {

@@ -18,9 +18,11 @@ package io.outfoxx.sunday.generator.swift.sunday
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedDocumentation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -34,6 +36,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.swift.AssociatedExtensions
 import io.outfoxx.sunday.generator.swift.SwiftSundayIrGenerator
@@ -45,6 +48,8 @@ import io.outfoxx.sunday.generator.swift.tools.compileGeneratedFiles
 import io.outfoxx.sunday.generator.swift.tools.compileTypes
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateSunday
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -1579,6 +1584,50 @@ class SwiftSundayIrGeneratorTest {
 
     assertTrue(error.message!!.contains("case name 'same' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `generates tolerant enums with raw-value associated fallback cases`(
+    compiler: SwiftCompiler,
+    @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
+    @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/tolerant-enum.yaml") asyncApiUri: URI,
+  ) {
+    val composedApi =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "running", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+    val apis =
+      listOf(
+        RamlToGeneratedApi().convert(TestAPIProcessing.process(ramlUri)),
+        OpenApiToGeneratedApi().convert(openApiUri),
+        AsyncApiToGeneratedApi().convertFragment(asyncApiUri).api,
+        GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composedApi)),
+      )
+
+    apis.forEach { api ->
+      val typeRegistry = SwiftTypeRegistry(setOf())
+      SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+        .generateServiceTypes()
+      assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+    }
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "TaskState.swift")
+    assertTrue(source.contains("public enum TaskState : CaseIterable, Codable, Sendable"), source)
+    assertTrue(source.contains("case unknown(String)"), source)
+    assertTrue(source.contains("default: self = .unknown(rawValue)"), source)
+    assertTrue(source.contains("case .unknown(let rawValue): return rawValue"), source)
+    assertTrue(source.contains("try container.encode(rawValue)"), source)
   }
 
   @Test

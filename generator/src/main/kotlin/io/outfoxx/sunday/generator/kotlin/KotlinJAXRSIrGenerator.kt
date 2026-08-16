@@ -131,6 +131,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.rawType
+import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
@@ -1806,44 +1807,52 @@ class KotlinJAXRSIrGenerator(
     when (kind) {
       GeneratedModel.Kind.ENUM -> {
         val entries = kotlinEnumEntries.entries(this)
-        TypeSpec
-          .enumBuilder(kotlinClassName())
-          .addModifiers(KModifier.PUBLIC)
-          .primaryConstructor(
-            FunSpec
-              .constructorBuilder()
-              .addParameter("wireValue", STRING)
-              .build(),
-          ).addProperty(
-            PropertySpec
-              .builder("wireValue", STRING, KModifier.PRIVATE)
-              .initializer("wireValue")
-              .build(),
-          ).addFunction(
-            FunSpec
-              .builder("toString")
-              .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
-              .returns(STRING)
-              .apply {
-                if (typeRegistry.options.contains(JacksonAnnotations)) {
-                  addAnnotation(JACKSON_JSON_VALUE)
-                }
-              }.addStatement("return wireValue")
-              .build(),
-          ).apply {
-            if (typeRegistry.options.contains(JacksonAnnotations)) {
-              addType(jsonCreatorCompanionType())
+        if (unknownValue != null) {
+          tolerantEnumTypeSpec(
+            kotlinClassName(),
+            entries,
+            typeRegistry.options.contains(JacksonAnnotations),
+          )
+        } else {
+          TypeSpec
+            .enumBuilder(kotlinClassName())
+            .addModifiers(KModifier.PUBLIC)
+            .primaryConstructor(
+              FunSpec
+                .constructorBuilder()
+                .addParameter("wireValue", STRING)
+                .build(),
+            ).addProperty(
+              PropertySpec
+                .builder("wireValue", STRING, KModifier.PRIVATE)
+                .initializer("wireValue")
+                .build(),
+            ).addFunction(
+              FunSpec
+                .builder("toString")
+                .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
+                .returns(STRING)
+                .apply {
+                  if (typeRegistry.options.contains(JacksonAnnotations)) {
+                    addAnnotation(JACKSON_JSON_VALUE)
+                  }
+                }.addStatement("return wireValue")
+                .build(),
+            ).apply {
+              if (typeRegistry.options.contains(JacksonAnnotations)) {
+                addType(jsonCreatorCompanionType())
+              }
+              entries.forEach { entry ->
+                addEnumConstant(
+                  entry.name,
+                  TypeSpec
+                    .anonymousClassBuilder()
+                    .addSuperclassConstructorParameter("%S", entry.value)
+                    .build(),
+                )
+              }
             }
-            entries.forEach { entry ->
-              addEnumConstant(
-                entry.name,
-                TypeSpec
-                  .anonymousClassBuilder()
-                  .addSuperclassConstructorParameter("%S", entry.value)
-                  .build(),
-              )
-            }
-          }
+        }
       }
 
       GeneratedModel.Kind.OBJECT ->

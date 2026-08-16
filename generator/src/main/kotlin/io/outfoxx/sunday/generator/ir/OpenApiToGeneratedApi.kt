@@ -440,6 +440,7 @@ class OpenApiToGeneratedApi(
           scope = scope,
           values = values,
           enumValueNames = resolved.enumValueNames(name, values),
+          unknownValue = resolved.unknownEnumValue(name, values),
           documentation = documentation(description = resolved["description"] as? String),
         )
       }
@@ -1268,6 +1269,26 @@ class OpenApiToGeneratedApi(
           "OpenAPI enum model '$modelName' x-enum-varnames entry ${index + 1} must be a non-blank string.",
         )
     }
+  }
+
+  private fun Map<*, *>.unknownEnumValue(
+    modelName: String,
+    values: List<String>,
+  ): String? {
+    if (!containsKey("x-unknown-value")) {
+      return null
+    }
+
+    val unknownValue =
+      this["x-unknown-value"] as? String
+        ?: throw IllegalArgumentException(
+          "OpenAPI enum model '$modelName' x-unknown-value must be a string matching an enum value.",
+        )
+
+    require(unknownValue in values) {
+      "OpenAPI enum model '$modelName' x-unknown-value '$unknownValue' does not match any enum value."
+    }
+    return unknownValue
   }
 
   private fun Map<*, *>.mapValue(name: String): Map<*, *>? = this[name] as? Map<*, *>

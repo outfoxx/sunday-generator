@@ -27,6 +27,29 @@ import kotlin.io.path.writeText
 class GeneratedApiYamlTest {
 
   @Test
+  fun `preserves tolerant enum fallback in composed IR`() {
+    val api =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+
+    val yaml = GeneratedApiYaml.writeString(api)
+
+    assertThat(GeneratedApiYaml.readString(yaml), equalTo(api))
+    assertThat(yaml, containsString("unknownValue: \"unknown\""))
+  }
+
+  @Test
   fun `serializes and deserializes the generated api contract`() {
 
     val api = craftProjectApi()

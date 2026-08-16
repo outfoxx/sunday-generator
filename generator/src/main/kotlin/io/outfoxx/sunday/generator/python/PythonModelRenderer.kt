@@ -113,15 +113,39 @@ class PythonModelRenderer(
     )
 
   private fun GeneratedModel.renderEnumModel(): PythonCodeBlock {
-    val body =
-      pythonEnumEntries()
+    val entries = pythonEnumEntries()
+    val members =
+      entries
         .joinToString("\n") { entry -> "    ${entry.name} = ${entry.value.pythonStringLiteral()}" }
         .ifBlank { "    pass" }
+    val body =
+      unknownValue?.let { fallbackValue ->
+        val fallbackEntry =
+          entries.singleOrNull { entry -> entry.value == fallbackValue }
+            ?: genError("Python tolerant enum '$name' unknown value '$fallbackValue' does not match any enum value")
+        PythonCodeBlock.of(
+          """
+          %L
+
+              @classmethod
+              def _missing_(cls, value: object) -> %T | None:
+                  if not isinstance(value, str):
+                      return None
+                  member = str.__new__(cls, value)
+                  member._name_ = %S
+                  member._value_ = value
+                  return member
+          """.trimIndent(),
+          members,
+          PythonSymbol("typing", "Self"),
+          fallbackEntry.name,
+        )
+      } ?: PythonCodeBlock.of("%L", members)
 
     return PythonCodeBlock.of(
       """
       class %L(%T):
-      %L
+      %C
       """.trimIndent(),
       name.pythonTypeName,
       PythonSymbol("enum", "StrEnum"),
