@@ -1076,6 +1076,112 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `escapes tolerant discriminator mapping values in fallback guards`(compiler: TypeScriptCompiler) {
+    val trailingBackslash = "trailing\\"
+    val injectionShaped = "known\\'; globalThis.compromised = true; //"
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Escaped Discriminators API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "InternalKind",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf(trailingBackslash, injectionShaped, "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "InternalEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("kind", GeneratedTypeRef.named("InternalKind"), required = true),
+                ),
+              discriminator = "kind",
+              discriminatorMappings =
+                mapOf(
+                  trailingBackslash to GeneratedTypeRef.named("TrailingEvent"),
+                  injectionShaped to GeneratedTypeRef.named("InjectionEvent"),
+                ),
+            ),
+            GeneratedModel(
+              name = "TrailingEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
+              discriminatorValue = trailingBackslash,
+            ),
+            GeneratedModel(
+              name = "InjectionEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
+              discriminatorValue = injectionShaped,
+            ),
+            GeneratedModel(
+              name = "ExternalKind",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf(trailingBackslash, injectionShaped, "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "ExternalData",
+              kind = GeneratedModel.Kind.OBJECT,
+              externallyDiscriminated = true,
+              discriminatorMappings =
+                mapOf(
+                  trailingBackslash to GeneratedTypeRef.named("TrailingData"),
+                  injectionShaped to GeneratedTypeRef.named("InjectionData"),
+                ),
+            ),
+            GeneratedModel(
+              name = "TrailingData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("ExternalData")),
+              discriminatorValue = trailingBackslash,
+            ),
+            GeneratedModel(
+              name = "InjectionData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("ExternalData")),
+              discriminatorValue = injectionShaped,
+            ),
+            GeneratedModel(
+              name = "ExternalEnvelope",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("kind", GeneratedTypeRef.named("ExternalKind"), required = true),
+                  GeneratedModelProperty(
+                    "data",
+                    GeneratedTypeRef.named("ExternalData"),
+                    required = true,
+                    externalDiscriminator = "kind",
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val expectedValues =
+      listOf(injectionShaped, trailingBackslash)
+        .sorted()
+        .map { value -> CodeBlock.of("%S", value) }
+        .joinToString(", ")
+    val internalFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "internal-event-unknown.ts")
+    val externalEnvelopeSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "external-envelope.ts")
+    assertTrue(internalFallbackSource.contains("![$expectedValues].includes(value)"), internalFallbackSource)
+    assertTrue(externalEnvelopeSource.contains("![$expectedValues].includes(value)"), externalEnvelopeSource)
+  }
+
+  @Test
   fun `rejects invalid explicit TypeScript enum member names`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val api =

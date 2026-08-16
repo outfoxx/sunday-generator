@@ -1021,7 +1021,7 @@ class TypeScriptSundayIrGenerator(
     fallback: GeneratedDiscriminatorFallback,
     exposedProperties: List<GeneratedModelProperty>,
   ): CodeBlock {
-    val mappedValues = fallback.mappedValues.sorted().joinToString(", ") { value -> "'${value.replace("'", "\\'")}'" }
+    val mappedValues = fallback.mappedValuesCode()
     return CodeBlock
       .builder()
       .add(
@@ -2339,7 +2339,7 @@ class TypeScriptSundayIrGenerator(
         ?.takeIf { candidate -> candidate.externallyDiscriminated }
         ?: return null
     val fallbackTypeName = discriminatedModel.typeName(fallback.modelName.toUpperCamelCase())
-    val mappedValues = fallback.mappedValues.sorted().joinToString(", ") { value -> "'${value.replace("'", "\\'")}'" }
+    val mappedValues = fallback.mappedValuesCode()
     return CodeBlock
       .builder()
       .add("%T.looseObject({ ", Z)
@@ -2357,6 +2357,12 @@ class TypeScriptSundayIrGenerator(
         fallbackTypeName.sibling("Schema"),
       ).build()
   }
+
+  private fun GeneratedDiscriminatorFallback.mappedValuesCode(): CodeBlock =
+    mappedValues
+      .sorted()
+      .map { value -> CodeBlock.of("%S", value) }
+      .joinToCode(", ")
 
   private fun externalDiscriminatedPropertySchema(propertyTypeName: TypeName): CodeBlock {
     val schema =
