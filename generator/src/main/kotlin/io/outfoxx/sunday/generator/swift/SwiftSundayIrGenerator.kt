@@ -38,13 +38,16 @@ import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitAcceptTypes
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
+import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.modelOrNull
 import io.outfoxx.sunday.generator.ir.emit.operationParameterViews
@@ -142,6 +145,16 @@ class SwiftSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
+    buildList {
+      api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
+      api.models.forEach { owner ->
+        owner.properties.mapNotNullTo(this) { property ->
+          property.externalDiscriminatorFallbackOrNull(owner, apiIndex)
+        }
+      }
+    }.associateBy { fallback -> fallback.hierarchy }
+  }
   private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
@@ -250,6 +263,111 @@ class SwiftSundayIrGenerator(
           outputDirectory = outputDirectory,
           outputGroup = outputGroup,
         )
+        discriminatorFallbacks[model]?.let { fallback ->
+          typeRegistry.addModelType(
+            model.swiftFallbackTypeName(fallback),
+            model.swiftFallbackTypeSpec(fallback),
+            outputDirectory = outputDirectory,
+            outputGroup = outputGroup,
+          )
+        }
+      }
+  }
+
+  private fun GeneratedModel.swiftFallbackTypeName(fallback: GeneratedDiscriminatorFallback): DeclaredTypeName {
+    val moduleName =
+      target("swift", "swift")?.modelModuleName
+        ?: api.target("swift", "swift")?.modelModuleName
+        ?: ""
+    return DeclaredTypeName.typeName("${if (moduleName.isBlank()) "" else moduleName}.${fallback.modelName}")
+  }
+
+  private fun GeneratedModel.swiftFallbackTypeSpec(fallback: GeneratedDiscriminatorFallback): TypeSpec.Builder {
+    val typeName = swiftFallbackTypeName(fallback)
+    val exposedProperties =
+      buildList {
+        if (!fallback.externallyDiscriminated) {
+          add(fallback.discriminatorProperty)
+        }
+        addAll(fallback.baseProperties)
+      }
+    val rawBodyType = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+    return TypeSpec
+      .structBuilder(typeName)
+      .addModifiers(PUBLIC)
+      .addSuperTypes(
+        buildList {
+          if (isProtocolHierarchyRootModel ||
+            isProblemHierarchyProtocolModel ||
+            isExternalDiscriminatorBaseProtocolModel
+          ) {
+            add(swiftDeclaredTypeName())
+          } else {
+            add(CODABLE)
+            add(CUSTOM_STRING_CONVERTIBLE)
+            add(SENDABLE)
+          }
+        },
+      ).apply {
+        exposedProperties.forEach { property ->
+          addProperty(
+            PropertySpec
+              .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(false), PUBLIC)
+              .build(),
+          )
+        }
+        addProperty(PropertySpec.builder("rawBody", rawBodyType, PUBLIC).build())
+        addProperty(debugDescriptionProperty(typeName, exposedProperties))
+        addFunction(
+          FunctionSpec
+            .constructorBuilder()
+            .addModifiers(PUBLIC)
+            .apply {
+              exposedProperties.forEach { property ->
+                addParameter(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(false))
+              }
+              addParameter("rawBody", rawBodyType)
+              exposedProperties.forEach { property ->
+                addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
+              }
+              addStatement("self.rawBody = rawBody")
+            }.build(),
+        )
+        addFunction(
+          FunctionSpec
+            .constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter("from", "decoder", DECODER)
+            .throws(true)
+            .apply {
+              if (exposedProperties.isNotEmpty()) {
+                addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
+              }
+              exposedProperties.forEach { property ->
+                addStatement(
+                  "self.%N = try container.decode%L(%T.self, forKey: .%N)",
+                  property.name.swiftIdentifierName,
+                  if (property.swiftModelPropertyTypeName(false).optional) "IfPresent" else "",
+                  property.swiftModelPropertyTypeName(false).makeNonOptional(),
+                  property.name.swiftIdentifierName,
+                )
+              }
+            }.addStatement("self.rawBody = try decoder.singleValueContainer().decode(%T.self)", rawBodyType)
+            .build(),
+        )
+        addFunction(
+          FunctionSpec
+            .builder("encode")
+            .addModifiers(PUBLIC)
+            .addParameter("to", "encoder", ENCODER)
+            .throws(true)
+            .addStatement("var container = encoder.singleValueContainer()")
+            .addStatement("try container.encode(rawBody)")
+            .build(),
+        )
+        if (exposedProperties.isNotEmpty()) {
+          addType(codingKeysType(exposedProperties))
+        }
       }
   }
 
@@ -971,7 +1089,13 @@ class SwiftSundayIrGenerator(
     if (cases.isEmpty()) {
       return null
     }
-    return TypedEventEnvelope(this, discriminatorProperty, dataProperty, cases)
+    return TypedEventEnvelope(
+      this,
+      discriminatorProperty,
+      dataProperty,
+      cases,
+      dataProperty.externalDiscriminatorFallbackOrNull(this, apiIndex),
+    )
   }
 
   private fun TypedEventEnvelope.swiftTypeSpec(): TypeSpec.Builder {
@@ -995,6 +1119,9 @@ class SwiftSundayIrGenerator(
         cases.forEach { case ->
           addEnumCase(case.caseName, case.typeName(typeName))
         }
+        fallback?.let { resolved ->
+          addEnumCase(resolved.fallbackName.swiftEnumCaseName, fallbackEventTypeName(typeName))
+        }
         model.properties.forEach { property ->
           addProperty(swiftEventEnvelopeProperty(property))
         }
@@ -1005,6 +1132,7 @@ class SwiftSundayIrGenerator(
         cases.forEach { case ->
           addType(case.swiftTypeSpec(typeName, this@swiftTypeSpec))
         }
+        fallback?.let { addType(swiftFallbackEventTypeSpec(typeName)) }
       }
   }
 
@@ -1028,6 +1156,13 @@ class SwiftSundayIrGenerator(
                 addStatement("case .%N(let value):%Wreturn value.%N", case.caseName, property.name.swiftIdentifierName)
               }
             }
+            fallback?.let { resolved ->
+              addStatement(
+                "case .%N(let value):%Wreturn value.%N",
+                resolved.fallbackName.swiftEnumCaseName,
+                property.name.swiftIdentifierName,
+              )
+            }
             endControlFlow("switch")
           }.build(),
       ).build()
@@ -1042,6 +1177,12 @@ class SwiftSundayIrGenerator(
             beginControlFlow("switch", "self")
             cases.forEach { case ->
               addStatement("case .%N(let value):%Wreturn value.debugDescription", case.caseName)
+            }
+            fallback?.let { resolved ->
+              addStatement(
+                "case .%N(let value):%Wreturn value.debugDescription",
+                resolved.fallbackName.swiftEnumCaseName,
+              )
             }
             endControlFlow("switch")
           }.build(),
@@ -1060,17 +1201,25 @@ class SwiftSundayIrGenerator(
         discriminatorProperty.name.swiftIdentifierName,
       ).apply {
         cases.forEach { case ->
-          beginControlFlow("if", "discriminatorValue == %L", case.discriminatorValueCode(discriminatorProperty))
+          beginControlFlow("if", "%L", case.discriminatorValueCondition(discriminatorProperty))
           addStatement("self = .%N(try %T(from: decoder))", case.caseName, case.typeName(typeName))
           addStatement("return")
           endControlFlow("if")
         }
-        addStatement(
-          "throw %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
-          DECODING_ERROR,
-          discriminatorProperty.name.swiftIdentifierName,
-          "unsupported value for \"${discriminatorProperty.name}\"",
-        )
+        if (fallback != null) {
+          addStatement(
+            "self = .%N(try %T(from: decoder))",
+            fallback.fallbackName.swiftEnumCaseName,
+            fallbackEventTypeName(typeName),
+          )
+        } else {
+          addStatement(
+            "throw %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
+            DECODING_ERROR,
+            discriminatorProperty.name.swiftIdentifierName,
+            "unsupported value for \"${discriminatorProperty.name}\"",
+          )
+        }
       }.build()
 
   private fun TypedEventEnvelope.swiftEventEnvelopeEncoder(): FunctionSpec =
@@ -1084,8 +1233,97 @@ class SwiftSundayIrGenerator(
         cases.forEach { case ->
           addStatement("case .%N(let value):%Wtry value.encode(to: encoder)", case.caseName)
         }
+        fallback?.let { resolved ->
+          addStatement("case .%N(let value):%Wtry value.encode(to: encoder)", resolved.fallbackName.swiftEnumCaseName)
+        }
         endControlFlow("switch")
       }.build()
+
+  private fun TypedEventEnvelope.fallbackEventTypeName(envelopeTypeName: DeclaredTypeName): DeclaredTypeName =
+    envelopeTypeName.nestedType((fallback?.fallbackName ?: "Unknown") + "Event")
+
+  private fun TypedEventEnvelope.swiftFallbackEventTypeSpec(envelopeTypeName: DeclaredTypeName): TypeSpec {
+    val resolvedFallback = fallback ?: error("Fallback event type requires a discriminator fallback")
+    val typeName = fallbackEventTypeName(envelopeTypeName)
+    val dataTypeName = resolvedFallback.hierarchy.swiftFallbackTypeName(resolvedFallback)
+    return TypeSpec
+      .structBuilder(typeName.simpleName)
+      .addModifiers(PUBLIC)
+      .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .apply {
+        model.properties.forEach { property ->
+          addProperty(
+            PropertySpec
+              .builder(
+                property.name.swiftIdentifierName,
+                if (property == dataProperty) dataTypeName else property.swiftModelPropertyTypeName(false),
+                PUBLIC,
+              ).build(),
+          )
+        }
+        addProperty(debugDescriptionProperty(typeName, model.properties))
+        addFunction(
+          FunctionSpec
+            .constructorBuilder()
+            .addModifiers(PUBLIC)
+            .apply {
+              model.properties.forEach { property ->
+                addParameter(
+                  property.name.swiftIdentifierName,
+                  if (property == dataProperty) dataTypeName else property.swiftModelPropertyTypeName(false),
+                )
+                addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
+              }
+            }.build(),
+        )
+        addFunction(
+          FunctionSpec
+            .constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter("from", "decoder", DECODER)
+            .throws(true)
+            .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
+            .apply {
+              model.properties.forEach { property ->
+                val propertyType =
+                  if (property ==
+                    dataProperty
+                  ) {
+                    dataTypeName
+                  } else {
+                    property.swiftModelPropertyTypeName(false)
+                  }
+                addStatement(
+                  "self.%N = try container.decode%L(%T.self, forKey: .%N)",
+                  property.name.swiftIdentifierName,
+                  if (propertyType.optional) "IfPresent" else "",
+                  propertyType.makeNonOptional(),
+                  property.name.swiftIdentifierName,
+                )
+              }
+            }.build(),
+        )
+        addFunction(
+          FunctionSpec
+            .builder("encode")
+            .addModifiers(PUBLIC)
+            .addParameter("to", "encoder", ENCODER)
+            .throws(true)
+            .addStatement("var container = encoder.container(keyedBy: CodingKeys.self)")
+            .apply {
+              model.properties.forEach { property ->
+                addStatement(
+                  "try container.encode%L(self.%N, forKey: .%N)",
+                  if (property.swiftModelPropertyTypeName(false).optional) "IfPresent" else "",
+                  property.name.swiftIdentifierName,
+                  property.name.swiftIdentifierName,
+                )
+              }
+            }.build(),
+        )
+        addType(codingKeysType(model.properties))
+      }.build()
+  }
 
   private fun TypedEventEnvelopeCase.swiftTypeSpec(
     envelopeTypeName: DeclaredTypeName,
@@ -1156,6 +1394,17 @@ class SwiftSundayIrGenerator(
 
   private fun TypedEventEnvelopeCase.discriminatorValueCode(discriminatorProperty: GeneratedModelProperty): CodeBlock =
     value.swiftValueCode(discriminatorProperty.swiftTypeName().makeNonOptional(), discriminatorProperty.type)
+
+  private fun TypedEventEnvelopeCase.discriminatorValueCondition(
+    discriminatorProperty: GeneratedModelProperty,
+  ): CodeBlock {
+    val enumModel = discriminatorProperty.type.modelOrNull(apiIndex)
+    return if (enumModel?.unknownValue != null) {
+      CodeBlock.of("discriminatorValue.rawValue == %S", value)
+    } else {
+      CodeBlock.of("discriminatorValue == %L", discriminatorValueCode(discriminatorProperty))
+    }
+  }
 
   private fun TypedEventEnvelope.caseConstructor(properties: List<GeneratedModelProperty>): FunctionSpec =
     FunctionSpec
@@ -1236,7 +1485,7 @@ class SwiftSundayIrGenerator(
   private val GeneratedModel.isExternalDiscriminatorBaseProtocolModel: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
-        properties.isEmpty() &&
+        externallyDiscriminated &&
         discriminatorMappings.isNotEmpty()
 
   private val GeneratedModel.isExternalDiscriminatorCaseValueModel: Boolean
@@ -1316,10 +1565,21 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addSwiftDoc(documentation)
       .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .apply {
+        constructorProperties().forEach { property ->
+          addProperty(
+            PropertySpec
+              .abstractBuilder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(false))
+              .addSwiftDoc(property.documentation)
+              .getter(FunctionSpec.getterBuilder().build())
+              .build(),
+          )
+        }
+      }
 
   private fun GeneratedModel.swiftExternalDiscriminatorCaseValueTypeSpec(): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
-    val localProperties = constructorProperties()
+    val localProperties = allConstructorProperties()
     val identifiableProperty = identifiablePropertyOrNull()
     val typeBuilder =
       TypeSpec
@@ -1370,6 +1630,8 @@ class SwiftSundayIrGenerator(
     val typeName = swiftDeclaredTypeName()
     val cases = unionCaseModels()
     val discriminator = unionDiscriminator(cases)
+    val fallback = discriminatorFallbacks[this]?.takeUnless { candidate -> candidate.externallyDiscriminated }
+    val fallbackTypeName = fallback?.let { resolved -> swiftFallbackTypeName(resolved) }
     val propertyBranches = cases.map { model -> UnionPropertyBranch(model, model.uniqueRequiredWireNames(cases)) }
 
     return TypeSpec
@@ -1381,6 +1643,9 @@ class SwiftSundayIrGenerator(
         cases.forEach { model ->
           addEnumCase(model.unionCaseName, model.swiftDeclaredTypeName())
         }
+        if (fallback != null && fallbackTypeName != null) {
+          addEnumCase(fallback.fallbackName.swiftEnumCaseName, fallbackTypeName)
+        }
       }.addProperty(
         PropertySpec
           .builder("debugDescription", STRING, PUBLIC)
@@ -1391,6 +1656,12 @@ class SwiftSundayIrGenerator(
                 beginControlFlow("switch", "self")
                 cases.forEach { model ->
                   addStatement("case .%N(let value):%Wreturn value.debugDescription", model.unionCaseName)
+                }
+                if (fallback != null) {
+                  addStatement(
+                    "case .%N(let value):%Wreturn value.debugDescription",
+                    fallback.fallbackName.swiftEnumCaseName,
+                  )
                 }
                 endControlFlow("switch")
               }.build(),
@@ -1435,12 +1706,21 @@ class SwiftSundayIrGenerator(
             addStatement("return")
             endControlFlow("if")
           }
-          addStatement(
-            "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
-            DECODING_ERROR,
-            discriminator.wireName.swiftIdentifierName,
-            "unsupported value for \"${discriminator.wireName}\"",
-          )
+          val fallback = discriminatorFallbacks[this@unionDecoderConstructor]?.takeUnless { it.externallyDiscriminated }
+          if (fallback != null) {
+            addStatement(
+              "self = .%N(try %T(from: decoder))",
+              fallback.fallbackName.swiftEnumCaseName,
+              swiftFallbackTypeName(fallback),
+            )
+          } else {
+            addStatement(
+              "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
+              DECODING_ERROR,
+              discriminator.wireName.swiftIdentifierName,
+              "unsupported value for \"${discriminator.wireName}\"",
+            )
+          }
         } else {
           addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
           addStatement("let keys = container.allKeys")
@@ -1515,6 +1795,14 @@ class SwiftSundayIrGenerator(
         cases.forEach { model ->
           addStatement("case .%N(let value):%Wtry container.encode(value)", model.unionCaseName)
         }
+        discriminatorFallbacks[this@unionEncoderFunction]
+          ?.takeUnless { fallback -> fallback.externallyDiscriminated }
+          ?.let { fallback ->
+            addStatement(
+              "case .%N(let value):%Wtry container.encode(value)",
+              fallback.fallbackName.swiftEnumCaseName,
+            )
+          }
         endControlFlow("switch")
       }.build()
 
@@ -2009,6 +2297,7 @@ class SwiftSundayIrGenerator(
     val allowsInheritedPropertyOverrides =
       isProtocolHierarchyValueModel ||
         isInheritedObjectValueModel ||
+        isExternalDiscriminatorCaseValueModel ||
         isExternalDiscriminatorEnvelopeValueModel
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
@@ -2138,6 +2427,7 @@ class SwiftSundayIrGenerator(
     val discriminatorProperty: GeneratedModelProperty,
     val dataProperty: GeneratedModelProperty,
     val cases: List<TypedEventEnvelopeCase>,
+    val fallback: GeneratedDiscriminatorFallback?,
   )
 
   private data class TypedEventEnvelopeCase(
@@ -2281,6 +2571,8 @@ class SwiftSundayIrGenerator(
 
     val discriminatorProperty = discriminatorPropertyOrNull() ?: return null
     val inheritingModels = swiftHierarchyCaseModels()
+    val fallback = discriminatorFallbacks[this]?.takeUnless { candidate -> candidate.externallyDiscriminated }
+    val fallbackTypeName = fallback?.let { resolved -> swiftFallbackTypeName(resolved) }
 
     if (inheritingModels.isEmpty()) {
       return null
@@ -2312,6 +2604,9 @@ class SwiftSundayIrGenerator(
           inheritingModels.forEach { model ->
             addEnumCase(model.discriminatorCaseName, model.swiftDeclaredTypeName())
           }
+          if (fallback != null && fallbackTypeName != null) {
+            addEnumCase(fallback.fallbackName.swiftEnumCaseName, fallbackTypeName)
+          }
 
           addProperty(
             PropertySpec
@@ -2323,6 +2618,9 @@ class SwiftSundayIrGenerator(
                     beginControlFlow("switch", "self")
                     inheritingModels.forEach { model ->
                       addStatement("case .%N(let value):%Wreturn value", model.discriminatorCaseName)
+                    }
+                    if (fallback != null) {
+                      addStatement("case .%N(let value):%Wreturn value", fallback.fallbackName.swiftEnumCaseName)
                     }
                     endControlFlow("switch")
                   }.build(),
@@ -2338,6 +2636,12 @@ class SwiftSundayIrGenerator(
                     beginControlFlow("switch", "self")
                     inheritingModels.forEach { model ->
                       addStatement("case .%N(let value):%Wreturn value.debugDescription", model.discriminatorCaseName)
+                    }
+                    if (fallback != null) {
+                      addStatement(
+                        "case .%N(let value):%Wreturn value.debugDescription",
+                        fallback.fallbackName.swiftEnumCaseName,
+                      )
                     }
                     endControlFlow("switch")
                   }.build(),
@@ -2355,6 +2659,13 @@ class SwiftSundayIrGenerator(
                     "case let value as %T:%Wself = .%N(value)",
                     model.swiftDeclaredTypeName(),
                     model.discriminatorCaseName,
+                  )
+                }
+                if (fallback != null && fallbackTypeName != null) {
+                  addStatement(
+                    "case let value as %T:%Wself = .%N(value)",
+                    fallbackTypeName,
+                    fallback.fallbackName.swiftEnumCaseName,
                   )
                 }
                 addStatement("default:%WfatalError(\"Invalid value type\")")
@@ -2382,12 +2693,20 @@ class SwiftSundayIrGenerator(
                     model.swiftDeclaredTypeName(),
                   )
                 }
-                addStatement(
-                  "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
-                  DECODING_ERROR,
-                  discriminatorProperty.name.swiftIdentifierName,
-                  "unsupported value for \"${discriminatorProperty.name}\"",
-                )
+                if (fallback != null && fallbackTypeName != null) {
+                  addStatement(
+                    "default:%Wself = .%N(try %T(from: decoder))",
+                    fallback.fallbackName.swiftEnumCaseName,
+                    fallbackTypeName,
+                  )
+                } else {
+                  addStatement(
+                    "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
+                    DECODING_ERROR,
+                    discriminatorProperty.name.swiftIdentifierName,
+                    "unsupported value for \"${discriminatorProperty.name}\"",
+                  )
+                }
                 endControlFlow("switch")
               }.build(),
           )
@@ -2402,6 +2721,12 @@ class SwiftSundayIrGenerator(
                 beginControlFlow("switch", "self")
                 inheritingModels.forEach { model ->
                   addStatement("case .%N(let value):%Wtry container.encode(value)", model.discriminatorCaseName)
+                }
+                if (fallback != null) {
+                  addStatement(
+                    "case .%N(let value):%Wtry container.encode(value)",
+                    fallback.fallbackName.swiftEnumCaseName,
+                  )
                 }
                 endControlFlow("switch")
               }.build(),
@@ -2741,12 +3066,27 @@ class SwiftSundayIrGenerator(
         property.name.swiftIdentifierName,
       )
     }
-    addStatement(
-      "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
-      DECODING_ERROR,
-      discriminatorProperty.name.swiftIdentifierName,
-      "unsupported value for \"${discriminatorProperty.name}\"",
-    )
+    val fallback =
+      property.type
+        .modelOrNull(apiIndex)
+        ?.let { model -> discriminatorFallbacks[model] }
+        ?.takeIf { candidate -> candidate.externallyDiscriminated }
+    if (fallback != null) {
+      addStatement(
+        "default:%Wself.%N = try container.decode%L(%T.self, forKey: .%N)",
+        property.name.swiftIdentifierName,
+        coderSuffix,
+        fallback.hierarchy.swiftFallbackTypeName(fallback),
+        property.name.swiftIdentifierName,
+      )
+    } else {
+      addStatement(
+        "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
+        DECODING_ERROR,
+        discriminatorProperty.name.swiftIdentifierName,
+        "unsupported value for \"${discriminatorProperty.name}\"",
+      )
+    }
     endControlFlow("switch")
   }
 
@@ -2771,15 +3111,31 @@ class SwiftSundayIrGenerator(
         property.name.swiftIdentifierName,
       )
     }
-    addStatement(
-      "default:\n" +
-        "throw %T.invalidValue(%>\nself.%N,\n%T(%>\ncodingPath: encoder.codingPath + [CodingKeys.%N],\ndebugDescription: %S%<\n)%<\n)",
-      ENCODING_ERROR,
-      discriminatorProperty.name.swiftIdentifierName,
-      ENCODING_ERROR.nestedType("Context"),
-      discriminatorProperty.name.swiftIdentifierName,
-      "unsupported value for \"${discriminatorProperty.name}\"",
-    )
+    val fallback =
+      property.type
+        .modelOrNull(apiIndex)
+        ?.let { model -> discriminatorFallbacks[model] }
+        ?.takeIf { candidate -> candidate.externallyDiscriminated }
+    if (fallback != null) {
+      addStatement(
+        "default:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
+        coderSuffix,
+        property.name.swiftIdentifierName,
+        fallback.hierarchy.swiftFallbackTypeName(fallback),
+        propertyTypeSuffix,
+        property.name.swiftIdentifierName,
+      )
+    } else {
+      addStatement(
+        "default:\n" +
+          "throw %T.invalidValue(%>\nself.%N,\n%T(%>\ncodingPath: encoder.codingPath + [CodingKeys.%N],\ndebugDescription: %S%<\n)%<\n)",
+        ENCODING_ERROR,
+        discriminatorProperty.name.swiftIdentifierName,
+        ENCODING_ERROR.nestedType("Context"),
+        discriminatorProperty.name.swiftIdentifierName,
+        "unsupported value for \"${discriminatorProperty.name}\"",
+      )
+    }
     endControlFlow("switch")
   }
 

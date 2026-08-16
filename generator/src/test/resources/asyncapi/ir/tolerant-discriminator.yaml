@@ -1,0 +1,39 @@
+asyncapi: 2.6.0
+info:
+  title: Tolerant Discriminator API
+  version: 1.0.0
+channels:
+  job.changed:
+    subscribe:
+      operationId: jobChanged
+      message:
+        name: JobProgress
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/JobProgress"
+components:
+  schemas:
+    JobPhase:
+      type: string
+      enum: [started, paused, unknown]
+      x-unknown-value: unknown
+    JobProgress:
+      type: object
+      required: [phase, jobId]
+      discriminator:
+        propertyName: phase
+        mapping:
+          started: "#/components/schemas/JobStarted"
+      properties:
+        phase:
+          $ref: "#/components/schemas/JobPhase"
+        jobId:
+          type: string
+    JobStarted:
+      allOf:
+        - $ref: "#/components/schemas/JobProgress"
+        - type: object
+          required: [taskCount]
+          properties:
+            taskCount:
+              type: integer

@@ -1,0 +1,28 @@
+#%RAML 1.0
+title: Tolerant Discriminator API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType: application/json
+
+types:
+  JobPhase:
+    type: string
+    enum: [started, paused, unknown]
+    (sunday.unknownValue): unknown
+  JobProgress:
+    type: object
+    discriminator: phase
+    properties:
+      phase: JobPhase
+      jobId: string
+  JobStarted:
+    type: JobProgress
+    discriminatorValue: started
+    properties:
+      taskCount: integer
+
+/jobs/{id}:
+  get:
+    responses:
+      200:
+        body: JobProgress

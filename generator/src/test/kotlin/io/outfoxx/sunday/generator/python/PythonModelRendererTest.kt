@@ -477,6 +477,233 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  fun `generates tolerant discriminator hierarchy fallbacks`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "JobPhase",
+          kind = GeneratedModel.Kind.ENUM,
+          values = listOf("started", "paused", "unknown"),
+          unknownValue = "unknown",
+        ),
+        GeneratedModel(
+          name = "JobProgress",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "phase",
+                GeneratedTypeRef.named("JobPhase"),
+                required = true,
+                serializationName = "jobPhase",
+              ),
+              GeneratedModelProperty(
+                "jobId",
+                GeneratedTypeRef.scalar("string"),
+                required = true,
+                serializationName = "job-id",
+              ),
+            ),
+          discriminator = "phase",
+          discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+        ),
+        GeneratedModel(
+          name = "JobStarted",
+          kind = GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+          discriminatorValue = "started",
+          properties = listOf(GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true)),
+        ),
+        GeneratedModel(
+          name = "JobPaused",
+          kind = GeneratedModel.Kind.OBJECT,
+          discriminatorValue = "paused",
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "phase",
+                GeneratedTypeRef.named("JobPhase"),
+                required = true,
+                serializationName = "jobPhase",
+              ),
+              GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
+            ),
+        ),
+        GeneratedModel(
+          name = "JobEvent",
+          kind = GeneratedModel.Kind.UNION,
+          aliases = listOf(GeneratedTypeRef.named("JobStarted"), GeneratedTypeRef.named("JobPaused")),
+          discriminator = "phase",
+          discriminatorMappings =
+            mapOf(
+              "started" to GeneratedTypeRef.named("JobStarted"),
+              "paused" to GeneratedTypeRef.named("JobPaused"),
+            ),
+        ),
+      )
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter, ValidationError
+          from turnpost_api.models import JobEvent, JobEventUnknown, JobProgress, JobProgressUnknown, JobStarted
+
+          adapter = TypeAdapter(JobProgress)
+          known = adapter.validate_python({"jobPhase": "started", "job-id": "job-1", "taskCount": 3})
+          assert isinstance(known, JobStarted)
+
+          raw = {"jobPhase": "future", "job-id": "job-1", "detail": {"attempt": 2}}
+          unknown = adapter.validate_python(raw)
+          assert isinstance(unknown, JobProgressUnknown)
+          assert unknown.phase.name == "UNKNOWN"
+          assert unknown.phase.value == "future"
+          assert unknown.job_id == "job-1"
+          assert unknown.raw_body == raw
+          assert adapter.dump_python(unknown, mode="json") == raw
+
+          paused = adapter.validate_python({"jobPhase": "paused", "job-id": "job-1"})
+          assert isinstance(paused, JobProgressUnknown)
+          assert paused.phase.value == "paused"
+
+          try:
+              adapter.validate_python({"jobPhase": "started", "job-id": "job-1"})
+              raise AssertionError("known malformed payload was accepted")
+          except ValidationError:
+              pass
+
+          try:
+              adapter.validate_python({"jobPhase": "future"})
+              raise AssertionError("unknown payload with invalid base fields was accepted")
+          except ValidationError:
+              pass
+
+          sentinel = adapter.validate_python({"jobPhase": "unknown", "job-id": "job-1"})
+          assert isinstance(sentinel, JobProgressUnknown)
+          assert sentinel.phase.value == "unknown"
+
+          for invalid in (
+              {"job-id": "job-1"},
+              {"jobPhase": None, "job-id": "job-1"},
+              {"jobPhase": 7, "job-id": "job-1"},
+          ):
+              try:
+                  adapter.validate_python(invalid)
+                  raise AssertionError("invalid discriminator was accepted")
+              except ValidationError:
+                  pass
+
+          event = TypeAdapter(JobEvent).validate_python({"jobPhase": "future", "detail": "raw"})
+          assert isinstance(event, JobEventUnknown)
+          assert event.phase.value == "future"
+          assert TypeAdapter(JobEvent).dump_python(event, mode="json") == {"jobPhase": "future", "detail": "raw"}
+          """.trimIndent(),
+      ),
+    )
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(source.contains("class JobProgressUnknown(RootModel[dict[str, Any]]):"), source)
+    assertTrue(source.contains("Discriminator(_job_progress_discriminator)"), source)
+  }
+
+  @Test
+  fun `generates tolerant external discriminator fallbacks`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "EventType",
+          kind = GeneratedModel.Kind.ENUM,
+          values = listOf("created", "unknown"),
+          unknownValue = "unknown",
+        ),
+        GeneratedModel(
+          name = "EventData",
+          kind = GeneratedModel.Kind.OBJECT,
+          externallyDiscriminated = true,
+          properties =
+            listOf(
+              GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
+            ),
+          discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+        ),
+        GeneratedModel(
+          name = "CreatedData",
+          kind = GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("EventData")),
+          discriminatorValue = "created",
+          properties =
+            listOf(
+              GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
+            ),
+        ),
+        GeneratedModel(
+          name = "EventEnvelope",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty("type", GeneratedTypeRef.named("EventType"), required = true),
+              GeneratedModelProperty(
+                "data",
+                GeneratedTypeRef.named("EventData"),
+                required = true,
+                externalDiscriminator = "type",
+              ),
+            ),
+        ),
+      )
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import ValidationError
+          from turnpost_api.models import CreatedData, EventDataUnknown, EventEnvelope
+
+          known = EventEnvelope.model_validate({"type": "created", "data": {"version": 1, "name": "ready"}})
+          assert isinstance(known.data, CreatedData)
+
+          raw_data = {"version": 2, "detail": {"attempt": 2}}
+          unknown = EventEnvelope.model_validate({"type": "future", "data": raw_data})
+          assert isinstance(unknown.data, EventDataUnknown)
+          assert unknown.type.value == "future"
+          assert unknown.data.version == 2
+          assert unknown.data.raw_body == raw_data
+          assert unknown.model_dump(mode="json", by_alias=True) == {"type": "future", "data": raw_data}
+
+          try:
+              EventEnvelope.model_validate({"type": "created", "data": {}})
+              raise AssertionError("known malformed payload was accepted")
+          except ValidationError:
+              pass
+
+          try:
+              EventEnvelope.model_validate({"type": "future", "data": {"detail": "missing base"}})
+              raise AssertionError("unknown payload with invalid base fields was accepted")
+          except ValidationError:
+              pass
+
+          try:
+              EventEnvelope.model_validate({"data": raw_data})
+              raise AssertionError("missing discriminator was accepted")
+          except ValidationError:
+              pass
+          """.trimIndent(),
+      ),
+      modelsModule.source,
+    )
+  }
+
+  @Test
   fun `prefixes digit leading Python enum member names`() {
     assertEquals("_123", "123".pythonEnumMemberName)
     assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)

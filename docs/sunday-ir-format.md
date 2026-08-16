@@ -115,6 +115,8 @@ Enum models carry wire values in `values`. When the source provides explicit gen
 
 An enum may opt into tolerant decoding by setting `unknownValue` to one of its declared wire values. OpenAPI and AsyncAPI map `x-unknown-value` to this field; RAML maps the `sunday.unknownValue` annotation. Emitters use the selected value's generated member name for a fallback arm that carries the unrecognized raw string and serializes that original string unchanged. Enums without `unknownValue` remain strict.
 
+When a discriminator property uses a tolerant enum, the same `unknownValue` automatically enables a catch-all hierarchy variant. Discriminator mappings continue to describe exact known cases; they are not wildcard declarations. Known tags decode only their mapped subtype, while an unmapped string tag decodes the generated fallback with the original tag, declared root properties, and complete raw payload. Mapping the reserved `unknownValue` sentinel to a concrete subtype is a generation error.
+
 Models declared outside the root source document may carry `source` with the defining source location. Named type references may also carry `source` when the referenced declaration is imported. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
 
 ## Model Source Fidelity
