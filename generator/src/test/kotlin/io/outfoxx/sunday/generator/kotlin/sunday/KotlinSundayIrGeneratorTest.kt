@@ -25,6 +25,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -1338,6 +1339,52 @@ class KotlinSundayIrGeneratorTest {
     assertContains(statusSource, "public override fun toString(): String")
     assertFalse(statusSource.contains("@JsonValue"), statusSource)
     assertFalse(statusSource.contains("@JsonCreator"), statusSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates tolerant enums as exhaustive raw-value sealed classes`(
+    @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
+    @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/tolerant-enum.yaml") asyncApiUri: URI,
+  ) {
+    val composedApi =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "running", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+    val apis =
+      listOf(
+        RamlToGeneratedApi().convert(TestAPIProcessing.process(ramlUri)),
+        OpenApiToGeneratedApi().convert(openApiUri),
+        AsyncApiToGeneratedApi().convertFragment(asyncApiUri).api,
+        GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composedApi)),
+      )
+
+    apis.forEach { api ->
+      val typeRegistry = typeRegistry(setOf(KotlinTypeRegistry.Option.JacksonAnnotations))
+      KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+        .generateServiceTypes()
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+    }
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/TaskState.kt")
+    assertContains(source, "public sealed class TaskState")
+    assertContains(source, "public data object Pending : TaskState(\"pending\")")
+    assertContains(source, "public data class Unknown(")
+    assertContains(source, "public val rawValue: String")
+    assertContains(source, "else -> Unknown(rawValue)")
+    assertContains(source, "@get:JsonValue")
+    assertContains(source, "@JsonCreator")
   }
 
   @Test

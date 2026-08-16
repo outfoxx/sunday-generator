@@ -53,6 +53,7 @@ enum class APIAnnotationName(
   ExternallyDiscriminated("externallyDiscriminated", false),
 
   Patchable("patchable", false),
+  UnknownValue("unknownValue", false),
 
   ProblemBaseUri("problemBaseUri", false),
   ProblemBaseUriParams("problemUriParams", false),

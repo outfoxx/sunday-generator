@@ -1,0 +1,21 @@
+#%RAML 1.0
+title: Tolerant Enum API
+uses:
+  sunday: https://outfoxx.github.io/sunday-generator/sunday.raml
+mediaType: application/json
+
+types:
+  TaskState:
+    type: string
+    enum: [pending, running, unknown]
+    (sunday.unknownValue): unknown
+  Task:
+    type: object
+    properties:
+      state: TaskState
+
+/tasks/{id}:
+  get:
+    responses:
+      200:
+        body: Task

@@ -852,16 +852,20 @@ class SwiftSundayIrGenerator(
   ): TypeSpec.Builder? =
     when (kind) {
       GeneratedModel.Kind.ENUM ->
-        TypeSpec
-          .enumBuilder(swiftDeclaredTypeName())
-          .addModifiers(PUBLIC)
-          .addSwiftDoc(documentation)
-          .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, SENDABLE))
-          .apply {
-            swiftEnumEntries().forEach { entry ->
-              addEnumCase(entry.name, entry.value)
+        if (unknownValue != null) {
+          swiftTolerantEnumTypeSpec()
+        } else {
+          TypeSpec
+            .enumBuilder(swiftDeclaredTypeName())
+            .addModifiers(PUBLIC)
+            .addSwiftDoc(documentation)
+            .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, SENDABLE))
+            .apply {
+              swiftEnumEntries().forEach { entry ->
+                addEnumCase(entry.name, entry.value)
+              }
             }
-          }
+        }
 
       GeneratedModel.Kind.OBJECT ->
         typedEventEnvelopeOrNull()?.swiftTypeSpec()
@@ -874,6 +878,79 @@ class SwiftSundayIrGenerator(
       GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
       else -> null
     }
+
+  private fun GeneratedModel.swiftTolerantEnumTypeSpec(): TypeSpec.Builder {
+    val typeName = swiftDeclaredTypeName()
+    val entries = swiftEnumEntries()
+    val fallbackValue = requireNotNull(unknownValue)
+    val fallbackEntry =
+      entries.singleOrNull { entry -> entry.value == fallbackValue }
+        ?: genError("Swift tolerant enum '$name' unknown value '$fallbackValue' does not match any enum value")
+    val knownEntries = entries.filterNot { entry -> entry == fallbackEntry }
+
+    return TypeSpec
+      .enumBuilder(typeName)
+      .addModifiers(PUBLIC)
+      .addSwiftDoc(documentation)
+      .addSuperTypes(listOf(CASE_ITERABLE, CODABLE, SENDABLE))
+      .apply {
+        knownEntries.forEach { entry -> addEnumCase(entry.name) }
+        addEnumCase(fallbackEntry.name, STRING)
+      }.addProperty(
+        PropertySpec
+          .builder("allCases", ARRAY.parameterizedBy(typeName), PUBLIC, STATIC)
+          .getter(
+            FunctionSpec
+              .getterBuilder()
+              .addCode(
+                "return %L\n",
+                entries
+                  .map { entry ->
+                    if (entry == fallbackEntry) {
+                      CodeBlock.of(".%N(%S)", entry.name, entry.value)
+                    } else {
+                      CodeBlock.of(".%N", entry.name)
+                    }
+                  }.joinToCode(prefix = "[", suffix = "]"),
+              ).build(),
+          ).build(),
+      ).addProperty(
+        PropertySpec
+          .builder("rawValue", STRING, PUBLIC)
+          .getter(
+            FunctionSpec
+              .getterBuilder()
+              .apply {
+                beginControlFlow("switch", "self")
+                knownEntries.forEach { entry -> addStatement("case .%N:%Wreturn %S", entry.name, entry.value) }
+                addStatement("case .%N(let rawValue):%Wreturn rawValue", fallbackEntry.name)
+                endControlFlow("switch")
+              }.build(),
+          ).build(),
+      ).addFunction(
+        FunctionSpec
+          .constructorBuilder()
+          .addModifiers(PUBLIC)
+          .addParameter("from", "decoder", DECODER)
+          .throws(true)
+          .addStatement("let rawValue = try decoder.singleValueContainer().decode(%T.self)", STRING)
+          .apply {
+            beginControlFlow("switch", "rawValue")
+            knownEntries.forEach { entry -> addStatement("case %S:%Wself = .%N", entry.value, entry.name) }
+            addStatement("default:%Wself = .%N(rawValue)", fallbackEntry.name)
+            endControlFlow("switch")
+          }.build(),
+      ).addFunction(
+        FunctionSpec
+          .builder("encode")
+          .addModifiers(PUBLIC)
+          .addParameter("to", "encoder", ENCODER)
+          .throws(true)
+          .addStatement("var container = encoder.singleValueContainer()")
+          .addStatement("try container.encode(rawValue)")
+          .build(),
+      )
+  }
 
   private fun GeneratedModel.typedEventEnvelopeOrNull(): TypedEventEnvelope? {
     val dataProperty =
@@ -3581,7 +3658,12 @@ class SwiftSundayIrGenerator(
             ?.modelOrNull(apiIndex)
             ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
         if (enumModel != null) {
-          CodeBlock.of("%T.%N", typeName, enumModel.requireSwiftEnumCaseNameForValue(this))
+          val caseName = enumModel.requireSwiftEnumCaseNameForValue(this)
+          if (enumModel.unknownValue == this) {
+            CodeBlock.of("%T.%N(%S)", typeName, caseName, this)
+          } else {
+            CodeBlock.of("%T.%N", typeName, caseName)
+          }
         } else {
           CodeBlock.of("%S", this)
         }

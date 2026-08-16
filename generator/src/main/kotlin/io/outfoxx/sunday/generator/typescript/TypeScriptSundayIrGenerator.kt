@@ -413,10 +413,14 @@ class TypeScriptSundayIrGenerator(
     val typeName = type.typeName(serviceTypeName)
     val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (value is String && enumModel != null) {
+      val memberName = enumModel.requireTypeScriptEnumMemberNameForValue(value, "default")
+      if (enumModel.unknownValue == value) {
+        return CodeBlock.of("%T.%L(%S)", typeName, memberName, value)
+      }
       return CodeBlock.of(
         "%T.%L",
         typeName,
-        enumModel.requireTypeScriptEnumMemberNameForValue(value, "default"),
+        memberName,
       )
     }
     return literal(value)
@@ -810,6 +814,11 @@ class TypeScriptSundayIrGenerator(
     typeName: TypeName.Standard,
     model: GeneratedModel,
   ) {
+    if (model.unknownValue != null) {
+      generateTolerantEnumModelType(typeName, model)
+      return
+    }
+
     val enumBuilder =
       EnumSpec
         .builder(typeName.simpleName())
@@ -828,6 +837,90 @@ class TypeScriptSundayIrGenerator(
         .build()
 
     typeRegistry.addModelType(typeName, enumBuilder, listOf(schemaCode))
+  }
+
+  private fun generateTolerantEnumModelType(
+    typeName: TypeName.Standard,
+    model: GeneratedModel,
+  ) {
+    val entries = model.typeScriptEnumEntries()
+    val fallbackValue = requireNotNull(model.unknownValue)
+    val fallbackEntry =
+      entries.singleOrNull { entry -> entry.value == fallbackValue }
+        ?: genError(
+          "TypeScript tolerant enum '${model.name}' unknown value '$fallbackValue' does not match any enum value",
+        )
+    val knownEntries = entries.filterNot { entry -> entry == fallbackEntry }
+    val kindTypeName = TypeName.standard(entries.joinToString(" | ") { entry -> "'${entry.name}'" })
+    val classBuilder =
+      ClassSpec
+        .builder(typeName.simpleName())
+        .addModifiers(Modifier.EXPORT)
+        .addProperty(
+          PropertySpec
+            .builder("kind", kindTypeName)
+            .addModifiers(Modifier.READONLY)
+            .build(),
+        ).addProperty(
+          PropertySpec
+            .builder("rawValue", STRING)
+            .addModifiers(Modifier.READONLY)
+            .build(),
+        ).constructor(
+          FunctionSpec
+            .constructorBuilder()
+            .addModifiers(Modifier.PRIVATE)
+            .addParameter("kind", kindTypeName)
+            .addParameter("rawValue", STRING)
+            .addStatement("this.kind = kind")
+            .addStatement("this.rawValue = rawValue")
+            .build(),
+        ).apply {
+          knownEntries.forEach { entry ->
+            addProperty(
+              PropertySpec
+                .builder(entry.name, typeName)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .initializer("new %T(%S, %S)", typeName, entry.name, entry.value)
+                .build(),
+            )
+          }
+          addFunction(
+            FunctionSpec
+              .builder(fallbackEntry.name)
+              .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+              .addParameter("rawValue", STRING)
+              .returns(typeName)
+              .addStatement("return new %T(%S, rawValue)", typeName, fallbackEntry.name)
+              .build(),
+          )
+          addFunction(
+            FunctionSpec
+              .builder("fromValue")
+              .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+              .addParameter("rawValue", STRING)
+              .returns(typeName)
+              .apply {
+                beginControlFlow("switch (%N)", "rawValue")
+                knownEntries.forEach { entry ->
+                  addStatement("case %S: return %T.%L", entry.value, typeName, entry.name)
+                }
+                addStatement("default: return %T.%L(rawValue)", typeName, fallbackEntry.name)
+                endControlFlow()
+              }.build(),
+          )
+        }
+    val schemaCode =
+      CodeBlock
+        .builder()
+        .add("export const %LSchema = ", typeName.simpleName())
+        .add("%T.codec(%T.string(), %T.custom<%T>((value) => value instanceof %T), {\n", Z, Z, Z, typeName, typeName)
+        .add("  decode: (value) => %T.fromValue(value),\n", typeName)
+        .add("  encode: (value) => value.rawValue,\n")
+        .add("});\n")
+        .build()
+
+    typeRegistry.addModelType(typeName, classBuilder, listOf(schemaCode))
   }
 
   private fun generateSharedObjectModelType(model: GeneratedModel) {
@@ -1302,10 +1395,14 @@ class TypeScriptSundayIrGenerator(
           model.kind == GeneratedModel.Kind.ENUM
         }
     if (enumModel != null) {
+      val memberName = enumModel.requireTypeScriptEnumMemberNameForValue(discriminatorValue, "discriminator")
+      if (enumModel.unknownValue == discriminatorValue) {
+        return CodeBlock.of("%T.%L(%S)", discriminatorTypeName, memberName, discriminatorValue)
+      }
       return CodeBlock.of(
         "%T.%L",
         discriminatorTypeName,
-        enumModel.requireTypeScriptEnumMemberNameForValue(discriminatorValue, "discriminator"),
+        memberName,
       )
     }
     return CodeBlock.of("%S", discriminatorValue)
@@ -1323,6 +1420,27 @@ class TypeScriptSundayIrGenerator(
           model.kind == GeneratedModel.Kind.ENUM
         }
     if (enumModel != null) {
+      if (enumModel.unknownValue != null) {
+        val memberName = enumModel.requireTypeScriptEnumMemberNameForValue(discriminatorValue, "discriminator")
+        val decodedValue =
+          if (enumModel.unknownValue == discriminatorValue) {
+            CodeBlock.of("%T.%L(%S)", discriminatorTypeName, memberName, discriminatorValue)
+          } else {
+            CodeBlock.of("%T.%L", discriminatorTypeName, memberName)
+          }
+        return CodeBlock
+          .builder()
+          .add(
+            "%T.codec(%T.literal(%S), %T.custom<%T>((value) => value instanceof %T), { ",
+            Z,
+            Z,
+            discriminatorValue,
+            Z,
+            discriminatorTypeName,
+            discriminatorTypeName,
+          ).add("decode: () => %L, encode: (value) => value.rawValue as %S })", decodedValue, discriminatorValue)
+          .build()
+      }
       return CodeBlock.of(
         "%T.literal(%T.%L)",
         Z,
@@ -2987,7 +3105,11 @@ class TypeScriptSundayIrGenerator(
     if (enumModel.values.filterIsInstance<String>().isEmpty()) {
       return null
     }
-    return CodeBlock.of("[%T.from(%N)]", MEDIA_TYPE, name)
+    return if (enumModel.unknownValue != null) {
+      CodeBlock.of("[%T.from(%N.rawValue)]", MEDIA_TYPE, name)
+    } else {
+      CodeBlock.of("[%T.from(%N)]", MEDIA_TYPE, name)
+    }
   }
 
   private fun acceptTypes(mediaTypes: List<String>): CodeBlock =

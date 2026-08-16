@@ -17,9 +17,12 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -410,6 +413,67 @@ class PythonModelRendererTest : PythonTest() {
 
     assertTrue(error.message!!.contains("member name 'SAME' is used for multiple values"), error.message)
     assertTrue(error.message!!.contains("x-enum-varnames"), error.message)
+  }
+
+  @Test
+  fun `generates tolerant string enums that retain and reserialize unknown values`(
+    compiler: PythonCompiler,
+    @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
+    @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/tolerant-enum.yaml") asyncApiUri: URI,
+  ) {
+    val composedApi =
+      GeneratedApi(
+        name = "Tolerant Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "TaskState",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("pending", "running", "unknown"),
+              unknownValue = "unknown",
+            ),
+          ),
+      )
+    val apis =
+      listOf(
+        GeneratedApiIrExporter().export(ramlUri),
+        GeneratedApiIrExporter().export(openApiUri),
+        GeneratedApiIrExporter().export(asyncApiUri),
+        GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composedApi)),
+      )
+
+    apis.forEach { api ->
+      val modelsModule = PythonModelRenderer("turnpost_api").renderModels(api.models)
+      val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+      assertTrue(
+        compileModules(
+          compiler,
+          listOf(initModule, modelsModule),
+          importModules = listOf("turnpost_api.models"),
+          smokeCode =
+            """
+            from pydantic import TypeAdapter
+
+            from turnpost_api.models import TaskState
+
+            adapter = TypeAdapter(TaskState)
+            known = adapter.validate_python("pending")
+            unknown = adapter.validate_python("refunded")
+
+            assert known is TaskState.PENDING
+            assert unknown.name == "UNKNOWN"
+            assert unknown.value == "refunded"
+            assert adapter.dump_python(unknown, mode="json") == "refunded"
+            """.trimIndent(),
+        ),
+      )
+    }
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(source.contains("def _missing_(cls, value: object) -> Self | None:"), source)
+    assertTrue(source.contains("member._name_ = \"UNKNOWN\""), source)
+    assertTrue(source.contains("member._value_ = value"), source)
   }
 
   @Test

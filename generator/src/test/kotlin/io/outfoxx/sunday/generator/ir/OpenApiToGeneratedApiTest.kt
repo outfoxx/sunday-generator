@@ -295,6 +295,45 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `maps OpenAPI tolerant enum fallback to generated API IR`(
+    @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    val taskState = api.models.single { model -> model.name == "TaskState" }
+    assertEquals(listOf("pending", "running", "unknown"), taskState.values)
+    assertEquals("unknown", taskState.unknownValue)
+  }
+
+  @Test
+  fun `rejects OpenAPI tolerant enum fallback outside the declared values`(
+    @TempDir tempDir: Path,
+  ) {
+    val source = tempDir.resolve("invalid-tolerant-enum.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.1.0
+      info: {title: Invalid Enum API, version: 1.0.0}
+      paths: {}
+      components:
+        schemas:
+          TaskState:
+            type: string
+            enum: [pending, unknown]
+            x-unknown-value: missing
+      """.trimIndent(),
+    )
+
+    val error = assertThrows(IllegalArgumentException::class.java) { OpenApiToGeneratedApi().convert(source.toUri()) }
+
+    assertEquals(
+      "OpenAPI enum model 'TaskState' x-unknown-value 'missing' does not match any enum value.",
+      error.message,
+    )
+  }
+
+  @Test
   fun `maps OpenAPI single allOf reference properties to referenced model types`(
     @ResourceUri("openapi/ir/single-allof-ref-3.1.yaml") testUri: URI,
   ) {

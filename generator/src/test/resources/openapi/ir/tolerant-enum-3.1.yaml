@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: Tolerant Enum API
+  version: 1.0.0
+paths:
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+components:
+  schemas:
+    TaskState:
+      type: string
+      enum: [pending, running, unknown]
+      x-unknown-value: unknown
+    Task:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: "#/components/schemas/TaskState"
