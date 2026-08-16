@@ -939,6 +939,249 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `generates tolerant discriminator hierarchy fallbacks`(compiler: TypeScriptCompiler) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Jobs API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "JobPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "paused", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "JobProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "JobStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+              discriminatorValue = "started",
+              properties =
+                listOf(
+                  GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobPaused",
+              kind = GeneratedModel.Kind.OBJECT,
+              discriminatorValue = "paused",
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobEvent",
+              kind = GeneratedModel.Kind.UNION,
+              aliases = listOf(GeneratedTypeRef.named("JobStarted"), GeneratedTypeRef.named("JobPaused")),
+              discriminator = "phase",
+              discriminatorMappings =
+                mapOf(
+                  "started" to GeneratedTypeRef.named("JobStarted"),
+                  "paused" to GeneratedTypeRef.named("JobPaused"),
+                ),
+            ),
+          ),
+      )
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val hierarchySource = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "job-progress.ts")
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "job-progress-unknown.ts")
+    val unionSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "job-event.ts")
+    assertTrue(hierarchySource.contains("JobProgressUnknownSchema"), hierarchySource)
+    assertTrue(fallbackSource.contains("export interface JobProgressUnknown"), fallbackSource)
+    assertTrue(fallbackSource.contains("readonly rawBody: Readonly<Record<string, unknown>>"), fallbackSource)
+    assertTrue(fallbackSource.contains("!['started'].includes(value)"), fallbackSource)
+    assertTrue(unionSource.contains("JobEventUnknownSchema"), unionSource)
+  }
+
+  @Test
+  fun `generates tolerant external discriminator fallbacks`(compiler: TypeScriptCompiler) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Events API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "EventType",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("created", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "EventData",
+              kind = GeneratedModel.Kind.OBJECT,
+              externallyDiscriminated = true,
+              properties =
+                listOf(
+                  GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+              discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+            ),
+            GeneratedModel(
+              name = "CreatedData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("EventData")),
+              discriminatorValue = "created",
+              properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+            ),
+            GeneratedModel(
+              name = "EventEnvelope",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("type", GeneratedTypeRef.named("EventType"), required = true),
+                  GeneratedModelProperty(
+                    "data",
+                    GeneratedTypeRef.named("EventData"),
+                    required = true,
+                    externalDiscriminator = "type",
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "event-envelope.ts")
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "event-data-unknown.ts")
+    assertTrue(envelopeSource.contains("!['created'].includes(value)"), envelopeSource)
+    assertTrue(envelopeSource.contains("EventDataUnknownSchema"), envelopeSource)
+    assertTrue(fallbackSource.contains("version: number"), fallbackSource)
+    assertTrue(fallbackSource.contains("readonly rawBody: Readonly<Record<string, unknown>>"), fallbackSource)
+  }
+
+  @Test
+  fun `escapes tolerant discriminator mapping values in fallback guards`(compiler: TypeScriptCompiler) {
+    val trailingBackslash = "trailing\\"
+    val injectionShaped = "known\\'; globalThis.compromised = true; //"
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Escaped Discriminators API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "InternalKind",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf(trailingBackslash, injectionShaped, "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "InternalEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("kind", GeneratedTypeRef.named("InternalKind"), required = true),
+                ),
+              discriminator = "kind",
+              discriminatorMappings =
+                mapOf(
+                  trailingBackslash to GeneratedTypeRef.named("TrailingEvent"),
+                  injectionShaped to GeneratedTypeRef.named("InjectionEvent"),
+                ),
+            ),
+            GeneratedModel(
+              name = "TrailingEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
+              discriminatorValue = trailingBackslash,
+            ),
+            GeneratedModel(
+              name = "InjectionEvent",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("InternalEvent")),
+              discriminatorValue = injectionShaped,
+            ),
+            GeneratedModel(
+              name = "ExternalKind",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf(trailingBackslash, injectionShaped, "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "ExternalData",
+              kind = GeneratedModel.Kind.OBJECT,
+              externallyDiscriminated = true,
+              discriminatorMappings =
+                mapOf(
+                  trailingBackslash to GeneratedTypeRef.named("TrailingData"),
+                  injectionShaped to GeneratedTypeRef.named("InjectionData"),
+                ),
+            ),
+            GeneratedModel(
+              name = "TrailingData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("ExternalData")),
+              discriminatorValue = trailingBackslash,
+            ),
+            GeneratedModel(
+              name = "InjectionData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("ExternalData")),
+              discriminatorValue = injectionShaped,
+            ),
+            GeneratedModel(
+              name = "ExternalEnvelope",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("kind", GeneratedTypeRef.named("ExternalKind"), required = true),
+                  GeneratedModelProperty(
+                    "data",
+                    GeneratedTypeRef.named("ExternalData"),
+                    required = true,
+                    externalDiscriminator = "kind",
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val expectedValues =
+      listOf(injectionShaped, trailingBackslash)
+        .sorted()
+        .map { value -> CodeBlock.of("%S", value) }
+        .joinToString(", ")
+    val internalFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "internal-event-unknown.ts")
+    val externalEnvelopeSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "external-envelope.ts")
+    assertTrue(internalFallbackSource.contains("![$expectedValues].includes(value)"), internalFallbackSource)
+    assertTrue(externalEnvelopeSource.contains("![$expectedValues].includes(value)"), externalEnvelopeSource)
+  }
+
+  @Test
   fun `rejects invalid explicit TypeScript enum member names`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val api =

@@ -889,6 +889,134 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `generates tolerant discriminator hierarchy fallbacks`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    val api =
+      GeneratedApi(
+        name = "Jobs API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "JobPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "paused", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "JobProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "JobStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+              discriminatorValue = "started",
+              properties =
+                listOf(
+                  GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobPaused",
+              kind = GeneratedModel.Kind.OBJECT,
+              discriminatorValue = "paused",
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobEvent",
+              kind = GeneratedModel.Kind.UNION,
+              aliases = listOf(GeneratedTypeRef.named("JobStarted"), GeneratedTypeRef.named("JobPaused")),
+              discriminator = "phase",
+              discriminatorMappings =
+                mapOf(
+                  "started" to GeneratedTypeRef.named("JobStarted"),
+                  "paused" to GeneratedTypeRef.named("JobPaused"),
+                ),
+            ),
+            GeneratedModel(
+              name = "EventType",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("created", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "EventData",
+              kind = GeneratedModel.Kind.OBJECT,
+              externallyDiscriminated = true,
+              properties =
+                listOf(
+                  GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+              discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+            ),
+            GeneratedModel(
+              name = "CreatedData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("EventData")),
+              discriminatorValue = "created",
+              properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+            ),
+            GeneratedModel(
+              name = "EventEnvelope",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("type", GeneratedTypeRef.named("EventType"), required = true),
+                  GeneratedModelProperty(
+                    "data",
+                    GeneratedTypeRef.named("EventData"),
+                    required = true,
+                    externalDiscriminator = "type",
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+    val hierarchySource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobProgress.kt")
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobProgressUnknown.kt")
+    val unionSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEvent.kt")
+    val externalRootSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/EventData.kt")
+    val externalFallbackSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/EventDataUnknown.kt",
+      )
+    assertTrue(hierarchySource.contains("defaultImpl = JobProgressUnknown::class"), hierarchySource)
+    assertTrue(hierarchySource.contains("visible = true"), hierarchySource)
+    assertTrue(fallbackSource.contains("public val rawBody: ObjectNode"), fallbackSource)
+    assertTrue(unionSource.contains("return parser.codec.treeToValue(tree, JobEventUnknown::class.java)"), unionSource)
+    assertTrue(externalRootSource.contains("defaultImpl = EventDataUnknown::class"), externalRootSource)
+    assertTrue(externalFallbackSource.contains("public override val version: Int"), externalFallbackSource)
+    assertTrue(externalFallbackSource.contains("public val rawBody: ObjectNode"), externalFallbackSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates object unions and polymorphic event bases from IR across JAX-RS modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->

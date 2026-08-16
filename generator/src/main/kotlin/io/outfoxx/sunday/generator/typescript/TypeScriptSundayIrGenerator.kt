@@ -34,10 +34,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
+import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
 import io.outfoxx.sunday.generator.ir.emit.modelOrNull
@@ -131,6 +134,17 @@ class TypeScriptSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val index = GeneratedApiIndex(api)
+  private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
+    buildList {
+      api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(index) }
+      api.models.forEach { owner ->
+        owner.properties.mapNotNullTo(this) { property ->
+          property.externalDiscriminatorFallbackOrNull(owner, index)
+        }
+      }
+    }.associateBy { fallback -> fallback.hierarchy }
+  }
+  private val generatedDiscriminatorFallbacks = mutableSetOf<GeneratedModel>()
   private val typeScriptEnumEntriesByModel = mutableMapOf<GeneratedModel, List<TypeScriptEnumEntry>>()
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
@@ -238,6 +252,7 @@ class TypeScriptSundayIrGenerator(
       .filter { model ->
         model.scope == null
       }.forEach { model ->
+        generateDiscriminatorFallbackType(model)
         when (model.kind) {
           GeneratedModel.Kind.ENUM -> generateSharedEnumModelType(model)
           GeneratedModel.Kind.OBJECT -> generateSharedObjectModelType(model)
@@ -956,6 +971,109 @@ class TypeScriptSundayIrGenerator(
     )
   }
 
+  private fun generateDiscriminatorFallbackType(model: GeneratedModel) {
+    val fallback = discriminatorFallbacks[model] ?: return
+    if (!generatedDiscriminatorFallbacks.add(model)) {
+      return
+    }
+    val typeName = model.typeName(fallback.modelName.toUpperCamelCase())
+    val exposedProperties =
+      buildList {
+        if (!fallback.externallyDiscriminated) {
+          add(fallback.discriminatorProperty)
+        }
+        addAll(fallback.baseProperties)
+      }
+    val interfaceBuilder =
+      InterfaceSpec
+        .builder(typeName.simpleName())
+        .addModifiers(Modifier.EXPORT)
+        .apply {
+          if (fallback.hierarchy.kind == GeneratedModel.Kind.OBJECT && fallback.hierarchy.isProblemModel()) {
+            addSuperInterface(fallback.hierarchy.typeName(fallback.hierarchy.name.toUpperCamelCase()))
+          }
+        }
+    exposedProperties.forEach { property ->
+      val propertyType = property.type.typeName(typeName).modelPropertyType(property)
+      interfaceBuilder.addProperty(
+        PropertySpec
+          .builder(property.name.typeScriptIdentifierName, propertyType.nonUndefinable)
+          .optional(propertyType.isUndefinable)
+          .build(),
+      )
+    }
+    interfaceBuilder.addProperty(
+      PropertySpec
+        .builder("rawBody", TypeName.implicit("Readonly<Record<string, unknown>>"))
+        .addModifiers(Modifier.READONLY)
+        .build(),
+    )
+
+    typeRegistry.addModelType(
+      typeName,
+      interfaceBuilder,
+      listOf(discriminatorFallbackSchemaCode(typeName, fallback, exposedProperties)),
+    )
+  }
+
+  private fun discriminatorFallbackSchemaCode(
+    typeName: TypeName.Standard,
+    fallback: GeneratedDiscriminatorFallback,
+    exposedProperties: List<GeneratedModelProperty>,
+  ): CodeBlock {
+    val mappedValues = fallback.mappedValuesCode()
+    return CodeBlock
+      .builder()
+      .add(
+        "export const %LSchema: %T = %Q((runtime: %T) => {\n",
+        typeName.simpleName(),
+        SCHEMA_LIKE.parameterized(typeName),
+        DEFINE_SCHEMA,
+        SCHEMA_RUNTIME,
+      ).add("  const wireSchema = %T.looseObject({\n", Z)
+      .apply {
+        exposedProperties.forEach { property ->
+          add("    %S: ", property.serializationName ?: property.name)
+          if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
+            add("%T.string().refine((value) => ![%L].includes(value)),\n", Z, mappedValues)
+          } else {
+            add(property.type.zodSchema(typeName, property.required, property.validation))
+            add(",\n")
+          }
+        }
+      }.add("  });\n")
+      .add(
+        "  return %T.codec(%T.unknown(), %T.custom<%T>((value) => " +
+          "typeof value === 'object' && value !== null && 'rawBody' in value), {\n",
+        Z,
+        Z,
+        Z,
+        typeName,
+      ).add("    decode: (rawValue) => {\n")
+      .add("      const value = wireSchema.parse(rawValue);\n")
+      .add("      return {\n")
+      .apply {
+        exposedProperties.forEach { property ->
+          add("        %N: ", property.name.typeScriptIdentifierName)
+          if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
+            add(
+              "%T.fromValue(value[%S]),\n",
+              property.type.typeName(typeName),
+              property.serializationName ?: property.name,
+            )
+          } else {
+            add("value[%S],\n", property.serializationName ?: property.name)
+          }
+        }
+      }.add("        rawBody: rawValue as Readonly<Record<string, unknown>>,\n")
+      .add("      };\n")
+      .add("    },\n")
+      .add("    encode: (value) => value.rawBody,\n")
+      .add("  });\n")
+      .add("});\n")
+      .build()
+  }
+
   private fun generateObjectModelType(
     ownerTypeName: TypeName.Standard,
     model: GeneratedModel,
@@ -1125,7 +1243,12 @@ class TypeScriptSundayIrGenerator(
         if (model.externallyDiscriminated) {
           externallyDiscriminatedObjectSchemaCode(typeName, allSerializableProperties)
         } else {
-          discriminatedObjectSchemaCode(typeName, requireNotNull(rootDiscriminatorName), childModels)
+          discriminatedObjectSchemaCode(
+            typeName,
+            requireNotNull(rootDiscriminatorName),
+            childModels,
+            discriminatorFallbacks[model],
+          )
         }
       } else {
         localObjectSchemaCode(
@@ -1214,6 +1337,7 @@ class TypeScriptSundayIrGenerator(
             typeName,
             requireNotNull(rootDiscriminatorName),
             childModels,
+            discriminatorFallbacks[model],
             typeName.takeIf { needsExplicitSchemaType },
           )
         }
@@ -1455,6 +1579,7 @@ class TypeScriptSundayIrGenerator(
     typeName: TypeName.Standard,
     discriminatorName: String,
     childModels: List<GeneratedModel>,
+    fallback: GeneratedDiscriminatorFallback? = null,
     schemaTypeName: TypeName.Standard? = null,
   ): CodeBlock {
     val variants =
@@ -1468,6 +1593,11 @@ class TypeScriptSundayIrGenerator(
       } else {
         "union"
       }
+    val fallbackSchema =
+      fallback?.let {
+        val fallbackTypeName = it.hierarchy.typeName(it.modelName.toUpperCamelCase())
+        CodeBlock.of("runtime.resolveSchema(%T)", fallbackTypeName.sibling("Schema"))
+      }
 
     return CodeBlock
       .builder()
@@ -1476,7 +1606,11 @@ class TypeScriptSundayIrGenerator(
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
       .apply {
-        if (schemaFactory == "discriminatedUnion") {
+        if (fallbackSchema != null && schemaFactory == "discriminatedUnion") {
+          add("  const knownSchema = %T.discriminatedUnion(%S, [\n", Z, discriminatorName)
+        } else if (fallbackSchema != null) {
+          add("  const knownSchema = %T.union([\n", Z)
+        } else if (schemaFactory == "discriminatedUnion") {
           add("  return %T.discriminatedUnion(%S, [\n", Z, discriminatorName)
         } else if (schemaTypeName != null) {
           add("  const wireSchema = %T.union([\n", Z)
@@ -1489,7 +1623,16 @@ class TypeScriptSundayIrGenerator(
           .joinToCode(",\n"),
       ).add("\n  ]);\n")
       .apply {
-        if (schemaTypeName != null) {
+        if (fallbackSchema != null) {
+          add("  const wireSchema = %T.union([knownSchema, ", Z)
+          add(fallbackSchema)
+          add("]);\n")
+          if (schemaTypeName == null) {
+            add("  return wireSchema;\n")
+          } else {
+            add("  return wireSchema as %T.ZodType<%T>;\n", Z, schemaTypeName)
+          }
+        } else if (schemaTypeName != null) {
           add("  return wireSchema as %T.ZodType<%T>;\n", Z, schemaTypeName)
         }
       }.add("});\n")
@@ -1533,6 +1676,7 @@ class TypeScriptSundayIrGenerator(
     typeName: TypeName.Standard,
     discriminatorName: String,
     childModels: List<GeneratedModel>,
+    fallback: GeneratedDiscriminatorFallback? = null,
   ): CodeBlock {
     val variants =
       childModels.map { childModel ->
@@ -1560,11 +1704,23 @@ class TypeScriptSundayIrGenerator(
           .map { (childSchemaTypeName, _) -> CodeBlock.of("runtime.resolveSchema(%T)", childSchemaTypeName) }
           .joinToCode(",\n"),
       ).add("\n  ]);\n")
-      .add("  return %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
-      .add("    decode: (value) => value as %T,\n", typeName)
+      .apply {
+        if (fallback == null) {
+          add("  return %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
+        } else {
+          add("  const knownSchema = %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
+        }
+      }.add("    decode: (value) => value as %T,\n", typeName)
       .add("    encode: (value) => value as z.infer<typeof wireSchema>,\n")
-      .add("  });\n\n")
-      .add("});\n")
+      .add("  });\n")
+      .apply {
+        if (fallback != null) {
+          val fallbackTypeName = fallback.hierarchy.typeName(fallback.modelName.toUpperCamelCase())
+          add("  return %T.union([knownSchema, runtime.resolveSchema(%T)]);\n", Z, fallbackTypeName.sibling("Schema"))
+        } else {
+          add("\n")
+        }
+      }.add("});\n")
       .build()
   }
 
@@ -1582,6 +1738,12 @@ class TypeScriptSundayIrGenerator(
           .add(")")
           .build()
       }
+    val fallbackSchema =
+      discriminatorFallbacks[model]?.let { fallback ->
+        val fallbackTypeName = model.typeName(fallback.modelName.toUpperCamelCase())
+        CodeBlock.of("runtime.resolveSchema(%T)", fallbackTypeName.sibling("Schema"))
+      }
+    val schemas = aliasSchemas + listOfNotNull(fallbackSchema)
 
     return CodeBlock
       .builder()
@@ -1590,7 +1752,7 @@ class TypeScriptSundayIrGenerator(
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
       .add("  const wireSchema = %T.union([\n", Z)
-      .add(aliasSchemas.joinToCode(",\n"))
+      .add(schemas.joinToCode(",\n"))
       .add("\n  ]);\n")
       .apply {
         if (schemaTypeName != null) {
@@ -1836,16 +1998,31 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.externalDiscriminatorTypedTypeName(typeName: TypeName.Standard): TypeName.Standard? =
     typeName
       .nested("Typed")
-      .takeIf { externalDiscriminatorTypedVariants(properties).isNotEmpty() }
+      .takeIf {
+        externalDiscriminatorTypedVariants(properties).isNotEmpty() ||
+          externalDiscriminatorTypedFallback(properties, typeName) != null
+      }
 
   private fun GeneratedModel.externalDiscriminatorTypedCode(
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
   ): CodeBlock? {
     val variants = externalDiscriminatorTypedVariants(properties)
-    if (variants.isEmpty()) {
+    val fallbackVariant = externalDiscriminatorTypedFallback(properties, typeName)
+    if (variants.isEmpty() && fallbackVariant == null) {
       return null
     }
+    val variantTypes =
+      variants.map { variant ->
+        CodeBlock.of(
+          "%T & { %L: %S, %L: %T }",
+          typeName,
+          variant.discriminatorProperty.name.typeScriptIdentifierName,
+          variant.discriminatorValue,
+          variant.discriminatedProperty.name.typeScriptIdentifierName,
+          variant.discriminatedTypeName,
+        )
+      } + listOfNotNull(fallbackVariant)
 
     return CodeBlock
       .builder()
@@ -1853,23 +2030,37 @@ class TypeScriptSundayIrGenerator(
       .add("  export type Typed =\n")
       .indent()
       .indent()
-      .add(
-        variants
-          .map { variant ->
-            CodeBlock.of(
-              "%T & { %L: %S, %L: %T }",
-              typeName,
-              variant.discriminatorProperty.name.typeScriptIdentifierName,
-              variant.discriminatorValue,
-              variant.discriminatedProperty.name.typeScriptIdentifierName,
-              variant.discriminatedTypeName,
-            )
-          }.joinToCode("\n| "),
-      ).add(";\n")
+      .add(variantTypes.joinToCode("\n| "))
+      .add(";\n")
       .unindent()
       .unindent()
       .add("}\n")
       .build()
+  }
+
+  private fun GeneratedModel.externalDiscriminatorTypedFallback(
+    properties: List<GeneratedModelProperty>,
+    typeName: TypeName.Standard,
+  ): CodeBlock? {
+    val (discriminatedProperty, discriminatorProperty) =
+      properties
+        .externalDiscriminatedPropertyPairs()
+        .singleOrNull()
+        ?: return null
+    val discriminatedModel = discriminatedProperty.type.modelOrNull(index) ?: return null
+    val fallback =
+      discriminatorFallbacks[discriminatedModel]
+        ?.takeIf { candidate -> candidate.externallyDiscriminated }
+        ?: return null
+    val fallbackTypeName = discriminatedModel.typeName(fallback.modelName.toUpperCamelCase())
+    return CodeBlock.of(
+      "%T & { %L: %T, %L: %T }",
+      typeName,
+      discriminatorProperty.name.typeScriptIdentifierName,
+      discriminatorProperty.type.typeName(typeName).nonUndefinable,
+      discriminatedProperty.name.typeScriptIdentifierName,
+      fallbackTypeName,
+    )
   }
 
   private fun GeneratedModel.externalDiscriminatorTypedVariants(
@@ -1975,8 +2166,16 @@ class TypeScriptSundayIrGenerator(
           .add(" })")
           .build()
       }
+    val fallbackVariant =
+      externalDiscriminatorFallbackVariant(
+        discriminatedModel,
+        discriminatedProperty,
+        discriminatorProperty,
+        serviceTypeName,
+        baseWireSchemaName,
+      )
 
-    if (variants.isEmpty()) {
+    if (variants.isEmpty() && fallbackVariant == null) {
       return CodeBlock.of("%L", baseWireSchemaName)
     }
 
@@ -2005,8 +2204,7 @@ class TypeScriptSundayIrGenerator(
           )
         }
       }
-    val discriminatorSchema =
-      externalDiscriminatorSchema(discriminatorProperty.wireName, variants)
+    val discriminatorSchema = externalDiscriminatorSchema(discriminatorProperty.wireName, variants, fallbackVariant)
 
     return if (optionalVariants.isEmpty()) {
       discriminatorSchema
@@ -2047,8 +2245,15 @@ class TypeScriptSundayIrGenerator(
           .add(" })")
           .build()
       }
+    val fallbackVariant =
+      externalDiscriminatorFallbackVariant(
+        discriminatedModel,
+        discriminatedProperty,
+        discriminatorProperty,
+        serviceTypeName,
+      )
 
-    if (variants.isEmpty()) {
+    if (variants.isEmpty() && fallbackVariant == null) {
       return CodeBlock.of("%T.looseObject({})", Z)
     }
 
@@ -2061,8 +2266,7 @@ class TypeScriptSundayIrGenerator(
           add(CodeBlock.of("%T.object({ %S: %T.null() })", Z, discriminatedProperty.wireName, Z))
         }
       }
-    val discriminatorSchema =
-      externalDiscriminatorSchema(discriminatorProperty.wireName, variants)
+    val discriminatorSchema = externalDiscriminatorSchema(discriminatorProperty.wireName, variants, fallbackVariant)
 
     return if (optionalVariants.isEmpty()) {
       discriminatorSchema
@@ -2089,22 +2293,76 @@ class TypeScriptSundayIrGenerator(
   private fun externalDiscriminatorSchema(
     discriminatorWireName: String,
     variants: List<Pair<String, CodeBlock>>,
-  ): CodeBlock =
-    if (variants.map { it.first }.toSet().size == variants.size) {
-      CodeBlock
-        .builder()
-        .add("%T.discriminatedUnion(%S, [\n", Z, discriminatorWireName)
-        .add(variants.map { it.second }.joinToCode(",\n"))
-        .add("\n  ])")
-        .build()
-    } else {
-      CodeBlock
-        .builder()
-        .add("%T.union([\n", Z)
-        .add(variants.map { it.second }.joinToCode(",\n"))
-        .add("\n  ])")
-        .build()
+    fallbackVariant: CodeBlock? = null,
+  ): CodeBlock {
+    val knownSchema =
+      if (variants.map { it.first }.toSet().size == variants.size) {
+        CodeBlock
+          .builder()
+          .add("%T.discriminatedUnion(%S, [\n", Z, discriminatorWireName)
+          .add(variants.map { it.second }.joinToCode(",\n"))
+          .add("\n  ])")
+          .build()
+      } else {
+        CodeBlock
+          .builder()
+          .add("%T.union([\n", Z)
+          .add(variants.map { it.second }.joinToCode(",\n"))
+          .add("\n  ])")
+          .build()
+      }
+    if (fallbackVariant == null) {
+      return knownSchema
     }
+    if (variants.isEmpty()) {
+      return fallbackVariant
+    }
+    return CodeBlock
+      .builder()
+      .add("%T.union([\n", Z)
+      .add(knownSchema)
+      .add(",\n")
+      .add(fallbackVariant)
+      .add("\n  ])")
+      .build()
+  }
+
+  private fun externalDiscriminatorFallbackVariant(
+    discriminatedModel: GeneratedModel,
+    discriminatedProperty: GeneratedModelProperty,
+    discriminatorProperty: GeneratedModelProperty,
+    serviceTypeName: TypeName.Standard,
+    baseWireSchemaName: String? = null,
+  ): CodeBlock? {
+    val fallback =
+      discriminatorFallbacks[discriminatedModel]
+        ?.takeIf { candidate -> candidate.externallyDiscriminated }
+        ?: return null
+    val fallbackTypeName = discriminatedModel.typeName(fallback.modelName.toUpperCamelCase())
+    val mappedValues = fallback.mappedValuesCode()
+    return CodeBlock
+      .builder()
+      .add("%T.looseObject({ ", Z)
+      .apply {
+        baseWireSchemaName?.let { schemaName -> add("...%L.shape, ", schemaName) }
+      }.add(
+        "%S: %T.string().refine((value) => ![%L].includes(value)).pipe(",
+        discriminatorProperty.wireName,
+        Z,
+        mappedValues,
+      ).add(discriminatorProperty.type.zodSchema(serviceTypeName, required = true))
+      .add(
+        "), %S: runtime.resolveSchema(%T) })",
+        discriminatedProperty.wireName,
+        fallbackTypeName.sibling("Schema"),
+      ).build()
+  }
+
+  private fun GeneratedDiscriminatorFallback.mappedValuesCode(): CodeBlock =
+    mappedValues
+      .sorted()
+      .map { value -> CodeBlock.of("%S", value) }
+      .joinToCode(", ")
 
   private fun externalDiscriminatedPropertySchema(propertyTypeName: TypeName): CodeBlock {
     val schema =

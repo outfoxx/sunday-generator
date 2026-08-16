@@ -63,10 +63,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
+import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
+import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
@@ -127,6 +130,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
@@ -158,6 +162,16 @@ class KotlinJAXRSIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
+    buildList {
+      api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
+      api.models.forEach { owner ->
+        owner.properties.mapNotNullTo(this) { property ->
+          property.externalDiscriminatorFallbackOrNull(owner, apiIndex)
+        }
+      }
+    }.associateBy { fallback -> fallback.hierarchy }
+  }
   private val kotlinEnumEntries = KotlinEnumEntriesResolver()
   private val generationMode = typeRegistry.generationMode
   private val reactiveDefault = options.reactiveResponseType != null && !options.coroutineServiceMethods
@@ -227,8 +241,30 @@ class KotlinJAXRSIrGenerator(
   private fun generateModelTypes() {
     api.models
       .filter { model -> model.scope == null }
-      .mapNotNull { model -> model.modelType()?.let { model.kotlinClassName() to it } }
-      .forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
+      .flatMap { model ->
+        buildList {
+          model.modelType()?.let { type -> add(model.kotlinClassName() to type) }
+          model.discriminatorFallbackType()?.let { fallback -> add(fallback) }
+        }
+      }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
+  }
+
+  private fun GeneratedModel.discriminatorFallbackType(): Pair<ClassName, TypeSpec.Builder>? {
+    if (!typeRegistry.options.contains(JacksonAnnotations)) {
+      return null
+    }
+    val fallback = discriminatorFallbacks[this] ?: return null
+    val hierarchyTypeName = kotlinClassName()
+    val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
+    val hierarchyIsClass = typeRegistry.options.contains(ImplementModel) || isProblemModel()
+    val type =
+      fallback.kotlinFallbackTypeSpec(
+        fallbackTypeName,
+        hierarchyTypeName,
+        hierarchyIsClass,
+        kind == GeneratedModel.Kind.OBJECT,
+      ) { property -> property.modelPropertyTypeName() }
+    return fallbackTypeName to type
   }
 
   private fun GeneratedApi.jaxRsServices(): List<GeneratedService> =
@@ -2263,11 +2299,29 @@ class KotlinJAXRSIrGenerator(
               addStatement("return %L", case.model.unionCaseDecodeCode(unionTypeName, directCases))
               endControlFlow()
             }
-            addStatement(
-              "throw %T.from(parser, %S)",
-              JACKSON_JSON_MAPPING_EXCEPTION,
-              "unsupported value for \"${discriminator.wireName}\"",
-            )
+            val fallback = discriminatorFallbacks[this@deserializerType]?.takeUnless { it.externallyDiscriminated }
+            if (fallback == null) {
+              addStatement(
+                "throw %T.from(parser, %S)",
+                JACKSON_JSON_MAPPING_EXCEPTION,
+                "unsupported value for \"${discriminator.wireName}\"",
+              )
+            } else {
+              beginControlFlow(
+                "if (tree.get(%S) == null || !tree.get(%S).isTextual)",
+                discriminator.wireName,
+                discriminator.wireName,
+              )
+              addStatement(
+                "throw %T.from(parser, %S)",
+                JACKSON_JSON_MAPPING_EXCEPTION,
+                "missing or non-string value for \"${discriminator.wireName}\"",
+              )
+              endControlFlow()
+              val hierarchyTypeName = kotlinClassName()
+              val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
+              addStatement("return parser.codec.treeToValue(tree, %T::class.java)", fallbackTypeName)
+            }
           } else {
             propertyBranches
               .filter { branch -> branch.uniqueRequiredWireNames.isNotEmpty() }
@@ -2345,7 +2399,14 @@ class KotlinJAXRSIrGenerator(
         .addMember("use = %T.%L", JACKSON_JSON_TYPEINFO_ID, JACKSON_JSON_TYPEINFO_ID_NAME)
         .addMember("include = %T.%L", JACKSON_JSON_TYPEINFO_AS, include)
         .addMember("property = %S", discriminator)
-        .build(),
+        .apply {
+          discriminatorFallbacks[model]?.let { fallback ->
+            val hierarchyTypeName = model.kotlinClassName()
+            val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
+            addMember("defaultImpl = %T::class", fallbackTypeName)
+            addMember("visible = true")
+          }
+        }.build(),
     )
     addAnnotation(
       AnnotationSpec

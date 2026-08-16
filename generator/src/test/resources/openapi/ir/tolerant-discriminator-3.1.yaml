@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: Tolerant Discriminator API
+  version: 1.0.0
+paths:
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobProgress"
+components:
+  schemas:
+    JobPhase:
+      type: string
+      enum: [started, paused, unknown]
+      x-unknown-value: unknown
+    JobProgress:
+      type: object
+      required: [phase, jobId]
+      discriminator:
+        propertyName: phase
+        mapping:
+          started: "#/components/schemas/JobStarted"
+      properties:
+        phase:
+          $ref: "#/components/schemas/JobPhase"
+        jobId:
+          type: string
+    JobStarted:
+      allOf:
+        - $ref: "#/components/schemas/JobProgress"
+        - type: object
+          required: [taskCount]
+          properties:
+            taskCount:
+              type: integer

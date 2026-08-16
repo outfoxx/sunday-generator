@@ -1631,6 +1631,150 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `generates tolerant discriminator hierarchy fallbacks`(compiler: SwiftCompiler) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Jobs API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "JobPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "paused", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "JobProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("jobId", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "JobStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("JobProgress")),
+              discriminatorValue = "started",
+              properties =
+                listOf(
+                  GeneratedModelProperty("taskCount", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobPaused",
+              kind = GeneratedModel.Kind.OBJECT,
+              discriminatorValue = "paused",
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("JobPhase"), required = true),
+                  GeneratedModelProperty("reason", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "JobEvent",
+              kind = GeneratedModel.Kind.UNION,
+              aliases = listOf(GeneratedTypeRef.named("JobStarted"), GeneratedTypeRef.named("JobPaused")),
+              discriminator = "phase",
+              discriminatorMappings =
+                mapOf(
+                  "started" to GeneratedTypeRef.named("JobStarted"),
+                  "paused" to GeneratedTypeRef.named("JobPaused"),
+                ),
+            ),
+          ),
+      )
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "JobProgressUnknown.swift")
+    val referenceSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "JobProgressRef.swift")
+    val unionSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "JobEvent.swift")
+    assertTrue(fallbackSource.contains("public let rawBody: [String : AnyValue]"), fallbackSource)
+    assertTrue(fallbackSource.contains("try container.encode(rawBody)"), fallbackSource)
+    assertTrue(referenceSource.contains("case unknown(JobProgressUnknown)"), referenceSource)
+    assertTrue(
+      referenceSource.contains("default: self = .unknown(try JobProgressUnknown(from: decoder))"),
+      referenceSource,
+    )
+    assertTrue(unionSource.contains("case unknown(JobEventUnknown)"), unionSource)
+  }
+
+  @Test
+  fun `generates tolerant typed event envelope fallbacks`(compiler: SwiftCompiler) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Events API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "EventType",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("created", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "EventData",
+              kind = GeneratedModel.Kind.OBJECT,
+              externallyDiscriminated = true,
+              properties =
+                listOf(
+                  GeneratedModelProperty("version", GeneratedTypeRef.scalar("integer"), required = true),
+                ),
+              discriminatorMappings = mapOf("created" to GeneratedTypeRef.named("CreatedData")),
+            ),
+            GeneratedModel(
+              name = "CreatedData",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("EventData")),
+              discriminatorValue = "created",
+              properties =
+                listOf(
+                  GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "EventEnvelope",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("type", GeneratedTypeRef.named("EventType"), required = true),
+                  GeneratedModelProperty(
+                    "data",
+                    GeneratedTypeRef.named("EventData"),
+                    required = true,
+                    externalDiscriminator = "type",
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "EventEnvelope.swift")
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "EventDataUnknown.swift")
+    assertTrue(envelopeSource.contains("case unknown(UnknownEvent)"), envelopeSource)
+    assertTrue(envelopeSource.contains("public let data: EventDataUnknown"), envelopeSource)
+    assertTrue(envelopeSource.contains("self = .unknown(try UnknownEvent(from: decoder))"), envelopeSource)
+    assertTrue(fallbackSource.contains("public let version: Int"), fallbackSource)
+    assertTrue(fallbackSource.contains("public let rawBody: [String : AnyValue]"), fallbackSource)
+  }
+
+  @Test
   fun `rejects invalid explicit Swift enum case names`() {
     val typeRegistry = SwiftTypeRegistry(setOf())
     val api =
