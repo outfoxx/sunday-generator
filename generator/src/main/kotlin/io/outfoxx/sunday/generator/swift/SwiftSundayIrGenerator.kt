@@ -63,6 +63,7 @@ import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
 import io.outfoxx.sunday.generator.swift.utils.CODABLE
 import io.outfoxx.sunday.generator.swift.utils.CODING_KEY
+import io.outfoxx.sunday.generator.swift.utils.CUSTOM_DEBUG_STRING_CONVERTIBLE
 import io.outfoxx.sunday.generator.swift.utils.CUSTOM_STRING_CONVERTIBLE
 import io.outfoxx.sunday.generator.swift.utils.DATE
 import io.outfoxx.sunday.generator.swift.utils.DECODER
@@ -304,7 +305,7 @@ class SwiftSundayIrGenerator(
             add(swiftDeclaredTypeName())
           } else {
             add(CODABLE)
-            add(CUSTOM_STRING_CONVERTIBLE)
+            add(CUSTOM_DEBUG_STRING_CONVERTIBLE)
             add(SENDABLE)
           }
         },
@@ -977,12 +978,12 @@ class SwiftSundayIrGenerator(
             .enumBuilder(swiftDeclaredTypeName())
             .addModifiers(PUBLIC)
             .addSwiftDoc(documentation)
-            .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, SENDABLE))
+            .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
             .apply {
               swiftEnumEntries().forEach { entry ->
                 addEnumCase(entry.name, entry.value)
               }
-            }
+            }.addProperty(swiftEnumDescriptionProperty())
         }
 
       GeneratedModel.Kind.OBJECT ->
@@ -1010,7 +1011,7 @@ class SwiftSundayIrGenerator(
       .enumBuilder(typeName)
       .addModifiers(PUBLIC)
       .addSwiftDoc(documentation)
-      .addSuperTypes(listOf(CASE_ITERABLE, CODABLE, SENDABLE))
+      .addSuperTypes(listOf(CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
       .apply {
         knownEntries.forEach { entry -> addEnumCase(entry.name) }
         addEnumCase(fallbackEntry.name, STRING)
@@ -1045,7 +1046,8 @@ class SwiftSundayIrGenerator(
                 endControlFlow("switch")
               }.build(),
           ).build(),
-      ).addFunction(
+      ).addProperty(swiftEnumDescriptionProperty())
+      .addFunction(
         FunctionSpec
           .constructorBuilder()
           .addModifiers(PUBLIC)
@@ -1069,6 +1071,16 @@ class SwiftSundayIrGenerator(
           .build(),
       )
   }
+
+  private fun swiftEnumDescriptionProperty(): PropertySpec =
+    PropertySpec
+      .builder("description", STRING, PUBLIC)
+      .getter(
+        FunctionSpec
+          .getterBuilder()
+          .addStatement("return rawValue")
+          .build(),
+      ).build()
 
   private fun GeneratedModel.typedEventEnvelopeOrNull(): TypedEventEnvelope? {
     val dataProperty =
@@ -1109,7 +1121,7 @@ class SwiftSundayIrGenerator(
       .addSuperTypes(
         buildList {
           add(CODABLE)
-          add(CUSTOM_STRING_CONVERTIBLE)
+          add(CUSTOM_DEBUG_STRING_CONVERTIBLE)
           add(SENDABLE)
           if (identifiableProperty != null) {
             add(IDENTIFIABLE)
@@ -1249,7 +1261,7 @@ class SwiftSundayIrGenerator(
     return TypeSpec
       .structBuilder(typeName.simpleName)
       .addModifiers(PUBLIC)
-      .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
       .apply {
         model.properties.forEach { property ->
           addProperty(
@@ -1343,7 +1355,7 @@ class SwiftSundayIrGenerator(
       .addSuperTypes(
         buildList {
           add(CODABLE)
-          add(CUSTOM_STRING_CONVERTIBLE)
+          add(CUSTOM_DEBUG_STRING_CONVERTIBLE)
           add(SENDABLE)
           if (identifiableProperty != null) {
             add(IDENTIFIABLE)
@@ -1564,7 +1576,7 @@ class SwiftSundayIrGenerator(
       .protocolBuilder(swiftDeclaredTypeName())
       .addModifiers(PUBLIC)
       .addSwiftDoc(documentation)
-      .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
       .apply {
         constructorProperties().forEach { property ->
           addProperty(
@@ -1638,7 +1650,7 @@ class SwiftSundayIrGenerator(
       .enumBuilder(typeName)
       .addModifiers(PUBLIC)
       .addSwiftDoc(documentation)
-      .addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
       .apply {
         cases.forEach { model ->
           addEnumCase(model.unionCaseName, model.swiftDeclaredTypeName())
@@ -2094,7 +2106,7 @@ class SwiftSundayIrGenerator(
           if (isProblemHierarchyProtocolModel) {
             addSuperType(inheritedTypeName ?: runtimeProblemTypeName)
           } else if (isProtocolHierarchyRoot) {
-            addSuperTypes(listOf(CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+            addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
           } else if (inheritedTypeName != null && !flattensInheritedProperties) {
             addSuperType(inheritedTypeName)
           } else if (isProblemHierarchyValueModel) {
@@ -2105,7 +2117,7 @@ class SwiftSundayIrGenerator(
             addSuperTypes(
               buildList {
                 add(CODABLE)
-                add(CUSTOM_STRING_CONVERTIBLE)
+                add(CUSTOM_DEBUG_STRING_CONVERTIBLE)
                 if (isValueModel || isRecursiveReferenceModel && !hasInheritingModels) {
                   add(SENDABLE)
                 }
@@ -2595,7 +2607,7 @@ class SwiftSundayIrGenerator(
         .addSuperTypes(
           buildList {
             add(CODABLE)
-            add(CUSTOM_STRING_CONVERTIBLE)
+            add(CUSTOM_DEBUG_STRING_CONVERTIBLE)
             if (inheritingModels.all { model -> model.isSwiftSendableModel }) {
               add(SENDABLE)
             }

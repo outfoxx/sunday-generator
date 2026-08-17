@@ -41,17 +41,27 @@ public final class API<TransportType : Transport> : Sendable {
     )
   }
 
-  public enum FetchTestCategoryHeaderParam : String, CaseIterable, Codable, Sendable {
+  public enum FetchTestCategoryHeaderParam : String, CaseIterable, Codable, CustomStringConvertible,
+      Sendable {
 
     case politics = "politics"
     case science = "science"
 
+    public var description: String {
+      return rawValue
+    }
+
   }
 
-  public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable, Sendable {
+  public enum FetchTestTypeHeaderParam : String, CaseIterable, Codable, CustomStringConvertible,
+      Sendable {
 
     case all = "all"
     case limited = "limited"
+
+    public var description: String {
+      return rawValue
+    }
 
   }
 

@@ -936,6 +936,8 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(source.contains("default: return TaskState.Unknown(rawValue)"), source)
     assertTrue(source.contains("encode: (value) => value.rawValue"), source)
     assertTrue(source.contains("readonly kind: 'Pending' | 'Running' | 'Unknown'"), source)
+    assertTrue(source.contains("toString(): string"), source)
+    assertTrue(source.contains("return this.rawValue"), source)
   }
 
   @Test

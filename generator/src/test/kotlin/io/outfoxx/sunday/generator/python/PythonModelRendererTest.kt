@@ -465,6 +465,8 @@ class PythonModelRendererTest : PythonTest() {
             assert known is TaskState.PENDING
             assert unknown.name == "UNKNOWN"
             assert unknown.value == "refunded"
+            assert f"{known}" == "pending"
+            assert f"{unknown}" == "refunded"
             assert adapter.dump_python(unknown, mode="json") == "refunded"
             """.trimIndent(),
         ),

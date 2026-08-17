@@ -1383,6 +1383,7 @@ class KotlinSundayIrGeneratorTest {
     assertContains(source, "public data class Unknown(")
     assertContains(source, "public val rawValue: String")
     assertContains(source, "else -> Unknown(rawValue)")
+    assertContains(source, "public override fun toString(): String = wireValue")
     assertContains(source, "@get:JsonValue")
     assertContains(source, "@JsonCreator")
   }
