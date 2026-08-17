@@ -377,6 +377,30 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `composed event stream preserves HTTP query and header parameters`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") asyncApiUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(listOf(openApiUri, asyncApiUri))
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    assertTrue(compileTypes(compiler, builtTypes))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "events-api.ts")
+
+    assertTrue(source.contains("subscriberId: string"), source)
+    assertTrue(source.contains("lastEventID: string | undefined"), source)
+    assertTrue(source.contains("queryParameters: {"), source)
+    assertTrue(source.contains("subscriberId"), source)
+    assertTrue(source.contains("headers: {"), source)
+    assertTrue(source.contains("'Last-Event-ID': lastEventID"), source)
+  }
+
+  @Test
   fun `generates event source methods from IR with existing TypeScript Sunday output shape`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,

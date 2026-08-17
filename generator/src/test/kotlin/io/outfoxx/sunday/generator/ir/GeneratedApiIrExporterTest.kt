@@ -123,6 +123,32 @@ class GeneratedApiIrExporterTest {
         .type,
       equalTo(GeneratedTypeRef.named("ProjectEvent")),
     )
+    assertThat(
+      api
+        .services
+        .single()
+        .operations
+        .single()
+        .parameters,
+      equalTo(
+        listOf(
+          GeneratedParameter(
+            name = "subscriberId",
+            location = GeneratedParameter.Location.QUERY,
+            type = GeneratedTypeRef.scalar("string"),
+            required = true,
+            encoding = GeneratedParameterEncoding(style = "form", explode = true),
+          ),
+          GeneratedParameter(
+            name = "lastEventID",
+            location = GeneratedParameter.Location.HEADER,
+            type = GeneratedTypeRef.scalar("string"),
+            serializationName = "Last-Event-ID",
+            encoding = GeneratedParameterEncoding(style = "simple", explode = false),
+          ),
+        ),
+      ),
+    )
   }
 
   @Test
@@ -152,6 +178,23 @@ class GeneratedApiIrExporterTest {
               GeneratedResponse(
                 type = GeneratedTypeRef.named("EventEnvelope"),
                 mediaTypes = listOf("application/json"),
+              ),
+            ),
+          parameters =
+            listOf(
+              GeneratedParameter(
+                name = "subscriberId",
+                location = GeneratedParameter.Location.QUERY,
+                type = GeneratedTypeRef.scalar("string"),
+                required = true,
+                encoding = GeneratedParameterEncoding(style = "form", explode = true),
+              ),
+              GeneratedParameter(
+                name = "lastEventID",
+                location = GeneratedParameter.Location.HEADER,
+                type = GeneratedTypeRef.scalar("string"),
+                serializationName = "Last-Event-ID",
+                encoding = GeneratedParameterEncoding(style = "simple", explode = false),
               ),
             ),
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM),

@@ -42,16 +42,32 @@ class GeneratedApiComposer {
     val problems = linkedMapOf<String, ProblemState>()
     val tags = linkedMapOf<String, GeneratedTag>()
     val targets = linkedMapOf<String, GeneratedTarget>()
-    val asyncEventStreamPaths =
+    val asyncEventStreams =
       fragments
-        .flatMap { fragment -> fragment.api.services.flatMap { service -> service.operations } }
-        .filter { operation -> operation.isAsyncEventStreamOperation() }
-        .map { operation -> operation.path }
-        .toSet()
+        .flatMap { fragment ->
+          fragment.api.services.flatMap { service ->
+            service.operations
+              .filter { operation -> operation.isAsyncEventStreamOperation() }
+              .map { operation -> EventStreamKey(fragment.serviceIdentity(service).id, operation.path) }
+          }
+        }.toSet()
+    val eventStreamFramingParameters =
+      fragments
+        .filter { fragment -> fragment.api.source.kind == GeneratedSourceSpec.Kind.OPENAPI }
+        .flatMap { fragment ->
+          fragment.api.services.flatMap { service ->
+            service.operations
+              .filter { operation -> operation.isEventStreamFramingPlaceholder() }
+              .map { operation ->
+                EventStreamKey(fragment.serviceIdentity(service).id, operation.path) to operation.parameters
+              }
+          }
+        }.filter { (key, _) -> key in asyncEventStreams }
+        .toMap()
 
     fragments.forEach { fragment ->
       fragment.api.services.forEach { service ->
-        addService(services, fragment, service, asyncEventStreamPaths)
+        addService(services, fragment, service, asyncEventStreams, eventStreamFramingParameters)
       }
       fragment.api.models.forEach { model ->
         addModel(models, fragment, model)
@@ -85,7 +101,8 @@ class GeneratedApiComposer {
     services: MutableMap<String, ServiceState>,
     fragment: GeneratedApiFragment,
     service: GeneratedService,
-    asyncEventStreamPaths: Set<String>,
+    asyncEventStreams: Set<EventStreamKey>,
+    eventStreamFramingParameters: Map<EventStreamKey, List<GeneratedParameter>>,
   ) {
     val identity = fragment.serviceIdentity(service)
     val existing = services[identity.id]
@@ -96,7 +113,7 @@ class GeneratedApiComposer {
           identity = identity,
         ).also { state ->
           service.operations.forEach { operation ->
-            addOperation(state, fragment, service, operation, asyncEventStreamPaths)
+            addOperation(state, fragment, service, operation, asyncEventStreams, eventStreamFramingParameters)
           }
         }
       return
@@ -105,7 +122,7 @@ class GeneratedApiComposer {
     val mergedService = existing.service.mergeMetadata(service)
     existing.service = mergedService
     service.operations.forEach { operation ->
-      addOperation(existing, fragment, service, operation, asyncEventStreamPaths)
+      addOperation(existing, fragment, service, operation, asyncEventStreams, eventStreamFramingParameters)
     }
   }
 
@@ -114,23 +131,37 @@ class GeneratedApiComposer {
     fragment: GeneratedApiFragment,
     service: GeneratedService,
     operation: GeneratedOperation,
-    asyncEventStreamPaths: Set<String>,
+    asyncEventStreams: Set<EventStreamKey>,
+    eventStreamFramingParameters: Map<EventStreamKey, List<GeneratedParameter>>,
   ) {
+    val eventStreamKey = EventStreamKey(fragment.serviceIdentity(service).id, operation.path)
     if (fragment.api.source.kind == GeneratedSourceSpec.Kind.OPENAPI &&
-      operation.isEventStreamFramingPlaceholder(asyncEventStreamPaths)
+      operation.isEventStreamFramingPlaceholder() &&
+      eventStreamKey in asyncEventStreams
     ) {
       return
     }
 
+    val composedOperation =
+      if (operation.isAsyncEventStreamOperation()) {
+        operation.copy(
+          parameters =
+            operation.parameters
+              .mergeFramingParameters(eventStreamFramingParameters[eventStreamKey].orEmpty()),
+        )
+      } else {
+        operation
+      }
+
     val identity = fragment.operationIdentity(service, operation)
     val existing = serviceState.operations[identity.id]
     if (existing == null) {
-      serviceState.operations[identity.id] = OperationState(operation, identity)
-      serviceState.service = serviceState.service.copy(operations = serviceState.service.operations + operation)
+      serviceState.operations[identity.id] = OperationState(composedOperation, identity)
+      serviceState.service = serviceState.service.copy(operations = serviceState.service.operations + composedOperation)
       return
     }
 
-    if (existing.operation == operation) {
+    if (existing.operation == composedOperation) {
       return
     }
 
@@ -275,13 +306,34 @@ class GeneratedApiComposer {
       streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM &&
       path.startsWith("/")
 
-  private fun GeneratedOperation.isEventStreamFramingPlaceholder(asyncEventStreamPaths: Set<String>): Boolean =
+  private fun GeneratedOperation.isEventStreamFramingPlaceholder(): Boolean =
     method == "GET" &&
-      path in asyncEventStreamPaths &&
       responses.any { response ->
         EVENT_STREAM_MEDIA_TYPE in response.mediaTypes &&
           response.type == GeneratedTypeRef.scalar("string")
       }
+
+  private fun List<GeneratedParameter>.mergeFramingParameters(
+    framingParameters: List<GeneratedParameter>,
+  ): List<GeneratedParameter> =
+    this +
+      framingParameters.filterNot { framingParameter ->
+        any { parameter -> parameter.hasSameWireIdentity(framingParameter) }
+      }
+
+  private fun GeneratedParameter.hasSameWireIdentity(other: GeneratedParameter): Boolean {
+    if (location != other.location) {
+      return false
+    }
+
+    val wireName = serializationName ?: name
+    val otherWireName = other.serializationName ?: other.name
+    return if (location == GeneratedParameter.Location.HEADER) {
+      wireName.equals(otherWireName, ignoreCase = true)
+    } else {
+      wireName == otherWireName
+    }
+  }
 
   private fun GeneratedService.mergeMetadata(other: GeneratedService): GeneratedService =
     copy(
@@ -314,6 +366,11 @@ class GeneratedApiComposer {
   private data class ProblemState(
     val problem: GeneratedProblem,
     val identity: GeneratedIdentity,
+  )
+
+  private data class EventStreamKey(
+    val serviceIdentity: String,
+    val path: String,
   )
 
   private companion object {

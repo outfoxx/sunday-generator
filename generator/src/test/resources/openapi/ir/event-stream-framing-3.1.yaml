@@ -7,6 +7,16 @@ paths:
   /events:
     get:
       operationId: streamEvents
+      parameters:
+        - name: subscriberId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: Last-Event-ID
+          in: header
+          schema:
+            type: string
       responses:
         "200":
           description: Server-sent event stream framing.

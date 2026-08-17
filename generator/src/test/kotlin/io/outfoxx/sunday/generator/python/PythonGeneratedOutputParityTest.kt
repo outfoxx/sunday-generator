@@ -173,6 +173,29 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  fun `composed event stream preserves HTTP query and header parameters`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") asyncApiUri: URI,
+  ) {
+    val modules = GeneratedApiIrExporter().export(listOf(openApiUri, asyncApiUri)).httpxModules()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = modules.importModuleNames(),
+      ),
+    )
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/events.py")
+
+    assertTrue(source.contains("subscriber_id: str"), source)
+    assertTrue(source.contains("last_event_id: str | None = None"), source)
+    assertTrue(source.contains("params=parameter_map({\"subscriberId\": subscriber_id})"), source)
+    assertTrue(source.contains("headers=parameter_map({\"Last-Event-ID\": last_event_id})"), source)
+  }
+
+  @Test
   fun `reserved Python service names compile in aggregate client and server output`(compiler: PythonCompiler) {
     val api =
       GeneratedApi(

@@ -458,16 +458,15 @@ class SwiftSundayIrGeneratorTest {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val typeSpec = findType("EventsAPI", builtTypes)
-    val source =
-      buildString {
-        FileSpec
-          .get("", typeSpec)
-          .writeTo(this)
-      }
-
     assertTrue(compileTypes(compiler, builtTypes))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "EventsAPI.swift")
     assertTrue(source.contains("public func streamProjectEvents("), source)
+    assertTrue(source.contains("subscriberId: String"), source)
+    assertTrue(source.contains("lastEventID: String? = nil"), source)
+    assertTrue(source.contains("queryParameters: ["), source)
+    assertTrue(source.contains("\"subscriberId\": try! ParameterValues.encode(subscriberId)"), source)
+    assertTrue(source.contains("headers: ["), source)
+    assertTrue(source.contains("\"Last-Event-ID\": try! ParameterValues.encode(lastEventID)"), source)
     assertTrue(source.contains("transport.eventStream"), source)
   }
 
