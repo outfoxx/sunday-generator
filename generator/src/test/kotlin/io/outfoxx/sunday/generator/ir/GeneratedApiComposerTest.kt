@@ -198,6 +198,92 @@ class GeneratedApiComposerTest {
   }
 
   @Test
+  fun `merges OpenAPI event stream parameters into the typed AsyncAPI operation`() {
+    val pathParameter =
+      GeneratedParameter(
+        name = "repoId",
+        location = GeneratedParameter.Location.PATH,
+        type = GeneratedTypeRef.scalar("string"),
+        required = true,
+      )
+    val queryParameter =
+      GeneratedParameter(
+        name = "subscriberId",
+        location = GeneratedParameter.Location.QUERY,
+        type = GeneratedTypeRef.scalar("string"),
+        required = true,
+      )
+    val headerParameter =
+      GeneratedParameter(
+        name = "lastEventID",
+        location = GeneratedParameter.Location.HEADER,
+        type = GeneratedTypeRef.scalar("string"),
+        serializationName = "Last-Event-ID",
+      )
+    val serviceIdentity = mapOf("EventsService" to GeneratedIdentity.explicit("events"))
+    val openApi =
+      fragment(
+        services =
+          listOf(
+            service(
+              name = "EventsService",
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "streamEvents",
+                    method = "GET",
+                    path = "/repos/{repoId}/events",
+                    parameters = listOf(pathParameter, queryParameter, headerParameter),
+                    responses =
+                      listOf(
+                        GeneratedResponse(
+                          type = GeneratedTypeRef.scalar("string"),
+                          mediaTypes = listOf("text/event-stream"),
+                        ),
+                      ),
+                    streaming = GeneratedStreaming(GeneratedStreaming.Kind.EVENT_STREAM),
+                  ),
+                ),
+            ),
+          ),
+        serviceIdentities = serviceIdentity,
+      )
+    val asyncApi =
+      fragment(
+        kind = GeneratedSourceSpec.Kind.ASYNCAPI,
+        services =
+          listOf(
+            service(
+              name = "EventsService",
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "streamRepoEvents",
+                    method = "SUBSCRIBE",
+                    path = "/repos/{repoId}/events",
+                    parameters = listOf(pathParameter),
+                    responses = listOf(GeneratedResponse(type = GeneratedTypeRef.named("RepoEvent"))),
+                    streaming = GeneratedStreaming(GeneratedStreaming.Kind.EVENT_STREAM),
+                  ),
+                ),
+            ),
+          ),
+        serviceIdentities = serviceIdentity,
+      )
+
+    val operation =
+      GeneratedApiComposer()
+        .compose(listOf(asyncApi, openApi))
+        .services
+        .single()
+        .operations
+        .single()
+
+    assertThat(operation.id, equalTo("streamRepoEvents"))
+    assertThat(operation.parameters, equalTo(listOf(pathParameter, queryParameter, headerParameter)))
+  }
+
+  @Test
   fun `composes tag derived services with explicit service labels case insensitively`(
     @ResourceUri("openapi/ir/tag-service-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/explicit-service-case.yaml") asyncApiUri: URI,

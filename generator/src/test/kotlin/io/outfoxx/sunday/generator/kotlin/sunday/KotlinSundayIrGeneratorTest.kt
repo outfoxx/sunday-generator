@@ -1074,15 +1074,19 @@ class KotlinSundayIrGeneratorTest {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val source =
-      buildString {
-        FileSpec
-          .get("io.test.service", findType("io.test.service.EventsAPI", builtTypes))
-          .writeTo(this)
-      }
-
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    val source =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/service/EventsAPI.kt",
+      )
     assertContains(source, "public fun streamProjectEvents(")
+    assertContains(source, "subscriberId: String")
+    assertContains(source, "lastEventID: String? = null")
+    assertContains(source, "queryParameters = mapOf(")
+    assertContains(source, "\"subscriberId\" to subscriberId")
+    assertContains(source, "headers = mapOf(")
+    assertContains(source, "\"Last-Event-ID\" to lastEventID")
     assertContains(source, ".eventStream(")
   }
 
