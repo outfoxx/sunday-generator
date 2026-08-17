@@ -1545,11 +1545,18 @@ class SwiftSundayIrGeneratorTest {
       }
 
     assertTrue(compileTypes(compiler, builtTypes))
-    assertTrue(enumSource.contains("public enum Status : String, CaseIterable, Codable"), enumSource)
+    assertTrue(
+      enumSource.contains("public enum Status : String, CaseIterable, Codable, CustomStringConvertible, Sendable"),
+      enumSource,
+    )
     assertTrue(enumSource.contains("case `open` = \"OPEN\""), enumSource)
     assertTrue(enumSource.contains("case pullRequestOpen = \"PULL_REQUEST_OPEN\""), enumSource)
     assertTrue(enumSource.contains("case lowerSnakeCase = \"lower_snake_case\""), enumSource)
     assertTrue(enumSource.contains("case mixedKebabCase = \"mixed-kebab.case\""), enumSource)
+    assertTrue(
+      enumSource.contains("public var description: String {\n    return rawValue\n  }"),
+      enumSource,
+    )
     assertTrue(containerSource.contains("public let status: Status"), containerSource)
     assertTrue(containerSource.contains("public let alias: String"), containerSource)
     assertTrue(containerSource.contains("public let list: [String]"), containerSource)
@@ -1623,10 +1630,17 @@ class SwiftSundayIrGeneratorTest {
     }
 
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "TaskState.swift")
-    assertTrue(source.contains("public enum TaskState : CaseIterable, Codable, Sendable"), source)
+    assertTrue(
+      source.contains("public enum TaskState : CaseIterable, Codable, CustomStringConvertible, Sendable"),
+      source,
+    )
     assertTrue(source.contains("case unknown(String)"), source)
     assertTrue(source.contains("default: self = .unknown(rawValue)"), source)
     assertTrue(source.contains("case .unknown(let rawValue): return rawValue"), source)
+    assertTrue(
+      source.contains("public var description: String {\n    return rawValue\n  }"),
+      source,
+    )
     assertTrue(source.contains("try container.encode(rawValue)"), source)
   }
 

@@ -890,6 +890,12 @@ class TypeScriptSundayIrGenerator(
             .addStatement("this.kind = kind")
             .addStatement("this.rawValue = rawValue")
             .build(),
+        ).addFunction(
+          FunctionSpec
+            .builder("toString")
+            .returns(STRING)
+            .addStatement("return this.rawValue")
+            .build(),
         ).apply {
           knownEntries.forEach { entry ->
             addProperty(

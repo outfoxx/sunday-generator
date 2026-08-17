@@ -48,24 +48,39 @@ public final class API<TransportType : Transport> : Sendable {
     )
   }
 
-  public enum FetchTestSelectUriParam : String, CaseIterable, Codable, Sendable {
+  public enum FetchTestSelectUriParam : String, CaseIterable, Codable, CustomStringConvertible,
+      Sendable {
 
     case all = "all"
     case limited = "limited"
+
+    public var description: String {
+      return rawValue
+    }
 
   }
 
-  public enum FetchTestPageQueryParam : String, CaseIterable, Codable, Sendable {
+  public enum FetchTestPageQueryParam : String, CaseIterable, Codable, CustomStringConvertible,
+      Sendable {
 
     case all = "all"
     case limited = "limited"
+
+    public var description: String {
+      return rawValue
+    }
 
   }
 
-  public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable, Sendable {
+  public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable, CustomStringConvertible,
+      Sendable {
 
     case all = "all"
     case limited = "limited"
+
+    public var description: String {
+      return rawValue
+    }
 
   }
 

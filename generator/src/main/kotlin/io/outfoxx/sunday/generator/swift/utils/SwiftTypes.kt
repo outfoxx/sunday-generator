@@ -39,7 +39,8 @@ val IDENTIFIABLE = typeName("$SWIFT_MODULE.Identifiable")
 val SENDABLE = typeName("$SWIFT_MODULE.Sendable")
 val UNCHECKED_SENDABLE = typeName(".@unchecked Sendable")
 
-val CUSTOM_STRING_CONVERTIBLE = typeName("$SWIFT_MODULE.CustomDebugStringConvertible")
+val CUSTOM_DEBUG_STRING_CONVERTIBLE = typeName("$SWIFT_MODULE.CustomDebugStringConvertible")
+val CUSTOM_STRING_CONVERTIBLE = typeName("$SWIFT_MODULE.CustomStringConvertible")
 
 val DICTIONARY_STRING_ANY = DICTIONARY.parameterizedBy(STRING, ANY)
 val DICTIONARY_STRING_ANY_OPTIONAL = DICTIONARY.parameterizedBy(STRING, ANY.makeOptional())

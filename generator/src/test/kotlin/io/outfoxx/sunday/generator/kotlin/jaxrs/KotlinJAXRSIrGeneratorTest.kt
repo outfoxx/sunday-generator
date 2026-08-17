@@ -884,6 +884,7 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(source.contains("public sealed class TaskState"), source)
     assertTrue(source.contains("public data class Unknown("), source)
     assertTrue(source.contains("else -> Unknown(rawValue)"), source)
+    assertTrue(source.contains("public override fun toString(): String = wireValue"), source)
     assertTrue(source.contains("@get:JsonValue"), source)
   }
 
