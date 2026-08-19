@@ -59,17 +59,11 @@ class PythonLitestarRenderer(
     }
     val entries =
       headers.map { header ->
-        val type =
-          if (header.type.kind == GeneratedTypeRef.Kind.ARRAY) {
-            header.type.renderServerPythonType(nullable = false)
-          } else {
-            header.type.renderServerPythonType(nullable = false)
-          }
         PythonCodeBlock.of(
           "%S: %T[%C]",
           header.wireName(),
           PythonSymbol("typing", if (header.required) "Required" else "NotRequired"),
-          type,
+          header.type.renderServerPythonType(nullable = false),
         )
       }
     return PythonCodeBlock.of(
@@ -193,89 +187,45 @@ class PythonLitestarRenderer(
   private fun GeneratedOperation.renderRouteHandler(): PythonCodeBlock =
     if (streaming == null) {
       if (hasHandlerParameters()) {
-        if (!hasSuccessBody()) {
-          PythonCodeBlock.of(
-            """
-            |    %C
-            |    async def %L(
-            |%C
-            |    ) -> %C:
-            |        result = await service.%L(%C)
-            |        if isinstance(result, %T):
-            |%C
-            |%C
-            """.trimMargin(),
-            renderRouteDecorator(),
-            id.pythonIdentifierName,
-            renderHandlerParameters(),
-            renderRouteReturnType(),
-            id.pythonIdentifierName,
-            renderServiceArguments(),
-            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
-            renderServerResponseReturn(),
-            renderBareServerResult(),
-          )
-        } else {
-          PythonCodeBlock.of(
-            """
-            |    %C
-            |    async def %L(
-            |%C
-            |    ) -> %C:
-            |        result = await service.%L(%C)
-            |        if isinstance(result, %T):
-            |%C
-            |%C
-            """.trimMargin(),
-            renderRouteDecorator(),
-            id.pythonIdentifierName,
-            renderHandlerParameters(),
-            renderRouteReturnType(),
-            id.pythonIdentifierName,
-            renderServiceArguments(),
-            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
-            renderServerResponseReturn(),
-            renderBareServerResult(),
-          )
-        }
+        PythonCodeBlock.of(
+          """
+          |    %C
+          |    async def %L(
+          |%C
+          |    ) -> %C:
+          |        result = await service.%L(%C)
+          |        if isinstance(result, %T):
+          |%C
+          |%C
+          """.trimMargin(),
+          renderRouteDecorator(),
+          id.pythonIdentifierName,
+          renderHandlerParameters(),
+          renderRouteReturnType(),
+          id.pythonIdentifierName,
+          renderServiceArguments(),
+          PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+          renderServerResponseReturn(),
+          renderBareServerResult(),
+        )
       } else {
-        if (!hasSuccessBody()) {
-          PythonCodeBlock.of(
-            """
-            |    %C
-            |    async def %L() -> %C:
-            |        result = await service.%L()
-            |        if isinstance(result, %T):
-            |%C
-            |%C
-            """.trimMargin(),
-            renderRouteDecorator(),
-            id.pythonIdentifierName,
-            renderRouteReturnType(),
-            id.pythonIdentifierName,
-            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
-            renderServerResponseReturn(),
-            renderBareServerResult(),
-          )
-        } else {
-          PythonCodeBlock.of(
-            """
-            |    %C
-            |    async def %L() -> %C:
-            |        result = await service.%L()
-            |        if isinstance(result, %T):
-            |%C
-            |%C
-            """.trimMargin(),
-            renderRouteDecorator(),
-            id.pythonIdentifierName,
-            renderRouteReturnType(),
-            id.pythonIdentifierName,
-            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
-            renderServerResponseReturn(),
-            renderBareServerResult(),
-          )
-        }
+        PythonCodeBlock.of(
+          """
+          |    %C
+          |    async def %L() -> %C:
+          |        result = await service.%L()
+          |        if isinstance(result, %T):
+          |%C
+          |%C
+          """.trimMargin(),
+          renderRouteDecorator(),
+          id.pythonIdentifierName,
+          renderRouteReturnType(),
+          id.pythonIdentifierName,
+          PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+          renderServerResponseReturn(),
+          renderBareServerResult(),
+        )
       }
     } else {
       if (hasHandlerParameters()) {

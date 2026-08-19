@@ -954,13 +954,6 @@ class PythonClientRenderer(
 
   private fun Boolean.pythonBoolean(): String = if (this) "True" else "False"
 
-  private fun Boolean?.pythonBooleanOrNone(): String =
-    when (this) {
-      true -> "True"
-      false -> "False"
-      else -> "None"
-    }
-
   private val GeneratedPayload?.isPythonStreamingRequestBody: Boolean
     get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
