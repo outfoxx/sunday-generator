@@ -49,7 +49,7 @@ class PythonModelRendererTest : PythonTest() {
           name = "ShortName",
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
           aliases = listOf(GeneratedTypeRef.scalar("string")),
-          validation = mapOf("minLength" to "2"),
+          validation = mapOf("minLength" to "+002"),
         ),
         GeneratedModel(
           name = "Tags",
@@ -76,7 +76,18 @@ class PythonModelRendererTest : PythonTest() {
           properties =
             listOf(
               GeneratedModelProperty("name", GeneratedTypeRef.named("ShortName")),
-              GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"), defaultValue = "3"),
+              GeneratedModelProperty(
+                "count",
+                GeneratedTypeRef.scalar("integer"),
+                defaultValue = "+003",
+                validation = mapOf("minimum" to "+0001", "exclusiveMinimum" to "true"),
+              ),
+              GeneratedModelProperty(
+                "ratio",
+                GeneratedTypeRef.scalar("number"),
+                defaultValue = "+01.50",
+                validation = mapOf("maximum" to "2E+0", "multipleOf" to "+00.25"),
+              ),
             ),
           closed = true,
         ),
@@ -128,6 +139,7 @@ class PythonModelRendererTest : PythonTest() {
           assert TypeAdapter(Scores).validate_python({"a": 1, "b": 2}) == {"a": 1, "b": 2}
           child = ChildRecord.model_validate({"id": "1"})
           assert child.count == 3
+          assert child.ratio == 1.5
           assert Node.model_validate({"value": "root", "children": [{"value": "leaf"}]}).children
           assert PatternRecord.model_validate({"x-name": "ok"}).model_dump()["x-name"] == "ok"
 
@@ -136,6 +148,7 @@ class PythonModelRendererTest : PythonTest() {
               lambda: TypeAdapter(Tags).validate_python([]),
               lambda: TypeAdapter(Scores).validate_python({"a": 1, "b": 2, "c": 3}),
               lambda: ChildRecord.model_validate({"id": "1", "name": None}),
+              lambda: ChildRecord.model_validate({"id": "1", "count": 1}),
               lambda: PatternRecord.model_validate({"x-name": "x"}),
               lambda: PatternRecord.model_validate({"other": "ok"}),
           )
@@ -150,6 +163,29 @@ class PythonModelRendererTest : PythonTest() {
       ),
       modelsModule.source,
     )
+  }
+
+  @Test
+  fun `rejects executable OpenAPI numeric defaults and constraints`(
+    @ResourceUri("openapi/ir/python-unsafe-numeric-default-3.1.yaml") defaultUri: URI,
+    @ResourceUri("openapi/ir/python-unsafe-numeric-constraint-3.1.yaml") constraintUri: URI,
+  ) {
+    val cases =
+      listOf(
+        Triple(defaultUri, "Invalid integer default for property 'count'", "sunday-python-default"),
+        Triple(constraintUri, "Invalid number constraint 'minimum'", "sunday-python-minimum"),
+      )
+
+    cases.forEach { (sourceUri, expectedContext, injectedMarker) ->
+      val api = GeneratedApiIrExporter().export(sourceUri)
+      val error =
+        assertThrows(GenerationException::class.java) {
+          PythonModelRenderer("turnpost_api").renderModels(api.models)
+        }
+
+      assertTrue(error.message!!.contains(expectedContext), error.message)
+      assertTrue(error.message!!.contains(injectedMarker), error.message)
+    }
   }
 
   @Test

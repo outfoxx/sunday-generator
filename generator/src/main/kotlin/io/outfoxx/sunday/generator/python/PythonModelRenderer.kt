@@ -23,6 +23,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
+import java.math.BigDecimal
+import java.math.BigInteger
 
 private val pythonEnumMemberIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 private const val FALLBACK_TAG = "__unknown__"
@@ -841,9 +843,17 @@ class PythonModelRenderer(
   private fun GeneratedModelProperty.renderDefaultValue(value: String): PythonCodeBlock =
     when {
       type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "boolean" ->
-        PythonCodeBlock.of(if (value.equals("true", ignoreCase = true)) "True" else "False")
-      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name in setOf("integer", "number") ->
-        PythonCodeBlock.of("%L", value)
+        PythonCodeBlock.of(
+          when (value) {
+            "true" -> "True"
+            "false" -> "False"
+            else -> genError("Invalid boolean default '$value' for property '$name'")
+          },
+        )
+      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "integer" ->
+        PythonCodeBlock.of("%L", value.pythonIntegerLiteral("default for property '$name'"))
+      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "number" ->
+        PythonCodeBlock.of("%L", value.pythonNumberLiteral("default for property '$name'"))
       else -> PythonCodeBlock.of("%S", value)
     }
 
@@ -853,22 +863,105 @@ class PythonModelRenderer(
   ): List<PythonCodeBlock> =
     entries.sortedBy { entry -> entry.key }.mapNotNull { (name, value) ->
       when (name) {
-        "minimum" -> PythonCodeBlock.of("ge=%L", value)
-        "maximum" -> PythonCodeBlock.of("le=%L", value)
-        "exclusiveMinimum" -> PythonCodeBlock.of("gt=%L", value)
-        "exclusiveMaximum" -> PythonCodeBlock.of("lt=%L", value)
-        "multipleOf" -> PythonCodeBlock.of("multiple_of=%L", value)
-        "minLength", "minItems", "minProperties" -> PythonCodeBlock.of("min_length=%L", value)
-        "maxLength", "maxItems", "maxProperties" -> PythonCodeBlock.of("max_length=%L", value)
+        "minimum" ->
+          PythonCodeBlock.of(
+            if (this["exclusiveMinimum"] == "true") "gt=%L" else "ge=%L",
+            value.pythonNumberLiteral("constraint '$name' on $context"),
+          )
+        "maximum" ->
+          PythonCodeBlock.of(
+            if (this["exclusiveMaximum"] == "true") "lt=%L" else "le=%L",
+            value.pythonNumberLiteral("constraint '$name' on $context"),
+          )
+        "exclusiveMinimum" ->
+          value.renderExclusiveConstraint("gt", "minimum", name, context, this)
+        "exclusiveMaximum" ->
+          value.renderExclusiveConstraint("lt", "maximum", name, context, this)
+        "multipleOf" ->
+          PythonCodeBlock.of(
+            "multiple_of=%L",
+            value.pythonPositiveNumberLiteral("constraint '$name' on $context"),
+          )
+        "minLength", "minItems", "minProperties" ->
+          PythonCodeBlock.of(
+            "min_length=%L",
+            value.pythonNonNegativeIntegerLiteral("constraint '$name' on $context"),
+          )
+        "maxLength", "maxItems", "maxProperties" ->
+          PythonCodeBlock.of(
+            "max_length=%L",
+            value.pythonNonNegativeIntegerLiteral("constraint '$name' on $context"),
+          )
         "pattern" -> PythonCodeBlock.of("pattern=%S", value)
         "uniqueItems" -> {
-          if (value == "true" && type.kind == GeneratedTypeRef.Kind.ARRAY && type.collection?.name != "SET") {
-            genError("Python $context requires uniqueItems but is not represented as a set")
+          when (value) {
+            "true" ->
+              if (type.kind == GeneratedTypeRef.Kind.ARRAY && type.collection?.name != "SET") {
+                genError("Python $context requires uniqueItems but is not represented as a set")
+              }
+            "false" -> Unit
+            else -> genError("Invalid boolean constraint 'uniqueItems' value '$value' on $context")
           }
           null
         }
         else -> genError("Unsupported Python validation '$name' on $context")
       }
+    }
+
+  private fun String.renderExclusiveConstraint(
+    pythonName: String,
+    boundName: String,
+    constraintName: String,
+    context: String,
+    constraints: Map<String, String>,
+  ): PythonCodeBlock? =
+    when (this) {
+      "true" -> {
+        if (boundName !in constraints) {
+          genError("Python $context requires '$boundName' when '$constraintName' is true")
+        }
+        null
+      }
+      "false" -> null
+      else ->
+        PythonCodeBlock.of(
+          "$pythonName=%L",
+          pythonNumberLiteral("constraint '$constraintName' on $context"),
+        )
+    }
+
+  private fun String.pythonIntegerLiteral(context: String): String = parsePythonInteger(context).toString()
+
+  private fun String.pythonNonNegativeIntegerLiteral(context: String): String {
+    val parsed = parsePythonInteger(context)
+    if (parsed.signum() < 0) {
+      genError("Invalid negative integer $context: '$this'")
+    }
+    return parsed.toString()
+  }
+
+  private fun String.pythonNumberLiteral(context: String): String = parsePythonNumber(context).toString()
+
+  private fun String.pythonPositiveNumberLiteral(context: String): String {
+    val parsed = parsePythonNumber(context)
+    if (parsed.signum() <= 0) {
+      genError("Invalid non-positive number $context: '$this'")
+    }
+    return parsed.toString()
+  }
+
+  private fun String.parsePythonInteger(context: String): BigInteger =
+    try {
+      BigInteger(this)
+    } catch (_: NumberFormatException) {
+      genError("Invalid integer $context: '$this'")
+    }
+
+  private fun String.parsePythonNumber(context: String): BigDecimal =
+    try {
+      BigDecimal(this)
+    } catch (_: NumberFormatException) {
+      genError("Invalid number $context: '$this'")
     }
 
   private fun Any.renderPythonValue(): PythonCodeBlock? =

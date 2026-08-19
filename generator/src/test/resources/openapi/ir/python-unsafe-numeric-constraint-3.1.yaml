@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info:
+  title: Unsafe Numeric Constraint API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Measurement:
+      type: object
+      properties:
+        value:
+          type: number
+          minimum: "(__import__('pathlib').Path('/tmp/sunday-python-minimum').touch() or 0)"
