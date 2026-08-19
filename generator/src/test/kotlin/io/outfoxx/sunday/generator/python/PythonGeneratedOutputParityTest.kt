@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -32,6 +33,7 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.net.URI
 
 class PythonGeneratedOutputParityTest : PythonTest() {
@@ -193,6 +195,30 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     assertTrue(source.contains("last_event_id: str | None = None"), source)
     assertTrue(source.contains("params=parameter_map({\"subscriberId\": subscriber_id})"), source)
     assertTrue(source.contains("headers=parameter_map({\"Last-Event-ID\": last_event_id})"), source)
+  }
+
+  @Test
+  fun `Python targets omit broker-only AsyncAPI channels`(
+    compiler: PythonCompiler,
+    @ResourceUri("asyncapi/ir/http-and-broker-events.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modules = api.httpxModules()
+
+    assertTrue(compileModules(compiler, modules, importModules = modules.importModuleNames()))
+    val paths = modules.map { module -> module.path }
+    assertTrue(paths.any { path -> path.endsWith("events.py") }, paths.toString())
+    assertFalse(paths.any { path -> path.contains("platform") || path.contains("broker") }, paths.toString())
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/events.py")
+    assertTrue(source.contains("stream_project_events"), source)
+    assertFalse(source.contains("consume_platform_event"), source)
+
+    val error =
+      assertThrows<GenerationException> {
+        PythonHttpxIrGenerator(api, PythonGeneratorOptions(packageName = "parity_api", broker = true))
+          .generateModules(GeneratedTypeCategory.entries.toSet())
+      }
+    assertTrue(error.message!!.contains("Python broker generation is not supported"), error.message)
   }
 
   @Test

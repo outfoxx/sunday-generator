@@ -57,6 +57,7 @@ class PythonCLITest {
           "-aggregate",
           "-aggregate-service-name",
           "TurnPostAPI",
+          "-broker",
           *requiredOptions,
         ),
       )
@@ -66,6 +67,7 @@ class PythonCLITest {
     assertThat(command.servicesFromTags, equalTo(true))
     assertThat(command.aggregateServices, equalTo(true))
     assertThat(command.aggregateServiceName, equalTo("TurnPostAPI"))
+    assertThat(command.broker, equalTo(true))
   }
 
   @Test

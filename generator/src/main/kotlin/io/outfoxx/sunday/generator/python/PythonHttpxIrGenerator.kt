@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedService
 
 /** Generates Python httpx client modules from generated IR. */
 class PythonHttpxIrGenerator(
@@ -27,7 +28,9 @@ class PythonHttpxIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
+    options.requireHttpOnly()
     val packageName = api.pythonPackageName(options)
+    val services = api.pythonHttpServices()
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     if (GeneratedTypeCategory.Model in outputCategories) {
@@ -38,16 +41,19 @@ class PythonHttpxIrGenerator(
     if (GeneratedTypeCategory.Service in outputCategories) {
       val clientRenderer = PythonClientRenderer(packageName, registerProblems = api.problems.isNotEmpty())
       modules += clientRenderer.renderRuntime()
-      modules += api.services.map(clientRenderer::renderService)
-      if (options.aggregateServices && api.services.size > 1) {
-        modules += renderAggregate(packageName)
+      modules += services.map(clientRenderer::renderService)
+      if (options.aggregateServices && services.size > 1) {
+        modules += renderAggregate(packageName, services)
       }
     }
 
     return modules
   }
 
-  private fun renderAggregate(packageName: String): PythonModule {
+  private fun renderAggregate(
+    packageName: String,
+    services: List<GeneratedService>,
+  ): PythonModule {
     val module = PythonModuleBuilder("$packageName/api.py")
     val className = options.aggregateServiceName?.pythonTypeName ?: api.aggregateTypeName
 
@@ -65,7 +71,7 @@ class PythonHttpxIrGenerator(
         className,
         PythonSymbol(".runtime", "Transport"),
         PythonCodeBlock.join(
-          api.services.map { service ->
+          services.map { service ->
             PythonCodeBlock.of(
               "        self.%L = %T(transport)",
               service.pythonServiceIdentifierName,

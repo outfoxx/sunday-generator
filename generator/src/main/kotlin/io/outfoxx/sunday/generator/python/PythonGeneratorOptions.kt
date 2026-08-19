@@ -21,4 +21,5 @@ data class PythonGeneratorOptions(
   val packageName: String? = null,
   val aggregateServices: Boolean = false,
   val aggregateServiceName: String? = null,
+  val broker: Boolean = false,
 )
