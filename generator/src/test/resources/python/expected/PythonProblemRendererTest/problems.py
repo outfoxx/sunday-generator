@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 from sunday import Problem as _Problem, ProblemPayload as _ProblemPayload, ProblemRegistrar
 from typing import ClassVar
 from uuid import UUID
@@ -18,7 +17,7 @@ class ProjectNotFoundProblemPayload(ProblemPayload):
     title: str | None = "Project not found"
     status: int | None = 404
     project_id: UUID = Field(alias="projectId")
-    retry_after: datetime | None = Field(default=None, alias="retry-after")
+    retry_after: AwareDatetime | None = Field(default=None, alias="retry-after")
 
 
 class ProjectNotFoundProblem(Problem):
@@ -37,7 +36,7 @@ class ProjectNotFoundProblem(Problem):
         return self.payload.project_id
 
     @property
-    def retry_after(self) -> datetime | None:
+    def retry_after(self) -> AwareDatetime | None:
         return self.payload.retry_after
 
 

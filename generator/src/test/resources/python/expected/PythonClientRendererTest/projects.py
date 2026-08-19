@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .models import ProjectQuery, ProjectView, UniqueId, UpdateProjectRequest
 from .problems import ProjectNotFoundProblem, register_problems
+from collections.abc import Sequence
 from pydantic import TypeAdapter, ValidationError
 from sunday import (
     MediaType,
@@ -12,7 +13,6 @@ from sunday import (
     OperationSpec,
     ParameterLocation,
     ParameterSpec,
-    ParameterStyle,
     PatchDocument,
     RequestPayloadSpec,
     RequestSpec,
@@ -27,12 +27,128 @@ from sunday import (
 __all__ = ["ProjectsClient"]
 
 
+_named_project_view_adapter: TypeAdapter[ProjectView] = TypeAdapter(ProjectView)
+
+
+_scalar_integer_adapter: TypeAdapter[int] = TypeAdapter(int)
+
+
+_array_project_view_adapter: TypeAdapter[list[ProjectView]] = TypeAdapter(list[ProjectView])
+
+
+_named_update_project_request_adapter: TypeAdapter[UpdateProjectRequest] = TypeAdapter(UpdateProjectRequest)
+
+
+_scalar_file_adapter: TypeAdapter[bytes] = TypeAdapter(bytes)
+
+
+_named_unique_id_adapter: TypeAdapter[UniqueId] = TypeAdapter(UniqueId)
+
+
+_get_project_responses: tuple[ResponseSpec[ProjectView], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_project_view_adapter.validate_python,
+        headers=(
+            ResponseHeaderSpec(
+                name="X-Revision",
+                decoder=_scalar_integer_adapter.validate_python,
+                required=True,
+            ),
+        ),
+    ),
+)
+
+
+_find_project_responses: tuple[ResponseSpec[ProjectView], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_project_view_adapter.validate_python,
+    ),
+)
+
+
+_list_projects_responses: tuple[ResponseSpec[list[ProjectView]], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_array_project_view_adapter.validate_python,
+    ),
+)
+
+
+_update_project_responses: tuple[ResponseSpec[ProjectView], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_project_view_adapter.validate_python,
+    ),
+)
+
+
+_put_project_avatar_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=204, body_expected=False),)
+
+
+_import_project_archive_responses: tuple[ResponseSpec[UniqueId], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_unique_id_adapter.validate_python,
+    ),
+)
+
+
+_create_project_revision_responses: tuple[ResponseSpec[UniqueId], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_unique_id_adapter.validate_python,
+    ),
+)
+
+
+_put_payload_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=204, body_expected=False),)
+
+
+def _request_payload_put_payload(body: ProjectView | bytes) -> RequestPayloadSpec[ProjectView | bytes]:
+    validated: ProjectView | bytes
+    try:
+        validated = _named_project_view_adapter.validate_python(body)
+    except ValidationError:
+        pass
+    else:
+        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/json"),))
+    try:
+        validated = _scalar_file_adapter.validate_python(body)
+    except ValidationError:
+        pass
+    else:
+        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/octet-stream"),))
+    raise ValueError("Request body does not match a declared payload for operation 'putPayload'")
+
+
+_upload_multipart_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=204, body_expected=False),)
+
+
+_patch_project_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=204, body_expected=False),)
+
+
 class ProjectsClient[TransportRequestT, TransportResponseT]:
     """Client operations for the Projects service."""
 
-    def __init__(self, transport: Transport[TransportRequestT, TransportResponseT]) -> None:
-        self._transport = transport
-        register_problems(self._transport)
+    def __init__(
+        self,
+        transport: Transport[TransportRequestT, TransportResponseT],
+        *,
+        default_content_types: Sequence[MediaType] = (MediaType("application/json"),),
+        default_accept_types: Sequence[MediaType] = (MediaType("application/json"),),
+    ) -> None:
+        self.transport = transport
+        self.default_content_types = tuple(default_content_types)
+        self.default_accept_types = tuple(default_accept_types)
+        register_problems(self.transport)
 
     def get_project(
         self,
@@ -42,41 +158,14 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
             path_template="/projects/{projectId}",
-            parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-            ),
-            body=None,
-            content_types=(),
-            accept_types=(MediaType("application/json"),),
+            parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, ProjectView] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_get_project_200_0_0,
-                    body_expected=True,
-                    headers=(
-                        ResponseHeaderSpec(
-                            name="X-Revision",
-                            decoder=TypeAdapter(int).validate_python,
-                            required=True,
-                            repeated=False,
-                        ),
-                    ),
-                ),
-            ),
+            responses=_get_project_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def find_project(
         self,
@@ -86,35 +175,15 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
             path_template="/projects/{projectId}",
-            parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-            ),
-            body=None,
-            content_types=(),
-            accept_types=(MediaType("application/json"),),
+            parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, ProjectView] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_find_project_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_find_project_responses,
         )
         return NullableOperation(
-            self._transport,
+            self.transport,
             operation_spec,
             NullifySpec(statuses=(404,), problem_types=(ProjectNotFoundProblem,)),
         )
@@ -128,31 +197,15 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             method="GET",
             path_template="/projects",
             parameters=(
-                ParameterSpec(
-                    name="",
-                    value=parameter_object(query_string),
-                    location=ParameterLocation.QUERY,
-                    style=ParameterStyle.FORM,
-                    explode=True,
-                ),
+                ParameterSpec(name="", value=parameter_object(query_string), location=ParameterLocation.QUERY),
             ),
-            body=None,
-            content_types=(),
-            accept_types=(MediaType("application/json"),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, list[ProjectView]] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_list_projects_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_list_projects_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def update_project(
         self,
@@ -167,60 +220,20 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             method="PUT",
             path_template="/projects/{projectId}",
             parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-                ParameterSpec(
-                    name="includeArchived",
-                    value=include_archived,
-                    location=ParameterLocation.QUERY,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-                ParameterSpec(
-                    name="revisionId",
-                    value=revision_id,
-                    location=ParameterLocation.QUERY,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-                ParameterSpec(
-                    name="X-Trace-Id",
-                    value=x_trace_id,
-                    location=ParameterLocation.HEADER,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
+                ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),
+                ParameterSpec(name="includeArchived", value=include_archived, location=ParameterLocation.QUERY),
+                ParameterSpec(name="revisionId", value=revision_id, location=ParameterLocation.QUERY),
+                ParameterSpec(name="X-Trace-Id", value=x_trace_id, location=ParameterLocation.HEADER),
             ),
             body=body,
-            content_types=(MediaType("application/json"),),
-            accept_types=(MediaType("application/json"),),
+            content_types=self.default_content_types,
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[UpdateProjectRequest, ProjectView] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_update_project_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_update_project_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def put_project_avatar(
         self,
@@ -233,42 +246,17 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             method="PUT",
             path_template="/projects/{projectId}/avatar",
             parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-                ParameterSpec(
-                    name="Content-Type",
-                    value=content_type,
-                    location=ParameterLocation.HEADER,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
+                ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),
+                ParameterSpec(name="Content-Type", value=content_type, location=ParameterLocation.HEADER),
             ),
             body=body,
             content_types=(MediaType("image/png"),),
-            accept_types=(),
         )
         operation_spec: OperationSpec[bytes, None] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=204,
-                    content_types=(),
-                    decoder=None,
-                    body_expected=False,
-                    headers=(),
-                ),
-            ),
+            responses=_put_project_avatar_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def import_project_archive(
         self,
@@ -279,34 +267,16 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[StreamingBody] = RequestSpec(
             method="POST",
             path_template="/projects/{projectId}/archive",
-            parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-            ),
+            parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
             body=body,
             content_types=(MediaType("application/x-tar"),),
-            accept_types=(MediaType("application/json"),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[StreamingBody, UniqueId] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_import_project_archive_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_import_project_archive_responses,
         )
-        return StreamingOperation(self._transport, operation_spec)
+        return StreamingOperation(self.transport, operation_spec)
 
     def create_project_revision(
         self,
@@ -316,34 +286,14 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[None] = RequestSpec(
             method="POST",
             path_template="/projects/{projectId}/revisions",
-            parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-            ),
-            body=None,
-            content_types=(),
-            accept_types=(MediaType("application/json"),),
+            parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, UniqueId] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_create_project_revision_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_create_project_revision_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def put_payload(
         self,
@@ -353,23 +303,13 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[ProjectView | bytes] = RequestSpec(
             method="POST",
             path_template="/payload",
-            parameters=(),
             payload=_request_payload_put_payload(body),
-            accept_types=(),
         )
         operation_spec: OperationSpec[ProjectView | bytes, None] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=204,
-                    content_types=(),
-                    decoder=None,
-                    body_expected=False,
-                    headers=(),
-                ),
-            ),
+            responses=_put_payload_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def upload_multipart(
         self,
@@ -379,24 +319,14 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[MultipartBody] = RequestSpec(
             method="POST",
             path_template="/multipart",
-            parameters=(),
             body=body,
             content_types=(MediaType("multipart/form-data"),),
-            accept_types=(),
         )
         operation_spec: OperationSpec[MultipartBody, None] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=204,
-                    content_types=(),
-                    decoder=None,
-                    body_expected=False,
-                    headers=(),
-                ),
-            ),
+            responses=_upload_multipart_responses,
         )
-        return Operation(self._transport, operation_spec)
+        return Operation(self.transport, operation_spec)
 
     def patch_project(
         self,
@@ -406,62 +336,11 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[PatchDocument] = RequestSpec(
             method="PATCH",
             path_template="/patch",
-            parameters=(),
             body=body,
             content_types=(MediaType("application/json-patch+json"),),
-            accept_types=(),
         )
         operation_spec: OperationSpec[PatchDocument, None] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=204,
-                    content_types=(),
-                    decoder=None,
-                    body_expected=False,
-                    headers=(),
-                ),
-            ),
+            responses=_patch_project_responses,
         )
-        return Operation(self._transport, operation_spec)
-
-
-def _decode_get_project_200_0_0(value: object) -> ProjectView:
-    return TypeAdapter(ProjectView).validate_python(value)
-
-
-def _decode_find_project_200_0_0(value: object) -> ProjectView:
-    return TypeAdapter(ProjectView).validate_python(value)
-
-
-def _decode_list_projects_200_0_0(value: object) -> list[ProjectView]:
-    return TypeAdapter(list[ProjectView]).validate_python(value)
-
-
-def _decode_update_project_200_0_0(value: object) -> ProjectView:
-    return TypeAdapter(ProjectView).validate_python(value)
-
-
-def _decode_import_project_archive_200_0_0(value: object) -> UniqueId:
-    return TypeAdapter(UniqueId).validate_python(value)
-
-
-def _decode_create_project_revision_200_0_0(value: object) -> UniqueId:
-    return TypeAdapter(UniqueId).validate_python(value)
-
-
-def _request_payload_put_payload(body: ProjectView | bytes) -> RequestPayloadSpec[ProjectView | bytes]:
-    validated: ProjectView | bytes
-    try:
-        validated = TypeAdapter(ProjectView).validate_python(body)
-    except ValidationError:
-        pass
-    else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/json"),))
-    try:
-        validated = TypeAdapter(bytes).validate_python(body)
-    except ValidationError:
-        pass
-    else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/octet-stream"),))
-    raise ValueError("Request body does not match a declared payload for operation 'putPayload'")
+        return Operation(self.transport, operation_spec)

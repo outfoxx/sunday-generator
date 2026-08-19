@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .models import Project
 from .problems import register_problems
+from collections.abc import Sequence
 from pydantic import TypeAdapter
 from sunday import (
     MediaType,
@@ -17,12 +18,32 @@ from sunday import (
 __all__ = ["ProjectsClient"]
 
 
+_named_project_adapter: TypeAdapter[Project] = TypeAdapter(Project)
+
+
+_get_project_responses: tuple[ResponseSpec[Project], ...] = (
+    ResponseSpec(
+        status=200,
+        content_types=(MediaType("application/json"),),
+        decoder=_named_project_adapter.validate_python,
+    ),
+)
+
+
 class ProjectsClient[TransportRequestT, TransportResponseT]:
     """Client operations for the Projects service."""
 
-    def __init__(self, transport: Transport[TransportRequestT, TransportResponseT]) -> None:
-        self._transport = transport
-        register_problems(self._transport)
+    def __init__(
+        self,
+        transport: Transport[TransportRequestT, TransportResponseT],
+        *,
+        default_content_types: Sequence[MediaType] = (),
+        default_accept_types: Sequence[MediaType] = (MediaType("application/json"),),
+    ) -> None:
+        self.transport = transport
+        self.default_content_types = tuple(default_content_types)
+        self.default_accept_types = tuple(default_accept_types)
+        register_problems(self.transport)
 
     def get_project(
         self,
@@ -32,35 +53,11 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
             path_template="/projects/{projectId}",
-            parameters=(
-                ParameterSpec(
-                    name="projectId",
-                    value=project_id,
-                    location=ParameterLocation.PATH,
-                    style=None,
-                    explode=None,
-                    allow_reserved=False,
-                    allow_empty_value=False,
-                ),
-            ),
-            body=None,
-            content_types=(),
-            accept_types=(MediaType("application/json"),),
+            parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
+            accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, Project] = OperationSpec(
             request=request_spec,
-            responses=(
-                ResponseSpec(
-                    status=200,
-                    content_types=(MediaType("application/json"),),
-                    decoder=_decode_get_project_200_0_0,
-                    body_expected=True,
-                    headers=(),
-                ),
-            ),
+            responses=_get_project_responses,
         )
-        return Operation(self._transport, operation_spec)
-
-
-def _decode_get_project_200_0_0(value: object) -> Project:
-    return TypeAdapter(Project).validate_python(value)
+        return Operation(self.transport, operation_spec)

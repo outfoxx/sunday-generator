@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
@@ -36,6 +37,7 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -545,6 +547,9 @@ class PythonClientRendererTest : PythonTest() {
                   sunday_transport = HttpxTransport(http_client)
                   projects_client = ProjectsClient(sunday_transport)
                   events_client = EventsClient(sunday_transport)
+                  assert projects_client.transport is sunday_transport
+                  assert tuple(str(value) for value in projects_client.default_content_types) == ("application/json",)
+                  assert tuple(str(value) for value in projects_client.default_accept_types) == ("application/json",)
                   operation = projects_client.get_project("project-1")
 
                   decoded_problem = operation.transport.problem_registry.decode(
@@ -553,7 +558,7 @@ class PythonClientRendererTest : PythonTest() {
                   )
                   assert isinstance(decoded_problem, ProjectNotFoundProblem)
 
-                  request = operation.transport_request()
+                  request = await operation.transport_request()
                   assert request.method == "GET"
                   assert request.url.path == "/projects/project-1"
 
@@ -618,7 +623,7 @@ class PythonClientRendererTest : PythonTest() {
                       "project-1",
                       StreamingBody.bytes(b"archive-bytes"),
                   )
-                  import_request = import_operation.transport_request()
+                  import_request = await import_operation.transport_request()
                   assert import_request.method == "POST"
                   assert import_request.url.path == "/projects/project-1/archive"
 
@@ -662,5 +667,135 @@ class PythonClientRendererTest : PythonTest() {
       "PythonClientRendererTest/events.py",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/events.py"),
     )
+  }
+
+  @Test
+  fun `generates exchange streaming discrimination and RFC6570 operations`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "ProjectCreated",
+          kind = GeneratedModel.Kind.OBJECT,
+          discriminatorValue = "project.created",
+        ),
+        GeneratedModel(
+          name = "ProjectDeleted",
+          kind = GeneratedModel.Kind.OBJECT,
+          discriminatorValue = "project.deleted",
+        ),
+      )
+    val eventUnion =
+      GeneratedTypeRef(
+        kind = GeneratedTypeRef.Kind.UNION,
+        name = "ProjectEvent",
+        arguments =
+          listOf(
+            GeneratedTypeRef.named("ProjectCreated"),
+            GeneratedTypeRef.named("ProjectDeleted"),
+          ),
+      )
+    val service =
+      GeneratedService(
+        name = "Events",
+        operations =
+          listOf(
+            GeneratedOperation(
+              id = "publishEvent",
+              method = "PUBLISH",
+              path = "/events",
+              exchange = GeneratedExchange.REQUEST,
+            ),
+            GeneratedOperation(
+              id = "nativeResponse",
+              method = "GET",
+              path = "/events/response",
+              exchange = GeneratedExchange.RESPONSE,
+            ),
+            GeneratedOperation(
+              id = "rawEvents",
+              method = "GET",
+              path = "/events/raw",
+              streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_SOURCE),
+            ),
+            GeneratedOperation(
+              id = "typedEvents",
+              method = "GET",
+              path = "/events/typed",
+              streaming =
+                GeneratedStreaming(
+                  kind = GeneratedStreaming.Kind.EVENT_STREAM,
+                  eventMode = GeneratedStreaming.EventMode.DISCRIMINATED,
+                ),
+              responses =
+                listOf(
+                  GeneratedResponse(
+                    status = 200,
+                    type = eventUnion,
+                    mediaTypes = listOf("text/event-stream"),
+                  ),
+                ),
+            ),
+            GeneratedOperation(
+              id = "templatedEvents",
+              method = "GET",
+              path = "/roots/{+path}/events/{id}{?fields*}",
+              parameters =
+                listOf(
+                  GeneratedParameter(
+                    name = "path",
+                    location = GeneratedParameter.Location.PATH,
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                  ),
+                  GeneratedParameter(
+                    name = "id",
+                    location = GeneratedParameter.Location.PATH,
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                  ),
+                  GeneratedParameter(
+                    name = "fields",
+                    location = GeneratedParameter.Location.QUERY,
+                    type =
+                      GeneratedTypeRef(
+                        kind = GeneratedTypeRef.Kind.ARRAY,
+                        name = "Fields",
+                        arguments = listOf(GeneratedTypeRef.scalar("string")),
+                      ),
+                    required = true,
+                  ),
+                ),
+              responses = listOf(GeneratedResponse(status = 204)),
+            ),
+          ),
+      )
+    val modules =
+      listOf(
+        PythonModuleBuilder("turnpost_api/__init__.py").build(),
+        PythonModelRenderer("turnpost_api").renderModels(models),
+        PythonClientRenderer("turnpost_api", models = models).renderService(service),
+      )
+
+    assertTrue(compileModules(compiler, modules, importModules = listOf("turnpost_api.events")))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/events.py")
+
+    assertTrue(source.contains("async def publish_event(self) -> TransportRequestT:"), source)
+    assertTrue(source.contains("method=\"POST\""), source)
+    assertTrue(source.contains("return await self.transport.transport_request(request_spec)"), source)
+    assertTrue(source.contains("async def native_response(self) -> TransportResponseT:"), source)
+    assertTrue(source.contains("return await self.transport.transport_response(request)"), source)
+    assertTrue(source.contains("def raw_events(self) -> EventSource:"), source)
+    assertTrue(source.contains("return self.transport.event_source(request_spec)"), source)
+    assertFalse(source.contains("self._transport"), source)
+    assertFalse(source.contains("prepare_request"), source)
+    assertFalse(source.contains("decode_response"), source)
+    assertTrue(source.contains("if event.event == \"project.created\":"), source)
+    assertTrue(source.contains("if event.event == \"project.deleted\":"), source)
+    assertTrue(source.contains("Unknown event type, ignoring event"), source)
+    assertTrue(source.contains("path_template=URITemplate(\"/roots/{+path}/events/{id}{?fields*}\")"), source)
+    assertTrue(source.contains("template_parameters={\"path\": path, \"fields\": fields}"), source)
+    assertTrue(source.contains("name=\"id\""), source)
+    assertTrue(!source.contains("name=\"path\""), source)
+    assertTrue(!source.contains("name=\"fields\""), source)
   }
 }

@@ -440,7 +440,7 @@ class PythonModelRendererTest : PythonTest() {
       ),
     )
     assertTrue(modelsModule.source.contains("id: str"), modelsModule.source)
-    assertTrue(modelsModule.source.contains("occurred_at: datetime"), modelsModule.source)
+    assertTrue(modelsModule.source.contains("occurred_at: AwareDatetime"), modelsModule.source)
     assertTrue(modelsModule.source.contains("data: AccountsTeamCreatedData"), modelsModule.source)
     assertTrue(modelsModule.source.contains("data: NotificationAnnouncementPublishedData"), modelsModule.source)
   }
@@ -823,6 +823,116 @@ class PythonModelRendererTest : PythonTest() {
   fun `prefixes digit leading Python enum member names`() {
     assertEquals("_123", "123".pythonEnumMemberName)
     assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)
+  }
+
+  @Test
+  fun `generates wire faithful scalar formats and collections`(compiler: PythonCompiler) {
+    val module =
+      PythonModelRenderer("turnpost_api")
+        .renderModels(
+          listOf(
+            GeneratedModel(
+              name = "WireValues",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "fullDate",
+                    GeneratedTypeRef.scalar("string", format = "full-date"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "partialTime",
+                    GeneratedTypeRef.scalar("string", format = "partial-time"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "occurredAt",
+                    GeneratedTypeRef.scalar("string", format = "date-time"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "localTime",
+                    GeneratedTypeRef.scalar("string", format = "date-time-only"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty("uri", GeneratedTypeRef.scalar("string", format = "iri"), required = true),
+                  GeneratedModelProperty(
+                    "reference",
+                    GeneratedTypeRef.scalar("string", format = "uri-reference"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "encoded",
+                    GeneratedTypeRef.scalar("string", format = "byte"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "binary",
+                    GeneratedTypeRef.scalar("string", format = "binary"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "tags",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "Tags",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                      collection = GeneratedCollectionKind.SET,
+                    ),
+                    required = true,
+                  ),
+                ),
+            ),
+          ),
+        )
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(module),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import ValidationError
+          from turnpost_api.models import WireValues
+
+          value = WireValues.model_validate({
+              "fullDate": "2026-08-19",
+              "partialTime": "12:30:00",
+              "occurredAt": "2026-08-19T12:30:00Z",
+              "localTime": "2026-08-19T12:30:00",
+              "uri": "https://例え.テスト/path",
+              "reference": "../relative",
+              "encoded": "dmFsdWU=",
+              "binary": "value",
+              "tags": ["one", "two", "one"],
+          })
+          assert value.encoded == b"value"
+          assert value.binary == b"value"
+          assert value.tags == {"one", "two"}
+
+          for field, invalid in (
+              ("occurredAt", "2026-08-19T12:30:00"),
+              ("localTime", "2026-08-19T12:30:00Z"),
+          ):
+              data = value.model_dump(mode="json", by_alias=True)
+              data[field] = invalid
+              try:
+                  WireValues.model_validate(data)
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError(f"{field} accepted an invalid timezone form")
+          """.trimIndent(),
+      ),
+    )
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(source.contains("occurred_at: AwareDatetime"), source)
+    assertTrue(source.contains("local_time: NaiveDatetime"), source)
+    assertTrue(source.contains("encoded: Base64Bytes"), source)
+    assertTrue(source.contains("reference: str"), source)
+    assertTrue(source.contains("tags: set[str]"), source)
   }
 
   @Test

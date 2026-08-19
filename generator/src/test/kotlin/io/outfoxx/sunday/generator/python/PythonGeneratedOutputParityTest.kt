@@ -137,7 +137,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     )
     assertTrue(clientSource.contains("request_spec: RequestSpec[StreamingBody]"), clientSource)
     assertTrue(clientSource.contains("body=body"), clientSource)
-    assertTrue(clientSource.contains("return StreamingOperation(self._transport, operation_spec)"), clientSource)
+    assertTrue(clientSource.contains("return StreamingOperation(self.transport, operation_spec)"), clientSource)
   }
 
   @Test
@@ -284,7 +284,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     val clientSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/api.py")
     assertFalse(clientSource.contains("from .import import"), clientSource)
     assertTrue(clientSource.contains("from .import_ import ImportClient"), clientSource)
-    assertTrue(clientSource.contains("self.import_ = ImportClient(transport)"), clientSource)
+    assertTrue(clientSource.contains("self.import_ = ImportClient("), clientSource)
 
     assertTrue(
       compileModules(

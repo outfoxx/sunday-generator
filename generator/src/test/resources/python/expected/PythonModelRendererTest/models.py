@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from enum import StrEnum
-from pydantic import AnyUrl, Field, TypeAdapter, model_validator
+from pydantic import AnyUrl, AwareDatetime, Field, TypeAdapter, model_validator
 from sunday import SundayModel
 from typing import Annotated, Literal
 from uuid import UUID
@@ -39,7 +39,7 @@ class ProjectView(SundayModel):
     project_id: str = Field(alias="projectId")
     unique_id: UniqueId = Field(alias="uniqueId")
     resource_id: UUID = Field(alias="resourceId")
-    created_at: datetime = Field(alias="createdAt")
+    created_at: AwareDatetime = Field(alias="createdAt")
     release_date: date | None = Field(default=None, alias="releaseDate")
     home_page: AnyUrl | None = Field(default=None, alias="homePage")
     avatar: bytes | None = Field(default=None)
@@ -78,7 +78,7 @@ class UserSelfResponse(SundayModel):
 
     user_id: str = Field(alias="userId")
     email: str
-    created_at: datetime = Field(alias="createdAt")
+    created_at: AwareDatetime = Field(alias="createdAt")
 
 
 type UserResponse = UserSelfResponse | UserSummaryResponse

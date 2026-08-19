@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedMedia
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
@@ -73,8 +74,12 @@ class PythonIrGeneratorTest : PythonTest() {
           from importlib.metadata import distributions
           from types import TracebackType
           from typing import Any
+          from uuid import UUID
 
           from sunday import (
+              BaseTransport,
+              EventSource,
+              EventSourceState,
               EventStream,
               EventStreamOptions,
               OperationResponse,
@@ -83,7 +88,6 @@ class PythonIrGeneratorTest : PythonTest() {
               ResponseHeaders,
               ResponseSpec,
               ServerSentEvent,
-              Transport,
           )
 
           from craft_api.api import CraftAPI
@@ -123,18 +127,39 @@ class PythonIrGeneratorTest : PythonTest() {
                   del exc_type, exc_value, traceback
 
 
-          class FakeTransport(Transport[NativeRequest, NativeResponse]):
+          class EmptyEventSource:
+              ready_state = EventSourceState.CLOSED
+              retry_time = 0.5
+              on_open: Callable[[], None] | None = None
+              on_error: Callable[[BaseException | None], None] | None = None
+              on_message: Callable[[ServerSentEvent], None] | None = None
+
+              def add_event_listener(self, event: str, handler: Callable[[ServerSentEvent], None]) -> UUID:
+                  del event, handler
+                  return UUID(int=0)
+
+              def remove_event_listener(self, event: str, listener: UUID) -> None:
+                  del event, listener
+
+              def connect(self) -> None:
+                  pass
+
+              def close(self) -> None:
+                  pass
+
+
+          class FakeTransport(BaseTransport[NativeRequest, NativeResponse]):
               def register_problem(self, type_uri: str, problem_type: type[Problem]) -> None:
                   del type_uri, problem_type
 
-              def build_request(self, spec: RequestSpec[Any]) -> NativeRequest:
+              async def _prepare_request(self, spec: RequestSpec[Any]) -> NativeRequest:
                   return NativeRequest(spec)
 
-              async def send(self, request: NativeRequest, *, stream: bool = False) -> NativeResponse:
+              async def _send(self, request: NativeRequest, *, stream: bool = False) -> NativeResponse:
                   del stream
                   return NativeResponse(request)
 
-              async def decode_response(
+              async def _decode_response(
                   self,
                   response: NativeResponse,
                   responses: Sequence[ResponseSpec[Any]],
@@ -150,12 +175,21 @@ class PythonIrGeneratorTest : PythonTest() {
               def event_stream[EventT](
                   self,
                   spec: RequestSpec[None],
-                  decoder: Callable[[ServerSentEvent], EventT],
+                  decoder: Callable[[ServerSentEvent], EventT | None],
                   *,
                   options: EventStreamOptions | None = None,
               ) -> EventStream[EventT]:
                   del spec, decoder, options
                   return EmptyEventStream()
+
+              def event_source(
+                  self,
+                  spec: RequestSpec[None],
+                  *,
+                  options: EventStreamOptions | None = None,
+              ) -> EventSource:
+                  del spec, options
+                  return EmptyEventSource()
 
               async def aclose(self) -> None:
                   pass
@@ -178,8 +212,11 @@ class PythonIrGeneratorTest : PythonTest() {
               assert "anyio" not in installed
 
               api = CraftAPI(FakeTransport())
+              assert api.projects.transport is api.transport
+              assert api.users.transport is api.transport
+              assert tuple(str(value) for value in api.default_accept_types) == ("application/json",)
               operation = api.projects.get_project("project-1")
-              request = operation.transport_request()
+              request = await operation.transport_request()
               response = await operation.transport_response()
               project = await operation.execute()
 
@@ -193,6 +230,13 @@ class PythonIrGeneratorTest : PythonTest() {
     )
     assertTrue(modules.none { module -> module.path.endsWith("runtime.py") })
     assertTrue(modules.none { module -> module.source.contains(".runtime") || module.source.contains("httpx") })
+    assertTrue(
+      modules.none { module ->
+        module.source.contains("prepare_request") ||
+          module.source.contains("decode_response") ||
+          module.source.contains("self._transport")
+      },
+    )
   }
 
   @Test
@@ -232,6 +276,7 @@ class PythonIrGeneratorTest : PythonTest() {
     GeneratedApi(
       name = "Craft API",
       source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "craft.yaml"),
+      media = GeneratedMedia(response = listOf("application/json")),
       models =
         listOf(
           GeneratedModel(
