@@ -20,8 +20,8 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 
-/** Generates Python httpx client modules from generated IR. */
-class PythonHttpxIrGenerator(
+/** Generates transport-neutral Python Sunday client modules from generated IR. */
+class PythonSundayIrGenerator(
   private val api: GeneratedApi,
   private val options: PythonGeneratorOptions = PythonGeneratorOptions(),
 ) {
@@ -40,7 +40,6 @@ class PythonHttpxIrGenerator(
 
     if (GeneratedTypeCategory.Service in outputCategories) {
       val clientRenderer = PythonClientRenderer(packageName, registerProblems = api.problems.isNotEmpty())
-      modules += clientRenderer.renderRuntime()
       modules += services.map(clientRenderer::renderService)
       if (options.aggregateServices && services.size > 1) {
         modules += renderAggregate(packageName, services)
@@ -61,15 +60,15 @@ class PythonHttpxIrGenerator(
     module.addCode(
       PythonCodeBlock.of(
         """
-        class %L:
+        class %L[TransportRequestT, TransportResponseT]:
             ${"\"\"\"Aggregate client for all generated service clients.\"\"\""}
 
-            def __init__(self, transport: %T) -> None:
+            def __init__(self, transport: %T[TransportRequestT, TransportResponseT]) -> None:
                 self._transport = transport
         %C
         """.trimIndent(),
         className,
-        PythonSymbol(".runtime", "Transport"),
+        PythonSymbol("sunday", "Transport"),
         PythonCodeBlock.join(
           services.map { service ->
             PythonCodeBlock.of(

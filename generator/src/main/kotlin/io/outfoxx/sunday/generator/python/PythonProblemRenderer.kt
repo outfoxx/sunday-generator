@@ -52,7 +52,7 @@ class PythonProblemRenderer(
         PythonCodeBlock.join(
           problems.map { problem ->
             PythonCodeBlock.of(
-              "    registry.register(%C, %L)",
+              "    registrar.register_problem(%C, %L)",
               problem.typeUri.renderPythonValue(),
               problem.name.pythonTypeName,
             )
@@ -61,11 +61,11 @@ class PythonProblemRenderer(
       }
     return PythonCodeBlock.of(
       """
-      def register_problems(registry: %T) -> None:
+      def register_problems(registrar: %T) -> None:
           ${"\"\"\"Register generated problem types for client response decoding.\"\"\""}
       %C
       """.trimIndent(),
-      PythonSymbol("sunday", "ProblemRegistry"),
+      PythonSymbol("sunday", "ProblemRegistrar"),
       registrations,
     )
   }

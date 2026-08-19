@@ -47,8 +47,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     compileAndSnapshot(
       compiler,
-      api.httpxModules(),
-      "PythonGeneratedOutputParityTest/raml-httpx-projects.py",
+      api.sundayModules(),
+      "PythonGeneratedOutputParityTest/raml-sunday-projects.py",
       "parity_api/projects.py",
     )
     compileAndSnapshot(
@@ -68,8 +68,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     compileAndSnapshot(
       compiler,
-      api.httpxModules(),
-      "PythonGeneratedOutputParityTest/openapi-httpx-projects.py",
+      api.sundayModules(),
+      "PythonGeneratedOutputParityTest/openapi-sunday-projects.py",
       "parity_api/projects.py",
     )
     compileAndSnapshot(
@@ -86,7 +86,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     @ResourceUri("openapi/ir/any-json-3.1.yaml") sourceUri: URI,
   ) {
     val api = GeneratedApiIrExporter().export(sourceUri)
-    val modules = api.httpxModules()
+    val modules = api.sundayModules()
 
     assertTrue(
       compileModules(
@@ -106,7 +106,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     )
     assertTrue(modelSource.contains("named: AnyJson | None = Field(default=None)"), modelSource)
     assertTrue(clientSource.contains("body: object"), clientSource)
-    assertTrue(clientSource.contains("Operation[AnyJson]"), clientSource)
+    assertTrue(clientSource.contains("Operation[AnyJson, TransportRequestT, TransportResponseT]"), clientSource)
   }
 
   @Test
@@ -115,7 +115,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     @ResourceUri("openapi/ir/streaming-request-3.1.yaml") sourceUri: URI,
   ) {
     val api = GeneratedApiIrExporter().export(sourceUri)
-    val modules = api.httpxModules()
+    val modules = api.sundayModules()
 
     assertTrue(
       compileModules(
@@ -127,7 +127,10 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     val clientSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/streaming_request.py")
 
     assertTrue(clientSource.contains("body: StreamingBody"), clientSource)
-    assertTrue(clientSource.contains("-> StreamingOperation[ImportAccepted]"), clientSource)
+    assertTrue(
+      clientSource.contains("-> StreamingOperation[ImportAccepted, TransportRequestT, TransportResponseT]"),
+      clientSource,
+    )
     assertTrue(clientSource.contains("request_spec: RequestSpec[StreamingBody]"), clientSource)
     assertTrue(clientSource.contains("body=body"), clientSource)
     assertTrue(clientSource.contains("return StreamingOperation(self._transport, operation_spec)"), clientSource)
@@ -142,8 +145,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     compileAndSnapshot(
       compiler,
-      api.httpxModules(),
-      "PythonGeneratedOutputParityTest/asyncapi-httpx-events.py",
+      api.sundayModules(),
+      "PythonGeneratedOutputParityTest/asyncapi-sunday-events.py",
       "parity_api/events.py",
     )
     compileAndSnapshot(
@@ -164,10 +167,10 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     compileAndSnapshot(
       compiler,
-      api.httpxModules(aggregate = true),
-      "PythonGeneratedOutputParityTest/composed-httpx-api.py",
+      api.sundayModules(aggregate = true),
+      "PythonGeneratedOutputParityTest/composed-sunday-api.py",
       "parity_api/api.py",
-      smokeCode = httpxEventSmokeCode,
+      smokeCode = sundayEventSmokeCode,
     )
     compileAndSnapshot(
       compiler,
@@ -184,7 +187,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") asyncApiUri: URI,
   ) {
-    val modules = GeneratedApiIrExporter().export(listOf(openApiUri, asyncApiUri)).httpxModules()
+    val modules = GeneratedApiIrExporter().export(listOf(openApiUri, asyncApiUri)).sundayModules()
 
     assertTrue(
       compileModules(
@@ -211,7 +214,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     @ResourceUri("asyncapi/ir/http-and-broker-events.yaml") sourceUri: URI,
   ) {
     val api = GeneratedApiIrExporter().export(sourceUri)
-    val modules = api.httpxModules()
+    val modules = api.sundayModules()
 
     assertTrue(compileModules(compiler, modules, importModules = modules.importModuleNames()))
     val paths = modules.map { module -> module.path }
@@ -223,7 +226,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     val error =
       assertThrows<GenerationException> {
-        PythonHttpxIrGenerator(api, PythonGeneratorOptions(packageName = "parity_api", broker = true))
+        PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "parity_api", broker = true))
           .generateModules(GeneratedTypeCategory.entries.toSet())
       }
     assertTrue(error.message!!.contains("Python broker generation is not supported"), error.message)
@@ -267,7 +270,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     assertTrue(
       compileModules(
         compiler,
-        api.httpxModules(aggregate = true),
+        api.sundayModules(aggregate = true),
         importModules = listOf("parity_api.api"),
       ),
     )
@@ -289,8 +292,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     assertTrue(serverSource.contains("create_import_router(import_)"), serverSource)
   }
 
-  private fun GeneratedApi.httpxModules(aggregate: Boolean = false): List<PythonModule> =
-    PythonHttpxIrGenerator(
+  private fun GeneratedApi.sundayModules(aggregate: Boolean = false): List<PythonModule> =
+    PythonSundayIrGenerator(
       this,
       PythonGeneratorOptions(
         packageName = "parity_api",
@@ -324,10 +327,27 @@ class PythonGeneratedOutputParityTest : PythonTest() {
         smokeCode = smokeCode,
       ),
     )
+    assertNeutralSundayModules(modules)
     assertPythonSnapshot(
       snapshotPath,
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, compiledSourcePath),
     )
+  }
+
+  private fun assertNeutralSundayModules(modules: List<PythonModule>) {
+    val clientModules = modules.filter { module -> module.source.contains("TransportRequestT") }
+    if (clientModules.isEmpty()) return
+
+    assertFalse(modules.any { module -> module.path.endsWith("runtime.py") }, modules.map { it.path }.toString())
+    clientModules.forEach { module ->
+      assertTrue(module.source.contains("from sunday import"), module.source)
+      listOf("from .runtime", "import httpx", "from sunday.httpx", "from sunday.httpx_compat").forEach { forbidden ->
+        assertFalse(
+          module.source.contains(forbidden),
+          "${module.path} contains forbidden import '$forbidden'\n${module.source}",
+        )
+      }
+    }
   }
 
   private fun List<PythonModule>.importModuleNames(): List<String> =
@@ -338,11 +358,12 @@ class PythonGeneratedOutputParityTest : PythonTest() {
         ?.replace('/', '.')
     }
 
-  private val httpxEventSmokeCode: String =
+  private val sundayEventSmokeCode: String =
     """
     import asyncio
 
     import httpx
+    from sunday.httpx import HttpxTransport
 
     from parity_api.api import ParityAPI
     from parity_api.models import ProjectCreatedData
@@ -373,7 +394,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     async def main() -> None:
         transport = httpx.MockTransport(handler)
         async with httpx.AsyncClient(base_url="https://api.example.test", transport=transport) as http_client:
-            api = ParityAPI(http_client)
+            api = ParityAPI(HttpxTransport(http_client))
             events = [event async for event in api.events.stream_events()]
 
         assert len(events) == 1

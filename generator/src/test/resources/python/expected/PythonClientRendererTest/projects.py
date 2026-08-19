@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from .models import ProjectQuery, ProjectView, UniqueId, UpdateProjectRequest
 from .problems import ProjectNotFoundProblem, register_problems
-from .runtime import (
+from pydantic import TypeAdapter, ValidationError
+from sunday import (
     MediaType,
     MultipartBody,
     NullableOperation,
@@ -20,25 +21,23 @@ from .runtime import (
     StreamingBody,
     StreamingOperation,
     Transport,
-    as_transport,
     parameter_object,
 )
-from pydantic import TypeAdapter, ValidationError
 
 __all__ = ["ProjectsClient"]
 
 
-class ProjectsClient:
+class ProjectsClient[TransportRequestT, TransportResponseT]:
     """Client operations for the Projects service."""
 
-    def __init__(self, transport: Transport) -> None:
-        self._transport = as_transport(transport)
-        register_problems(self._transport.problem_registry)
+    def __init__(self, transport: Transport[TransportRequestT, TransportResponseT]) -> None:
+        self._transport = transport
+        register_problems(self._transport)
 
     def get_project(
         self,
         project_id: str,
-    ) -> Operation[ProjectView]:
+    ) -> Operation[ProjectView, TransportRequestT, TransportResponseT]:
         """Create the getProject operation."""
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
@@ -82,7 +81,7 @@ class ProjectsClient:
     def find_project(
         self,
         project_id: str,
-    ) -> NullableOperation[ProjectView]:
+    ) -> NullableOperation[ProjectView, TransportRequestT, TransportResponseT]:
         """Create the findProject operation."""
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
@@ -123,7 +122,7 @@ class ProjectsClient:
     def list_projects(
         self,
         query_string: ProjectQuery,
-    ) -> Operation[list[ProjectView]]:
+    ) -> Operation[list[ProjectView], TransportRequestT, TransportResponseT]:
         """Create the listProjects operation."""
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
@@ -162,7 +161,7 @@ class ProjectsClient:
         revision_id: str,
         include_archived: bool | None = False,
         x_trace_id: str | None = None,
-    ) -> Operation[ProjectView]:
+    ) -> Operation[ProjectView, TransportRequestT, TransportResponseT]:
         """Create the updateProject operation."""
         request_spec: RequestSpec[UpdateProjectRequest] = RequestSpec(
             method="PUT",
@@ -228,7 +227,7 @@ class ProjectsClient:
         project_id: str,
         body: bytes,
         content_type: str,
-    ) -> Operation[None]:
+    ) -> Operation[None, TransportRequestT, TransportResponseT]:
         """Create the putProjectAvatar operation."""
         request_spec: RequestSpec[bytes] = RequestSpec(
             method="PUT",
@@ -275,7 +274,7 @@ class ProjectsClient:
         self,
         project_id: str,
         body: StreamingBody,
-    ) -> StreamingOperation[UniqueId]:
+    ) -> StreamingOperation[UniqueId, TransportRequestT, TransportResponseT]:
         """Create the importProjectArchive operation."""
         request_spec: RequestSpec[StreamingBody] = RequestSpec(
             method="POST",
@@ -312,7 +311,7 @@ class ProjectsClient:
     def create_project_revision(
         self,
         project_id: str,
-    ) -> Operation[UniqueId]:
+    ) -> Operation[UniqueId, TransportRequestT, TransportResponseT]:
         """Create the createProjectRevision operation."""
         request_spec: RequestSpec[None] = RequestSpec(
             method="POST",
@@ -349,7 +348,7 @@ class ProjectsClient:
     def put_payload(
         self,
         body: ProjectView | bytes,
-    ) -> Operation[None]:
+    ) -> Operation[None, TransportRequestT, TransportResponseT]:
         """Create the putPayload operation."""
         request_spec: RequestSpec[ProjectView | bytes] = RequestSpec(
             method="POST",
@@ -375,7 +374,7 @@ class ProjectsClient:
     def upload_multipart(
         self,
         body: MultipartBody,
-    ) -> Operation[None]:
+    ) -> Operation[None, TransportRequestT, TransportResponseT]:
         """Create the uploadMultipart operation."""
         request_spec: RequestSpec[MultipartBody] = RequestSpec(
             method="POST",
@@ -402,7 +401,7 @@ class ProjectsClient:
     def patch_project(
         self,
         body: PatchDocument,
-    ) -> Operation[None]:
+    ) -> Operation[None, TransportRequestT, TransportResponseT]:
         """Create the patchProject operation."""
         request_spec: RequestSpec[PatchDocument] = RequestSpec(
             method="PATCH",

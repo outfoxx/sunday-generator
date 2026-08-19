@@ -36,9 +36,9 @@ import org.junit.jupiter.api.Test
 class PythonIrGeneratorTest : PythonTest() {
 
   @Test
-  fun `generates compileable aggregate httpx modules from IR`(compiler: PythonCompiler) {
+  fun `generates compileable aggregate Sunday modules from IR`(compiler: PythonCompiler) {
     val generator =
-      PythonHttpxIrGenerator(
+      PythonSundayIrGenerator(
         apiFixture(),
         PythonGeneratorOptions(
           aggregateServices = true,
@@ -53,7 +53,6 @@ class PythonIrGeneratorTest : PythonTest() {
         "craft_api/__init__.py",
         "craft_api/models.py",
         "craft_api/problems.py",
-        "craft_api/runtime.py",
         "craft_api/projects.py",
         "craft_api/users.py",
         "craft_api/api.py",
@@ -66,12 +65,127 @@ class PythonIrGeneratorTest : PythonTest() {
         importModules = listOf("craft_api.api"),
         smokeCode =
           """
-          from craft_api.api import CraftAPI
+          import asyncio
+          from collections.abc import AsyncIterator, Callable, Sequence
+          from dataclasses import dataclass
+          from types import TracebackType
+          from typing import Any
 
-          assert hasattr(CraftAPI, "__init__")
+          from sunday import (
+              EventStream,
+              EventStreamOptions,
+              OperationResponse,
+              Problem,
+              RequestSpec,
+              ResponseHeaders,
+              ResponseSpec,
+              ServerSentEvent,
+              Transport,
+          )
+
+          from craft_api.api import CraftAPI
+          from craft_api.models import ProjectView
+
+
+          @dataclass(frozen=True)
+          class NativeRequest:
+              spec: RequestSpec[Any]
+
+
+          @dataclass(frozen=True)
+          class NativeResponse:
+              request: NativeRequest
+
+
+          class EmptyEventStream[EventT]:
+              def __aiter__(self) -> AsyncIterator[EventT]:
+                  return self.events()
+
+              async def events(self) -> AsyncIterator[EventT]:
+                  if False:
+                      yield
+
+              async def aclose(self) -> None:
+                  pass
+
+              async def __aenter__(self) -> "EmptyEventStream[EventT]":
+                  return self
+
+              async def __aexit__(
+                  self,
+                  exc_type: type[BaseException] | None,
+                  exc_value: BaseException | None,
+                  traceback: TracebackType | None,
+              ) -> None:
+                  del exc_type, exc_value, traceback
+
+
+          class FakeTransport(Transport[NativeRequest, NativeResponse]):
+              def register_problem(self, type_uri: str, problem_type: type[Problem]) -> None:
+                  del type_uri, problem_type
+
+              def build_request(self, spec: RequestSpec[Any]) -> NativeRequest:
+                  return NativeRequest(spec)
+
+              async def send(self, request: NativeRequest, *, stream: bool = False) -> NativeResponse:
+                  del stream
+                  return NativeResponse(request)
+
+              async def decode_response(
+                  self,
+                  response: NativeResponse,
+                  responses: Sequence[ResponseSpec[Any]],
+              ) -> OperationResponse[Any, NativeResponse]:
+                  del responses
+                  return OperationResponse(
+                      ProjectView(projectId="project-1"),
+                      response,
+                      200,
+                      ResponseHeaders(()),
+                  )
+
+              def event_stream[EventT](
+                  self,
+                  spec: RequestSpec[None],
+                  decoder: Callable[[ServerSentEvent], EventT],
+                  *,
+                  options: EventStreamOptions | None = None,
+              ) -> EventStream[EventT]:
+                  del spec, decoder, options
+                  return EmptyEventStream()
+
+              async def aclose(self) -> None:
+                  pass
+
+              async def __aenter__(self) -> "FakeTransport":
+                  return self
+
+              async def __aexit__(
+                  self,
+                  exc_type: type[BaseException] | None,
+                  exc_value: BaseException | None,
+                  traceback: TracebackType | None,
+              ) -> None:
+                  del exc_type, exc_value, traceback
+
+
+          async def main() -> None:
+              api = CraftAPI(FakeTransport())
+              operation = api.projects.get_project("project-1")
+              request = operation.transport_request()
+              response = await operation.transport_response()
+              project = await operation.execute()
+
+              assert isinstance(request, NativeRequest)
+              assert isinstance(response, NativeResponse)
+              assert project.project_id == "project-1"
+
+          asyncio.run(main())
           """.trimIndent(),
       ),
     )
+    assertTrue(modules.none { module -> module.path.endsWith("runtime.py") })
+    assertTrue(modules.none { module -> module.source.contains(".runtime") || module.source.contains("httpx") })
   }
 
   @Test

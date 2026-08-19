@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from .models import EventEnvelope
 from .problems import register_problems
-from .runtime import EventStream, MediaType, RequestSpec, ServerSentEvent, Transport, as_transport
 from pydantic import TypeAdapter
+from sunday import EventStream, MediaType, RequestSpec, ServerSentEvent, Transport
 
 __all__ = ["EventsClient"]
 
 
-class EventsClient:
+class EventsClient[TransportRequestT, TransportResponseT]:
     """Client operations for the Events service."""
 
-    def __init__(self, transport: Transport) -> None:
-        self._transport = as_transport(transport)
-        register_problems(self._transport.problem_registry)
+    def __init__(self, transport: Transport[TransportRequestT, TransportResponseT]) -> None:
+        self._transport = transport
+        register_problems(self._transport)
 
     def stream_project_events(self) -> EventStream[EventEnvelope]:
         """Create the streamProjectEvents operation."""

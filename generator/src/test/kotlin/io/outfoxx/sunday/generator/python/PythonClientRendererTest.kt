@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test
 class PythonClientRendererTest : PythonTest() {
 
   @Test
-  fun `generates operation runtime and first async httpx service method`(compiler: PythonCompiler) {
+  fun `generates neutral operations with an explicit HTTPX consumer`(compiler: PythonCompiler) {
     val clientRenderer = PythonClientRenderer("turnpost_api", registerProblems = true)
     val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
     val modelsModule =
@@ -126,7 +126,6 @@ class PythonClientRendererTest : PythonTest() {
             ),
           ),
         )
-    val runtimeModule = clientRenderer.renderRuntime()
     val serviceModule =
       clientRenderer.renderService(
         GeneratedService(
@@ -428,7 +427,7 @@ class PythonClientRendererTest : PythonTest() {
     assertTrue(
       compileModules(
         compiler,
-        listOf(initModule, modelsModule, problemsModule, runtimeModule, serviceModule, eventsModule),
+        listOf(initModule, modelsModule, problemsModule, serviceModule, eventsModule),
         importModules = listOf("turnpost_api.events", "turnpost_api.projects"),
         smokeCode =
           """
@@ -436,12 +435,7 @@ class PythonClientRendererTest : PythonTest() {
           import json
 
           import httpx
-
-          from turnpost_api.events import EventsClient
-          from turnpost_api.models import ProjectCreatedData, ProjectQuery, ProjectView, UpdateProjectRequest
-          from turnpost_api.problems import ProjectNotFoundProblem
-          from turnpost_api.projects import ProjectsClient
-          from turnpost_api.runtime import (
+          from sunday import (
               MultipartBody,
               MultipartPart,
               PatchDocument,
@@ -449,6 +443,12 @@ class PythonClientRendererTest : PythonTest() {
               PatchOperationKind,
               StreamingBody,
           )
+          from sunday.httpx import HttpxTransport
+
+          from turnpost_api.events import EventsClient
+          from turnpost_api.models import ProjectCreatedData, ProjectQuery, ProjectView, UpdateProjectRequest
+          from turnpost_api.problems import ProjectNotFoundProblem
+          from turnpost_api.projects import ProjectsClient
 
 
           class EventByteStream(httpx.AsyncByteStream):
@@ -539,7 +539,10 @@ class PythonClientRendererTest : PythonTest() {
           async def main() -> None:
               transport = httpx.MockTransport(handler)
               async with httpx.AsyncClient(base_url="https://api.example.test", transport=transport) as http_client:
-                  operation = ProjectsClient(http_client).get_project("project-1")
+                  sunday_transport = HttpxTransport(http_client)
+                  projects_client = ProjectsClient(sunday_transport)
+                  events_client = EventsClient(sunday_transport)
+                  operation = projects_client.get_project("project-1")
 
                   decoded_problem = operation.transport.problem_registry.decode(
                       {"type": "https://turnpost.example/problems/project-not-found"},
@@ -563,16 +566,16 @@ class PythonClientRendererTest : PythonTest() {
                   assert project.project_id == "project-1"
                   assert project.name == "Roadmap"
 
-                  assert await ProjectsClient(http_client).find_project("missing").execute_or_none() is None
+                  assert await projects_client.find_project("missing").execute_or_none() is None
 
-                  projects = await ProjectsClient(http_client).list_projects(
+                  projects = await projects_client.list_projects(
                       ProjectQuery(tags=["one", "two"])
                   ).execute()
                   assert len(projects) == 1
                   assert projects[0].project_id == "project-1"
                   assert projects[0].name == "Roadmap"
 
-                  update_operation = ProjectsClient(http_client).update_project(
+                  update_operation = projects_client.update_project(
                       "project-1",
                       UpdateProjectRequest(display_name="Updated", from_commit_id=None),
                       revision_id="revision-1",
@@ -585,7 +588,7 @@ class PythonClientRendererTest : PythonTest() {
                   assert updated_project.name == "Updated"
 
                   try:
-                      ProjectsClient(http_client).update_project(
+                      projects_client.update_project(
                           "project-1",
                           UpdateProjectRequest(display_name="Updated", from_commit_id=None),
                       )
@@ -594,7 +597,7 @@ class PythonClientRendererTest : PythonTest() {
                   else:
                       raise AssertionError("required query parameter was accepted as omitted")
 
-                  avatar = await ProjectsClient(http_client).put_project_avatar(
+                  avatar = await projects_client.put_project_avatar(
                       "project-1",
                       b"avatar-bytes",
                       content_type="image/png",
@@ -602,13 +605,13 @@ class PythonClientRendererTest : PythonTest() {
                   assert avatar is None
 
                   try:
-                      ProjectsClient(http_client).put_project_avatar("project-1", b"avatar-bytes")
+                      projects_client.put_project_avatar("project-1", b"avatar-bytes")
                   except TypeError:
                       pass
                   else:
                       raise AssertionError("required header parameter was accepted as omitted")
 
-                  import_operation = ProjectsClient(http_client).import_project_archive(
+                  import_operation = projects_client.import_project_archive(
                       "project-1",
                       StreamingBody.bytes(b"archive-bytes"),
                   )
@@ -619,23 +622,23 @@ class PythonClientRendererTest : PythonTest() {
                   import_id = await import_operation.execute()
                   assert import_id == "import-1"
 
-                  revision_id = await ProjectsClient(http_client).create_project_revision("project-1").execute()
+                  revision_id = await projects_client.create_project_revision("project-1").execute()
                   assert revision_id == "revision-1"
 
-                  await ProjectsClient(http_client).put_payload(
+                  await projects_client.put_payload(
                       ProjectView(projectId="project-1", name="Roadmap")
                   ).execute()
-                  await ProjectsClient(http_client).put_payload(b"payload-bytes").execute()
-                  await ProjectsClient(http_client).upload_multipart(
+                  await projects_client.put_payload(b"payload-bytes").execute()
+                  await projects_client.upload_multipart(
                       MultipartBody((MultipartPart("title", "Roadmap"),))
                   ).execute()
-                  await ProjectsClient(http_client).patch_project(
+                  await projects_client.patch_project(
                       PatchDocument(
                           (PatchOperation(PatchOperationKind.REPLACE, "/name", "Updated"),)
                       )
                   ).execute()
 
-                  stream = EventsClient(http_client).stream_project_events()
+                  stream = events_client.stream_project_events()
                   events = [event async for event in stream]
                   assert len(events) == 1
                   assert events[0].type == "project.created"
@@ -648,10 +651,6 @@ class PythonClientRendererTest : PythonTest() {
       ),
     )
 
-    assertPythonSnapshot(
-      "PythonClientRendererTest/runtime.py",
-      CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/runtime.py"),
-    )
     assertPythonSnapshot(
       "PythonClientRendererTest/projects.py",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/projects.py"),

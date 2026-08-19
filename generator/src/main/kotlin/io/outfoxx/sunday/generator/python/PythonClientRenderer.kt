@@ -26,59 +26,11 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 
-/** Renders declarative Sunday Python HTTPX clients from generated IR. */
+/** Renders declarative transport-neutral Sunday Python clients from generated IR. */
 class PythonClientRenderer(
   private val packageName: String,
   private val registerProblems: Boolean = false,
 ) {
-
-  /** Renders the beta compatibility module as re-exports only. */
-  fun renderRuntime(): PythonModule {
-    val module = PythonModuleBuilder("$packageName/runtime.py")
-    val exports =
-      listOf(
-        "EventStream" to PythonSymbol("sunday.httpx", "HttpxEventStream", "_EventStream"),
-        "MediaType" to PythonSymbol("sunday", "MediaType", "_MediaType"),
-        "MultipartBody" to PythonSymbol("sunday", "MultipartBody", "_MultipartBody"),
-        "MultipartPart" to PythonSymbol("sunday", "MultipartPart", "_MultipartPart"),
-        "NullableOperation" to PythonSymbol("sunday", "NullableOperation", "_NullableOperation"),
-        "NullifySpec" to PythonSymbol("sunday", "NullifySpec", "_NullifySpec"),
-        "Operation" to PythonSymbol("sunday", "Operation", "_Operation"),
-        "OperationResponse" to PythonSymbol("sunday", "OperationResponse", "_OperationResponse"),
-        "OperationSpec" to PythonSymbol("sunday", "OperationSpec", "_OperationSpec"),
-        "ParameterLocation" to PythonSymbol("sunday", "ParameterLocation", "_ParameterLocation"),
-        "ParameterSpec" to PythonSymbol("sunday", "ParameterSpec", "_ParameterSpec"),
-        "ParameterStyle" to PythonSymbol("sunday", "ParameterStyle", "_ParameterStyle"),
-        "PatchDocument" to PythonSymbol("sunday", "PatchDocument", "_PatchDocument"),
-        "PatchOperation" to PythonSymbol("sunday", "PatchOperation", "_PatchOperation"),
-        "PatchOperationKind" to PythonSymbol("sunday", "PatchOperationKind", "_PatchOperationKind"),
-        "RequestSpec" to PythonSymbol("sunday", "RequestSpec", "_RequestSpec"),
-        "RequestPayloadSpec" to PythonSymbol("sunday", "RequestPayloadSpec", "_RequestPayloadSpec"),
-        "ResponseHeaderSpec" to PythonSymbol("sunday", "ResponseHeaderSpec", "_ResponseHeaderSpec"),
-        "ResponseHeaders" to PythonSymbol("sunday", "ResponseHeaders", "_ResponseHeaders"),
-        "ResponseSpec" to PythonSymbol("sunday", "ResponseSpec", "_ResponseSpec"),
-        "ServerSentEvent" to PythonSymbol("sunday", "ServerSentEvent", "_ServerSentEvent"),
-        "StreamingBody" to PythonSymbol("sunday", "StreamingBody", "_StreamingBody"),
-        "StreamingOperation" to PythonSymbol("sunday", "StreamingOperation", "_StreamingOperation"),
-        "Transport" to PythonSymbol("sunday.httpx_compat", "Transport", "_Transport"),
-        "TransportRequest" to PythonSymbol("sunday.httpx_compat", "TransportRequest", "_TransportRequest"),
-        "TransportResponse" to PythonSymbol("sunday.httpx_compat", "TransportResponse", "_TransportResponse"),
-        "as_transport" to PythonSymbol("sunday.httpx_compat", "as_transport", "_as_transport"),
-        "json_body" to PythonSymbol("sunday.httpx_compat", "json_body", "_json_body"),
-        "parameter_map" to PythonSymbol("sunday.httpx_compat", "parameter_map", "_parameter_map"),
-        "parameter_object" to PythonSymbol("sunday", "parameter_object", "_parameter_object"),
-        "path_template" to PythonSymbol("sunday.httpx_compat", "path_template", "_path_template"),
-      )
-
-    exports.forEach { (name, _) -> module.addExport(name) }
-    module.addCode(
-      PythonCodeBlock.join(
-        exports.map { (name, symbol) -> PythonCodeBlock.of("%L = %T", name, symbol) },
-        separator = "\n",
-      ),
-    )
-    return module.build()
-  }
 
   /** Renders one generated service client. */
   fun renderService(service: GeneratedService): PythonModule {
@@ -87,7 +39,7 @@ class PythonClientRenderer(
     val problemRegistration =
       if (registerProblems) {
         PythonCodeBlock.of(
-          "\n        %T(self._transport.problem_registry)",
+          "\n        %T(self._transport)",
           PythonSymbol(".problems", "register_problems"),
         )
       } else {
@@ -98,18 +50,17 @@ class PythonClientRenderer(
     module.addCode(
       PythonCodeBlock.of(
         """
-        class %L:
+        class %L[TransportRequestT, TransportResponseT]:
             ${"\"\"\"Client operations for the %L service.\"\"\""}
 
-            def __init__(self, transport: %T) -> None:
-                self._transport = %T(transport)%C
+            def __init__(self, transport: %T[TransportRequestT, TransportResponseT]) -> None:
+                self._transport = transport%C
 
         %C
         """.trimIndent(),
         className,
         service.pythonServiceBaseName,
-        PythonSymbol(".runtime", "Transport"),
-        PythonSymbol(".runtime", "as_transport"),
+        PythonSymbol("sunday", "Transport"),
         problemRegistration,
         PythonCodeBlock.join(service.operations.map { it.renderOperationMethod() }, separator = "\n\n"),
       ),
@@ -127,10 +78,16 @@ class PythonClientRenderer(
     val responseType = renderSuccessType()
     val operationType =
       when {
-        streaming != null -> PythonSymbol(".runtime", "EventStream")
-        nullify != null -> PythonSymbol(".runtime", "NullableOperation")
-        requestBody.isPythonStreamingRequestBody -> PythonSymbol(".runtime", "StreamingOperation")
-        else -> PythonSymbol(".runtime", "Operation")
+        streaming != null -> PythonSymbol("sunday", "EventStream")
+        nullify != null -> PythonSymbol("sunday", "NullableOperation")
+        requestBody.isPythonStreamingRequestBody -> PythonSymbol("sunday", "StreamingOperation")
+        else -> PythonSymbol("sunday", "Operation")
+      }
+    val operationReturnType =
+      if (streaming != null) {
+        PythonCodeBlock.of("%T[%C]", operationType, responseType)
+      } else {
+        PythonCodeBlock.of("%T[%C, TransportRequestT, TransportResponseT]", operationType, responseType)
       }
     val body =
       if (streaming != null) {
@@ -139,7 +96,7 @@ class PythonClientRenderer(
           |        request_spec: %T[%C] = %C
           |        return self._transport.event_stream(request_spec, %L)
           """.trimMargin(),
-          PythonSymbol(".runtime", "RequestSpec"),
+          PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
           renderRequestSpec(),
           eventDecoderName(),
@@ -154,13 +111,13 @@ class PythonClientRenderer(
           |        )
           |%C
           """.trimMargin(),
-          PythonSymbol(".runtime", "RequestSpec"),
+          PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
           renderRequestSpec(),
-          PythonSymbol(".runtime", "OperationSpec"),
+          PythonSymbol("sunday", "OperationSpec"),
           renderRequestBodyType(),
           responseType,
-          PythonSymbol(".runtime", "OperationSpec"),
+          PythonSymbol("sunday", "OperationSpec"),
           renderResponseSpecs(),
           renderOperationConstruction(operationType),
         )
@@ -169,13 +126,12 @@ class PythonClientRenderer(
     return if (!hasSignatureParameters()) {
       PythonCodeBlock.of(
         """
-            def %L(self) -> %T[%C]:
+            def %L(self) -> %C:
                 ${"\"\"\"Create the %L operation.\"\"\""}
         %C
         """.trimIndent(),
         id.pythonIdentifierName,
-        operationType,
-        responseType,
+        operationReturnType,
         id,
         body,
       )
@@ -185,14 +141,13 @@ class PythonClientRenderer(
             def %L(
                 self,
         %C
-            ) -> %T[%C]:
+            ) -> %C:
                 ${"\"\"\"Create the %L operation.\"\"\""}
         %C
         """.trimIndent(),
         id.pythonIdentifierName,
         signature,
-        operationType,
-        responseType,
+        operationReturnType,
         id,
         body,
       )
@@ -214,7 +169,7 @@ class PythonClientRenderer(
           "            %T(statuses=%C, problem_types=%C),\n" +
           "        )",
         operationType,
-        PythonSymbol(".runtime", "NullifySpec"),
+        PythonSymbol("sunday", "NullifySpec"),
         renderTuple(nullify.statuses.map { status -> PythonCodeBlock.of("%L", status) }),
         renderTuple(problemTypes),
       )
@@ -238,7 +193,7 @@ class PythonClientRenderer(
       |            accept_types=%C,
       |        )
       """.trimMargin(),
-      PythonSymbol(".runtime", "RequestSpec"),
+      PythonSymbol("sunday", "RequestSpec"),
       httpMethod(),
       path,
       renderParameterSpecs(),
@@ -280,11 +235,11 @@ class PythonClientRenderer(
                 "                    style=%T.FORM,\n" +
                 "                    explode=True,\n" +
                 "                ),",
-              PythonSymbol(".runtime", "ParameterSpec"),
+              PythonSymbol("sunday", "ParameterSpec"),
               "",
-              PythonSymbol(".runtime", "parameter_object"),
-              PythonSymbol(".runtime", "ParameterLocation"),
-              PythonSymbol(".runtime", "ParameterStyle"),
+              PythonSymbol("sunday", "parameter_object"),
+              PythonSymbol("sunday", "ParameterLocation"),
+              PythonSymbol("sunday", "ParameterStyle"),
             )
           },
         )
@@ -313,10 +268,10 @@ class PythonClientRenderer(
       |                    allow_empty_value=%L,
       |                ),
       """.trimMargin(),
-      PythonSymbol(".runtime", "ParameterSpec"),
+      PythonSymbol("sunday", "ParameterSpec"),
       wireName(),
       value,
-      PythonSymbol(".runtime", "ParameterLocation"),
+      PythonSymbol("sunday", "ParameterLocation"),
       location.name,
       encoding?.style.renderParameterStyle(),
       encoding?.explode.pythonBooleanOrNone(),
@@ -328,7 +283,7 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderResponseSpecs(): PythonCodeBlock {
     val variants = responseVariants()
     if (variants.isEmpty()) {
-      return PythonCodeBlock.of("(%T(status=None, body_expected=False),)", PythonSymbol(".runtime", "ResponseSpec"))
+      return PythonCodeBlock.of("(%T(status=None, body_expected=False),)", PythonSymbol("sunday", "ResponseSpec"))
     }
     return PythonCodeBlock.of(
       """
@@ -354,7 +309,7 @@ class PythonClientRenderer(
       |                    headers=%C,
       |                ),
       """.trimMargin(),
-      PythonSymbol(".runtime", "ResponseSpec"),
+      PythonSymbol("sunday", "ResponseSpec"),
       response.status?.toString() ?: "None",
       renderMediaTypes(mediaTypes),
       if (hasBody()) decoderName else "None",
@@ -388,7 +343,7 @@ class PythonClientRenderer(
       |                            repeated=%L,
       |                        ),
       """.trimMargin(),
-      PythonSymbol(".runtime", "ResponseHeaderSpec"),
+      PythonSymbol("sunday", "ResponseHeaderSpec"),
       wireName(),
       PythonSymbol("pydantic", "TypeAdapter"),
       decodedType.renderClientPythonType(nullable = false),
@@ -405,7 +360,7 @@ class PythonClientRenderer(
         "(%C,)",
         PythonCodeBlock.join(
           mediaTypes.map { mediaType ->
-            PythonCodeBlock.of("%T(%S)", PythonSymbol(".runtime", "MediaType"), mediaType)
+            PythonCodeBlock.of("%T(%S)", PythonSymbol("sunday", "MediaType"), mediaType)
           },
           separator = ", ",
         ),
@@ -425,7 +380,7 @@ class PythonClientRenderer(
             return %T(%C).validate_json(event.data)
         """.trimIndent(),
         eventDecoderName(),
-        PythonSymbol(".runtime", "ServerSentEvent"),
+        PythonSymbol("sunday", "ServerSentEvent"),
         responseType.renderClientPythonType(),
         PythonSymbol("pydantic", "TypeAdapter"),
         responseType.renderClientPythonType(nullable = false),
@@ -482,7 +437,7 @@ class PythonClientRenderer(
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
     if (isPythonStreamingRequestBody) {
-      PythonCodeBlock.of("        body: %T,", PythonSymbol(".runtime", "StreamingBody"))
+      PythonCodeBlock.of("        body: %T,", PythonSymbol("sunday", "StreamingBody"))
     } else {
       PythonCodeBlock.of("        body: %C,", renderClientBodyType())
     }
@@ -519,7 +474,7 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderRequestBodyType(): PythonCodeBlock =
     when {
       requestBody == null -> PythonCodeBlock.of("None")
-      requestBody.isPythonStreamingRequestBody -> PythonCodeBlock.of("%T", PythonSymbol(".runtime", "StreamingBody"))
+      requestBody.isPythonStreamingRequestBody -> PythonCodeBlock.of("%T", PythonSymbol("sunday", "StreamingBody"))
       else -> requestBody.renderClientBodyType()
     }
 
@@ -534,7 +489,7 @@ class PythonClientRenderer(
         "    raise ValueError(%S)",
       requestPayloadFunctionName(),
       bodyType,
-      PythonSymbol(".runtime", "RequestPayloadSpec"),
+      PythonSymbol("sunday", "RequestPayloadSpec"),
       bodyType,
       bodyType,
       PythonCodeBlock.join(attempts, separator = "\n"),
@@ -554,9 +509,9 @@ class PythonClientRenderer(
   private fun PythonRequestVariant.renderClientType(): PythonCodeBlock =
     when {
       mediaTypes.any { mediaType -> mediaType.startsWith("multipart/", ignoreCase = true) } ->
-        PythonCodeBlock.of("%T", PythonSymbol(".runtime", "MultipartBody"))
+        PythonCodeBlock.of("%T", PythonSymbol("sunday", "MultipartBody"))
       mediaTypes.any { mediaType -> mediaType.equals("application/json-patch+json", ignoreCase = true) } ->
-        PythonCodeBlock.of("%T", PythonSymbol(".runtime", "PatchDocument"))
+        PythonCodeBlock.of("%T", PythonSymbol("sunday", "PatchDocument"))
       else -> type.renderClientPythonType(nullable = false)
     }
 
@@ -564,9 +519,9 @@ class PythonClientRenderer(
     val runtimeType =
       when {
         mediaTypes.any { mediaType -> mediaType.startsWith("multipart/", ignoreCase = true) } ->
-          PythonSymbol(".runtime", "MultipartBody")
+          PythonSymbol("sunday", "MultipartBody")
         mediaTypes.any { mediaType -> mediaType.equals("application/json-patch+json", ignoreCase = true) } ->
-          PythonSymbol(".runtime", "PatchDocument")
+          PythonSymbol("sunday", "PatchDocument")
         else -> null
       }
     return if (runtimeType != null) {
@@ -575,7 +530,7 @@ class PythonClientRenderer(
           "        validated = body\n" +
           "        return %T(body=validated, content_types=%C)",
         runtimeType,
-        PythonSymbol(".runtime", "RequestPayloadSpec"),
+        PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
       )
     } else {
@@ -590,7 +545,7 @@ class PythonClientRenderer(
         PythonSymbol("pydantic", "TypeAdapter"),
         type,
         PythonSymbol("pydantic", "ValidationError"),
-        PythonSymbol(".runtime", "RequestPayloadSpec"),
+        PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
       )
     }
@@ -667,13 +622,13 @@ class PythonClientRenderer(
   private fun String?.renderParameterStyle(): PythonCodeBlock =
     when (this) {
       null -> PythonCodeBlock.of("None")
-      "simple" -> PythonCodeBlock.of("%T.SIMPLE", PythonSymbol(".runtime", "ParameterStyle"))
-      "label" -> PythonCodeBlock.of("%T.LABEL", PythonSymbol(".runtime", "ParameterStyle"))
-      "matrix" -> PythonCodeBlock.of("%T.MATRIX", PythonSymbol(".runtime", "ParameterStyle"))
-      "form" -> PythonCodeBlock.of("%T.FORM", PythonSymbol(".runtime", "ParameterStyle"))
-      "spaceDelimited" -> PythonCodeBlock.of("%T.SPACE_DELIMITED", PythonSymbol(".runtime", "ParameterStyle"))
-      "pipeDelimited" -> PythonCodeBlock.of("%T.PIPE_DELIMITED", PythonSymbol(".runtime", "ParameterStyle"))
-      "deepObject" -> PythonCodeBlock.of("%T.DEEP_OBJECT", PythonSymbol(".runtime", "ParameterStyle"))
+      "simple" -> PythonCodeBlock.of("%T.SIMPLE", PythonSymbol("sunday", "ParameterStyle"))
+      "label" -> PythonCodeBlock.of("%T.LABEL", PythonSymbol("sunday", "ParameterStyle"))
+      "matrix" -> PythonCodeBlock.of("%T.MATRIX", PythonSymbol("sunday", "ParameterStyle"))
+      "form" -> PythonCodeBlock.of("%T.FORM", PythonSymbol("sunday", "ParameterStyle"))
+      "spaceDelimited" -> PythonCodeBlock.of("%T.SPACE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
+      "pipeDelimited" -> PythonCodeBlock.of("%T.PIPE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
+      "deepObject" -> PythonCodeBlock.of("%T.DEEP_OBJECT", PythonSymbol("sunday", "ParameterStyle"))
       else -> genError("Unsupported Python parameter style '$this'")
     }
 

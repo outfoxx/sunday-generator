@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pydantic import Field
-from sunday import Problem as _Problem, ProblemPayload as _ProblemPayload, ProblemRegistry
+from sunday import Problem as _Problem, ProblemPayload as _ProblemPayload, ProblemRegistrar
 from typing import ClassVar
 from uuid import UUID
 
@@ -41,6 +41,6 @@ class ProjectNotFoundProblem(Problem):
         return self.payload.retry_after
 
 
-def register_problems(registry: ProblemRegistry) -> None:
+def register_problems(registrar: ProblemRegistrar) -> None:
     """Register generated problem types for client response decoding."""
-    registry.register("https://turnpost.example/problems/project-not-found", ProjectNotFoundProblem)
+    registrar.register_problem("https://turnpost.example/problems/project-not-found", ProjectNotFoundProblem)
