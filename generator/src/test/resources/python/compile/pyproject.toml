@@ -3,12 +3,12 @@ name = "sunday-python-generated-test"
 version = "0.0.0"
 requires-python = ">=3.12"
 dependencies = [
-  "sunday-python>=2.0.0.dev0,<2.1",
+  "sunday-python>=2.0.0b1,<2.1",
 ]
 
 [project.optional-dependencies]
-httpx = ["sunday-python[httpx]>=2.0.0.dev0,<2.1"]
-litestar = ["sunday-python[litestar]>=2.0.0.dev0,<2.1"]
+httpx = ["sunday-python[httpx]>=2.0.0b1,<2.1"]
+litestar = ["sunday-python[litestar]>=2.0.0b1,<2.1"]
 
 [dependency-groups]
 dev = [
