@@ -29,6 +29,8 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
+import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -39,6 +41,7 @@ import java.net.URI
 class PythonGeneratedOutputParityTest : PythonTest() {
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `RAML source emits compile-backed client and server snapshots`(
     compiler: PythonCompiler,
     @ResourceUri("raml/ir/craft-project.raml") sourceUri: URI,
@@ -60,6 +63,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `OpenAPI source emits compile-backed client and server snapshots`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/project-3.1.yaml") sourceUri: URI,
@@ -137,6 +141,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `AsyncAPI source emits compile-backed client and server snapshots`(
     compiler: PythonCompiler,
     @ResourceUri("asyncapi/ir/typed-event-envelope-3.1.yaml") sourceUri: URI,
@@ -158,6 +163,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX_LITESTAR)
   fun `composed OpenAPI and AsyncAPI output passes client and server runtime smoke`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/composition-audit-3.1.yaml") openApiUri: URI,
@@ -233,6 +239,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `reserved Python service names compile in aggregate client and server output`(compiler: PythonCompiler) {
     val api =
       GeneratedApi(

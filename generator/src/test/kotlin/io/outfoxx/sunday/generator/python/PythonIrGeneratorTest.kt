@@ -28,6 +28,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
+import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.contains
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -68,6 +70,7 @@ class PythonIrGeneratorTest : PythonTest() {
           import asyncio
           from collections.abc import AsyncIterator, Callable, Sequence
           from dataclasses import dataclass
+          from importlib.metadata import distributions
           from types import TracebackType
           from typing import Any
 
@@ -170,6 +173,10 @@ class PythonIrGeneratorTest : PythonTest() {
 
 
           async def main() -> None:
+              installed = {distribution.metadata["Name"].lower() for distribution in distributions()}
+              assert "httpx" not in installed
+              assert "anyio" not in installed
+
               api = CraftAPI(FakeTransport())
               operation = api.projects.get_project("project-1")
               request = operation.transport_request()
@@ -189,6 +196,7 @@ class PythonIrGeneratorTest : PythonTest() {
   }
 
   @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `generates compileable aggregate Litestar modules from IR`(compiler: PythonCompiler) {
     val generator =
       PythonLitestarIrGenerator(

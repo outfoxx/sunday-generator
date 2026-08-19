@@ -34,9 +34,12 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
+import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
+@RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
 class PythonClientRendererTest : PythonTest() {
 
   @Test
