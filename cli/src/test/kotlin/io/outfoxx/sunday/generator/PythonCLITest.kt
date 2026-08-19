@@ -18,8 +18,8 @@ package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.parse
 import com.github.ajalt.clikt.testing.test
-import io.outfoxx.sunday.generator.python.PythonHttpxGenerateCommand
 import io.outfoxx.sunday.generator.python.PythonLitestarGenerateCommand
+import io.outfoxx.sunday.generator.python.PythonSundayGenerateCommand
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
@@ -41,13 +41,13 @@ class PythonCLITest {
       )
   }
 
-  class PythonHttpxGenerateCommandTest : PythonHttpxGenerateCommand() {
+  class PythonSundayGenerateCommandTest : PythonSundayGenerateCommand() {
     override fun run() {}
   }
 
   @Test
   fun `python shared options`() {
-    val command = PythonHttpxGenerateCommandTest()
+    val command = PythonSundayGenerateCommandTest()
     assertDoesNotThrow {
       command.parse(
         arrayOf(
@@ -57,6 +57,7 @@ class PythonCLITest {
           "-aggregate",
           "-aggregate-service-name",
           "TurnPostAPI",
+          "-broker",
           *requiredOptions,
         ),
       )
@@ -66,15 +67,20 @@ class PythonCLITest {
     assertThat(command.servicesFromTags, equalTo(true))
     assertThat(command.aggregateServices, equalTo(true))
     assertThat(command.aggregateServiceName, equalTo("TurnPostAPI"))
+    assertThat(command.broker, equalTo(true))
   }
 
   @Test
-  fun `generates httpx client files from OpenAPI tags`() {
-    val output = createTempDirectory("sunday-python-httpx-cli")
+  fun `generates neutral Sunday client files and removes the legacy runtime`() {
+    val output = createTempDirectory("sunday-python-sunday-cli")
     val openApi = taggedOpenApi()
+    val packageDirectory = output.resolve("turnpost_api")
+    Files.createDirectories(packageDirectory)
+    Files.writeString(packageDirectory.resolve("runtime.py"), "# legacy generated runtime\n")
+    Files.writeString(packageDirectory.resolve("handwritten.py"), "# keep\n")
 
     val result =
-      PythonHttpxGenerateCommand()
+      PythonSundayGenerateCommand()
         .test(
           arrayOf(
             "-pkg",
@@ -92,7 +98,8 @@ class PythonCLITest {
     assertThat(result.statusCode, equalTo(0))
     assertThat(Files.exists(output.resolve("turnpost_api").resolve("__init__.py")), equalTo(true))
     assertThat(Files.exists(output.resolve("turnpost_api").resolve("models.py")), equalTo(true))
-    assertThat(Files.exists(output.resolve("turnpost_api").resolve("runtime.py")), equalTo(true))
+    assertThat(Files.exists(output.resolve("turnpost_api").resolve("runtime.py")), equalTo(false))
+    assertThat(Files.readString(output.resolve("turnpost_api").resolve("handwritten.py")), equalTo("# keep\n"))
     assertThat(Files.exists(output.resolve("turnpost_api").resolve("users.py")), equalTo(true))
     assertThat(Files.exists(output.resolve("turnpost_api").resolve("projects.py")), equalTo(true))
     assertThat(Files.exists(output.resolve("turnpost_api").resolve("api.py")), equalTo(true))
@@ -104,7 +111,7 @@ class PythonCLITest {
     val openApi = taggedOpenApi()
 
     val result =
-      PythonHttpxGenerateCommand()
+      PythonSundayGenerateCommand()
         .test(
           arrayOf(
             "-out",
@@ -116,6 +123,32 @@ class PythonCLITest {
     assertThat(result.statusCode, equalTo(0))
     assertThat(Files.exists(output.resolve("turnpost").resolve("__init__.py")), equalTo(true))
     assertThat(Files.exists(output.resolve("turnpost").resolve("api.py")), equalTo(false))
+  }
+
+  @Test
+  fun `model-only Sunday generation preserves an existing runtime module`() {
+    val output = createTempDirectory("sunday-python-model-only-cli")
+    val openApi = taggedOpenApi()
+    val runtime = output.resolve("turnpost_api").resolve("runtime.py")
+    Files.createDirectories(runtime.parent)
+    Files.writeString(runtime, "# retained service module\n")
+
+    val result =
+      PythonSundayGenerateCommand()
+        .test(
+          arrayOf(
+            "-package",
+            "turnpost_api",
+            "-category",
+            "model",
+            "-out",
+            output.toString(),
+            openApi.toString(),
+          ),
+        )
+
+    assertThat(result.statusCode, equalTo(0))
+    assertThat(Files.readString(runtime), equalTo("# retained service module\n"))
   }
 
   @Test

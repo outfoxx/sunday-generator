@@ -17,11 +17,14 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -37,6 +40,153 @@ import org.junit.jupiter.api.Test
 import java.net.URI
 
 class PythonModelRendererTest : PythonTest() {
+
+  @Test
+  fun `generates constrained aliases inheritance recursive references and open objects`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "ShortName",
+          kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          validation = mapOf("minLength" to "+002"),
+        ),
+        GeneratedModel(
+          name = "Tags",
+          kind = GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          collection = GeneratedCollectionKind.SET,
+          validation = mapOf("minItems" to "1", "uniqueItems" to "true"),
+        ),
+        GeneratedModel(
+          name = "Scores",
+          kind = GeneratedModel.Kind.MAP,
+          aliases = listOf(GeneratedTypeRef.scalar("integer")),
+          validation = mapOf("maxProperties" to "2"),
+        ),
+        GeneratedModel(
+          name = "BaseRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)),
+        ),
+        GeneratedModel(
+          name = "ChildRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("BaseRecord")),
+          properties =
+            listOf(
+              GeneratedModelProperty("name", GeneratedTypeRef.named("ShortName")),
+              GeneratedModelProperty(
+                "count",
+                GeneratedTypeRef.scalar("integer"),
+                defaultValue = "+003",
+                validation = mapOf("minimum" to "+0001", "exclusiveMinimum" to "true"),
+              ),
+              GeneratedModelProperty(
+                "ratio",
+                GeneratedTypeRef.scalar("number"),
+                defaultValue = "+01.50",
+                validation = mapOf("maximum" to "2E+0", "multipleOf" to "+00.25"),
+              ),
+            ),
+          closed = true,
+        ),
+        GeneratedModel(
+          name = "PatternRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          patternProperties =
+            listOf(
+              GeneratedPatternProperty(
+                pattern = "^x-",
+                type = GeneratedTypeRef.scalar("string"),
+                validation = mapOf("minLength" to "2"),
+              ),
+            ),
+          additionalProperties = GeneratedAdditionalProperties(allowed = false),
+        ),
+        GeneratedModel(
+          name = "Node",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty("value", GeneratedTypeRef.scalar("string"), required = true),
+              GeneratedModelProperty(
+                "children",
+                GeneratedTypeRef(
+                  kind = GeneratedTypeRef.Kind.ARRAY,
+                  name = "children",
+                  arguments = listOf(GeneratedTypeRef.named("Node")),
+                ),
+              ),
+            ),
+        ),
+      )
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter, ValidationError
+          from turnpost_api.models import ChildRecord, Node, PatternRecord, Scores, ShortName, Tags
+
+          assert TypeAdapter(ShortName).validate_python("ok") == "ok"
+          assert TypeAdapter(Tags).validate_python(["a", "a"]) == {"a"}
+          assert TypeAdapter(Scores).validate_python({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+          child = ChildRecord.model_validate({"id": "1"})
+          assert child.count == 3
+          assert child.ratio == 1.5
+          assert Node.model_validate({"value": "root", "children": [{"value": "leaf"}]}).children
+          assert PatternRecord.model_validate({"x-name": "ok"}).model_dump()["x-name"] == "ok"
+
+          invalid_values = (
+              lambda: TypeAdapter(ShortName).validate_python("x"),
+              lambda: TypeAdapter(Tags).validate_python([]),
+              lambda: TypeAdapter(Scores).validate_python({"a": 1, "b": 2, "c": 3}),
+              lambda: ChildRecord.model_validate({"id": "1", "name": None}),
+              lambda: ChildRecord.model_validate({"id": "1", "count": 1}),
+              lambda: PatternRecord.model_validate({"x-name": "x"}),
+              lambda: PatternRecord.model_validate({"other": "ok"}),
+          )
+          for invalid_value in invalid_values:
+              try:
+                  invalid_value()
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError("expected validation failure")
+          """.trimIndent(),
+      ),
+      modelsModule.source,
+    )
+  }
+
+  @Test
+  fun `rejects executable OpenAPI numeric defaults and constraints`(
+    @ResourceUri("openapi/ir/python-unsafe-numeric-default-3.1.yaml") defaultUri: URI,
+    @ResourceUri("openapi/ir/python-unsafe-numeric-constraint-3.1.yaml") constraintUri: URI,
+  ) {
+    val cases =
+      listOf(
+        Triple(defaultUri, "Invalid integer default for property 'count'", "sunday-python-default"),
+        Triple(constraintUri, "Invalid number constraint 'minimum'", "sunday-python-minimum"),
+      )
+
+    cases.forEach { (sourceUri, expectedContext, injectedMarker) ->
+      val api = GeneratedApiIrExporter().export(sourceUri)
+      val error =
+        assertThrows(GenerationException::class.java) {
+          PythonModelRenderer("turnpost_api").renderModels(api.models)
+        }
+
+      assertTrue(error.message!!.contains(expectedContext), error.message)
+      assertTrue(error.message!!.contains(injectedMarker), error.message)
+    }
+  }
 
   @Test
   fun `generates pydantic object and enum models from IR`(compiler: PythonCompiler) {
@@ -326,7 +476,7 @@ class PythonModelRendererTest : PythonTest() {
       ),
     )
     assertTrue(modelsModule.source.contains("id: str"), modelsModule.source)
-    assertTrue(modelsModule.source.contains("occurred_at: datetime"), modelsModule.source)
+    assertTrue(modelsModule.source.contains("occurred_at: AwareDatetime"), modelsModule.source)
     assertTrue(modelsModule.source.contains("data: AccountsTeamCreatedData"), modelsModule.source)
     assertTrue(modelsModule.source.contains("data: NotificationAnnouncementPublishedData"), modelsModule.source)
   }
@@ -473,9 +623,9 @@ class PythonModelRendererTest : PythonTest() {
       )
     }
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
-    assertTrue(source.contains("def _missing_(cls, value: object) -> Self | None:"), source)
-    assertTrue(source.contains("member._name_ = \"UNKNOWN\""), source)
-    assertTrue(source.contains("member._value_ = value"), source)
+    assertTrue(source.contains("class TaskState(TolerantStrEnum):"), source)
+    assertTrue(source.contains("__unknown_member_name__ = \"UNKNOWN\""), source)
+    assertTrue(!source.contains("def _missing_("), source)
   }
 
   @Test
@@ -709,6 +859,116 @@ class PythonModelRendererTest : PythonTest() {
   fun `prefixes digit leading Python enum member names`() {
     assertEquals("_123", "123".pythonEnumMemberName)
     assertEquals("_123_ABC", "123ABC".pythonEnumMemberName)
+  }
+
+  @Test
+  fun `generates wire faithful scalar formats and collections`(compiler: PythonCompiler) {
+    val module =
+      PythonModelRenderer("turnpost_api")
+        .renderModels(
+          listOf(
+            GeneratedModel(
+              name = "WireValues",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "fullDate",
+                    GeneratedTypeRef.scalar("string", format = "full-date"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "partialTime",
+                    GeneratedTypeRef.scalar("string", format = "partial-time"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "occurredAt",
+                    GeneratedTypeRef.scalar("string", format = "date-time"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "localTime",
+                    GeneratedTypeRef.scalar("string", format = "date-time-only"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty("uri", GeneratedTypeRef.scalar("string", format = "iri"), required = true),
+                  GeneratedModelProperty(
+                    "reference",
+                    GeneratedTypeRef.scalar("string", format = "uri-reference"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "encoded",
+                    GeneratedTypeRef.scalar("string", format = "byte"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "binary",
+                    GeneratedTypeRef.scalar("string", format = "binary"),
+                    required = true,
+                  ),
+                  GeneratedModelProperty(
+                    "tags",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "Tags",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                      collection = GeneratedCollectionKind.SET,
+                    ),
+                    required = true,
+                  ),
+                ),
+            ),
+          ),
+        )
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(module),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import ValidationError
+          from turnpost_api.models import WireValues
+
+          value = WireValues.model_validate({
+              "fullDate": "2026-08-19",
+              "partialTime": "12:30:00",
+              "occurredAt": "2026-08-19T12:30:00Z",
+              "localTime": "2026-08-19T12:30:00",
+              "uri": "https://例え.テスト/path",
+              "reference": "../relative",
+              "encoded": "dmFsdWU=",
+              "binary": "value",
+              "tags": ["one", "two", "one"],
+          })
+          assert value.encoded == b"value"
+          assert value.binary == b"value"
+          assert value.tags == {"one", "two"}
+
+          for field, invalid in (
+              ("occurredAt", "2026-08-19T12:30:00"),
+              ("localTime", "2026-08-19T12:30:00Z"),
+          ):
+              data = value.model_dump(mode="json", by_alias=True)
+              data[field] = invalid
+              try:
+                  WireValues.model_validate(data)
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError(f"{field} accepted an invalid timezone form")
+          """.trimIndent(),
+      ),
+    )
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(source.contains("occurred_at: AwareDatetime"), source)
+    assertTrue(source.contains("local_time: NaiveDatetime"), source)
+    assertTrue(source.contains("encoded: Base64Bytes"), source)
+    assertTrue(source.contains("reference: str"), source)
+    assertTrue(source.contains("tags: set[str]"), source)
   }
 
   @Test

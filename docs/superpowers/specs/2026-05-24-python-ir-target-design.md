@@ -204,7 +204,7 @@ Non-HTTP AsyncAPI broker channels are deferred.
 
 Add separate targets:
 
-- `python/httpx`
+- `python/sunday` (transport-neutral client; supersedes the original `python/httpx` target)
 - `python/litestar`
 
 Shared options:
@@ -251,7 +251,7 @@ Initial fixtures:
 1. Add Python emitter infrastructure and compile-backed test helper.
 2. Generate Pydantic models for a narrow model fixture.
 3. Generate problem payload/exception types for one problem fixture.
-4. Generate `python/httpx` client vertical slice for one operation.
+4. Generate a transport-neutral `python/sunday` client vertical slice for one operation.
 5. Generate `python/litestar` server stub vertical slice for the same operation.
 6. Add service grouping and package naming.
 7. Add aggregate client and aggregate router generation.

@@ -26,9 +26,17 @@ class PythonModuleWriter {
   fun writeModules(
     modules: List<PythonModule>,
     outputDirectory: Path,
+    obsoleteModulePaths: Collection<String> = emptyList(),
   ) {
+    val outputRoot = outputDirectory.toAbsolutePath().normalize()
+    obsoleteModulePaths.forEach { modulePath ->
+      val path = outputRoot.resolve(modulePath).normalize()
+      require(path.startsWith(outputRoot)) { "Obsolete Python module path escapes the output directory: $modulePath" }
+      Files.deleteIfExists(path)
+    }
     modules.forEach { module ->
-      val path = outputDirectory.resolve(module.path).normalize()
+      val path = outputRoot.resolve(module.path).normalize()
+      require(path.startsWith(outputRoot)) { "Python module path escapes the output directory: ${module.path}" }
       Files.createDirectories(path.parent)
       Files.writeString(path, module.source)
     }

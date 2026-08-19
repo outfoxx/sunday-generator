@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.python
+package io.outfoxx.sunday.test.extensions
 
-/** Options shared by Python IR-backed generators. */
-data class PythonGeneratorOptions(
-  val packageName: String? = null,
-  val aggregateServices: Boolean = false,
-  val aggregateServiceName: String? = null,
-  val broker: Boolean = false,
-)
+/** Dependency profiles available to compile-backed generated Python tests. */
+enum class PythonRuntimeProfile(
+  val extras: Set<String>,
+) {
+  CORE(emptySet()),
+  HTTPX(setOf("httpx")),
+  LITESTAR(setOf("litestar")),
+  HTTPX_LITESTAR(setOf("httpx", "litestar")),
+}

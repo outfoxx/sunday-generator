@@ -30,9 +30,12 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
+import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
+@RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonLitestarRendererTest : PythonTest() {
 
   @Test
@@ -48,6 +51,30 @@ class PythonLitestarRendererTest : PythonTest() {
               properties =
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "ProjectQuery",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "tags",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "tags",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                    ),
+                    required = true,
+                  ),
+                ),
+            ),
+            GeneratedModel(
+              name = "Configuration",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
                 ),
             ),
@@ -114,6 +141,13 @@ class PythonLitestarRendererTest : PythonTest() {
                         type = GeneratedTypeRef.scalar("string"),
                         required = true,
                       ),
+                      GeneratedParameter(
+                        name = "sessionId",
+                        location = GeneratedParameter.Location.COOKIE,
+                        type = GeneratedTypeRef.scalar("string"),
+                        serializationName = "session-id",
+                        required = true,
+                      ),
                     ),
                   responses =
                     listOf(
@@ -121,6 +155,16 @@ class PythonLitestarRendererTest : PythonTest() {
                         status = 200,
                         type = GeneratedTypeRef.named("ProjectView"),
                         mediaTypes = listOf("application/json"),
+                        headers =
+                          listOf(
+                            GeneratedParameter(
+                              name = "xRevision",
+                              location = GeneratedParameter.Location.HEADER,
+                              type = GeneratedTypeRef.scalar("integer"),
+                              serializationName = "X-Revision",
+                              required = true,
+                            ),
+                          ),
                       ),
                     ),
                 ),
@@ -148,6 +192,7 @@ class PythonLitestarRendererTest : PythonTest() {
                         location = GeneratedParameter.Location.HEADER,
                         type = GeneratedTypeRef.scalar("string"),
                         serializationName = "X-Trace-Id",
+                        required = true,
                       ),
                     ),
                   requestBody =
@@ -163,6 +208,82 @@ class PythonLitestarRendererTest : PythonTest() {
                         mediaTypes = listOf("application/json"),
                       ),
                     ),
+                ),
+                GeneratedOperation(
+                  id = "createProject",
+                  method = "POST",
+                  path = "/projects",
+                  requestBody =
+                    GeneratedPayload(
+                      type = GeneratedTypeRef.named("UpdateProjectRequest"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  responses =
+                    listOf(
+                      GeneratedResponse(
+                        status = 202,
+                        type = GeneratedTypeRef.named("ProjectView"),
+                        mediaTypes = listOf("application/json"),
+                      ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "listProjects",
+                  method = "GET",
+                  path = "/projects",
+                  queryString = GeneratedTypeRef.named("ProjectQuery"),
+                  responses =
+                    listOf(
+                      GeneratedResponse(
+                        status = 200,
+                        type =
+                          GeneratedTypeRef(
+                            kind = GeneratedTypeRef.Kind.ARRAY,
+                            name = "projects",
+                            arguments = listOf(GeneratedTypeRef.named("ProjectView")),
+                          ),
+                        mediaTypes = listOf("application/json"),
+                      ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "putConfiguration",
+                  method = "POST",
+                  path = "/configuration",
+                  requestBody =
+                    GeneratedPayload(
+                      type = GeneratedTypeRef.named("Configuration"),
+                      mediaTypes = listOf("application/yaml"),
+                    ),
+                  responses =
+                    listOf(
+                      GeneratedResponse(
+                        status = 200,
+                        type = GeneratedTypeRef.named("Configuration"),
+                        mediaTypes = listOf("application/yaml"),
+                      ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "headProject",
+                  method = "HEAD",
+                  path = "/projects/{projectId}",
+                  parameters =
+                    listOf(
+                      GeneratedParameter(
+                        name = "projectId",
+                        location = GeneratedParameter.Location.PATH,
+                        type = GeneratedTypeRef.scalar("string"),
+                        required = true,
+                      ),
+                    ),
+                  responses = listOf(GeneratedResponse(status = 200)),
+                ),
+                GeneratedOperation(
+                  id = "optionsProjects",
+                  method = "OPTIONS",
+                  path = "/projects",
+                  responses = listOf(GeneratedResponse(status = 204)),
                 ),
                 GeneratedOperation(
                   id = "deleteProjectAvatar",
@@ -225,28 +346,63 @@ class PythonLitestarRendererTest : PythonTest() {
           from collections.abc import AsyncIterator
 
           from litestar import Litestar
-          from litestar.plugins.pydantic import PydanticPlugin
           from litestar.testing import TestClient
+          from sunday.litestar import ServerResponse, SundayPlugin
 
           from turnpost_api.events_server import EventsService, create_events_router
-          from turnpost_api.models import EventEnvelope, ProjectCreatedData, ProjectView, UpdateProjectRequest
-          from turnpost_api.projects_server import ProjectsService, create_projects_router
+          from turnpost_api.models import (
+              EventEnvelope,
+              Configuration,
+              ProjectCreatedData,
+              ProjectQuery,
+              ProjectView,
+              UpdateProjectRequest,
+          )
+          from turnpost_api.projects_server import (
+              GetProjectResponseHeaders,
+              ProjectsService,
+              create_projects_router,
+          )
 
 
           class ProjectsImplementation:
-              async def get_project(self, project_id: str) -> ProjectView:
-                  return ProjectView(projectId=project_id, name="Roadmap")
+              async def get_project(
+                  self,
+                  project_id: str,
+                  session_id: str,
+              ) -> ServerResponse[ProjectView, GetProjectResponseHeaders]:
+                  assert session_id == "session-1"
+                  return ServerResponse(
+                      ProjectView(projectId=project_id, name="Roadmap"),
+                      {"X-Revision": 7},
+                  )
 
               async def update_project(
                   self,
                   project_id: str,
                   body: UpdateProjectRequest,
+                  x_trace_id: str,
                   include_archived: bool | None = False,
-                  x_trace_id: str | None = None,
               ) -> ProjectView:
                   assert include_archived is True
                   assert x_trace_id == "trace-1"
                   return ProjectView(projectId=project_id, name=body.display_name)
+
+              async def create_project(self, body: UpdateProjectRequest) -> ProjectView:
+                  return ProjectView(projectId="project-2", name=body.display_name)
+
+              async def list_projects(self, query_string: ProjectQuery) -> list[ProjectView]:
+                  assert query_string.tags == ["one", "two"]
+                  return [ProjectView(projectId="project-1", name="Roadmap")]
+
+              async def put_configuration(self, body: Configuration) -> Configuration:
+                  return body
+
+              async def head_project(self, project_id: str) -> None:
+                  assert project_id == "project-1"
+
+              async def options_projects(self) -> None:
+                  return None
 
               async def delete_project_avatar(self, project_id: str) -> None:
                   assert project_id == "project-1"
@@ -261,14 +417,15 @@ class PythonLitestarRendererTest : PythonTest() {
           events_service: EventsService = EventsImplementation()
           app = Litestar(
               route_handlers=[create_projects_router(service), create_events_router(events_service)],
-              plugins=[PydanticPlugin(prefer_alias=True)],
+              plugins=[SundayPlugin()],
           )
 
           with TestClient(app=app) as client:
-              response = client.get("/projects/project-1")
+              response = client.get("/projects/project-1", cookies={"session-id": "session-1"})
 
           assert response.status_code == 200
           assert response.json() == {"projectId": "project-1", "name": "Roadmap"}
+          assert response.headers["X-Revision"] == "7"
 
           with TestClient(app=app) as client:
               response = client.put(
@@ -279,6 +436,41 @@ class PythonLitestarRendererTest : PythonTest() {
 
           assert response.status_code == 200
           assert response.json() == {"projectId": "project-1", "name": "Updated"}
+
+          with TestClient(app=app) as client:
+              response = client.post("/projects", json={"displayName": "Created"})
+
+          assert response.status_code == 202
+          assert response.json() == {"projectId": "project-2", "name": "Created"}
+
+          with TestClient(app=app) as client:
+              response = client.get("/projects?tags=one&tags=two")
+
+          assert response.status_code == 200
+          assert response.json() == [{"projectId": "project-1", "name": "Roadmap"}]
+
+          with TestClient(app=app) as client:
+              response = client.post(
+                  "/configuration",
+                  content="name: Roadmap",
+                  headers={"content-type": "application/yaml"},
+              )
+
+          assert response.status_code == 200
+          assert response.headers["content-type"].startswith("application/yaml")
+          assert response.text == "name: Roadmap\n"
+
+          with TestClient(app=app) as client:
+              response = client.head("/projects/project-1")
+
+          assert response.status_code == 200
+          assert response.content == b""
+
+          with TestClient(app=app) as client:
+              response = client.options("/projects")
+
+          assert response.status_code == 204
+          assert response.content == b""
 
           with TestClient(app=app) as client:
               response = client.delete("/projects/project-1/avatar")

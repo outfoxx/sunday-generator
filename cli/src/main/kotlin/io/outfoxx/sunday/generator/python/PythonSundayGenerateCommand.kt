@@ -16,11 +16,12 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 
-/** CLI command that generates Python httpx clients from supported source specs. */
-open class PythonHttpxGenerateCommand :
-  PythonGenerateCommand(name = "python/httpx", help = "Generate Python httpx client") {
+/** CLI command that generates transport-neutral Python Sunday clients from supported source specs. */
+open class PythonSundayGenerateCommand :
+  PythonGenerateCommand(name = "python/sunday", help = "Generate Python client for Sunday framework") {
 
   override val generationMode: GenerationMode = GenerationMode.Client
 
@@ -30,9 +31,15 @@ open class PythonHttpxGenerateCommand :
 
     val export = exportApi()
     val modules =
-      PythonHttpxIrGenerator(export.api, pythonOptions(export))
+      PythonSundayIrGenerator(export.api, pythonOptions(export))
         .generateModules(outputCategories.toSet())
 
-    PythonModuleWriter().writeModules(modules, outputDirectory.toPath())
+    val obsoleteModulePaths =
+      if (GeneratedTypeCategory.Service in outputCategories) {
+        listOf(modules.first().path.substringBeforeLast('/') + "/runtime.py")
+      } else {
+        emptyList()
+      }
+    PythonModuleWriter().writeModules(modules, outputDirectory.toPath(), obsoleteModulePaths)
   }
 }

@@ -1,57 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Any, ClassVar, Self
+from pydantic import AwareDatetime, Field
+from sunday import Problem as _Problem, ProblemPayload as _ProblemPayload, ProblemRegistrar
+from typing import ClassVar
 from uuid import UUID
 
-__all__ = ["ProblemPayload", "Problem", "ProjectNotFoundProblemPayload", "ProjectNotFoundProblem"]
+__all__ = ["ProblemPayload", "Problem", "register_problems", "ProjectNotFoundProblemPayload", "ProjectNotFoundProblem"]
 
 
-class ProblemPayload(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    type: str = "about:blank"
-    title: str | None = None
-    status: int | None = None
-    detail: str | None = None
-    instance: str | None = None
-
-
-class Problem(Exception):
-    payload_type: ClassVar[type[ProblemPayload]] = ProblemPayload
-    payload: ProblemPayload
-
-    def __init__(self, payload: ProblemPayload) -> None:
-        super().__init__(payload.title or payload.type)
-        self.payload = payload
-
-    @classmethod
-    def model_validate(cls, value: object) -> Self:
-        return cls(cls.payload_type.model_validate(value))
-
-    @property
-    def type(self) -> str:
-        return self.payload.type
-
-    @property
-    def title(self) -> str | None:
-        return self.payload.title
-
-    @property
-    def status(self) -> int | None:
-        return self.payload.status
-
-    @property
-    def detail(self) -> str | None:
-        return self.payload.detail
-
-    @property
-    def instance(self) -> str | None:
-        return self.payload.instance
-
-    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
-        return self.payload.model_dump(**kwargs)
+ProblemPayload = _ProblemPayload
+Problem = _Problem
 
 
 class ProjectNotFoundProblemPayload(ProblemPayload):
@@ -59,7 +17,7 @@ class ProjectNotFoundProblemPayload(ProblemPayload):
     title: str | None = "Project not found"
     status: int | None = 404
     project_id: UUID = Field(alias="projectId")
-    retry_after: datetime | None = Field(default=None, alias="retry-after")
+    retry_after: AwareDatetime | None = Field(default=None, alias="retry-after")
 
 
 class ProjectNotFoundProblem(Problem):
@@ -78,5 +36,10 @@ class ProjectNotFoundProblem(Problem):
         return self.payload.project_id
 
     @property
-    def retry_after(self) -> datetime | None:
+    def retry_after(self) -> AwareDatetime | None:
         return self.payload.retry_after
+
+
+def register_problems(registrar: ProblemRegistrar) -> None:
+    """Register generated problem types for client response decoding."""
+    registrar.register_problem("https://turnpost.example/problems/project-not-found", ProjectNotFoundProblem)

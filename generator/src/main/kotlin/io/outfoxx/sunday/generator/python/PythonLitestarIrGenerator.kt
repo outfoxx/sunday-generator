@@ -28,7 +28,9 @@ class PythonLitestarIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
+    options.requireHttpOnly()
     val packageName = api.pythonPackageName(options)
+    val services = api.pythonHttpServices()
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     if (GeneratedTypeCategory.Model in outputCategories) {
@@ -38,16 +40,19 @@ class PythonLitestarIrGenerator(
 
     if (GeneratedTypeCategory.Service in outputCategories) {
       val litestarRenderer = PythonLitestarRenderer(packageName)
-      modules += api.services.map(litestarRenderer::renderService)
-      if (options.aggregateServices && api.services.size > 1) {
-        modules += renderAggregate(packageName)
+      modules += services.map(litestarRenderer::renderService)
+      if (options.aggregateServices && services.size > 1) {
+        modules += renderAggregate(packageName, services)
       }
     }
 
     return modules
   }
 
-  private fun renderAggregate(packageName: String): PythonModule {
+  private fun renderAggregate(
+    packageName: String,
+    services: List<GeneratedService>,
+  ): PythonModule {
     val module = PythonModuleBuilder("$packageName/api_server.py")
     val aggregateName = options.aggregateServiceName?.pythonIdentifierName ?: api.aggregateIdentifierName
     val routerFactoryName = "create_${aggregateName}_router"
@@ -59,7 +64,7 @@ class PythonLitestarIrGenerator(
         def %L(
         %C
         ) -> %T:
-            ${"\"\"\"Create an aggregate Litestar router for all generated service routers.\n\n            Configure Litestar with PydanticPlugin(prefer_alias=True) so responses use source wire names.\n            \"\"\""}
+            ${"\"\"\"Create an aggregate Litestar router for all generated service routers.\n\n            Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.\n            \"\"\""}
             return %T(
                 path="/",
                 route_handlers=[
@@ -68,10 +73,10 @@ class PythonLitestarIrGenerator(
             )
         """.trimIndent(),
         routerFactoryName,
-        PythonCodeBlock.join(api.services.map { service -> service.renderAggregateParameter() }, separator = "\n"),
+        PythonCodeBlock.join(services.map { service -> service.renderAggregateParameter() }, separator = "\n"),
         PythonSymbol("litestar", "Router"),
         PythonSymbol("litestar", "Router"),
-        PythonCodeBlock.join(api.services.map { service -> service.renderAggregateRouteHandler() }, separator = "\n"),
+        PythonCodeBlock.join(services.map { service -> service.renderAggregateRouteHandler() }, separator = "\n"),
       ),
     )
 

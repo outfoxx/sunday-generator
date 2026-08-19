@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info:
+  title: Unsafe Numeric Default API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Counter:
+      type: object
+      properties:
+        count:
+          type: integer
+          default: "(__import__('pathlib').Path('/tmp/sunday-python-default').touch() or 0)"

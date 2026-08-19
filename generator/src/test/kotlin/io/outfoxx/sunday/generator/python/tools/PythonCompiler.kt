@@ -24,20 +24,40 @@ import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
 
 class PythonCompiler(
   private val command: String,
   val workDir: Path,
+  private val sundayPythonPath: Path?,
+  extras: Set<String>,
 ) : Closeable,
   ExtensionContext.Store.CloseableResource {
 
   companion object {
 
-    fun create(workDir: Path): PythonCompiler {
+    private const val SUNDAY_PYTHON_REPOSITORY = "https://github.com/outfoxx/sunday-python.git"
+    private const val SUNDAY_PYTHON_TAG = "2.0.0-beta.1"
+
+    fun create(
+      workDir: Path,
+      extras: Set<String> = emptySet(),
+    ): PythonCompiler {
       val (uvExists, uvPath) = ShellProcess.execute("command", "-v", "uv")
       require(uvExists) { "Python generated source verification requires uv" }
-      return PythonCompiler(uvPath.trim(), workDir)
+      val sundayPythonPath =
+        System
+          .getenv("SUNDAY_PYTHON_PATH")
+          ?.let(Paths::get)
+          ?.toAbsolutePath()
+          ?.normalize()
+      if (sundayPythonPath != null) {
+        require(sundayPythonPath.resolve("pyproject.toml").exists()) {
+          "SUNDAY_PYTHON_PATH does not reference a sunday-python checkout: $sundayPythonPath"
+        }
+      }
+      return PythonCompiler(uvPath.trim(), workDir, sundayPythonPath, extras)
     }
   }
 
@@ -57,7 +77,30 @@ class PythonCompiler(
       }
     }
 
-    val (result, output) = execute("sync")
+    val uvSource =
+      if (sundayPythonPath != null) {
+        val sundayPythonSource = sundayPythonPath.toString().replace("\\", "\\\\")
+        """
+        [tool.uv.sources]
+        sunday-python = { path = "$sundayPythonSource", editable = true }
+        """.trimIndent()
+      } else {
+        """
+        [tool.uv.sources]
+        sunday-python = { git = "$SUNDAY_PYTHON_REPOSITORY", tag = "$SUNDAY_PYTHON_TAG" }
+        """.trimIndent()
+      }
+    Files.writeString(workDir.resolve("pyproject.toml"), "\n$uvSource\n", StandardOpenOption.APPEND)
+
+    val syncArguments =
+      buildList {
+        add("sync")
+        extras.sorted().forEach { extra ->
+          add("--extra")
+          add(extra)
+        }
+      }
+    val (result, output) = execute(*syncArguments.toTypedArray())
     check(result == 0) { "Python verification environment setup failed:\n$output" }
   }
 

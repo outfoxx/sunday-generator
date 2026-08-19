@@ -16,12 +16,16 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedPayloadOption
+import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
@@ -31,14 +35,18 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
+import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
+@RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
 class PythonClientRendererTest : PythonTest() {
 
   @Test
-  fun `generates operation runtime and first async httpx service method`(compiler: PythonCompiler) {
-    val clientRenderer = PythonClientRenderer("turnpost_api")
+  fun `generates neutral operations with an explicit HTTPX consumer`(compiler: PythonCompiler) {
+    val clientRenderer = PythonClientRenderer("turnpost_api", registerProblems = true)
     val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
     val modelsModule =
       PythonModelRenderer("turnpost_api")
@@ -51,6 +59,22 @@ class PythonClientRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "ProjectQuery",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "tags",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "tags",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                    ),
+                    required = true,
+                  ),
                 ),
             ),
             GeneratedModel(
@@ -107,7 +131,6 @@ class PythonClientRendererTest : PythonTest() {
             ),
           ),
         )
-    val runtimeModule = clientRenderer.renderRuntime()
     val serviceModule =
       clientRenderer.renderService(
         GeneratedService(
@@ -133,13 +156,51 @@ class PythonClientRendererTest : PythonTest() {
                       status = 200,
                       type = GeneratedTypeRef.named("ProjectView"),
                       mediaTypes = listOf("application/json"),
+                      headers =
+                        listOf(
+                          GeneratedParameter(
+                            name = "xRevision",
+                            location = GeneratedParameter.Location.HEADER,
+                            type = GeneratedTypeRef.scalar("integer"),
+                            serializationName = "X-Revision",
+                            required = true,
+                          ),
+                        ),
                     ),
+                  ),
+              ),
+              GeneratedOperation(
+                id = "findProject",
+                method = "GET",
+                path = "/projects/{projectId}",
+                parameters =
+                  listOf(
+                    GeneratedParameter(
+                      name = "projectId",
+                      location = GeneratedParameter.Location.PATH,
+                      type = GeneratedTypeRef.scalar("string"),
+                      required = true,
+                    ),
+                  ),
+                responses =
+                  listOf(
+                    GeneratedResponse(
+                      status = 200,
+                      type = GeneratedTypeRef.named("ProjectView"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  ),
+                nullify =
+                  GeneratedNullify(
+                    problems = listOf(GeneratedTypeRef.named("ProjectNotFoundProblem")),
+                    statuses = listOf(404),
                   ),
               ),
               GeneratedOperation(
                 id = "listProjects",
                 method = "GET",
                 path = "/projects",
+                queryString = GeneratedTypeRef.named("ProjectQuery"),
                 responses =
                   listOf(
                     GeneratedResponse(
@@ -286,6 +347,50 @@ class PythonClientRendererTest : PythonTest() {
                     ),
                   ),
               ),
+              GeneratedOperation(
+                id = "putPayload",
+                method = "POST",
+                path = "/payload",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.named("ProjectView"),
+                    mediaTypes = listOf("application/json"),
+                    payloads =
+                      listOf(
+                        GeneratedPayloadOption(
+                          type = GeneratedTypeRef.named("ProjectView"),
+                          mediaTypes = listOf("application/json"),
+                        ),
+                        GeneratedPayloadOption(
+                          type = GeneratedTypeRef.scalar("file"),
+                          mediaTypes = listOf("application/octet-stream"),
+                        ),
+                      ),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
+              GeneratedOperation(
+                id = "uploadMultipart",
+                method = "POST",
+                path = "/multipart",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.scalar("object"),
+                    mediaTypes = listOf("multipart/form-data"),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
+              GeneratedOperation(
+                id = "patchProject",
+                method = "PATCH",
+                path = "/patch",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.scalar("object"),
+                    mediaTypes = listOf("application/json-patch+json"),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
             ),
         ),
       )
@@ -312,11 +417,22 @@ class PythonClientRendererTest : PythonTest() {
             ),
         ),
       )
+    val problemsModule =
+      PythonProblemRenderer("turnpost_api")
+        .renderProblems(
+          listOf(
+            GeneratedProblem(
+              name = "ProjectNotFoundProblem",
+              typeUri = "https://turnpost.example/problems/project-not-found",
+              status = 404,
+            ),
+          ),
+        )
 
     assertTrue(
       compileModules(
         compiler,
-        listOf(initModule, modelsModule, runtimeModule, serviceModule, eventsModule),
+        listOf(initModule, modelsModule, problemsModule, serviceModule, eventsModule),
         importModules = listOf("turnpost_api.events", "turnpost_api.projects"),
         smokeCode =
           """
@@ -324,11 +440,20 @@ class PythonClientRendererTest : PythonTest() {
           import json
 
           import httpx
+          from sunday import (
+              MultipartBody,
+              MultipartPart,
+              PatchDocument,
+              PatchOperation,
+              PatchOperationKind,
+              StreamingBody,
+          )
+          from sunday.httpx import HttpxTransport
 
           from turnpost_api.events import EventsClient
-          from turnpost_api.models import ProjectCreatedData, UpdateProjectRequest
+          from turnpost_api.models import ProjectCreatedData, ProjectQuery, ProjectView, UpdateProjectRequest
+          from turnpost_api.problems import ProjectNotFoundProblem
           from turnpost_api.projects import ProjectsClient
-          from turnpost_api.runtime import StreamingBody
 
 
           class EventByteStream(httpx.AsyncByteStream):
@@ -336,9 +461,16 @@ class PythonClientRendererTest : PythonTest() {
                   yield b'data: {"type":"project.created","data":{"projectId":"project-1"}}\n\n'
 
 
+          event_requests = 0
+
+
           def handler(request: httpx.Request) -> httpx.Response:
+              global event_requests
               if request.url.path == "/events":
                   assert request.method == "GET"
+                  event_requests += 1
+                  if event_requests > 1:
+                      return httpx.Response(204)
                   return httpx.Response(
                       200,
                       headers={"content-type": "text/event-stream"},
@@ -347,9 +479,42 @@ class PythonClientRendererTest : PythonTest() {
 
               if request.method == "GET":
                   if request.url.path == "/projects":
+                      assert request.url.params.get_list("tags") == ["one", "two"]
                       return httpx.Response(200, json=[{"projectId": "project-1", "name": "Roadmap"}])
+                  if request.url.path == "/projects/missing":
+                      return httpx.Response(
+                          404,
+                          headers={"content-type": "application/problem+json"},
+                          json={"type": "https://turnpost.example/problems/project-not-found", "status": 404},
+                      )
                   assert request.url.path == "/projects/project-1"
-                  return httpx.Response(200, json={"projectId": "project-1", "name": "Roadmap"})
+                  return httpx.Response(
+                      200,
+                      headers={"X-Revision": "7"},
+                      json={"projectId": "project-1", "name": "Roadmap"},
+                  )
+
+              if request.url.path == "/payload":
+                  assert request.method == "POST"
+                  if request.headers["content-type"] == "application/json":
+                      assert json.loads(request.content)["projectId"] == "project-1"
+                  else:
+                      assert request.headers["content-type"] == "application/octet-stream"
+                      assert request.content == b"payload-bytes"
+                  return httpx.Response(204)
+
+              if request.url.path == "/multipart":
+                  assert request.method == "POST"
+                  assert request.headers["content-type"].startswith("multipart/form-data; boundary=")
+                  assert b'name="title"' in request.content
+                  assert b"Roadmap" in request.content
+                  return httpx.Response(204)
+
+              if request.url.path == "/patch":
+                  assert request.method == "PATCH"
+                  assert request.headers["content-type"] == "application/json-patch+json"
+                  assert json.loads(request.content) == [{"op": "replace", "path": "/name", "value": "Updated"}]
+                  return httpx.Response(204)
 
               if request.url.path == "/projects/project-1/avatar":
                   assert request.method == "PUT"
@@ -372,16 +537,28 @@ class PythonClientRendererTest : PythonTest() {
               assert request.url.params["includeArchived"] == "true"
               assert request.url.params["revisionId"] == "revision-1"
               assert request.headers["X-Trace-Id"] == "trace-1"
-              assert json.loads(request.content) == {"displayName": "Updated"}
+              assert json.loads(request.content) == {"displayName": "Updated", "fromCommitId": None}
               return httpx.Response(200, json={"projectId": "project-1", "name": "Updated"})
 
 
           async def main() -> None:
               transport = httpx.MockTransport(handler)
               async with httpx.AsyncClient(base_url="https://api.example.test", transport=transport) as http_client:
-                  operation = ProjectsClient(http_client).get_project("project-1")
+                  sunday_transport = HttpxTransport(http_client)
+                  projects_client = ProjectsClient(sunday_transport)
+                  events_client = EventsClient(sunday_transport)
+                  assert projects_client.transport is sunday_transport
+                  assert tuple(str(value) for value in projects_client.default_content_types) == ("application/json",)
+                  assert tuple(str(value) for value in projects_client.default_accept_types) == ("application/json",)
+                  operation = projects_client.get_project("project-1")
 
-                  request = operation.transport_request()
+                  decoded_problem = operation.transport.problem_registry.decode(
+                      {"type": "https://turnpost.example/problems/project-not-found"},
+                      response_status=404,
+                  )
+                  assert isinstance(decoded_problem, ProjectNotFoundProblem)
+
+                  request = await operation.transport_request()
                   assert request.method == "GET"
                   assert request.url.path == "/projects/project-1"
 
@@ -391,17 +568,22 @@ class PythonClientRendererTest : PythonTest() {
                   assert str(response.content_type) == "application/json"
                   assert response.get_header("content-type") == "application/json"
                   assert response.get_headers("content-type") == ("application/json",)
+                  assert response.decoded_header("X-Revision") == 7
 
                   project = await operation.execute()
                   assert project.project_id == "project-1"
                   assert project.name == "Roadmap"
 
-                  projects = await ProjectsClient(http_client).list_projects().execute()
+                  assert await projects_client.find_project("missing").execute_or_none() is None
+
+                  projects = await projects_client.list_projects(
+                      ProjectQuery(tags=["one", "two"])
+                  ).execute()
                   assert len(projects) == 1
                   assert projects[0].project_id == "project-1"
                   assert projects[0].name == "Roadmap"
 
-                  update_operation = ProjectsClient(http_client).update_project(
+                  update_operation = projects_client.update_project(
                       "project-1",
                       UpdateProjectRequest(display_name="Updated", from_commit_id=None),
                       revision_id="revision-1",
@@ -414,7 +596,7 @@ class PythonClientRendererTest : PythonTest() {
                   assert updated_project.name == "Updated"
 
                   try:
-                      ProjectsClient(http_client).update_project(
+                      projects_client.update_project(
                           "project-1",
                           UpdateProjectRequest(display_name="Updated", from_commit_id=None),
                       )
@@ -423,7 +605,7 @@ class PythonClientRendererTest : PythonTest() {
                   else:
                       raise AssertionError("required query parameter was accepted as omitted")
 
-                  avatar = await ProjectsClient(http_client).put_project_avatar(
+                  avatar = await projects_client.put_project_avatar(
                       "project-1",
                       b"avatar-bytes",
                       content_type="image/png",
@@ -431,27 +613,40 @@ class PythonClientRendererTest : PythonTest() {
                   assert avatar is None
 
                   try:
-                      ProjectsClient(http_client).put_project_avatar("project-1", b"avatar-bytes")
+                      projects_client.put_project_avatar("project-1", b"avatar-bytes")
                   except TypeError:
                       pass
                   else:
                       raise AssertionError("required header parameter was accepted as omitted")
 
-                  import_operation = ProjectsClient(http_client).import_project_archive(
+                  import_operation = projects_client.import_project_archive(
                       "project-1",
                       StreamingBody.bytes(b"archive-bytes"),
                   )
-                  import_request = import_operation.transport_request()
+                  import_request = await import_operation.transport_request()
                   assert import_request.method == "POST"
                   assert import_request.url.path == "/projects/project-1/archive"
 
                   import_id = await import_operation.execute()
                   assert import_id == "import-1"
 
-                  revision_id = await ProjectsClient(http_client).create_project_revision("project-1").execute()
+                  revision_id = await projects_client.create_project_revision("project-1").execute()
                   assert revision_id == "revision-1"
 
-                  stream = EventsClient(http_client).stream_project_events()
+                  await projects_client.put_payload(
+                      ProjectView(projectId="project-1", name="Roadmap")
+                  ).execute()
+                  await projects_client.put_payload(b"payload-bytes").execute()
+                  await projects_client.upload_multipart(
+                      MultipartBody((MultipartPart("title", "Roadmap"),))
+                  ).execute()
+                  await projects_client.patch_project(
+                      PatchDocument(
+                          (PatchOperation(PatchOperationKind.REPLACE, "/name", "Updated"),)
+                      )
+                  ).execute()
+
+                  stream = events_client.stream_project_events()
                   events = [event async for event in stream]
                   assert len(events) == 1
                   assert events[0].type == "project.created"
@@ -465,10 +660,6 @@ class PythonClientRendererTest : PythonTest() {
     )
 
     assertPythonSnapshot(
-      "PythonClientRendererTest/runtime.py",
-      CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/runtime.py"),
-    )
-    assertPythonSnapshot(
       "PythonClientRendererTest/projects.py",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/projects.py"),
     )
@@ -476,5 +667,135 @@ class PythonClientRendererTest : PythonTest() {
       "PythonClientRendererTest/events.py",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/events.py"),
     )
+  }
+
+  @Test
+  fun `generates exchange streaming discrimination and RFC6570 operations`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "ProjectCreated",
+          kind = GeneratedModel.Kind.OBJECT,
+          discriminatorValue = "project.created",
+        ),
+        GeneratedModel(
+          name = "ProjectDeleted",
+          kind = GeneratedModel.Kind.OBJECT,
+          discriminatorValue = "project.deleted",
+        ),
+      )
+    val eventUnion =
+      GeneratedTypeRef(
+        kind = GeneratedTypeRef.Kind.UNION,
+        name = "ProjectEvent",
+        arguments =
+          listOf(
+            GeneratedTypeRef.named("ProjectCreated"),
+            GeneratedTypeRef.named("ProjectDeleted"),
+          ),
+      )
+    val service =
+      GeneratedService(
+        name = "Events",
+        operations =
+          listOf(
+            GeneratedOperation(
+              id = "publishEvent",
+              method = "PUBLISH",
+              path = "/events",
+              exchange = GeneratedExchange.REQUEST,
+            ),
+            GeneratedOperation(
+              id = "nativeResponse",
+              method = "GET",
+              path = "/events/response",
+              exchange = GeneratedExchange.RESPONSE,
+            ),
+            GeneratedOperation(
+              id = "rawEvents",
+              method = "GET",
+              path = "/events/raw",
+              streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_SOURCE),
+            ),
+            GeneratedOperation(
+              id = "typedEvents",
+              method = "GET",
+              path = "/events/typed",
+              streaming =
+                GeneratedStreaming(
+                  kind = GeneratedStreaming.Kind.EVENT_STREAM,
+                  eventMode = GeneratedStreaming.EventMode.DISCRIMINATED,
+                ),
+              responses =
+                listOf(
+                  GeneratedResponse(
+                    status = 200,
+                    type = eventUnion,
+                    mediaTypes = listOf("text/event-stream"),
+                  ),
+                ),
+            ),
+            GeneratedOperation(
+              id = "templatedEvents",
+              method = "GET",
+              path = "/roots/{+path}/events/{id}{?fields*}",
+              parameters =
+                listOf(
+                  GeneratedParameter(
+                    name = "path",
+                    location = GeneratedParameter.Location.PATH,
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                  ),
+                  GeneratedParameter(
+                    name = "id",
+                    location = GeneratedParameter.Location.PATH,
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                  ),
+                  GeneratedParameter(
+                    name = "fields",
+                    location = GeneratedParameter.Location.QUERY,
+                    type =
+                      GeneratedTypeRef(
+                        kind = GeneratedTypeRef.Kind.ARRAY,
+                        name = "Fields",
+                        arguments = listOf(GeneratedTypeRef.scalar("string")),
+                      ),
+                    required = true,
+                  ),
+                ),
+              responses = listOf(GeneratedResponse(status = 204)),
+            ),
+          ),
+      )
+    val modules =
+      listOf(
+        PythonModuleBuilder("turnpost_api/__init__.py").build(),
+        PythonModelRenderer("turnpost_api").renderModels(models),
+        PythonClientRenderer("turnpost_api", models = models).renderService(service),
+      )
+
+    assertTrue(compileModules(compiler, modules, importModules = listOf("turnpost_api.events")))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/events.py")
+
+    assertTrue(source.contains("async def publish_event(self) -> TransportRequestT:"), source)
+    assertTrue(source.contains("method=\"POST\""), source)
+    assertTrue(source.contains("return await self.transport.transport_request(request_spec)"), source)
+    assertTrue(source.contains("async def native_response(self) -> TransportResponseT:"), source)
+    assertTrue(source.contains("return await self.transport.transport_response(request)"), source)
+    assertTrue(source.contains("def raw_events(self) -> EventSource:"), source)
+    assertTrue(source.contains("return self.transport.event_source(request_spec)"), source)
+    assertFalse(source.contains("self._transport"), source)
+    assertFalse(source.contains("prepare_request"), source)
+    assertFalse(source.contains("decode_response"), source)
+    assertTrue(source.contains("if event.event == \"project.created\":"), source)
+    assertTrue(source.contains("if event.event == \"project.deleted\":"), source)
+    assertTrue(source.contains("Unknown event type, ignoring event"), source)
+    assertTrue(source.contains("path_template=URITemplate(\"/roots/{+path}/events/{id}{?fields*}\")"), source)
+    assertTrue(source.contains("template_parameters={\"path\": path, \"fields\": fields}"), source)
+    assertTrue(source.contains("name=\"id\""), source)
+    assertTrue(!source.contains("name=\"path\""), source)
+    assertTrue(!source.contains("name=\"fields\""), source)
   }
 }

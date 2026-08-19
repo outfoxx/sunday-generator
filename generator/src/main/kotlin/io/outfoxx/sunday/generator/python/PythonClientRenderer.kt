@@ -17,814 +17,787 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedExchange
+import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
+import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 
-/** Renders the first Python client runtime and service method surface from IR. */
+/** Renders declarative transport-neutral Sunday Python clients from generated IR. */
 class PythonClientRenderer(
   private val packageName: String,
+  private val registerProblems: Boolean = false,
+  models: List<GeneratedModel> = emptyList(),
+  private val defaultMediaTypes: List<String> = listOf("application/json"),
 ) {
 
-  /** Renders the shared Python client runtime module. */
-  fun renderRuntime(): PythonModule {
-    val module = PythonModuleBuilder("$packageName/runtime.py")
+  private val modelIndex = models.associateBy { model -> model.name }
 
-    module.addExport("Operation")
-    module.addExport("OperationResponse")
-    module.addExport("EventStream")
-    module.addExport("MediaType")
-    module.addExport("ResponseHeaders")
-    module.addExport("StreamingBody")
-    module.addExport("StreamingOperation")
-    module.addExport("Transport")
-    module.addExport("TransportRequest")
-    module.addExport("TransportResponse")
-    module.addExport("json_body")
-    module.addExport("parameter_map")
-    module.addExport("path_template")
-    module.addCode(
-      PythonCodeBlock.of(
-        """
-        type Transport = %T
-        type TransportRequest = %T
-        type TransportResponse = %T
-        type StreamingBodyChunk = bytes | bytearray | memoryview
-        type StreamingBodyContent = bytes | %T[bytes] | %T[bytes]
-
-
-        def _streaming_chunk(chunk: StreamingBodyChunk) -> bytes:
-            return bytes(chunk)
-
-
-        def _streaming_iterable(chunks: %T[StreamingBodyChunk]) -> %T[bytes]:
-            for chunk in chunks:
-                yield _streaming_chunk(chunk)
-
-
-        async def _streaming_async_iterable(chunks: %T[StreamingBodyChunk]) -> %T[bytes]:
-            async for chunk in chunks:
-                yield _streaming_chunk(chunk)
-
-
-        @%T(frozen=True, slots=True)
-        class StreamingBody:
-            ${"\"\"\"A reusable streaming request body backed by a fresh content factory.\"\"\""}
-
-            factory: %T[[], StreamingBodyContent]
-
-            @classmethod
-            def bytes(cls, data: StreamingBodyChunk) -> StreamingBody:
-                ${"\"\"\"Create a streaming body from in-memory bytes.\"\"\""}
-                content = _streaming_chunk(data)
-                return cls(lambda: content)
-
-            @classmethod
-            def iterable(cls, factory: %T[[], %T[StreamingBodyChunk]]) -> StreamingBody:
-                ${"\"\"\"Create a streaming body from a fresh byte iterable factory.\"\"\""}
-                return cls(lambda: _streaming_iterable(factory()))
-
-            @classmethod
-            def async_iterable(cls, factory: %T[[], %T[StreamingBodyChunk]]) -> StreamingBody:
-                ${"\"\"\"Create a streaming body from a fresh async byte iterable factory.\"\"\""}
-                return cls(lambda: _streaming_async_iterable(factory()))
-
-            def content(self) -> StreamingBodyContent:
-                ${"\"\"\"Create the httpx request content for one request attempt.\"\"\""}
-                return self.factory()
-
-
-        @%T(frozen=True, slots=True)
-        class MediaType:
-            ${"\"\"\"A parsed media type header value.\"\"\""}
-
-            value: str
-
-            @property
-            def type(self) -> str:
-                ${"\"\"\"Return the top-level media type.\"\"\""}
-                return self.value.split(";", 1)[0].partition("/")[0].strip().lower()
-
-            @property
-            def subtype(self) -> str:
-                ${"\"\"\"Return the media subtype.\"\"\""}
-                return self.value.split(";", 1)[0].partition("/")[2].strip().lower()
-
-            def __str__(self) -> str:
-                return self.value
-
-
-        @%T(frozen=True, slots=True)
-        class ResponseHeaders:
-            ${"\"\"\"Case-insensitive access to response headers.\"\"\""}
-
-            entries: tuple[tuple[str, str], ...]
-
-            @classmethod
-            def from_headers(cls, headers: %T) -> ResponseHeaders:
-                ${"\"\"\"Create a response header view from httpx headers.\"\"\""}
-                return cls(tuple(headers.multi_items()))
-
-            def get_all(self, name: str) -> tuple[str, ...]:
-                ${"\"\"\"Return all response header values with the requested name.\"\"\""}
-                lower_name = name.lower()
-                return tuple(value for header_name, value in self.entries if header_name.lower() == lower_name)
-
-            def get(self, name: str) -> str | None:
-                ${"\"\"\"Return the first response header value with the requested name.\"\"\""}
-                values = self.get_all(name)
-                return values[0] if values else None
-
-            @property
-            def content_type(self) -> MediaType | None:
-                ${"\"\"\"Return the parsed Content-Type header when present.\"\"\""}
-                value = self.get("Content-Type")
-                return MediaType(value) if value is not None else None
-
-
-        @%T(frozen=True, slots=True)
-        class OperationResponse[ResponseT]:
-            ${"\"\"\"A typed operation result with its transport response metadata.\"\"\""}
-
-            result: ResponseT
-            transport_response: TransportResponse
-
-            @property
-            def status(self) -> int:
-                ${"\"\"\"Return the HTTP response status code.\"\"\""}
-                return self.transport_response.status_code
-
-            @property
-            def headers(self) -> ResponseHeaders:
-                ${"\"\"\"Return a case-insensitive response header view.\"\"\""}
-                return ResponseHeaders.from_headers(self.transport_response.headers)
-
-            def get_headers(self, name: str) -> tuple[str, ...]:
-                ${"\"\"\"Return all response header values with the requested name.\"\"\""}
-                return self.headers.get_all(name)
-
-            def get_header(self, name: str) -> str | None:
-                ${"\"\"\"Return the first response header value with the requested name.\"\"\""}
-                return self.headers.get(name)
-
-            @property
-            def content_type(self) -> MediaType | None:
-                ${"\"\"\"Return the parsed Content-Type header when present.\"\"\""}
-                return self.headers.content_type
-
-
-        @%T(frozen=True, slots=True)
-        class Operation[ResponseT]:
-            ${"\"\"\"A prepared HTTP operation that can produce transport values or execute.\"\"\""}
-
-            transport: Transport
-            request: TransportRequest
-            decode: %T[[%T], ResponseT]
-
-            async def execute(self) -> ResponseT:
-                ${"\"\"\"Send the request and decode the successful response body.\"\"\""}
-                return (await self.response()).result
-
-            async def response(self) -> OperationResponse[ResponseT]:
-                ${"\"\"\"Send the request and return the decoded response with metadata.\"\"\""}
-                response = await self.transport_response()
-                response.raise_for_status()
-                return OperationResponse(result=self.decode(response), transport_response=response)
-
-            def transport_request(self) -> TransportRequest:
-                ${"\"\"\"Return the transport-specific request value.\"\"\""}
-                return self.request
-
-            async def transport_response(self) -> TransportResponse:
-                ${"\"\"\"Send the request and return the transport-specific response value.\"\"\""}
-                return await self.transport.send(self.request)
-
-
-        @%T(frozen=True, slots=True)
-        class StreamingOperation[ResponseT]:
-            ${"\"\"\"A prepared streaming upload operation that builds a fresh request for each attempt.\"\"\""}
-
-            transport: Transport
-            build_request: %T[[], TransportRequest]
-            decode: %T[[%T], ResponseT]
-
-            async def execute(self) -> ResponseT:
-                ${"\"\"\"Send the request and decode the successful response body.\"\"\""}
-                return (await self.response()).result
-
-            async def response(self) -> OperationResponse[ResponseT]:
-                ${"\"\"\"Send the request and return the decoded response with metadata.\"\"\""}
-                response = await self.transport_response()
-                response.raise_for_status()
-                return OperationResponse(result=self.decode(response), transport_response=response)
-
-            def transport_request(self) -> TransportRequest:
-                ${"\"\"\"Return a fresh transport-specific request value.\"\"\""}
-                return self.build_request()
-
-            async def transport_response(self) -> TransportResponse:
-                ${"\"\"\"Send a fresh request and return the transport-specific response value.\"\"\""}
-                return await self.transport.send(self.build_request())
-
-
-        @%T(frozen=True, slots=True)
-        class EventStream[EventT]:
-            ${"\"\"\"A prepared HTTP SSE stream that decodes events as they arrive.\"\"\""}
-
-            transport: Transport
-            request: TransportRequest
-            decode: %T[[str], EventT]
-
-            def __aiter__(self) -> %T[EventT]:
-                return self.events()
-
-            async def events(self) -> %T[EventT]:
-                ${"\"\"\"Send the request and decode server-sent event payloads.\"\"\""}
-                response = await self.transport.send(self.request, stream=True)
-                try:
-                    response.raise_for_status()
-                    async for payload in event_payloads(response):
-                        yield self.decode(payload)
-                finally:
-                    await response.aclose()
-
-
-        def json_body(body: object | None) -> object | None:
-            ${"\"\"\"Convert a generated model into a JSON request body.\"\"\""}
-            if isinstance(body, %T):
-                return body.model_dump(mode="json", by_alias=True, exclude_none=True)
-            return body
-
-
-        def parameter_map(parameters: %T[str, object | None]) -> dict[str, str]:
-            ${"\"\"\"Format request parameters while omitting absent values.\"\"\""}
-            return {name: parameter_value(value) for name, value in parameters.items() if value is not None}
-
-
-        def path_template(path: str, path_parameters: %T[str, object]) -> str:
-            ${"\"\"\"Expand a URI path template using URL-encoded path parameter values.\"\"\""}
-            for name, value in path_parameters.items():
-                path = path.replace("{" + name + "}", %T(parameter_value(value), safe=""))
-            return path
-
-
-        def parameter_value(value: object) -> str:
-            if isinstance(value, bool):
-                return "true" if value else "false"
-            return str(value)
-
-
-        async def event_payloads(response: %T) -> %T[str]:
-            data_lines: list[str] = []
-            async for line in response.aiter_lines():
-                if line == "":
-                    if data_lines:
-                        yield "\n".join(data_lines)
-                        data_lines = []
-                    continue
-                if line.startswith(":"):
-                    continue
-                field, _, value = line.partition(":")
-                if value.startswith(" "):
-                    value = value[1:]
-                if field == "data":
-                    data_lines.append(value)
-
-            if data_lines:
-                yield "\n".join(data_lines)
-        """.trimIndent(),
-        PythonSymbol("httpx", "AsyncClient"),
-        PythonSymbol("httpx", "Request"),
-        PythonSymbol("httpx", "Response"),
-        PythonSymbol("collections.abc", "Iterable"),
-        PythonSymbol("collections.abc", "AsyncIterable"),
-        PythonSymbol("collections.abc", "Iterable"),
-        PythonSymbol("collections.abc", "Iterator"),
-        PythonSymbol("collections.abc", "AsyncIterable"),
-        PythonSymbol("collections.abc", "AsyncIterator"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("collections.abc", "Iterable"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("collections.abc", "AsyncIterable"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("httpx", "Headers"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("httpx", "Response"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("httpx", "Response"),
-        PythonSymbol("dataclasses", "dataclass"),
-        PythonSymbol("collections.abc", "Callable"),
-        PythonSymbol("collections.abc", "AsyncIterator"),
-        PythonSymbol("collections.abc", "AsyncIterator"),
-        PythonSymbol("pydantic", "BaseModel"),
-        PythonSymbol("collections.abc", "Mapping"),
-        PythonSymbol("collections.abc", "Mapping"),
-        PythonSymbol("urllib.parse", "quote"),
-        PythonSymbol("httpx", "Response"),
-        PythonSymbol("collections.abc", "AsyncIterator"),
-      ),
-    )
-
-    return module.build()
-  }
-
-  /** Renders a Python service client module. */
+  /** Renders one generated service client. */
   fun renderService(service: GeneratedService): PythonModule {
-    val moduleName = service.pythonServiceModuleName
-    val module = PythonModuleBuilder("$packageName/$moduleName.py")
+    val module = PythonModuleBuilder("$packageName/${service.pythonServiceModuleName}.py")
     val className = "${service.pythonServiceBaseName.pythonTypeName}Client"
-    val operationMethods =
-      PythonCodeBlock.join(
-        service.operations.map { operation ->
-          operation.renderOperationMethod()
-        },
-        "\n\n",
-      )
+    val mediaSelection = service.defaultMediaSelection(defaultMediaTypes)
+    val problemRegistration =
+      if (registerProblems) {
+        PythonCodeBlock.of(
+          "\n        %T(self.transport)",
+          PythonSymbol(".problems", "register_problems"),
+        )
+      } else {
+        PythonCodeBlock.of("")
+      }
 
     module.addExport(className)
+    service.adapterTypes().forEach { type -> module.addCode(type.renderAdapterConstant()) }
+    service.operations.forEach { operation ->
+      operation.renderDecoderFunctions()?.let(module::addCode)
+      operation.renderResponseSpecConstant()?.let(module::addCode)
+      operation.renderRequestPayloadFunction()?.let(module::addCode)
+    }
     module.addCode(
       PythonCodeBlock.of(
         """
-        class %L:
+        class %L[TransportRequestT, TransportResponseT]:
             ${"\"\"\"Client operations for the %L service.\"\"\""}
 
-            def __init__(self, transport: %T) -> None:
-                self._transport = transport
+            def __init__(
+                self,
+                transport: %T[TransportRequestT, TransportResponseT],
+                *,
+                default_content_types: %T[%T] = %C,
+                default_accept_types: %T[%T] = %C,
+            ) -> None:
+                self.transport = transport
+                self.default_content_types = tuple(default_content_types)
+                self.default_accept_types = tuple(default_accept_types)%C
 
         %C
         """.trimIndent(),
         className,
         service.pythonServiceBaseName,
-        PythonSymbol(".runtime", "Transport"),
-        operationMethods,
+        PythonSymbol("sunday", "Transport"),
+        PythonSymbol("collections.abc", "Sequence"),
+        PythonSymbol("sunday", "MediaType"),
+        renderMediaTypes(mediaSelection.contentTypes),
+        PythonSymbol("collections.abc", "Sequence"),
+        PythonSymbol("sunday", "MediaType"),
+        renderMediaTypes(mediaSelection.acceptTypes),
+        problemRegistration,
+        PythonCodeBlock.join(
+          service.operations.map {
+            it.renderOperationMethod(mediaSelection.contentTypes, mediaSelection.acceptTypes)
+          },
+          separator = "\n\n",
+        ),
       ),
     )
-
-    service.operations.forEach { operation ->
-      module.addCode(operation.renderResponseDecoderFunction())
-    }
-
     return module.build()
   }
 
-  private fun GeneratedOperation.renderOperationMethod(): PythonCodeBlock {
-    if (streaming != null) {
-      return renderStreamMethod()
-    }
-
-    val response = successResponse()
-    val responseType = response?.type ?: GeneratedTypeRef.scalar("nil")
-    val decoderName = "_decode_${id.pythonIdentifierName}_response"
-    val signatureParameters = renderClientSignatureParameterLines()
+  private fun GeneratedOperation.renderOperationMethod(
+    defaultContentTypes: List<String>,
+    defaultAcceptTypes: List<String>,
+  ): PythonCodeBlock {
+    val signature = renderSignatureParameters()
+    val responseType = renderSuccessType()
     val operationType =
-      if (requestBody.isPythonStreamingRequestBody) {
-        PythonSymbol(".runtime", "StreamingOperation")
+      when {
+        streaming?.kind == GeneratedStreaming.Kind.EVENT_SOURCE -> PythonSymbol("sunday", "EventSource")
+        streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM -> PythonSymbol("sunday", "EventStream")
+        nullify != null -> PythonSymbol("sunday", "NullableOperation")
+        requestBody.isPythonStreamingRequestBody -> PythonSymbol("sunday", "StreamingOperation")
+        else -> PythonSymbol("sunday", "Operation")
+      }
+    val operationReturnType =
+      when {
+        streaming?.kind == GeneratedStreaming.Kind.EVENT_SOURCE -> PythonCodeBlock.of("%T", operationType)
+        streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM ->
+          PythonCodeBlock.of(
+            "%T[%C]",
+            operationType,
+            responseType,
+          )
+        exchange == GeneratedExchange.REQUEST -> PythonCodeBlock.of("TransportRequestT")
+        exchange == GeneratedExchange.RESPONSE -> PythonCodeBlock.of("TransportResponseT")
+        else -> PythonCodeBlock.of("%T[%C, TransportRequestT, TransportResponseT]", operationType, responseType)
+      }
+    val body =
+      if (streaming?.kind == GeneratedStreaming.Kind.EVENT_SOURCE) {
+        PythonCodeBlock.of(
+          "        request_spec: %T[%C] = %C\n" +
+            "        return self.transport.event_source(request_spec)",
+          PythonSymbol("sunday", "RequestSpec"),
+          renderRequestBodyType(),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+        )
+      } else if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
+        PythonCodeBlock.of(
+          """
+          |        request_spec: %T[%C] = %C
+          |        return self.transport.event_stream(request_spec, %L)
+          """.trimMargin(),
+          PythonSymbol("sunday", "RequestSpec"),
+          renderRequestBodyType(),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          eventDecoderName(),
+        )
+      } else if (exchange != null) {
+        val transportCall =
+          when (exchange) {
+            GeneratedExchange.REQUEST -> "        return await self.transport.transport_request(request_spec)"
+            GeneratedExchange.RESPONSE ->
+              "        request = await self.transport.transport_request(request_spec)\n" +
+                "        return await self.transport.transport_response(request)"
+          }
+        PythonCodeBlock.of(
+          "        request_spec: %T[%C] = %C\n%L",
+          PythonSymbol("sunday", "RequestSpec"),
+          renderRequestBodyType(),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          transportCall,
+        )
       } else {
-        PythonSymbol(".runtime", "Operation")
+        PythonCodeBlock.of(
+          """
+          |        request_spec: %T[%C] = %C
+          |        operation_spec: %T[%C, %C] = %T(
+          |            request=request_spec,
+          |            responses=%L,
+          |        )
+          |%C
+          """.trimMargin(),
+          PythonSymbol("sunday", "RequestSpec"),
+          renderRequestBodyType(),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          PythonSymbol("sunday", "OperationSpec"),
+          renderRequestBodyType(),
+          responseType,
+          PythonSymbol("sunday", "OperationSpec"),
+          responseSpecsName(),
+          renderOperationConstruction(operationType),
+        )
       }
 
-    return if (hasClientSignatureParameters()) {
+    val functionPrefix = if (exchange != null && streaming == null) "async def" else "def"
+
+    return if (!hasSignatureParameters()) {
       PythonCodeBlock.of(
         """
-        |    def %L(
-        |        self,
-        |%C
-        |    ) -> %T[%C]:
-        |        ${"\"\"\"Create the %L operation.\"\"\""}
-        |%C
-        |%C
-        """.trimMargin(),
+            %L %L(self) -> %C:
+                ${"\"\"\"Create the %L operation.\"\"\""}
+        %C
+        """.trimIndent(),
+        functionPrefix,
         id.pythonIdentifierName,
-        signatureParameters,
-        operationType,
-        responseType.renderClientPythonType(),
+        operationReturnType,
         id,
-        if (requestBody.isPythonStreamingRequestBody) {
-          renderBuildStreamingRequestFunction()
-        } else {
-          renderBuildRequest()
-        },
-        renderOperationReturn(operationType, decoderName, requestBody.isPythonStreamingRequestBody),
+        body,
       )
     } else {
       PythonCodeBlock.of(
         """
-        |    def %L(self) -> %T[%C]:
-        |        ${"\"\"\"Create the %L operation.\"\"\""}
-        |%C
-        |%C
-        """.trimMargin(),
+            %L %L(
+                self,
+        %C
+            ) -> %C:
+                ${"\"\"\"Create the %L operation.\"\"\""}
+        %C
+        """.trimIndent(),
+        functionPrefix,
         id.pythonIdentifierName,
+        signature,
+        operationReturnType,
+        id,
+        body,
+      )
+    }
+  }
+
+  private fun GeneratedOperation.renderOperationConstruction(operationType: PythonSymbol): PythonCodeBlock =
+    nullify?.let { nullify ->
+      val problemTypes =
+        nullify.problems.mapNotNull { problem ->
+          problem.takeIf { type -> type.kind == GeneratedTypeRef.Kind.NAMED }?.let { type ->
+            PythonCodeBlock.of("%T", PythonSymbol(".problems", type.name.pythonTypeName))
+          }
+        }
+      PythonCodeBlock.of(
+        "        return %T(\n" +
+          "            self.transport,\n" +
+          "            operation_spec,\n" +
+          "            %T(statuses=%C, problem_types=%C),\n" +
+          "        )",
         operationType,
-        responseType.renderClientPythonType(),
-        id,
-        if (requestBody.isPythonStreamingRequestBody) {
-          renderBuildStreamingRequestFunction()
-        } else {
-          renderBuildRequest()
-        },
-        renderOperationReturn(operationType, decoderName, requestBody.isPythonStreamingRequestBody),
+        PythonSymbol("sunday", "NullifySpec"),
+        renderTuple(nullify.statuses.map { status -> PythonCodeBlock.of("%L", status) }),
+        renderTuple(problemTypes),
       )
-    }
-  }
+    } ?: PythonCodeBlock.of("        return %T(self.transport, operation_spec)", operationType)
 
-  private fun GeneratedOperation.renderStreamMethod(): PythonCodeBlock {
-    val responseType = successResponse()?.type ?: GeneratedTypeRef.scalar("string")
-    val decoderName = "_decode_${id.pythonIdentifierName}_event"
-    val signatureParameters = renderClientSignatureParameterLines()
-
-    return if (hasClientSignatureParameters()) {
-      PythonCodeBlock.of(
-        """
-        |    def %L(
-        |        self,
-        |%C
-        |    ) -> %T[%C]:
-        |        ${"\"\"\"Create the %L event stream.\"\"\""}
-        |%C
-        |%C
-        """.trimMargin(),
-        id.pythonIdentifierName,
-        signatureParameters,
-        PythonSymbol(".runtime", "EventStream"),
-        responseType.renderClientPythonType(),
-        id,
-        renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName, false),
-      )
+  private fun renderTuple(values: List<PythonCodeBlock>): PythonCodeBlock =
+    if (values.isEmpty()) {
+      PythonCodeBlock.of("()")
     } else {
-      PythonCodeBlock.of(
-        """
-        |    def %L(self) -> %T[%C]:
-        |        ${"\"\"\"Create the %L event stream.\"\"\""}
-        |%C
-        |%C
-        """.trimMargin(),
-        id.pythonIdentifierName,
-        PythonSymbol(".runtime", "EventStream"),
-        responseType.renderClientPythonType(),
-        id,
-        renderBuildRequest(),
-        renderOperationReturn(PythonSymbol(".runtime", "EventStream"), decoderName, false),
-      )
+      PythonCodeBlock.of("(%C,)", PythonCodeBlock.join(values, separator = ", "))
     }
-  }
 
-  private fun GeneratedOperation.renderBuildRequest(): PythonCodeBlock =
-    PythonCodeBlock.of(
-      """
-      |        request = self._transport.build_request(
-      |            %S,
-      |%C%C
-      |        )
-      """.trimMargin(),
-      httpMethod(),
-      renderPathTemplateArgument("            "),
-      renderBuildRequestArguments("            "),
-    )
-
-  private fun GeneratedOperation.renderBuildStreamingRequestFunction(): PythonCodeBlock =
-    PythonCodeBlock.of(
-      """
-      |
-      |        def build_request() -> %T:
-      |            return self._transport.build_request(
-      |                %S,
-      |%C%C
-      |            )
-      |
-      """.trimMargin(),
-      PythonSymbol(".runtime", "TransportRequest"),
-      httpMethod(),
-      renderPathTemplateArgument("                "),
-      renderBuildRequestArguments("                "),
-    )
-
-  private fun GeneratedOperation.renderOperationReturn(
-    operationType: PythonSymbol,
-    decoderName: String,
-    streamingRequestBody: Boolean,
+  private fun GeneratedOperation.renderRequestSpec(
+    defaultContentTypes: List<String>,
+    defaultAcceptTypes: List<String>,
   ): PythonCodeBlock =
     PythonCodeBlock.of(
       """
-      |        return %T(
-      |%C
-      |        )
+      |%T(
+      |            method=%S,
+      |            path_template=%C,
+      |%C%C%C%C        )
       """.trimMargin(),
-      operationType,
-      if (streamingRequestBody) {
-        PythonCodeBlock.of(
-          """
-          |            transport=self._transport,
-          |            build_request=build_request,
-          |            decode=%L,
-          """.trimMargin(),
-          decoderName,
-        )
-      } else {
-        PythonCodeBlock.of(
-          """
-          |            transport=self._transport,
-          |            request=request,
-          |            decode=%L,
-          """.trimMargin(),
-          decoderName,
-        )
-      },
+      PythonSymbol("sunday", "RequestSpec"),
+      httpMethod(),
+      renderPathTemplate(),
+      renderTemplateParameterArgument(),
+      renderParameterArgument(),
+      renderRequestPayloadSpec(defaultContentTypes),
+      renderAcceptTypes(defaultAcceptTypes),
     )
 
-  private fun GeneratedOperation.hasClientSignatureParameters(): Boolean =
-    pathParameters().isNotEmpty() ||
-      requestBody != null ||
-      queryParameters().isNotEmpty() ||
-      headerParameters().isNotEmpty()
-
-  private fun GeneratedOperation.httpMethod(): String =
-    if (streaming != null && method.equals("SUBSCRIBE", ignoreCase = true)) {
-      "GET"
-    } else {
-      method.uppercase()
+  private fun GeneratedOperation.renderRequestPayloadSpec(defaultContentTypes: List<String>): PythonCodeBlock =
+    when {
+      requestBody == null -> PythonCodeBlock.of("")
+      requestBody.payloads.isNotEmpty() ->
+        PythonCodeBlock.of("            payload=%L(body),\n", requestPayloadFunctionName())
+      else ->
+        PythonCodeBlock.of(
+          "            body=body,\n" +
+            "            content_types=%C,\n",
+          if (requestBody.mediaTypes == defaultContentTypes) {
+            PythonCodeBlock.of("self.default_content_types")
+          } else {
+            renderMediaTypes(requestBody.mediaTypes)
+          },
+        )
     }
 
-  private fun GeneratedOperation.renderResponseDecoderFunction(): PythonCodeBlock {
-    val response = successResponse()
-    val responseType = response?.type ?: GeneratedTypeRef.scalar("nil")
-    val decoderName =
-      if (streaming == null) {
-        "_decode_${id.pythonIdentifierName}_response"
+  private fun GeneratedOperation.renderAcceptTypes(defaultAcceptTypes: List<String>): PythonCodeBlock {
+    val acceptTypes = responseVariants().flatMap { variant -> variant.mediaTypes }.distinct()
+    if (acceptTypes.isEmpty()) {
+      return PythonCodeBlock.of("")
+    }
+    return PythonCodeBlock.of(
+      "            accept_types=%C,\n",
+      if (acceptTypes == defaultAcceptTypes) {
+        PythonCodeBlock.of("self.default_accept_types")
       } else {
-        "_decode_${id.pythonIdentifierName}_event"
-      }
+        renderMediaTypes(acceptTypes)
+      },
+    )
+  }
 
-    return if (streaming == null) {
+  private fun GeneratedOperation.renderParameterArgument(): PythonCodeBlock =
+    if (requestParameters().isEmpty() && queryString == null) {
+      PythonCodeBlock.of("")
+    } else {
+      PythonCodeBlock.of("            parameters=%C,\n", renderParameterSpecs())
+    }
+
+  private fun GeneratedOperation.renderParameterSpecs(): PythonCodeBlock {
+    val parameters = requestParameters()
+    if (parameters.isEmpty() && queryString == null) {
+      return PythonCodeBlock.of("()")
+    }
+    if (parameters.size == 1 && queryString == null && parameters.single().usesDefaultEncoding()) {
+      return PythonCodeBlock.of("(%C,)", parameters.single().renderInlineParameterSpec())
+    }
+    val specs =
+      parameters.map { it.renderParameterSpec() } +
+        listOfNotNull(
+          queryString?.let {
+            PythonCodeBlock.of(
+              "                %T(name=%S, value=%T(query_string), location=%T.QUERY),",
+              PythonSymbol("sunday", "ParameterSpec"),
+              "",
+              PythonSymbol("sunday", "parameter_object"),
+              PythonSymbol("sunday", "ParameterLocation"),
+            )
+          },
+        )
+    return PythonCodeBlock.of(
+      """
+      |(
+      |%C
+      |            )
+      """.trimMargin(),
+      PythonCodeBlock.join(specs, separator = "\n"),
+    )
+  }
+
+  private fun GeneratedParameter.usesDefaultEncoding(): Boolean =
+    encoding?.let { encoding ->
+      encoding.style == null &&
+        encoding.explode == null &&
+        encoding.allowReserved != true &&
+        encoding.allowEmptyValue != true
+    } ?: true
+
+  private fun GeneratedParameter.renderInlineParameterSpec(): PythonCodeBlock {
+    val value = constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    return PythonCodeBlock.of(
+      "%T(name=%S, value=%C, location=%T.%L)",
+      PythonSymbol("sunday", "ParameterSpec"),
+      wireName(),
+      value,
+      PythonSymbol("sunday", "ParameterLocation"),
+      location.name,
+    )
+  }
+
+  private fun GeneratedParameter.renderParameterSpec(): PythonCodeBlock {
+    val value = constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    val encoding = encoding
+    val optionalArguments =
+      listOfNotNull(
+        encoding?.style?.let { style -> PythonCodeBlock.of("style=%C", style.renderParameterStyle()) },
+        encoding?.explode?.let { explode -> PythonCodeBlock.of("explode=%L", explode.pythonBoolean()) },
+        encoding?.allowReserved?.takeIf { it }?.let { PythonCodeBlock.of("allow_reserved=True") },
+        encoding?.allowEmptyValue?.takeIf { it }?.let { PythonCodeBlock.of("allow_empty_value=True") },
+      )
+    if (optionalArguments.isEmpty()) {
+      return PythonCodeBlock.of(
+        "                %T(name=%S, value=%C, location=%T.%L),",
+        PythonSymbol("sunday", "ParameterSpec"),
+        wireName(),
+        value,
+        PythonSymbol("sunday", "ParameterLocation"),
+        location.name,
+      )
+    }
+    return PythonCodeBlock.of(
+      """
+      |                %T(
+      |                    name=%S,
+      |                    value=%C,
+      |                    location=%T.%L,
+      |                    %C,
+      |                ),
+      """.trimMargin(),
+      PythonSymbol("sunday", "ParameterSpec"),
+      wireName(),
+      value,
+      PythonSymbol("sunday", "ParameterLocation"),
+      location.name,
+      PythonCodeBlock.join(optionalArguments, separator = ",\n                    "),
+    )
+  }
+
+  private fun GeneratedOperation.renderResponseSpecs(): PythonCodeBlock {
+    val variants = responseVariants()
+    if (variants.isEmpty()) {
+      return PythonCodeBlock.of("(%T(status=None, body_expected=False),)", PythonSymbol("sunday", "ResponseSpec"))
+    }
+    val specs = variants.map { variant -> variant.renderResponseSpec() }
+    val singleVariant = variants.singleOrNull()
+    if (singleVariant != null && !singleVariant.hasBody() && singleVariant.response.headers.isEmpty()) {
+      return PythonCodeBlock.of("(%C,)", specs.single())
+    }
+    return PythonCodeBlock.of(
+      """
+      |(
+      |    %C,
+      |)
+      """.trimMargin(),
+      PythonCodeBlock.join(
+        specs,
+        separator = ",\n    ",
+      ),
+    )
+  }
+
+  private fun GeneratedOperation.renderResponseSpecConstant(): PythonCodeBlock? {
+    if (streaming != null || exchange != null) {
+      return null
+    }
+    return PythonCodeBlock.of(
+      "%L: tuple[%T[%C], ...] = %C",
+      responseSpecsName(),
+      PythonSymbol("sunday", "ResponseSpec"),
+      renderSuccessType(),
+      renderResponseSpecs(),
+    )
+  }
+
+  private fun GeneratedOperation.responseSpecsName(): String = "_${id.pythonIdentifierName}_responses"
+
+  private fun PythonResponseVariant.renderResponseSpec(): PythonCodeBlock {
+    val arguments =
+      buildList {
+        add(PythonCodeBlock.of("status=%L", response.status?.toString() ?: "None"))
+        if (mediaTypes.isNotEmpty()) {
+          add(PythonCodeBlock.of("content_types=%C", renderMediaTypes(mediaTypes)))
+        }
+        if (hasBody()) {
+          add(PythonCodeBlock.of("decoder=%L.validate_python", checkNotNull(type).adapterName()))
+        } else {
+          add(PythonCodeBlock.of("body_expected=False"))
+        }
+        if (response.headers.isNotEmpty()) {
+          add(PythonCodeBlock.of("headers=%C", response.renderResponseHeaderSpecs()))
+        }
+      }
+    return if (arguments.size <= 2 && response.headers.isEmpty()) {
       PythonCodeBlock.of(
-        """
-        def %L(response: %T) -> %C:
-        %C
-        """.trimIndent(),
-        decoderName,
-        PythonSymbol("httpx", "Response"),
-        responseType.renderClientPythonType(),
-        responseType.renderResponseDecoder(),
+        "%T(%C)",
+        PythonSymbol("sunday", "ResponseSpec"),
+        PythonCodeBlock.join(arguments, separator = ", "),
       )
     } else {
       PythonCodeBlock.of(
-        """
-        def %L(data: str) -> %C:
-            return %T(%C).validate_json(data)
-        """.trimIndent(),
-        decoderName,
-        responseType.renderClientPythonType(),
-        PythonSymbol("pydantic", "TypeAdapter"),
-        responseType.renderClientPythonType(),
+        "%T(\n" +
+          "        %C,\n" +
+          "    )",
+        PythonSymbol("sunday", "ResponseSpec"),
+        PythonCodeBlock.join(arguments, separator = ",\n        "),
       )
     }
   }
 
-  private fun GeneratedOperation.successResponse(): GeneratedResponse? =
-    responses.firstOrNull { response -> response.status in 200..299 && response.type != null }
-      ?: responses.firstOrNull { response -> streaming != null && response.type != null }
+  private fun GeneratedResponse.renderResponseHeaderSpecs(): PythonCodeBlock {
+    if (headers.isEmpty()) {
+      return PythonCodeBlock.of("()")
+    }
+    val specs = headers.map { it.renderResponseHeaderSpec() }
+    if (headers.size == 1 && !headers.single().required && headers.single().type.kind != GeneratedTypeRef.Kind.ARRAY) {
+      return PythonCodeBlock.of("(%C,)", specs.single())
+    }
+    return PythonCodeBlock.of(
+      """
+      |(
+      |            %C,
+      |        )
+      """.trimMargin(),
+      PythonCodeBlock.join(specs, separator = ",\n            "),
+    )
+  }
 
-  private fun GeneratedParameter.wireName(): String = serializationName ?: name
+  private fun GeneratedParameter.renderResponseHeaderSpec(): PythonCodeBlock {
+    val repeated = type.kind == GeneratedTypeRef.Kind.ARRAY
+    val decodedType = if (repeated) type.arguments.firstOrNull() ?: GeneratedTypeRef.scalar("any") else type
+    val optionalArguments =
+      listOfNotNull(
+        required.takeIf { it }?.let { PythonCodeBlock.of("required=True") },
+        repeated.takeIf { it }?.let { PythonCodeBlock.of("repeated=True") },
+      )
+    if (optionalArguments.isEmpty()) {
+      return PythonCodeBlock.of(
+        "%T(name=%S, decoder=%L.validate_python)",
+        PythonSymbol("sunday", "ResponseHeaderSpec"),
+        wireName(),
+        decodedType.adapterName(),
+      )
+    }
+    return PythonCodeBlock.of(
+      """
+      |%T(
+      |                name=%S,
+      |                decoder=%L.validate_python,
+      |                %C,
+      |            )
+      """.trimMargin(),
+      PythonSymbol("sunday", "ResponseHeaderSpec"),
+      wireName(),
+      decodedType.adapterName(),
+      PythonCodeBlock.join(optionalArguments, separator = ",\n                "),
+    )
+  }
 
-  private fun GeneratedOperation.renderClientSignatureParameterLines(): PythonCodeBlock {
-    val queryAndHeaderParameters =
-      parameters.filter { parameter ->
-        parameter.location == GeneratedParameter.Location.QUERY ||
-          parameter.location == GeneratedParameter.Location.HEADER
+  private fun renderMediaTypes(mediaTypes: List<String>): PythonCodeBlock =
+    if (mediaTypes.isEmpty()) {
+      PythonCodeBlock.of("()")
+    } else {
+      PythonCodeBlock.of(
+        "(%C,)",
+        PythonCodeBlock.join(
+          mediaTypes.map { mediaType ->
+            PythonCodeBlock.of("%T(%S)", PythonSymbol("sunday", "MediaType"), mediaType)
+          },
+          separator = ", ",
+        ),
+      )
+    }
+
+  private fun GeneratedService.adapterTypes(): List<GeneratedTypeRef> =
+    operations
+      .flatMap { operation ->
+        val responseTypes =
+          operation.responseVariants().mapNotNull { variant ->
+            variant.type?.takeUnless { it.isNil() }
+          }
+        val eventTypes = responseTypes.flatMap { type -> type.eventDiscriminatorMappings().map { it.second } }
+        val headerTypes =
+          operation.responses.flatMap { response ->
+            response.headers.map { header ->
+              if (header.type.kind == GeneratedTypeRef.Kind.ARRAY) {
+                header.type.arguments.firstOrNull() ?: GeneratedTypeRef.scalar("any")
+              } else {
+                header.type
+              }
+            }
+          }
+        val requestTypes =
+          operation.requestBody
+            ?.requestVariants()
+            .orEmpty()
+            .filter { variant -> variant.runtimeType() == null }
+            .map { variant -> variant.type }
+        responseTypes + eventTypes + headerTypes + requestTypes
+      }.distinct()
+
+  private fun GeneratedTypeRef.renderAdapterConstant(): PythonCodeBlock {
+    val name = adapterName()
+    val type = renderClientPythonType(nullable = false)
+    return if (kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) {
+      PythonCodeBlock.of(
+        "%L: %T[%C] = %T(%C)",
+        name,
+        PythonSymbol("pydantic", "TypeAdapter"),
+        type,
+        PythonSymbol("pydantic", "TypeAdapter"),
+        type,
+      )
+    } else {
+      PythonCodeBlock.of(
+        "%L: %T[%C] = %T(\n    %C\n)",
+        name,
+        PythonSymbol("pydantic", "TypeAdapter"),
+        type,
+        PythonSymbol("pydantic", "TypeAdapter"),
+        type,
+      )
+    }
+  }
+
+  private fun GeneratedTypeRef.adapterName(): String =
+    "_" +
+      when (kind) {
+        GeneratedTypeRef.Kind.NAMED -> "named_$name"
+        GeneratedTypeRef.Kind.SCALAR -> "scalar_$name"
+        GeneratedTypeRef.Kind.ARRAY -> "array_${arguments.firstOrNull()?.adapterNamePart() ?: "object"}"
+        GeneratedTypeRef.Kind.MAP -> "map_${arguments.firstOrNull()?.adapterNamePart() ?: "object"}"
+        GeneratedTypeRef.Kind.UNION -> "union_${arguments.joinToString("_") { it.adapterNamePart() }}"
+      }.pythonIdentifierName +
+      "_adapter"
+
+  private fun GeneratedTypeRef.adapterNamePart(): String =
+    when (kind) {
+      GeneratedTypeRef.Kind.NAMED, GeneratedTypeRef.Kind.SCALAR -> name
+      GeneratedTypeRef.Kind.ARRAY -> "array_${arguments.firstOrNull()?.adapterNamePart() ?: "object"}"
+      GeneratedTypeRef.Kind.MAP -> "map_${arguments.firstOrNull()?.adapterNamePart() ?: "object"}"
+      GeneratedTypeRef.Kind.UNION -> "union_${arguments.joinToString("_") { it.adapterNamePart() }}"
+    }
+
+  private fun GeneratedOperation.renderDecoderFunctions(): PythonCodeBlock? {
+    if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
+      val responseType =
+        responseVariants().firstNotNullOfOrNull { variant -> variant.type }
+          ?: GeneratedTypeRef.scalar("string")
+      if (streaming.eventMode == GeneratedStreaming.EventMode.DISCRIMINATED) {
+        val mappings = responseType.eventDiscriminatorMappings()
+        val cases =
+          mappings.map { (event, type) ->
+            PythonCodeBlock.of(
+              "    if event.event == %S:\n" +
+                "        return %L.validate_json(event.data)",
+              event,
+              type.adapterName(),
+            )
+          }
+        return PythonCodeBlock.of(
+          "def %L(event: %T) -> %C | None:\n" +
+            "    if event.data is None:\n" +
+            "        raise ValueError(%S)\n" +
+            "%C\n" +
+            "    %T(__name__).warning(%S, event.event)\n" +
+            "    return None",
+          eventDecoderName(),
+          PythonSymbol("sunday", "ServerSentEvent"),
+          responseType.renderClientPythonType(),
+          "Server-sent events must contain data",
+          PythonCodeBlock.join(cases, separator = "\n"),
+          PythonSymbol("logging", "getLogger"),
+          "Unknown event type, ignoring event: event=%s",
+        )
       }
-    val requiredParameters =
-      pathParameters().map { parameter -> parameter.renderRequiredParameter() } +
-        listOfNotNull(requestBody?.renderRequestBodyParameter()) +
-        queryAndHeaderParameters
-          .filter { parameter -> parameter.required }
-          .map { parameter -> parameter.renderRequiredParameter() }
-    val optionalParameters =
-      queryAndHeaderParameters
-        .filterNot { parameter -> parameter.required }
-        .map { parameter ->
-          parameter.renderOptionalParameter()
-        }
+      return PythonCodeBlock.of(
+        """
+        def %L(event: %T) -> %C:
+            if event.data is None:
+                raise ValueError("Server-sent events must contain data")
+            return %L.validate_json(event.data)
+        """.trimIndent(),
+        eventDecoderName(),
+        PythonSymbol("sunday", "ServerSentEvent"),
+        responseType.renderClientPythonType(),
+        responseType.adapterName(),
+      )
+    }
 
-    return PythonCodeBlock.join(requiredParameters + optionalParameters, separator = "\n")
+    return null
+  }
+
+  private fun GeneratedOperation.renderSignatureParameters(): PythonCodeBlock {
+    val parameters =
+      httpParameters()
+        .filter { parameter -> parameter.constantValue == null }
+    val required =
+      parameters
+        .filter { parameter -> parameter.location == GeneratedParameter.Location.PATH }
+        .map { it.renderRequiredParameter() } +
+        listOfNotNull(requestBody?.renderRequestBodyParameter()) +
+        listOfNotNull(
+          queryString?.let { type ->
+            PythonCodeBlock.of("        query_string: %C,", type.renderClientPythonType(nullable = false))
+          },
+        ) +
+        parameters
+          .filter { parameter -> parameter.required && parameter.location != GeneratedParameter.Location.PATH }
+          .map { it.renderRequiredParameter() }
+    val optional =
+      parameters.filterNot { parameter ->
+        parameter.required || parameter.location == GeneratedParameter.Location.PATH
+      }
+
+    return PythonCodeBlock.join(
+      required + optional.map { it.renderOptionalParameter() },
+      separator = "\n",
+    )
   }
 
   private fun GeneratedParameter.renderRequiredParameter(): PythonCodeBlock =
-    PythonCodeBlock.of(
-      "        %L: %C,",
-      name.pythonIdentifierName,
-      type.renderClientPythonType(nullable = false),
-    )
+    PythonCodeBlock.of("        %L: %C,", name.pythonIdentifierName, type.renderClientPythonType(nullable = false))
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
     if (isPythonStreamingRequestBody) {
-      PythonCodeBlock.of("        body: %T,", PythonSymbol(".runtime", "StreamingBody"))
+      PythonCodeBlock.of("        body: %T,", PythonSymbol("sunday", "StreamingBody"))
     } else {
-      PythonCodeBlock.of("        body: %C,", type.renderClientPythonType(nullable = false))
+      PythonCodeBlock.of("        body: %C,", renderClientBodyType())
     }
+
+  private fun GeneratedPayload.renderClientBodyType(): PythonCodeBlock =
+    PythonCodeBlock.join(
+      requestVariants()
+        .map { variant -> variant.renderClientType() }
+        .distinct()
+        .map { bodyType -> bodyType },
+      separator = " | ",
+    )
 
   private fun GeneratedParameter.renderOptionalParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
       "        %L: %C = %C,",
       name.pythonIdentifierName,
-      type.renderOptionalParameterType(),
-      renderDefaultValue(),
-    )
-
-  private fun GeneratedTypeRef.renderOptionalParameterType(): PythonCodeBlock =
-    if (nullable) {
-      renderClientPythonType()
-    } else {
-      PythonCodeBlock.of("%C | None", renderClientPythonType(nullable = false))
-    }
-
-  private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock =
-    defaultValue?.renderPythonValue() ?: PythonCodeBlock.of("None")
-
-  private fun Any.renderPythonValue(): PythonCodeBlock =
-    when (this) {
-      is Boolean -> PythonCodeBlock.of(if (this) "True" else "False")
-      is Number -> PythonCodeBlock.of("%L", this)
-      is String -> PythonCodeBlock.of("%S", this)
-      else -> PythonCodeBlock.of("None")
-    }
-
-  private fun GeneratedOperation.renderPathTemplateArgument(indent: String): PythonCodeBlock {
-    val pathParameters = pathParameters()
-    val inlineMap = pathParameters.renderInlinePathParameterMap()
-    val inlineCall = "path_template(${path.pythonStringLiteral()}, $inlineMap),"
-    return if (inlineCall.length <= 100) {
-      PythonCodeBlock.of(
-        "%L%T(%S, %L),",
-        indent,
-        PythonSymbol(".runtime", "path_template"),
-        path,
-        inlineMap,
-      )
-    } else {
-      PythonCodeBlock.of(
-        """
-        |%L%T(
-        |%L    %S,
-        |%C
-        |%L),
-        """.trimMargin(),
-        indent,
-        PythonSymbol(".runtime", "path_template"),
-        indent,
-        path,
-        pathParameters.renderMultilinePathParameterMap(indent),
-        indent,
-      )
-    }
-  }
-
-  private fun List<GeneratedParameter>.renderInlinePathParameterMap(): String =
-    if (isEmpty()) {
-      "{}"
-    } else {
-      joinToString(", ", prefix = "{", postfix = "}") { parameter ->
-        "${parameter.wireName().pythonStringLiteral()}: ${parameter.name.pythonIdentifierName}"
-      }
-    }
-
-  private fun List<GeneratedParameter>.renderMultilinePathParameterMap(indent: String): PythonCodeBlock =
-    if (isEmpty()) {
-      PythonCodeBlock.of("%L    {},", indent)
-    } else {
-      PythonCodeBlock.join(
-        listOf(PythonCodeBlock.of("%L    {", indent)) +
-          map { parameter ->
-            PythonCodeBlock.of(
-              "%L        %S: %L,",
-              indent,
-              parameter.wireName(),
-              parameter.name.pythonIdentifierName,
-            )
-          } +
-          listOf(PythonCodeBlock.of("%L    },", indent)),
-      )
-    }
-
-  private fun GeneratedOperation.renderBuildRequestArguments(indent: String): PythonCodeBlock {
-    val arguments =
-      listOfNotNull(
-        queryParameters().renderRequestParameters("params", indent),
-        renderHeadersArgument(indent),
-        requestBody?.renderRequestBodyArgument(indent),
-      )
-
-    return if (arguments.isEmpty()) {
-      PythonCodeBlock.of("")
-    } else {
-      PythonCodeBlock.of("\n%C", PythonCodeBlock.join(arguments, separator = "\n"))
-    }
-  }
-
-  private fun GeneratedOperation.renderHeadersArgument(indent: String): PythonCodeBlock? {
-    val headerParameters = headerParameters()
-    val contentType =
-      if (headerParameters.any { parameter -> parameter.wireName().equals("Content-Type", ignoreCase = true) }) {
-        null
+      if (type.nullable) {
+        type.renderClientPythonType()
       } else {
-        requestBody.contentTypeHeaderForContentBody()
-      }
-
-    if (headerParameters.isEmpty() && contentType == null) {
-      return null
-    }
-
-    return PythonCodeBlock.of(
-      "%Lheaders=%C,",
-      indent,
-      when {
-        headerParameters.isEmpty() ->
-          PythonCodeBlock.of("{%S: %S}", "Content-Type", contentType)
-        contentType == null ->
-          headerParameters.renderRequestParameterMap()
-        else ->
-          PythonCodeBlock.of(
-            "{**%C, %S: %S}",
-            headerParameters.renderRequestParameterMap(),
-            "Content-Type",
-            contentType,
-          )
+        PythonCodeBlock.of("%C | None", type.renderClientPythonType(nullable = false))
       },
+      defaultValue?.renderPythonValue() ?: PythonCodeBlock.of("None"),
     )
+
+  private fun GeneratedOperation.renderSuccessType(): PythonCodeBlock {
+    val types = responseVariants().mapNotNull { variant -> variant.type }.distinct()
+    if (types.isEmpty()) {
+      return PythonCodeBlock.of("None")
+    }
+    return PythonCodeBlock.join(types.map { it.renderClientPythonType() }, separator = " | ")
   }
 
-  private fun GeneratedPayload.renderRequestBodyArgument(indent: String): PythonCodeBlock =
+  private fun GeneratedOperation.renderRequestBodyType(): PythonCodeBlock =
     when {
-      isPythonStreamingRequestBody ->
-        PythonCodeBlock.of("%Lcontent=body.content(),", indent)
-      type.isBinaryPayload() ->
-        PythonCodeBlock.of("%Lcontent=body,", indent)
-      else ->
-        PythonCodeBlock.of("%Ljson=%T(body),", indent, PythonSymbol(".runtime", "json_body"))
+      requestBody == null -> PythonCodeBlock.of("None")
+      requestBody.isPythonStreamingRequestBody -> PythonCodeBlock.of("%T", PythonSymbol("sunday", "StreamingBody"))
+      else -> requestBody.renderClientBodyType()
     }
 
-  private fun GeneratedTypeRef.isBinaryPayload(): Boolean =
-    kind == GeneratedTypeRef.Kind.SCALAR &&
-      (name == "file" || name == "binary" || name == "byte")
-
-  private fun List<GeneratedParameter>.renderRequestParameters(
-    argumentName: String,
-    indent: String,
-  ): PythonCodeBlock? {
-    if (isEmpty()) {
-      return null
-    }
-
+  private fun GeneratedOperation.renderRequestPayloadFunction(): PythonCodeBlock? {
+    val requestBody = requestBody?.takeIf { payload -> payload.payloads.isNotEmpty() } ?: return null
+    val bodyType = requestBody.renderClientBodyType()
+    val attempts = requestBody.requestVariants().map { variant -> variant.renderValidationAttempt() }
     return PythonCodeBlock.of(
-      "%L%L=%T({%L}),",
-      indent,
-      argumentName,
-      PythonSymbol(".runtime", "parameter_map"),
-      joinToString(", ") { parameter ->
-        "${parameter.wireName().pythonStringLiteral()}: ${parameter.name.pythonIdentifierName}"
-      },
+      "def %L(body: %C) -> %T[%C]:\n" +
+        "    validated: %C\n" +
+        "%C\n" +
+        "    raise ValueError(%S)",
+      requestPayloadFunctionName(),
+      bodyType,
+      PythonSymbol("sunday", "RequestPayloadSpec"),
+      bodyType,
+      bodyType,
+      PythonCodeBlock.join(attempts, separator = "\n"),
+      "Request body does not match a declared payload for operation '$id'",
     )
   }
 
-  private fun List<GeneratedParameter>.renderRequestParameterMap(): PythonCodeBlock =
-    PythonCodeBlock.of(
-      "%T({%L})",
-      PythonSymbol(".runtime", "parameter_map"),
-      joinToString(", ") { parameter ->
-        "${parameter.wireName().pythonStringLiteral()}: ${parameter.name.pythonIdentifierName}"
-      },
-    )
+  private fun GeneratedOperation.requestPayloadFunctionName(): String = "_request_payload_${id.pythonIdentifierName}"
 
-  private fun GeneratedPayload?.contentTypeHeaderForContentBody(): String? {
-    if (this == null || mediaTypes.isEmpty() || !usesPythonContentRequestBody) {
-      return null
+  private fun GeneratedPayload.requestVariants(): List<PythonRequestVariant> =
+    if (payloads.isEmpty()) {
+      listOf(PythonRequestVariant(type, mediaTypes))
+    } else {
+      payloads.map { payload -> PythonRequestVariant(payload.type, payload.mediaTypes) }
     }
 
-    return mediaTypes.first()
+  private fun PythonRequestVariant.renderClientType(): PythonCodeBlock =
+    when {
+      mediaTypes.any { mediaType -> mediaType.startsWith("multipart/", ignoreCase = true) } ->
+        PythonCodeBlock.of("%T", PythonSymbol("sunday", "MultipartBody"))
+      mediaTypes.any { mediaType -> mediaType.equals("application/json-patch+json", ignoreCase = true) } ->
+        PythonCodeBlock.of("%T", PythonSymbol("sunday", "PatchDocument"))
+      else -> type.renderClientPythonType(nullable = false)
+    }
+
+  private fun PythonRequestVariant.renderValidationAttempt(): PythonCodeBlock {
+    val runtimeType = runtimeType()
+    return if (runtimeType != null) {
+      PythonCodeBlock.of(
+        "    if isinstance(body, %T):\n" +
+          "        validated = body\n" +
+          "        return %T(body=validated, content_types=%C)",
+        runtimeType,
+        PythonSymbol("sunday", "RequestPayloadSpec"),
+        renderMediaTypes(mediaTypes),
+      )
+    } else {
+      PythonCodeBlock.of(
+        "    try:\n" +
+          "        validated = %L.validate_python(body)\n" +
+          "    except %T:\n" +
+          "        pass\n" +
+          "    else:\n" +
+          "        return %T(body=validated, content_types=%C)",
+        this.type.adapterName(),
+        PythonSymbol("pydantic", "ValidationError"),
+        PythonSymbol("sunday", "RequestPayloadSpec"),
+        renderMediaTypes(mediaTypes),
+      )
+    }
   }
 
-  private val GeneratedPayload.usesPythonContentRequestBody: Boolean
-    get() = isPythonStreamingRequestBody || type.isBinaryPayload()
-
-  private fun GeneratedOperation.pathParameters(): List<GeneratedParameter> =
-    parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.PATH }
-
-  private fun GeneratedOperation.queryParameters(): List<GeneratedParameter> =
-    parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.QUERY }
-
-  private fun GeneratedOperation.headerParameters(): List<GeneratedParameter> =
-    parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.HEADER }
+  private fun PythonRequestVariant.runtimeType(): PythonSymbol? =
+    when {
+      mediaTypes.any { mediaType -> mediaType.startsWith("multipart/", ignoreCase = true) } ->
+        PythonSymbol("sunday", "MultipartBody")
+      mediaTypes.any { mediaType -> mediaType.equals("application/json-patch+json", ignoreCase = true) } ->
+        PythonSymbol("sunday", "PatchDocument")
+      else -> null
+    }
 
   private fun GeneratedTypeRef.renderClientPythonType(nullable: Boolean = true): PythonCodeBlock {
     val type =
@@ -832,7 +805,8 @@ class PythonClientRenderer(
         GeneratedTypeRef.Kind.NAMED -> PythonCodeBlock.of("%T", PythonSymbol(".models", name.pythonTypeName))
         GeneratedTypeRef.Kind.ARRAY ->
           PythonCodeBlock.of(
-            "list[%C]",
+            "%L[%C]",
+            if (collection?.name == "SET") "set" else "list",
             arguments.firstOrNull()?.renderClientPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
           )
         GeneratedTypeRef.Kind.MAP ->
@@ -844,51 +818,159 @@ class PythonClientRenderer(
           if (arguments.isEmpty()) {
             PythonCodeBlock.of("object")
           } else {
-            PythonCodeBlock.join(
-              arguments.map { type ->
-                type.renderClientPythonType(nullable = false)
-              },
-              separator = " | ",
-            )
+            PythonCodeBlock.join(arguments.map { it.renderClientPythonType(nullable = false) }, separator = " | ")
           }
         GeneratedTypeRef.Kind.SCALAR -> renderPythonType(nullable = false)
       }
-
-    return if (nullable && this.nullable) {
-      PythonCodeBlock.of("%C | None", type)
-    } else {
-      type
-    }
+    return if (nullable && this.nullable) PythonCodeBlock.of("%C | None", type) else type
   }
 
-  private fun GeneratedTypeRef.renderResponseDecoder(): PythonCodeBlock =
-    when (kind) {
-      GeneratedTypeRef.Kind.NAMED ->
-        PythonCodeBlock.of(
-          "    return %T(%C).validate_python(response.json())",
-          PythonSymbol("pydantic", "TypeAdapter"),
-          renderClientPythonType(nullable = false),
-        )
-      GeneratedTypeRef.Kind.SCALAR ->
-        when (name) {
-          "nil" -> PythonCodeBlock.of("    return None")
-          "string" -> PythonCodeBlock.of("    return response.text")
-          "file" -> PythonCodeBlock.of("    return response.content")
-          else ->
-            PythonCodeBlock.of(
-              "    return %T(%C).validate_python(response.json())",
-              PythonSymbol("pydantic", "TypeAdapter"),
-              renderClientPythonType(nullable = false),
-            )
+  private fun GeneratedOperation.successResponses(): List<GeneratedResponse> =
+    responses.filter { response -> response.status == null || response.status in 200..299 }
+
+  private fun GeneratedOperation.eventDecoderName(): String = "_decode_${id.pythonIdentifierName}_event"
+
+  private fun PythonResponseVariant.hasBody(): Boolean = type != null && !type.isNil()
+
+  private fun GeneratedOperation.responseVariants(): List<PythonResponseVariant> =
+    successResponses().flatMapIndexed { responseIndex, response ->
+      if (response.payloads.isEmpty()) {
+        listOf(PythonResponseVariant(response, response.type, response.mediaTypes, responseIndex, 0))
+      } else {
+        response.payloads.mapIndexed { payloadIndex, payload ->
+          PythonResponseVariant(response, payload.type, payload.mediaTypes, responseIndex, payloadIndex)
         }
-      else ->
-        PythonCodeBlock.of(
-          "    return %T(%C).validate_python(response.json())",
-          PythonSymbol("pydantic", "TypeAdapter"),
-          renderClientPythonType(nullable = false),
+      }
+    }
+
+  private fun GeneratedTypeRef.isNil(): Boolean = kind == GeneratedTypeRef.Kind.SCALAR && name == "nil"
+
+  private fun GeneratedOperation.httpMethod(): String =
+    when {
+      method.equals("SUBSCRIBE", ignoreCase = true) -> "GET"
+      method.equals("PUBLISH", ignoreCase = true) -> "POST"
+      else -> method.uppercase()
+    }
+
+  private fun GeneratedOperation.httpParameters(): List<GeneratedParameter> =
+    parameters.filter { parameter ->
+      parameter.location in
+        setOf(
+          GeneratedParameter.Location.PATH,
+          GeneratedParameter.Location.QUERY,
+          GeneratedParameter.Location.HEADER,
+          GeneratedParameter.Location.COOKIE,
         )
     }
+
+  private fun GeneratedOperation.requestParameters(): List<GeneratedParameter> {
+    val templateVariables = rfc6570Variables()
+    return httpParameters().filterNot { parameter -> parameter.wireName() in templateVariables }
+  }
+
+  private fun GeneratedOperation.renderPathTemplate(): PythonCodeBlock =
+    if (rfc6570Variables().isEmpty()) {
+      PythonCodeBlock.of("%S", path)
+    } else {
+      PythonCodeBlock.of("%T(%S)", PythonSymbol("sunday", "URITemplate"), path)
+    }
+
+  private fun GeneratedOperation.renderTemplateParameterArgument(): PythonCodeBlock {
+    val variables = rfc6570Variables()
+    if (variables.isEmpty()) {
+      return PythonCodeBlock.of("")
+    }
+    val values =
+      httpParameters()
+        .filter { parameter -> parameter.wireName() in variables }
+        .map { parameter ->
+          val value =
+            parameter.constantValue?.renderPythonValue()
+              ?: PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
+          PythonCodeBlock.of("%S: %C", parameter.wireName(), value)
+        }
+    return PythonCodeBlock.of(
+      "            template_parameters={%C},\n",
+      PythonCodeBlock.join(values, separator = ", "),
+    )
+  }
+
+  private fun GeneratedOperation.rfc6570Variables(): Set<String> =
+    RFC6570_EXPRESSION
+      .findAll(path)
+      .map { match -> match.groupValues[1] }
+      .filter { expression -> expression.isRfc6570Expression() }
+      .flatMap { expression ->
+        expression
+          .trimStart('+', '#', '.', '/', ';', '?', '&')
+          .splitToSequence(',')
+          .map { variable -> variable.substringBefore('*').substringBefore(':') }
+      }.toSet()
+
+  private fun String.isRfc6570Expression(): Boolean =
+    firstOrNull() in setOf('+', '#', '.', '/', ';', '?', '&') || contains(',') || contains('*') || contains(':')
+
+  private fun GeneratedTypeRef.eventDiscriminatorMappings(): List<Pair<String, GeneratedTypeRef>> {
+    if (kind == GeneratedTypeRef.Kind.NAMED) {
+      val mappings = modelIndex[name]?.discriminatorMappings.orEmpty()
+      if (mappings.isNotEmpty()) {
+        return mappings.toList()
+      }
+    }
+    return flattenedUnionTypes()
+      .filter { type -> type.kind == GeneratedTypeRef.Kind.NAMED }
+      .map { type ->
+        (modelIndex[type.name]?.discriminatorValue ?: type.name.pythonTypeName) to type
+      }
+  }
+
+  private fun GeneratedOperation.hasSignatureParameters(): Boolean =
+    httpParameters().any { parameter -> parameter.constantValue == null } || requestBody != null || queryString != null
+
+  private fun GeneratedParameter.wireName(): String = serializationName ?: name
+
+  private fun String?.renderParameterStyle(): PythonCodeBlock =
+    when (this) {
+      null -> PythonCodeBlock.of("None")
+      "simple" -> PythonCodeBlock.of("%T.SIMPLE", PythonSymbol("sunday", "ParameterStyle"))
+      "label" -> PythonCodeBlock.of("%T.LABEL", PythonSymbol("sunday", "ParameterStyle"))
+      "matrix" -> PythonCodeBlock.of("%T.MATRIX", PythonSymbol("sunday", "ParameterStyle"))
+      "form" -> PythonCodeBlock.of("%T.FORM", PythonSymbol("sunday", "ParameterStyle"))
+      "spaceDelimited" -> PythonCodeBlock.of("%T.SPACE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
+      "pipeDelimited" -> PythonCodeBlock.of("%T.PIPE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
+      "deepObject" -> PythonCodeBlock.of("%T.DEEP_OBJECT", PythonSymbol("sunday", "ParameterStyle"))
+      else -> genError("Unsupported Python parameter style '$this'")
+    }
+
+  private fun Any.renderPythonValue(): PythonCodeBlock =
+    when (this) {
+      is Boolean -> PythonCodeBlock.of(pythonBoolean())
+      is Number -> PythonCodeBlock.of("%L", this)
+      is String -> PythonCodeBlock.of("%S", this)
+      else -> PythonCodeBlock.of("None")
+    }
+
+  private fun Boolean?.pythonBoolean(): String = if (this == true) "True" else "False"
+
+  private fun Boolean.pythonBoolean(): String = if (this) "True" else "False"
 
   private val GeneratedPayload?.isPythonStreamingRequestBody: Boolean
     get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
+
+  private companion object {
+    val RFC6570_EXPRESSION = Regex("\\{([^}]+)}")
+  }
 }
+
+private data class PythonResponseVariant(
+  val response: GeneratedResponse,
+  val type: GeneratedTypeRef?,
+  val mediaTypes: List<String>,
+  val responseIndex: Int,
+  val payloadIndex: Int,
+)
+
+private data class PythonRequestVariant(
+  val type: GeneratedTypeRef,
+  val mediaTypes: List<String>,
+)

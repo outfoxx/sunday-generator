@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.python
+package io.outfoxx.sunday.test.extensions
 
-/** Options shared by Python IR-backed generators. */
-data class PythonGeneratorOptions(
-  val packageName: String? = null,
-  val aggregateServices: Boolean = false,
-  val aggregateServiceName: String? = null,
-  val broker: Boolean = false,
+/** Selects optional Sunday runtime dependencies for a compile-backed Python test. */
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class RequiresPythonRuntime(
+  val value: PythonRuntimeProfile,
 )

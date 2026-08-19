@@ -33,14 +33,18 @@ class PythonCompilerExtension : ParameterResolver {
     parameterContext: ParameterContext,
     extensionContext: ExtensionContext,
   ): Any {
+    val profile =
+      extensionContext.requiredTestMethod.getAnnotation(RequiresPythonRuntime::class.java)?.value
+        ?: extensionContext.requiredTestClass.getAnnotation(RequiresPythonRuntime::class.java)?.value
+        ?: PythonRuntimeProfile.CORE
     val store =
       extensionContext.root.getStore(
         ExtensionContext.Namespace.create(PythonCompilerExtension::class.java, extensionContext.requiredTestClass),
       )
 
-    return store.getOrComputeIfAbsent(PythonCompiler::class.java) {
+    return store.getOrComputeIfAbsent(profile) {
       val workDir = Files.createTempDirectory("python-compiler-")
-      PythonCompiler.create(workDir)
+      PythonCompiler.create(workDir, profile.extras)
     }
   }
 }

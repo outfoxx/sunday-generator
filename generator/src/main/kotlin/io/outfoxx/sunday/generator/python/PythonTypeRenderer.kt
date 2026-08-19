@@ -33,7 +33,8 @@ private fun GeneratedTypeRef.renderNonNullablePythonType(): PythonCodeBlock =
     GeneratedTypeRef.Kind.NAMED -> PythonCodeBlock.of("%L", name.pythonTypeName)
     GeneratedTypeRef.Kind.ARRAY ->
       PythonCodeBlock.of(
-        "list[%C]",
+        "%L[%C]",
+        if (collection?.name == "SET") "set" else "list",
         arguments.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
       )
     GeneratedTypeRef.Kind.MAP ->
@@ -52,16 +53,19 @@ private fun GeneratedTypeRef.renderNonNullablePythonType(): PythonCodeBlock =
 private fun GeneratedTypeRef.renderScalarPythonType(): PythonCodeBlock {
   val formattedType = format?.lowercase()?.ifBlank { null } ?: name.lowercase()
   return when (formattedType) {
-    "date" -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "date"))
+    "date", "date-only", "full-date" -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "date"))
     "date-time",
     "datetime",
+    -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "AwareDatetime"))
     "date-time-only",
     "datetime-only",
-    -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "datetime"))
-    "time", "time-only" -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "time"))
-    "uri", "url" -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "AnyUrl"))
+    -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "NaiveDatetime"))
+    "time", "time-only", "partial-time" -> PythonCodeBlock.of("%T", PythonSymbol("datetime", "time"))
+    "uri", "url", "iri" -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "AnyUrl"))
+    "uri-reference", "iri-reference" -> PythonCodeBlock.of("str")
     "uuid" -> PythonCodeBlock.of("%T", PythonSymbol("uuid", "UUID"))
-    "binary", "byte" -> PythonCodeBlock.of("bytes")
+    "byte" -> PythonCodeBlock.of("%T", PythonSymbol("pydantic", "Base64Bytes"))
+    "binary" -> PythonCodeBlock.of("bytes")
     else ->
       when (name) {
         "boolean" -> PythonCodeBlock.of("bool")

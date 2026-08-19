@@ -116,7 +116,8 @@ class CLITest {
     val result = assertDoesNotThrow { command.test(arrayOf("--help")) }
     assertThat(result.stdout, containsString("RAML definitions"))
     assertThat(result.stdout, containsString("ir"))
-    assertThat(result.stdout, containsString("python/httpx"))
+    assertThat(result.stdout, containsString("python/sunday"))
+    assertThat(result.stdout.contains("python/httpx"), equalTo(false))
     assertThat(result.stdout, containsString("python/litestar"))
   }
 }

@@ -66,7 +66,13 @@ class PythonProblemRendererTest : PythonTest() {
         smokeCode =
           """
           from datetime import datetime
-          from turnpost_api.problems import Problem, ProjectNotFoundProblem, ProjectNotFoundProblemPayload
+          from sunday import ProblemRegistry
+          from turnpost_api.problems import (
+              Problem,
+              ProjectNotFoundProblem,
+              ProjectNotFoundProblemPayload,
+              register_problems,
+          )
 
           payload = ProjectNotFoundProblemPayload.model_validate(
               {
@@ -85,6 +91,14 @@ class PythonProblemRendererTest : PythonTest() {
           assert str(problem.project_id) == "4f76662f-dc50-41b8-bb15-0a097ace8515"
           assert isinstance(problem.retry_after, datetime)
           assert problem.model_dump(by_alias=True)["retry-after"].year == 2026
+
+          registry = ProblemRegistry()
+          register_problems(registry)
+          decoded_problem = registry.decode(
+              {"type": problem.type, "projectId": "4f76662f-dc50-41b8-bb15-0a097ace8515"},
+              response_status=404,
+          )
+          assert isinstance(decoded_problem, ProjectNotFoundProblem)
 
           try:
               raise problem
