@@ -33,7 +33,8 @@ private fun GeneratedTypeRef.renderNonNullablePythonType(): PythonCodeBlock =
     GeneratedTypeRef.Kind.NAMED -> PythonCodeBlock.of("%L", name.pythonTypeName)
     GeneratedTypeRef.Kind.ARRAY ->
       PythonCodeBlock.of(
-        "list[%C]",
+        "%L[%C]",
+        if (collection?.name == "SET") "set" else "list",
         arguments.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
       )
     GeneratedTypeRef.Kind.MAP ->

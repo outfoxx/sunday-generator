@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from .models import Project
 from .problems import register_problems
-from .runtime import Operation, Transport, as_transport, path_template
-from httpx import Response
+from .runtime import (
+    MediaType,
+    Operation,
+    OperationSpec,
+    ParameterLocation,
+    ParameterSpec,
+    RequestSpec,
+    ResponseSpec,
+    Transport,
+    as_transport,
+)
 from pydantic import TypeAdapter
 
 __all__ = ["ProjectsClient"]
@@ -21,16 +30,38 @@ class ProjectsClient:
         project_id: str,
     ) -> Operation[Project]:
         """Create the getProject operation."""
-        request = self._transport.client.build_request(
-            "GET",
-            path_template("/projects/{projectId}", {"projectId": project_id}),
+        request_spec: RequestSpec[None] = RequestSpec(
+            method="GET",
+            path_template="/projects/{projectId}",
+            parameters=(
+                ParameterSpec(
+                    name="projectId",
+                    value=project_id,
+                    location=ParameterLocation.PATH,
+                    style=None,
+                    explode=None,
+                    allow_reserved=False,
+                    allow_empty_value=False,
+                ),
+            ),
+            body=None,
+            content_types=(),
+            accept_types=(MediaType("application/json"),),
         )
-        return Operation(
-            transport=self._transport,
-            request=request,
-            decode=_decode_get_project_response,
+        operation_spec: OperationSpec[None, Project] = OperationSpec(
+            request=request_spec,
+            responses=(
+                ResponseSpec(
+                    status=200,
+                    content_types=(MediaType("application/json"),),
+                    decoder=_decode_get_project_200_0_0,
+                    body_expected=True,
+                    headers=(),
+                ),
+            ),
         )
+        return Operation(self._transport, operation_spec)
 
 
-def _decode_get_project_response(response: Response) -> Project:
-    return TypeAdapter(Project).validate_python(response.json())
+def _decode_get_project_200_0_0(value: object) -> Project:
+    return TypeAdapter(Project).validate_python(value)

@@ -53,6 +53,7 @@ class PythonModelRenderer(
 
     models
       .filter { model -> model.isSupportedModel() }
+      .orderedForInheritance()
       .forEach { model ->
         discriminatorFallbacks[model.name]?.let { fallback ->
           module.addExport(fallback.modelName.pythonTypeName)
@@ -62,14 +63,50 @@ class PythonModelRenderer(
         module.addCode(model.renderModel())
       }
 
+    val rebuilds =
+      models
+        .filter { model -> model.isObjectClass() }
+        .map { model -> PythonCodeBlock.of("%L.model_rebuild()", model.name.pythonTypeName) }
+    if (rebuilds.isNotEmpty()) {
+      module.addCode(PythonCodeBlock.join(rebuilds, separator = "\n"))
+    }
+
     return module.build()
+  }
+
+  private fun List<GeneratedModel>.orderedForInheritance(): List<GeneratedModel> {
+    val remaining = toMutableList()
+    val emitted = mutableSetOf<String>()
+    val ordered = mutableListOf<GeneratedModel>()
+    while (remaining.isNotEmpty()) {
+      val ready =
+        remaining.filter { model ->
+          model.inherits.none { inherited ->
+            inherited.kind == GeneratedTypeRef.Kind.NAMED &&
+              modelIndex[inherited.name]?.isObjectClass() == true &&
+              inherited.name !in emitted
+          }
+        }
+      if (ready.isEmpty()) {
+        genError(
+          "Python object inheritance contains a cycle involving " +
+            remaining.joinToString { model -> model.name },
+        )
+      }
+      ordered += ready
+      emitted += ready.map { model -> model.name }
+      remaining.removeAll(ready.toSet())
+    }
+    return ordered
   }
 
   private fun GeneratedModel.isSupportedModel(): Boolean =
     kind == GeneratedModel.Kind.ENUM ||
       kind == GeneratedModel.Kind.OBJECT ||
       kind == GeneratedModel.Kind.SCALAR_ALIAS ||
-      kind == GeneratedModel.Kind.UNION
+      kind == GeneratedModel.Kind.UNION ||
+      kind == GeneratedModel.Kind.ARRAY ||
+      kind == GeneratedModel.Kind.MAP
 
   private fun GeneratedModel.renderModel(): PythonCodeBlock =
     when (kind) {
@@ -77,15 +114,20 @@ class PythonModelRenderer(
       GeneratedModel.Kind.ENUM -> renderEnumModel()
       GeneratedModel.Kind.SCALAR_ALIAS -> renderScalarAliasModel()
       GeneratedModel.Kind.UNION -> renderUnionModel()
-      else -> error("Unsupported Python model kind in initial model slices: $kind")
+      GeneratedModel.Kind.ARRAY -> renderArrayAliasModel()
+      GeneratedModel.Kind.MAP -> renderMapAliasModel()
     }
+
+  private fun GeneratedModel.isObjectClass(): Boolean =
+    kind == GeneratedModel.Kind.OBJECT &&
+      !(discriminatorMappings.isNotEmpty() && (properties.isEmpty() || discriminator != null))
 
   private fun GeneratedModel.renderObjectModel(): PythonCodeBlock {
     if (discriminatorMappings.isNotEmpty() && (properties.isEmpty() || discriminator != null)) {
       return renderUnionAliasModel()
     }
 
-    val effectiveProperties = effectiveModelProperties()
+    val effectiveProperties = properties
     val renderedProperties =
       syntheticDiscriminatorProperty()
         ?.let { discriminatorProperty ->
@@ -95,28 +137,75 @@ class PythonModelRenderer(
               (property.serializationName ?: property.name) == discriminatorWireName
             }
         } ?: effectiveProperties
+    val bodyBlocks =
+      listOf(
+        PythonCodeBlock.of("    %L", "\"\"\"Generated ${name.pythonTypeName} model.\"\"\""),
+      ) +
+        listOfNotNull(
+          renderObjectConfiguration(),
+          renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
+            PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
+          },
+          renderWireValueValidator(),
+          renderExternalDiscriminatorValidator(),
+        )
     val body =
-      if (renderedProperties.isEmpty()) {
-        PythonCodeBlock.of("    pass")
-      } else {
-        val validators = renderExternalDiscriminatorValidator()
-        if (validators == null) {
-          PythonCodeBlock.join(renderedProperties.map { property -> property.renderProperty(this) })
-        } else {
-          val propertyBlock = PythonCodeBlock.join(renderedProperties.map { property -> property.renderProperty(this) })
-          val blocks = listOf(propertyBlock, validators)
-          PythonCodeBlock.join(blocks, separator = "\n\n")
-        }
-      }
+      bodyBlocks.takeIf { it.isNotEmpty() }?.let { PythonCodeBlock.join(it, separator = "\n\n") }
+        ?: PythonCodeBlock.of("    pass")
+    val bases =
+      inherits
+        .filter { inherited ->
+          inherited.kind == GeneratedTypeRef.Kind.NAMED && modelIndex[inherited.name]?.isObjectClass() == true
+        }.map { inherited -> inherited.renderPythonType(nullable = false) }
+        .ifEmpty { listOf(PythonCodeBlock.of("%T", PythonSymbol("sunday", "SundayModel"))) }
 
     return PythonCodeBlock.of(
       """
-      class %L(%T):
+      class %L(%C):
       %C
       """.trimIndent(),
       name.pythonTypeName,
-      PythonSymbol("sunday", "SundayModel"),
+      PythonCodeBlock.join(bases, separator = ", "),
       body,
+    )
+  }
+
+  private fun GeneratedModel.renderObjectConfiguration(): PythonCodeBlock? {
+    val extra =
+      when {
+        patternProperties.isNotEmpty() || additionalProperties?.allowed == true || additionalProperties?.type != null ->
+          "allow"
+        closed == true || additionalProperties?.allowed == false -> "forbid"
+        else -> null
+      }
+    val schemaExtra = mutableListOf<PythonCodeBlock>()
+    if (examples.isNotEmpty()) {
+      schemaExtra +=
+        PythonCodeBlock.of(
+          "%S: [%C]",
+          "examples",
+          PythonCodeBlock.join(examples.mapNotNull { example -> example.value?.renderPythonValue() }, separator = ", "),
+        )
+    }
+    if (deprecated) {
+      schemaExtra += PythonCodeBlock.of("%S: True", "deprecated")
+    }
+    if (extra == null && schemaExtra.isEmpty()) {
+      return null
+    }
+    val arguments = mutableListOf<PythonCodeBlock>()
+    extra?.let { value -> arguments += PythonCodeBlock.of("extra=%S", value) }
+    if (schemaExtra.isNotEmpty()) {
+      arguments +=
+        PythonCodeBlock.of(
+          "json_schema_extra={%C}",
+          PythonCodeBlock.join(schemaExtra, separator = ", "),
+        )
+    }
+    return PythonCodeBlock.of(
+      "    model_config = %T(%C)",
+      PythonSymbol("pydantic", "ConfigDict"),
+      PythonCodeBlock.join(arguments, separator = ", "),
     )
   }
 
@@ -124,8 +213,159 @@ class PythonModelRenderer(
     PythonCodeBlock.of(
       "type %L = %C",
       name.pythonTypeName,
-      aliases.firstOrNull()?.renderPythonType(nullable = false) ?: GeneratedTypeRef.scalar("any").renderPythonType(),
+      renderValidatedType(
+        aliases.firstOrNull()?.renderPythonType(nullable = false)
+          ?: GeneratedTypeRef.scalar("any").renderPythonType(),
+        validation,
+        "model '$name'",
+        aliases.firstOrNull() ?: GeneratedTypeRef.scalar("any"),
+      ),
     )
+
+  private fun GeneratedModel.renderArrayAliasModel(): PythonCodeBlock {
+    val elementType = aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object")
+    val collectionType =
+      PythonCodeBlock.of(
+        "%L[%C]",
+        if (collection?.name == "SET") "set" else "list",
+        elementType,
+      )
+    return PythonCodeBlock.of(
+      "type %L = %C",
+      name.pythonTypeName,
+      renderValidatedType(
+        collectionType,
+        validation,
+        "model '$name'",
+        GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", collection = collection),
+      ),
+    )
+  }
+
+  private fun GeneratedModel.renderMapAliasModel(): PythonCodeBlock {
+    val mapType =
+      PythonCodeBlock.of(
+        "dict[str, %C]",
+        aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
+      )
+    return PythonCodeBlock.of(
+      "type %L = %C",
+      name.pythonTypeName,
+      renderValidatedType(mapType, validation, "model '$name'", GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map")),
+    )
+  }
+
+  private fun renderValidatedType(
+    baseType: PythonCodeBlock,
+    validation: Map<String, String>,
+    context: String,
+    type: GeneratedTypeRef,
+  ): PythonCodeBlock {
+    val constraints = validation.renderFieldConstraints(context, type)
+    return if (constraints.isEmpty()) {
+      baseType
+    } else {
+      PythonCodeBlock.of(
+        "%T[%C, %T(%C)]",
+        PythonSymbol("typing", "Annotated"),
+        baseType,
+        PythonSymbol("pydantic", "Field"),
+        PythonCodeBlock.join(constraints, separator = ", "),
+      )
+    }
+  }
+
+  private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
+    val nonNullableOptionalProperties =
+      properties.filter { property -> !property.required && !property.type.acceptsNull() }
+    val validatesAdditionalProperties =
+      patternProperties.isNotEmpty() || additionalProperties?.type != null
+    if (nonNullableOptionalProperties.isEmpty() && !validatesAdditionalProperties) {
+      return null
+    }
+
+    val statements = mutableListOf<PythonCodeBlock>()
+    nonNullableOptionalProperties.forEach { property ->
+      val wireName = property.serializationName ?: property.name
+      statements +=
+        PythonCodeBlock.of(
+          "        if %S in data and data[%S] is None:\n" +
+            "            raise ValueError(%S)",
+          wireName,
+          wireName,
+          "Property '$wireName' is not nullable",
+        )
+    }
+
+    if (validatesAdditionalProperties) {
+      statements +=
+        PythonCodeBlock.of(
+          "        declared_names = set(cls.model_fields)\n" +
+            "        declared_names.update(" +
+            "field.alias for field in cls.model_fields.values() if field.alias is not None)\n" +
+            "        for key in list(data):\n" +
+            "            if key in declared_names:\n" +
+            "                continue\n" +
+            "            matched = False",
+        )
+      patternProperties.forEach { patternProperty ->
+        val validatedType =
+          renderValidatedType(
+            patternProperty.type.renderPythonType(nullable = patternProperty.type.nullable),
+            patternProperty.validation,
+            "pattern property '${patternProperty.pattern}' on model '$name'",
+            patternProperty.type,
+          )
+        statements +=
+          PythonCodeBlock.of(
+            "            if %T(%S, key) is not None:\n" +
+              "                data[key] = %T(%C).validate_python(data[key])\n" +
+              "                matched = True",
+            PythonSymbol("re", "search"),
+            patternProperty.pattern,
+            PythonSymbol("pydantic", "TypeAdapter"),
+            validatedType,
+          )
+      }
+      val additionalType = additionalProperties?.type
+      if (additionalType != null) {
+        val validatedType =
+          renderValidatedType(
+            additionalType.renderPythonType(nullable = additionalType.nullable),
+            additionalProperties.validation,
+            "additional properties on model '$name'",
+            additionalType,
+          )
+        statements +=
+          PythonCodeBlock.of(
+            "            if not matched:\n" +
+              "                data[key] = %T(%C).validate_python(data[key])",
+            PythonSymbol("pydantic", "TypeAdapter"),
+            validatedType,
+          )
+      } else if (additionalProperties?.allowed == false || closed == true) {
+        statements +=
+          PythonCodeBlock.of(
+            "            if not matched:\n" +
+              "                raise ValueError(f\"Extra property '{key}' is not allowed\")",
+          )
+      }
+    }
+
+    return PythonCodeBlock.of(
+      "    @%T(mode=%S)\n" +
+        "    @classmethod\n" +
+        "    def _validate_wire_values(cls, data: object) -> object:\n" +
+        "        if not isinstance(data, dict):\n" +
+        "            return data\n" +
+        "        data = dict(data)\n" +
+        "%C\n" +
+        "        return data",
+      PythonSymbol("pydantic", "model_validator"),
+      "before",
+      PythonCodeBlock.join(statements, separator = "\n"),
+    )
+  }
 
   private fun GeneratedModel.renderEnumModel(): PythonCodeBlock {
     val entries = pythonEnumEntries()
@@ -520,36 +760,140 @@ class PythonModelRenderer(
         ?: externalDiscriminatorType
         ?: type.renderPythonType(nullable = false)
     val propertyType =
-      if (required && !type.nullable) {
+      if (!type.nullable && (required || defaultValue != null)) {
         basePropertyType
       } else {
         PythonCodeBlock.of("%C | None", basePropertyType)
       }
-    val defaultValue = if (required) "" else " = None"
     val alias = serializationName ?: name
+    val fieldArguments = mutableListOf<PythonCodeBlock>()
+    if (!required) {
+      fieldArguments +=
+        PythonCodeBlock.of(
+          "default=%C",
+          defaultValue?.let { value -> renderDefaultValue(value) } ?: PythonCodeBlock.of("None"),
+        )
+    }
+    if (defaultValue != null) {
+      fieldArguments += PythonCodeBlock.of("validate_default=True")
+    }
+    if (alias != propertyName) {
+      fieldArguments += PythonCodeBlock.of("alias=%S", alias)
+    }
+    fieldArguments += validation.renderFieldConstraints("property '${model.name}.$name'", type)
+    documentation?.description?.let { description ->
+      fieldArguments += PythonCodeBlock.of("description=%S", description)
+    }
+    if (deprecated) {
+      fieldArguments += PythonCodeBlock.of("deprecated=True")
+    }
+    val schemaExtra = mutableListOf<PythonCodeBlock>()
+    if (readOnly) {
+      schemaExtra += PythonCodeBlock.of("%S: True", "readOnly")
+    }
+    if (writeOnly) {
+      schemaExtra += PythonCodeBlock.of("%S: True", "writeOnly")
+    }
+    if (schemaExtra.isNotEmpty()) {
+      fieldArguments +=
+        PythonCodeBlock.of(
+          "json_schema_extra={%C}",
+          PythonCodeBlock.join(schemaExtra, separator = ", "),
+        )
+    }
+    val exampleValues = examples.mapNotNull { example -> example.value?.renderPythonValue() }
+    if (exampleValues.isNotEmpty()) {
+      fieldArguments +=
+        PythonCodeBlock.of(
+          "examples=[%C]",
+          PythonCodeBlock.join(exampleValues, separator = ", "),
+        )
+    }
 
-    return if (alias != propertyName) {
-      if (required) {
-        PythonCodeBlock.of(
-          "    %L: %C = %T(alias=%S)",
-          propertyName,
-          propertyType,
-          PythonSymbol("pydantic", "Field"),
-          alias,
-        )
+    val overrideSuffix =
+      if (model.inheritedPropertyNames().contains(name)) {
+        "  # type: ignore[assignment]"
       } else {
-        PythonCodeBlock.of(
-          "    %L: %C = %T(default=None, alias=%S)",
-          propertyName,
-          propertyType,
-          PythonSymbol("pydantic", "Field"),
-          alias,
-        )
+        ""
       }
+
+    return if (fieldArguments.isEmpty()) {
+      PythonCodeBlock.of("    %L: %C%L", propertyName, propertyType, overrideSuffix)
     } else {
-      PythonCodeBlock.of("    %L: %C%L", propertyName, propertyType, defaultValue)
+      PythonCodeBlock.of(
+        "    %L: %C = %T(%C)%L",
+        propertyName,
+        propertyType,
+        PythonSymbol("pydantic", "Field"),
+        PythonCodeBlock.join(fieldArguments, separator = ", "),
+        overrideSuffix,
+      )
     }
   }
+
+  private fun GeneratedModel.inheritedPropertyNames(): Set<String> =
+    inherits
+      .mapNotNull { inherited -> modelIndex[inherited.name]?.takeIf { model -> model.isObjectClass() } }
+      .flatMapTo(mutableSetOf()) { inherited ->
+        inherited.properties.map { property -> property.name } + inherited.inheritedPropertyNames()
+      }
+
+  private fun GeneratedModelProperty.renderDefaultValue(value: String): PythonCodeBlock =
+    when {
+      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "boolean" ->
+        PythonCodeBlock.of(if (value.equals("true", ignoreCase = true)) "True" else "False")
+      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name in setOf("integer", "number") ->
+        PythonCodeBlock.of("%L", value)
+      else -> PythonCodeBlock.of("%S", value)
+    }
+
+  private fun Map<String, String>.renderFieldConstraints(
+    context: String,
+    type: GeneratedTypeRef,
+  ): List<PythonCodeBlock> =
+    entries.sortedBy { entry -> entry.key }.mapNotNull { (name, value) ->
+      when (name) {
+        "minimum" -> PythonCodeBlock.of("ge=%L", value)
+        "maximum" -> PythonCodeBlock.of("le=%L", value)
+        "exclusiveMinimum" -> PythonCodeBlock.of("gt=%L", value)
+        "exclusiveMaximum" -> PythonCodeBlock.of("lt=%L", value)
+        "multipleOf" -> PythonCodeBlock.of("multiple_of=%L", value)
+        "minLength", "minItems", "minProperties" -> PythonCodeBlock.of("min_length=%L", value)
+        "maxLength", "maxItems", "maxProperties" -> PythonCodeBlock.of("max_length=%L", value)
+        "pattern" -> PythonCodeBlock.of("pattern=%S", value)
+        "uniqueItems" -> {
+          if (value == "true" && type.kind == GeneratedTypeRef.Kind.ARRAY && type.collection?.name != "SET") {
+            genError("Python $context requires uniqueItems but is not represented as a set")
+          }
+          null
+        }
+        else -> genError("Unsupported Python validation '$name' on $context")
+      }
+    }
+
+  private fun Any.renderPythonValue(): PythonCodeBlock? =
+    when (this) {
+      is Boolean -> PythonCodeBlock.of(if (this) "True" else "False")
+      is Number -> PythonCodeBlock.of("%L", this)
+      is String -> PythonCodeBlock.of("%S", this)
+      is List<*> ->
+        PythonCodeBlock.of(
+          "[%C]",
+          PythonCodeBlock.join(mapNotNull { value -> value?.renderPythonValue() }, separator = ", "),
+        )
+      is Map<*, *> -> {
+        val entries =
+          entries.mapNotNull { (key, value) ->
+            if (key !is String || value == null) {
+              null
+            } else {
+              value.renderPythonValue()?.let { rendered -> PythonCodeBlock.of("%S: %C", key, rendered) }
+            }
+          }
+        PythonCodeBlock.of("{%C}", PythonCodeBlock.join(entries, separator = ", "))
+      }
+      else -> null
+    }
 
   private fun GeneratedModelProperty.renderExternalDiscriminatorPropertyType(): PythonCodeBlock? {
     if (externalDiscriminator == null) {
@@ -655,4 +999,14 @@ class PythonModelRenderer(
             property.type.name == name
         }
       }
+
+  private fun GeneratedTypeRef.acceptsNull(visited: Set<String> = emptySet()): Boolean =
+    nullable ||
+      (kind == GeneratedTypeRef.Kind.SCALAR && name.lowercase() in setOf("any", "object", "nil")) ||
+      (kind == GeneratedTypeRef.Kind.UNION && arguments.any { argument -> argument.acceptsNull(visited) }) ||
+      (
+        kind == GeneratedTypeRef.Kind.NAMED &&
+          name !in visited &&
+          modelIndex[name]?.aliases?.any { alias -> alias.acceptsNull(visited + name) } == true
+      )
 }

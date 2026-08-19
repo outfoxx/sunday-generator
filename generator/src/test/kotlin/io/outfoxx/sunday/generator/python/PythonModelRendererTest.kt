@@ -17,11 +17,14 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
@@ -37,6 +40,117 @@ import org.junit.jupiter.api.Test
 import java.net.URI
 
 class PythonModelRendererTest : PythonTest() {
+
+  @Test
+  fun `generates constrained aliases inheritance recursive references and open objects`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "ShortName",
+          kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          validation = mapOf("minLength" to "2"),
+        ),
+        GeneratedModel(
+          name = "Tags",
+          kind = GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          collection = GeneratedCollectionKind.SET,
+          validation = mapOf("minItems" to "1", "uniqueItems" to "true"),
+        ),
+        GeneratedModel(
+          name = "Scores",
+          kind = GeneratedModel.Kind.MAP,
+          aliases = listOf(GeneratedTypeRef.scalar("integer")),
+          validation = mapOf("maxProperties" to "2"),
+        ),
+        GeneratedModel(
+          name = "BaseRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)),
+        ),
+        GeneratedModel(
+          name = "ChildRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("BaseRecord")),
+          properties =
+            listOf(
+              GeneratedModelProperty("name", GeneratedTypeRef.named("ShortName")),
+              GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"), defaultValue = "3"),
+            ),
+          closed = true,
+        ),
+        GeneratedModel(
+          name = "PatternRecord",
+          kind = GeneratedModel.Kind.OBJECT,
+          patternProperties =
+            listOf(
+              GeneratedPatternProperty(
+                pattern = "^x-",
+                type = GeneratedTypeRef.scalar("string"),
+                validation = mapOf("minLength" to "2"),
+              ),
+            ),
+          additionalProperties = GeneratedAdditionalProperties(allowed = false),
+        ),
+        GeneratedModel(
+          name = "Node",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty("value", GeneratedTypeRef.scalar("string"), required = true),
+              GeneratedModelProperty(
+                "children",
+                GeneratedTypeRef(
+                  kind = GeneratedTypeRef.Kind.ARRAY,
+                  name = "children",
+                  arguments = listOf(GeneratedTypeRef.named("Node")),
+                ),
+              ),
+            ),
+        ),
+      )
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter, ValidationError
+          from turnpost_api.models import ChildRecord, Node, PatternRecord, Scores, ShortName, Tags
+
+          assert TypeAdapter(ShortName).validate_python("ok") == "ok"
+          assert TypeAdapter(Tags).validate_python(["a", "a"]) == {"a"}
+          assert TypeAdapter(Scores).validate_python({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+          child = ChildRecord.model_validate({"id": "1"})
+          assert child.count == 3
+          assert Node.model_validate({"value": "root", "children": [{"value": "leaf"}]}).children
+          assert PatternRecord.model_validate({"x-name": "ok"}).model_dump()["x-name"] == "ok"
+
+          invalid_values = (
+              lambda: TypeAdapter(ShortName).validate_python("x"),
+              lambda: TypeAdapter(Tags).validate_python([]),
+              lambda: TypeAdapter(Scores).validate_python({"a": 1, "b": 2, "c": 3}),
+              lambda: ChildRecord.model_validate({"id": "1", "name": None}),
+              lambda: PatternRecord.model_validate({"x-name": "x"}),
+              lambda: PatternRecord.model_validate({"other": "ok"}),
+          )
+          for invalid_value in invalid_values:
+              try:
+                  invalid_value()
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError("expected validation failure")
+          """.trimIndent(),
+      ),
+      modelsModule.source,
+    )
+  }
 
   @Test
   fun `generates pydantic object and enum models from IR`(compiler: PythonCompiler) {

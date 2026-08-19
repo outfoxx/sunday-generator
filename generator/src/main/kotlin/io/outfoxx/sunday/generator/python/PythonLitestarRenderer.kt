@@ -35,6 +35,12 @@ class PythonLitestarRenderer(
     val serviceName = "${service.pythonServiceBaseName.pythonTypeName}Service"
     val routerFactoryName = service.pythonServiceRouterFactoryName
 
+    service.operations.forEach { operation ->
+      operation.renderResponseHeadersType()?.let { headersType ->
+        module.addExport(operation.responseHeadersTypeName())
+        module.addCode(headersType)
+      }
+    }
     module.addExport(serviceName)
     module.addExport(routerFactoryName)
     module.addCode(service.renderServiceProtocol(serviceName))
@@ -45,6 +51,37 @@ class PythonLitestarRenderer(
 
     return module.build()
   }
+
+  private fun GeneratedOperation.renderResponseHeadersType(): PythonCodeBlock? {
+    val headers = successResponses().flatMap { response -> response.headers }.distinctBy { header -> header.wireName() }
+    if (headers.isEmpty()) {
+      return null
+    }
+    val entries =
+      headers.map { header ->
+        val type =
+          if (header.type.kind == GeneratedTypeRef.Kind.ARRAY) {
+            header.type.renderServerPythonType(nullable = false)
+          } else {
+            header.type.renderServerPythonType(nullable = false)
+          }
+        PythonCodeBlock.of(
+          "%S: %T[%C]",
+          header.wireName(),
+          PythonSymbol("typing", if (header.required) "Required" else "NotRequired"),
+          type,
+        )
+      }
+    return PythonCodeBlock.of(
+      "%L = %T(%S, {%C}, total=False)",
+      responseHeadersTypeName(),
+      PythonSymbol("typing", "TypedDict"),
+      responseHeadersTypeName(),
+      PythonCodeBlock.join(entries, separator = ", "),
+    )
+  }
+
+  private fun GeneratedOperation.responseHeadersTypeName(): String = "${id.pythonTypeName}ResponseHeaders"
 
   private fun renderServerSentEventsHelper(): PythonCodeBlock =
     PythonCodeBlock.of(
@@ -120,13 +157,13 @@ class PythonLitestarRenderer(
           """.trimMargin(),
           id.pythonIdentifierName,
           renderServiceParameterLines(),
-          returnType().renderServerPythonType(),
+          renderServiceReturnType(),
         )
       } else {
         PythonCodeBlock.of(
           "    async def %L(self) -> %C: ...",
           id.pythonIdentifierName,
-          returnType().renderServerPythonType(),
+          renderServiceReturnType(),
         )
       }
     } else {
@@ -156,20 +193,27 @@ class PythonLitestarRenderer(
   private fun GeneratedOperation.renderRouteHandler(): PythonCodeBlock =
     if (streaming == null) {
       if (hasHandlerParameters()) {
-        if (returnType().isNil()) {
+        if (!hasSuccessBody()) {
           PythonCodeBlock.of(
             """
             |    %C
             |    async def %L(
             |%C
-            |    ) -> None:
-            |        await service.%L(%C)
+            |    ) -> %C:
+            |        result = await service.%L(%C)
+            |        if isinstance(result, %T):
+            |%C
+            |%C
             """.trimMargin(),
             renderRouteDecorator(),
             id.pythonIdentifierName,
             renderHandlerParameters(),
+            renderRouteReturnType(),
             id.pythonIdentifierName,
             renderServiceArguments(),
+            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+            renderServerResponseReturn(),
+            renderBareServerResult(),
           )
         } else {
           PythonCodeBlock.of(
@@ -178,39 +222,58 @@ class PythonLitestarRenderer(
             |    async def %L(
             |%C
             |    ) -> %C:
-            |        return await service.%L(%C)
+            |        result = await service.%L(%C)
+            |        if isinstance(result, %T):
+            |%C
+            |%C
             """.trimMargin(),
             renderRouteDecorator(),
             id.pythonIdentifierName,
             renderHandlerParameters(),
-            returnType().renderServerPythonType(),
+            renderRouteReturnType(),
             id.pythonIdentifierName,
             renderServiceArguments(),
+            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+            renderServerResponseReturn(),
+            renderBareServerResult(),
           )
         }
       } else {
-        if (returnType().isNil()) {
+        if (!hasSuccessBody()) {
           PythonCodeBlock.of(
             """
             |    %C
-            |    async def %L() -> None:
-            |        await service.%L()
+            |    async def %L() -> %C:
+            |        result = await service.%L()
+            |        if isinstance(result, %T):
+            |%C
+            |%C
             """.trimMargin(),
             renderRouteDecorator(),
             id.pythonIdentifierName,
+            renderRouteReturnType(),
             id.pythonIdentifierName,
+            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+            renderServerResponseReturn(),
+            renderBareServerResult(),
           )
         } else {
           PythonCodeBlock.of(
             """
             |    %C
             |    async def %L() -> %C:
-            |        return await service.%L()
+            |        result = await service.%L()
+            |        if isinstance(result, %T):
+            |%C
+            |%C
             """.trimMargin(),
             renderRouteDecorator(),
             id.pythonIdentifierName,
-            returnType().renderServerPythonType(),
+            renderRouteReturnType(),
             id.pythonIdentifierName,
+            PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+            renderServerResponseReturn(),
+            renderBareServerResult(),
           )
         }
       }
@@ -251,8 +314,10 @@ class PythonLitestarRenderer(
   private fun GeneratedOperation.hasServiceParameters(): Boolean =
     routeParameters().isNotEmpty() ||
       requestBody != null ||
+      queryString != null ||
       queryParameters().isNotEmpty() ||
-      headerParameters().isNotEmpty()
+      headerParameters().isNotEmpty() ||
+      cookieParameters().isNotEmpty()
 
   private fun GeneratedOperation.hasHandlerParameters(): Boolean = hasServiceParameters()
 
@@ -265,11 +330,24 @@ class PythonLitestarRenderer(
   private fun GeneratedOperation.renderHandlerParameters(): PythonCodeBlock =
     PythonCodeBlock.join(
       routeParameters().map { parameter -> parameter.renderPathHandlerParameter() } +
-        listOfNotNull(requestBody?.renderBodyHandlerParameter()) +
-        (queryParameters() + headerParameters())
+        listOfNotNull(
+          requestBody?.takeUnless { body -> body.requiresRuntimeDecode() }?.renderBodyHandlerParameter(),
+        ) +
+        listOfNotNull(
+          (queryString != null || requestBody?.requiresRuntimeDecode() == true).takeIf { it }?.let {
+            PythonCodeBlock.of(
+              "        request: %T[%T, %T, %T],",
+              PythonSymbol("litestar", "Request"),
+              PythonSymbol("typing", "Any"),
+              PythonSymbol("typing", "Any"),
+              PythonSymbol("typing", "Any"),
+            )
+          },
+        ) +
+        (queryParameters() + headerParameters() + cookieParameters())
           .filter { parameter -> parameter.required }
           .map { parameter -> parameter.renderHandlerParameter() } +
-        (queryParameters() + headerParameters())
+        (queryParameters() + headerParameters() + cookieParameters())
           .filterNot { parameter -> parameter.required }
           .map { parameter -> parameter.renderHandlerParameter() },
       separator = "\n",
@@ -277,16 +355,38 @@ class PythonLitestarRenderer(
 
   private fun GeneratedOperation.renderServiceArguments(): PythonCodeBlock {
     val arguments =
-      routeParameters().map { parameter -> parameter.name.pythonIdentifierName } +
-        listOfNotNull(requestBody?.let { "data" }) +
-        (queryParameters() + headerParameters())
+      routeParameters().map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) } +
+        listOfNotNull(
+          requestBody?.let { body ->
+            if (body.requiresRuntimeDecode()) {
+              PythonCodeBlock.of(
+                "await %T(%C, request, %S)",
+                PythonSymbol("sunday.litestar", "request_model", "_decode_body"),
+                body.renderServerBodyType(),
+                body.mediaTypes.first(),
+              )
+            } else {
+              PythonCodeBlock.of("data")
+            }
+          },
+        ) +
+        listOfNotNull(
+          queryString?.let { type ->
+            PythonCodeBlock.of(
+              "%T(%C, request)",
+              PythonSymbol("sunday.litestar", "query_model", "_sunday_query_model"),
+              type.renderServerPythonType(nullable = false),
+            )
+          },
+        ) +
+        (queryParameters() + headerParameters() + cookieParameters())
           .filter { parameter -> parameter.required }
-          .map { parameter -> parameter.name.pythonIdentifierName } +
-        (queryParameters() + headerParameters())
+          .map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) } +
+        (queryParameters() + headerParameters() + cookieParameters())
           .filterNot { parameter -> parameter.required }
-          .map { parameter -> parameter.name.pythonIdentifierName }
+          .map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) }
 
-    return PythonCodeBlock.of("%L", arguments.joinToString(", "))
+    return PythonCodeBlock.join(arguments, separator = ", ")
   }
 
   private fun GeneratedOperation.requiredServiceParameters(): List<PythonCodeBlock> =
@@ -298,19 +398,27 @@ class PythonLitestarRenderer(
       )
     } +
       listOfNotNull(requestBody?.renderServiceBodyParameter()) +
-      (queryParameters() + headerParameters())
+      listOfNotNull(
+        queryString?.let { type ->
+          PythonCodeBlock.of("        query_string: %C,", type.renderServerPythonType(nullable = false))
+        },
+      ) +
+      (queryParameters() + headerParameters() + cookieParameters())
         .filter { parameter -> parameter.required }
         .map { parameter -> parameter.renderRequiredServiceParameter() }
 
   private fun GeneratedOperation.optionalServiceParameters(): List<PythonCodeBlock> =
-    (queryParameters() + headerParameters()).filterNot { parameter -> parameter.required }.map { parameter ->
-      PythonCodeBlock.of(
-        "        %L: %C = %C,",
-        parameter.name.pythonIdentifierName,
-        parameter.type.renderOptionalParameterType(),
-        parameter.renderDefaultValue(),
-      )
-    }
+    (queryParameters() + headerParameters() + cookieParameters())
+      .filterNot { parameter ->
+        parameter.required
+      }.map { parameter ->
+        PythonCodeBlock.of(
+          "        %L: %C = %C,",
+          parameter.name.pythonIdentifierName,
+          parameter.type.renderOptionalParameterType(),
+          parameter.renderDefaultValue(),
+        )
+      }
 
   private fun GeneratedParameter.renderRequiredServiceParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
@@ -320,10 +428,34 @@ class PythonLitestarRenderer(
     )
 
   private fun GeneratedPayload.renderServiceBodyParameter(): PythonCodeBlock =
-    PythonCodeBlock.of("        body: %C,", type.renderServerPythonType(nullable = false))
+    PythonCodeBlock.of("        body: %C,", renderServerBodyType())
 
   private fun GeneratedPayload.renderBodyHandlerParameter(): PythonCodeBlock =
-    PythonCodeBlock.of("        data: %C,", type.renderServerPythonType(nullable = false))
+    PythonCodeBlock.of(
+      "        data: %T[%C, %T(media_type=%S)],",
+      PythonSymbol("typing", "Annotated"),
+      renderServerBodyType(),
+      PythonSymbol("litestar.params", "Body"),
+      mediaTypes.firstOrNull() ?: "application/json",
+    )
+
+  private fun GeneratedPayload.renderServerBodyType(): PythonCodeBlock =
+    PythonCodeBlock.join(
+      (payloads.map { payload -> payload.type }.ifEmpty { listOf(type) })
+        .distinct()
+        .map { bodyType -> bodyType.renderServerPythonType(nullable = false) },
+      separator = " | ",
+    )
+
+  private fun GeneratedPayload.requiresRuntimeDecode(): Boolean =
+    mediaTypes.firstOrNull()?.let { mediaType ->
+      mediaType.endsWith("+xml", ignoreCase = true) ||
+        mediaType.endsWith("+yaml", ignoreCase = true) ||
+        mediaType.equals("application/xml", ignoreCase = true) ||
+        mediaType.equals("text/xml", ignoreCase = true) ||
+        mediaType.equals("application/yaml", ignoreCase = true) ||
+        mediaType.equals("text/yaml", ignoreCase = true)
+    } == true
 
   private fun GeneratedParameter.renderPathHandlerParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
@@ -338,7 +470,8 @@ class PythonLitestarRenderer(
       when (location) {
         GeneratedParameter.Location.QUERY -> PythonSymbol("litestar.params", "QueryParameter")
         GeneratedParameter.Location.HEADER -> PythonSymbol("litestar.params", "HeaderParameter")
-        else -> error("Only query and header parameters use annotated handler parameters")
+        GeneratedParameter.Location.COOKIE -> PythonSymbol("litestar.params", "CookieParameter")
+        else -> error("Only query, header, and cookie parameters use annotated handler parameters")
       }
     val type = if (required) type.renderServerPythonType() else type.renderOptionalParameterType()
     val defaultValue = if (required) PythonCodeBlock.of("") else PythonCodeBlock.of(" = %C", renderDefaultValue())
@@ -362,8 +495,108 @@ class PythonLitestarRenderer(
   private fun GeneratedOperation.headerParameters(): List<GeneratedParameter> =
     parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.HEADER }
 
+  private fun GeneratedOperation.cookieParameters(): List<GeneratedParameter> =
+    parameters.filter { parameter -> parameter.location == GeneratedParameter.Location.COOKIE }
+
   private fun GeneratedOperation.returnType(): GeneratedTypeRef =
     successResponse()?.type ?: GeneratedTypeRef.scalar("nil")
+
+  private fun GeneratedOperation.renderSuccessBodyType(): PythonCodeBlock {
+    val types =
+      successResponses()
+        .flatMap { response ->
+          response.payloads.map { payload -> payload.type }.ifEmpty { listOfNotNull(response.type) }
+        }.filterNot { type -> type.isNil() }
+        .distinct()
+    return if (types.isEmpty()) {
+      PythonCodeBlock.of("None")
+    } else {
+      PythonCodeBlock.join(types.map { type -> type.renderServerPythonType() }, separator = " | ")
+    }
+  }
+
+  private fun GeneratedOperation.renderServiceReturnType(): PythonCodeBlock {
+    val bodyType = renderSuccessBodyType()
+    val headersType =
+      if (successResponses().any { response -> response.headers.isNotEmpty() }) {
+        PythonCodeBlock.of("%L", responseHeadersTypeName())
+      } else {
+        PythonCodeBlock.of("dict[str, object]")
+      }
+    return PythonCodeBlock.of(
+      "%C | %T[%C, %C]",
+      bodyType,
+      PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+      bodyType,
+      headersType,
+    )
+  }
+
+  private fun GeneratedOperation.renderRouteReturnType(): PythonCodeBlock {
+    val bodyType = renderSuccessBodyType()
+    if (!hasSuccessBody()) {
+      return PythonCodeBlock.of("None")
+    }
+    return PythonCodeBlock.of(
+      "%C | %T[%C]",
+      bodyType,
+      PythonSymbol("litestar.response", "Response"),
+      bodyType,
+    )
+  }
+
+  private fun GeneratedOperation.renderBareServerResult(): PythonCodeBlock =
+    if (!hasSuccessBody()) {
+      PythonCodeBlock.of("        return None")
+    } else if (successMediaType().isXmlOrYaml()) {
+      PythonCodeBlock.of(
+        "        return %T(\n" +
+          "            %C,\n" +
+          "            %T(result, {}, media_type=%S).to_response(default_status=%L),\n" +
+          "        )",
+        PythonSymbol("typing", "cast"),
+        renderRouteReturnType(),
+        PythonSymbol("sunday.litestar", "ServerResponse", "_SundayServerResponse"),
+        successMediaType(),
+        successStatus() ?: 200,
+      )
+    } else {
+      PythonCodeBlock.of("        return result")
+    }
+
+  private fun String.isXmlOrYaml(): Boolean =
+    endsWith("+xml", ignoreCase = true) ||
+      endsWith("+yaml", ignoreCase = true) ||
+      equals("application/xml", ignoreCase = true) ||
+      equals("text/xml", ignoreCase = true) ||
+      equals("application/yaml", ignoreCase = true) ||
+      equals("text/yaml", ignoreCase = true)
+
+  private fun GeneratedOperation.renderServerResponseReturn(): PythonCodeBlock =
+    PythonCodeBlock.of(
+      "            return %T(\n" +
+        "                %C,\n" +
+        "                result.to_response(default_status=%L, default_media_type=%S),\n" +
+        "            )",
+      PythonSymbol("typing", "cast"),
+      renderRouteReturnType(),
+      successStatus() ?: 200,
+      successMediaType(),
+    )
+
+  private fun GeneratedOperation.hasSuccessBody(): Boolean =
+    successResponses().any { response ->
+      response.payloads.any { payload -> !payload.type.isNil() } || response.type?.isNil() == false
+    }
+
+  private fun GeneratedOperation.successResponses(): List<GeneratedResponse> =
+    responses.filter { response -> response.status == null || response.status in 200..299 }
+
+  private fun GeneratedOperation.successMediaType(): String =
+    successResponses().firstNotNullOfOrNull { response ->
+      response.payloads.firstNotNullOfOrNull { payload -> payload.mediaTypes.firstOrNull() }
+        ?: response.mediaTypes.firstOrNull()
+    } ?: "application/json"
 
   private fun GeneratedOperation.successResponse(): GeneratedResponse? =
     responses.firstOrNull { response -> response.status in 200..299 && response.type != null }

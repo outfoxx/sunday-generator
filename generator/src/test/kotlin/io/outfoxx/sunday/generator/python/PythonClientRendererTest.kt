@@ -19,9 +19,11 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedPayloadOption
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
@@ -52,6 +54,22 @@ class PythonClientRendererTest : PythonTest() {
                 listOf(
                   GeneratedModelProperty("projectId", GeneratedTypeRef.scalar("string"), required = true),
                   GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "ProjectQuery",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "tags",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "tags",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                    ),
+                    required = true,
+                  ),
                 ),
             ),
             GeneratedModel(
@@ -134,13 +152,51 @@ class PythonClientRendererTest : PythonTest() {
                       status = 200,
                       type = GeneratedTypeRef.named("ProjectView"),
                       mediaTypes = listOf("application/json"),
+                      headers =
+                        listOf(
+                          GeneratedParameter(
+                            name = "xRevision",
+                            location = GeneratedParameter.Location.HEADER,
+                            type = GeneratedTypeRef.scalar("integer"),
+                            serializationName = "X-Revision",
+                            required = true,
+                          ),
+                        ),
                     ),
+                  ),
+              ),
+              GeneratedOperation(
+                id = "findProject",
+                method = "GET",
+                path = "/projects/{projectId}",
+                parameters =
+                  listOf(
+                    GeneratedParameter(
+                      name = "projectId",
+                      location = GeneratedParameter.Location.PATH,
+                      type = GeneratedTypeRef.scalar("string"),
+                      required = true,
+                    ),
+                  ),
+                responses =
+                  listOf(
+                    GeneratedResponse(
+                      status = 200,
+                      type = GeneratedTypeRef.named("ProjectView"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  ),
+                nullify =
+                  GeneratedNullify(
+                    problems = listOf(GeneratedTypeRef.named("ProjectNotFoundProblem")),
+                    statuses = listOf(404),
                   ),
               ),
               GeneratedOperation(
                 id = "listProjects",
                 method = "GET",
                 path = "/projects",
+                queryString = GeneratedTypeRef.named("ProjectQuery"),
                 responses =
                   listOf(
                     GeneratedResponse(
@@ -287,6 +343,50 @@ class PythonClientRendererTest : PythonTest() {
                     ),
                   ),
               ),
+              GeneratedOperation(
+                id = "putPayload",
+                method = "POST",
+                path = "/payload",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.named("ProjectView"),
+                    mediaTypes = listOf("application/json"),
+                    payloads =
+                      listOf(
+                        GeneratedPayloadOption(
+                          type = GeneratedTypeRef.named("ProjectView"),
+                          mediaTypes = listOf("application/json"),
+                        ),
+                        GeneratedPayloadOption(
+                          type = GeneratedTypeRef.scalar("file"),
+                          mediaTypes = listOf("application/octet-stream"),
+                        ),
+                      ),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
+              GeneratedOperation(
+                id = "uploadMultipart",
+                method = "POST",
+                path = "/multipart",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.scalar("object"),
+                    mediaTypes = listOf("multipart/form-data"),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
+              GeneratedOperation(
+                id = "patchProject",
+                method = "PATCH",
+                path = "/patch",
+                requestBody =
+                  GeneratedPayload(
+                    type = GeneratedTypeRef.scalar("object"),
+                    mediaTypes = listOf("application/json-patch+json"),
+                  ),
+                responses = listOf(GeneratedResponse(status = 204)),
+              ),
             ),
         ),
       )
@@ -338,10 +438,17 @@ class PythonClientRendererTest : PythonTest() {
           import httpx
 
           from turnpost_api.events import EventsClient
-          from turnpost_api.models import ProjectCreatedData, UpdateProjectRequest
+          from turnpost_api.models import ProjectCreatedData, ProjectQuery, ProjectView, UpdateProjectRequest
           from turnpost_api.problems import ProjectNotFoundProblem
           from turnpost_api.projects import ProjectsClient
-          from turnpost_api.runtime import StreamingBody
+          from turnpost_api.runtime import (
+              MultipartBody,
+              MultipartPart,
+              PatchDocument,
+              PatchOperation,
+              PatchOperationKind,
+              StreamingBody,
+          )
 
 
           class EventByteStream(httpx.AsyncByteStream):
@@ -367,9 +474,42 @@ class PythonClientRendererTest : PythonTest() {
 
               if request.method == "GET":
                   if request.url.path == "/projects":
+                      assert request.url.params.get_list("tags") == ["one", "two"]
                       return httpx.Response(200, json=[{"projectId": "project-1", "name": "Roadmap"}])
+                  if request.url.path == "/projects/missing":
+                      return httpx.Response(
+                          404,
+                          headers={"content-type": "application/problem+json"},
+                          json={"type": "https://turnpost.example/problems/project-not-found", "status": 404},
+                      )
                   assert request.url.path == "/projects/project-1"
-                  return httpx.Response(200, json={"projectId": "project-1", "name": "Roadmap"})
+                  return httpx.Response(
+                      200,
+                      headers={"X-Revision": "7"},
+                      json={"projectId": "project-1", "name": "Roadmap"},
+                  )
+
+              if request.url.path == "/payload":
+                  assert request.method == "POST"
+                  if request.headers["content-type"] == "application/json":
+                      assert json.loads(request.content)["projectId"] == "project-1"
+                  else:
+                      assert request.headers["content-type"] == "application/octet-stream"
+                      assert request.content == b"payload-bytes"
+                  return httpx.Response(204)
+
+              if request.url.path == "/multipart":
+                  assert request.method == "POST"
+                  assert request.headers["content-type"].startswith("multipart/form-data; boundary=")
+                  assert b'name="title"' in request.content
+                  assert b"Roadmap" in request.content
+                  return httpx.Response(204)
+
+              if request.url.path == "/patch":
+                  assert request.method == "PATCH"
+                  assert request.headers["content-type"] == "application/json-patch+json"
+                  assert json.loads(request.content) == [{"op": "replace", "path": "/name", "value": "Updated"}]
+                  return httpx.Response(204)
 
               if request.url.path == "/projects/project-1/avatar":
                   assert request.method == "PUT"
@@ -392,7 +532,7 @@ class PythonClientRendererTest : PythonTest() {
               assert request.url.params["includeArchived"] == "true"
               assert request.url.params["revisionId"] == "revision-1"
               assert request.headers["X-Trace-Id"] == "trace-1"
-              assert json.loads(request.content) == {"displayName": "Updated"}
+              assert json.loads(request.content) == {"displayName": "Updated", "fromCommitId": None}
               return httpx.Response(200, json={"projectId": "project-1", "name": "Updated"})
 
 
@@ -417,12 +557,17 @@ class PythonClientRendererTest : PythonTest() {
                   assert str(response.content_type) == "application/json"
                   assert response.get_header("content-type") == "application/json"
                   assert response.get_headers("content-type") == ("application/json",)
+                  assert response.decoded_header("X-Revision") == 7
 
                   project = await operation.execute()
                   assert project.project_id == "project-1"
                   assert project.name == "Roadmap"
 
-                  projects = await ProjectsClient(http_client).list_projects().execute()
+                  assert await ProjectsClient(http_client).find_project("missing").execute_or_none() is None
+
+                  projects = await ProjectsClient(http_client).list_projects(
+                      ProjectQuery(tags=["one", "two"])
+                  ).execute()
                   assert len(projects) == 1
                   assert projects[0].project_id == "project-1"
                   assert projects[0].name == "Roadmap"
@@ -476,6 +621,19 @@ class PythonClientRendererTest : PythonTest() {
 
                   revision_id = await ProjectsClient(http_client).create_project_revision("project-1").execute()
                   assert revision_id == "revision-1"
+
+                  await ProjectsClient(http_client).put_payload(
+                      ProjectView(projectId="project-1", name="Roadmap")
+                  ).execute()
+                  await ProjectsClient(http_client).put_payload(b"payload-bytes").execute()
+                  await ProjectsClient(http_client).upload_multipart(
+                      MultipartBody((MultipartPart("title", "Roadmap"),))
+                  ).execute()
+                  await ProjectsClient(http_client).patch_project(
+                      PatchDocument(
+                          (PatchOperation(PatchOperationKind.REPLACE, "/name", "Updated"),)
+                      )
+                  ).execute()
 
                   stream = EventsClient(http_client).stream_project_events()
                   events = [event async for event in stream]

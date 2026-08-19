@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .models import EventEnvelope
 from .problems import register_problems
-from .runtime import EventStream, Transport, as_transport, path_template
+from .runtime import EventStream, MediaType, RequestSpec, ServerSentEvent, Transport, as_transport
 from pydantic import TypeAdapter
 
 __all__ = ["EventsClient"]
@@ -16,17 +16,19 @@ class EventsClient:
         register_problems(self._transport.problem_registry)
 
     def stream_project_events(self) -> EventStream[EventEnvelope]:
-        """Create the streamProjectEvents event stream."""
-        request = self._transport.client.build_request(
-            "GET",
-            path_template("/events", {}),
+        """Create the streamProjectEvents operation."""
+        request_spec: RequestSpec[None] = RequestSpec(
+            method="GET",
+            path_template="/events",
+            parameters=(),
+            body=None,
+            content_types=(),
+            accept_types=(MediaType("text/event-stream"),),
         )
-        return EventStream(
-            transport=self._transport,
-            request=request,
-            decode=_decode_stream_project_events_event,
-        )
+        return self._transport.event_stream(request_spec, _decode_stream_project_events_event)
 
 
-def _decode_stream_project_events_event(data: str) -> EventEnvelope:
-    return TypeAdapter(EventEnvelope).validate_json(data)
+def _decode_stream_project_events_event(event: ServerSentEvent) -> EventEnvelope:
+    if event.data is None:
+        raise ValueError("Server-sent events must contain data")
+    return TypeAdapter(EventEnvelope).validate_json(event.data)

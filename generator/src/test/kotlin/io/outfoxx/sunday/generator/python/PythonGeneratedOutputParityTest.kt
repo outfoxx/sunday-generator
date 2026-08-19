@@ -99,9 +99,12 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     val clientSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/any_json.py")
 
     assertTrue(modelSource.contains("AnyJson = object"), modelSource)
-    assertTrue(modelSource.contains("value: object | None = None"), modelSource)
-    assertTrue(modelSource.contains("documented: object | None = None"), modelSource)
-    assertTrue(modelSource.contains("named: AnyJson | None = None"), modelSource)
+    assertTrue(modelSource.contains("value: object | None = Field(default=None)"), modelSource)
+    assertTrue(
+      modelSource.contains("documented: object | None = Field(default=None, description=\"Any documented value\")"),
+      modelSource,
+    )
+    assertTrue(modelSource.contains("named: AnyJson | None = Field(default=None)"), modelSource)
     assertTrue(clientSource.contains("body: object"), clientSource)
     assertTrue(clientSource.contains("Operation[AnyJson]"), clientSource)
   }
@@ -125,8 +128,9 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     assertTrue(clientSource.contains("body: StreamingBody"), clientSource)
     assertTrue(clientSource.contains("-> StreamingOperation[ImportAccepted]"), clientSource)
-    assertTrue(clientSource.contains("build_request=build_request"), clientSource)
-    assertTrue(clientSource.contains("content=body.content()"), clientSource)
+    assertTrue(clientSource.contains("request_spec: RequestSpec[StreamingBody]"), clientSource)
+    assertTrue(clientSource.contains("body=body"), clientSource)
+    assertTrue(clientSource.contains("return StreamingOperation(self._transport, operation_spec)"), clientSource)
   }
 
   @Test
@@ -193,8 +197,12 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     assertTrue(source.contains("subscriber_id: str"), source)
     assertTrue(source.contains("last_event_id: str | None = None"), source)
-    assertTrue(source.contains("params=parameter_map({\"subscriberId\": subscriber_id})"), source)
-    assertTrue(source.contains("headers=parameter_map({\"Last-Event-ID\": last_event_id})"), source)
+    assertTrue(source.contains("name=\"subscriberId\""), source)
+    assertTrue(source.contains("value=subscriber_id"), source)
+    assertTrue(source.contains("location=ParameterLocation.QUERY"), source)
+    assertTrue(source.contains("name=\"Last-Event-ID\""), source)
+    assertTrue(source.contains("value=last_event_id"), source)
+    assertTrue(source.contains("location=ParameterLocation.HEADER"), source)
   }
 
   @Test
