@@ -3,9 +3,7 @@ name = "sunday-python-generated-test"
 version = "0.0.0"
 requires-python = ">=3.12"
 dependencies = [
-  "httpx>=0.28",
-  "litestar>=2.18",
-  "pydantic>=2.12",
+  "sunday-python[httpx,litestar]>=2.0.0.dev0,<2.1",
 ]
 
 [dependency-groups]

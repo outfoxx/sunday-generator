@@ -319,9 +319,16 @@ class PythonGeneratedOutputParityTest : PythonTest() {
             yield b'data: {"id":"event-1","type":"project.created","data":{"projectId":"project-1"}}\n\n'
 
 
+    event_requests = 0
+
+
     def handler(request: httpx.Request) -> httpx.Response:
+        global event_requests
         assert request.method == "GET"
         assert request.url.path == "/events"
+        event_requests += 1
+        if event_requests > 1:
+            return httpx.Response(204)
         return httpx.Response(
             200,
             headers={"content-type": "text/event-stream"},

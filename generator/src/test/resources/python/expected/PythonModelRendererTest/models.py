@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import AnyUrl, Field, TypeAdapter, model_validator
+from sunday import SundayModel
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -32,9 +33,7 @@ class ProjectStatus(StrEnum):
 type UniqueId = str
 
 
-class ProjectView(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class ProjectView(SundayModel):
     project_id: str = Field(alias="projectId")
     unique_id: UniqueId = Field(alias="uniqueId")
     resource_id: UUID = Field(alias="resourceId")
@@ -47,16 +46,12 @@ class ProjectView(BaseModel):
     tags: list[str] | None = None
 
 
-class UserSummaryResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class UserSummaryResponse(SundayModel):
     user_id: str = Field(alias="userId")
     email: str
 
 
-class UserSelfResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class UserSelfResponse(SundayModel):
     user_id: str = Field(alias="userId")
     email: str
     created_at: datetime = Field(alias="createdAt")
@@ -65,16 +60,12 @@ class UserSelfResponse(BaseModel):
 type UserResponse = UserSelfResponse | UserSummaryResponse
 
 
-class UserIdentity(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class UserIdentity(SundayModel):
     kind: Literal["user"]
     user_id: str = Field(alias="userId")
 
 
-class ServiceIdentity(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class ServiceIdentity(SundayModel):
     kind: Literal["service"]
     service_id: str = Field(alias="serviceId")
 
@@ -85,9 +76,7 @@ type Identity = Annotated[
 ]
 
 
-class EventEnvelope(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class EventEnvelope(SundayModel):
     type: str
     data: EventData
 
@@ -108,14 +97,10 @@ class EventEnvelope(BaseModel):
 type EventData = ProjectCreatedData | ProjectDeletedData
 
 
-class ProjectCreatedData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class ProjectCreatedData(SundayModel):
     project_id: str = Field(alias="projectId")
 
 
-class ProjectDeletedData(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
-
+class ProjectDeletedData(SundayModel):
     project_id: str = Field(alias="projectId")
     reason: str | None = None

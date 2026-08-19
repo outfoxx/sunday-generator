@@ -112,13 +112,10 @@ class PythonModelRenderer(
     return PythonCodeBlock.of(
       """
       class %L(%T):
-          model_config = %T(populate_by_name=True, serialize_by_alias=True)
-
       %C
       """.trimIndent(),
       name.pythonTypeName,
-      PythonSymbol("pydantic", "BaseModel"),
-      PythonSymbol("pydantic", "ConfigDict"),
+      PythonSymbol("sunday", "SundayModel"),
       body,
     )
   }
@@ -145,17 +142,9 @@ class PythonModelRenderer(
           """
           %L
 
-              @classmethod
-              def _missing_(cls, value: object) -> %T | None:
-                  if not isinstance(value, str):
-                      return None
-                  member = str.__new__(cls, value)
-                  member._name_ = %S
-                  member._value_ = value
-                  return member
+              __unknown_member_name__ = %S
           """.trimIndent(),
           members,
-          PythonSymbol("typing", "Self"),
           fallbackEntry.name,
         )
       } ?: PythonCodeBlock.of("%L", members)
@@ -166,7 +155,7 @@ class PythonModelRenderer(
       %C
       """.trimIndent(),
       name.pythonTypeName,
-      PythonSymbol("enum", "StrEnum"),
+      if (unknownValue != null) PythonSymbol("sunday", "TolerantStrEnum") else PythonSymbol("enum", "StrEnum"),
       body,
     )
   }

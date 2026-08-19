@@ -24,11 +24,13 @@ import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
 
 class PythonCompiler(
   private val command: String,
   val workDir: Path,
+  private val sundayPythonPath: Path,
 ) : Closeable,
   ExtensionContext.Store.CloseableResource {
 
@@ -37,7 +39,19 @@ class PythonCompiler(
     fun create(workDir: Path): PythonCompiler {
       val (uvExists, uvPath) = ShellProcess.execute("command", "-v", "uv")
       require(uvExists) { "Python generated source verification requires uv" }
-      return PythonCompiler(uvPath.trim(), workDir)
+      val sundayPythonPath =
+        System
+          .getenv("SUNDAY_PYTHON_PATH")
+          ?.let(Paths::get)
+          ?.toAbsolutePath()
+          ?.normalize()
+          ?: error(
+            "Python generated source verification requires SUNDAY_PYTHON_PATH to reference the local sunday-python checkout",
+          )
+      require(sundayPythonPath.resolve("pyproject.toml").exists()) {
+        "SUNDAY_PYTHON_PATH does not reference a sunday-python checkout: $sundayPythonPath"
+      }
+      return PythonCompiler(uvPath.trim(), workDir, sundayPythonPath)
     }
   }
 
@@ -56,6 +70,14 @@ class PythonCompiler(
         Files.createDirectories(target)
       }
     }
+
+    val sundayPythonSource = sundayPythonPath.toString().replace("\\", "\\\\")
+    val uvSource =
+      """
+      [tool.uv.sources]
+      sunday-python = { path = "$sundayPythonSource", editable = true }
+      """.trimIndent()
+    Files.writeString(workDir.resolve("pyproject.toml"), "\n$uvSource\n", StandardOpenOption.APPEND)
 
     val (result, output) = execute("sync")
     check(result == 0) { "Python verification environment setup failed:\n$output" }

@@ -15,7 +15,7 @@ def create_parity_api_router(
 ) -> Router:
     """Create an aggregate Litestar router for all generated service routers.
 
-    Configure Litestar with PydanticPlugin(prefer_alias=True) so responses use source wire names.
+    Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.
     """
     return Router(
         path="/",

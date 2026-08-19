@@ -20,10 +20,10 @@ class ProjectsService(Protocol):
 def create_projects_router(service: ProjectsService) -> Router:
     """Create a Litestar router for the Projects service.
 
-    Configure Litestar with PydanticPlugin(prefer_alias=True) so responses use source wire names.
+    Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.
     """
 
-    @get("/projects/{project_id:str}")
+    @get("/projects/{project_id:str}", status_code=200)
     async def get_project(
         project_id: FromPath[str],
     ) -> Project:

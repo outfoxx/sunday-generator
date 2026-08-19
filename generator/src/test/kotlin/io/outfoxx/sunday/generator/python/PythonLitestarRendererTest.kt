@@ -148,6 +148,7 @@ class PythonLitestarRendererTest : PythonTest() {
                         location = GeneratedParameter.Location.HEADER,
                         type = GeneratedTypeRef.scalar("string"),
                         serializationName = "X-Trace-Id",
+                        required = true,
                       ),
                     ),
                   requestBody =
@@ -163,6 +164,45 @@ class PythonLitestarRendererTest : PythonTest() {
                         mediaTypes = listOf("application/json"),
                       ),
                     ),
+                ),
+                GeneratedOperation(
+                  id = "createProject",
+                  method = "POST",
+                  path = "/projects",
+                  requestBody =
+                    GeneratedPayload(
+                      type = GeneratedTypeRef.named("UpdateProjectRequest"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  responses =
+                    listOf(
+                      GeneratedResponse(
+                        status = 202,
+                        type = GeneratedTypeRef.named("ProjectView"),
+                        mediaTypes = listOf("application/json"),
+                      ),
+                    ),
+                ),
+                GeneratedOperation(
+                  id = "headProject",
+                  method = "HEAD",
+                  path = "/projects/{projectId}",
+                  parameters =
+                    listOf(
+                      GeneratedParameter(
+                        name = "projectId",
+                        location = GeneratedParameter.Location.PATH,
+                        type = GeneratedTypeRef.scalar("string"),
+                        required = true,
+                      ),
+                    ),
+                  responses = listOf(GeneratedResponse(status = 200)),
+                ),
+                GeneratedOperation(
+                  id = "optionsProjects",
+                  method = "OPTIONS",
+                  path = "/projects",
+                  responses = listOf(GeneratedResponse(status = 204)),
                 ),
                 GeneratedOperation(
                   id = "deleteProjectAvatar",
@@ -225,8 +265,8 @@ class PythonLitestarRendererTest : PythonTest() {
           from collections.abc import AsyncIterator
 
           from litestar import Litestar
-          from litestar.plugins.pydantic import PydanticPlugin
           from litestar.testing import TestClient
+          from sunday.litestar import SundayPlugin
 
           from turnpost_api.events_server import EventsService, create_events_router
           from turnpost_api.models import EventEnvelope, ProjectCreatedData, ProjectView, UpdateProjectRequest
@@ -241,12 +281,21 @@ class PythonLitestarRendererTest : PythonTest() {
                   self,
                   project_id: str,
                   body: UpdateProjectRequest,
+                  x_trace_id: str,
                   include_archived: bool | None = False,
-                  x_trace_id: str | None = None,
               ) -> ProjectView:
                   assert include_archived is True
                   assert x_trace_id == "trace-1"
                   return ProjectView(projectId=project_id, name=body.display_name)
+
+              async def create_project(self, body: UpdateProjectRequest) -> ProjectView:
+                  return ProjectView(projectId="project-2", name=body.display_name)
+
+              async def head_project(self, project_id: str) -> None:
+                  assert project_id == "project-1"
+
+              async def options_projects(self) -> None:
+                  return None
 
               async def delete_project_avatar(self, project_id: str) -> None:
                   assert project_id == "project-1"
@@ -261,7 +310,7 @@ class PythonLitestarRendererTest : PythonTest() {
           events_service: EventsService = EventsImplementation()
           app = Litestar(
               route_handlers=[create_projects_router(service), create_events_router(events_service)],
-              plugins=[PydanticPlugin(prefer_alias=True)],
+              plugins=[SundayPlugin()],
           )
 
           with TestClient(app=app) as client:
@@ -279,6 +328,24 @@ class PythonLitestarRendererTest : PythonTest() {
 
           assert response.status_code == 200
           assert response.json() == {"projectId": "project-1", "name": "Updated"}
+
+          with TestClient(app=app) as client:
+              response = client.post("/projects", json={"displayName": "Created"})
+
+          assert response.status_code == 202
+          assert response.json() == {"projectId": "project-2", "name": "Created"}
+
+          with TestClient(app=app) as client:
+              response = client.head("/projects/project-1")
+
+          assert response.status_code == 200
+          assert response.content == b""
+
+          with TestClient(app=app) as client:
+              response = client.options("/projects")
+
+          assert response.status_code == 204
+          assert response.content == b""
 
           with TestClient(app=app) as client:
               response = client.delete("/projects/project-1/avatar")

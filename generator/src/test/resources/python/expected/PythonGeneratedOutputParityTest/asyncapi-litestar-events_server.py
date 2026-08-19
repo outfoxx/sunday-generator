@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from .models import EventEnvelope
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterator
 from litestar import Router, get
 from litestar.response import ServerSentEvent
-from pydantic import BaseModel
+from sunday.litestar import server_sent_events as _sunday_server_sent_events
 from typing import Protocol
 
 __all__ = ["EventsService", "create_events_router"]
@@ -19,7 +19,7 @@ class EventsService(Protocol):
 def create_events_router(service: EventsService) -> Router:
     """Create a Litestar router for the Events service.
 
-    Configure Litestar with PydanticPlugin(prefer_alias=True) so responses use source wire names.
+    Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.
     """
 
     @get("/events")
@@ -34,6 +34,4 @@ def create_events_router(service: EventsService) -> Router:
     )
 
 
-async def _server_sent_events(events: AsyncIterable[BaseModel]) -> AsyncIterator[str]:
-    async for event in events:
-        yield event.model_dump_json(by_alias=True)
+_server_sent_events = _sunday_server_sent_events

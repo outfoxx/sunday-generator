@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from .models import ProjectView, UniqueId, UpdateProjectRequest
+from .problems import register_problems
 from .runtime import (
     Operation,
     StreamingBody,
     StreamingOperation,
     Transport,
     TransportRequest,
+    as_transport,
     json_body,
     parameter_map,
     path_template,
@@ -21,14 +23,15 @@ class ProjectsClient:
     """Client operations for the Projects service."""
 
     def __init__(self, transport: Transport) -> None:
-        self._transport = transport
+        self._transport = as_transport(transport)
+        register_problems(self._transport.problem_registry)
 
     def get_project(
         self,
         project_id: str,
     ) -> Operation[ProjectView]:
         """Create the getProject operation."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "GET",
             path_template("/projects/{projectId}", {"projectId": project_id}),
         )
@@ -40,7 +43,7 @@ class ProjectsClient:
 
     def list_projects(self) -> Operation[list[ProjectView]]:
         """Create the listProjects operation."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "GET",
             path_template("/projects", {}),
         )
@@ -59,7 +62,7 @@ class ProjectsClient:
         x_trace_id: str | None = None,
     ) -> Operation[ProjectView]:
         """Create the updateProject operation."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "PUT",
             path_template("/projects/{projectId}", {"projectId": project_id}),
             params=parameter_map({"includeArchived": include_archived, "revisionId": revision_id}),
@@ -79,7 +82,7 @@ class ProjectsClient:
         content_type: str,
     ) -> Operation[None]:
         """Create the putProjectAvatar operation."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "PUT",
             path_template("/projects/{projectId}/avatar", {"projectId": project_id}),
             headers=parameter_map({"Content-Type": content_type}),
@@ -99,7 +102,7 @@ class ProjectsClient:
         """Create the importProjectArchive operation."""
 
         def build_request() -> TransportRequest:
-            return self._transport.build_request(
+            return self._transport.client.build_request(
                 "POST",
                 path_template("/projects/{projectId}/archive", {"projectId": project_id}),
                 headers={"Content-Type": "application/x-tar"},
@@ -117,7 +120,7 @@ class ProjectsClient:
         project_id: str,
     ) -> Operation[UniqueId]:
         """Create the createProjectRevision operation."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "POST",
             path_template("/projects/{projectId}/revisions", {"projectId": project_id}),
         )

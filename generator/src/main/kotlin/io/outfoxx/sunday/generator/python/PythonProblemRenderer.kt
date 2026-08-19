@@ -30,6 +30,7 @@ class PythonProblemRenderer(
 
     module.addExport("ProblemPayload")
     module.addExport("Problem")
+    module.addExport("register_problems")
     module.addCode(baseProblemCode())
 
     problems.forEach { problem ->
@@ -38,64 +39,45 @@ class PythonProblemRenderer(
       module.addCode(problem.renderPayloadType())
       module.addCode(problem.renderProblemType())
     }
+    module.addCode(renderProblemRegistration(problems))
 
     return module.build()
+  }
+
+  private fun renderProblemRegistration(problems: List<GeneratedProblem>): PythonCodeBlock {
+    val registrations =
+      if (problems.isEmpty()) {
+        PythonCodeBlock.of("    pass")
+      } else {
+        PythonCodeBlock.join(
+          problems.map { problem ->
+            PythonCodeBlock.of(
+              "    registry.register(%C, %L)",
+              problem.typeUri.renderPythonValue(),
+              problem.name.pythonTypeName,
+            )
+          },
+        )
+      }
+    return PythonCodeBlock.of(
+      """
+      def register_problems(registry: %T) -> None:
+          ${"\"\"\"Register generated problem types for client response decoding.\"\"\""}
+      %C
+      """.trimIndent(),
+      PythonSymbol("sunday", "ProblemRegistry"),
+      registrations,
+    )
   }
 
   private fun baseProblemCode(): PythonCodeBlock =
     PythonCodeBlock.of(
       """
-      class ProblemPayload(%T):
-          model_config = %T(populate_by_name=True)
-
-          type: str = "about:blank"
-          title: str | None = None
-          status: int | None = None
-          detail: str | None = None
-          instance: str | None = None
-
-
-      class Problem(Exception):
-          payload_type: %T[type[ProblemPayload]] = ProblemPayload
-          payload: ProblemPayload
-
-          def __init__(self, payload: ProblemPayload) -> None:
-              super().__init__(payload.title or payload.type)
-              self.payload = payload
-
-          @classmethod
-          def model_validate(cls, value: object) -> %T:
-              return cls(cls.payload_type.model_validate(value))
-
-          @property
-          def type(self) -> str:
-              return self.payload.type
-
-          @property
-          def title(self) -> str | None:
-              return self.payload.title
-
-          @property
-          def status(self) -> int | None:
-              return self.payload.status
-
-          @property
-          def detail(self) -> str | None:
-              return self.payload.detail
-
-          @property
-          def instance(self) -> str | None:
-              return self.payload.instance
-
-          def model_dump(self, **kwargs: %T) -> dict[str, %T]:
-              return self.payload.model_dump(**kwargs)
+      ProblemPayload = %T
+      Problem = %T
       """.trimIndent(),
-      PythonSymbol("pydantic", "BaseModel"),
-      PythonSymbol("pydantic", "ConfigDict"),
-      PythonSymbol("typing", "ClassVar"),
-      PythonSymbol("typing", "Self"),
-      PythonSymbol("typing", "Any"),
-      PythonSymbol("typing", "Any"),
+      PythonSymbol("sunday", "ProblemPayload", "_ProblemPayload"),
+      PythonSymbol("sunday", "Problem", "_Problem"),
     )
 
   private fun GeneratedProblem.renderPayloadType(): PythonCodeBlock {

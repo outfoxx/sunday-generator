@@ -36,7 +36,7 @@ class PythonHttpxIrGenerator(
     }
 
     if (GeneratedTypeCategory.Service in outputCategories) {
-      val clientRenderer = PythonClientRenderer(packageName)
+      val clientRenderer = PythonClientRenderer(packageName, registerProblems = api.problems.isNotEmpty())
       modules += clientRenderer.renderRuntime()
       modules += api.services.map(clientRenderer::renderService)
       if (options.aggregateServices && api.services.size > 1) {

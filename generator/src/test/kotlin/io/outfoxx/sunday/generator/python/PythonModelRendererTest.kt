@@ -473,9 +473,9 @@ class PythonModelRendererTest : PythonTest() {
       )
     }
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
-    assertTrue(source.contains("def _missing_(cls, value: object) -> Self | None:"), source)
-    assertTrue(source.contains("member._name_ = \"UNKNOWN\""), source)
-    assertTrue(source.contains("member._value_ = value"), source)
+    assertTrue(source.contains("class TaskState(TolerantStrEnum):"), source)
+    assertTrue(source.contains("__unknown_member_name__ = \"UNKNOWN\""), source)
+    assertTrue(!source.contains("def _missing_("), source)
   }
 
   @Test

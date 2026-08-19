@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from .models import EventEnvelope
-from .runtime import EventStream, Transport, path_template
+from .problems import register_problems
+from .runtime import EventStream, Transport, as_transport, path_template
 from pydantic import TypeAdapter
 
 __all__ = ["EventsClient"]
@@ -11,11 +12,12 @@ class EventsClient:
     """Client operations for the Events service."""
 
     def __init__(self, transport: Transport) -> None:
-        self._transport = transport
+        self._transport = as_transport(transport)
+        register_problems(self._transport.problem_registry)
 
     def stream_project_events(self) -> EventStream[EventEnvelope]:
         """Create the streamProjectEvents event stream."""
-        request = self._transport.build_request(
+        request = self._transport.client.build_request(
             "GET",
             path_template("/events", {}),
         )

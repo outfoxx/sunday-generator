@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
@@ -38,7 +39,7 @@ class PythonClientRendererTest : PythonTest() {
 
   @Test
   fun `generates operation runtime and first async httpx service method`(compiler: PythonCompiler) {
-    val clientRenderer = PythonClientRenderer("turnpost_api")
+    val clientRenderer = PythonClientRenderer("turnpost_api", registerProblems = true)
     val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
     val modelsModule =
       PythonModelRenderer("turnpost_api")
@@ -312,11 +313,22 @@ class PythonClientRendererTest : PythonTest() {
             ),
         ),
       )
+    val problemsModule =
+      PythonProblemRenderer("turnpost_api")
+        .renderProblems(
+          listOf(
+            GeneratedProblem(
+              name = "ProjectNotFoundProblem",
+              typeUri = "https://turnpost.example/problems/project-not-found",
+              status = 404,
+            ),
+          ),
+        )
 
     assertTrue(
       compileModules(
         compiler,
-        listOf(initModule, modelsModule, runtimeModule, serviceModule, eventsModule),
+        listOf(initModule, modelsModule, problemsModule, runtimeModule, serviceModule, eventsModule),
         importModules = listOf("turnpost_api.events", "turnpost_api.projects"),
         smokeCode =
           """
@@ -327,6 +339,7 @@ class PythonClientRendererTest : PythonTest() {
 
           from turnpost_api.events import EventsClient
           from turnpost_api.models import ProjectCreatedData, UpdateProjectRequest
+          from turnpost_api.problems import ProjectNotFoundProblem
           from turnpost_api.projects import ProjectsClient
           from turnpost_api.runtime import StreamingBody
 
@@ -336,9 +349,16 @@ class PythonClientRendererTest : PythonTest() {
                   yield b'data: {"type":"project.created","data":{"projectId":"project-1"}}\n\n'
 
 
+          event_requests = 0
+
+
           def handler(request: httpx.Request) -> httpx.Response:
+              global event_requests
               if request.url.path == "/events":
                   assert request.method == "GET"
+                  event_requests += 1
+                  if event_requests > 1:
+                      return httpx.Response(204)
                   return httpx.Response(
                       200,
                       headers={"content-type": "text/event-stream"},
@@ -380,6 +400,12 @@ class PythonClientRendererTest : PythonTest() {
               transport = httpx.MockTransport(handler)
               async with httpx.AsyncClient(base_url="https://api.example.test", transport=transport) as http_client:
                   operation = ProjectsClient(http_client).get_project("project-1")
+
+                  decoded_problem = operation.transport.problem_registry.decode(
+                      {"type": "https://turnpost.example/problems/project-not-found"},
+                      response_status=404,
+                  )
+                  assert isinstance(decoded_problem, ProjectNotFoundProblem)
 
                   request = operation.transport_request()
                   assert request.method == "GET"

@@ -59,7 +59,7 @@ class PythonLitestarIrGenerator(
         def %L(
         %C
         ) -> %T:
-            ${"\"\"\"Create an aggregate Litestar router for all generated service routers.\n\n            Configure Litestar with PydanticPlugin(prefer_alias=True) so responses use source wire names.\n            \"\"\""}
+            ${"\"\"\"Create an aggregate Litestar router for all generated service routers.\n\n            Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.\n            \"\"\""}
             return %T(
                 path="/",
                 route_handlers=[
