@@ -124,12 +124,15 @@ class DockerSwiftCompiler(
     Runtime.getRuntime().addShutdownHook(Shutdown(this))
   }
 
-  override fun compile(): Pair<Int, String> {
+  override fun compile(): Pair<Int, String> = execute("build")
 
+  override fun test(): Pair<Int, String> = execute("test")
+
+  private fun execute(action: String): Pair<Int, String> {
     val execId =
       dockerClient
         .execCreateCmd(containerId)
-        .withCmd("swift", "build")
+        .withCmd("swift", action)
         .withWorkingDir("/work")
         .withAttachStdout(true)
         .withAttachStderr(true)

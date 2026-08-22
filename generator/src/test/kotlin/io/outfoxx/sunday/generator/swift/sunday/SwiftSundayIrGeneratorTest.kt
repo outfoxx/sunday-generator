@@ -44,10 +44,13 @@ import io.outfoxx.sunday.generator.swift.SwiftSundayOptions
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
+import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.swift.tools.compileGeneratedFiles
 import io.outfoxx.sunday.generator.swift.tools.compileTypes
 import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateSunday
+import io.outfoxx.sunday.generator.swift.tools.reusableDiscriminatorMappingApi
+import io.outfoxx.sunday.generator.swift.tools.reusableDiscriminatorMappingRuntimeTest
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
@@ -1760,6 +1763,101 @@ class SwiftSundayIrGeneratorTest {
       referenceSource,
     )
     assertTrue(unionSource.contains("case unknown(JobEventUnknown)"), unionSource)
+  }
+
+  @Test
+  fun `decodes reusable discriminator mappings through reference unions`(compiler: SwiftCompiler) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(reusableDiscriminatorMappingApi(), typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    typeRegistry.generateFiles(
+      setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model),
+      compiler.srcDir,
+    )
+    val serviceSourcePath =
+      Files
+        .walk(compiler.srcDir)
+        .use { paths ->
+          paths
+            .filter { path -> Files.isRegularFile(path) && path.fileName.toString() == "API.swift" }
+            .findFirst()
+            .orElseThrow()
+        }
+    val serviceSourceRelativePath = compiler.srcDir.relativize(serviceSourcePath).toString()
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("ReusableDiscriminatorMappingTests.swift"),
+      reusableDiscriminatorMappingRuntimeTest,
+    )
+
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+
+    val referenceSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/NotificationEventEnvelopeRef.swift",
+      )
+    val canonicalSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/EventOne.swift",
+      )
+    val notificationSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/Notification.swift",
+      )
+    val inheritedReferenceSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/InheritedNotificationEventEnvelopeRef.swift",
+      )
+    val inheritedNotificationSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/InheritedNotification.swift",
+      )
+    val serviceSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        serviceSourceRelativePath,
+      )
+
+    assertTrue(referenceSource.contains("case eventOne(EventOne)"), referenceSource)
+    assertTrue(
+      referenceSource.contains("case unrecognized(NotificationEventEnvelopeUnrecognized)"),
+      referenceSource,
+    )
+    assertFalse(referenceSource.contains("public var value:"), referenceSource)
+    assertFalse(referenceSource.contains("public init(value:"), referenceSource)
+    assertTrue(canonicalSource.contains("public struct EventOne : EventEnvelope"), canonicalSource)
+    assertFalse(canonicalSource.contains("NotificationEventEnvelope"), canonicalSource)
+    assertTrue(notificationSource.contains("public let event: NotificationEventEnvelopeRef"), notificationSource)
+    assertTrue(inheritedReferenceSource.contains("case eventOne(EventOne)"), inheritedReferenceSource)
+    assertTrue(
+      inheritedReferenceSource.contains("case unrecognized(InheritedNotificationEventEnvelopeUnrecognized)"),
+      inheritedReferenceSource,
+    )
+    assertTrue(
+      inheritedNotificationSource.contains("public let event: InheritedNotificationEventEnvelopeRef"),
+      inheritedNotificationSource,
+    )
+    assertTrue(
+      serviceSource.contains("Operation<Empty, NotificationEventEnvelopeRef, TransportType>"),
+      serviceSource,
+    )
+    assertTrue(serviceSource.contains("AsyncStream<NotificationEventEnvelopeRef>"), serviceSource)
+    assertTrue(
+      serviceSource.contains("Operation<Empty, InheritedNotificationEventEnvelopeRef, TransportType>"),
+      serviceSource,
+    )
+    assertTrue(serviceSource.contains("AsyncStream<InheritedNotificationEventEnvelopeRef>"), serviceSource)
+    assertTrue(
+      serviceSource.contains("decoder.decode(NotificationEventEnvelopeRef.self, from: data) }"),
+      serviceSource,
+    )
+    assertFalse(serviceSource.contains("NotificationEventEnvelopeRef.self, from: data).value"), serviceSource)
   }
 
   @Test

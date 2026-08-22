@@ -46,6 +46,7 @@ private fun compileTypesUnsafe(
       }
 
     fileSpecs.forEach { it.writeTo(compiler.srcDir) }
+    Files.createDirectories(compiler.testsDir)
 
     val (result, output) = compiler.compile()
 
@@ -83,9 +84,15 @@ fun compileGeneratedFiles(compiler: SwiftCompiler): Boolean =
     compileGeneratedFilesUnsafe(compiler)
   }
 
+internal fun compileAndTestGeneratedFiles(compiler: SwiftCompiler): Boolean =
+  compiler.synchronizeCompilation {
+    compileAndTestGeneratedFilesUnsafe(compiler)
+  }
+
 private fun compileGeneratedFilesUnsafe(compiler: SwiftCompiler): Boolean {
   try {
     CompiledGeneratedSources.beginCompile()
+    Files.createDirectories(compiler.testsDir)
     val (result, output) = compiler.compile()
 
     val generatedWarnings = output.containsGeneratedWarnings(compiler.srcDir)
@@ -121,12 +128,57 @@ private fun compileGeneratedFilesUnsafe(compiler: SwiftCompiler): Boolean {
     return result == 0 && !generatedWarnings
   } finally {
     compiler.srcDir.toFile().deleteRecursively()
+    compiler.testsDir.toFile().deleteRecursively()
   }
 }
 
+private fun compileAndTestGeneratedFilesUnsafe(compiler: SwiftCompiler): Boolean {
+  try {
+    CompiledGeneratedSources.beginCompile()
+    Files.createDirectories(compiler.testsDir)
+    val (result, output) = compiler.test()
+
+    val generatedWarnings =
+      output.containsGeneratedWarnings(compiler.srcDir) || output.containsGeneratedWarnings(compiler.testsDir)
+
+    if (result != 0 || generatedWarnings) {
+      val files = generatedSwiftFiles(compiler.srcDir) + generatedSwiftFiles(compiler.testsDir)
+
+      Compilation.printFailure(files, output)
+      throw AssertionFailedError("Swift tests failed:\n$output")
+    }
+
+    val files = generatedSwiftFilePaths(compiler.srcDir).associateWith { path -> Files.readString(path) }
+    CompiledGeneratedSources.recordAll(GeneratedCodeLanguage.Swift, compiler.srcDir, files)
+
+    return true
+  } finally {
+    compiler.srcDir.toFile().deleteRecursively()
+    compiler.testsDir.toFile().deleteRecursively()
+  }
+}
+
+private fun generatedSwiftFiles(sourceRoot: Path): Map<String, String> =
+  generatedSwiftFilePaths(sourceRoot).associate { path ->
+    sourceRoot.relativize(path).toString() to Files.readString(path)
+  }
+
+private fun generatedSwiftFilePaths(sourceRoot: Path): List<Path> =
+  if (Files.exists(sourceRoot)) {
+    Files
+      .walk(sourceRoot)
+      .use { paths ->
+        paths
+          .filter { path -> Files.isRegularFile(path) && path.fileName.toString().endsWith(".swift") }
+          .toList()
+      }
+  } else {
+    emptyList()
+  }
+
 private fun String.containsGeneratedWarnings(srcDir: Path): Boolean {
   val localSrcDir = Regex.escape(srcDir.toAbsolutePath().normalize().toString())
-  val dockerSrcDir = Regex.escape("/work/src")
+  val dockerSrcDir = Regex.escape("/work/${srcDir.fileName}")
   return lineSequence()
     .filter { line ->
       Regex("""^(?:$localSrcDir|$dockerSrcDir|.*[/\\]src[/\\]).*:\d+:\d+: warning:""")

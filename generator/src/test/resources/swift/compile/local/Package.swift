@@ -19,6 +19,11 @@ let package = Package(
             .product(name: "Sunday", package: "sunday-swift")
           ],
           path: "src"
+        ),
+        .testTarget(
+          name: "SundayGenTestTests",
+          dependencies: ["SundayGenTest"],
+          path: "tests"
         )
     ]
 )
