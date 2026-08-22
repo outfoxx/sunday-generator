@@ -629,6 +629,45 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  fun `retains inherited OpenAPI allOf properties when discriminator base is a union alias`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/tolerant-discriminator-3.1.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modelsModule = PythonModelRenderer("turnpost_api").renderModels(api.models)
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter
+
+          from turnpost_api.models import JobProgress, JobStarted
+
+          progress = TypeAdapter(JobProgress).validate_python(
+              {"phase": "started", "jobId": "job-1", "taskCount": 3},
+          )
+
+          assert isinstance(progress, JobStarted)
+          assert progress.phase == "started"
+          assert progress.job_id == "job-1"
+          assert progress.task_count == 3
+          assert progress.model_dump(mode="json", by_alias=True) == {
+              "phase": "started",
+              "jobId": "job-1",
+              "taskCount": 3,
+          }
+          """.trimIndent(),
+      ),
+      modelsModule.source,
+    )
+  }
+
+  @Test
   fun `generates tolerant discriminator hierarchy fallbacks`(compiler: PythonCompiler) {
     val models =
       listOf(
