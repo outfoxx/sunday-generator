@@ -108,6 +108,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionGenerator
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
@@ -185,6 +186,15 @@ class KotlinSundayIrGenerator(
         }
       }
     }.associateBy { fallback -> fallback.hierarchy }
+  }
+  private val discriminatorMappingUnions by lazy {
+    KotlinDiscriminatorMappingUnionGenerator(
+      api = api,
+      apiIndex = apiIndex,
+      discriminatorFallbacks = discriminatorFallbacks,
+      jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
+      typeName = { model -> model.kotlinClassName() },
+    )
   }
   private val requestBodyModels by lazy {
     api
@@ -322,13 +332,16 @@ class KotlinSundayIrGenerator(
     val fallback = discriminatorFallbacks[this] ?: return null
     val hierarchyTypeName = kotlinClassName()
     val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
-    val hierarchyIsClass = kind == GeneratedModel.Kind.OBJECT && (shouldGenerateClassModel || isProblemModel())
+    val hierarchyIsClass =
+      kind == GeneratedModel.Kind.OBJECT &&
+        (shouldGenerateClassModel || isProblemModel()) &&
+        !isDiscriminatorMappingUnionInterface
     val type =
       fallback.kotlinFallbackTypeSpec(
         fallbackTypeName,
         hierarchyTypeName,
         hierarchyIsClass,
-        kind == GeneratedModel.Kind.OBJECT,
+        kind == GeneratedModel.Kind.OBJECT && !isDiscriminatorMappingUnionInterface,
       ) { property -> property.modelPropertyTypeName() }
     return fallbackTypeName to type
   }
@@ -889,15 +902,35 @@ class KotlinSundayIrGenerator(
           ).build(),
       ).build()
 
+  private fun GeneratedModel.discriminatorMappingUnionTypeSpecOrNull(): TypeSpec.Builder? =
+    discriminatorMappingUnions.generateOrNull(this, directUnionSupertypes()) { model ->
+      addJacksonPolymorphism(model)
+    }
+
   private fun GeneratedModel.objectTypeSpec(): TypeSpec.Builder {
+    discriminatorMappingUnionTypeSpecOrNull()?.let { return it }
+
     val inheritedProperties = inheritedModelProperties()
     val directUnionSupertypes = directUnionSupertypes()
-    val flattensInheritedProperties = directUnionSupertypes.isNotEmpty()
+    val inheritedMappingUnionSupertypes = inheritedDiscriminatorMappingUnionSupertypes
+    val flattensInheritedProperties =
+      directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty()
     val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
+    val hasClassParent =
+      inherits.any { inherited ->
+        inherited.modelOrNull(apiIndex)?.isDiscriminatorMappingUnionInterface != true
+      }
+    val classInheritedProperties = effectiveInheritedProperties.takeIf { hasClassParent }.orEmpty()
+    val classLocalProperties =
+      if (hasClassParent) {
+        localProperties
+      } else {
+        effectiveInheritedProperties + localProperties
+      }
 
     if (isProblemModel()) {
-      return classTypeSpec(effectiveInheritedProperties, localProperties)
+      return classTypeSpec(classInheritedProperties, classLocalProperties)
     }
     if (shouldGenerateClassModel && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
       return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
@@ -906,7 +939,7 @@ class KotlinSundayIrGenerator(
       return dataClassTypeSpec(localProperties)
     }
     if (shouldGenerateClassModel) {
-      return classTypeSpec(effectiveInheritedProperties, localProperties)
+      return classTypeSpec(classInheritedProperties, classLocalProperties)
     }
 
     return TypeSpec
@@ -929,6 +962,12 @@ class KotlinSundayIrGenerator(
           }
         }
         directUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         val declaredProperties =
@@ -991,12 +1030,15 @@ class KotlinSundayIrGenerator(
         if (isProblemRootModel) {
           configureSourceProblemRootModel(inheritedProperties + localProperties)
         } else {
-          inherits.firstOrNull()?.let { inherited ->
-            superclass(inherited.kotlinTypeName())
-            inheritedProperties.forEach { property ->
-              addSuperclassConstructorParameter("%N", property.name.kotlinIdentifierName)
+          inherits
+            .firstOrNull { inherited ->
+              inherited.modelOrNull(apiIndex)?.isDiscriminatorMappingUnionInterface != true
+            }?.let { inherited ->
+              superclass(inherited.kotlinTypeName())
+              inheritedProperties.forEach { property ->
+                addSuperclassConstructorParameter("%N", property.name.kotlinIdentifierName)
+              }
             }
-          }
         }
         if (patchable) {
           addSuperinterface(PATCH)
@@ -1008,6 +1050,12 @@ class KotlinSundayIrGenerator(
           )
         }
         directUnionSupertypes().forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         localProperties
@@ -1146,6 +1194,12 @@ class KotlinSundayIrGenerator(
         addJacksonPolymorphism(this@dataClassTypeSpec)
         addJacksonUnionMemberDeserializerOverride(this@dataClassTypeSpec)
         directUnionSupertypes().forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         properties.forEach { property ->
@@ -1487,7 +1541,7 @@ class KotlinSundayIrGenerator(
     if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)) {
       return
     }
-    if (model.directUnionSupertypes().isEmpty()) {
+    if (model.directUnionSupertypes().isEmpty() && model.discriminatorMappingUnionSupertypes.isEmpty()) {
       return
     }
 
@@ -2449,6 +2503,15 @@ class KotlinSundayIrGenerator(
           .orEmpty()
       this in cases && union.usesDirectUnionCases(union.kotlinClassName(), cases)
     }
+
+  private val GeneratedModel.discriminatorMappingUnionSupertypes: List<GeneratedModel>
+    get() = discriminatorMappingUnions.supertypesOf(this)
+
+  private val GeneratedModel.inheritedDiscriminatorMappingUnionSupertypes: List<GeneratedModel>
+    get() = discriminatorMappingUnions.inheritedSupertypesOf(this)
+
+  private val GeneratedModel.isDiscriminatorMappingUnionInterface: Boolean
+    get() = discriminatorMappingUnions.isUnion(this)
 
   private fun GeneratedModel.usesDirectUnionCases(
     unionTypeName: ClassName,
