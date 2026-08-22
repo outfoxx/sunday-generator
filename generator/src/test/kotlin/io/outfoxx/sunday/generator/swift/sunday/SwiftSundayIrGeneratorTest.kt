@@ -1469,82 +1469,21 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
-  fun `uses value models for non-recursive plain inheritance`(compiler: SwiftCompiler) {
+  fun `uses value models for non-recursive OpenAPI allOf inheritance`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/value-inheritance-3.1.yaml") testUri: URI,
+  ) {
     val typeRegistry = SwiftTypeRegistry(setOf())
-    val api =
-      GeneratedApi(
-        name = "Render API",
-        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
-        models =
-          listOf(
-            GeneratedModel(
-              name = "RenderGraphSummary",
-              kind = GeneratedModel.Kind.OBJECT,
-              properties =
-                listOf(
-                  GeneratedModelProperty("graphJobId", GeneratedTypeRef.scalar("string"), required = true),
-                ),
-            ),
-            GeneratedModel(
-              name = "RenderGraphDetails",
-              kind = GeneratedModel.Kind.OBJECT,
-              inherits = listOf(GeneratedTypeRef.named("RenderGraphSummary")),
-              properties =
-                listOf(
-                  GeneratedModelProperty(
-                    "tasks",
-                    GeneratedTypeRef(
-                      kind = GeneratedTypeRef.Kind.ARRAY,
-                      name = "array",
-                      arguments = listOf(GeneratedTypeRef.scalar("string")),
-                    ),
-                    required = true,
-                  ),
-                ),
-            ),
-            GeneratedModel(
-              name = "RenderGraphList",
-              kind = GeneratedModel.Kind.OBJECT,
-              properties =
-                listOf(
-                  GeneratedModelProperty(
-                    "items",
-                    GeneratedTypeRef(
-                      kind = GeneratedTypeRef.Kind.ARRAY,
-                      name = "array",
-                      arguments = listOf(GeneratedTypeRef.named("RenderGraphSummary")),
-                    ),
-                    required = true,
-                  ),
-                ),
-            ),
-          ),
-      )
+    val api = OpenApiToGeneratedApi().convert(testUri)
 
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
       .generateServiceTypes()
 
-    val builtTypes = typeRegistry.buildTypes()
-    val summarySource =
-      buildString {
-        FileSpec
-          .get("", findType("RenderGraphSummary", builtTypes))
-          .writeTo(this)
-      }
-    val detailsSource =
-      buildString {
-        FileSpec
-          .get("", findType("RenderGraphDetails", builtTypes))
-          .writeTo(this)
-      }
-    val listSource =
-      buildString {
-        FileSpec
-          .get("", findType("RenderGraphList", builtTypes))
-          .writeTo(this)
-      }
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
 
-    assertTrue(compileTypes(compiler, builtTypes))
+    val summarySource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphSummary.swift")
+    val detailsSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphDetails.swift")
+    val listSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphList.swift")
     assertTrue(
       summarySource.contains(
         "public struct RenderGraphSummary : Codable, CustomDebugStringConvertible, Sendable",

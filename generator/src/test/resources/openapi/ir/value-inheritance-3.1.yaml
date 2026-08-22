@@ -1,0 +1,34 @@
+openapi: 3.1.0
+info:
+  title: Render API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    RenderGraphSummary:
+      type: object
+      required:
+        - graphJobId
+      properties:
+        graphJobId:
+          type: string
+    RenderGraphDetails:
+      allOf:
+        - $ref: "#/components/schemas/RenderGraphSummary"
+        - type: object
+          required:
+            - tasks
+          properties:
+            tasks:
+              type: array
+              items:
+                type: string
+    RenderGraphList:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RenderGraphSummary"
