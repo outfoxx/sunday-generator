@@ -32,3 +32,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RenderGraphSummary"
+    RecursiveParent:
+      type: object
+      properties:
+        child:
+          $ref: "#/components/schemas/RecursiveChild"
+    RecursiveChild:
+      allOf:
+        - $ref: "#/components/schemas/RecursiveParent"
+        - type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string

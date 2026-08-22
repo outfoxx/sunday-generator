@@ -638,12 +638,20 @@ class SwiftSundayIrGenerator(
   private val recursiveSwiftObjectModelKeys: Set<SwiftModelKey> by lazy {
     val edges =
       swiftObjectModelsByKey.mapValues { (_, model) ->
-        model
-          .properties
-          .mapNotNull { property -> property.type.directNamedModelOrNull() }
-          .filter { referenced -> referenced.kind == GeneratedModel.Kind.OBJECT }
-          .map { referenced -> referenced.swiftModelKey() }
-          .toSet()
+        buildSet {
+          model
+            .properties
+            .mapNotNull { property -> property.type.directNamedModelOrNull() }
+            .filter { referenced -> referenced.kind == GeneratedModel.Kind.OBJECT }
+            .mapTo(this) { referenced -> referenced.swiftModelKey() }
+
+          // Inherited properties are flattened into value models, so inheritance participates in stored-value cycles.
+          model
+            .inherits
+            .mapNotNull { inherited -> inherited.modelOrNull(apiIndex) }
+            .filter { inherited -> inherited.kind == GeneratedModel.Kind.OBJECT }
+            .mapTo(this) { inherited -> inherited.swiftModelKey() }
+        }
       }
 
     swiftObjectModelsByKey.keys.filterTo(mutableSetOf()) { key -> key.reaches(key, edges, mutableSetOf()) }
