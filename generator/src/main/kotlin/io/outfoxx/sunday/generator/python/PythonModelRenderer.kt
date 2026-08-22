@@ -618,17 +618,33 @@ class PythonModelRenderer(
     val propertyBlocks =
       exposedProperties.map { property ->
         val wireName = property.serializationName ?: property.name
-        val propertyType = property.type.renderPythonType(nullable = !property.required || property.type.nullable)
-        val rawValue = PythonCodeBlock.of("self.root.get(%S)", wireName)
+        val basePropertyType = property.type.renderPythonType(nullable = false)
+        val propertyType =
+          if (property.required && !property.type.nullable) {
+            basePropertyType
+          } else {
+            PythonCodeBlock.of("%C | None", basePropertyType)
+          }
+        val validatedType = property.type.renderPythonType(nullable = property.type.nullable)
+        val missingValue =
+          if (property.required) {
+            PythonCodeBlock.of("raise ValueError(%S)", "Property '$wireName' is required")
+          } else {
+            PythonCodeBlock.of("return None")
+          }
         PythonCodeBlock.of(
           "    @property\n" +
             "    def %L(self) -> %C:\n" +
-            "        return %T(%C).validate_python(%C)",
+            "        if %S not in self.root:\n" +
+            "            %C\n" +
+            "        return %T(%C).validate_python(self.root[%S])",
           property.name.pythonIdentifierName,
           propertyType,
+          wireName,
+          missingValue,
           PythonSymbol("pydantic", "TypeAdapter"),
-          propertyType,
-          rawValue,
+          validatedType,
+          wireName,
         )
       }
     val validationReads =

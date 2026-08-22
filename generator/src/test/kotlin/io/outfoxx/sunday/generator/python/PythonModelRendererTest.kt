@@ -728,6 +728,11 @@ class PythonModelRendererTest : PythonTest() {
           unknownValue = "unknown",
         ),
         GeneratedModel(
+          name = "EventIdentity",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("name", GeneratedTypeRef.scalar("string"), required = true)),
+        ),
+        GeneratedModel(
           name = "JobProgress",
           kind = GeneratedModel.Kind.OBJECT,
           properties =
@@ -744,6 +749,7 @@ class PythonModelRendererTest : PythonTest() {
                 required = true,
                 serializationName = "job-id",
               ),
+              GeneratedModelProperty("actor", GeneratedTypeRef.named("EventIdentity")),
             ),
           discriminator = "phase",
           discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
@@ -805,8 +811,19 @@ class PythonModelRendererTest : PythonTest() {
           assert unknown.phase.name == "UNKNOWN"
           assert unknown.phase.value == "future"
           assert unknown.job_id == "job-1"
+          assert unknown.actor is None
           assert unknown.raw_body == raw
           assert adapter.dump_python(unknown, mode="json") == raw
+
+          attributed = adapter.validate_python({"jobPhase": "future", "job-id": "job-1", "actor": {"name": "Ada"}})
+          assert attributed.actor.name == "Ada"
+
+          for invalid_actor in (None, {}, {"name": None}):
+              try:
+                  adapter.validate_python({"jobPhase": "future", "job-id": "job-1", "actor": invalid_actor})
+                  raise AssertionError("unknown payload with invalid optional actor was accepted")
+              except ValidationError:
+                  pass
 
           paused = adapter.validate_python({"jobPhase": "paused", "job-id": "job-1"})
           assert isinstance(paused, JobProgressUnknown)
@@ -849,6 +866,7 @@ class PythonModelRendererTest : PythonTest() {
 
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
     assertTrue(source.contains("class JobProgressUnknown(RootModel[dict[str, Any]]):"), source)
+    assertTrue(source.contains("def actor(self) -> EventIdentity | None:"), source)
     assertTrue(source.contains("Discriminator(_job_progress_discriminator)"), source)
   }
 
