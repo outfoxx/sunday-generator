@@ -1808,6 +1808,16 @@ class SwiftSundayIrGeneratorTest {
         GeneratedCodeLanguage.Swift,
         "Models/Notification.swift",
       )
+    val inheritedReferenceSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/InheritedNotificationEventEnvelopeRef.swift",
+      )
+    val inheritedNotificationSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/InheritedNotification.swift",
+      )
     val serviceSource =
       CompiledGeneratedSources.source(
         GeneratedCodeLanguage.Swift,
@@ -1824,11 +1834,25 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(canonicalSource.contains("public struct EventOne : EventEnvelope"), canonicalSource)
     assertFalse(canonicalSource.contains("NotificationEventEnvelope"), canonicalSource)
     assertTrue(notificationSource.contains("public let event: NotificationEventEnvelopeRef"), notificationSource)
+    assertTrue(inheritedReferenceSource.contains("case eventOne(EventOne)"), inheritedReferenceSource)
+    assertTrue(
+      inheritedReferenceSource.contains("case unrecognized(InheritedNotificationEventEnvelopeUnrecognized)"),
+      inheritedReferenceSource,
+    )
+    assertTrue(
+      inheritedNotificationSource.contains("public let event: InheritedNotificationEventEnvelopeRef"),
+      inheritedNotificationSource,
+    )
     assertTrue(
       serviceSource.contains("Operation<Empty, NotificationEventEnvelopeRef, TransportType>"),
       serviceSource,
     )
     assertTrue(serviceSource.contains("AsyncStream<NotificationEventEnvelopeRef>"), serviceSource)
+    assertTrue(
+      serviceSource.contains("Operation<Empty, InheritedNotificationEventEnvelopeRef, TransportType>"),
+      serviceSource,
+    )
+    assertTrue(serviceSource.contains("AsyncStream<InheritedNotificationEventEnvelopeRef>"), serviceSource)
     assertTrue(
       serviceSource.contains("decoder.decode(NotificationEventEnvelopeRef.self, from: data) }"),
       serviceSource,

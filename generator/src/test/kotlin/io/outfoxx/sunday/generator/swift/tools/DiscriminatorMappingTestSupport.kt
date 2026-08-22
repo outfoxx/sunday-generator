@@ -63,6 +63,33 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
                   ),
                 streaming = GeneratedStreaming(GeneratedStreaming.Kind.EVENT_STREAM),
               ),
+              GeneratedOperation(
+                id = "getInheritedNotificationEvent",
+                method = "GET",
+                path = "/inherited-notification-event",
+                responses =
+                  listOf(
+                    GeneratedResponse(
+                      status = 200,
+                      type = GeneratedTypeRef.named("InheritedNotificationEventEnvelope"),
+                      mediaTypes = listOf("application/json"),
+                    ),
+                  ),
+              ),
+              GeneratedOperation(
+                id = "streamInheritedNotificationEvents",
+                method = "GET",
+                path = "/inherited-notification-events",
+                responses =
+                  listOf(
+                    GeneratedResponse(
+                      status = 200,
+                      type = GeneratedTypeRef.named("InheritedNotificationEventEnvelope"),
+                      mediaTypes = listOf("text/event-stream"),
+                    ),
+                  ),
+                streaming = GeneratedStreaming(GeneratedStreaming.Kind.EVENT_STREAM),
+              ),
             ),
         ),
       ),
@@ -126,6 +153,37 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
               ),
             ),
         ),
+        GeneratedModel(
+          name = "NotificationEventEnvelopeBase",
+          kind = GeneratedModel.Kind.OBJECT,
+        ),
+        GeneratedModel(
+          name = "InheritedNotificationEventEnvelope",
+          kind = GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("NotificationEventEnvelopeBase")),
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "type",
+                GeneratedTypeRef.named("NotificationEventType"),
+                required = true,
+              ),
+            ),
+          discriminator = "type",
+          discriminatorMappings = mapOf("event.one" to GeneratedTypeRef.named("EventOne")),
+        ),
+        GeneratedModel(
+          name = "InheritedNotification",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "event",
+                GeneratedTypeRef.named("InheritedNotificationEventEnvelope"),
+                required = true,
+              ),
+            ),
+        ),
       ),
   )
 
@@ -153,6 +211,27 @@ internal val reusableDiscriminatorMappingRuntimeTest: String =
       let unknown = try decoder.decode(Notification.self, from: unknownJSON)
       guard case .unrecognized(let event) = unknown.event else {
         return XCTFail("Expected tolerant discriminator fallback")
+      }
+      XCTAssertEqual(event.type.rawValue, "future.event")
+      try XCTAssertJSONEqual(encoder.encode(unknown), unknownJSON)
+    }
+
+    func testInheritedKnownAndUnknownMappingsRoundTrip() throws {
+      let decoder = JSONDecoder()
+      let encoder = JSONEncoder()
+
+      let knownJSON = Data(#"{"event":{"type":"event.one","data":"known"}}"#.utf8)
+      let known = try decoder.decode(InheritedNotification.self, from: knownJSON)
+      guard case .eventOne(let event) = known.event else {
+        return XCTFail("Expected inherited canonical event.one mapping")
+      }
+      XCTAssertEqual(event.data, "known")
+      try XCTAssertJSONEqual(encoder.encode(known), knownJSON)
+
+      let unknownJSON = Data(#"{"event":{"type":"future.event","detail":"preserved"}}"#.utf8)
+      let unknown = try decoder.decode(InheritedNotification.self, from: unknownJSON)
+      guard case .unrecognized(let event) = unknown.event else {
+        return XCTFail("Expected inherited tolerant discriminator fallback")
       }
       XCTAssertEqual(event.type.rawValue, "future.event")
       try XCTAssertJSONEqual(encoder.encode(unknown), unknownJSON)

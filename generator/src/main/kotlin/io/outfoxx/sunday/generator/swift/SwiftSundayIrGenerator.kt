@@ -2380,7 +2380,7 @@ class SwiftSundayIrGenerator(
       kind == GeneratedModel.Kind.OBJECT &&
         discriminator != null &&
         !externallyDiscriminated &&
-        inherits.isEmpty() &&
+        (inherits.isEmpty() || isDiscriminatorMappingUnionModel) &&
         swiftHierarchyCaseModels().isNotEmpty()
 
   private val GeneratedModel.isSwiftSendableModel: Boolean
@@ -2584,7 +2584,12 @@ class SwiftSundayIrGenerator(
     outputDirectory: OutputDirectory,
     outputGroup: String?,
   ): TypeSpec? {
-    if (discriminator == null || externallyDiscriminated || inherits.isNotEmpty()) {
+    if (
+      discriminator == null ||
+      externallyDiscriminated ||
+      inherits.isNotEmpty() &&
+      !isDiscriminatorMappingUnionModel
+    ) {
       return null
     }
 
