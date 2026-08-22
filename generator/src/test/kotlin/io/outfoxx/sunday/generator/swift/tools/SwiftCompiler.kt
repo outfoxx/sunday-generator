@@ -63,7 +63,11 @@ abstract class SwiftCompiler(
 
   val srcDir: Path = workDir.resolve("src")
 
+  internal val testsDir: Path = workDir.resolve("tests")
+
   abstract fun compile(): Pair<Int, String>
+
+  internal abstract fun test(): Pair<Int, String>
 
   internal fun <T> synchronizeCompilation(action: () -> T): T = lock.withLock(action)
 

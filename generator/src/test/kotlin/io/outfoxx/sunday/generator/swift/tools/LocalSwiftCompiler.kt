@@ -97,12 +97,15 @@ class LocalSwiftCompiler(
     }
   }
 
-  override fun compile(): Pair<Int, String> {
+  override fun compile(): Pair<Int, String> = execute("build")
 
+  override fun test(): Pair<Int, String> = execute("test")
+
+  private fun execute(action: String): Pair<Int, String> {
     val buildCommand =
       buildList {
         add(command)
-        add("build")
+        add(action)
         add("--package-path")
         add("$workDir")
         add("--manifest-cache")
@@ -117,16 +120,16 @@ class LocalSwiftCompiler(
         add("$swiftCacheDir")
       }
 
-    val buildPkg =
+    val process =
       ProcessBuilder()
         .directory(workDir.toFile())
         .command(buildCommand)
         .redirectErrorStream(true)
         .start()
 
-    val result = buildPkg.waitFor()
+    val result = process.waitFor()
 
-    return result to buildPkg.inputStream.readAllBytes().decodeToString()
+    return result to process.inputStream.readAllBytes().decodeToString()
   }
 
   override fun close() {

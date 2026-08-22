@@ -2601,10 +2601,14 @@ class SwiftSundayIrGenerator(
       swiftReferenceTypeName(typeName)
     typeRegistry.addReferenceType(typeName, anyRefTypeName)
     val referenceValueTypeName =
-      if (isProtocolHierarchyRootModel || isProblemHierarchyProtocolModel) {
-        typeName.swiftExistentialTypeName()
+      if (!isDiscriminatorMappingUnionModel) {
+        if (isProtocolHierarchyRootModel || isProblemHierarchyProtocolModel) {
+          typeName.swiftExistentialTypeName()
+        } else {
+          typeName
+        }
       } else {
-        typeName
+        null
       }
 
     val referenceType =
@@ -2627,24 +2631,26 @@ class SwiftSundayIrGenerator(
             addEnumCase(fallback.fallbackName.swiftEnumCaseName, fallbackTypeName)
           }
 
-          addProperty(
-            PropertySpec
-              .builder("value", referenceValueTypeName, PUBLIC)
-              .getter(
-                FunctionSpec
-                  .getterBuilder()
-                  .apply {
-                    beginControlFlow("switch", "self")
-                    inheritingModels.forEach { model ->
-                      addStatement("case .%N(let value):%Wreturn value", model.discriminatorCaseName)
-                    }
-                    if (fallback != null) {
-                      addStatement("case .%N(let value):%Wreturn value", fallback.fallbackName.swiftEnumCaseName)
-                    }
-                    endControlFlow("switch")
-                  }.build(),
-              ).build(),
-          )
+          referenceValueTypeName?.let { valueTypeName ->
+            addProperty(
+              PropertySpec
+                .builder("value", valueTypeName, PUBLIC)
+                .getter(
+                  FunctionSpec
+                    .getterBuilder()
+                    .apply {
+                      beginControlFlow("switch", "self")
+                      inheritingModels.forEach { model ->
+                        addStatement("case .%N(let value):%Wreturn value", model.discriminatorCaseName)
+                      }
+                      if (fallback != null) {
+                        addStatement("case .%N(let value):%Wreturn value", fallback.fallbackName.swiftEnumCaseName)
+                      }
+                      endControlFlow("switch")
+                    }.build(),
+                ).build(),
+            )
+          }
           addProperty(
             PropertySpec
               .builder("debugDescription", STRING, PUBLIC)
@@ -2666,31 +2672,33 @@ class SwiftSundayIrGenerator(
                   }.build(),
               ).build(),
           )
-          addFunction(
-            FunctionSpec
-              .constructorBuilder()
-              .addModifiers(PUBLIC)
-              .addParameter("value", referenceValueTypeName)
-              .apply {
-                beginControlFlow("switch", "value")
-                inheritingModels.forEach { model ->
-                  addStatement(
-                    "case let value as %T:%Wself = .%N(value)",
-                    model.swiftDeclaredTypeName(),
-                    model.discriminatorCaseName,
-                  )
-                }
-                if (fallback != null && fallbackTypeName != null) {
-                  addStatement(
-                    "case let value as %T:%Wself = .%N(value)",
-                    fallbackTypeName,
-                    fallback.fallbackName.swiftEnumCaseName,
-                  )
-                }
-                addStatement("default:%WfatalError(\"Invalid value type\")")
-                endControlFlow("switch")
-              }.build(),
-          )
+          referenceValueTypeName?.let { valueTypeName ->
+            addFunction(
+              FunctionSpec
+                .constructorBuilder()
+                .addModifiers(PUBLIC)
+                .addParameter("value", valueTypeName)
+                .apply {
+                  beginControlFlow("switch", "value")
+                  inheritingModels.forEach { model ->
+                    addStatement(
+                      "case let value as %T:%Wself = .%N(value)",
+                      model.swiftDeclaredTypeName(),
+                      model.discriminatorCaseName,
+                    )
+                  }
+                  if (fallback != null && fallbackTypeName != null) {
+                    addStatement(
+                      "case let value as %T:%Wself = .%N(value)",
+                      fallbackTypeName,
+                      fallback.fallbackName.swiftEnumCaseName,
+                    )
+                  }
+                  addStatement("default:%WfatalError(\"Invalid value type\")")
+                  endControlFlow("switch")
+                }.build(),
+            )
+          }
           addFunction(
             FunctionSpec
               .constructorBuilder()
@@ -3413,7 +3421,12 @@ class SwiftSundayIrGenerator(
 
       else -> {
         val decodeType = typeRegistry.getReferenceType(originalReturnType) ?: originalReturnType
-        val decodeUnwrap = if (decodeType != originalReturnType) ".value" else ""
+        val decodeUnwrap =
+          if (decodeType != originalReturnType && responseType?.isDiscriminatorMappingUnionType != true) {
+            ".value"
+          } else {
+            ""
+          }
         builder.add(
           ",\ndecoder: { decoder, _, _, data, _ in try decoder.decode(%T.self, from: data)%L }",
           decodeType,
@@ -3825,6 +3838,7 @@ class SwiftSundayIrGenerator(
         when {
           model.isFreeformObject -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
           model.isAliasLike -> model.aliasPublicTypeName()
+          model.isDiscriminatorMappingUnionModel -> model.swiftReferenceTypeName()
           model.hasSwiftReferenceType -> model.swiftDeclaredTypeName().swiftExistentialTypeName()
           else -> model.swiftDeclaredTypeName()
         }
@@ -3853,6 +3867,23 @@ class SwiftSundayIrGenerator(
       modelOrNull(apiIndex)
     } else {
       null
+    }
+
+  private val GeneratedTypeRef.isDiscriminatorMappingUnionType: Boolean
+    get() = directNamedModelOrNull()?.isDiscriminatorMappingUnionModel == true
+
+  private val GeneratedModel.isDiscriminatorMappingUnionModel: Boolean
+    get() =
+      kind == GeneratedModel.Kind.OBJECT &&
+        discriminatorMappings.isNotEmpty() &&
+        discriminatorMappings.values.any { type ->
+          type.modelOrNull(apiIndex)?.structurallyInherits(this) == false
+        }
+
+  private fun GeneratedModel.structurallyInherits(base: GeneratedModel): Boolean =
+    inherits.any { inherited ->
+      val inheritedModel = inherited.modelOrNull(apiIndex) ?: return@any false
+      inheritedModel == base || inheritedModel.structurallyInherits(base)
     }
 
   private fun SwiftModelKey.reaches(
