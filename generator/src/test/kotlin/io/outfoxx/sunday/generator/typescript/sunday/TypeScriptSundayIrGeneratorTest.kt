@@ -1107,10 +1107,19 @@ class TypeScriptSundayIrGeneratorTest {
                   |    return ref;
                   |  },
                   |};
+                  |const eventEnvelopeSchema = runtime.resolveSchema(%T);
+                  |const canonicalAlias = eventEnvelopeSchema.parse({type: 'event.legacy', data: {id: 'canonical'}});
+                  |if (canonicalAlias.data.id !== 'canonical' || canonicalAlias.type.rawValue !== 'event.legacy') {
+                  |  throw new Error('canonical mapping alias did not decode');
+                  |}
                   |const notificationSchema = runtime.resolveSchema(%T);
                   |const recognized = notificationSchema.parse({event: {type: 'event.one', data: {id: 'known'}}});
                   |if (recognized.event.data.id !== 'known' || recognized.event.type.rawValue !== 'event.one') {
                   |  throw new Error('recognized canonical event did not decode');
+                  |}
+                  |const aliased = notificationSchema.parse({event: {type: 'event.legacy', data: {id: 'legacy'}}});
+                  |if (aliased.event.data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
+                  |  throw new Error('aliased canonical event did not decode');
                   |}
                   |const unknown = notificationSchema.parse({event: {type: 'future.event', detail: 'preserved'}});
                   |if (unknown.event.type.rawValue !== 'future.event' || unknown.event.rawBody.detail !== 'preserved') {
@@ -1127,6 +1136,7 @@ class TypeScriptSundayIrGeneratorTest {
                   |assertInvalid({event: {}});
                   |assertInvalid({event: {type: 1}});
                   """.trimMargin(),
+                  TypeName.namedImport("EventEnvelopeSchema", "!event-envelope"),
                   TypeName.namedImport("NotificationSchema", "!notification"),
                 ),
               ).build()
