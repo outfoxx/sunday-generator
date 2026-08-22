@@ -1469,6 +1469,47 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `distinguishes value and reference models for OpenAPI allOf inheritance`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/value-inheritance-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val summarySource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphSummary.swift")
+    val detailsSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphDetails.swift")
+    val listSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RenderGraphList.swift")
+    val recursiveParentSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RecursiveParent.swift")
+    val recursiveChildSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "RecursiveChild.swift")
+    assertTrue(
+      summarySource.contains(
+        "public struct RenderGraphSummary : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      summarySource,
+    )
+    assertTrue(
+      detailsSource.contains(
+        "public struct RenderGraphDetails : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      detailsSource,
+    )
+    assertTrue(detailsSource.contains("public let graphJobId: String"), detailsSource)
+    assertTrue(detailsSource.contains("public let tasks: [String]"), detailsSource)
+    assertTrue(listSource.contains("public let items: [RenderGraphSummary]"), listSource)
+    assertTrue(recursiveParentSource.contains("public class RecursiveParent"), recursiveParentSource)
+    assertTrue(recursiveParentSource.contains("public let child: RecursiveChild?"), recursiveParentSource)
+    assertTrue(
+      recursiveChildSource.contains("public final class RecursiveChild : RecursiveParent"),
+      recursiveChildSource,
+    )
+  }
+
+  @Test
   fun `lowers shared enums and alias-like models directly from IR`(compiler: SwiftCompiler) {
     val typeRegistry = SwiftTypeRegistry(setOf())
     val api =
