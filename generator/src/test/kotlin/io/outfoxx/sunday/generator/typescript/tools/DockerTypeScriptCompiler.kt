@@ -125,12 +125,25 @@ class DockerTypeScriptCompiler(
       .awaitCompletion(3, MINUTES)
   }
 
-  override fun compile(): Pair<Int, String> {
+  override fun compile(): Pair<Int, String> = executeCommand(tscCommand())
+
+  override fun execute(modulePath: String): Pair<Int, String> {
+    outputDir.toFile().deleteRecursively()
+    val (compileResult, compileOutput) = executeCommand(tscCommand("/work/dist"))
+    if (compileResult != 0) {
+      return compileResult to compileOutput
+    }
+
+    val (executionResult, executionOutput) = executeCommand(arrayOf("node", "/work/dist/$modulePath.js"))
+    return executionResult to listOf(compileOutput, executionOutput).filter { it.isNotBlank() }.joinToString("\n")
+  }
+
+  private fun executeCommand(command: Array<String>): Pair<Int, String> {
 
     val execId =
       dockerClient
         .execCreateCmd(containerId)
-        .withCmd(*tscCommand())
+        .withCmd(*command)
         .withWorkingDir("/work")
         .withAttachStdout(true)
         .withAttachStderr(true)
@@ -154,18 +167,26 @@ class DockerTypeScriptCompiler(
     return resultCode to out.toByteArray().decodeToString()
   }
 
-  private fun tscCommand(): Array<String> =
-    arrayOf(
-      "/work/node_modules/.bin/tsc",
-      "--project",
-      "tsconfig.json",
-      "--noEmit",
-      "--pretty",
-      "false",
-      "--incremental",
-      "false",
-      "--noErrorTruncation",
-    )
+  private fun tscCommand(outputDir: String? = null): Array<String> =
+    buildList {
+      addAll(
+        listOf(
+          "/work/node_modules/.bin/tsc",
+          "--project",
+          "tsconfig.json",
+          "--pretty",
+          "false",
+          "--incremental",
+          "false",
+          "--noErrorTruncation",
+        ),
+      )
+      if (outputDir == null) {
+        add("--noEmit")
+      } else {
+        addAll(listOf("--outDir", outputDir))
+      }
+    }.toTypedArray()
 
   override fun close() {
     println("### Stopping TypeScript Compiler")

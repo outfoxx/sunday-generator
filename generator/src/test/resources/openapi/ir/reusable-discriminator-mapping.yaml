@@ -1,0 +1,64 @@
+openapi: 3.1.0
+info:
+  title: Reusable discriminator mapping
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    EventType:
+      type: string
+      enum: [event.one, event.legacy, event.two, unrecognized]
+      x-unknown-value: unrecognized
+    EventEnvelope:
+      type: object
+      required: [type]
+      properties:
+        type:
+          $ref: '#/components/schemas/EventType'
+      discriminator:
+        propertyName: type
+        mapping:
+          event.legacy: '#/components/schemas/EventOne'
+          event.one: '#/components/schemas/EventOne'
+          event.two: '#/components/schemas/EventTwo'
+    EventOne:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+    EventTwo:
+      allOf:
+        - $ref: '#/components/schemas/EventEnvelope'
+        - type: object
+          required: [message]
+          properties:
+            message:
+              type: string
+    NotificationEventType:
+      type: string
+      enum: [event.one, event.legacy, unrecognized]
+      x-unknown-value: unrecognized
+    NotificationEventEnvelope:
+      type: object
+      required: [type]
+      properties:
+        type:
+          $ref: '#/components/schemas/NotificationEventType'
+      discriminator:
+        propertyName: type
+        mapping:
+          event.legacy: '#/components/schemas/EventOne'
+          event.one: '#/components/schemas/EventOne'
+    Notification:
+      type: object
+      required: [event]
+      properties:
+        event:
+          $ref: '#/components/schemas/NotificationEventEnvelope'

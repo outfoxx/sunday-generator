@@ -70,5 +70,10 @@ abstract class TypeScriptCompiler(
 
   val srcDir: Path = workDir.resolve("src")
 
+  protected val outputDir: Path = workDir.resolve("dist")
+
   abstract fun compile(): Pair<Int, String>
+
+  /** Emits the compiled sources and executes the selected module. */
+  abstract fun execute(modulePath: String): Pair<Int, String>
 }

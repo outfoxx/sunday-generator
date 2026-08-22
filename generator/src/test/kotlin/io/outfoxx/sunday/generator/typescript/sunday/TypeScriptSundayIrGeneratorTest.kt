@@ -43,6 +43,7 @@ import io.outfoxx.sunday.generator.typescript.TypeScriptTest
 import io.outfoxx.sunday.generator.typescript.TypeScriptTypeRegistry
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.assertSnapshot
+import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
 import io.outfoxx.sunday.generator.typescript.tools.compileTypes
 import io.outfoxx.sunday.generator.typescript.tools.findTypeMod
 import io.outfoxx.sunday.generator.typescript.tools.generateSunday
@@ -1037,6 +1038,128 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(fallbackSource.contains("readonly rawBody: Readonly<Record<string, unknown>>"), fallbackSource)
     assertTrue(fallbackSource.contains("!['started'].includes(value)"), fallbackSource)
     assertTrue(unionSource.contains("JobEventUnknownSchema"), unionSource)
+  }
+
+  @Test
+  fun `generates discriminated unions for mappings that reuse canonical schemas`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/reusable-discriminator-mapping.yaml") openApiUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(listOf(openApiUri))
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val typeCheckedTypes =
+      builtTypes +
+        (
+          TypeName.namedImport("ReusableDiscriminatorMappingTypeCheck", "!reusable-discriminator-mapping-type-check") to
+            ModuleSpec
+              .builder("ReusableDiscriminatorMappingTypeCheck", ModuleSpec.Kind.MODULE)
+              .addCode(
+                CodeBlock.of(
+                  """
+                  |function eventDataId(notification: %T): string | undefined {
+                  |  if ('data' in notification.event) {
+                  |    const canonicalEvent: %T = notification.event;
+                  |    return canonicalEvent.data.id;
+                  |  }
+                  |  const fallbackEvent: %T = notification.event;
+                  |  return fallbackEvent.rawBody.id as string | undefined;
+                  |}
+                  |
+                  |export {eventDataId};
+                  |
+                  """.trimMargin(),
+                  TypeName.namedImport("Notification", "!notification"),
+                  TypeName.namedImport("EventOne", "!event-one"),
+                  TypeName.namedImport(
+                    "NotificationEventEnvelopeUnrecognized",
+                    "!notification-event-envelope-unrecognized",
+                  ),
+                ),
+              ).build()
+        )
+    val runtimeCheckedTypes =
+      typeCheckedTypes +
+        (
+          TypeName.namedImport(
+            "ReusableDiscriminatorMappingRuntimeCheck",
+            "!reusable-discriminator-mapping-runtime-check",
+          ) to
+            ModuleSpec
+              .builder("ReusableDiscriminatorMappingRuntimeCheck", ModuleSpec.Kind.MODULE)
+              .addCode(
+                CodeBlock.of(
+                  """
+                  |const schemaCache = new Map<object, unknown>();
+                  |const runtime = {
+                  |  policy: {},
+                  |  resolveSchema(ref: any): any {
+                  |    if (ref && typeof ref.build === 'function') {
+                  |      if (!schemaCache.has(ref)) {
+                  |        schemaCache.set(ref, ref.build(runtime));
+                  |      }
+                  |      return schemaCache.get(ref);
+                  |    }
+                  |    return ref;
+                  |  },
+                  |};
+                  |const eventEnvelopeSchema = runtime.resolveSchema(%T);
+                  |const canonicalAlias = eventEnvelopeSchema.parse({type: 'event.legacy', data: {id: 'canonical'}});
+                  |if (canonicalAlias.data.id !== 'canonical' || canonicalAlias.type.rawValue !== 'event.legacy') {
+                  |  throw new Error('canonical mapping alias did not decode');
+                  |}
+                  |const notificationSchema = runtime.resolveSchema(%T);
+                  |const recognized = notificationSchema.parse({event: {type: 'event.one', data: {id: 'known'}}});
+                  |if (recognized.event.data.id !== 'known' || recognized.event.type.rawValue !== 'event.one') {
+                  |  throw new Error('recognized canonical event did not decode');
+                  |}
+                  |const aliased = notificationSchema.parse({event: {type: 'event.legacy', data: {id: 'legacy'}}});
+                  |if (aliased.event.data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
+                  |  throw new Error('aliased canonical event did not decode');
+                  |}
+                  |const unknown = notificationSchema.parse({event: {type: 'future.event', detail: 'preserved'}});
+                  |if (unknown.event.type.rawValue !== 'future.event' || unknown.event.rawBody.detail !== 'preserved') {
+                  |  throw new Error('unknown event did not preserve its discriminator and raw body');
+                  |}
+                  |function assertInvalid(input: unknown): void {
+                  |  try {
+                  |    notificationSchema.parse(input);
+                  |  } catch {
+                  |    return;
+                  |  }
+                  |  throw new Error('invalid discriminator was accepted');
+                  |}
+                  |assertInvalid({event: {}});
+                  |assertInvalid({event: {type: 1}});
+                  """.trimMargin(),
+                  TypeName.namedImport("EventEnvelopeSchema", "!event-envelope"),
+                  TypeName.namedImport("NotificationSchema", "!notification"),
+                ),
+              ).build()
+        )
+
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        runtimeCheckedTypes,
+        "reusable-discriminator-mapping-runtime-check",
+      ),
+    )
+
+    val envelopeSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "notification-event-envelope.ts")
+    assertTrue(envelopeSource.contains("import {EventOneSchema} from './event-one';"), envelopeSource)
+    assertTrue(
+      envelopeSource.contains(
+        "import {NotificationEventEnvelopeUnrecognizedSchema} from './notification-event-envelope-unrecognized';",
+      ),
+      envelopeSource,
+    )
+    assertTrue(envelopeSource.contains("z.discriminatedUnion('type', ["), envelopeSource)
   }
 
   @Test

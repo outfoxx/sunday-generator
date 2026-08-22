@@ -44,34 +44,53 @@ class LocalTypeScriptCompiler(
     println(buildPkg.inputStream.readAllBytes().decodeToString())
   }
 
-  override fun compile(): Pair<Int, String> {
+  override fun compile(): Pair<Int, String> = executeCommand(tscCommand())
 
-    val buildPkg =
+  override fun execute(modulePath: String): Pair<Int, String> {
+    outputDir.toFile().deleteRecursively()
+    val (compileResult, compileOutput) = executeCommand(tscCommand(outputDir.toString()))
+    if (compileResult != 0) {
+      return compileResult to compileOutput
+    }
+
+    val (executionResult, executionOutput) =
+      executeCommand(listOf("node", outputDir.resolve("$modulePath.js").toString()))
+    return executionResult to listOf(compileOutput, executionOutput).filter { it.isNotBlank() }.joinToString("\n")
+  }
+
+  private fun executeCommand(command: List<String>): Pair<Int, String> {
+    val process =
       ProcessBuilder()
         .directory(workDir.toFile())
-        .command(tscCommand())
+        .command(command)
         .apply {
           environment().putAll(env)
         }.redirectErrorStream(true)
         .start()
-
-    val result = buildPkg.waitFor()
-
-    return result to buildPkg.inputStream.readAllBytes().decodeToString()
+    val result = process.waitFor()
+    return result to process.inputStream.readAllBytes().decodeToString()
   }
 
-  private fun tscCommand(): List<String> =
-    listOf(
-      workDir.resolve("node_modules/.bin/tsc").toString(),
-      "--project",
-      "tsconfig.json",
-      "--noEmit",
-      "--pretty",
-      "false",
-      "--incremental",
-      "false",
-      "--noErrorTruncation",
-    )
+  private fun tscCommand(outputDir: String? = null): List<String> =
+    buildList {
+      addAll(
+        listOf(
+          workDir.resolve("node_modules/.bin/tsc").toString(),
+          "--project",
+          "tsconfig.json",
+          "--pretty",
+          "false",
+          "--incremental",
+          "false",
+          "--noErrorTruncation",
+        ),
+      )
+      if (outputDir == null) {
+        add("--noEmit")
+      } else {
+        addAll(listOf("--outDir", outputDir))
+      }
+    }
 
   override fun close() {
   }
