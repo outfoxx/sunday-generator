@@ -44,6 +44,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
+import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
@@ -988,6 +989,90 @@ class KotlinJAXRSIrGeneratorTest {
                 ),
             ),
             GeneratedModel(
+              name = "NotificationPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "NotificationProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("NotificationPhase"), required = true),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "StrictNotificationPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started"),
+            ),
+            GeneratedModel(
+              name = "StrictNotificationProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "phase",
+                    GeneratedTypeRef.named("StrictNotificationPhase"),
+                    required = true,
+                  ),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "CrossPackageProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("phase", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+              discriminator = "phase",
+            ),
+            GeneratedModel(
+              name = "CrossPackageStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              targets =
+                mapOf(
+                  "kotlin" to GeneratedTarget(modelPackageName = "io.test.events"),
+                  "kotlinClient" to GeneratedTarget(modelPackageName = "io.test.events"),
+                ),
+              inherits = listOf(GeneratedTypeRef.named("CrossPackageProgress")),
+              discriminatorValue = "started",
+            ),
+            GeneratedModel(
+              name = "UnionNotificationPhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              name = "UnionNotificationProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "phase",
+                    GeneratedTypeRef.named("UnionNotificationPhase"),
+                    required = true,
+                  ),
+                ),
+              discriminator = "phase",
+              discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
+            ),
+            GeneratedModel(
+              name = "NotificationEvent",
+              kind = GeneratedModel.Kind.UNION,
+              aliases =
+                listOf(
+                  GeneratedTypeRef.named("UnionNotificationProgress"),
+                  GeneratedTypeRef.named("JobStarted"),
+                ),
+            ),
+            GeneratedModel(
               name = "JobPaused",
               kind = GeneratedModel.Kind.OBJECT,
               discriminatorValue = "paused",
@@ -1086,8 +1171,68 @@ class KotlinJAXRSIrGeneratorTest {
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEvent.kt")
     val implementingUnionFallbackSource =
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobEventUnknown.kt")
+    val implementingHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/JobProgress.kt")
+    val notificationHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/NotificationProgress.kt")
+    val notificationFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/NotificationProgressUnknown.kt")
+    val strictNotificationHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/StrictNotificationProgress.kt")
+    val crossPackageHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/CrossPackageProgress.kt")
+    val unionNotificationHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/UnionNotificationProgress.kt")
+    val unionNotificationFallbackSource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/UnionNotificationProgressUnknown.kt")
     assertTrue(implementingUnionSource.contains("public sealed interface JobEvent"), implementingUnionSource)
     assertTrue(implementingUnionFallbackSource.contains(") : JobEvent {"), implementingUnionFallbackSource)
+    assertTrue(
+      implementingHierarchySource.contains("public sealed class JobProgress("),
+      implementingHierarchySource,
+    )
+    assertTrue(
+      notificationHierarchySource.contains("public sealed class NotificationProgress("),
+      notificationHierarchySource,
+    )
+    assertTrue(
+      notificationHierarchySource.contains("value = JobStarted::class, name = \"started\""),
+      notificationHierarchySource,
+    )
+    assertTrue(
+      notificationHierarchySource.contains("defaultImpl = NotificationProgressUnknown::class"),
+      notificationHierarchySource,
+    )
+    assertTrue(
+      notificationFallbackSource.contains(") : NotificationProgress(phase = phase) {"),
+      notificationFallbackSource,
+    )
+    assertTrue(notificationFallbackSource.contains("public val rawBody: ObjectNode"), notificationFallbackSource)
+    assertTrue(notificationFallbackSource.contains("generator.writeTree(value.rawBody)"), notificationFallbackSource)
+    assertTrue(
+      strictNotificationHierarchySource.contains("public class StrictNotificationProgress("),
+      strictNotificationHierarchySource,
+    )
+    assertFalse(
+      strictNotificationHierarchySource.contains("public sealed class StrictNotificationProgress("),
+      strictNotificationHierarchySource,
+    )
+    assertTrue(
+      crossPackageHierarchySource.contains("public open class CrossPackageProgress("),
+      crossPackageHierarchySource,
+    )
+    assertTrue(
+      unionNotificationHierarchySource.contains("public sealed class UnionNotificationProgress("),
+      unionNotificationHierarchySource,
+    )
+    assertTrue(
+      unionNotificationHierarchySource.contains(") : NotificationEvent"),
+      unionNotificationHierarchySource,
+    )
+    assertTrue(
+      unionNotificationFallbackSource.contains(") : UnionNotificationProgress(phase = phase) {"),
+      unionNotificationFallbackSource,
+    )
   }
 
   @OptIn(ExperimentalCompilerApi::class)

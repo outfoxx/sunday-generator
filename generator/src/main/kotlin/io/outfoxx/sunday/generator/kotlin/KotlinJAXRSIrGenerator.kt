@@ -1909,7 +1909,7 @@ class KotlinJAXRSIrGenerator(
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
 
     if (typeRegistry.options.contains(ImplementModel) || isProblemModel()) {
-      if (!isProblemModel() && flattensInheritedProperties) {
+      if (!isProblemModel() && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
         return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
       }
       return classTypeSpec(effectiveInheritedProperties, localProperties)
@@ -2001,8 +2001,14 @@ class KotlinJAXRSIrGenerator(
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
-        if (hasInheritors) {
-          addModifiers(KModifier.OPEN)
+        if (hasInheritors || hasDiscriminatorFallbackSubclass) {
+          addModifiers(
+            if (canGenerateSealedDiscriminatorHierarchy) {
+              KModifier.SEALED
+            } else {
+              KModifier.OPEN
+            },
+          )
         }
         if (isProblemRoot) {
           configureSourceProblemRootModel(this@classTypeSpec, inheritedProperties + localProperties)
@@ -2536,7 +2542,23 @@ class KotlinJAXRSIrGenerator(
   }
 
   private val GeneratedModel.hasInheritors: Boolean
-    get() = api.models.any { model -> model.inherits.any { inherited -> inherited.modelOrNull(apiIndex) == this } }
+    get() = directInheritors.isNotEmpty()
+
+  private val GeneratedModel.directInheritors: List<GeneratedModel>
+    get() =
+      api.models.filter { model ->
+        model.inherits.any { inherited -> inherited.modelOrNull(apiIndex) == this }
+      }
+
+  private val GeneratedModel.hasDiscriminatorFallbackSubclass: Boolean
+    get() = typeRegistry.options.contains(JacksonAnnotations) && discriminatorFallbacks.containsKey(this)
+
+  private val GeneratedModel.canGenerateSealedDiscriminatorHierarchy: Boolean
+    get() =
+      (discriminator != null || externallyDiscriminated || discriminatorMappings.isNotEmpty()) &&
+        directInheritors.all { inheritor ->
+          inheritor.kotlinClassName().packageName == kotlinClassName().packageName
+        }
 
   private val GeneratedModelProperty.wireName: String
     get() = serializationName ?: name
