@@ -191,7 +191,7 @@ class PythonModelRendererTest : PythonTest() {
 
   @Test
   fun `escapes multiline schema descriptions as valid Python literals`(compiler: PythonCompiler) {
-    val description = "First line.\nSecond line uses C:\\docs.\r\nTabbed:\tvalue\u0000"
+    val description = "First.\nSecond C:\\docs.\r\nTab:\tNul:\u0000 Emoji:\uD83D\uDC0D"
     val modelsModule =
       PythonModelRenderer("turnpost_api")
         .renderModels(
@@ -222,7 +222,7 @@ class PythonModelRendererTest : PythonTest() {
           """
           from turnpost_api.models import Example
 
-          expected = "First line.\nSecond line uses C:\\docs.\r\nTabbed:\tvalue\u0000"
+          expected = "First.\nSecond C:\\docs.\r\nTab:\tNul:\u0000 Emoji:\U0001F40D"
           assert Example.model_fields["value"].description == expected
           """.trimIndent(),
       ),
@@ -232,7 +232,7 @@ class PythonModelRendererTest : PythonTest() {
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
     assertTrue(
       source.contains(
-        "description=\"First line.\\nSecond line uses C:\\\\docs.\\r\\nTabbed:\\tvalue\\u0000\"",
+        "description=\"First.\\nSecond C:\\\\docs.\\r\\nTab:\\tNul:\\u0000 Emoji:\uD83D\uDC0D\"",
       ),
       source,
     )

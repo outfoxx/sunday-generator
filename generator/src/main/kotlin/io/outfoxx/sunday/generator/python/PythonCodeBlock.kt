@@ -68,23 +68,26 @@ class PythonCodeBlock private constructor(
 internal fun String.pythonStringLiteral(): String =
   buildString(length + 2) {
     append('"')
-    this@pythonStringLiteral.forEach { character ->
-      when (character) {
-        '\\' -> append("\\\\")
-        '"' -> append("\\\"")
-        '\b' -> append("\\b")
-        '\t' -> append("\\t")
-        '\n' -> append("\\n")
-        '\u000C' -> append("\\f")
-        '\r' -> append("\\r")
+    var index = 0
+    while (index < this@pythonStringLiteral.length) {
+      val codePoint = this@pythonStringLiteral.codePointAt(index)
+      when (codePoint) {
+        '\\'.code -> append("\\\\")
+        '"'.code -> append("\\\"")
+        '\b'.code -> append("\\b")
+        '\t'.code -> append("\\t")
+        '\n'.code -> append("\\n")
+        '\u000C'.code -> append("\\f")
+        '\r'.code -> append("\\r")
         else ->
-          if (character.code < 0x20 || character.code == 0x7F || character.isSurrogate()) {
+          if (codePoint < 0x20 || codePoint == 0x7F || codePoint in 0xD800..0xDFFF) {
             append("\\u")
-            append(character.code.toString(16).padStart(4, '0'))
+            append(codePoint.toString(16).padStart(4, '0'))
           } else {
-            append(character)
+            appendCodePoint(codePoint)
           }
       }
+      index += Character.charCount(codePoint)
     }
     append('"')
   }
