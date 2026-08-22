@@ -1024,11 +1024,36 @@ class KotlinJAXRSIrGeneratorTest {
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
             ),
             GeneratedModel(
+              name = "StrictInheritedProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "phase",
+                    GeneratedTypeRef.named("StrictNotificationPhase"),
+                    required = true,
+                  ),
+                ),
+              discriminator = "phase",
+            ),
+            GeneratedModel(
+              name = "StrictInheritedStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("StrictInheritedProgress")),
+              discriminatorValue = "started",
+            ),
+            GeneratedModel(
+              name = "CrossPackagePhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
               name = "CrossPackageProgress",
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("phase", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("CrossPackagePhase"), required = true),
                 ),
               discriminator = "phase",
             ),
@@ -1179,6 +1204,8 @@ class KotlinJAXRSIrGeneratorTest {
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/NotificationProgressUnknown.kt")
     val strictNotificationHierarchySource =
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/StrictNotificationProgress.kt")
+    val strictInheritedHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/StrictInheritedProgress.kt")
     val crossPackageHierarchySource =
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/CrossPackageProgress.kt")
     val unionNotificationHierarchySource =
@@ -1216,6 +1243,14 @@ class KotlinJAXRSIrGeneratorTest {
     assertFalse(
       strictNotificationHierarchySource.contains("public sealed class StrictNotificationProgress("),
       strictNotificationHierarchySource,
+    )
+    assertTrue(
+      strictInheritedHierarchySource.contains("public open class StrictInheritedProgress("),
+      strictInheritedHierarchySource,
+    )
+    assertFalse(
+      strictInheritedHierarchySource.contains("public sealed class StrictInheritedProgress("),
+      strictInheritedHierarchySource,
     )
     assertTrue(
       crossPackageHierarchySource.contains("public open class CrossPackageProgress("),

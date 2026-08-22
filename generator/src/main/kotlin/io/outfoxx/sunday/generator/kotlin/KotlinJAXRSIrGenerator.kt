@@ -2003,7 +2003,7 @@ class KotlinJAXRSIrGenerator(
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
-            if (canGenerateSealedDiscriminatorHierarchy) {
+            if (canGenerateSealedDiscriminatorFallbackHierarchy) {
               KModifier.SEALED
             } else {
               KModifier.OPEN
@@ -2553,9 +2553,9 @@ class KotlinJAXRSIrGenerator(
   private val GeneratedModel.hasDiscriminatorFallbackSubclass: Boolean
     get() = typeRegistry.options.contains(JacksonAnnotations) && discriminatorFallbacks.containsKey(this)
 
-  private val GeneratedModel.canGenerateSealedDiscriminatorHierarchy: Boolean
+  private val GeneratedModel.canGenerateSealedDiscriminatorFallbackHierarchy: Boolean
     get() =
-      (discriminator != null || externallyDiscriminated || discriminatorMappings.isNotEmpty()) &&
+      hasDiscriminatorFallbackSubclass &&
         directInheritors.all { inheritor ->
           inheritor.kotlinClassName().packageName == kotlinClassName().packageName
         }

@@ -981,7 +981,7 @@ class KotlinSundayIrGenerator(
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
-            if (canGenerateSealedDiscriminatorHierarchy) {
+            if (canGenerateSealedDiscriminatorFallbackHierarchy) {
               KModifier.SEALED
             } else {
               KModifier.OPEN
@@ -2469,9 +2469,9 @@ class KotlinSundayIrGenerator(
       typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations) &&
         discriminatorFallbacks.containsKey(this)
 
-  private val GeneratedModel.canGenerateSealedDiscriminatorHierarchy: Boolean
+  private val GeneratedModel.canGenerateSealedDiscriminatorFallbackHierarchy: Boolean
     get() =
-      (discriminator != null || externallyDiscriminated || discriminatorMappings.isNotEmpty()) &&
+      hasDiscriminatorFallbackSubclass &&
         directInheritors.all { inheritor ->
           inheritor.kotlinClassName().packageName == kotlinClassName().packageName
         }

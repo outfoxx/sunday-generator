@@ -462,7 +462,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
-  fun `generates discriminated request body roots as sealed classes when implementations are enabled`() {
+  fun `generates discriminated request body roots as inheritable classes when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
         "io.test",
@@ -538,7 +538,7 @@ class KotlinSundayIrGeneratorTest {
       }
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertContains(rootSource, "public sealed class EntityUpdate(")
+    assertContains(rootSource, "public open class EntityUpdate(")
     assertFalse(rootSource.contains("data class EntityUpdate"), rootSource)
     assertContains(childSource, "public class SceneUpdate(")
     assertContains(childSource, ": EntityUpdate(")
@@ -546,7 +546,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
-  fun `generates OpenAPI discriminated request body roots as sealed classes when implementations are enabled`(
+  fun `generates OpenAPI discriminated request body roots as inheritable classes when implementations are enabled`(
     @ResourceUri("openapi/ir/discriminated-update-3.1.yaml") testUri: URI,
   ) {
     val typeRegistry =
@@ -578,7 +578,7 @@ class KotlinSundayIrGeneratorTest {
       }
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertContains(rootSource, "public sealed class EntityUpdate(")
+    assertContains(rootSource, "public open class EntityUpdate(")
     assertFalse(rootSource.contains("data class EntityUpdate"), rootSource)
     assertContains(characterSource, "public class CharacterUpdate(")
     assertContains(characterSource, ": EntityUpdate(")
@@ -1533,11 +1533,36 @@ class KotlinSundayIrGeneratorTest {
               discriminatorMappings = mapOf("started" to GeneratedTypeRef.named("JobStarted")),
             ),
             GeneratedModel(
+              name = "StrictInheritedProgress",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "phase",
+                    GeneratedTypeRef.named("StrictNotificationPhase"),
+                    required = true,
+                  ),
+                ),
+              discriminator = "phase",
+            ),
+            GeneratedModel(
+              name = "StrictInheritedStarted",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("StrictInheritedProgress")),
+              discriminatorValue = "started",
+            ),
+            GeneratedModel(
+              name = "CrossPackagePhase",
+              kind = GeneratedModel.Kind.ENUM,
+              values = listOf("started", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
               name = "CrossPackageProgress",
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
-                  GeneratedModelProperty("phase", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty("phase", GeneratedTypeRef.named("CrossPackagePhase"), required = true),
                 ),
               discriminator = "phase",
             ),
@@ -1688,6 +1713,8 @@ class KotlinSundayIrGeneratorTest {
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/NotificationProgressUnknown.kt")
     val strictNotificationHierarchySource =
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/StrictNotificationProgress.kt")
+    val strictInheritedHierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/StrictInheritedProgress.kt")
     val crossPackageHierarchySource =
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/CrossPackageProgress.kt")
     val unionNotificationHierarchySource =
@@ -1705,6 +1732,8 @@ class KotlinSundayIrGeneratorTest {
     assertContains(notificationFallbackSource, "generator.writeTree(value.rawBody)")
     assertContains(strictNotificationHierarchySource, "public class StrictNotificationProgress(")
     assertFalse(strictNotificationHierarchySource.contains("public sealed class StrictNotificationProgress("))
+    assertContains(strictInheritedHierarchySource, "public open class StrictInheritedProgress(")
+    assertFalse(strictInheritedHierarchySource.contains("public sealed class StrictInheritedProgress("))
     assertContains(crossPackageHierarchySource, "public open class CrossPackageProgress(")
     assertContains(unionNotificationHierarchySource, "public sealed class UnionNotificationProgress(")
     assertContains(unionNotificationHierarchySource, ") : NotificationEvent")
