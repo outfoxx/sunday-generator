@@ -1288,11 +1288,11 @@ class TypeScriptSundayIrGenerator(
       model.properties
         .filterNot { property -> property.name == rootDiscriminatorName }
     val allSerializableProperties = inheritedProperties.withoutOverridesFrom(declaredProperties) + declaredProperties
-    val childModels = model.childModels()
-    val isDiscriminatorBase = rootDiscriminatorName != null && childModels.isNotEmpty()
+    val discriminatorCases = model.discriminatorCaseModels()
+    val isDiscriminatorBase = rootDiscriminatorName != null && discriminatorCases.isNotEmpty()
     val leafDiscriminatorValue =
       rootDiscriminatorName
-        ?.takeIf { model.inherits.isNotEmpty() && childModels.isEmpty() }
+        ?.takeIf { model.inherits.isNotEmpty() && discriminatorCases.isEmpty() }
         ?.let { model.discriminatorValue ?: model.name }
     val discriminatorProperty =
       rootDiscriminatorName
@@ -1304,15 +1304,15 @@ class TypeScriptSundayIrGenerator(
     val recursiveModel = model.isRecursiveModel()
     val needsExplicitSchemaType =
       recursiveModel ||
-        (isDiscriminatorBase && childModels.any { childModel -> childModel.isRecursiveModel() })
+        (isDiscriminatorBase && discriminatorCases.any { (_, caseModel) -> caseModel.isRecursiveModel() })
     val typeSpec: AnyTypeSpecBuilder =
       if (needsExplicitSchemaType && isDiscriminatorBase) {
         TypeAliasSpec
           .builder(
             typeName.simpleName(),
             TypeName.unionType(
-              *childModels
-                .map { childModel -> childModel.typeName(childModel.name.toUpperCamelCase()) }
+              *discriminatorCases
+                .map { (_, caseModel) -> caseModel.typeName(caseModel.name.toUpperCamelCase()) }
                 .toTypedArray(),
             ),
           ).addModifiers(Modifier.EXPORT)
@@ -1335,14 +1335,14 @@ class TypeScriptSundayIrGenerator(
         if (model.externallyDiscriminated) {
           plainExternallyDiscriminatedObjectSchemaCode(
             typeName,
-            childModels,
+            discriminatorCases.map { (_, caseModel) -> caseModel },
             typeName.takeIf { needsExplicitSchemaType },
           )
         } else {
           plainDiscriminatedObjectSchemaCode(
             typeName,
             requireNotNull(rootDiscriminatorName),
-            childModels,
+            discriminatorCases,
             discriminatorFallbacks[model],
             typeName.takeIf { needsExplicitSchemaType },
           )
@@ -1584,14 +1584,14 @@ class TypeScriptSundayIrGenerator(
   private fun plainDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
     discriminatorName: String,
-    childModels: List<GeneratedModel>,
+    discriminatorCases: List<Pair<String?, GeneratedModel>>,
     fallback: GeneratedDiscriminatorFallback? = null,
     schemaTypeName: TypeName.Standard? = null,
   ): CodeBlock {
     val variants =
-      childModels.map { childModel ->
-        val childTypeName = childModel.typeName(childModel.name.toUpperCamelCase())
-        childTypeName.sibling("Schema") to (childModel.discriminatorValue ?: childModel.name)
+      discriminatorCases.map { (mappedDiscriminator, caseModel) ->
+        val caseTypeName = caseModel.typeName(caseModel.name.toUpperCamelCase())
+        caseTypeName.sibling("Schema") to (mappedDiscriminator ?: caseModel.discriminatorValue ?: caseModel.name)
       }
     val schemaFactory =
       if (schemaTypeName == null && variants.map { it.second }.toSet().size == variants.size) {

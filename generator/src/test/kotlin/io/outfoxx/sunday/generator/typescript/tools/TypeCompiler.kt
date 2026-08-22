@@ -32,6 +32,21 @@ fun compileTypes(
   compiler: TypeScriptCompiler,
   types: Map<TypeName.Standard, ModuleSpec>,
   generateIndex: Boolean = false,
+): Boolean = compileTypes(compiler, types, generateIndex, null)
+
+/** Compiles generated TypeScript and executes the selected emitted module. */
+fun compileAndRunTypes(
+  compiler: TypeScriptCompiler,
+  types: Map<TypeName.Standard, ModuleSpec>,
+  modulePath: String,
+  generateIndex: Boolean = false,
+): Boolean = compileTypes(compiler, types, generateIndex, modulePath)
+
+private fun compileTypes(
+  compiler: TypeScriptCompiler,
+  types: Map<TypeName.Standard, ModuleSpec>,
+  generateIndex: Boolean,
+  modulePath: String?,
 ): Boolean {
   try {
     CompiledGeneratedSources.beginCompile()
@@ -100,7 +115,15 @@ fun compileTypes(
       }
     }
 
-    return result == 0
+    if (result != 0 || modulePath == null) {
+      return result == 0
+    }
+
+    val (executionResult, executionOutput) = compiler.execute(normalizeModulePath(modulePath))
+    if (executionResult != 0) {
+      System.err.println("TypeScript execution failed:\n$executionOutput")
+    }
+    return executionResult == 0
   } finally {
     compiler.srcDir.toFile().deleteRecursively()
   }

@@ -1,17 +1,19 @@
 {
   "name": "@outfoxx/sunday",
   "version": "0.0.0-test",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "types": "index.d.ts",
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "import": "./index.js"
+      "import": "./index.js",
+      "require": "./index.js"
     },
     "./*": {
       "types": "./index.d.ts",
-      "import": "./index.js"
+      "import": "./index.js",
+      "require": "./index.js"
     },
     "./package.json": "./package.json"
   },
