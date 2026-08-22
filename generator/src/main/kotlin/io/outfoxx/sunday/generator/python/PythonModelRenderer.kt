@@ -129,7 +129,7 @@ class PythonModelRenderer(
       return renderUnionAliasModel()
     }
 
-    val effectiveProperties = properties
+    val effectiveProperties = renderedModelProperties()
     val renderedProperties =
       syntheticDiscriminatorProperty()
         ?.let { discriminatorProperty ->
@@ -148,7 +148,7 @@ class PythonModelRenderer(
           renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
-          renderWireValueValidator(),
+          renderWireValueValidator(effectiveProperties),
           renderExternalDiscriminatorValidator(),
         )
     val body =
@@ -277,9 +277,11 @@ class PythonModelRenderer(
     }
   }
 
-  private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
+  private fun GeneratedModel.renderWireValueValidator(
+    effectiveProperties: List<GeneratedModelProperty>,
+  ): PythonCodeBlock? {
     val nonNullableOptionalProperties =
-      properties.filter { property -> !property.required && !property.type.acceptsNull() }
+      effectiveProperties.filter { property -> !property.required && !property.type.acceptsNull() }
     val validatesAdditionalProperties =
       patternProperties.isNotEmpty() || additionalProperties?.type != null
     if (nonNullableOptionalProperties.isEmpty() && !validatesAdditionalProperties) {
@@ -1021,6 +1023,22 @@ class PythonModelRenderer(
         .map { property -> property.serializationName ?: property.name }
         .toSet()
     return inheritedProperties
+      .filterNot { property ->
+        (property.serializationName ?: property.name) in overrideNames
+      } + properties
+  }
+
+  private fun GeneratedModel.renderedModelProperties(): List<GeneratedModelProperty> {
+    val inheritedAliasProperties =
+      inherits
+        .mapNotNull { inherited ->
+          modelIndex[inherited.name]?.takeUnless { model -> model.isObjectClass() }
+        }.flatMap { model -> model.effectiveModelProperties() }
+    val overrideNames =
+      properties
+        .map { property -> property.serializationName ?: property.name }
+        .toSet()
+    return inheritedAliasProperties
       .filterNot { property ->
         (property.serializationName ?: property.name) in overrideNames
       } + properties
