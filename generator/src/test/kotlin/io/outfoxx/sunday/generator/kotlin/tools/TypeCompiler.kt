@@ -20,6 +20,7 @@ package io.outfoxx.sunday.generator.kotlin.tools
 
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
+import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
@@ -29,7 +30,9 @@ import io.outfoxx.sunday.test.utils.Compilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.io.ByteArrayOutputStream
 
-fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
+fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode = compileTypesResult(types).exitCode
+
+internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilationResult {
 
   val fileSpecs =
     types.entries
@@ -79,5 +82,5 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode {
     Compilation.printFailure(files, out.toByteArray().decodeToString())
   }
 
-  return result.exitCode
+  return result
 }

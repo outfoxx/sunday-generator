@@ -58,8 +58,11 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ImplementMod
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnotations
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.UseJakartaPackages
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
+import io.outfoxx.sunday.generator.kotlin.tools.assertReusableDiscriminatorMappingRoundTrips
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
+import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.findType
+import io.outfoxx.sunday.generator.kotlin.tools.reusableDiscriminatorMappingApi
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
@@ -891,6 +894,54 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `decodes reusable discriminator mappings through sealed interfaces`() {
+    val typeRegistry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(ImplementModel, JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.ZALANDO,
+        problemRfc = KotlinProblemRfc.RFC7807,
+      )
+    KotlinJAXRSIrGenerator(reusableDiscriminatorMappingApi(), typeRegistry, testOptions())
+      .generateServiceTypes()
+
+    val compilation = compileTypesResult(typeRegistry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
+
+    val hierarchySource =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/NotificationEventEnvelope.kt")
+    val canonicalSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/EventOne.kt")
+    val fallbackSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/NotificationEventEnvelopeUnrecognized.kt",
+      )
+    val crossPackageHierarchySource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/CrossPackageNotificationEventEnvelope.kt",
+      )
+    assertTrue(hierarchySource.contains("public sealed interface NotificationEventEnvelope"), hierarchySource)
+    assertTrue(
+      hierarchySource.contains("return parser.codec.treeToValue(tree, EventOne::class.java)"),
+      hierarchySource,
+    )
+    assertTrue(canonicalSource.contains("NotificationEventEnvelope"), canonicalSource)
+    assertTrue(canonicalSource.contains("@JsonDeserialize(using = JsonDeserializer.None::class)"), canonicalSource)
+    assertTrue(fallbackSource.contains(") : NotificationEventEnvelope {"), fallbackSource)
+    assertTrue(
+      crossPackageHierarchySource.contains("public interface CrossPackageNotificationEventEnvelope"),
+      crossPackageHierarchySource,
+    )
+    assertFalse(crossPackageHierarchySource.contains("public sealed interface"))
+
+    assertReusableDiscriminatorMappingRoundTrips(compilation)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates concrete fallback when discriminator is not the first property`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1219,31 +1270,27 @@ class KotlinJAXRSIrGeneratorTest {
       implementingHierarchySource,
     )
     assertTrue(
-      notificationHierarchySource.contains("public sealed class NotificationProgress("),
+      notificationHierarchySource.contains("public sealed interface NotificationProgress"),
       notificationHierarchySource,
     )
     assertTrue(
-      notificationHierarchySource.contains("value = JobStarted::class, name = \"started\""),
+      notificationHierarchySource.contains("return parser.codec.treeToValue(tree, JobStarted::class.java)"),
       notificationHierarchySource,
     )
     assertTrue(
-      notificationHierarchySource.contains("defaultImpl = NotificationProgressUnknown::class"),
+      notificationHierarchySource.contains(
+        "return parser.codec.treeToValue(tree, NotificationProgressUnknown::class.java)",
+      ),
       notificationHierarchySource,
     )
-    assertTrue(
-      notificationFallbackSource.contains(") : NotificationProgress(phase = phase) {"),
-      notificationFallbackSource,
-    )
+    assertTrue(notificationFallbackSource.contains(") : NotificationProgress {"), notificationFallbackSource)
     assertTrue(notificationFallbackSource.contains("public val rawBody: ObjectNode"), notificationFallbackSource)
     assertTrue(notificationFallbackSource.contains("generator.writeTree(value.rawBody)"), notificationFallbackSource)
     assertTrue(
-      strictNotificationHierarchySource.contains("public class StrictNotificationProgress("),
+      strictNotificationHierarchySource.contains("public sealed interface StrictNotificationProgress"),
       strictNotificationHierarchySource,
     )
-    assertFalse(
-      strictNotificationHierarchySource.contains("public sealed class StrictNotificationProgress("),
-      strictNotificationHierarchySource,
-    )
+    assertTrue(strictNotificationHierarchySource.contains("unsupported value for \\\"phase\\\""))
     assertTrue(
       strictInheritedHierarchySource.contains("public open class StrictInheritedProgress("),
       strictInheritedHierarchySource,
@@ -1257,15 +1304,13 @@ class KotlinJAXRSIrGeneratorTest {
       crossPackageHierarchySource,
     )
     assertTrue(
-      unionNotificationHierarchySource.contains("public sealed class UnionNotificationProgress("),
+      unionNotificationHierarchySource.contains(
+        "public sealed interface UnionNotificationProgress : NotificationEvent",
+      ),
       unionNotificationHierarchySource,
     )
     assertTrue(
-      unionNotificationHierarchySource.contains(") : NotificationEvent"),
-      unionNotificationHierarchySource,
-    )
-    assertTrue(
-      unionNotificationFallbackSource.contains(") : UnionNotificationProgress(phase = phase) {"),
+      unionNotificationFallbackSource.contains(") : UnionNotificationProgress {"),
       unionNotificationFallbackSource,
     )
   }

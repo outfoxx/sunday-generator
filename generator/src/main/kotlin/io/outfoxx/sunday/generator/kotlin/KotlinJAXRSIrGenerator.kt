@@ -257,13 +257,15 @@ class KotlinJAXRSIrGenerator(
     val hierarchyTypeName = kotlinClassName()
     val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
     val hierarchyIsClass =
-      kind == GeneratedModel.Kind.OBJECT && (typeRegistry.options.contains(ImplementModel) || isProblemModel())
+      kind == GeneratedModel.Kind.OBJECT &&
+        (typeRegistry.options.contains(ImplementModel) || isProblemModel()) &&
+        !isDiscriminatorMappingUnionInterface
     val type =
       fallback.kotlinFallbackTypeSpec(
         fallbackTypeName,
         hierarchyTypeName,
         hierarchyIsClass,
-        kind == GeneratedModel.Kind.OBJECT,
+        kind == GeneratedModel.Kind.OBJECT && !isDiscriminatorMappingUnionInterface,
       ) { property -> property.modelPropertyTypeName() }
     return fallbackTypeName to type
   }
@@ -1901,18 +1903,123 @@ class KotlinJAXRSIrGenerator(
       else -> null
     }
 
+  private fun GeneratedModel.discriminatorMappingUnionTypeSpecOrNull(): TypeSpec.Builder? {
+    if (!isDiscriminatorMappingUnionInterface) {
+      return null
+    }
+
+    val unionTypeName = kotlinClassName()
+    return TypeSpec
+      .interfaceBuilder(unionTypeName)
+      .addModifiers(KModifier.PUBLIC)
+      .apply {
+        if (canGenerateSealedDiscriminatorMappingUnion) {
+          addModifiers(KModifier.SEALED)
+        }
+        directUnionSupertypes().forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        if (typeRegistry.options.contains(JacksonAnnotations)) {
+          if (discriminator != null) {
+            addAnnotation(
+              AnnotationSpec
+                .builder(JACKSON_JSON_DESERIALIZE)
+                .addMember("using = %T::class", unionTypeName.nestedClass("Deserializer"))
+                .build(),
+            )
+            addType(discriminatorMappingUnionDeserializerType(unionTypeName))
+          } else {
+            addJacksonPolymorphism(this@discriminatorMappingUnionTypeSpecOrNull)
+          }
+        }
+      }
+  }
+
+  private fun GeneratedModel.discriminatorMappingUnionDeserializerType(unionTypeName: ClassName): TypeSpec {
+    val discriminatorName = discriminator ?: genError("Discriminator mapping union '$name' has no discriminator")
+    val discriminatorWireName = discriminatorPropertyOrNull(discriminatorName)?.wireName ?: discriminatorName
+    val mappedTypes =
+      discriminatorMappings.mapNotNull { (value, typeRef) ->
+        val mappedModel = typeRef.modelOrNull(apiIndex) ?: return@mapNotNull null
+        value to mappedModel.kotlinClassName()
+      }
+    val deserialize =
+      FunSpec
+        .builder("deserialize")
+        .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
+        .addParameter("parser", JACKSON_JSON_PARSER)
+        .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
+        .returns(unionTypeName)
+        .addStatement("val tree = parser.codec.readTree<%T>(parser)", JSON_NODE)
+        .addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminatorWireName)
+        .apply {
+          mappedTypes.forEach { (value, typeName) ->
+            beginControlFlow("if (discriminatorValue == %S)", value)
+            addStatement("return parser.codec.treeToValue(tree, %T::class.java)", typeName)
+            endControlFlow()
+          }
+          val fallback = discriminatorFallbacks[this@discriminatorMappingUnionDeserializerType]
+          if (fallback == null) {
+            addStatement(
+              "throw %T.from(parser, %S)",
+              JACKSON_JSON_MAPPING_EXCEPTION,
+              "unsupported value for \"$discriminatorWireName\"",
+            )
+          } else {
+            beginControlFlow(
+              "if (tree.get(%S) == null || !tree.get(%S).isTextual)",
+              discriminatorWireName,
+              discriminatorWireName,
+            )
+            addStatement(
+              "throw %T.from(parser, %S)",
+              JACKSON_JSON_MAPPING_EXCEPTION,
+              "missing or non-string value for \"$discriminatorWireName\"",
+            )
+            endControlFlow()
+            val fallbackTypeName = ClassName(unionTypeName.packageName, fallback.modelName.toUpperCamelCase())
+            addStatement("return parser.codec.treeToValue(tree, %T::class.java)", fallbackTypeName)
+          }
+        }.build()
+
+    return TypeSpec
+      .classBuilder("Deserializer")
+      .addModifiers(KModifier.PUBLIC)
+      .superclass(JACKSON_JSON_DESERIALIZER.parameterizedBy(unionTypeName))
+      .addFunction(deserialize)
+      .build()
+  }
+
   private fun GeneratedModel.objectTypeSpec(): TypeSpec.Builder {
+    discriminatorMappingUnionTypeSpecOrNull()?.let { return it }
+
     val inheritedProperties = inheritedModelProperties()
     val directUnionSupertypes = directUnionSupertypes()
-    val flattensInheritedProperties = directUnionSupertypes.isNotEmpty()
+    val inheritedMappingUnionSupertypes = inheritedDiscriminatorMappingUnionSupertypes
+    val flattensInheritedProperties =
+      directUnionSupertypes.isNotEmpty() || inheritedMappingUnionSupertypes.isNotEmpty()
     val localProperties = localModelProperties(inheritedProperties, allowOverrides = flattensInheritedProperties)
     val effectiveInheritedProperties = inheritedProperties.withoutOverridesFrom(localProperties)
+    val hasClassParent =
+      inherits.any { inherited ->
+        inherited.modelOrNull(apiIndex)?.isDiscriminatorMappingUnionInterface != true
+      }
+    val classInheritedProperties = effectiveInheritedProperties.takeIf { hasClassParent }.orEmpty()
+    val classLocalProperties =
+      if (hasClassParent) {
+        localProperties
+      } else {
+        effectiveInheritedProperties + localProperties
+      }
 
     if (typeRegistry.options.contains(ImplementModel) || isProblemModel()) {
       if (!isProblemModel() && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
         return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
       }
-      return classTypeSpec(effectiveInheritedProperties, localProperties)
+      return classTypeSpec(classInheritedProperties, classLocalProperties)
     }
 
     return TypeSpec
@@ -1926,6 +2033,12 @@ class KotlinJAXRSIrGenerator(
           }
         }
         directUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         val declaredProperties =
@@ -1958,6 +2071,12 @@ class KotlinJAXRSIrGenerator(
         addJacksonPolymorphism(this@dataClassTypeSpec)
         addJacksonUnionMemberDeserializerOverride(this@dataClassTypeSpec)
         directUnionSupertypes().forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         properties.forEach { property ->
@@ -2013,14 +2132,23 @@ class KotlinJAXRSIrGenerator(
         if (isProblemRoot) {
           configureSourceProblemRootModel(this@classTypeSpec, inheritedProperties + localProperties)
         } else {
-          inherits.firstOrNull()?.let { inherited ->
-            superclass(inherited.kotlinTypeName())
-            inheritedProperties.forEach { property ->
-              addSuperclassConstructorParameter("%N", property.name.kotlinIdentifierName)
+          inherits
+            .firstOrNull { inherited ->
+              inherited.modelOrNull(apiIndex)?.isDiscriminatorMappingUnionInterface != true
+            }?.let { inherited ->
+              superclass(inherited.kotlinTypeName())
+              inheritedProperties.forEach { property ->
+                addSuperclassConstructorParameter("%N", property.name.kotlinIdentifierName)
+              }
             }
-          }
         }
         directUnionSupertypes().forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        inheritedDiscriminatorMappingUnionSupertypes.forEach { union ->
+          addSuperinterface(union.kotlinClassName())
+        }
+        discriminatorMappingUnionSupertypes.forEach { union ->
           addSuperinterface(union.kotlinClassName())
         }
         localProperties
@@ -2443,7 +2571,7 @@ class KotlinJAXRSIrGenerator(
     if (!typeRegistry.options.contains(JacksonAnnotations)) {
       return
     }
-    if (model.directUnionSupertypes().isEmpty()) {
+    if (model.directUnionSupertypes().isEmpty() && model.discriminatorMappingUnionSupertypes.isEmpty()) {
       return
     }
 
@@ -2964,6 +3092,41 @@ class KotlinJAXRSIrGenerator(
           ?.unionCaseModels()
           .orEmpty()
       this in cases && union.usesDirectUnionCases(union.kotlinClassName(), cases)
+    }
+
+  private val GeneratedModel.discriminatorMappingUnionSupertypes: List<GeneratedModel>
+    get() =
+      api.models.filter { union ->
+        union.isDiscriminatorMappingUnionInterface &&
+          union.discriminatorMappings.values.any { typeRef -> typeRef.modelOrNull(apiIndex) == this }
+      }
+
+  private val GeneratedModel.inheritedDiscriminatorMappingUnionSupertypes: List<GeneratedModel>
+    get() =
+      inherits.mapNotNull { inherited ->
+        inherited.modelOrNull(apiIndex)?.takeIf { model -> model.isDiscriminatorMappingUnionInterface }
+      }
+
+  private val GeneratedModel.isDiscriminatorMappingUnionInterface: Boolean
+    get() =
+      kind == GeneratedModel.Kind.OBJECT &&
+        discriminatorMappings.isNotEmpty() &&
+        discriminatorMappingModels.any { mappedModel -> !mappedModel.structurallyInherits(this) }
+
+  private val GeneratedModel.discriminatorMappingModels: List<GeneratedModel>
+    get() = discriminatorMappings.values.mapNotNull { typeRef -> typeRef.modelOrNull(apiIndex) }
+
+  private fun GeneratedModel.structurallyInherits(base: GeneratedModel): Boolean =
+    inherits.any { inherited ->
+      val inheritedModel = inherited.modelOrNull(apiIndex) ?: return@any false
+      inheritedModel == base || inheritedModel.structurallyInherits(base)
+    }
+
+  private val GeneratedModel.canGenerateSealedDiscriminatorMappingUnion: Boolean
+    get() {
+      val packageName = kotlinClassName().packageName
+      val implementations = discriminatorMappingModels + directInheritors
+      return implementations.all { model -> model.kotlinClassName().packageName == packageName }
     }
 
   private fun GeneratedModel.usesDirectUnionCases(
