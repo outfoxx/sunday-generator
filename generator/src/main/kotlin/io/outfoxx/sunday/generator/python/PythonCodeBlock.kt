@@ -65,4 +65,26 @@ class PythonCodeBlock private constructor(
   }
 }
 
-internal fun String.pythonStringLiteral(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+internal fun String.pythonStringLiteral(): String =
+  buildString(length + 2) {
+    append('"')
+    this@pythonStringLiteral.forEach { character ->
+      when (character) {
+        '\\' -> append("\\\\")
+        '"' -> append("\\\"")
+        '\b' -> append("\\b")
+        '\t' -> append("\\t")
+        '\n' -> append("\\n")
+        '\u000C' -> append("\\f")
+        '\r' -> append("\\r")
+        else ->
+          if (character.code < 0x20 || character.code == 0x7F || character.isSurrogate()) {
+            append("\\u")
+            append(character.code.toString(16).padStart(4, '0'))
+          } else {
+            append(character)
+          }
+      }
+    }
+    append('"')
+  }

@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
+import io.outfoxx.sunday.generator.ir.GeneratedDocumentation
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -186,6 +187,55 @@ class PythonModelRendererTest : PythonTest() {
       assertTrue(error.message!!.contains(expectedContext), error.message)
       assertTrue(error.message!!.contains(injectedMarker), error.message)
     }
+  }
+
+  @Test
+  fun `escapes multiline schema descriptions as valid Python literals`(compiler: PythonCompiler) {
+    val description = "First line.\nSecond line uses C:\\docs.\r\nTabbed:\tvalue\u0000"
+    val modelsModule =
+      PythonModelRenderer("turnpost_api")
+        .renderModels(
+          listOf(
+            GeneratedModel(
+              name = "Example",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    name = "value",
+                    type = GeneratedTypeRef.scalar("string"),
+                    required = true,
+                    documentation = GeneratedDocumentation(description = description),
+                  ),
+                ),
+            ),
+          ),
+        )
+    val initModule = PythonModuleBuilder("turnpost_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from turnpost_api.models import Example
+
+          expected = "First line.\nSecond line uses C:\\docs.\r\nTabbed:\tvalue\u0000"
+          assert Example.model_fields["value"].description == expected
+          """.trimIndent(),
+      ),
+      modelsModule.source,
+    )
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
+    assertTrue(
+      source.contains(
+        "description=\"First line.\\nSecond line uses C:\\\\docs.\\r\\nTabbed:\\tvalue\\u0000\"",
+      ),
+      source,
+    )
   }
 
   @Test
