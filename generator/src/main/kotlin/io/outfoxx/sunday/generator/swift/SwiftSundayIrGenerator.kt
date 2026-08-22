@@ -1516,8 +1516,7 @@ class SwiftSundayIrGenerator(
         discriminatorMappings.isEmpty() &&
         !externallyDiscriminated &&
         properties.none { property -> property.externalDiscriminator != null } &&
-        !isProblemModel &&
-        !hasInheritingModels
+        !isProblemModel
 
   private val GeneratedModel.isPatchableObjectValueModel: Boolean
     get() =

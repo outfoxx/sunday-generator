@@ -1469,6 +1469,100 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `uses value models for non-recursive plain inheritance`(compiler: SwiftCompiler) {
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Render API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "RenderGraphSummary",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty("graphJobId", GeneratedTypeRef.scalar("string"), required = true),
+                ),
+            ),
+            GeneratedModel(
+              name = "RenderGraphDetails",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("RenderGraphSummary")),
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "tasks",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "array",
+                      arguments = listOf(GeneratedTypeRef.scalar("string")),
+                    ),
+                    required = true,
+                  ),
+                ),
+            ),
+            GeneratedModel(
+              name = "RenderGraphList",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "items",
+                    GeneratedTypeRef(
+                      kind = GeneratedTypeRef.Kind.ARRAY,
+                      name = "array",
+                      arguments = listOf(GeneratedTypeRef.named("RenderGraphSummary")),
+                    ),
+                    required = true,
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    val summarySource =
+      buildString {
+        FileSpec
+          .get("", findType("RenderGraphSummary", builtTypes))
+          .writeTo(this)
+      }
+    val detailsSource =
+      buildString {
+        FileSpec
+          .get("", findType("RenderGraphDetails", builtTypes))
+          .writeTo(this)
+      }
+    val listSource =
+      buildString {
+        FileSpec
+          .get("", findType("RenderGraphList", builtTypes))
+          .writeTo(this)
+      }
+
+    assertTrue(compileTypes(compiler, builtTypes))
+    assertTrue(
+      summarySource.contains(
+        "public struct RenderGraphSummary : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      summarySource,
+    )
+    assertTrue(
+      detailsSource.contains(
+        "public struct RenderGraphDetails : Codable, CustomDebugStringConvertible, Sendable",
+      ),
+      detailsSource,
+    )
+    assertTrue(detailsSource.contains("public let graphJobId: String"), detailsSource)
+    assertTrue(detailsSource.contains("public let tasks: [String]"), detailsSource)
+    assertTrue(listSource.contains("public let items: [RenderGraphSummary]"), listSource)
+  }
+
+  @Test
   fun `lowers shared enums and alias-like models directly from IR`(compiler: SwiftCompiler) {
     val typeRegistry = SwiftTypeRegistry(setOf())
     val api =
