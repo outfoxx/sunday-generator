@@ -899,7 +899,7 @@ class KotlinSundayIrGenerator(
     if (isProblemModel()) {
       return classTypeSpec(effectiveInheritedProperties, localProperties)
     }
-    if (shouldGenerateClassModel && flattensInheritedProperties) {
+    if (shouldGenerateClassModel && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
       return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
     }
     if (shouldGenerateDataClassModel && localProperties.isNotEmpty()) {
@@ -952,6 +952,7 @@ class KotlinSundayIrGenerator(
         this in requestBodyModels &&
         inherits.isEmpty() &&
         !hasInheritors &&
+        !hasDiscriminatorFallbackSubclass &&
         !patchable
 
   private fun GeneratedModel.classTypeSpec(
@@ -978,8 +979,14 @@ class KotlinSundayIrGenerator(
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
-        if (hasInheritors) {
-          addModifiers(KModifier.OPEN)
+        if (hasInheritors || hasDiscriminatorFallbackSubclass) {
+          addModifiers(
+            if (canGenerateSealedDiscriminatorFallbackHierarchy) {
+              KModifier.SEALED
+            } else {
+              KModifier.OPEN
+            },
+          )
         }
         if (isProblemRootModel) {
           configureSourceProblemRootModel(inheritedProperties + localProperties)
@@ -2449,10 +2456,25 @@ class KotlinSundayIrGenerator(
   ): Boolean = cases.all { model -> model.kotlinClassName().packageName == unionTypeName.packageName }
 
   private val GeneratedModel.hasInheritors: Boolean
+    get() = directInheritors.isNotEmpty()
+
+  private val GeneratedModel.directInheritors: List<GeneratedModel>
     get() =
-      api.models.any { model ->
+      api.models.filter { model ->
         model.inherits.any { inherited -> inherited.modelOrNull(apiIndex) == this }
       }
+
+  private val GeneratedModel.hasDiscriminatorFallbackSubclass: Boolean
+    get() =
+      typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations) &&
+        discriminatorFallbacks.containsKey(this)
+
+  private val GeneratedModel.canGenerateSealedDiscriminatorFallbackHierarchy: Boolean
+    get() =
+      hasDiscriminatorFallbackSubclass &&
+        directInheritors.all { inheritor ->
+          inheritor.kotlinClassName().packageName == kotlinClassName().packageName
+        }
 
   private fun GeneratedModel.unionCaseTypeName(unionTypeName: ClassName): ClassName =
     unionTypeName.nestedClass("${name.toUpperCamelCase()}Value")
