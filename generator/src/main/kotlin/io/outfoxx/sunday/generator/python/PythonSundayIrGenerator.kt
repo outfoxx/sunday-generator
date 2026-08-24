@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
+import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates transport-neutral Python Sunday client modules from generated IR. */
 class PythonSundayIrGenerator(
@@ -33,7 +34,7 @@ class PythonSundayIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
-    options.requireHttpOnly()
+    options.requireBrokerServicesSupported("Python/Sunday")
     val packageName = api.pythonPackageName(options)
     val services = api.pythonHttpServices()
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())

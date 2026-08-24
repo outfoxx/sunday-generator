@@ -16,16 +16,9 @@
 
 package io.outfoxx.sunday.generator.python
 
-import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedService
-
-internal fun PythonGeneratorOptions.requireHttpOnly() {
-  if (broker) {
-    genError("Python broker generation is not supported; generate HTTP services without -broker")
-  }
-}
 
 internal fun GeneratedApi.pythonHttpServices(): List<GeneratedService> =
   services.mapNotNull { service ->

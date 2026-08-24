@@ -63,5 +63,6 @@ open class TypeScriptSundayGenerateCommand :
       aggregateServices,
       aggregateServiceName,
       servicesFromTags,
+      generateBrokerServices,
     )
 }

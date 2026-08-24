@@ -88,6 +88,13 @@ abstract class SundayGenerate
 
     @get:Input
     @get:Optional
+    val generateBrokerServices: Property<Boolean> =
+      objects
+        .property(Boolean::class.java)
+        .convention(framework.map { targetFramework -> targetFramework == TargetFramework.Sunday })
+
+    @get:Input
+    @get:Optional
     val pkgName: Property<String> = objects.property(String::class.java).convention("com.example")
 
     @get:Input
@@ -320,6 +327,7 @@ abstract class SundayGenerate
                   aggregateServices = aggregateServices.get(),
                   aggregateServiceName = aggregateServiceName.orNull,
                   servicesFromTags = servicesFromTags.get(),
+                  generateBrokerServices = generateBrokerServices.get(),
                 ),
               ).generateServiceTypes()
 
@@ -335,6 +343,7 @@ abstract class SundayGenerate
                   aggregateServices = aggregateServices.get(),
                   aggregateServiceName = aggregateServiceName.orNull,
                   servicesFromTags = servicesFromTags.get(),
+                  generateBrokerServices = generateBrokerServices.get(),
                 ),
               ).generateServiceTypes()
           }

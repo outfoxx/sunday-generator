@@ -28,4 +28,5 @@ class SwiftSundayOptions(
   val aggregateServices: Boolean = false,
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
-) : GenerationOptions(defaultProblemBaseUri, defaultMediaTypes, serviceSuffix)
+  generateBrokerServices: Boolean = false,
+) : GenerationOptions(defaultProblemBaseUri, defaultMediaTypes, serviceSuffix, generateBrokerServices)

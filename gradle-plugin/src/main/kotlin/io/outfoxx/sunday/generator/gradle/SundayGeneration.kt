@@ -51,6 +51,7 @@ class SundayGeneration(
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
   val generateService: Property<Boolean> = objects.property(Boolean::class.java)
+  val generateBrokerServices: Property<Boolean> = objects.property(Boolean::class.java)
   val pkgName: Property<String> = objects.property(String::class.java)
   val servicePkgName: Property<String> = objects.property(String::class.java)
   val serviceSuffix: Property<String> = objects.property(String::class.java)

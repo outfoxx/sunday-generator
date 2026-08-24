@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates Python Litestar server modules from generated IR. */
 class PythonLitestarIrGenerator(
@@ -28,7 +29,7 @@ class PythonLitestarIrGenerator(
 
   /** Generates the modules for the requested type categories. */
   fun generateModules(outputCategories: Set<GeneratedTypeCategory>): List<PythonModule> {
-    options.requireHttpOnly()
+    options.requireBrokerServicesSupported("Python/Litestar")
     val packageName = api.pythonPackageName(options)
     val services = api.pythonHttpServices()
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())

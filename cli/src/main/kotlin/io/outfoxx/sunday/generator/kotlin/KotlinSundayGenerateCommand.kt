@@ -24,7 +24,11 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 
 open class KotlinSundayGenerateCommand :
-  KotlinGenerateCommand(name = "kotlin/sunday", help = "Generate Kotlin client for Sunday framework") {
+  KotlinGenerateCommand(
+    name = "kotlin/sunday",
+    help = "Generate Kotlin client for Sunday framework",
+    generateBrokerServicesDefault = true,
+  ) {
 
   override val mode = GenerationMode.Client
 
@@ -73,5 +77,6 @@ open class KotlinSundayGenerateCommand :
       aggregateServices,
       aggregateServiceName,
       servicesFromTags,
+      generateBrokerServices,
     )
 }

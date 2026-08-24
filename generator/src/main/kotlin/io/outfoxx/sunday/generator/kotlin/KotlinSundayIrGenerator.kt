@@ -242,12 +242,15 @@ class KotlinSundayIrGenerator(
     }
 
     val serviceTypeNames = serviceTypes.map { serviceType -> serviceType.typeName.simpleName }.toSet()
-    brokerServices.forEach { service ->
-      val servicePackageName = servicePackageName()
-      val serviceTypeName = ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName(serviceTypeNames)}")
-      val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
+    if (options.generateBrokerServices) {
+      brokerServices.forEach { service ->
+        val servicePackageName = servicePackageName()
+        val serviceTypeName =
+          ClassName.bestGuess("$servicePackageName.${service.brokerTypeSimpleName(serviceTypeNames)}")
+        val serviceTypeBuilder = generateBrokerServiceType(serviceTypeName, service)
 
-      typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
+        typeRegistry.addServiceType(serviceTypeName, serviceTypeBuilder)
+      }
     }
   }
 

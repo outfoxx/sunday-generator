@@ -55,11 +55,6 @@ abstract class PythonGenerateCommand(
     help = "Use the first operation tag as the generated service when no x-sunday-service is present",
   ).flag(default = false)
 
-  val broker by option(
-    "-broker",
-    help = "Generate broker services (currently unsupported for Python)",
-  ).flag(default = false)
-
   protected fun exportApi(): GeneratedApiIrExport =
     GeneratedApiIrExporter(
       GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = generationMode),
@@ -70,6 +65,6 @@ abstract class PythonGenerateCommand(
       packageName = packageName ?: export.apiId.id,
       aggregateServices = aggregateServices,
       aggregateServiceName = aggregateServiceName,
-      broker = broker,
+      generateBrokerServices = generateBrokerServices,
     )
 }

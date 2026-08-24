@@ -34,10 +34,12 @@ class KotlinJAXRSOptions(
   val aggregateServices: Boolean = false,
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
+  generateBrokerServices: Boolean = false,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
+    generateBrokerServices,
   ) {
 
   /** Base URI emission mode for service-level JAX-RS path annotations. */
