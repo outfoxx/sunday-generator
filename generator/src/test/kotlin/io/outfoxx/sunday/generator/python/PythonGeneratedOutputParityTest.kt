@@ -131,6 +131,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
     )
 
     val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/models.py")
+    assertTrue(modelSource.contains("class AllOfRequiredData(SundayModel):"), modelSource)
+    assertTrue(modelSource.contains("value: str"), modelSource)
     assertTrue(
       modelSource.contains(
         "render_graph: VisualizationRenderGraphTaskSettledDataRenderGraph = Field(alias=\"renderGraph\")",

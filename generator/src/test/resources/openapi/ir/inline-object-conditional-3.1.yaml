@@ -15,6 +15,13 @@ paths:
                 $ref: "#/components/schemas/VisualizationRenderGraphTaskSettledData"
 components:
   schemas:
+    AllOfRequiredData:
+      type: object
+      allOf:
+        - required: [value]
+      properties:
+        value:
+          type: string
     RenderGraphTaskSettledState:
       type: string
       enum: [completed, failed, skipped, deferred, refused]

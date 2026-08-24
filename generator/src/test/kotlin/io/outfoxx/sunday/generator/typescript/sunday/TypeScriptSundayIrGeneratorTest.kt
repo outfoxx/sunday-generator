@@ -668,12 +668,18 @@ class TypeScriptSundayIrGeneratorTest {
         GeneratedCodeLanguage.TypeScript,
         "visualization-render-graph-task-settled-data-render-graph.ts",
       )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.TypeScript,
+        "all-of-required-data.ts",
+      )
     assertTrue(
       dataSource.contains(
         "'renderGraph': runtime.resolveSchema(VisualizationRenderGraphTaskSettledDataRenderGraphSchema)",
       ),
       dataSource,
     )
+    assertTrue(allOfRequiredSource.contains("'value': z.string()"), allOfRequiredSource)
     assertTrue(renderGraphSource.contains("'graphJobId': z.string()"), renderGraphSource)
     assertTrue(renderGraphSource.contains("'taskId': z.string()"), renderGraphSource)
     assertTrue(

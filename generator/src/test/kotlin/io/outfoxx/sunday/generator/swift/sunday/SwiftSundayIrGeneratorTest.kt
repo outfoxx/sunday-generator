@@ -219,12 +219,18 @@ class SwiftSundayIrGeneratorTest {
         GeneratedCodeLanguage.Swift,
         "Models/VisualizationRenderGraphTaskSettledDataRenderGraph.swift",
       )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/AllOfRequiredData.swift",
+      )
     assertTrue(
       dataSource.contains(
         "public let renderGraph: VisualizationRenderGraphTaskSettledDataRenderGraph",
       ),
       dataSource,
     )
+    assertTrue(allOfRequiredSource.contains("public let value: String"), allOfRequiredSource)
     assertTrue(renderGraphSource.contains("public let graphJobId: String"), renderGraphSource)
     assertTrue(renderGraphSource.contains("public let taskId: String"), renderGraphSource)
     assertTrue(renderGraphSource.contains("public let state: RenderGraphTaskSettledState"), renderGraphSource)

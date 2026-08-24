@@ -354,8 +354,10 @@ class OpenApiToGeneratedApiTest {
 
     val data = api.models.single { model -> model.name == "VisualizationRenderGraphTaskSettledData" }
     val renderGraph = api.models.single { model -> model.name == "VisualizationRenderGraphTaskSettledDataRenderGraph" }
+    val allOfRequired = api.models.single { model -> model.name == "AllOfRequiredData" }
 
     assertEquals(GeneratedTypeRef.named(renderGraph.name), data.properties.single().type)
+    assertEquals(true, allOfRequired.properties.single { property -> property.name == "value" }.required)
     assertEquals(
       listOf(
         "graphJobId",

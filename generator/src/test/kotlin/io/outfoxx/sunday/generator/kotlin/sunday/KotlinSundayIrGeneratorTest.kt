@@ -1274,7 +1274,13 @@ class KotlinSundayIrGeneratorTest {
         GeneratedCodeLanguage.Kotlin,
         "io/test/VisualizationRenderGraphTaskSettledDataRenderGraph.kt",
       )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/AllOfRequiredData.kt",
+      )
     assertContains(dataSource, "public val `renderGraph`: VisualizationRenderGraphTaskSettledDataRenderGraph")
+    assertContains(allOfRequiredSource, "public val `value`: String")
     assertContains(renderGraphSource, "public val `graphJobId`: String")
     assertContains(renderGraphSource, "public val `taskId`: String")
     assertContains(renderGraphSource, "public val `state`: RenderGraphTaskSettledState")
