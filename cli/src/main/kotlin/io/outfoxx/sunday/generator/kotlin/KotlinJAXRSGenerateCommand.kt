@@ -129,5 +129,6 @@ open class KotlinJAXRSGenerateCommand :
       aggregateServices,
       aggregateServiceName,
       servicesFromTags,
+      generateBrokerServices,
     )
 }

@@ -21,6 +21,7 @@ import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -33,6 +34,7 @@ import java.net.URI
 abstract class CommonGenerateCommand(
   name: String,
   val help: String,
+  generateBrokerServicesDefault: Boolean = false,
 ) : CliktCommand(name = name) {
 
   override fun help(context: Context): String = help
@@ -41,6 +43,15 @@ abstract class CommonGenerateCommand(
     "-service-suffix",
     help = "Suffix for generated services",
   ).default("API")
+
+  val generateBrokerServices by option(
+    "-broker",
+    help = "Generate broker services when supported by the target runtime",
+  ).flag(
+    "-no-broker",
+    default = generateBrokerServicesDefault,
+    defaultForHelp = if (generateBrokerServicesDefault) "enabled" else "disabled",
+  )
 
   val mediaTypes by option(
     "-media-type",

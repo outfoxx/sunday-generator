@@ -58,6 +58,7 @@ import io.outfoxx.sunday.generator.ir.emit.referencedProblems
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
 import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
@@ -160,6 +161,7 @@ class SwiftSundayIrGenerator(
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    options.requireBrokerServicesSupported("Swift/Sunday")
     val services = api.swiftSundayServices()
     val serviceOutputGroups = services.swiftOutputGroups()
     generateModelTypes(services, serviceOutputGroups)

@@ -232,10 +232,12 @@ class PythonGeneratedOutputParityTest : PythonTest() {
 
     val error =
       assertThrows<GenerationException> {
-        PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "parity_api", broker = true))
-          .generateModules(GeneratedTypeCategory.entries.toSet())
+        PythonSundayIrGenerator(
+          api,
+          PythonGeneratorOptions(packageName = "parity_api", generateBrokerServices = true),
+        ).generateModules(GeneratedTypeCategory.entries.toSet())
       }
-    assertTrue(error.message!!.contains("Python broker generation is not supported"), error.message)
+    assertTrue(error.message!!.contains("not supported for Python/Sunday"), error.message)
   }
 
   @Test

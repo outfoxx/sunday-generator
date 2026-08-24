@@ -52,6 +52,7 @@ import io.outfoxx.sunday.generator.ir.emit.referencedProblems
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
 import io.outfoxx.sunday.generator.typescript.utils.ASYNC_ITERABLE
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_NULLABLE_OPERATION
@@ -149,6 +150,7 @@ class TypeScriptSundayIrGenerator(
 
   /** Generates TypeScript/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
+    options.requireBrokerServicesSupported("TypeScript/Sunday")
     val services = api.typeScriptSundayServices()
 
     registerCompanionSchemaTypes()

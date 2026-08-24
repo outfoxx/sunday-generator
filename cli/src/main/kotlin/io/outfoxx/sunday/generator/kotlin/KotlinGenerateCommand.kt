@@ -37,7 +37,12 @@ import io.outfoxx.sunday.generator.provideDelegate
 abstract class KotlinGenerateCommand(
   name: String,
   help: String,
-) : CommonGenerateCommand(name = name, help = help) {
+  generateBrokerServicesDefault: Boolean = false,
+) : CommonGenerateCommand(
+    name = name,
+    help = help,
+    generateBrokerServicesDefault = generateBrokerServicesDefault,
+  ) {
 
   companion object {
     val impliedRegistryOptions = setOf(AddGeneratedAnnotation)

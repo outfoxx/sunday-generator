@@ -21,4 +21,5 @@ open class GenerationOptions(
   val defaultProblemBaseUri: String,
   val defaultMediaTypes: List<String>,
   val serviceSuffix: String,
-)
+  override val generateBrokerServices: Boolean = false,
+) : BrokerGenerationOptions

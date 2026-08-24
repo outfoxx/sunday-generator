@@ -137,6 +137,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.rawType
 import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
+import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
@@ -210,6 +211,7 @@ class KotlinJAXRSIrGenerator(
    * Generates Kotlin/JAX-RS service types from IR and registers them in the type registry.
    */
   fun generateServiceTypes() {
+    options.requireBrokerServicesSupported("Kotlin/JAX-RS")
     val services = api.jaxRsServices()
 
     generateModelTypes()

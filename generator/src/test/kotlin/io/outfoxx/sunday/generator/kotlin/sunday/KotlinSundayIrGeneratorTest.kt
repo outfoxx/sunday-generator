@@ -3172,6 +3172,33 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `omits AMQP broker facades while retaining message models`(
+    @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+    val options =
+      KotlinSundayOptions(
+        defaultServicePackageName = "io.test.service",
+        defaultProblemBaseUri = "http://example.com/",
+        defaultMediaTypes = listOf("application/json"),
+        serviceSuffix = "API",
+        generateBrokerServices = false,
+      )
+
+    KotlinSundayIrGenerator(api, typeRegistry, options).generateServiceTypes()
+
+    val builtTypes = typeRegistry.buildTypes()
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+    assertFalse(builtTypes.keys.any { typeName -> typeName.simpleName.endsWith("Broker") }, builtTypes.keys.toString())
+    assertTrue(builtTypes.keys.any { typeName -> typeName.simpleName == "PlatformEvent" }, builtTypes.keys.toString())
+
+    val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/PlatformEvent.kt")
+    assertTrue(modelSource.contains("public interface PlatformEvent"), modelSource)
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `generates AMQP broker facades for mixed and unidirectional services`() {
     val typeRegistry = typeRegistry()
     val api = brokerEdgeCaseApi()

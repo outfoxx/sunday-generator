@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.python
+package io.outfoxx.sunday.generator
 
-import io.outfoxx.sunday.generator.BrokerGenerationOptions
+/** Options controlling broker service generation. */
+interface BrokerGenerationOptions {
 
-/** Options shared by Python IR-backed generators. */
-data class PythonGeneratorOptions(
-  val packageName: String? = null,
-  val aggregateServices: Boolean = false,
-  val aggregateServiceName: String? = null,
-  override val generateBrokerServices: Boolean = false,
-) : BrokerGenerationOptions
+  /** Whether broker service facades should be generated. */
+  val generateBrokerServices: Boolean
+}
+
+internal fun BrokerGenerationOptions.requireBrokerServicesSupported(target: String) {
+  if (generateBrokerServices) {
+    genError("Broker service generation is not supported for $target")
+  }
+}
