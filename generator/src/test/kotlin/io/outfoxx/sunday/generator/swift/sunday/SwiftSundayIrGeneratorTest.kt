@@ -201,6 +201,44 @@ class SwiftSundayIrGeneratorTest {
   }
 
   @Test
+  fun `Swift Sunday preserves OpenAPI inline object properties beside conditional allOf`(
+    compiler: SwiftCompiler,
+    @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") testUri: URI,
+  ) {
+    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
+
+    assertTrue(compileGeneratedFiles(compiler))
+
+    val dataSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/VisualizationRenderGraphTaskSettledData.swift",
+      )
+    val renderGraphSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/VisualizationRenderGraphTaskSettledDataRenderGraph.swift",
+      )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/AllOfRequiredData.swift",
+      )
+    assertTrue(
+      dataSource.contains(
+        "public let renderGraph: VisualizationRenderGraphTaskSettledDataRenderGraph",
+      ),
+      dataSource,
+    )
+    assertTrue(allOfRequiredSource.contains("public let value: String"), allOfRequiredSource)
+    assertTrue(renderGraphSource.contains("public let graphJobId: String"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("public let taskId: String"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("public let state: RenderGraphTaskSettledState"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("public let completedCount: Int"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("public let taskCount: Int"), renderGraphSource)
+  }
+
+  @Test
   fun `Swift Sunday generated files use OpenAPI enum varnames`(
     compiler: SwiftCompiler,
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,

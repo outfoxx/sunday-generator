@@ -347,6 +347,41 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `preserves OpenAPI inline object properties beside conditional allOf`(
+    @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") testUri: URI,
+  ) {
+    val api = OpenApiToGeneratedApi().convert(testUri)
+
+    val data = api.models.single { model -> model.name == "VisualizationRenderGraphTaskSettledData" }
+    val renderGraph = api.models.single { model -> model.name == "VisualizationRenderGraphTaskSettledDataRenderGraph" }
+    val allOfRequired = api.models.single { model -> model.name == "AllOfRequiredData" }
+
+    assertEquals(GeneratedTypeRef.named(renderGraph.name), data.properties.single().type)
+    assertEquals(true, allOfRequired.properties.single { property -> property.name == "value" }.required)
+    assertEquals(
+      listOf(
+        "graphJobId",
+        "taskId",
+        "state",
+        "assetVersionId",
+        "refusalReason",
+        "refusalClass",
+        "completedCount",
+        "taskCount",
+      ),
+      renderGraph.properties.map { property -> property.name },
+    )
+    assertEquals(
+      setOf("graphJobId", "taskId", "state", "completedCount", "taskCount"),
+      renderGraph
+        .properties
+        .filter { property -> property.required }
+        .map { property -> property.name }
+        .toSet(),
+    )
+  }
+
+  @Test
   fun `maps OpenAPI scalar component schemas to scalar alias models`(
     @ResourceUri("openapi/ir/scalar-alias-3.1.yaml") testUri: URI,
   ) {

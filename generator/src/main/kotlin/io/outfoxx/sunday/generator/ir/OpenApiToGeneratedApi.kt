@@ -497,9 +497,13 @@ class OpenApiToGeneratedApi(
         )
 
       else -> {
-        val inlineObject = allOf.firstOrNull { part -> part.refName() == null } ?: resolved
+        val inlineObject =
+          allOf.firstOrNull { part ->
+            part.refName() == null && part.mapValue("properties").orEmpty().isNotEmpty()
+          } ?: resolved
         val required =
-          (resolved.listValue("required") + inlineObject.listValue("required"))
+          (listOf(resolved) + allOf)
+            .flatMap { part -> part.listValue("required") }
             .mapNotNull {
               it as? String
             }.toSet()

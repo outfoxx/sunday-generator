@@ -646,6 +646,51 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `preserves OpenAPI inline object properties beside conditional allOf in TypeScript Sunday`(
+    compiler: TypeScriptCompiler,
+    @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+
+    val dataSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.TypeScript,
+        "visualization-render-graph-task-settled-data.ts",
+      )
+    val renderGraphSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.TypeScript,
+        "visualization-render-graph-task-settled-data-render-graph.ts",
+      )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.TypeScript,
+        "all-of-required-data.ts",
+      )
+    assertTrue(
+      dataSource.contains(
+        "'renderGraph': runtime.resolveSchema(VisualizationRenderGraphTaskSettledDataRenderGraphSchema)",
+      ),
+      dataSource,
+    )
+    assertTrue(allOfRequiredSource.contains("'value': z.string()"), allOfRequiredSource)
+    assertTrue(renderGraphSource.contains("'graphJobId': z.string()"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("'taskId': z.string()"), renderGraphSource)
+    assertTrue(
+      renderGraphSource.contains("'state': runtime.resolveSchema(RenderGraphTaskSettledStateSchema)"),
+      renderGraphSource,
+    )
+    assertTrue(renderGraphSource.contains("'completedCount': z.number()"), renderGraphSource)
+    assertTrue(renderGraphSource.contains("'taskCount': z.number()"), renderGraphSource)
+  }
+
+  @Test
   fun `uses content type header parameter as request media selection in TypeScript Sunday`(
     compiler: TypeScriptCompiler,
   ) {

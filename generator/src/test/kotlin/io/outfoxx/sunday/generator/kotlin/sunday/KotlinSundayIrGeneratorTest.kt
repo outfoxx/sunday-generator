@@ -1253,6 +1253,43 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  fun `preserves OpenAPI inline object properties beside conditional allOf in Kotlin Sunday`(
+    @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") testUri: URI,
+  ) {
+    val typeRegistry = typeRegistry()
+    val api = GeneratedApiIrExporter().export(testUri)
+
+    KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
+      .generateServiceTypes()
+
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+
+    val dataSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/VisualizationRenderGraphTaskSettledData.kt",
+      )
+    val renderGraphSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/VisualizationRenderGraphTaskSettledDataRenderGraph.kt",
+      )
+    val allOfRequiredSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Kotlin,
+        "io/test/AllOfRequiredData.kt",
+      )
+    assertContains(dataSource, "public val `renderGraph`: VisualizationRenderGraphTaskSettledDataRenderGraph")
+    assertContains(allOfRequiredSource, "public val `value`: String")
+    assertContains(renderGraphSource, "public val `graphJobId`: String")
+    assertContains(renderGraphSource, "public val `taskId`: String")
+    assertContains(renderGraphSource, "public val `state`: RenderGraphTaskSettledState")
+    assertContains(renderGraphSource, "public val `completedCount`: Int")
+    assertContains(renderGraphSource, "public val `taskCount`: Int")
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
   fun `uses OpenAPI enum varnames and wire values in Kotlin Sunday`(
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
   ) {
