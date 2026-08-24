@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: Visualization API
+  version: 1.0.0
+paths:
+  /render-graph-task:
+    get:
+      operationId: getRenderGraphTask
+      responses:
+        "200":
+          description: Settled render graph task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisualizationRenderGraphTaskSettledData"
+components:
+  schemas:
+    RenderGraphTaskSettledState:
+      type: string
+      enum: [completed, failed, skipped, deferred, refused]
+    RefusalClass:
+      type: string
+      enum: [hard, soft]
+    VisualizationRenderGraphTaskSettledData:
+      type: object
+      required: [renderGraph]
+      properties:
+        renderGraph:
+          type: object
+          required: [graphJobId, taskId, state, completedCount, taskCount]
+          allOf:
+            - if:
+                properties:
+                  state:
+                    const: refused
+              then:
+                required: [refusalClass]
+          properties:
+            graphJobId:
+              type: string
+            taskId:
+              type: string
+            state:
+              $ref: "#/components/schemas/RenderGraphTaskSettledState"
+            assetVersionId:
+              type: string
+            refusalReason:
+              type: string
+            refusalClass:
+              $ref: "#/components/schemas/RefusalClass"
+            completedCount:
+              type: integer
+              format: int32
+            taskCount:
+              type: integer
+              format: int32

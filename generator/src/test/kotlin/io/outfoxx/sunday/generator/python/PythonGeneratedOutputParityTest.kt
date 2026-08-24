@@ -114,6 +114,37 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  fun `OpenAPI inline object properties beside conditional allOf compile in Python`(
+    compiler: PythonCompiler,
+    @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") sourceUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter().export(sourceUri)
+    val modelsModule = PythonModelRenderer("parity_api").renderModels(api.models)
+    val initModule = PythonModuleBuilder("parity_api/__init__.py").build()
+
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(initModule, modelsModule),
+        importModules = listOf("parity_api.models"),
+      ),
+    )
+
+    val modelSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/models.py")
+    assertTrue(
+      modelSource.contains(
+        "render_graph: VisualizationRenderGraphTaskSettledDataRenderGraph = Field(alias=\"renderGraph\")",
+      ),
+      modelSource,
+    )
+    assertTrue(modelSource.contains("graph_job_id: str = Field(alias=\"graphJobId\")"), modelSource)
+    assertTrue(modelSource.contains("task_id: str = Field(alias=\"taskId\")"), modelSource)
+    assertTrue(modelSource.contains("state: RenderGraphTaskSettledState"), modelSource)
+    assertTrue(modelSource.contains("completed_count: int = Field(alias=\"completedCount\")"), modelSource)
+    assertTrue(modelSource.contains("task_count: int = Field(alias=\"taskCount\")"), modelSource)
+  }
+
+  @Test
   fun `OpenAPI streaming request bodies emit Python streaming operations`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/streaming-request-3.1.yaml") sourceUri: URI,
