@@ -661,10 +661,17 @@ class PythonModelRendererTest : PythonTest() {
             adapter = TypeAdapter(TaskState)
             known = adapter.validate_python("pending")
             unknown = adapter.validate_python("refunded")
+            same_unknown = adapter.validate_python("refunded")
+            other_unknown = adapter.validate_python("other")
 
             assert known is TaskState.PENDING
             assert unknown.name == "UNKNOWN"
             assert unknown.value == "refunded"
+            assert unknown == same_unknown
+            assert hash(unknown) == hash(same_unknown)
+            assert unknown != other_unknown
+            assert len({known, unknown, same_unknown, other_unknown}) == 3
+            assert {unknown: "found"}[same_unknown] == "found"
             assert f"{known}" == "pending"
             assert f"{unknown}" == "refunded"
             assert adapter.dump_python(unknown, mode="json") == "refunded"
