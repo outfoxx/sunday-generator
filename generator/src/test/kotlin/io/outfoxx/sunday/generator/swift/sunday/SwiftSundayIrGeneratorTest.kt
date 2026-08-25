@@ -1710,11 +1710,45 @@ class SwiftSundayIrGeneratorTest {
       assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
     }
 
-    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "TaskState.swift")
+    val typeRegistry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(composedApi, typeRegistry, swiftSundayTestOptions)
+      .generateServiceTypes()
+    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("TolerantEnumTests.swift"),
+      """
+      import XCTest
+      @testable import SundayGenTest
+
+      final class TolerantEnumTests: XCTestCase {
+
+        func testEqualityAndHashing() {
+          XCTAssertEqual(TaskState.pending, .pending)
+          XCTAssertNotEqual(TaskState.unknown("future"), .unknown("other"))
+
+          let states: Set<TaskState> = [.pending, .unknown("future"), .unknown("future")]
+          XCTAssertEqual(states.count, 2)
+
+          let grouped = Dictionary(grouping: ["first", "second"]) { _ in TaskState.unknown("future") }
+          XCTAssertEqual(grouped[.unknown("future")], ["first", "second"])
+        }
+
+        func testAllCasesContainsOnlyKnownValues() {
+          XCTAssertEqual(TaskState.allCases, [.pending, .running])
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/TaskState.swift")
     assertTrue(
-      source.contains("public enum TaskState : CaseIterable, Codable, CustomStringConvertible, Sendable"),
+      source.contains("public enum TaskState : CaseIterable, Codable, CustomStringConvertible, Equatable, Hashable,"),
       source,
     )
+    assertTrue(source.contains("Sendable {"), source)
+    assertTrue(source.contains("return [.pending, .running]"), source)
     assertTrue(source.contains("case unknown(String)"), source)
     assertTrue(source.contains("default: self = .unknown(rawValue)"), source)
     assertTrue(source.contains("case .unknown(let rawValue): return rawValue"), source)
