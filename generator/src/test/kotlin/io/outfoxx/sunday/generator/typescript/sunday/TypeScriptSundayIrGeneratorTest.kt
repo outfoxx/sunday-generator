@@ -965,6 +965,50 @@ class TypeScriptSundayIrGeneratorTest {
   }
 
   @Test
+  fun `rejects duplicate wire values only for tolerant TypeScript enums`(compiler: TypeScriptCompiler) {
+    val strictTypeRegistry = TypeScriptTypeRegistry(setOf())
+    val strictModel =
+      GeneratedModel(
+        name = "Status",
+        kind = GeneratedModel.Kind.ENUM,
+        values = listOf("active", "active", "unknown"),
+        enumValueNames = listOf("Primary", "Alias", "Unknown"),
+      )
+    val strictApi =
+      GeneratedApi(
+        name = "Strict Enum API",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models = listOf(strictModel),
+      )
+
+    TypeScriptSundayIrGenerator(strictApi, strictTypeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+
+    assertTrue(compileTypes(compiler, strictTypeRegistry.buildTypes()))
+
+    val tolerantTypeRegistry = TypeScriptTypeRegistry(setOf())
+    val tolerantApi =
+      strictApi.copy(
+        name = "Tolerant Enum API",
+        models = listOf(strictModel.copy(unknownValue = "unknown")),
+      )
+
+    val error =
+      assertThrows(GenerationException::class.java) {
+        TypeScriptSundayIrGenerator(tolerantApi, tolerantTypeRegistry, typeScriptSundayTestOptions)
+          .generateServiceTypes()
+      }
+
+    assertTrue(
+      error.message!!.contains(
+        "TypeScript tolerant enum 'Status' wire value 'active' is used by multiple members 'Primary', 'Alias'",
+      ),
+      error.message,
+    )
+    assertTrue(error.message!!.contains("require unique wire values for raw-value interning"), error.message)
+  }
+
+  @Test
   fun `generates tolerant enum codecs that preserve raw values`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,

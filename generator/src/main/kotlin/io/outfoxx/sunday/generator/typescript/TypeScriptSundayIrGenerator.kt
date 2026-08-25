@@ -861,6 +861,16 @@ class TypeScriptSundayIrGenerator(
     model: GeneratedModel,
   ) {
     val entries = model.typeScriptEnumEntries()
+    entries
+      .groupBy { entry -> entry.value }
+      .filterValues { duplicates -> duplicates.size > 1 }
+      .forEach { (value, duplicates) ->
+        genError(
+          "TypeScript tolerant enum '${model.name}' wire value '$value' is used by multiple members " +
+            duplicates.joinToString(", ") { entry -> "'${entry.name}'" } +
+            ". Tolerant enums require unique wire values for raw-value interning.",
+        )
+      }
     val fallbackValue = requireNotNull(model.unknownValue)
     val fallbackEntry =
       entries.singleOrNull { entry -> entry.value == fallbackValue }
