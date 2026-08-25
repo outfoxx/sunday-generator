@@ -73,8 +73,10 @@ import io.outfoxx.sunday.generator.swift.utils.DESCRIPTION_BUILDER
 import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.ENCODER
 import io.outfoxx.sunday.generator.swift.utils.ENCODING_ERROR
+import io.outfoxx.sunday.generator.swift.utils.EQUATABLE
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.swift.utils.GENERIC_PROBLEM
+import io.outfoxx.sunday.generator.swift.utils.HASHABLE
 import io.outfoxx.sunday.generator.swift.utils.IDENTIFIABLE
 import io.outfoxx.sunday.generator.swift.utils.MEDIA_TYPE_ARRAY
 import io.outfoxx.sunday.generator.swift.utils.NILABLE_OPERATION
@@ -1021,7 +1023,7 @@ class SwiftSundayIrGenerator(
       .enumBuilder(typeName)
       .addModifiers(PUBLIC)
       .addSwiftDoc(documentation)
-      .addSuperTypes(listOf(CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+      .addSuperTypes(listOf(CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, EQUATABLE, HASHABLE, SENDABLE))
       .apply {
         knownEntries.forEach { entry -> addEnumCase(entry.name) }
         addEnumCase(fallbackEntry.name, STRING)
@@ -1033,14 +1035,9 @@ class SwiftSundayIrGenerator(
               .getterBuilder()
               .addCode(
                 "return %L\n",
-                entries
-                  .map { entry ->
-                    if (entry == fallbackEntry) {
-                      CodeBlock.of(".%N(%S)", entry.name, entry.value)
-                    } else {
-                      CodeBlock.of(".%N", entry.name)
-                    }
-                  }.joinToCode(prefix = "[", suffix = "]"),
+                knownEntries
+                  .map { entry -> CodeBlock.of(".%N", entry.name) }
+                  .joinToCode(prefix = "[", suffix = "]"),
               ).build(),
           ).build(),
       ).addProperty(

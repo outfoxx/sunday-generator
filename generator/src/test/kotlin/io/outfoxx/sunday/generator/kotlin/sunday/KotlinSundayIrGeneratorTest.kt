@@ -51,6 +51,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.assertReusableDiscriminatorMappingRoundTrips
+import io.outfoxx.sunday.generator.kotlin.tools.assertTolerantEnumCollectionParity
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.findType
@@ -1418,7 +1419,9 @@ class KotlinSundayIrGeneratorTest {
       val typeRegistry = typeRegistry(setOf(KotlinTypeRegistry.Option.JacksonAnnotations))
       KotlinSundayIrGenerator(api, typeRegistry, kotlinSundayTestOptions)
         .generateServiceTypes()
-      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+      val compilation = compileTypesResult(typeRegistry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
+      assertTolerantEnumCollectionParity(compilation)
     }
 
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/TaskState.kt")

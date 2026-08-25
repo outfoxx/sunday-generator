@@ -59,6 +59,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.JacksonAnnot
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.UseJakartaPackages
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry.Option.ValidationConstraints
 import io.outfoxx.sunday.generator.kotlin.tools.assertReusableDiscriminatorMappingRoundTrips
+import io.outfoxx.sunday.generator.kotlin.tools.assertTolerantEnumCollectionParity
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.findType
@@ -883,7 +884,9 @@ class KotlinJAXRSIrGeneratorTest {
     KotlinJAXRSIrGenerator(api, typeRegistry, testOptions())
       .generateServiceTypes()
 
-    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(typeRegistry.buildTypes()))
+    val compilation = compileTypesResult(typeRegistry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode)
+    assertTolerantEnumCollectionParity(compilation)
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/TaskState.kt")
     assertTrue(source.contains("public sealed class TaskState"), source)
     assertTrue(source.contains("public data class Unknown("), source)
