@@ -869,11 +869,18 @@ class TypeScriptSundayIrGenerator(
         )
     val knownEntries = entries.filterNot { entry -> entry == fallbackEntry }
     val kindTypeName = TypeName.standard(entries.joinToString(" | ") { entry -> "'${entry.name}'" })
+    val instancesTypeName = TypeName.standard("Map<string, ${typeName.simpleName()}>")
     val classBuilder =
       ClassSpec
         .builder(typeName.simpleName())
         .addModifiers(Modifier.EXPORT)
         .addProperty(
+          PropertySpec
+            .builder("instances", instancesTypeName)
+            .addModifiers(Modifier.PRIVATE, Modifier.STATIC)
+            .initializer("new Map()")
+            .build(),
+        ).addProperty(
           PropertySpec
             .builder("kind", kindTypeName)
             .addModifiers(Modifier.READONLY)
@@ -904,7 +911,7 @@ class TypeScriptSundayIrGenerator(
               PropertySpec
                 .builder(entry.name, typeName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .initializer("new %T(%S, %S)", typeName, entry.name, entry.value)
+                .initializer("%T.intern(%S, %S)", typeName, entry.name, entry.value)
                 .build(),
             )
           }
@@ -914,7 +921,7 @@ class TypeScriptSundayIrGenerator(
               .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
               .addParameter("rawValue", STRING)
               .returns(typeName)
-              .addStatement("return new %T(%S, rawValue)", typeName, fallbackEntry.name)
+              .addStatement("return %T.intern(%S, rawValue)", typeName, fallbackEntry.name)
               .build(),
           )
           addFunction(
@@ -923,14 +930,28 @@ class TypeScriptSundayIrGenerator(
               .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
               .addParameter("rawValue", STRING)
               .returns(typeName)
-              .apply {
-                beginControlFlow("switch (%N)", "rawValue")
-                knownEntries.forEach { entry ->
-                  addStatement("case %S: return %T.%L", entry.value, typeName, entry.name)
-                }
-                addStatement("default: return %T.%L(rawValue)", typeName, fallbackEntry.name)
-                endControlFlow()
-              }.build(),
+              .addStatement(
+                "return %T.instances.get(rawValue) ?? %T.%L(rawValue)",
+                typeName,
+                typeName,
+                fallbackEntry.name,
+              ).build(),
+          )
+          addFunction(
+            FunctionSpec
+              .builder("intern")
+              .addModifiers(Modifier.PRIVATE, Modifier.STATIC)
+              .addParameter("kind", kindTypeName)
+              .addParameter("rawValue", STRING)
+              .returns(typeName)
+              .addStatement("const existing = %T.instances.get(rawValue)", typeName)
+              .beginControlFlow("if (existing !== undefined)")
+              .addStatement("return existing")
+              .endControlFlow()
+              .addStatement("const value = new %T(kind, rawValue)", typeName)
+              .addStatement("%T.instances.set(rawValue, value)", typeName)
+              .addStatement("return value")
+              .build(),
           )
         }
     val schemaCode =

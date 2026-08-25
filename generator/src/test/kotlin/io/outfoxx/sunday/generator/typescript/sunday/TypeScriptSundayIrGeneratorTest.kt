@@ -1000,10 +1000,79 @@ class TypeScriptSundayIrGeneratorTest {
       assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
     }
 
+    val typeRegistry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(composedApi, typeRegistry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    val runtimeCheckedTypes =
+      typeRegistry.buildTypes() +
+        (
+          TypeName.namedImport("TolerantEnumRuntimeCheck", "!tolerant-enum-runtime-check") to
+            ModuleSpec
+              .builder("TolerantEnumRuntimeCheck", ModuleSpec.Kind.MODULE)
+              .addCode(
+                CodeBlock.of(
+                  """
+                  |const schemaCache = new Map<object, unknown>();
+                  |const runtime = {
+                  |  policy: {},
+                  |  resolveSchema(ref: any): any {
+                  |    if (ref && typeof ref.build === 'function') {
+                  |      if (!schemaCache.has(ref)) {
+                  |        schemaCache.set(ref, ref.build(runtime));
+                  |      }
+                  |      return schemaCache.get(ref);
+                  |    }
+                  |    return ref;
+                  |  },
+                  |};
+                  |const schema = runtime.resolveSchema(%T);
+                  |const TaskStateType = %T;
+                  |const firstFromValue = TaskStateType.fromValue('future');
+                  |const secondFromValue = TaskStateType.fromValue('future');
+                  |const firstUnknown = schema.parse('future');
+                  |const secondUnknown = schema.parse('future');
+                  |const otherUnknown = schema.parse('other');
+                  |if (firstFromValue !== secondFromValue || firstUnknown !== firstFromValue ||
+                  |    firstUnknown !== secondUnknown || firstUnknown !== TaskStateType.Unknown('future')) {
+                  |  throw new Error('equal unknown values were not interned');
+                  |}
+                  |if (TaskStateType.Unknown('pending') !== TaskStateType.Pending ||
+                  |    TaskStateType.fromValue('pending') !== TaskStateType.Pending) {
+                  |  throw new Error('known values were not canonicalized');
+                  |}
+                  |if (firstUnknown === otherUnknown || firstUnknown.kind !== 'Unknown' || firstUnknown.rawValue !== 'future') {
+                  |  throw new Error('distinct unknown values did not retain their identity and data');
+                  |}
+                  |if (new Set([firstUnknown, secondUnknown, otherUnknown]).size !== 2) {
+                  |  throw new Error('interned values did not deduplicate in Set');
+                  |}
+                  |const values = new Map([[firstUnknown, 'found']]);
+                  |if (values.get(secondUnknown) !== 'found') {
+                  |  throw new Error('interned values did not work as Map keys');
+                  |}
+                  |if (schema.parse(schema.encode(firstUnknown)) !== firstUnknown) {
+                  |  throw new Error('codec round-trip did not preserve the interned value');
+                  |}
+                  """.trimMargin(),
+                  TypeName.namedImport("TaskStateSchema", "!task-state"),
+                  TypeName.namedImport("TaskState", "!task-state"),
+                ),
+              ).build()
+        )
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        runtimeCheckedTypes,
+        "tolerant-enum-runtime-check",
+      ),
+    )
+
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "task-state.ts")
     assertTrue(source.contains("export class TaskState"), source)
+    assertTrue(source.contains("private static instances: Map<string, TaskState>"), source)
     assertTrue(source.contains("static Unknown(rawValue: string): TaskState"), source)
-    assertTrue(source.contains("default: return TaskState.Unknown(rawValue)"), source)
+    assertTrue(source.contains("return TaskState.intern('Unknown', rawValue)"), source)
+    assertTrue(source.contains("return TaskState.instances.get(rawValue) ?? TaskState.Unknown(rawValue)"), source)
     assertTrue(source.contains("encode: (value) => value.rawValue"), source)
     assertTrue(source.contains("readonly kind: 'Pending' | 'Running' | 'Unknown'"), source)
     assertTrue(source.contains("toString(): string"), source)
