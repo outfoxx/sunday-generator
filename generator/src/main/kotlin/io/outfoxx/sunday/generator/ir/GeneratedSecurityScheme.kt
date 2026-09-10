@@ -29,4 +29,8 @@ data class GeneratedSecurityScheme(
   val cookieParameters: List<GeneratedParameter> = listOf(),
   val queryString: GeneratedTypeRef? = null,
   val documentation: GeneratedDocumentation? = null,
+  /** OpenID Connect discovery document URL supplied by the contract. */
+  val openIdConnectUrl: String? = null,
+  /** OAuth flow configuration supplied by the contract, keyed by flow name. */
+  val oauthFlows: Map<String, GeneratedOAuthFlow> = mapOf(),
 )

@@ -70,6 +70,8 @@ import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
+import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
+import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
@@ -219,6 +221,12 @@ class KotlinJAXRSIrGenerator(
     if (options.resourceAdapters && generationMode != Server) {
       genError("Kotlin/JAX-RS resource adapters require server mode")
     }
+    if (options.enforceSecuritySchemes && !options.resourceAdapters) {
+      genError("Kotlin/JAX-RS security scheme enforcement requires resource adapters")
+    }
+    if (options.enforceSecuritySchemes && options.explicitSecurityParameters) {
+      genError("Security scheme enforcement extracts credentials separately; disable explicit security parameters")
+    }
     val services = api.jaxRsServices()
 
     generateModelTypes()
@@ -239,10 +247,28 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
+    val securityGenerators =
+      if (options.enforceSecuritySchemes) {
+        serviceTypes.groupBy { it.typeName.packageName }.mapValues { (packageName, group) ->
+          val generator = KotlinJAXRSSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), jaxRsTypes)
+          val policies =
+            group.flatMap { service ->
+              service.service.operations.mapNotNull { operation ->
+                api.endpointSecurityPolicy(service.service, operation)
+              }
+            }
+          typeRegistry.addServiceType(generator.typeName, generator.generate(policies.endpointSecuritySchemes()))
+          generator
+        }
+      } else {
+        emptyMap()
+      }
+
     serviceTypes.forEach { service ->
       val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
       if (options.resourceAdapters) {
-        val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus)
+        val securityGenerator = securityGenerators[service.typeName.packageName]
+        val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus, securityGenerator)
         val endpointAuthentication =
           service.service.operations.associate { operation ->
             operation.id.kotlinIdentifierName to api.endpointAuthentication(service.service, operation)
@@ -255,6 +281,13 @@ class KotlinJAXRSIrGenerator(
             serviceType.build(),
             endpointAuthentication,
             service.subresourcePath == null,
+            if (securityGenerator != null) {
+              service.service.operations.associate { operation ->
+                operation.id.kotlinIdentifierName to api.endpointSecurityPolicy(service.service, operation)
+              }
+            } else {
+              emptyMap()
+            },
           ),
         )
       } else {

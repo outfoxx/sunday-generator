@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
@@ -23,6 +24,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointAccess
+import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 
 /** Renders Litestar server stubs from generated IR. */
 class PythonLitestarRenderer(
@@ -33,6 +35,7 @@ class PythonLitestarRenderer(
   fun renderService(
     service: GeneratedService,
     authentication: Map<String, GeneratedEndpointAccess> = emptyMap(),
+    securityPolicies: Map<String, GeneratedEndpointPolicy?>? = null,
   ): PythonModule {
     val moduleName = service.pythonServiceServerModuleName
     val module = PythonModuleBuilder("$packageName/$moduleName.py")
@@ -48,10 +51,10 @@ class PythonLitestarRenderer(
     module.addExport(serviceName)
     module.addExport(routerFactoryName)
     module.addCode(service.renderServiceProtocol(serviceName))
-    if (GeneratedEndpointAccess.AUTHENTICATED in authentication.values) {
+    if (securityPolicies == null && GeneratedEndpointAccess.AUTHENTICATED in authentication.values) {
       module.addCode(renderAuthenticationGuard())
     }
-    module.addCode(service.renderRouterFactory(serviceName, routerFactoryName, authentication))
+    module.addCode(service.renderRouterFactory(serviceName, routerFactoryName, authentication, securityPolicies))
     if (service.operations.any { operation -> operation.streaming != null }) {
       module.addCode(renderServerSentEventsHelper())
     }
@@ -129,12 +132,29 @@ class PythonLitestarRenderer(
     serviceName: String,
     routerFactoryName: String,
     authentication: Map<String, GeneratedEndpointAccess>,
+    securityPolicies: Map<String, GeneratedEndpointPolicy?>?,
   ): PythonCodeBlock {
     val handlers =
       PythonCodeBlock.join(
         operations.map { operation ->
+          if (securityPolicies != null && !securityPolicies.containsKey(operation.id)) {
+            genError("Missing security policy for operation '" + operation.id + "'")
+          }
+          val policy = securityPolicies?.get(operation.id)
+          val access =
+            if (securityPolicies == null) {
+              authentication[operation.id] ?: GeneratedEndpointAccess.UNSPECIFIED
+            } else {
+              when {
+                policy == null -> GeneratedEndpointAccess.UNSPECIFIED
+                policy.requirements.isEmpty() -> GeneratedEndpointAccess.PUBLIC
+                else -> GeneratedEndpointAccess.AUTHENTICATED
+              }
+            }
           operation.renderRouteHandler(
-            authentication[operation.id] ?: GeneratedEndpointAccess.UNSPECIFIED,
+            access,
+            policy?.takeIf { it.requirements.isNotEmpty() }?.let { name + "." + operation.id },
+            securityPolicies != null,
           )
         },
         "\n\n",
@@ -142,10 +162,10 @@ class PythonLitestarRenderer(
 
     return PythonCodeBlock.of(
       """
-      def %L(service: %L) -> %T:
+      def %L(service: %L%C) -> %T:
           ${"\"\"\"Create a Litestar router for the %L service.\n\n          Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.\n          \"\"\""}
 
-      %C
+      %C%C
 
           return %T(
               path="/",
@@ -156,8 +176,18 @@ class PythonLitestarRenderer(
       """.trimIndent(),
       routerFactoryName,
       serviceName,
+      if (securityPolicies != null) {
+        PythonCodeBlock.of(", *, security: %T", PythonSecurityRenderer(packageName).securityType)
+      } else {
+        PythonCodeBlock.of("")
+      },
       PythonSymbol("litestar", "Router"),
       pythonServiceBaseName,
+      if (securityPolicies != null) {
+        PythonCodeBlock.of("    _sunday_security = security\n\n")
+      } else {
+        PythonCodeBlock.of("")
+      },
       handlers,
       PythonSymbol("litestar", "Router"),
       renderRouteHandlerList(),
@@ -216,7 +246,11 @@ class PythonLitestarRenderer(
       }
     }
 
-  private fun GeneratedOperation.renderRouteHandler(access: GeneratedEndpointAccess): PythonCodeBlock =
+  private fun GeneratedOperation.renderRouteHandler(
+    access: GeneratedEndpointAccess,
+    policyKey: String?,
+    strictSecurity: Boolean,
+  ): PythonCodeBlock =
     if (streaming == null) {
       if (hasHandlerParameters()) {
         PythonCodeBlock.of(
@@ -230,7 +264,7 @@ class PythonLitestarRenderer(
           |%C
           |%C
           """.trimMargin(),
-          renderRouteDecorator(access),
+          renderRouteDecorator(access, policyKey, strictSecurity),
           id.pythonIdentifierName,
           renderHandlerParameters(),
           renderRouteReturnType(),
@@ -250,7 +284,7 @@ class PythonLitestarRenderer(
           |%C
           |%C
           """.trimMargin(),
-          renderRouteDecorator(access),
+          renderRouteDecorator(access, policyKey, strictSecurity),
           id.pythonIdentifierName,
           renderRouteReturnType(),
           id.pythonIdentifierName,
@@ -269,7 +303,7 @@ class PythonLitestarRenderer(
           |    ) -> %T:
           |        return %T(_server_sent_events(service.%L(%C)))
           """.trimMargin(),
-          renderRouteDecorator(access),
+          renderRouteDecorator(access, policyKey, strictSecurity),
           id.pythonIdentifierName,
           renderHandlerParameters(),
           PythonSymbol("litestar.response", "ServerSentEvent"),
@@ -284,7 +318,7 @@ class PythonLitestarRenderer(
           |    async def %L() -> %T:
           |        return %T(_server_sent_events(service.%L()))
           """.trimMargin(),
-          renderRouteDecorator(access),
+          renderRouteDecorator(access, policyKey, strictSecurity),
           id.pythonIdentifierName,
           PythonSymbol("litestar.response", "ServerSentEvent"),
           PythonSymbol("litestar.response", "ServerSentEvent"),
@@ -621,7 +655,11 @@ class PythonLitestarRenderer(
       else -> PythonCodeBlock.of("None")
     }
 
-  private fun GeneratedOperation.renderRouteDecorator(access: GeneratedEndpointAccess): PythonCodeBlock {
+  private fun GeneratedOperation.renderRouteDecorator(
+    access: GeneratedEndpointAccess,
+    policyKey: String?,
+    strictSecurity: Boolean,
+  ): PythonCodeBlock {
     val methodName = method.uppercase()
     val arguments =
       buildList {
@@ -631,11 +669,25 @@ class PythonLitestarRenderer(
         }
         successStatus()?.let { status -> add(PythonCodeBlock.of("status_code=%L", status)) }
         when (access) {
-          GeneratedEndpointAccess.AUTHENTICATED -> add(PythonCodeBlock.of("guards=[_require_authenticated]"))
+          GeneratedEndpointAccess.AUTHENTICATED -> {
+            if (strictSecurity) {
+              val key = policyKey ?: genError("Missing security policy for operation '$id'")
+              add(PythonCodeBlock.of("guards=[_sunday_security.guard(%S)]", key))
+            } else {
+              add(PythonCodeBlock.of("guards=[_require_authenticated]"))
+            }
+          }
           GeneratedEndpointAccess.PUBLIC -> add(PythonCodeBlock.of("opt={\"exclude_from_auth\": True}"))
           GeneratedEndpointAccess.UNSPECIFIED -> Unit
         }
       }
+    if (strictSecurity) {
+      return PythonCodeBlock.of(
+        "@%T(\n%C\n    )",
+        methodName.routeDecorator(),
+        PythonCodeBlock.join(arguments.map { PythonCodeBlock.of("        %C,", it) }, "\n"),
+      )
+    }
     return PythonCodeBlock.of(
       "@%T(%C)",
       methodName.routeDecorator(),

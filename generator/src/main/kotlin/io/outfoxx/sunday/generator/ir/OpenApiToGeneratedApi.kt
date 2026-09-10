@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.math.BigDecimal
@@ -146,7 +147,7 @@ class OpenApiToGeneratedApi(
               responses = responses(operation, operationId, seed.serviceLabel, localModels),
               problems = operation.problemRefs(),
               nullify = operation.nullify(),
-              auth = auth(operation, operation["security"] as? List<*>),
+              auth = auth(operation, operation.securityValue()),
               media = GeneratedMedia(),
               policy = operationPolicy,
               jaxrs = operationJaxrs,
@@ -670,7 +671,9 @@ class OpenApiToGeneratedApi(
     zanzibarUserSource: GeneratedZanzibarUserSource? = null,
   ): GeneratedAuth? {
     val requirements =
-      security.orEmpty().mapNotNull { requirement -> (requirement as? Map<*, *>)?.securityRequirement() }
+      security.orEmpty().map { requirement ->
+        (requirement as? Map<*, *> ?: genError("OpenAPI security alternatives must be objects")).securityRequirement()
+      }
     val schemeNames = requirements.flatMap { requirement -> requirement.schemes }.distinct()
     val schemes = schemeNames.mapNotNull { name -> securityScheme(name) }
     return GeneratedAuth(
@@ -684,24 +687,37 @@ class OpenApiToGeneratedApi(
   }
 
   private fun Map<*, *>.securityRequirement(): GeneratedSecurityRequirement =
-    GeneratedSecurityRequirement(keys.mapNotNull { it as? String })
+    GeneratedSecurityRequirement(
+      schemes = keys.mapNotNull { it as? String },
+      permissions =
+        entries
+          .associate { (name, value) ->
+            (name as? String ?: genError("Security requirement scheme names must be strings")) to
+              ((value as? List<*>) ?: genError("Security requirement '$name' must contain a permission list"))
+                .map { it as? String ?: genError("Security requirement '$name' permissions must be strings") }
+          }.filterValues { it.isNotEmpty() },
+    )
 
   private fun OpenApiSourceDocument.securityScheme(name: String): GeneratedSecurityScheme? {
-    val scheme = securitySchemes[name] ?: return null
+    val scheme = resolveSecurityScheme(securitySchemes[name] ?: return null, mutableSetOf())
     val type = scheme["type"] as? String
     val parameter =
       if (type == "apiKey") {
+        val wireName =
+          (scheme["name"] as? String)?.takeIf { it.isNotBlank() }
+            ?: genError("API key security scheme '$name' must declare its parameter name")
         GeneratedParameter(
-          name = (scheme["name"] as? String ?: name).toLowerCamelCase(),
+          name = wireName.toLowerCamelCase(),
           location =
             when (scheme["in"] as? String) {
               "query" -> GeneratedParameter.Location.QUERY
               "cookie" -> GeneratedParameter.Location.COOKIE
-              else -> GeneratedParameter.Location.HEADER
+              "header" -> GeneratedParameter.Location.HEADER
+              else -> genError("API key security scheme '$name' must use header, query, or cookie location")
             },
           type = scalar("string"),
           required = true,
-          serializationName = (scheme["name"] as? String)?.takeUnless { it == it.toLowerCamelCase() },
+          serializationName = wireName.takeUnless { it == it.toLowerCamelCase() },
         )
       } else {
         null
@@ -715,7 +731,49 @@ class OpenApiToGeneratedApi(
       queryParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.QUERY }),
       cookieParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.COOKIE }),
       documentation = documentation(description = scheme["description"] as? String),
+      openIdConnectUrl = scheme["openIdConnectUrl"] as? String,
+      oauthFlows =
+        (scheme["flows"] as? Map<*, *>).orEmpty().entries.associate { (flowName, value) ->
+          val flow = (value as? Map<*, *>).orEmpty()
+          flowName.toString() to
+            GeneratedOAuthFlow(
+              authorizationUrl = flow["authorizationUrl"] as? String,
+              tokenUrl = flow["tokenUrl"] as? String,
+              refreshUrl = flow["refreshUrl"] as? String,
+              scopes =
+                (flow["scopes"] as? Map<*, *>).orEmpty().entries.associate {
+                  it.key.toString() to
+                    it.value.toString()
+                },
+            )
+        },
     )
+  }
+
+  private fun OpenApiSourceDocument.resolveSecurityScheme(
+    value: Map<*, *>,
+    visited: MutableSet<URI>,
+  ): Map<*, *> {
+    if (!value.containsKey("\$ref")) return value
+    val reference = value["\$ref"] as? String ?: genError("Security scheme references must be strings")
+    val resolved = URI(location).resolve(reference)
+    if (!visited.add(resolved)) genError("Cyclic security scheme reference '$resolved'")
+    val documentUri = URI(resolved.scheme, resolved.authority, resolved.path, resolved.query, null)
+    val document = if (documentUri.toString() == location) this else OpenApiSourceDocument.read(documentUri.toString())
+    val pointer = resolved.fragment.orEmpty()
+    if (pointer.isNotEmpty() && !pointer.startsWith("/")) {
+      genError("Security scheme references must use a JSON pointer: '$resolved'")
+    }
+    val target =
+      if (pointer.isEmpty()) {
+        document.source
+      } else {
+        pointer.drop(1).split('/').fold(document.source) { current, token ->
+          current[token.replace("~1", "/").replace("~0", "~")] as? Map<*, *>
+            ?: genError("Unresolved security scheme reference '$resolved'")
+        }
+      }
+    return document.resolveSecurityScheme(target, visited)
   }
 
   private fun OpenApiSourceDocument.headerParameter(
@@ -1351,7 +1409,7 @@ class OpenApiToGeneratedApi(
           (name as? String)?.let { it to (schema as? Map<*, *>).orEmpty() }
         }.toMap()
     val servers: List<Map<*, *>> = source.listValue("servers").mapNotNull { it as? Map<*, *> }
-    val security: List<Any?>? = source["security"] as? List<*>
+    val security: List<Any?>? = source.securityValue()
     val securitySchemes: Map<String, Map<*, *>> =
       components
         .mapValue("securitySchemes")
@@ -1379,6 +1437,13 @@ class OpenApiToGeneratedApi(
   }
 
   private companion object {
+
+    fun Map<*, *>.securityValue(): List<Any?>? =
+      if (containsKey("security")) {
+        this["security"] as? List<*> ?: genError("OpenAPI security must be an array")
+      } else {
+        null
+      }
 
     val httpMethods = setOf("get", "put", "post", "delete", "options", "head", "patch", "trace")
     val unconstrainedSchemaKeys =

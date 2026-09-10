@@ -43,6 +43,8 @@ This option is disabled by default, preserving existing Litestar output.
 
 ## Authentication policy and application configuration
 
+For complete named-scheme, scope/role, and AND/OR enforcement, enable `-enforce-security-schemes` as described in [OpenAPI security enforcement](openapi-security-enforcement.md). The table below describes the generic checks used without that option.
+
 The shared IR resolution honors operation, service, then API precedence, including explicit empty overrides preserved by issue #206:
 
 | Effective requirement | Quarkus resource | Standard JAX-RS resource | Litestar route |

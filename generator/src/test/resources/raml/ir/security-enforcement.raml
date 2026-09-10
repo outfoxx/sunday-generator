@@ -1,0 +1,29 @@
+#%RAML 1.0
+title: Security Enforcement API
+securitySchemes:
+  basicAuth:
+    type: Basic Authentication
+  oauth:
+    type: OAuth 2.0
+    settings:
+      accessTokenUri: https://issuer.example/token
+      authorizationGrants: [client_credentials]
+      scopes: [read, admin]
+/basic:
+  get:
+    displayName: basic
+    securedBy: [basicAuth]
+    responses:
+      200:
+        body:
+          text/plain:
+            type: string
+/scoped:
+  get:
+    displayName: scoped
+    securedBy: [{oauth: {scopes: [read]}}]
+    responses:
+      200:
+        body:
+          text/plain:
+            type: string

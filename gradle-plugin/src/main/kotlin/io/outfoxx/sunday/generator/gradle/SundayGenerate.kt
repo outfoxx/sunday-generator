@@ -193,6 +193,10 @@ abstract class SundayGenerate
     @get:Input
     val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+    /** Enforces named security schemes and permissions in generated resource adapters. */
+    @get:Input
+    val enforceSecuritySchemes: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
     @get:Input
     @get:Optional
     val problemLibrary: Property<KotlinProblemLibrary> =
@@ -333,6 +337,7 @@ abstract class SundayGenerate
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
                   resourceAdapters = resourceAdapters.get(),
+                  enforceSecuritySchemes = enforceSecuritySchemes.get(),
                 ),
               ).generateServiceTypes()
 
