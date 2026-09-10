@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
@@ -28,6 +29,48 @@ import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
 class GeneratedApiComposerTest {
+
+  @Test
+  fun `preserves OpenAPI security overrides when composing with AsyncAPI in either order`(
+    @ResourceUri("openapi/ir/security-overrides-3.1.yaml") openApiUri: URI,
+    @ResourceUri("asyncapi/ir/project-events.yaml") asyncApiUri: URI,
+  ) {
+    val openApi = OpenApiToGeneratedApi().convertFragment(openApiUri)
+    val openApiService = openApi.api.services.single()
+    val asyncApi =
+      AsyncApiToGeneratedApi()
+        .convertFragment(asyncApiUri)
+        .let { fragment ->
+          val serviceName =
+            fragment.api.services
+              .single()
+              .name
+          fragment.copy(
+            apiId = openApi.apiId,
+            serviceIdentities =
+              mapOf(serviceName to openApi.serviceIdentities.getValue(openApiService.name)),
+          )
+        }
+
+    listOf(listOf(openApi, asyncApi), listOf(asyncApi, openApi)).forEach { fragments ->
+      val composed = GeneratedApiComposer().compose(fragments)
+      val decoded = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composed))
+
+      assertThat(decoded, equalTo(composed))
+      val service = decoded.services.single()
+      assertThat(service.operations.size, equalTo(openApiService.operations.size + 1))
+      openApiService.operations.forEach { original ->
+        val operation = service.operations.single { operation -> operation.id == original.id }
+        assertThat(operation.auth, equalTo(original.auth))
+        assertThat(
+          decoded.effectiveAuth(service, operation),
+          equalTo(openApi.api.effectiveAuth(openApiService, original)),
+        )
+      }
+      val register = service.operations.single { operation -> operation.id == "register" }
+      assertThat(decoded.effectiveAuth(service, register), equalTo(GeneratedAuth(securityOverride = true)))
+    }
+  }
 
   @Test
   fun `composes source fragments by explicit api and service identity`() {

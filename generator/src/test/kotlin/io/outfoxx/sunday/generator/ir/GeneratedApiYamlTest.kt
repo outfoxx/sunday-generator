@@ -604,6 +604,28 @@ class GeneratedApiYamlTest {
   }
 
   @Test
+  fun `preserves explicit empty security overrides at every auth level`() {
+    val emptyAuth = GeneratedAuth(securityOverride = true)
+    val api =
+      craftProjectApi().copy(
+        auth = emptyAuth,
+        services =
+          listOf(
+            GeneratedService(
+              name = "PublicService",
+              auth = emptyAuth,
+              operations = listOf(GeneratedOperation("register", "POST", "/register", auth = emptyAuth)),
+            ),
+          ),
+      )
+
+    val yaml = GeneratedApiYaml.writeString(api)
+
+    assertThat(GeneratedApiYaml.readString(yaml), equalTo(api))
+    assertThat(yaml, containsString("securityOverride: true"))
+  }
+
+  @Test
   fun `preserves examples through yaml round trip`() {
 
     val api =

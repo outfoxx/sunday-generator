@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test
 class GeneratedOperationMetadataTest {
 
   @Test
-  fun `selects most specific non-empty auth metadata`() {
+  fun `selects most specific auth metadata`() {
     val apiAuth = auth("api")
     val serviceAuth = auth("service")
     val operationAuth = auth("operation")
@@ -48,8 +48,40 @@ class GeneratedOperationMetadataTest {
 
     assertSame(operationAuth, api.effectiveAuth(service, operation(auth = operationAuth)))
     assertSame(serviceAuth, api.effectiveAuth(service, operation()))
+    assertSame(serviceAuth, api.effectiveAuth(service, operation(auth = GeneratedAuth())))
     assertSame(apiAuth, api.effectiveAuth(service(auth = null), operation()))
     assertNull(api(auth = null).effectiveAuth(service(auth = null), operation()))
+  }
+
+  @Test
+  fun `honors empty auth overrides at operation service and API levels`() {
+    val emptyAuth = GeneratedAuth(securityOverride = true)
+    val api = api(auth("api"))
+    val service = service(auth("service"))
+
+    assertFalse(emptyAuth.isEmpty)
+    assertSame(emptyAuth, api.effectiveAuth(service, operation(auth = emptyAuth)))
+    assertSame(emptyAuth, api.effectiveAuth(service(auth = emptyAuth), operation()))
+    assertSame(emptyAuth, api(emptyAuth).effectiveAuth(service(), operation()))
+  }
+
+  @Test
+  fun `inherits security independently of Zanzibar metadata`() {
+    val apiAuth = auth("api")
+    val serviceAuth = auth("service")
+    val operationAuth = GeneratedAuth(zanzibar = mapOf("ignore" to "true"))
+    val api = api(apiAuth)
+
+    assertEquals(
+      serviceAuth.copy(zanzibar = operationAuth.zanzibar),
+      api.effectiveAuth(service(serviceAuth), operation(operationAuth)),
+    )
+    assertEquals(
+      apiAuth.copy(zanzibar = operationAuth.zanzibar),
+      api.effectiveAuth(service(operationAuth), operation()),
+    )
+    val publicAuth = operationAuth.copy(securityOverride = true)
+    assertSame(publicAuth, api.effectiveAuth(service(serviceAuth), operation(publicAuth)))
   }
 
   @Test

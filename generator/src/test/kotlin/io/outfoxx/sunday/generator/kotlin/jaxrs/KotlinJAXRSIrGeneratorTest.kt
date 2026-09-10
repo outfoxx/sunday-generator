@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
@@ -2157,6 +2158,38 @@ class KotlinJAXRSIrGeneratorTest {
       filePackageName = "io.test.service",
       snapshotPath = "RequestExplicitSecurityParamsTest/test-explicit-security-parameter-generation.output.kt",
     )
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `omits inherited security parameters for public OpenAPI operations`(
+    @ResourceUri("openapi/ir/security-overrides-3.1.yaml") testUri: URI,
+  ) {
+    val converted = OpenApiToGeneratedApi().convert(testUri)
+    val api = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(converted))
+
+    listOf(false, true).forEach { quarkus ->
+      val typeRegistry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+      KotlinJAXRSIrGenerator(
+        api,
+        typeRegistry,
+        testOptions(explicitSecurityParameters = true, quarkus = quarkus),
+      ).generateServiceTypes()
+
+      val builtTypes = typeRegistry.buildTypes()
+      assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
+      val source =
+        CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
+      val operations = findType("io.test.service.API", builtTypes).funSpecs.associateBy { it.name }
+
+      assertEquals(listOf("traceKeyXTraceKey"), operations.getValue("protectedOperation").parameters.map { it.name })
+      assertEquals(listOf("traceKeyXTraceKey"), operations.getValue("protectedWithZanzibar").parameters.map { it.name })
+      assertEquals(listOf("queryKeyApiKey"), operations.getValue("overrideSecurity").parameters.map { it.name })
+      listOf("register", "anonymous", "optional", "ignored").forEach { name ->
+        assertTrue(operations.getValue(name).parameters.isEmpty(), source)
+      }
+      assertEquals(quarkus, source.contains("@FGAIgnore"), source)
+    }
   }
 
   @OptIn(ExperimentalCompilerApi::class)

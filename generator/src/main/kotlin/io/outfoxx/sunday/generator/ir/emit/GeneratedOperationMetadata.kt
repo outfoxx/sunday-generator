@@ -28,25 +28,39 @@ import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedService
 
 /**
- * True when the auth metadata carries no security, scheme, or Zanzibar data.
+ * True when the auth metadata carries no security declaration, scheme, or Zanzibar data.
  */
 val GeneratedAuth.isEmpty: Boolean
   get() =
-    schemes.isEmpty() &&
-      requirements.isEmpty() &&
-      securitySchemes.isEmpty() &&
+    !hasSecurity &&
       zanzibar.isEmpty() &&
       zanzibarUserSource == null
 
+private val GeneratedAuth.hasSecurity: Boolean
+  get() = securityOverride || schemes.isNotEmpty() || requirements.isNotEmpty() || securitySchemes.isNotEmpty()
+
 /**
  * Returns auth metadata using operation, service, then API precedence.
+ * Zanzibar-only metadata inherits security; an explicit security override also applies when its requirements are empty.
  */
 fun GeneratedApi.effectiveAuth(
   service: GeneratedService,
   operation: GeneratedOperation,
-): GeneratedAuth? =
-  listOf(operation.auth, service.auth, auth)
-    .firstOrNull { current -> current != null && !current.isEmpty }
+): GeneratedAuth? {
+  val levels = listOfNotNull(operation.auth, service.auth, auth)
+  val effective = levels.firstOrNull { current -> !current.isEmpty } ?: return null
+  val security = levels.firstOrNull { current -> current.hasSecurity } ?: return effective
+  if (effective === security) {
+    return effective
+  }
+
+  return effective.copy(
+    schemes = security.schemes,
+    requirements = security.requirements,
+    securitySchemes = security.securitySchemes,
+    securityOverride = security.securityOverride,
+  )
+}
 
 /**
  * Flattened security requirement scheme names in declaration order.

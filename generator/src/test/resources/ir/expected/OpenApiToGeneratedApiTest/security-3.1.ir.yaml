@@ -64,6 +64,7 @@ services:
           serializationName: "api_key"
         documentation:
           description: "Query API key."
+      securityOverride: true
     media: {}
   auth:
     schemes:
@@ -78,6 +79,7 @@ services:
       bearerFormat: "JWT"
       documentation:
         description: "Bearer token authentication."
+    securityOverride: true
   media: {}
 models:
 - name: "Project"
@@ -101,4 +103,5 @@ auth:
     bearerFormat: "JWT"
     documentation:
       description: "Bearer token authentication."
+  securityOverride: true
 media: {}
