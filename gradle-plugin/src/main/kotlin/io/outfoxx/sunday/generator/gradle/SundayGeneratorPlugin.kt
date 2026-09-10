@@ -122,6 +122,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.useResultResponseReturn.takeIf { it.isPresent }?.let { genTask.useResultResponseReturn.set(it) }
           gen.useJakartaPackages.takeIf { it.isPresent }?.let { genTask.useJakartaPackages.set(it) }
           gen.quarkus.takeIf { it.isPresent }?.let { genTask.quarkus.set(it) }
+          gen.resourceAdapters.takeIf { it.isPresent }?.let { genTask.resourceAdapters.set(it) }
           gen.outputDir.takeIf { it.isPresent }?.let { genTask.outputDir.set(it) }
         }
 

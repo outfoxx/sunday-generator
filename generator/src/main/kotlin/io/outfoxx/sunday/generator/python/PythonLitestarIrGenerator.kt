@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates Python Litestar server modules from generated IR. */
@@ -41,7 +42,18 @@ class PythonLitestarIrGenerator(
 
     if (GeneratedTypeCategory.Service in outputCategories) {
       val litestarRenderer = PythonLitestarRenderer(packageName)
-      modules += services.map(litestarRenderer::renderService)
+      modules +=
+        services.map { service ->
+          val authentication =
+            if (options.enforceEndpointSecurity) {
+              service.operations.associate { operation ->
+                operation.id to api.endpointAuthentication(service, operation)
+              }
+            } else {
+              emptyMap()
+            }
+          litestarRenderer.renderService(service, authentication)
+        }
       if (options.aggregateServices && services.size > 1) {
         modules += renderAggregate(packageName, services)
       }

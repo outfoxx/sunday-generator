@@ -1,0 +1,26 @@
+asyncapi: '2.6.0'
+info:
+  title: Adapter Test API
+  version: 1.0.0
+x-sunday-apiId: adapter-tests
+servers:
+  events:
+    url: https://api.example.com
+    protocol: http
+    security:
+      - bearerAuth: []
+channels:
+  /events:
+    x-sunday-service: Events
+    subscribe:
+      operationId: streamEvents
+      message:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

@@ -27,6 +27,8 @@ dependencies {
   testImplementation(libs.javaxJaxrs)
   testImplementation(libs.jakartaJaxrs)
   testImplementation(libs.validation)
+  testImplementation(libs.jakartaValidation)
+  testImplementation(libs.javaxAnnotations)
   testImplementation(libs.zalandoProblem)
   testImplementation(libs.quarkiverseProblem)
   testImplementation(libs.mutiny)
@@ -37,6 +39,7 @@ dependencies {
   testImplementation(libs.rxJava3)
   testImplementation(libs.rxJava2)
   testImplementation(libs.quarkusRest)
+  testImplementation(libs.quarkusSecurity)
   testImplementation(libs.quarkiverseZanzibar)
   // END: generated code dependencies
 
