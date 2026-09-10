@@ -21,9 +21,13 @@ dependencies {
 
 val generatedSources = layout.buildDirectory.dir("generated/sunday")
 val contract = rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/server-adapters.yaml")
+val ramlContract =
+  rootProject.layout.projectDirectory.file(
+    "generator/src/test/resources/raml/ir/security-overrides.raml",
+  )
 
 val generateApi by tasks.registering(JavaExec::class) {
-  inputs.file(contract)
+  inputs.files(contract, ramlContract)
   outputs.dir(generatedSources)
   classpath = generator
   mainClass.set("io.outfoxx.sunday.generator.MainKt")
@@ -41,6 +45,7 @@ val generateApi by tasks.registering(JavaExec::class) {
     "-out",
     generatedSources.get().asFile.absolutePath,
     contract.asFile.absolutePath,
+    ramlContract.asFile.absolutePath,
   )
 }
 

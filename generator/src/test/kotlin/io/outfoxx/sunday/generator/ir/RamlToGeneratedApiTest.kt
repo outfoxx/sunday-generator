@@ -16,6 +16,9 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointAccess
+import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
+import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -26,12 +29,90 @@ import org.hamcrest.Matchers.hasSize
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
 @ExtendWith(ResourceExtension::class)
 class RamlToGeneratedApiTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = ["basic", "null", "absent"])
+  fun `preserves RAML security alternatives and declaration precedence through YAML`(
+    rootSecurity: String,
+    @ResourceUri("raml/ir/security-overrides.raml") testUri: URI,
+  ) {
+    val source = Files.readString(Path.of(testUri))
+    val fixture = Files.createTempFile("raml-security-overrides-", ".raml")
+    try {
+      Files.writeString(
+        fixture,
+        source.replace(
+          "securedBy: [basic]\nsecuritySchemes:",
+          when (rootSecurity) {
+            "absent" -> "securitySchemes:"
+            "null" -> "securedBy: [null]\nsecuritySchemes:"
+            else -> "securedBy: [basic]\nsecuritySchemes:"
+          },
+        ),
+      )
+      val original = RamlToGeneratedApi().convert(TestAPIProcessing.process(fixture.toUri()))
+      val decoded = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(original))
+      assertEquals(original, decoded)
+      val inherited =
+        when (rootSecurity) {
+          "basic" -> listOf(listOf("basic"))
+          "null" -> listOf(emptyList())
+          else -> emptyList()
+        }
+      val expected =
+        mapOf(
+          "publicAccess" to listOf(emptyList()),
+          "mixedAccess" to listOf(listOf("basic"), emptyList()),
+          "inheritedAccess" to inherited,
+          "resourcePublic" to listOf(emptyList()),
+          "methodProtected" to listOf(listOf("basic")),
+          "nestedInherited" to inherited,
+          "replacementAccess" to listOf(listOf("other")),
+          "traitPublic" to listOf(emptyList()),
+        )
+      listOf(original, decoded).forEach { api ->
+        val service = api.services.single()
+        service.operations.forEach { operation ->
+          val requirements = expected.getValue(operation.id)
+          assertEquals(
+            requirements,
+            api
+              .effectiveAuth(service, operation)
+              ?.requirements
+              .orEmpty()
+              .map { it.schemes },
+            operation.id,
+          )
+          assertEquals(
+            when {
+              requirements.any { it.isEmpty() } -> GeneratedEndpointAccess.PUBLIC
+              requirements.isNotEmpty() -> GeneratedEndpointAccess.AUTHENTICATED
+              else -> GeneratedEndpointAccess.UNSPECIFIED
+            },
+            api.endpointAuthentication(service, operation),
+            operation.id,
+          )
+        }
+        assertEquals(
+          inherited,
+          api.auth
+            ?.requirements
+            .orEmpty()
+            .map { it.schemes },
+        )
+      }
+    } finally {
+      Files.deleteIfExists(fixture)
+    }
+  }
 
   @Test
   fun `maps RAML tolerant enum fallback to generated API IR`(

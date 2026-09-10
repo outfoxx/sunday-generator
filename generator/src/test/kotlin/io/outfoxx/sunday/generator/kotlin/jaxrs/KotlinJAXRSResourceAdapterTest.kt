@@ -38,6 +38,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
+import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
@@ -54,6 +55,36 @@ import org.junit.jupiter.params.provider.ValueSource
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
 class KotlinJAXRSResourceAdapterTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = ["javax", "jakarta", "quarkus"])
+  fun `RAML anonymous alternatives compile to public endpoints without relaxing protected overrides`(target: String) {
+    val raml = "raml/ir/security-overrides.raml"
+    val openApi = "openapi/ir/server-adapters.yaml"
+    listOf(listOf(raml), listOf(raml, openApi), listOf(openApi, raml)).forEach { paths ->
+      val registry = registry(target)
+      KotlinJAXRSIrGenerator(export(*paths.toTypedArray()), registry, options(target)).generateServiceTypes()
+      val result = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+      val resource = result.classLoader.loadClass("io.test.RamlAccessAPIResource")
+      val publicOperations = setOf("publicAccess", "mixedAccess", "resourcePublic", "traitPublic")
+      val protectedOperations = setOf("inheritedAccess", "methodProtected", "nestedInherited", "replacementAccess")
+      (publicOperations + protectedOperations).forEach { name ->
+        val annotations =
+          resource.declaredMethods
+            .single { it.name == name }
+            .annotations
+            .map { it.annotationClass.simpleName }
+        assertEquals(name in publicOperations, "PermitAll" in annotations, name)
+        if (target == "quarkus") {
+          assertEquals(name in protectedOperations, "Authenticated" in annotations, name)
+        }
+      }
+      if (target != "quarkus") {
+        assertEquals(4, Regex("userPrincipal == null").findAll(source("RamlAccessAPIResource")).count())
+      }
+    }
+  }
 
   @ParameterizedTest
   @CsvSource("javax,false", "jakarta,false", "quarkus,false", "quarkus,true")

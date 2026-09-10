@@ -81,43 +81,6 @@ services:
       context:
       - "uriInfo"
       - "securityContext"
-  auth:
-    schemes:
-    - "bearer"
-    - "apiKey"
-    requirements:
-    - schemes:
-      - "bearer"
-    - schemes:
-      - "apiKey"
-    securitySchemes:
-    - name: "bearer"
-      type: "Pass Through"
-      headers:
-      - name: "authorization"
-        location: "HEADER"
-        type:
-          kind: "SCALAR"
-          name: "string"
-        required: true
-        serializationName: "Authorization"
-        validation:
-          pattern: "^Bearer .+$"
-        documentation:
-          description: "Bearer token."
-      documentation:
-        description: "Bearer token authentication."
-    - name: "apiKey"
-      type: "Pass Through"
-      queryParameters:
-      - name: "apiKey"
-        location: "QUERY"
-        type:
-          kind: "SCALAR"
-          name: "string"
-        required: true
-        serializationName: "api-key"
-        constantValue: "internal"
   media:
     request:
     - "application/json"
@@ -140,43 +103,6 @@ models:
       kind: "SCALAR"
       name: "string"
     required: true
-auth:
-  schemes:
-  - "bearer"
-  - "apiKey"
-  requirements:
-  - schemes:
-    - "bearer"
-  - schemes:
-    - "apiKey"
-  securitySchemes:
-  - name: "bearer"
-    type: "Pass Through"
-    headers:
-    - name: "authorization"
-      location: "HEADER"
-      type:
-        kind: "SCALAR"
-        name: "string"
-      required: true
-      serializationName: "Authorization"
-      validation:
-        pattern: "^Bearer .+$"
-      documentation:
-        description: "Bearer token."
-    documentation:
-      description: "Bearer token authentication."
-  - name: "apiKey"
-    type: "Pass Through"
-    queryParameters:
-    - name: "apiKey"
-      location: "QUERY"
-      type:
-        kind: "SCALAR"
-        name: "string"
-      required: true
-      serializationName: "api-key"
-      constantValue: "internal"
 media:
   request:
   - "application/json"
