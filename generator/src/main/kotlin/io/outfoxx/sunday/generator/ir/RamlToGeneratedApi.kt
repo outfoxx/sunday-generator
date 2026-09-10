@@ -115,7 +115,6 @@ import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operationName
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.parameters
-import io.outfoxx.sunday.generator.utils.parent
 import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.patternName
@@ -174,12 +173,7 @@ class RamlToGeneratedApi(
     val apiMedia = media(api.contentType, api.accepts)
     val apiAuth =
       auth(
-        securityRequirements =
-          if (sourceKind == GeneratedSourceSpec.Kind.OPENAPI) {
-            api.security
-          } else {
-            api.security + api.endPoints.flatMap(::securityRequirements)
-          },
+        securityRequirements = result.apiSecurity ?: api.security,
         localModels = localModels,
         zanzibar = api.zanzibar(),
         zanzibarUserSource = api.zanzibarUserSource(),
@@ -2272,32 +2266,15 @@ class RamlToGeneratedApi(
       response = acceptTypes.filterNotNull().ifEmpty { contentTypes.filterNotNull() },
     )
 
-  private fun securityRequirements(endPoint: EndPoint): List<SecurityRequirement> =
-    endPoint.security + endPoint.operations().flatMap { it.security }
-
   private fun resolveSecurityRequirements(
     api: WebApi,
     endPoint: EndPoint,
     operation: Operation,
-  ): List<SecurityRequirement> {
-    if (sourceKind == GeneratedSourceSpec.Kind.OPENAPI) {
-      return operation.security
-        .ifEmpty { endPoint.security }
-        .ifEmpty { api.security }
-    }
-
-    val requirements = mutableListOf<SecurityRequirement>()
-    requirements.addAll(api.security)
-
-    fun addEndpoint(current: EndPoint) {
-      current.parent?.let(::addEndpoint)
-      requirements.addAll(current.security)
-    }
-
-    addEndpoint(endPoint)
-    requirements.addAll(operation.security)
-    return requirements
-  }
+  ): List<SecurityRequirement> =
+    // RAML declarations replace defaults, and resource security does not extend to nested resources.
+    operation.security
+      .ifEmpty { endPoint.security }
+      .ifEmpty { api.security }
 
   private fun auth(
     securityRequirements: List<SecurityRequirement>,
@@ -2310,17 +2287,15 @@ class RamlToGeneratedApi(
     val requirements =
       securityRequirements
         .map { requirement -> requirement.securityRequirement() }
-        .filter { requirement -> requirement.schemes.isNotEmpty() }
 
     val schemes =
       requirements
         .flatMap { requirement -> requirement.schemes }
-        .ifEmpty { securityRequirements.mapNotNull { it.name().value() } }
         .distinct()
 
     val securitySchemes =
       securityRequirements
-        .flatMap { requirement -> requirement.schemes().map { scheme -> scheme.scheme() } }
+        .flatMap { requirement -> requirement.schemes().mapNotNull { scheme -> scheme.scheme() } }
         .distinctBy { scheme -> scheme.name().value() }
         .mapNotNull { scheme -> scheme.securityScheme(localModels) }
 
@@ -2335,7 +2310,7 @@ class RamlToGeneratedApi(
 
   private fun SecurityRequirement.securityRequirement(): GeneratedSecurityRequirement =
     GeneratedSecurityRequirement(
-      schemes = schemes().mapNotNull { scheme -> scheme.scheme().name().value() },
+      schemes = schemes().mapNotNull { scheme -> scheme.scheme()?.name()?.value() },
     )
 
   private fun SecurityScheme.securityScheme(localModels: LocalModelRegistry): GeneratedSecurityScheme? {

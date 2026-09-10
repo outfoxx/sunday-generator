@@ -18,6 +18,7 @@ package io.test.quarkus
 
 import io.quarkus.test.common.http.TestHTTPResource
 import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -31,6 +32,32 @@ import java.util.Base64
 class ResourceAdapterTest {
   @TestHTTPResource
   lateinit var baseUri: URI
+
+  @Inject
+  lateinit var ramlAccess: RamlAccess
+
+  @Test
+  fun `RAML anonymous alternatives and protected overrides enforce the contract`() {
+    val initialCalls = ramlAccess.calls.get()
+    listOf("public", "mixed", "resource", "trait").forEach { path ->
+      assertEquals(204, request("/raml/" + path).statusCode(), path)
+    }
+    val protected =
+      listOf(
+        "GET" to "inherited",
+        "POST" to "resource",
+        "GET" to "resource/nested",
+        "GET" to "replacement",
+      )
+    protected.forEach { (method, path) ->
+      assertEquals(401, request("/raml/" + path, method).statusCode(), path)
+    }
+    assertEquals(initialCalls + 4, ramlAccess.calls.get())
+    protected.forEach { (method, path) ->
+      assertEquals(204, request("/raml/" + path, method, authenticated = true).statusCode(), path)
+    }
+    assertEquals(initialCalls + 8, ramlAccess.calls.get())
+  }
 
   @Test
   fun `anonymous requests reach explicitly public delegates`() {

@@ -36,6 +36,89 @@ import org.junit.jupiter.params.provider.ValueSource
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonEndpointSecurityTest : PythonTest() {
 
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `RAML anonymous alternatives reach delegates while protected overrides reject anonymous requests`(
+    composed: Boolean,
+    compiler: PythonCompiler,
+  ) {
+    val paths =
+      listOf("raml/ir/security-overrides.raml") +
+        if (composed) listOf("openapi/ir/server-adapters.yaml") else emptyList()
+    assertTrue(
+      compileModules(
+        compiler,
+        modules(paths),
+        smokeCode =
+          """
+          from litestar import Litestar
+          from litestar.exceptions import NotAuthorizedException
+          from litestar.middleware import DefineMiddleware
+          from litestar.middleware.authentication import AbstractAuthenticationMiddleware, AuthenticationResult
+          from litestar.testing import TestClient
+          from sunday.litestar import SundayPlugin
+          from security_api.raml_access_server import create_raml_access_router
+
+          calls = []
+
+          class Access:
+              async def public_access(self) -> None:
+                  calls.append("public")
+
+              async def mixed_access(self) -> None:
+                  calls.append("mixed")
+
+              async def inherited_access(self) -> None:
+                  calls.append("inherited")
+
+              async def resource_public(self) -> None:
+                  calls.append("resource")
+
+              async def method_protected(self) -> None:
+                  calls.append("method")
+
+              async def nested_inherited(self) -> None:
+                  calls.append("nested")
+
+              async def replacement_access(self) -> None:
+                  calls.append("replacement")
+
+              async def trait_public(self) -> None:
+                  calls.append("trait")
+
+          class Authentication(AbstractAuthenticationMiddleware):
+              async def authenticate_request(self, connection):
+                  if connection.headers.get("Authorization") == "Bearer test-token":
+                      return AuthenticationResult(user="alice", auth="test-token")
+                  raise NotAuthorizedException()
+
+          for middleware in ([], [DefineMiddleware(Authentication)]):
+              calls.clear()
+              app = Litestar(
+                  route_handlers=[create_raml_access_router(Access())],
+                  middleware=middleware,
+                  plugins=[SundayPlugin()],
+              )
+              with TestClient(app) as client:
+                  for path in ("public", "mixed", "resource", "trait"):
+                      response = client.get("/raml/" + path)
+                      assert response.status_code == 204, (path, response.text)
+                  assert calls == ["public", "mixed", "resource", "trait"], calls
+                  protected = (("GET", "inherited"), ("POST", "resource"), ("GET", "resource/nested"), ("GET", "replacement"))
+                  for method, path in protected:
+                      response = client.request(method, "/raml/" + path)
+                      assert response.status_code == 401, (path, response.text)
+                  assert len(calls) == 4, calls
+                  if middleware:
+                      for method, path in protected:
+                          response = client.request(method, "/raml/" + path, headers={"Authorization": "Bearer test-token"})
+                          assert response.status_code == 204, (path, response.text)
+                      assert calls[4:] == ["inherited", "method", "nested", "replacement"], calls
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `public and protected routes enforce security before invoking application delegates`(compiler: PythonCompiler) {
     val modules = modules(listOf("openapi/ir/server-adapters.yaml"))

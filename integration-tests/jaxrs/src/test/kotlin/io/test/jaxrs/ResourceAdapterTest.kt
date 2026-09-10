@@ -16,6 +16,8 @@
 
 package io.test.jaxrs
 
+import io.test.jaxrs.api.RamlAccessAPI
+import io.test.jaxrs.api.RamlAccessAPIResource
 import io.test.jaxrs.api.UsersAPI
 import io.test.jaxrs.api.UsersAPIResource
 import jakarta.ws.rs.container.ContainerRequestFilter
@@ -34,17 +36,19 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.security.Principal
+import java.util.concurrent.atomic.AtomicInteger
 
 class ResourceAdapterTest : JerseyTest() {
   override fun getTestContainerFactory(): TestContainerFactory = InMemoryTestContainerFactory()
 
   override fun configure(): Application =
-    ResourceConfig(UsersAPIResource::class.java)
+    ResourceConfig(UsersAPIResource::class.java, RamlAccessAPIResource::class.java)
       .property(ServerProperties.WADL_FEATURE_DISABLE, true)
       .register(
         object : AbstractBinder() {
           override fun configure() {
             bind(UsersAPIResource(Users())).to(UsersAPIResource::class.java)
+            bind(RamlAccessAPIResource(RamlAccess)).to(RamlAccessAPIResource::class.java)
           }
         },
       ).register(
@@ -71,6 +75,37 @@ class ResourceAdapterTest : JerseyTest() {
   fun stop() = tearDown()
 
   @Test
+  fun `RAML anonymous alternatives and protected overrides enforce the contract`() {
+    val initialCalls = RamlAccess.calls.get()
+    listOf("public", "mixed", "resource", "trait").forEach { path ->
+      assertEquals(204, target("/raml/" + path).request().get().use { it.status }, path)
+    }
+    val protected =
+      listOf(
+        "GET" to "inherited",
+        "POST" to "resource",
+        "GET" to "resource/nested",
+        "GET" to "replacement",
+      )
+    protected.forEach { (method, path) ->
+      assertEquals(401, target("/raml/" + path).request().method(method).use { it.status }, path)
+    }
+    assertEquals(initialCalls + 4, RamlAccess.calls.get())
+    protected.forEach { (method, path) ->
+      assertEquals(
+        204,
+        target("/raml/" + path)
+          .request()
+          .header("Authorization", "Bearer test-token")
+          .method(method)
+          .use { it.status },
+        path,
+      )
+    }
+    assertEquals(initialCalls + 8, RamlAccess.calls.get())
+  }
+
+  @Test
   fun `anonymous requests reach public operations`() {
     target("/users").request().method("POST").use { response ->
       assertEquals(201, response.status)
@@ -90,6 +125,31 @@ class ResourceAdapterTest : JerseyTest() {
     target("/users/private").request().header("Authorization", "Bearer test-token").get().use { response ->
       assertEquals(200, response.status)
       assertEquals("private:alice", response.readEntity(String::class.java))
+    }
+  }
+
+  private object RamlAccess : RamlAccessAPI {
+    val calls = AtomicInteger()
+
+    override fun publicAccess(): Response = accept()
+
+    override fun mixedAccess(): Response = accept()
+
+    override fun inheritedAccess(): Response = accept()
+
+    override fun resourcePublic(): Response = accept()
+
+    override fun methodProtected(): Response = accept()
+
+    override fun nestedInherited(): Response = accept()
+
+    override fun replacementAccess(): Response = accept()
+
+    override fun traitPublic(): Response = accept()
+
+    private fun accept(): Response {
+      calls.incrementAndGet()
+      return Response.noContent().build()
     }
   }
 

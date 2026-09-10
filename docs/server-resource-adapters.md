@@ -51,6 +51,8 @@ The shared IR resolution honors operation, service, then API precedence, includi
 | Explicit empty security or an anonymous alternative | `@PermitAll` | `@PermitAll`, no principal check | `exclude_from_auth` route option |
 | No security declaration | No generated access restriction | No generated access restriction | No generated access restriction |
 
+For RAML, `securedBy: [null]` and mixed alternatives such as `securedBy: [basic, null]` permit anonymous access. A method's declaration replaces resource and API defaults, so a protected method on a public resource remains protected. Resource security applies to that resource's own methods; nested resources use their own declarations or the API default. See [RAML security inheritance](https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#applying-security-schemes).
+
 These are generic authentication checks. Scheme names, OAuth scopes, and AND/OR combinations of named schemes do not become role checks or credential validators. Applications must configure their authentication mechanisms, accepted credentials, roles/scopes, and any scheme-specific enforcement. In particular, OpenAPI `http/bearer` or `bearerFormat: JWT` does not select Quarkus OIDC versus SmallRye JWT. Standard JAX-RS applications must populate `SecurityContext` after validating credentials and configure any authentication challenge headers.
 
 Zanzibar authorization remains separate from authentication and still requires its runtime extension and application configuration. No Python or plain JAX-RS Zanzibar/fault-tolerance implementation is implied by these options.
@@ -63,7 +65,7 @@ References: [Quarkus endpoint security and inheritance](https://quarkus.io/guide
 
 Generator tests compile generated Kotlin and validate generated Python with formatting, lint, type, and import checks before inspecting or snapshotting source. Coverage includes RAML, OpenAPI, AsyncAPI, and composed inputs.
 
-The runtime fixtures generate source from the contract during the build, compile it, and then exercise endpoint behavior:
+The runtime fixtures generate source from OpenAPI and RAML contracts during the build, compile it, and then exercise endpoint behavior:
 
 ```sh
 ./gradlew :integration-tests:jaxrs:check :integration-tests:quarkus:check

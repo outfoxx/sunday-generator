@@ -48,21 +48,6 @@ services:
       - "application/json"
       response:
       - "application/json"
-  auth:
-    schemes:
-    - "signed"
-    requirements:
-    - schemes:
-      - "signed"
-    securitySchemes:
-    - name: "signed"
-      type: "Pass Through"
-      queryString:
-        kind: "NAMED"
-        name: "SignedQueryString"
-        scope:
-          securityScheme: "signed"
-          usage: "SECURITY_QUERY_STRING"
   media:
     request:
     - "application/json"
@@ -119,21 +104,6 @@ models:
       kind: "SCALAR"
       name: "integer"
     required: true
-auth:
-  schemes:
-  - "signed"
-  requirements:
-  - schemes:
-    - "signed"
-  securitySchemes:
-  - name: "signed"
-    type: "Pass Through"
-    queryString:
-      kind: "NAMED"
-      name: "SignedQueryString"
-      scope:
-        securityScheme: "signed"
-        usage: "SECURITY_QUERY_STRING"
 media:
   request:
   - "application/json"
