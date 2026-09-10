@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.python
+package io.test.quarkus
 
-import io.outfoxx.sunday.generator.BrokerGenerationOptions
+import io.test.quarkus.api.AccountsAPI
+import jakarta.inject.Singleton
+import org.jboss.resteasy.reactive.RestResponse
 
-/** Options shared by Python IR-backed generators. */
-data class PythonGeneratorOptions(
-  val packageName: String? = null,
-  val aggregateServices: Boolean = false,
-  val aggregateServiceName: String? = null,
-  override val generateBrokerServices: Boolean = false,
-  /** Enforce resolved endpoint authentication in generated Litestar route handlers. */
-  val enforceEndpointSecurity: Boolean = false,
-) : BrokerGenerationOptions
+/** Application behavior verifying path parameters bound by an aggregate resource locator. */
+@Singleton
+class Accounts : AccountsAPI {
+  override fun getAccount(accountId: String): RestResponse<String> = RestResponse.ok(accountId)
+}

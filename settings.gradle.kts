@@ -55,4 +55,6 @@ include(
   "cli",
   "gradle-plugin",
   "code-coverage",
+  "integration-tests:quarkus",
+  "integration-tests:jaxrs",
 )

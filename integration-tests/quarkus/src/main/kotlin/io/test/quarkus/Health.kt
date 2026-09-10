@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Outfox, Inc.
+ * Copyright 2020 Outfox, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.python
+package io.test.quarkus
 
-import io.outfoxx.sunday.generator.BrokerGenerationOptions
+import io.test.quarkus.api.HealthAPI
+import jakarta.inject.Singleton
+import org.jboss.resteasy.reactive.RestResponse
 
-/** Options shared by Python IR-backed generators. */
-data class PythonGeneratorOptions(
-  val packageName: String? = null,
-  val aggregateServices: Boolean = false,
-  val aggregateServiceName: String? = null,
-  override val generateBrokerServices: Boolean = false,
-  /** Enforce resolved endpoint authentication in generated Litestar route handlers. */
-  val enforceEndpointSecurity: Boolean = false,
-) : BrokerGenerationOptions
+/** Application-owned health handler, without any REST annotations. */
+@Singleton
+class Health : HealthAPI {
+  override fun health(): RestResponse<Unit> = RestResponse.noContent()
+}

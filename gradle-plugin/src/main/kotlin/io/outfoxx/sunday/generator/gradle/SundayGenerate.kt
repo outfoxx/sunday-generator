@@ -205,6 +205,10 @@ abstract class SundayGenerate
     @get:Optional
     val quarkus: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+    /** Generates JAX-RS endpoint implementations backed by application-owned service delegates. */
+    @get:Input
+    val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
     @get:Input
     @get:Optional
     val problemLibrary: Property<KotlinProblemLibrary> =
@@ -348,6 +352,7 @@ abstract class SundayGenerate
                   aggregateServiceName = aggregateServiceName.orNull,
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
+                  resourceAdapters = resourceAdapters.get(),
                 ),
               ).generateServiceTypes()
 
