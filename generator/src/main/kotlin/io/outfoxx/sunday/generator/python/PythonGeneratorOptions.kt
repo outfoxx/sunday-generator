@@ -26,4 +26,6 @@ data class PythonGeneratorOptions(
   override val generateBrokerServices: Boolean = false,
   /** Enforce resolved endpoint authentication in generated Litestar route handlers. */
   val enforceEndpointSecurity: Boolean = false,
+  /** Enforce complete scheme and permission requirements using application-provided authenticators. */
+  val enforceSecuritySchemes: Boolean = false,
 ) : BrokerGenerationOptions

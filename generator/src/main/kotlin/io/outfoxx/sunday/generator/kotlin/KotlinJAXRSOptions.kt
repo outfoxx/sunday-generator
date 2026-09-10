@@ -37,6 +37,8 @@ class KotlinJAXRSOptions(
   generateBrokerServices: Boolean = false,
   /** Generate endpoint resource classes that delegate to annotation-free service interfaces. */
   val resourceAdapters: Boolean = false,
+  /** Enforce complete scheme and permission requirements through generated resources and application authenticators. */
+  val enforceSecuritySchemes: Boolean = false,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,

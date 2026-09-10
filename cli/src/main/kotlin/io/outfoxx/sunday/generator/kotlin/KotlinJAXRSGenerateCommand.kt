@@ -98,6 +98,12 @@ open class KotlinJAXRSGenerateCommand :
     help = "Generate server resource implementations backed by application-owned service delegates",
   ).flag(default = false)
 
+  /** Whether generated adapters enforce the declared schemes and permissions. */
+  val enforceSecuritySchemes by option(
+    "-enforce-security-schemes",
+    help = "Enforce named schemes and permissions using application authenticators; requires -resource-adapters",
+  ).flag(default = false)
+
   override fun run() {
     println("Generating ${this.outputCategories} types")
     println("Processing ${files.joinToString()}")
@@ -142,5 +148,6 @@ open class KotlinJAXRSGenerateCommand :
       servicesFromTags,
       generateBrokerServices,
       resourceAdapters,
+      enforceSecuritySchemes,
     )
 }

@@ -675,8 +675,18 @@ class AsyncApiToGeneratedApi(
   private fun sourceAuth(securityRequirements: List<Map<*, *>>): GeneratedAuth? {
     val requirements =
       securityRequirements
-        .map { requirement -> GeneratedSecurityRequirement(schemes = requirement.keys.filterIsInstance<String>()) }
-        .filter { requirement -> requirement.schemes.isNotEmpty() }
+        .map { requirement ->
+          GeneratedSecurityRequirement(
+            schemes = requirement.keys.filterIsInstance<String>(),
+            permissions =
+              requirement.entries
+                .associate { (name, value) ->
+                  (name as? String ?: genError("Security requirement scheme names must be strings")) to
+                    ((value as? List<*>) ?: genError("Security requirement '$name' must contain a permission list"))
+                      .map { it as? String ?: genError("Security requirement '$name' permissions must be strings") }
+                }.filterValues { it.isNotEmpty() },
+          )
+        }.filter { requirement -> requirement.schemes.isNotEmpty() }
     val schemes = requirements.flatMap { requirement -> requirement.schemes }.distinct()
     val securitySchemes =
       currentSourceDocument
@@ -688,6 +698,21 @@ class AsyncApiToGeneratedApi(
             type = scheme["type"] as? String,
             scheme = scheme["scheme"] as? String,
             bearerFormat = scheme["bearerFormat"] as? String,
+            openIdConnectUrl = scheme["openIdConnectUrl"] as? String,
+            oauthFlows =
+              (scheme["flows"] as? Map<*, *>).orEmpty().entries.associate { (flowName, value) ->
+                val flow = (value as? Map<*, *>).orEmpty()
+                flowName.toString() to
+                  GeneratedOAuthFlow(
+                    authorizationUrl = flow["authorizationUrl"] as? String,
+                    tokenUrl = flow["tokenUrl"] as? String,
+                    refreshUrl = flow["refreshUrl"] as? String,
+                    scopes =
+                      (flow["scopes"] as? Map<*, *>).orEmpty().entries.associate {
+                        it.key.toString() to it.value.toString()
+                      },
+                  )
+              },
             documentation =
               GeneratedDocumentation(
                 summary = scheme["summary"] as? String,

@@ -1,0 +1,242 @@
+openapi: 3.1.0
+info:
+  title: Security Enforcement API
+  version: 1.0.0
+x-sunday-apiId: scheme-security
+security:
+  - bearerAuth: []
+paths:
+  /strict/inherited:
+    get:
+      operationId: inherited
+      x-sunday-service: Policy
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/basic:
+    get:
+      operationId: basic
+      x-sunday-service: Policy
+      security: [{basicAuth: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/bearer:
+    get:
+      operationId: bearer
+      x-sunday-service: Policy
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/header:
+    get:
+      operationId: header
+      x-sunday-service: Policy
+      security: [{headerKey: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/query:
+    get:
+      operationId: query
+      x-sunday-service: Policy
+      security: [{queryKey: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/cookie:
+    get:
+      operationId: cookie
+      x-sunday-service: Policy
+      security: [{cookieKey: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/scoped:
+    get:
+      operationId: scoped
+      x-sunday-service: Policy
+      security: [{oauth: [read]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/allScopes:
+    get:
+      operationId: allScopes
+      x-sunday-service: Policy
+      security: [{oauth: [read, admin]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/oidc:
+    get:
+      operationId: oidc
+      x-sunday-service: Policy
+      security: [{oidc: [read]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/combined:
+    get:
+      operationId: combined
+      x-sunday-service: Policy
+      security: [{oauth: [read], headerKey: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/alternative:
+    get:
+      operationId: alternative
+      x-sunday-service: Policy
+      security: [{oauth: [admin]}, {headerKey: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/scopeAlternative:
+    get:
+      operationId: scopeAlternative
+      x-sunday-service: Policy
+      security: [{oauth: [admin]}, {oauth: [read]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/role:
+    get:
+      operationId: role
+      x-sunday-service: Policy
+      security: [{headerKey: [admin]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/anonymous:
+    get:
+      operationId: anonymous
+      x-sunday-service: Policy
+      security: []
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/optional:
+    get:
+      operationId: optional
+      x-sunday-service: Policy
+      security: [{}, {oauth: [read]}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/tls:
+    get:
+      operationId: tls
+      x-sunday-service: Policy
+      security: [{clientCertificate: []}]
+      responses:
+        '200':
+          description: Authorized
+          content:
+            text/plain:
+              schema:
+                type: string
+  /strict/health:
+    get:
+      operationId: health
+      x-sunday-service: Security
+      security: []
+      responses:
+        '204':
+          description: Healthy
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    headerKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    queryKey:
+      type: apiKey
+      in: query
+      name: api_key
+    cookieKey:
+      type: apiKey
+      in: cookie
+      name: session_key
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://issuer.example/token
+          refreshUrl: https://issuer.example/refresh
+          scopes:
+            read: Read resources
+            admin: Administer resources
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://issuer.example/.well-known/openid-configuration
+    clientCertificate:
+      type: mutualTLS

@@ -49,16 +49,46 @@ val generateApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val securedSources = layout.buildDirectory.dir("generated/security")
+val securedContract =
+  rootProject.layout.projectDirectory.file(
+    "generator/src/test/resources/openapi/ir/security-enforcement.yaml",
+  )
+
+val generateSecuredApi by tasks.registering(JavaExec::class) {
+  inputs.file(securedContract)
+  outputs.dir(securedSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-aggregate-services",
+    "-aggregate-service-name",
+    "SecureAPI",
+    "-pkg",
+    "io.test.quarkus.secure",
+    "-out",
+    securedSources.get().asFile.absolutePath,
+    securedContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
 
 kotlin.sourceSets.main {
   kotlin.srcDir(generateApi)
+  kotlin.srcDir(generateSecuredApi)
 }
 
 tasks.compileKotlin {
-  dependsOn(generateApi)
+  dependsOn(generateApi, generateSecuredApi)
 }
 
 tasks.test {
@@ -69,6 +99,6 @@ tasks.test {
 // Generated sources are compiled before the runtime tests, and retain the generator's formatting.
 ktlint {
   filter {
-    exclude { it.file.path.contains("/generated/sunday/") }
+    exclude { it.file.path.contains("/generated/") }
   }
 }
