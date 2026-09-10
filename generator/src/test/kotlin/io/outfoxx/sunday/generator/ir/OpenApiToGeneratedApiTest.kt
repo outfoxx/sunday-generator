@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -538,6 +539,56 @@ class OpenApiToGeneratedApiTest {
     val api = OpenApiToGeneratedApi().convert(testUri)
 
     assertEquals(expectedYaml("security-3.1.ir.yaml"), normalizedYaml(api))
+  }
+
+  @Test
+  fun `preserves operation security overrides and inheritance through YAML`(
+    @ResourceUri("openapi/ir/security-overrides-3.1.yaml") testUri: URI,
+  ) {
+    val converted = OpenApiToGeneratedApi().convert(testUri)
+    val decoded = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(converted))
+
+    assertEquals(converted, decoded)
+    listOf(converted, decoded).forEach { api ->
+      val service = api.services.single()
+      val operations = service.operations.associateBy { operation -> operation.id }
+      val protectedOperation = operations.getValue("protectedOperation")
+      val register = operations.getValue("register")
+      val anonymous = operations.getValue("anonymous")
+      val optional = operations.getValue("optional")
+      val override = operations.getValue("overrideSecurity")
+      val ignored = operations.getValue("ignored")
+
+      assertEquals(null, protectedOperation.auth)
+      assertEquals(api.auth, api.effectiveAuth(service, protectedOperation))
+      assertEquals(listOf("bearerAuth", "traceKey"), api.auth?.schemes)
+      assertEquals(GeneratedAuth(securityOverride = true), register.auth)
+      assertEquals(register.auth, api.effectiveAuth(service, register))
+      assertEquals(listOf(GeneratedSecurityRequirement()), anonymous.auth?.requirements)
+      assertEquals(anonymous.auth, api.effectiveAuth(service, anonymous))
+      assertEquals(
+        listOf(GeneratedSecurityRequirement(listOf("bearerAuth")), GeneratedSecurityRequirement()),
+        optional.auth?.requirements,
+      )
+      assertEquals(optional.auth, api.effectiveAuth(service, optional))
+      assertEquals(listOf("queryKey"), override.auth?.schemes)
+      assertEquals(override.auth, api.effectiveAuth(service, override))
+      val queryKey = requireNotNull(override.auth).securitySchemes.single()
+      assertEquals("api_key", queryKey.queryParameters.single().serializationName)
+      assertEquals(listOf<String>(), ignored.auth?.schemes)
+      assertEquals(true, ignored.auth?.securityOverride)
+      assertEquals(mapOf("ignore" to "true"), ignored.auth?.zanzibar)
+      assertEquals(
+        GeneratedZanzibarUserSource(jwt = GeneratedZanzibarJwtUserSource(listOf("sub"), principalFallback = true)),
+        ignored.auth?.zanzibarUserSource,
+      )
+      val protectedWithZanzibar = operations.getValue("protectedWithZanzibar")
+      assertEquals(false, protectedWithZanzibar.auth?.securityOverride)
+      assertEquals(
+        api.auth?.copy(zanzibar = mapOf("ignore" to "true")),
+        api.effectiveAuth(service, protectedWithZanzibar),
+      )
+    }
   }
 
   @Test

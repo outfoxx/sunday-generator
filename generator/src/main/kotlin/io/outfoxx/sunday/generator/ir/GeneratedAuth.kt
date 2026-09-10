@@ -18,6 +18,8 @@ package io.outfoxx.sunday.generator.ir
 
 /**
  * Authentication metadata shared by services and operations.
+ *
+ * @property securityOverride Whether source security explicitly replaces inherited requirements, even when empty.
  */
 data class GeneratedAuth(
   val schemes: List<String> = listOf(),
@@ -25,4 +27,5 @@ data class GeneratedAuth(
   val securitySchemes: List<GeneratedSecurityScheme> = listOf(),
   val zanzibar: Map<String, String> = mapOf(),
   val zanzibarUserSource: GeneratedZanzibarUserSource? = null,
+  val securityOverride: Boolean = false,
 )

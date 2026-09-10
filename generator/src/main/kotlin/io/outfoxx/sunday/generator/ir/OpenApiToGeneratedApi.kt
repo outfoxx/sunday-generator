@@ -146,7 +146,7 @@ class OpenApiToGeneratedApi(
               responses = responses(operation, operationId, seed.serviceLabel, localModels),
               problems = operation.problemRefs(),
               nullify = operation.nullify(),
-              auth = auth(operation, operation.listValue("security")),
+              auth = auth(operation, operation["security"] as? List<*>),
               media = GeneratedMedia(),
               policy = operationPolicy,
               jaxrs = operationJaxrs,
@@ -665,11 +665,12 @@ class OpenApiToGeneratedApi(
   }
 
   private fun OpenApiSourceDocument.auth(
-    security: List<Any?> = this.security,
+    security: List<Any?>? = this.security,
     zanzibar: Map<String, String> = mapOf(),
     zanzibarUserSource: GeneratedZanzibarUserSource? = null,
   ): GeneratedAuth? {
-    val requirements = security.mapNotNull { requirement -> (requirement as? Map<*, *>)?.securityRequirement() }
+    val requirements =
+      security.orEmpty().mapNotNull { requirement -> (requirement as? Map<*, *>)?.securityRequirement() }
     val schemeNames = requirements.flatMap { requirement -> requirement.schemes }.distinct()
     val schemes = schemeNames.mapNotNull { name -> securityScheme(name) }
     return GeneratedAuth(
@@ -678,6 +679,7 @@ class OpenApiToGeneratedApi(
       securitySchemes = schemes,
       zanzibar = zanzibar,
       zanzibarUserSource = zanzibarUserSource,
+      securityOverride = security != null,
     ).takeUnless { it == GeneratedAuth() }
   }
 
@@ -885,7 +887,7 @@ class OpenApiToGeneratedApi(
 
   private fun OpenApiSourceDocument.auth(
     operation: Map<*, *>,
-    security: List<Any?>,
+    security: List<Any?>?,
   ): GeneratedAuth? {
     val zanzibar = operation.mapValue("x-sunday-zanzibar")
     return auth(
@@ -1349,7 +1351,7 @@ class OpenApiToGeneratedApi(
           (name as? String)?.let { it to (schema as? Map<*, *>).orEmpty() }
         }.toMap()
     val servers: List<Map<*, *>> = source.listValue("servers").mapNotNull { it as? Map<*, *> }
-    val security: List<Any?> = source.listValue("security")
+    val security: List<Any?>? = source["security"] as? List<*>
     val securitySchemes: Map<String, Map<*, *>> =
       components
         .mapValue("securitySchemes")

@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: Security Overrides API
+  version: 1.0.0
+security:
+  - bearerAuth: []
+    traceKey: []
+paths:
+  /protected:
+    get:
+      operationId: protectedOperation
+      responses:
+        "204":
+          description: Protected.
+  /register:
+    post:
+      operationId: register
+      security: []
+      responses:
+        "204":
+          description: Public.
+  /protected-zanzibar:
+    get:
+      operationId: protectedWithZanzibar
+      x-sunday-zanzibar:
+        ignore: true
+      responses:
+        "204":
+          description: Inherited security with Zanzibar metadata.
+  /anonymous:
+    get:
+      operationId: anonymous
+      security: [{}]
+      responses:
+        "204":
+          description: Anonymous alternative.
+  /optional:
+    get:
+      operationId: optional
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "204":
+          description: Bearer or anonymous.
+  /override:
+    get:
+      operationId: overrideSecurity
+      security:
+        - queryKey: []
+      responses:
+        "204":
+          description: Query key only.
+  /ignored:
+    get:
+      operationId: ignored
+      security: []
+      x-sunday-zanzibar:
+        ignore: true
+        user-source:
+          jwt:
+            claims: [sub]
+            principal-fallback: true
+      responses:
+        "204":
+          description: Public with Zanzibar metadata.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    traceKey:
+      type: apiKey
+      in: header
+      name: X-Trace-Key
+    queryKey:
+      type: apiKey
+      in: query
+      name: api_key
