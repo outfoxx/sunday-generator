@@ -1,0 +1,11 @@
+parameters:
+  - name: q
+    in: query
+    required: true
+    schema:
+      type: string
+      minLength: 2
+headers:
+  Count:
+    schema:
+      type: integer

@@ -174,19 +174,37 @@ class PythonModelRendererTest : PythonTest() {
     val cases =
       listOf(
         Triple(defaultUri, "Invalid integer default for property 'count'", "sunday-python-default"),
-        Triple(constraintUri, "Invalid number constraint 'minimum'", "sunday-python-minimum"),
+        Triple(constraintUri, "Invalid numeric OpenAPI schema constraint", "sunday-python-minimum"),
       )
 
     cases.forEach { (sourceUri, expectedContext, injectedMarker) ->
-      val api = GeneratedApiIrExporter().export(sourceUri)
       val error =
         assertThrows(GenerationException::class.java) {
+          val api = GeneratedApiIrExporter().export(sourceUri)
           PythonModelRenderer("turnpost_api").renderModels(api.models)
         }
 
       assertTrue(error.message!!.contains(expectedContext), error.message)
       assertTrue(error.message!!.contains(injectedMarker), error.message)
     }
+  }
+
+  @Test
+  fun `rejects executable numeric constraints supplied directly as IR`() {
+    val expression = "(unsafe_numeric_value() or 0)"
+    val model =
+      GeneratedModel(
+        name = "Unsafe",
+        kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.scalar("number")),
+        validation = mapOf("minimum" to expression),
+      )
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonModelRenderer("turnpost_api").renderModels(listOf(model))
+      }
+    assertTrue(error.message!!.contains("Invalid number constraint 'minimum'"), error.message)
+    assertTrue(error.message!!.contains(expression), error.message)
   }
 
   @Test

@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
@@ -35,6 +36,11 @@ class SundayGeneration(
   objects: ObjectFactory,
   project: Project,
 ) {
+  /** Persistent cache for public HTTP(S) OpenAPI documents, revalidated on each online build. */
+  val openApiReferenceCacheDirectory: DirectoryProperty =
+    objects.directoryProperty().fileValue(
+      project.gradle.gradleUserHomeDir.resolve("caches/sunday/openapi"),
+    )
 
   val source: Property<FileCollection> =
     objects

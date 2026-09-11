@@ -22,17 +22,27 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.common.APIProcessor
+import io.outfoxx.sunday.generator.ir.OpenApiDocumentLoader
+import io.outfoxx.sunday.generator.ir.OpenApiDocumentSnapshot
+import io.outfoxx.sunday.generator.ir.OpenApiLoadedDocument
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceOptions
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceResolver
 import io.outfoxx.sunday.generator.utils.allUnits
 import io.outfoxx.sunday.generator.utils.location
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -47,6 +57,7 @@ abstract class SundayDiscoverIncludes
   @Inject
   constructor(
     objects: ObjectFactory,
+    layout: ProjectLayout,
   ) : SourceTask() {
 
     @InputFiles
@@ -64,7 +75,40 @@ abstract class SundayDiscoverIncludes
     @OutputFile
     val allSourcesIndexFile: RegularFileProperty = objects.fileProperty()
 
+    /** Captured content used by generation, independent of HTTP cache metadata. */
+    @get:OutputDirectory
+    val capturedDocumentsDirectory: DirectoryProperty =
+      objects.directoryProperty().convention(
+        layout.buildDirectory.dir("generated/sunday/documents/$name"),
+      )
+
+    /** Base used to encode local document paths in relocatable manifests. */
+    @get:Internal
+    val sourceBaseDirectory: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory)
+
+    /** Persistent HTTP cache, separate from the declared generation inputs. */
+    @get:Internal
+    val openApiReferenceCacheDirectory: DirectoryProperty =
+      objects.directoryProperty().fileValue(
+        OpenApiReferenceOptions().cacheDirectory.toFile(),
+      )
+
+    /** Whether HTTP retrieval is disabled for this invocation. */
+    @get:Input
+    val openApiOffline: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
+    init {
+      outputs.upToDateWhen { !hasOpenApiSources() }
+      outputs.doNotCacheIf("OpenAPI references must be revalidated for each invocation") { hasOpenApiSources() }
+    }
+
     private val apiProcessor = APIProcessor()
+
+    private fun hasOpenApiSources(): Boolean = source.files.any { it.isFile && it.isOpenApiSource() }
+
+    private fun File.isOpenApiSource(): Boolean =
+      extension.lowercase() in setOf("yaml", "yml", "json") &&
+        runCatching { yamlMapper.readTree(this)?.has("openapi") == true }.getOrDefault(false)
 
     @TaskAction
     fun discover() {
@@ -75,15 +119,37 @@ abstract class SundayDiscoverIncludes
           .toSortedSet(compareBy { file -> file.absolutePath })
 
       val allSources = roots.toMutableSet()
+      val captured = linkedMapOf<URI, OpenApiLoadedDocument>()
+      val loader =
+        OpenApiDocumentLoader.create(
+          OpenApiReferenceOptions(
+            cacheDirectory = openApiReferenceCacheDirectory.get().asFile.toPath(),
+            offline = openApiOffline.get(),
+          ),
+        )
 
       roots.forEach { file ->
         val discovered =
-          when (file.extension.lowercase()) {
-            "raml" -> discoverRamlSources(file)
+          when {
+            file.isOpenApiSource() -> {
+              val resolution = OpenApiReferenceResolver(loader).resolve(file.toURI())
+              captured.putAll(resolution.documents)
+              resolution.documents.keys
+                .filter { it.scheme == "file" }
+                .map { File(it).canonicalFile }
+                .toSet()
+            }
+            file.extension.lowercase() == "raml" -> discoverRamlSources(file)
             else -> discoverNativeSources(file)
           }
         discovered.forEach { allSources.add(it) }
+        captured.putIfAbsent(file.toURI(), OpenApiLoadedDocument(file.toURI(), file.readBytes()))
       }
+      OpenApiDocumentSnapshot.write(
+        capturedDocumentsDirectory.get().asFile.toPath(),
+        sourceBaseDirectory.get().asFile.toPath(),
+        captured,
+      )
 
       writeIndex(rootsIndexFile.get().asFile, roots)
       writeIndex(allSourcesIndexFile.get().asFile, allSources)
@@ -176,6 +242,13 @@ abstract class SundayDiscoverIncludes
             if (name == "\$ref" && value.isTextual) {
               visit(value.asText())
             }
+            if (name == "discriminator" && value.isObject) {
+              value.path("mapping").properties().forEach { (_, mapping) ->
+                if (mapping.isTextual) {
+                  visit(mapping.asText())
+                }
+              }
+            }
             value.visitReferences(visit)
           }
         }
@@ -199,7 +272,7 @@ abstract class SundayDiscoverIncludes
           when {
             uri.isAbsolute && uri.scheme.equals("file", ignoreCase = true) -> File(uri)
             uri.isAbsolute -> null
-            else -> sourceFile.parentFile.resolve(referencedPath)
+            else -> File(sourceFile.toURI().resolve(uri))
           }
         }.getOrElse {
           sourceFile.parentFile.resolve(referencedPath)

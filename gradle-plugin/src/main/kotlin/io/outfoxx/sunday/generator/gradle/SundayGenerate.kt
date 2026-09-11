@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
+import io.outfoxx.sunday.generator.ir.OpenApiDocumentSnapshot
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
@@ -37,15 +38,19 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -61,7 +66,18 @@ abstract class SundayGenerate
   @Inject
   constructor(
     objects: ObjectFactory,
+    layout: ProjectLayout,
   ) : SourceTask() {
+
+    /** Captured OpenAPI documents produced by discovery; HTTP cache metadata is not an input. */
+    @get:InputDirectory
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    val capturedDocumentsDirectory: DirectoryProperty = objects.directoryProperty()
+
+    /** Base used to restore relative local URIs from the captured document manifest. */
+    @get:Internal
+    val sourceBaseDirectory: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory)
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -286,6 +302,10 @@ abstract class SundayGenerate
       val exporter =
         GeneratedApiIrExporter(
           GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags.get(), generationMode = mode.get()),
+          openApiDocumentLoader =
+            capturedDocumentsDirectory.orNull?.let {
+              OpenApiDocumentSnapshot.loader(it.asFile.toPath(), sourceBaseDirectory.get().asFile.toPath())
+            },
         )
       val apiGroups =
         try {

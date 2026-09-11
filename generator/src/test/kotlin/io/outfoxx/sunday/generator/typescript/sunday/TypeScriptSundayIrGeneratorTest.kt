@@ -37,6 +37,7 @@ import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
@@ -54,11 +55,13 @@ import io.outfoxx.typescriptpoet.FileSpec
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.SymbolSpec
 import io.outfoxx.typescriptpoet.TypeName
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -66,6 +69,183 @@ import java.nio.file.Path
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [IR] Generator Test")
 class TypeScriptSundayIrGeneratorTest {
+
+  @Test
+  fun `compiles remote schema resources`(
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val api = fixture.export(directory)
+      val registry = TypeScriptTypeRegistry(setOf())
+      TypeScriptSundayIrGenerator(
+        api,
+        registry,
+        typeScriptSundayTestOptions,
+      ).generateServiceTypes()
+      val checkedTypes =
+        registry.buildTypes() +
+          (
+            TypeName.namedImport("NullableReferenceCheck", "!nullable-reference-check") to
+              ModuleSpec
+                .builder("NullableReferenceCheck", ModuleSpec.Kind.MODULE)
+                .addCode(
+                  CodeBlock.of(
+                    """
+                    |const nullableFields: Pick<%T, 'node' | 'composedNode' | 'copiedNode' | 'maybeAddress'> =
+                    |  {node: null, composedNode: null, copiedNode: null, maybeAddress: null};
+                    |const child: %T = {child: null};
+                    |const documented: %T = {id: 'one', detail: 'detail', payload: null};
+                    |const parent: %T = documented;
+                    |if (parent.id !== 'one') throw new Error('inherited field changed');
+                    |const schemaCache = new Map<object, unknown>();
+                    |const runtime = {
+                    |  policy: {},
+                    |  resolveSchema(ref: any): any {
+                    |    if (ref && typeof ref.build === 'function') {
+                    |      if (!schemaCache.has(ref)) {
+                    |        schemaCache.set(ref, ref.build(runtime));
+                    |      }
+                    |      return schemaCache.get(ref);
+                    |    }
+                    |    return ref;
+                    |  },
+                    |};
+                    |const recordSchema = runtime.resolveSchema(%T);
+                    |recordSchema.parse(documented);
+                    |for (const payload of [null, 'value']) {
+                    |  const decoded = recordSchema.parse({...documented, payload});
+                    |  if (decoded.payload !== payload) throw new Error('nullable inherited field changed');
+                    |}
+                    |if (recordSchema.safeParse({...documented, payload: 42}).success) {
+                    |  throw new Error('inherited string accepted a number');
+                    |}
+                    |for (const next of [null, {id: 'two', next: {id: 'three'}}]) {
+                    |  const decoded = recordSchema.parse({...documented, next});
+                    |  if (JSON.stringify(decoded.next) !== JSON.stringify(next)) {
+                    |    throw new Error('wrapped recursive field changed');
+                    |  }
+                    |}
+                    |if (recordSchema.safeParse({...documented, next: 42}).success) {
+                    |  throw new Error('recursive reference accepted a number');
+                    |}
+                    |if (recordSchema.safeParse({detail: 'detail'}).success) {
+                    |  throw new Error('inherited id must remain required');
+                    |}
+                    |const userSchema = runtime.resolveSchema(%T);
+                    |const nodeSchema = runtime.resolveSchema(%T);
+                    |const petsSchema = runtime.resolveSchema(%T);
+                    |const mappedPetsSchema = runtime.resolveSchema(%T);
+                    |for (const animal of [{kind: 'kitty', lives: 9}, {kind: 'hound', barks: true}]) {
+                    |  const decoded = mappedPetsSchema.parse({animal});
+                    |  const restored = JSON.parse(JSON.stringify(decoded));
+                    |  if (JSON.stringify(restored) !== JSON.stringify({animal})) {
+                    |    throw new Error('relative discriminator mapping lost the subtype or wire value');
+                    |  }
+                    |  mappedPetsSchema.parse(restored);
+                    |}
+                    |if (mappedPetsSchema.safeParse({animal: {kind: 'kitty', lives: 'nine'}}).success ||
+                    |    mappedPetsSchema.safeParse({animal: {kind: 'MappedCat', lives: 9}}).success) {
+                    |  throw new Error('relative discriminator mapping did not validate its subtype');
+                    |}
+                    |for (const kind of ['Cat', 'Dog']) {
+                    |  const decoded = petsSchema.parse({animal: {kind}});
+                    |  if (JSON.parse(JSON.stringify(decoded)).animal.kind !== kind) {
+                    |    throw new Error('discriminator wire value changed');
+                    |  }
+                    |}
+                    |if (petsSchema.safeParse({animal: {kind: 'Cat2'}}).success) {
+                    |  throw new Error('generated model name became a wire value');
+                    |}
+                    |userSchema.parse({id: 'one', address: {street: 'Main'}, ...nullableFields});
+                    |nodeSchema.parse(child);
+                    |userSchema.parse({id: 'one', address: {street: 'Main'}, ...nullableFields, maybeAddress: {street: 'Main'}});
+                    |if (userSchema.safeParse({id: 'one', address: {street: 'Main'}, ...nullableFields, maybeAddress: 42}).success) {
+                    |  throw new Error('nullable address accepted a number');
+                    |}
+                    |if (userSchema.safeParse({id: 'one', address: {street: 'Main'}}).success ||
+                    |    nodeSchema.safeParse({}).success) {
+                    |  throw new Error('required nullable fields must still be present');
+                    |}
+                    |const restrictions = runtime.resolveSchema(%T);
+                    |const nullability = runtime.resolveSchema(%T);
+                    |const booleans = runtime.resolveSchema(%T);
+                    |for (const value of [0, false, 'value', {nested: true}]) {
+                    |  const decoded = booleans.parse({truth: value, empty: value});
+                    |  if (JSON.stringify(decoded.truth) !== JSON.stringify(decoded.empty)) {
+                    |    throw new Error('true and empty schemas disagree');
+                    |  }
+                    |}
+                    |nullability.parse({strictText: 'valid', values: null});
+                    |nullability.parse({strictText: 'valid', values: ['valid']});
+                    |if (nullability.safeParse({strictText: null, values: null}).success) {
+                    |  throw new Error('constrained string accepted null');
+                    |}
+                    |const valid = {address: {street: 'Main'}, text: 'hello', state: 'active'};
+                    |restrictions.parse(valid);
+                    |for (const field of Object.keys(valid)) {
+                    |  for (const excluded of [42, null]) {
+                    |    if (restrictions.safeParse({...valid, [field]: excluded}).success) {
+                    |      throw new Error(field + ' accepted ' + excluded);
+                    |    }
+                    |  }
+                    |}
+                    """.trimMargin(),
+                    TypeName.namedImport("User", "!user"),
+                    TypeName.namedImport("Node", "!node"),
+                    TypeName.namedImport("DocumentedRecord", "!documented-record"),
+                    TypeName.namedImport("BaseRecord", "!base-record"),
+                    TypeName.namedImport("DocumentedRecordSchema", "!documented-record"),
+                    TypeName.namedImport("UserSchema", "!user"),
+                    TypeName.namedImport("NodeSchema", "!node"),
+                    TypeName.namedImport("PetsSchema", "!pets"),
+                    TypeName.namedImport("MappedPetsSchema", "!mapped-pets"),
+                    TypeName.namedImport("RestrictionsSchema", "!restrictions"),
+                    TypeName.namedImport("NullabilitySchema", "!nullability"),
+                    TypeName.namedImport("BooleanValuesSchema", "!boolean-values"),
+                  ),
+                ).build()
+          )
+      assertTrue(compileAndRunTypes(compiler, checkedTypes, "nullable-reference-check"))
+      assertEquals(
+        listOf(GeneratedTypeRef.named("BaseRecord")),
+        api.models.single { it.name == "DocumentedRecord" }.inherits,
+      )
+      val record = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "documented-record.ts")
+      assertEquals(1, "'id': z.string()".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      assertEquals(
+        1,
+        "'payload': z.string().nullish()".toRegex(RegexOption.LITERAL).findAll(record).count(),
+        record,
+      )
+      assertEquals(1, "'next':".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      assertTrue(record.contains("runtime.resolveSchema(RecordNodeSchema)"), record)
+      assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "cat.ts").contains("unrelated"))
+      assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "cat2.ts").contains("lives"))
+      val user = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "user.ts")
+      assertTrue(user.contains("Address"), user)
+      assertTrue(user.contains("'node': runtime.resolveSchema(NodeSchema).nullable()"), user)
+      assertTrue(user.contains("'composedNode': runtime.resolveSchema(NodeSchema).nullable()"), user)
+      assertTrue(user.contains("'copiedNode': runtime.resolveSchema(NodeSchema).nullable().nullish()"), user)
+      assertTrue(user.contains("UserProfile2"), user)
+      assertFalse(user.contains("UserArbitrary"), user)
+      assertFalse(user.contains("UserNullableArbitrary"), user)
+      val profile = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "user-profile.ts")
+      assertTrue(profile.contains("remoteValue"), profile)
+      val inlineProfile = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "user-profile2.ts")
+      assertTrue(inlineProfile.contains("localValue"), inlineProfile)
+      val extended = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "user-extended-address.ts")
+      assertTrue(extended.contains("street"), extended)
+      assertTrue(extended.contains("postalCode"), extended)
+      val node = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "node.ts")
+      assertTrue(node.contains("'child': z.lazy(() => runtime.resolveSchema(NodeSchema)).nullable()"), node)
+      val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "api.ts")
+      assertTrue(service.contains("limit ?? 20"), service)
+      val nullability = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "nullability.ts")
+      assertTrue(nullability.contains("'strictText': z.string(),"), nullability)
+      assertTrue(nullability.contains("'values': z.array(z.string()).nullable()"), nullability)
+    }
+  }
 
   @Test
   fun `TypeScript Sunday CLI uses the IR exporter directly`() {

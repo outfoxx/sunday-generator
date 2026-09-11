@@ -531,7 +531,10 @@ class GradlePluginTests {
     val schemaDir = testProjectDir.resolve("src/main/sunday-schemas")
     schemaDir.mkdirs()
 
-    val schemaFile = schemaDir.resolve("user.yaml")
+    val nestedDir = schemaDir.resolve("nested").also { it.mkdirs() }
+    val schemaFile = nestedDir.resolve("user schema.yaml")
+    val entryFile = schemaDir.resolve("entry.yaml")
+    entryFile.writeText("${'$'}ref: './nested/user%20schema.yaml'\n")
     schemaFile.writeUserSchema(includeDisplayName = false)
 
     sourceDir.resolve("openapi.yaml").writeText(
@@ -557,7 +560,7 @@ class GradlePluginTests {
                 content:
                   application/json:
                     schema:
-                      ${'$'}ref: '../sunday-schemas/user.yaml'
+                      ${'$'}ref: '../sunday-schemas/entry.yaml'
       """.trimIndent(),
     )
 
@@ -583,6 +586,10 @@ class GradlePluginTests {
           pkgName.set('io.outfoxx.test.client')
           servicePkgName.set('io.outfoxx.test.client.api')
           defaultMediaTypes.set(["application/json"])
+          generateService.set(false)
+          disableValidationConstraints.set(true)
+          disableJacksonAnnotations.set(true)
+          generatedAnnotation.set(null)
         }
       }
       """.trimIndent(),
@@ -602,12 +609,17 @@ class GradlePluginTests {
       .create()
       .withProjectDir(testProjectDir)
       .withPluginClasspath()
-      .withArguments("sundayGenerate_client", "--stacktrace", "--debug", "--build-cache")
+      .withArguments("build", "--stacktrace", "--debug", "--build-cache")
       .withDebug(true)
       .build()
 
     val allSourcesIndex = testProjectDir.resolve("build/generated/sunday/all-sources/client.txt")
     assertThat(allSourcesIndex.readText(), containsString(schemaFile.canonicalPath))
+
+    assertThat(allSourcesIndex.readText(), containsString(entryFile.canonicalPath))
+    val modelFile = testProjectDir.walkTopDown().single { it.name == "UserSchema.kt" }
+    assertThat(modelFile.readText(), containsString("id: String"))
+    assertThat(modelFile.readText(), not(containsString("displayName")))
 
     schemaFile.writeUserSchema(includeDisplayName = true)
 
@@ -616,12 +628,14 @@ class GradlePluginTests {
         .create()
         .withProjectDir(testProjectDir)
         .withPluginClasspath()
-        .withArguments("sundayGenerate_client", "--stacktrace", "--debug", "--build-cache")
+        .withArguments("build", "--stacktrace", "--debug", "--build-cache")
         .withDebug(true)
         .forwardOutput()
         .build()
 
     assertGenerationInvalidated(result, "client")
+    assertThat(result.task(":compileKotlin")?.outcome, equalTo(TaskOutcome.SUCCESS))
+    assertThat(modelFile.readText(), containsString("displayName: String?"))
   }
 
   @Test
@@ -873,6 +887,8 @@ class GradlePluginTests {
         appendLine("properties:")
         appendLine("  id:")
         appendLine("    type: string")
+        appendLine("  parent:")
+        appendLine("    ${'$'}ref: ''")
         if (includeDisplayName) {
           appendLine("  displayName:")
           appendLine("    type: string")

@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -36,9 +37,141 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
+import java.nio.file.Path
 
 class PythonGeneratedOutputParityTest : PythonTest() {
+
+  @Test
+  @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+  fun `compiles remote schema resources`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val api = fixture.export(directory)
+      for ((server, modules) in listOf(false to api.sundayModules(), true to api.litestarModules())) {
+        assertTrue(
+          compileModules(
+            compiler,
+            modules,
+            importModules = listOf("parity_api.models"),
+            smokeCode =
+              """
+              from parity_api.models import User, Node, Restrictions, Nullability, Pets, Cat, Cat2, Dog, BooleanValues
+              from parity_api.models import BaseRecord, DocumentedRecord, RecordNode
+              from parity_api.models import MappedPets, MappedCat, MappedDog
+              assert issubclass(DocumentedRecord, BaseRecord)
+              record = DocumentedRecord.model_validate({'id': 'one', 'detail': 'detail'})
+              assert isinstance(record, BaseRecord) and record.id == 'one'
+              assert BaseRecord.model_fields['id'].is_required()
+              assert BaseRecord.model_fields['id'].description == 'Parent identifier'
+              assert 'id' not in DocumentedRecord.__annotations__
+              assert 'payload' not in DocumentedRecord.__annotations__
+              assert BaseRecord.model_fields['payload'].annotation == str | None
+              for payload in (None, 'value'):
+                  assert DocumentedRecord.model_validate({'id': 'one', 'payload': payload}).payload == payload
+              assert 'next' not in DocumentedRecord.__annotations__
+              assert BaseRecord.model_fields['next'].annotation == RecordNode | None
+              for next in (None, {'id': 'two', 'next': {'id': 'three'}}):
+                  decoded = DocumentedRecord.model_validate({'id': 'one', 'detail': 'detail', 'next': next})
+                  restored = DocumentedRecord.model_validate_json(decoded.model_dump_json())
+                  if next is None:
+                      assert restored.next is None
+                  else:
+                      assert type(restored.next) is RecordNode
+                      assert restored.next.id == 'two' and restored.next.next.id == 'three'
+              assert 'unrelated' in Cat.model_fields and 'lives' in Cat2.model_fields
+              assert BooleanValues.model_fields['truth'].annotation.__value__ is object
+              assert BooleanValues.model_fields['empty'].annotation.__value__ is object
+              for value in (0, False, 'value', {'nested': True}):
+                  decoded = BooleanValues.model_validate({'truth': value, 'empty': value})
+                  assert decoded.truth == value and decoded.empty == value
+              user = User.model_validate({"id": "one", "address": {"street": "Main"}, "node": None, "composedNode": None, "maybeAddress": None})
+              assert user.node is None and user.composed_node is None
+              assert Node.model_validate({"child": None}).child is None
+              assert user.maybe_address is None
+              assert not User.model_fields['node'].deprecated
+              assert not (User.model_fields['node'].json_schema_extra or {}).get('readOnly', False)
+              assert not User.model_fields['node'].description == 'Annotated node'
+              assert User.model_validate({"id": "one", "address": {"street": "Main"}, "node": None, "composedNode": None, "maybeAddress": {"street": "Main"}}).maybe_address.street == "Main"
+              from pydantic import ValidationError
+              for animal, model in (({'kind': 'kitty', 'lives': 9}, MappedCat), ({'kind': 'hound', 'barks': True}, MappedDog)):
+                  decoded = MappedPets.model_validate({'animal': animal})
+                  assert type(decoded.animal) is model
+                  assert decoded.model_dump(mode='json') == {'animal': animal}
+                  assert type(MappedPets.model_validate_json(decoded.model_dump_json()).animal) is model
+              try:
+                  MappedPets.model_validate({'animal': {'kind': 'MappedCat', 'lives': 9}})
+                  raise AssertionError('mapped discriminator accepted the generated model name')
+              except ValidationError:
+                  pass
+              try:
+                  DocumentedRecord.model_validate({'id': 'one', 'next': 42})
+                  raise AssertionError('recursive reference accepted a number')
+              except ValidationError:
+                  pass
+              for kind, model in (("Cat", Cat2), ("Dog", Dog)):
+                  pets = Pets.model_validate({"animal": {"kind": kind}})
+                  assert isinstance(pets.animal, model)
+                  assert pets.model_dump(mode='json')['animal']['kind'] == kind
+              try:
+                  Pets.model_validate({"animal": {"kind": "Cat2"}})
+                  raise AssertionError('generated model name became a wire value')
+              except ValidationError:
+                  pass
+              for values in (None, ["valid"]):
+                  assert Nullability.model_validate({"strictText": "valid", "values": values}).values == values
+              try:
+                  Nullability.model_validate({"strictText": None, "values": None})
+                  raise AssertionError('constrained string accepted null')
+              except ValidationError:
+                  pass
+              try:
+                  User.model_validate({"id": "one", "address": {"street": "Main"}, "node": None, "composedNode": None, "maybeAddress": 42})
+                  raise AssertionError('nullable address accepted a number')
+              except ValidationError:
+                  pass
+              valid = {"address": {"street": "Main"}, "text": "hello", "state": "active"}
+              assert Restrictions.model_validate(valid).text == "hello"
+              for field in valid:
+                  for excluded in (42, None):
+                      try:
+                          Restrictions.model_validate({**valid, field: excluded})
+                          raise AssertionError(f'{field} accepted {excluded}')
+                      except ValidationError:
+                          pass
+              """.trimIndent(),
+          ),
+        )
+        val models = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "parity_api/models.py")
+        assertTrue(models.contains("Address"), models)
+        assertTrue(models.contains("UserExtendedAddress"), models)
+        assertTrue(models.contains("postal_code"), models)
+        assertTrue(models.contains("class Node("), models)
+        assertTrue(models.contains("node: Node | None"), models)
+        assertTrue(models.contains("composed_node: Node | None"), models)
+        assertTrue(models.contains("child: Node | None"), models)
+        assertFalse(models.contains("class UserNode("), models)
+        assertTrue(models.contains("class UserProfile("), models)
+        assertTrue(models.contains("class UserProfile2("), models)
+        assertTrue(models.contains("remote_value"), models)
+        assertTrue(models.contains("local_value"), models)
+        assertFalse(models.contains("class UserArbitrary("), models)
+        assertFalse(models.contains("class UserNullableArbitrary("), models)
+        assertTrue(models.contains("strict_text: str ="), models)
+        assertFalse(models.contains("strict_text: str | None"), models)
+        val client =
+          CompiledGeneratedSources.source(
+            GeneratedCodeLanguage.Python,
+            "parity_api/references" +
+              if (server) "_server.py" else ".py",
+          )
+        assertTrue(client.contains("= 20"), client)
+      }
+    }
+  }
 
   @Test
   @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)

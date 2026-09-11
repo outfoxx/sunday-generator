@@ -30,11 +30,29 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSourceKind
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceOptions
 
 /**
  * CLI command that exports source documents to Sunday generated API IR YAML.
  */
 class IrCommand : CliktCommand(name = "ir") {
+
+  val openApiReferenceCacheDirectory by option(
+    "--openapi-reference-cache-dir",
+    help = "Cache directory for public HTTP(S) OpenAPI documents",
+  ).file(mustExist = false, canBeFile = false, canBeDir = true)
+
+  val openApiOffline by option(
+    "--openapi-offline",
+    help = "Resolve remote OpenAPI documents from the cache without HTTP requests",
+  ).flag(default = false)
+
+  /** Retrieval options shared by native OpenAPI export and generation. */
+  protected fun openApiReferenceOptions(): OpenApiReferenceOptions =
+    OpenApiReferenceOptions(
+      cacheDirectory = openApiReferenceCacheDirectory?.toPath() ?: OpenApiReferenceOptions().cacheDirectory,
+      offline = openApiOffline,
+    )
 
   override fun help(context: Context): String = "Export source specs to Sunday IR YAML"
 
@@ -78,13 +96,14 @@ class IrCommand : CliktCommand(name = "ir") {
       throw UsageError("Missing source file")
     }
     val output = outputFile ?: throw UsageError("Missing required option '-out'")
-    GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
-      .writeYaml(
-        sourceFiles.map { sourceFile ->
-          sourceFile.toURI()
-        },
-        output.toPath(),
-        sourceKind,
-      )
+    GeneratedApiIrExporter(
+      GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, openApiReferences = openApiReferenceOptions()),
+    ).writeYaml(
+      sourceFiles.map { sourceFile ->
+        sourceFile.toURI()
+      },
+      output.toPath(),
+      sourceKind,
+    )
   }
 }

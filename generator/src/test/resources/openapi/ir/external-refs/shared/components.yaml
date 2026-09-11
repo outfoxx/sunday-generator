@@ -1,0 +1,45 @@
+components:
+  parameters:
+    SearchQuery:
+      $ref: '../parameters.yaml#/parameters/0'
+  requestBodies:
+    UserBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+  responses:
+    UserResponse:
+      description: Created user
+      content:
+        application/json:
+          schema:
+            $ref: './components.yaml#/components/schemas/User'
+    BinaryResponse:
+      description: Download
+      headers:
+        X-Count:
+          $ref: '../parameters.yaml#/headers/Count'
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+  schemas:
+    User:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        parent:
+          $ref: '#/components/schemas/User'
+        profile:
+          $ref: './models%20space.json#/$defs/Profile'
+        repeatedProfile:
+          $ref: '../shared/models%20space.json#/$defs/Profile'
+        externalNode:
+          $ref: './models%20space.json#/$defs/Node'
+        escaped:
+          $ref: './models%20space.json#/$defs/Name~1With~0Escape%20Space'

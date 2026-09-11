@@ -97,8 +97,13 @@ open class KotlinJAXRSGenerateCommand :
     println("Processing ${files.joinToString()}")
 
     val api =
-      GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = mode))
-        .export(files.map { file -> file.toURI() })
+      GeneratedApiIrExporter(
+        GeneratedApiIrOptions(
+          openApiReferences = openApiReferenceOptions(),
+          deriveServicesFromTags = servicesFromTags,
+          generationMode = mode,
+        ),
+      ).export(files.map { file -> file.toURI() })
 
     KotlinJAXRSIrGenerator(api, typeRegistry, kotlinJaxrsOptions())
       .generateServiceTypes()

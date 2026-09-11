@@ -57,7 +57,11 @@ abstract class PythonGenerateCommand(
 
   protected fun exportApi(): GeneratedApiIrExport =
     GeneratedApiIrExporter(
-      GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = generationMode),
+      GeneratedApiIrOptions(
+        openApiReferences = openApiReferenceOptions(),
+        deriveServicesFromTags = servicesFromTags,
+        generationMode = generationMode,
+      ),
     ).exportWithIdentity(files.map { file -> GeneratedApiIrSource(file.toURI()) })
 
   protected fun pythonOptions(export: GeneratedApiIrExport): PythonGeneratorOptions =

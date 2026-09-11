@@ -29,6 +29,7 @@ import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceOptions
 import java.net.URI
 
 abstract class CommonGenerateCommand(
@@ -36,6 +37,23 @@ abstract class CommonGenerateCommand(
   val help: String,
   generateBrokerServicesDefault: Boolean = false,
 ) : CliktCommand(name = name) {
+
+  val openApiReferenceCacheDirectory by option(
+    "--openapi-reference-cache-dir",
+    help = "Cache directory for public HTTP(S) OpenAPI documents",
+  ).file(mustExist = false, canBeFile = false, canBeDir = true)
+
+  val openApiOffline by option(
+    "--openapi-offline",
+    help = "Resolve remote OpenAPI documents from the cache without HTTP requests",
+  ).flag(default = false)
+
+  /** Retrieval options shared by native OpenAPI export and generation. */
+  protected fun openApiReferenceOptions(): OpenApiReferenceOptions =
+    OpenApiReferenceOptions(
+      cacheDirectory = openApiReferenceCacheDirectory?.toPath() ?: OpenApiReferenceOptions().cacheDirectory,
+      offline = openApiOffline,
+    )
 
   override fun help(context: Context): String = help
 

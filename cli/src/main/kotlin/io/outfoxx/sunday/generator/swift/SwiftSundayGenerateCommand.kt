@@ -46,7 +46,11 @@ open class SwiftSundayGenerateCommand :
 
     val api =
       GeneratedApiIrExporter(
-        GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, generationMode = GenerationMode.Client),
+        GeneratedApiIrOptions(
+          openApiReferences = openApiReferenceOptions(),
+          deriveServicesFromTags = servicesFromTags,
+          generationMode = GenerationMode.Client,
+        ),
       ).export(files.map { file -> file.toURI() })
 
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayOptions())

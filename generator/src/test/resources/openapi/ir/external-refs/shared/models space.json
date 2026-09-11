@@ -1,0 +1,16 @@
+{
+  "$defs": {
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "owner": { "$ref": "./components.yaml#/components/schemas/User" },
+        "displayName": { "type": "string" }
+      }
+    },
+    "Node": {
+      "type": "object",
+      "properties": { "external": { "type": "boolean" } }
+    },
+    "Name/With~Escape Space": { "type": "string", "minLength": 2 }
+  }
+}
