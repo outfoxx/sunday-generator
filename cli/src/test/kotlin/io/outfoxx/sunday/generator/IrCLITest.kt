@@ -17,10 +17,11 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.testing.test
-import com.sun.net.httpserver.HttpServer
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
+import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.equalTo
@@ -29,10 +30,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createTempFile
 import kotlin.io.path.writeText
 
@@ -105,146 +104,56 @@ class IrCLITest {
   fun `exports remote schema resources and reuses the CLI cache offline`(
     @TempDir directory: Path,
   ) {
-    val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-    val requests = AtomicInteger()
-    server.createContext("/redirect") { exchange ->
-      exchange.use {
-        requests.incrementAndGet()
-        exchange.responseHeaders.add("Location", "/user.yaml")
-        exchange.sendResponseHeaders(302, -1)
-      }
-    }
-    server.createContext("/user.yaml") { exchange ->
-      exchange.use {
-        requests.incrementAndGet()
-        val bytes =
+    OpenApiHttpFixture().use { server ->
+      server.respond("/redirect", "", 302, mapOf("Location" to "/user.yaml"))
+      server.respond(
+        "/user.yaml",
+        OpenApiReferenceDocuments.document(
+          "Shared user",
           """
-          openapi: 3.1.0
-          info: {title: Shared user, version: 1.0.0}
-          paths: {}
-          components:
-            schemas:
-              User:
-                ${'$'}id: ./user-resource.yaml
-                ${'$'}anchor: user
-                type: [object, 'null']
-                required: [parent, detail]
-                properties:
-                  id: {type: string}
-                  parent: {${'$'}ref: '#user'}
-                  detail:
-                    ${'$'}anchor: detail
-                    description: Original detail
-                    anyOf:
-                      - {type: object, properties: {value: {type: string}}}
-                      - {type: 'null'}
-                  copiedDetail: {${'$'}ref: '#detail'}
-                  strictDetail:
-                    type: object
-                    anyOf: [{type: object, properties: {value: {type: string}}}, {type: 'null'}]
-                  text:
-                    ${'$'}anchor: text
-                    oneOf: [{type: [string, 'null']}, {type: 'null'}]
-                  copiedText: {${'$'}ref: '#text'}
-                  state:
-                    ${'$'}anchor: state
-                    type: [string, 'null']
-                    enum: [active, inactive]
-                  copiedState: {${'$'}ref: '#state'}
-              AnnotatedDetail:
-                ${'$'}ref: '#/components/schemas/User/properties/detail'
-                description: Alias detail
-                readOnly: true
-                deprecated: true
-              NullableValues:
-                ${'$'}anchor: values
-                type: [array, 'null']
-                items: {type: string}
-                then: {type: string}
-              Anything: true
-              Empty: {}
-              Pet:
+          User:
+            ${'$'}id: ./user-resource.yaml
+            ${'$'}anchor: user
+            type: [object, 'null']
+            required: [parent, detail]
+            properties:
+              id: {type: string}
+              parent: {${'$'}ref: '#user'}
+              detail:
+                ${'$'}anchor: detail
+                description: Original detail
+                anyOf:
+                  - {type: object, properties: {value: {type: string}}}
+                  - {type: 'null'}
+              copiedDetail: {${'$'}ref: '#detail'}
+              strictDetail:
                 type: object
-                required: [kind]
-                properties: {kind: {type: string}}
-                discriminator: {propertyName: kind}
-              MappedPet:
-                ${'$'}id: ./mapped-cat?base=pet
-                type: object
-                required: [kind]
-                properties: {kind: {type: string}}
-                discriminator: {propertyName: kind, mapping: {kitty: '?schema=cat'}}
-              Cat:
-                allOf:
-                  - ${'$'}ref: '#/components/schemas/Pet'
-                  - type: object
-                    properties:
-                      kind: {type: string, description: The animal kind}
-                      lives: {type: integer}
-              RecordNode:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id: {type: string}
-                      next:
-                        anyOf:
-                          - {allOf: [{allOf: [{${'$'}ref: '#/components/schemas/RecordNode'}]}], title: Shared, description: Parent next}
-                          - {type: 'null'}
-                  - properties:
-                      next:
-                        anyOf:
-                          - {allOf: [{allOf: [{${'$'}ref: '#/components/schemas/RecordNode'}]}], description: Updated next}
-                          - {type: 'null'}
-              BaseRecord:
-                type: object
-                required: [id]
-                properties:
-                  id: {type: string, description: Parent identifier}
-                  payload:
-                    anyOf: [{type: string, description: Parent payload}, {type: 'null'}]
-                  next:
-                    anyOf:
-                      - {allOf: [{allOf: [{${'$'}ref: '#/components/schemas/RecordNode'}]}], title: Shared, description: Parent next}
-                      - {type: 'null'}
-              DocumentedRecord:
-                allOf:
-                  - ${'$'}ref: '#/components/schemas/BaseRecord'
-                  - type: object
-                    required: [id]
-                    properties:
-                      id: {type: string, description: Child identifier}
-                      payload:
-                        anyOf: [{type: string, description: Child payload}, {type: 'null'}]
-                      next:
-                        anyOf:
-                          - {allOf: [{allOf: [{${'$'}ref: '#/components/schemas/RecordNode'}]}], description: Child next}
-                          - {type: 'null'}
-                      detail: {type: string}
-              Dog: {allOf: [{${'$'}ref: '#/components/schemas/Pet'}, {type: object, properties: {barks: {type: boolean}}}]}
-          """.trimIndent().toByteArray()
-        exchange.sendResponseHeaders(200, bytes.size.toLong())
-        exchange.responseBody.write(bytes)
-      }
-    }
-    server.createContext("/mapped-cat") { exchange ->
-      exchange.use {
-        requests.incrementAndGet()
-        assertEquals("schema=cat", exchange.requestURI.rawQuery)
-        val bytes =
-          """
-          allOf:
-            - ${'$'}ref: 'user.yaml#/components/schemas/MappedPet'
-            - type: object
-              required: [lives]
-              properties: {lives: {type: integer}}
-          """.trimIndent().toByteArray()
-        exchange.sendResponseHeaders(200, bytes.size.toLong())
-        exchange.responseBody.write(bytes)
-      }
-    }
-    server.start()
-    try {
+                anyOf: [{type: object, properties: {value: {type: string}}}, {type: 'null'}]
+              text:
+                ${'$'}anchor: text
+                oneOf: [{type: [string, 'null']}, {type: 'null'}]
+              copiedText: {${'$'}ref: '#text'}
+              state:
+                ${'$'}anchor: state
+                type: [string, 'null']
+                enum: [active, inactive]
+              copiedState: {${'$'}ref: '#state'}
+          AnnotatedDetail:
+            ${'$'}ref: '#/components/schemas/User/properties/detail'
+            description: Alias detail
+            readOnly: true
+            deprecated: true
+          """.trimIndent(),
+          OpenApiReferenceDocuments.nullableValues,
+          OpenApiReferenceDocuments.booleanSchemas,
+          OpenApiReferenceDocuments.pet,
+          OpenApiReferenceDocuments.mappedPet(),
+          OpenApiReferenceDocuments.cat,
+          OpenApiReferenceDocuments.records,
+          OpenApiReferenceDocuments.dog,
+        ),
+      )
+      server.respond("/mapped-cat?schema=cat", OpenApiReferenceDocuments.mappedCat())
       val source = directory.resolve("api.yaml")
       source.writeText(
         """
@@ -262,26 +171,26 @@ class IrCLITest {
         components:
           schemas:
             cat: {type: object, properties: {unrelated: {type: boolean}}}
-            Anything: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/Anything'}
-            Empty: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/Empty'}
+            Anything: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Anything'}
+            Empty: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Empty'}
             Unbounded: {type: integer, exclusiveMinimum: false, exclusiveMaximum: false}
-            DocumentedRecord: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/DocumentedRecord'}
-            MappedPet: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/MappedPet'}
+            DocumentedRecord: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/DocumentedRecord'}
+            MappedPet: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/MappedPet'}
             Pets:
               type: object
               properties:
-                animal: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/Pet'}
-                cat: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/Cat'}
-                dog: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/Dog'}
-            User: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/User'}
+                animal: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Pet'}
+                cat: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Cat'}
+                dog: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Dog'}
+            User: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/User'}
             Limit: {${'$'}ref: '#/paths/~1users/get/parameters/0/schema'}
-            AnnotatedDetail: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#/components/schemas/AnnotatedDetail'}
+            AnnotatedDetail: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/AnnotatedDetail'}
             Nullability:
               type: object
               required: [strictText, values]
               properties:
                 strictText: {type: string, allOf: [{type: string, nullable: true}]}
-                values: {${'$'}ref: 'http://127.0.0.1:${server.address.port}/redirect#values'}
+                values: {${'$'}ref: '${server.baseUri}redirect#values'}
         """.trimIndent(),
       )
       val output = directory.resolve("api.ir.yaml")
@@ -352,6 +261,19 @@ class IrCLITest {
           .single { it.name == "next" }
       assertEquals(GeneratedTypeRef.named("RecordNode", nullable = true), next.type)
       assertFalse(next.required)
+      for (field in listOf("direct", "wrapped")) {
+        for ((name, description) in listOf("BaseRecord" to "Parent", "RecordNode" to "Updated")) {
+          val property =
+            onlineApi.models
+              .single { it.name == name }
+              .properties
+              .single { it.name == field }
+          assertEquals(GeneratedTypeRef.named("RecordNode"), property.type)
+          assertFalse(property.required)
+          assertEquals("$description $field", property.documentation?.description)
+        }
+      }
+      assertEquals(1, onlineApi.models.count { it.name.startsWith("RecordNode") })
       val nullability =
         onlineApi.models
           .single { it.name == "Nullability" }
@@ -397,9 +319,7 @@ class IrCLITest {
       val effectiveOffline = IrCommand().test(arrayOf("--openapi-offline", *arguments))
       assertEquals(0, effectiveOffline.statusCode, effectiveOffline.output)
       assertEquals(onlineApi, GeneratedApiYaml.readPath(output))
-      assertEquals(3, requests.get())
-    } finally {
-      server.stop(0)
+      assertEquals(listOf("/redirect", "/user.yaml", "/mapped-cat?schema=cat"), server.requests.toList())
     }
   }
 

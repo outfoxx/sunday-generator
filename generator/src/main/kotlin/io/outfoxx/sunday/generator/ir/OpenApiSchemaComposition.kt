@@ -17,9 +17,14 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.declarationAnnotations
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.isAssertion
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.lowerBounds
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.upperBounds
 import java.math.BigDecimal
 import java.util.Collections
 import java.util.IdentityHashMap
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaReferences.name as referenceName
 
 /** Projects schema conjunctions into the existing IR without treating assertions as overrides. */
 internal class OpenApiSchemaComposition(
@@ -80,12 +85,15 @@ internal class OpenApiSchemaComposition(
       parts.forEach { part -> result = merge(result, resolve(part), schema) }
       val own =
         schema.entries
-          .filter { it.key is String && it.key !in setOf(REF, "allOf") }
+          .filter { it.key is String && it.key !in setOf("\$ref", "allOf") }
           .associate { it.key as String to it.value }
       result = merge(result, normalizeAssertions(OpenApiSchemaBounds.normalize(own, schema)), schema)
       validate(result, schema)
       // Effective schemas use numeric exclusive bounds, including across dialect boundaries.
-      return ((schema as? OpenApiSchema)?.withFields(result, false) ?: result).also { resolved[schema] = it }
+      return ((schema as? OpenApiSchema)?.withFields(result, false) ?: result).also {
+        resolved[schema] = it
+        resolved[it] = it
+      }
     } finally {
       resolving.remove(schema)
     }
@@ -222,7 +230,8 @@ internal class OpenApiSchemaComposition(
       left == true -> right
       right == true -> left
       left == false || right == false -> false
-      left is Map<*, *> && right is Map<*, *> -> resolve(located(origin, mapOf("allOf" to listOf(left, right))))
+      left is Map<*, *> && right is Map<*, *> ->
+        compatibility.mergeIfCompatible(left, right) ?: resolve(located(origin, mapOf("allOf" to listOf(left, right))))
       else -> fail(origin, "Unsupported OpenAPI schema intersection")
     }
 
@@ -304,58 +313,4 @@ internal class OpenApiSchemaComposition(
     origin: Map<*, *>,
     message: String,
   ): Nothing = (origin as? OpenApiSchema)?.error(message) ?: genError(message)
-
-  companion object {
-    private const val REF = "\$ref"
-    private val declarationAnnotations =
-      setOf("discriminator", "description", "summary", "title", "example", "examples", "deprecated")
-    private val lowerBounds =
-      setOf("minimum", "exclusiveMinimum", "minLength", "minItems", "minProperties", "minContains")
-    private val upperBounds =
-      setOf("maximum", "exclusiveMaximum", "maxLength", "maxItems", "maxProperties", "maxContains")
-    private val assertions =
-      setOf(
-        "type",
-        "enum",
-        "const",
-        "required",
-        "properties",
-        "patternProperties",
-        "additionalProperties",
-        "items",
-        "prefixItems",
-        "allOf",
-        "oneOf",
-        "anyOf",
-        "not",
-        "if",
-        "then",
-        "else",
-        "contains",
-        "propertyNames",
-        "dependentSchemas",
-        "dependentRequired",
-        "unevaluatedItems",
-        "unevaluatedProperties",
-        "multipleOf",
-        "uniqueItems",
-        "pattern",
-        "format",
-        "nullable",
-      ) + lowerBounds + upperBounds
-
-    fun isAssertion(name: String): Boolean = name in assertions
-
-    fun referenceName(schema: Map<*, *>): String? =
-      (schema[REF] as? String)?.takeIf { it.startsWith("#/components/schemas/") }?.substringAfterLast('/')
-
-    fun isSingleReference(schema: Map<*, *>): Boolean = singleReferenceName(schema) != null
-
-    /** Follows assertion-free allOf wrappers without expanding the named target. */
-    fun singleReferenceName(schema: Map<*, *>): String? {
-      if (schema.keys.any { it is String && it != "allOf" && isAssertion(it) }) return null
-      val member = (schema["allOf"] as? List<*>)?.singleOrNull() as? Map<*, *> ?: return null
-      return referenceName(member) ?: singleReferenceName(member)
-    }
-  }
 }

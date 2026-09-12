@@ -24,4 +24,14 @@ data class OpenApiReferenceResolution(
   val document: Map<String, Any?>,
   /** Retrieval URIs, including redirect aliases, mapped to captured source content. */
   val documents: Map<URI, OpenApiLoadedDocument>,
-)
+) {
+  internal val schemas: Map<String, Map<*, *>> =
+    ((document["components"] as? Map<*, *>)?.get("schemas") as? Map<*, *>)
+      .orEmpty()
+      .entries
+      .mapNotNull { (name, schema) -> (name as? String)?.let { it to (schema as? Map<*, *>).orEmpty() } }
+      .toMap()
+
+  // Kept out of the public result fields and serialized snapshots; the converter reuses discovery's completed work.
+  internal val analysis: OpenApiSchemaAnalysis by lazy { OpenApiSchemaAnalysis(schemas) }
+}

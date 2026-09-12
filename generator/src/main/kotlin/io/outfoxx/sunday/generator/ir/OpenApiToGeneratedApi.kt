@@ -214,10 +214,7 @@ class OpenApiToGeneratedApi(
   }
 
   private fun OpenApiSourceDocument.parameter(value: Any?): GeneratedParameter? {
-    if ((value as? Map<*, *>)?.excluded() == true) {
-      return null
-    }
-    val parameter = resolveParameter(value) ?: return null
+    val parameter = value as? Map<*, *> ?: return null
     if (parameter.excluded()) {
       return null
     }
@@ -254,11 +251,7 @@ class OpenApiToGeneratedApi(
     operation: Map<*, *>,
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedPayload? {
-    if ((operation["requestBody"] as? Map<*, *>)?.excluded() == true) {
-      return null
-    }
-    val requestBodyReference = operation["requestBody"] as? Map<*, *>
-    val requestBody = resolveRequestBody(operation["requestBody"]) ?: return null
+    val requestBody = operation.mapValue("requestBody") ?: return null
     if (requestBody.excluded()) {
       return null
     }
@@ -277,7 +270,7 @@ class OpenApiToGeneratedApi(
       mediaTypes = payloads.mapNotNull { payload -> payload.mediaTypes.firstOrNull() },
       payloads = payloads.takeIf { it.size > 1 }.orEmpty(),
       examples = content.flatMap { (mediaType, media) -> media.examples(mediaType) },
-      streaming = requestBodyReference?.modeFlag("x-sunday-streaming") ?: requestBody.modeFlag("x-sunday-streaming"),
+      streaming = requestBody.modeFlag("x-sunday-streaming"),
       documentation = documentation(description = requestBody["description"] as? String),
     )
   }
@@ -293,7 +286,7 @@ class OpenApiToGeneratedApi(
       .orEmpty()
       .mapNotNull { (statusValue, responseValue) ->
         val status = statusValue as? String ?: return@mapNotNull null
-        val response = resolveResponse(responseValue) ?: return@mapNotNull null
+        val response = responseValue as? Map<*, *> ?: return@mapNotNull null
         val content = response.content()
         val responseScope =
           GeneratedModelScope(
@@ -338,11 +331,11 @@ class OpenApiToGeneratedApi(
     scope: GeneratedModelScope?,
     localModels: MutableMap<String, GeneratedModel>? = null,
   ): GeneratedTypeRef {
-    val effective = composition.resolve(schema)
-    val projection = nullUnions.project(schema)
-    val nullable = projection?.nullable ?: nullability.isNullable(effective)
-    schema.refName()?.let { return GeneratedTypeRef.named(it, nullable = nullable) }
-    schema.singleAllOfRefName()?.let { return GeneratedTypeRef.named(it, nullable = nullable) }
+    val analyzed = analysis.analyze(schema)
+    val effective = analyzed.effective
+    val projection = analyzed.projection
+    val nullable = analyzed.nullable
+    analyzed.canonicalReference?.let { return GeneratedTypeRef.named(it, nullable = nullable) }
 
     if (projection != null) {
       return schemaTypeRef(projection.schema, nameHint, scope, localModels).copy(nullable = projection.nullable)
@@ -426,15 +419,16 @@ class OpenApiToGeneratedApi(
     discriminatorValues: Map<String, String>,
     scope: GeneratedModelScope? = null,
   ): GeneratedModel {
-    val composed = composition.model(schema)
+    val analyzed = analysis.analyze(schema)
+    val composed = analyzed.model
     val resolved = composed.schema
     val oneOf = resolved.listValue("oneOf").mapNotNull { it as? Map<*, *> }
     val anyOf = resolved.listValue("anyOf").mapNotNull { it as? Map<*, *> }
 
-    nullUnions.project(schema)?.let { projection ->
+    analyzed.projection?.let { projection ->
       val payload = projection.schema
       val model =
-        if (payload.refName() != null || payload.singleAllOfRefName() != null) {
+        if (OpenApiSchemaReferences.canonicalName(payload) != null) {
           GeneratedModel(
             name = name,
             kind = GeneratedModel.Kind.SCALAR_ALIAS,
@@ -455,7 +449,7 @@ class OpenApiToGeneratedApi(
       }
     }
 
-    val nullable = nullability.isNullable(schema)
+    val nullable = analyzed.nullable
     return when {
       oneOf.isNotEmpty() || anyOf.isNotEmpty() ->
         generatedUnionModel(
@@ -935,38 +929,7 @@ class OpenApiToGeneratedApi(
           .mapNotNull { (value, ref) -> (ref as? String)?.substringAfterLast('/')?.let { it to value.toString() } }
       }.toMap()
 
-  private fun OpenApiSourceDocument.resolveParameter(value: Any?): Map<*, *>? =
-    when (value) {
-      is Map<*, *> -> resolveComponentRef(value, "parameters")
-      else -> null
-    }
-
-  private fun OpenApiSourceDocument.resolveRequestBody(value: Any?): Map<*, *>? =
-    when (value) {
-      is Map<*, *> -> resolveComponentRef(value, "requestBodies")
-      else -> null
-    }
-
-  private fun OpenApiSourceDocument.resolveResponse(value: Any?): Map<*, *>? =
-    when (value) {
-      is Map<*, *> -> resolveComponentRef(value, "responses")
-      else -> null
-    }
-
-  private fun OpenApiSourceDocument.resolveSchema(schema: Map<*, *>): Map<*, *> =
-    composition.resolve(nullUnions.project(schema)?.schema ?: schema)
-
-  private fun OpenApiSourceDocument.resolveComponentRef(
-    value: Map<*, *>,
-    component: String,
-  ): Map<*, *> = value.refName()?.let { components.mapValue(component)?.mapValue(it) } ?: value
-
-  private fun Map<*, *>.refName(): String? =
-    (this["\$ref"] as? String)
-      ?.takeIf { ref -> ref.startsWith("#/components/") }
-      ?.substringAfterLast('/')
-
-  private fun Map<*, *>.singleAllOfRefName(): String? = OpenApiSchemaComposition.singleReferenceName(this)
+  private fun OpenApiSourceDocument.resolveSchema(schema: Map<*, *>): Map<*, *> = analysis.analyze(schema).metadata
 
   private fun Map<*, *>.content(): Map<String, Map<*, *>> =
     mapValue("content")
@@ -1178,7 +1141,7 @@ class OpenApiToGeneratedApi(
 
   private fun Map<*, *>.isUnconstrainedSchema(): Boolean =
     keys.all { key ->
-      key is String && key != "\$ref" && (key == "nullable" || !OpenApiSchemaComposition.isAssertion(key))
+      key is String && key != "\$ref" && (key == "nullable" || !OpenApiSchemaKeywords.isAssertion(key))
     }
 
   private fun Map<*, *>.isMapModel(): Boolean =
@@ -1344,8 +1307,9 @@ class OpenApiToGeneratedApi(
 
   private class OpenApiSourceDocument(
     val location: String,
-    val source: Map<*, *>,
+    resolution: OpenApiReferenceResolution,
   ) {
+    val source = resolution.document
 
     private fun Map<*, *>.mapValue(name: String): Map<*, *>? = this[name] as? Map<*, *>
 
@@ -1363,16 +1327,8 @@ class OpenApiToGeneratedApi(
           (path as? String)?.let { it to (item as? Map<*, *>).orEmpty() }
         }.toMap()
     val components: Map<*, *> = source.mapValue("components").orEmpty()
-    val schemas: Map<String, Map<*, *>> =
-      components
-        .mapValue("schemas")
-        .orEmpty()
-        .mapNotNull { (name, schema) ->
-          (name as? String)?.let { it to (schema as? Map<*, *>).orEmpty() }
-        }.toMap()
-    val composition = OpenApiSchemaComposition(schemas)
-    val nullability = OpenApiSchemaNullability(composition)
-    val nullUnions = OpenApiNullUnionProjection(composition, nullability)
+    val schemas = resolution.schemas
+    val analysis = resolution.analysis
     val modelNames = OpenApiModelNames(schemas.keys)
     val servers: List<Map<*, *>> = source.listValue("servers").mapNotNull { it as? Map<*, *> }
     val security: List<Any?>? = source["security"] as? List<*>
@@ -1398,7 +1354,7 @@ class OpenApiToGeneratedApi(
       ): OpenApiSourceDocument =
         OpenApiSourceDocument(
           location,
-          OpenApiReferenceResolver(documentLoader).resolve(URI(location)).document,
+          OpenApiReferenceResolver(documentLoader).resolve(URI(location)),
         )
     }
   }

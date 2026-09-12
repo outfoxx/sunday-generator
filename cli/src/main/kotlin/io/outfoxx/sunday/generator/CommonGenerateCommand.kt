@@ -20,6 +20,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
@@ -38,22 +39,16 @@ abstract class CommonGenerateCommand(
   generateBrokerServicesDefault: Boolean = false,
 ) : CliktCommand(name = name) {
 
-  val openApiReferenceCacheDirectory by option(
-    "--openapi-reference-cache-dir",
-    help = "Cache directory for public HTTP(S) OpenAPI documents",
-  ).file(mustExist = false, canBeFile = false, canBeDir = true)
+  private val referenceOptions by OpenApiReferenceOptionGroup()
 
-  val openApiOffline by option(
-    "--openapi-offline",
-    help = "Resolve remote OpenAPI documents from the cache without HTTP requests",
-  ).flag(default = false)
+  /** Explicit cache directory, or null when using the default. */
+  val openApiReferenceCacheDirectory get() = referenceOptions.cacheDirectory
+
+  /** Whether remote documents must be loaded without HTTP requests. */
+  val openApiOffline get() = referenceOptions.offline
 
   /** Retrieval options shared by native OpenAPI export and generation. */
-  protected fun openApiReferenceOptions(): OpenApiReferenceOptions =
-    OpenApiReferenceOptions(
-      cacheDirectory = openApiReferenceCacheDirectory?.toPath() ?: OpenApiReferenceOptions().cacheDirectory,
-      offline = openApiOffline,
-    )
+  protected fun openApiReferenceOptions(): OpenApiReferenceOptions = referenceOptions.options()
 
   override fun help(context: Context): String = help
 

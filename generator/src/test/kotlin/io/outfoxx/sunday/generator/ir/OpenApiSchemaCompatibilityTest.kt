@@ -18,6 +18,8 @@ package io.outfoxx.sunday.generator.ir
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -146,8 +148,83 @@ class OpenApiSchemaCompatibilityTest {
       assertTrue(comparison.equivalent(before, after))
       val merged = (comparison.mergeValue("anyOf", listOf(before), listOf(after)) as List<*>).single()
       assertEquals(after + ("title" to "Inherited"), merged)
+      assertEquals(merged, comparison.mergeIfCompatible(before, after))
     }
     assertEquals("Parent wrapper", before["description"])
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["description", "summary", "title", "example", "examples", "externalDocs", "\$comment"])
+  fun `schema intersections overlay documentary changes without expanding recursive values`(annotation: String) {
+    val retained = if (annotation == "title") "description" else "title"
+    val before = ref("Node") + mapOf(annotation to "Parent", retained to "Inherited")
+    val after = ref("Node") + (annotation to "Child")
+    for (keyword in listOf(
+      "properties",
+      "patternProperties",
+      "dependentSchemas",
+      "items",
+      "additionalProperties",
+      "unevaluatedProperties",
+      "propertyNames",
+    )) {
+      val schemaMap = keyword in setOf("properties", "patternProperties", "dependentSchemas")
+
+      fun operand(value: Map<String, Any?>) = mapOf(keyword to if (schemaMap) mapOf("next" to value) else value)
+      val node = mapOf("allOf" to listOf(operand(before), operand(after)))
+      val composition = OpenApiSchemaComposition(mapOf("Node" to node))
+      val effective = composition.resolve(node)
+      assertEquals(operand(after + (retained to "Inherited")), effective, keyword)
+      assertSame(effective, composition.resolve(node))
+      assertSame(effective, composition.resolve(effective))
+      assertEquals("Parent", before[annotation])
+    }
+  }
+
+  @Test
+  fun `unproven recursive contracts and changed literal data cannot use a compatible merge`() {
+    val comparison =
+      OpenApiSchemaCompatibility(
+        OpenApiSchemaComposition(mapOf("Node" to ref("Node"), "Other" to ref("Other"))),
+      )
+    val before = ref("Node") + ("description" to "Parent")
+    val after = ref("Node") + ("description" to "Child")
+    assertEquals(after, comparison.mergeIfCompatible(before, after))
+    assertNull(comparison.mergeIfCompatible(before, ref("Other")))
+    for (key in listOf("maxProperties", "default", "deprecated", "readOnly", "writeOnly", "x-sunday-name")) {
+      assertNull(comparison.mergeIfCompatible(before, after + (key to 1)), key)
+    }
+    for (key in listOf("enum", "const", "default", "x-data", "unknown")) {
+      val left = if (key == "enum") listOf(before) else before
+      val right = if (key == "enum") listOf(after) else after
+      assertNull(comparison.mergeIfCompatible(mapOf(key to left), mapOf(key to right)), key)
+    }
+    assertEquals(after, comparison.mergeIfCompatible(before, after))
+  }
+
+  @Test
+  fun `comparison operands preserve aliases and effective annotation overlays on repeated merges`() {
+    val text = mapOf("type" to "string", "minLength" to 2, "title" to "Inherited")
+    val comparison = OpenApiSchemaCompatibility(OpenApiSchemaComposition(mapOf("Text" to text, "Alias" to ref("Text"))))
+    val original = ref("Text") + ("description" to "Parent")
+    val alias = ref("Alias") + ("description" to "Alias use")
+    val composed = mapOf("allOf" to listOf(text), "description" to "Composed use")
+    repeat(2) {
+      assertTrue(comparison.equivalent(original, alias))
+      assertTrue(comparison.equivalent(original, composed))
+      assertEquals(ref("Text") + ("description" to "Alias use"), comparison.mergeIfCompatible(original, alias))
+      assertEquals(text + ("description" to "Composed use"), comparison.mergeIfCompatible(original, composed))
+      assertEquals(
+        listOf(ref("Text") + ("description" to "Alias use")),
+        comparison.mergeValue("anyOf", listOf(original), listOf(alias)),
+      )
+      assertEquals(
+        listOf(text + ("description" to "Composed use")),
+        comparison.mergeValue("oneOf", listOf(original), listOf(composed)),
+      )
+    }
+    assertEquals("Parent", original["description"])
+    assertFalse(comparison.equivalent(original, composed + ("default" to "changed")))
   }
 
   private fun ref(name: String) = mapOf("\$ref" to "#/components/schemas/$name")

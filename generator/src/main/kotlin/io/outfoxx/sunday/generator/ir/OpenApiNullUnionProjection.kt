@@ -69,12 +69,12 @@ internal class OpenApiNullUnionProjection(
     // such an alias needs a separate wrapper declaration, never a mutation of the target.
     val unchanged = assertions(constrained) == assertions(nonNullPayload)
     val reference =
-      OpenApiSchemaComposition.referenceName(payload) != null || OpenApiSchemaComposition.isSingleReference(payload)
+      OpenApiSchemaReferences.canonicalName(payload) != null
     val keepReference = reference && unchanged && (nullable || nullability.acceptsNull(payloadSchema) == false)
     val fields =
       if (keepReference) {
         payload.entries.associate { it.key.toString() to it.value } +
-          wrapper.filterKeys { !OpenApiSchemaComposition.isAssertion(it) }
+          wrapper.filterKeys { !OpenApiSchemaKeywords.isAssertion(it) }
       } else {
         constrained
       }
@@ -117,7 +117,7 @@ internal class OpenApiNullUnionProjection(
       schema["enum"] == listOf(null)
 
   private fun assertions(schema: Map<String, Any?>): Map<String, Any?> =
-    schema.filterKeys(OpenApiSchemaComposition::isAssertion)
+    schema.filterKeys(OpenApiSchemaKeywords::isAssertion)
 
   private fun fail(
     origin: Map<*, *>,

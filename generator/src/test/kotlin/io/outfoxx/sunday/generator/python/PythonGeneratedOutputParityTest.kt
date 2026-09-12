@@ -62,6 +62,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
               from parity_api.models import User, Node, Restrictions, Nullability, Pets, Cat, Cat2, Dog, BooleanValues
               from parity_api.models import BaseRecord, DocumentedRecord, RecordNode
               from parity_api.models import MappedPets, MappedCat, MappedDog
+              from pydantic import ValidationError
               assert issubclass(DocumentedRecord, BaseRecord)
               record = DocumentedRecord.model_validate({'id': 'one', 'detail': 'detail'})
               assert isinstance(record, BaseRecord) and record.id == 'one'
@@ -74,9 +75,27 @@ class PythonGeneratedOutputParityTest : PythonTest() {
                   assert DocumentedRecord.model_validate({'id': 'one', 'payload': payload}).payload == payload
               assert 'next' not in DocumentedRecord.__annotations__
               assert BaseRecord.model_fields['next'].annotation == RecordNode | None
+              for field in ('direct', 'wrapped'):
+                  assert field not in DocumentedRecord.__annotations__
+                  assert BaseRecord.model_fields[field].annotation == RecordNode | None
+                  assert RecordNode.model_fields[field].annotation == RecordNode | None
+                  assert BaseRecord.model_fields[field].description == 'Parent ' + field
+                  assert RecordNode.model_fields[field].description == 'Updated ' + field
+                  nested = {'id': 'two', field: {'id': 'three'}}
+                  decoded = DocumentedRecord.model_validate({'id': 'one', field: nested})
+                  restored = DocumentedRecord.model_validate_json(decoded.model_dump_json(exclude_unset=True))
+                  value = getattr(restored, field)
+                  assert type(value) is RecordNode and getattr(value, field).id == 'three'
+                  assert restored.model_dump(exclude_unset=True) == {'id': 'one', field: nested}
+                  for invalid in (42, None):
+                      try:
+                          RecordNode.model_validate({'id': 'one', field: invalid})
+                          raise AssertionError('non-null recursive reference accepted an invalid value')
+                      except ValidationError:
+                          pass
               for next in (None, {'id': 'two', 'next': {'id': 'three'}}):
                   decoded = DocumentedRecord.model_validate({'id': 'one', 'detail': 'detail', 'next': next})
-                  restored = DocumentedRecord.model_validate_json(decoded.model_dump_json())
+                  restored = DocumentedRecord.model_validate_json(decoded.model_dump_json(exclude_unset=True))
                   if next is None:
                       assert restored.next is None
                   else:
@@ -96,7 +115,6 @@ class PythonGeneratedOutputParityTest : PythonTest() {
               assert not (User.model_fields['node'].json_schema_extra or {}).get('readOnly', False)
               assert not User.model_fields['node'].description == 'Annotated node'
               assert User.model_validate({"id": "one", "address": {"street": "Main"}, "node": None, "composedNode": None, "maybeAddress": {"street": "Main"}}).maybe_address.street == "Main"
-              from pydantic import ValidationError
               for animal, model in (({'kind': 'kitty', 'lives': 9}, MappedCat), ({'kind': 'hound', 'barks': True}, MappedDog)):
                   decoded = MappedPets.model_validate({'animal': animal})
                   assert type(decoded.animal) is model

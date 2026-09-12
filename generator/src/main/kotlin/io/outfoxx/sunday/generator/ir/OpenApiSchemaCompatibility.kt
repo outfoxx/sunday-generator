@@ -16,47 +16,74 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.documentaryAnnotations
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.numericAssertions
 import java.util.Collections
 import java.util.IdentityHashMap
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.lists as schemaLists
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.maps as schemaMaps
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.values as schemaValues
 
 /** Compares inherited field contracts without treating documentary annotations as refinements. */
 internal class OpenApiSchemaCompatibility(
   private val composition: OpenApiSchemaComposition,
 ) {
-  private val compared = IdentityHashMap<Map<*, *>, IdentityHashMap<Map<*, *>, Boolean>>()
+  private class Comparison(
+    val first: Map<*, *>,
+    val second: Map<*, *>,
+  )
+
+  private val compared = IdentityHashMap<Map<*, *>, IdentityHashMap<Map<*, *>, Comparison>>()
   private val comparing = IdentityHashMap<Map<*, *>, MutableSet<Map<*, *>>>()
 
   fun equivalent(
     left: Any?,
     right: Any?,
-  ): Boolean {
-    if (left == right) return true
-    if (left !is Map<*, *> || right !is Map<*, *>) return false
+  ): Boolean = left == right || (left is Map<*, *> && right is Map<*, *> && compare(left, right) != null)
+
+  private fun compare(
+    left: Map<*, *>,
+    right: Map<*, *>,
+  ): Comparison? {
     compared[left]?.get(right)?.let { return it }
     val active = comparing.getOrPut(left) { Collections.newSetFromMap(IdentityHashMap()) }
     // Recursive shapes that cannot be established from canonical references remain refinements.
-    if (!active.add(right)) return false
+    if (!active.add(right)) return null
     try {
-      // Matching wrappers can establish a recursive contract without resolving the enclosing declaration.
-      if (structurallyEquivalent(left, right)) {
-        compared.getOrPut(left) { IdentityHashMap() }[right] = true
-        return true
-      }
-      val reference = OpenApiSchemaComposition.referenceName(left)
-      if (reference != null &&
-        reference == OpenApiSchemaComposition.referenceName(right) &&
-        equivalentFields(left, right)
-      ) {
-        return true
-      }
-      val first = composition.resolveForComparison(left) ?: return false
-      val second = composition.resolveForComparison(right) ?: return false
-      val result = equivalentFields(first, second)
+      val result = compareOperands(left, right) ?: return null
+      // A blocked recursive comparison can succeed later; only completed compatible results are reusable.
       compared.getOrPut(left) { IdentityHashMap() }[right] = result
       return result
     } finally {
       active.remove(right)
     }
+  }
+
+  private fun compareOperands(
+    left: Map<*, *>,
+    right: Map<*, *>,
+  ): Comparison? {
+    // Matching wrappers can establish a recursive contract without resolving the enclosing declaration.
+    if (structurallyEquivalent(left, right)) {
+      return Comparison(left, right)
+    }
+    val reference = OpenApiSchemaReferences.name(left)
+    if (reference != null &&
+      reference == OpenApiSchemaReferences.name(right) &&
+      equivalentFields(left, right)
+    ) {
+      return Comparison(left, right)
+    }
+    val first = composition.resolveForComparison(left) ?: return null
+    val second = composition.resolveForComparison(right) ?: return null
+    if (!equivalentFields(first, second)) return null
+
+    // Equivalent named aliases retain the inherited spelling when their use-site assertions also match.
+    val referenceUses =
+      OpenApiSchemaReferences.name(left) != null &&
+        OpenApiSchemaReferences.name(right) != null &&
+        equivalentFields(left.filterKeys { it != "\$ref" }, right.filterKeys { it != "\$ref" })
+    return if (referenceUses || equivalentFields(left, right)) Comparison(left, right) else Comparison(first, second)
   }
 
   fun equivalentValue(
@@ -108,20 +135,21 @@ internal class OpenApiSchemaCompatibility(
   private fun mergeAnnotations(
     left: Any?,
     right: Any?,
-  ): Any? {
-    if (left == right || left !is Map<*, *> || right !is Map<*, *>) return right
-    // Equivalent named aliases retain the inherited reference spelling instead of expanding their target.
-    val referenceUses =
-      OpenApiSchemaComposition.referenceName(left) != null &&
-        OpenApiSchemaComposition.referenceName(right) != null &&
-        equivalentFields(left.filterKeys { it != "\$ref" }, right.filterKeys { it != "\$ref" })
-    // Keep references in matching branches; only different composition forms need effective schemas.
-    val (first, second) =
-      if (structurallyEquivalent(left, right) || referenceUses || equivalentFields(left, right)) {
-        left to right
-      } else {
-        checkNotNull(composition.resolveForComparison(left)) to checkNotNull(composition.resolveForComparison(right))
-      }
+  ): Any? =
+    if (left == right || left !is Map<*, *> || right !is Map<*, *>) {
+      right
+    } else {
+      checkNotNull(mergeIfCompatible(left, right))
+    }
+
+  /** Reuses the established comparison operands to overlay documentation without expanding matching references. */
+  fun mergeIfCompatible(
+    left: Map<*, *>,
+    right: Map<*, *>,
+  ): Map<String, Any?>? {
+    val comparison = compare(left, right) ?: return null
+    val first = comparison.first
+    val second = comparison.second
     val fields = first.entries.associate { it.key.toString() to it.value }.toMutableMap()
     second.forEach { (name, value) ->
       val key = name.toString()
@@ -158,41 +186,5 @@ internal class OpenApiSchemaCompatibility(
     val first = left.toString().toBigDecimalOrNull() ?: return false
     val second = right.toString().toBigDecimalOrNull() ?: return false
     return first.compareTo(second) == 0
-  }
-
-  private companion object {
-    val documentaryAnnotations =
-      setOf("description", "summary", "title", "example", "examples", "externalDocs", "\$comment")
-    val schemaMaps = setOf("properties", "patternProperties", "\$defs", "definitions", "dependentSchemas")
-    val schemaLists = setOf("allOf", "oneOf", "anyOf", "prefixItems")
-    val numericAssertions =
-      setOf(
-        "minimum",
-        "maximum",
-        "exclusiveMinimum",
-        "exclusiveMaximum",
-        "minLength",
-        "maxLength",
-        "minItems",
-        "maxItems",
-        "minProperties",
-        "maxProperties",
-        "minContains",
-        "maxContains",
-        "multipleOf",
-      )
-    val schemaValues =
-      setOf(
-        "items",
-        "additionalProperties",
-        "not",
-        "if",
-        "then",
-        "else",
-        "contains",
-        "propertyNames",
-        "unevaluatedItems",
-        "unevaluatedProperties",
-      )
   }
 }

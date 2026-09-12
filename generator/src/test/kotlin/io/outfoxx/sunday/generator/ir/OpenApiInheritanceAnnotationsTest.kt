@@ -149,6 +149,158 @@ class OpenApiInheritanceAnnotationsTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["3.0.3", "3.1.0"])
+  fun `recursive property intersections retain references annotations and inheritance`(
+    version: String,
+    @TempDir directory: Path,
+  ) {
+    val nodeReference = if (version == "3.1.0") "https://schemas.example.test/node" else "#/components/schemas/Node"
+    val recursiveReference = if (version == "3.1.0") "#node" else nodeReference
+    for (depth in 0..2) {
+      fun reference(
+        target: String,
+        label: String,
+        level: Int = depth,
+      ): String {
+        val contract =
+          if (level == 0) {
+            "${'$'}ref: '$target'"
+          } else {
+            "allOf: [${reference(target, label, level - 1)}]"
+          }
+        val inherited = if (label == "Parent") ", title: 'Inherited $level'" else ""
+        return "{$contract, description: '$label $level'$inherited}"
+      }
+      for (nullable in listOf(false, true)) {
+        val parent = reference(nodeReference, "Parent")
+        val declarations =
+          listOf(
+            """
+            Node:
+              ${'$'}id: https://schemas.example.test/node
+              ${'$'}anchor: node
+              allOf:
+                - type: object
+                  nullable: $nullable
+                  required: [next]
+                  properties:
+                    next: $parent
+                    optional: $parent
+                - properties:
+                    next: ${reference(recursiveReference, "Updated")}
+            """.trimIndent(),
+            "NodeAlias: {${'$'}ref: '#/components/schemas/Node'}",
+            "Pet: {type: object, required: [value], properties: {value: $parent}}",
+            """
+            Cat:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Pet'
+                - properties:
+                    value: ${reference("#/components/schemas/NodeAlias", "Child")}
+                    own: {type: string}
+            """.trimIndent(),
+          )
+        for (order in listOf(declarations, declarations.reversed())) {
+          val source = api(directory, order.joinToString("\n"), version)
+          val converter = OpenApiToGeneratedApi()
+          val result = converter.convert(source.toUri())
+          val models = result.models.associateBy { it.name }
+          val expectedType = GeneratedTypeRef.named("Node", nullable = nullable)
+          assertEquals(setOf("Node", "NodeAlias", "Pet", "Cat"), models.keys)
+          for (name in listOf("Node", "NodeAlias")) {
+            val properties = models.getValue(name).properties.associateBy { it.name }
+            assertEquals(setOf("next", "optional"), properties.keys)
+            assertEquals(expectedType, properties.getValue("next").type)
+            assertEquals(expectedType, properties.getValue("optional").type)
+            assertTrue(properties.getValue("next").required)
+            assertFalse(properties.getValue("optional").required)
+          }
+          assertEquals(
+            expectedType,
+            models
+              .getValue("Pet")
+              .properties
+              .single()
+              .type,
+          )
+          assertTrue(
+            models
+              .getValue("Pet")
+              .properties
+              .single()
+              .required,
+          )
+          assertEquals(listOf(GeneratedTypeRef.named("Pet")), models.getValue("Cat").inherits)
+          assertEquals(listOf("own"), models.getValue("Cat").properties.map { it.name })
+          val schemas = schemas(source)
+          val composition = OpenApiSchemaComposition(schemas)
+          val parts = schemas.getValue("Node")["allOf"] as List<*>
+          val original = ((parts.first() as Map<*, *>)["properties"] as Map<*, *>)["next"]
+          var origin = ((parts.last() as Map<*, *>)["properties"] as Map<*, *>)["next"] as Map<*, *>
+          var merged = (composition.resolve(schemas.getValue("Node"))["properties"] as Map<*, *>)["next"] as Map<*, *>
+          for (level in depth downTo 0) {
+            if (level > 0 || version == "3.1.0") {
+              assertEquals("Updated $level", merged["description"])
+              assertEquals("Inherited $level", merged["title"])
+            }
+            if (depth > 0 || version == "3.1.0") {
+              val location = assertThrows(GenerationException::class.java) { (merged as OpenApiSchema).error("merged") }
+              val expected = assertThrows(GenerationException::class.java) { (origin as OpenApiSchema).error("origin") }
+              assertEquals(expected.file, location.file)
+              assertEquals(expected.line, location.line)
+            }
+            if (level > 0) {
+              merged = (merged["allOf"] as List<*>).single() as Map<*, *>
+              origin = (origin["allOf"] as List<*>).single() as Map<*, *>
+            }
+          }
+          assertEquals("#/components/schemas/Node", merged["\$ref"])
+          assertEquals(original, (composition.resolve(schemas.getValue("Pet"))["properties"] as Map<*, *>)["value"])
+          assertEquals(result, converter.convert(source.toUri()))
+          if (depth == 2) {
+            Executors.newFixedThreadPool(2).use { executor ->
+              executor.invokeAll(List(4) { Callable { converter.convert(source.toUri()) } }).forEach {
+                assertEquals(result, it.get())
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `unproven recursive property intersections retain source located failures`(
+    @TempDir directory: Path,
+  ) {
+    val reference = "${'$'}ref: '#/components/schemas/Node'"
+    for (changed in listOf(
+      "${'$'}ref: '#/components/schemas/Other'",
+      "$reference, maxProperties: 1",
+      "$reference, default: {description: Literal, ${'$'}ref: missing.yaml}",
+      "$reference, deprecated: true",
+      "$reference, x-sunday-name: Different",
+    )) {
+      val source =
+        api(
+          directory,
+          """
+          Node:
+            allOf:
+              - type: object
+                properties: {next: {$reference, description: Parent}}
+              - properties: {next: {$changed, description: Child}}
+          Other: {type: string}
+          """.trimIndent(),
+        )
+      val error = assertThrows(GenerationException::class.java) { OpenApiToGeneratedApi().convert(source.toUri()) }
+      assertEquals(source.toUri().toString(), error.file)
+      assertTrue(error.line >= 6, error.toString())
+      assertTrue(error.message.orEmpty().contains("Cyclic OpenAPI schema composition"), error.message)
+    }
+  }
+
   @Test
   fun `actual field refinements still flatten and incompatible intersections retain their source`(
     @TempDir directory: Path,

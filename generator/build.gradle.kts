@@ -2,6 +2,16 @@
 plugins {
   id("common.conventions")
   id("publishing.conventions")
+  `java-test-fixtures`
+}
+
+// Fixtures are shared only inside this build; published consumers receive the production library.
+val javaComponent = components["java"] as AdhocComponentWithVariants
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) { skip() }
+// The publishing plugin creates this documentation variant after project evaluation.
+afterEvaluate {
+  javaComponent.withVariantsFromConfiguration(configurations["testFixturesSourcesElements"]) { skip() }
 }
 
 dependencies {

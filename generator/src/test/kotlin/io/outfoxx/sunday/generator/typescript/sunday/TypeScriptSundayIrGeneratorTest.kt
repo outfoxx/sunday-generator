@@ -129,6 +129,16 @@ class TypeScriptSundayIrGeneratorTest {
                     |if (recordSchema.safeParse({...documented, next: 42}).success) {
                     |  throw new Error('recursive reference accepted a number');
                     |}
+                    |for (const field of ['direct', 'wrapped']) {
+                    |  const nested = {id: 'two', [field]: {id: 'three'}};
+                    |  const decoded = recordSchema.parse({...documented, [field]: nested});
+                    |  if (JSON.stringify(decoded[field]) !== JSON.stringify(nested)) {
+                    |    throw new Error('recursive property intersection changed its payload');
+                    |  }
+                    |  if (recordSchema.safeParse({...documented, [field]: 42}).success) {
+                    |    throw new Error('recursive property intersection accepted a number');
+                    |  }
+                    |}
                     |if (recordSchema.safeParse({detail: 'detail'}).success) {
                     |  throw new Error('inherited id must remain required');
                     |}

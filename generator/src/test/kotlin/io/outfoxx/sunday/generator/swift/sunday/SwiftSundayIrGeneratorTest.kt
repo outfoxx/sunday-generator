@@ -110,6 +110,15 @@ class SwiftSundayIrGeneratorTest {
               XCTAssertEqual(decoded.next?.id, next?.id)
               XCTAssertEqual(decoded.next?.next?.id, next?.next?.id)
             }
+            let recursive = DocumentedRecord(
+              id: "one",
+              direct: RecordNode(id: "two", direct: RecordNode(id: "three")),
+              wrapped: RecordNode(id: "four", wrapped: RecordNode(id: "five"))
+            )
+            let recursiveBytes = try JSONEncoder().encode(recursive)
+            let restored = try JSONDecoder().decode(DocumentedRecord.self, from: recursiveBytes)
+            XCTAssertEqual(restored.direct?.direct?.id, "three")
+            XCTAssertEqual(restored.wrapped?.wrapped?.id, "five")
             let invalid = Data(#"{"id":"one","next":42}"#.utf8)
             XCTAssertThrowsError(try JSONDecoder().decode(DocumentedRecord.self, from: invalid))
             let cat = try JSONDecoder().decode(Cat2.self, from: Data(#"{"kind":"Cat"}"#.utf8))
@@ -191,6 +200,9 @@ class SwiftSundayIrGeneratorTest {
       assertEquals(1, "let id:".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
       assertEquals(1, "let payload: String?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
       assertEquals(1, "let next: RecordNode?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      for (field in listOf("direct", "wrapped")) {
+        assertEquals(1, "let $field: RecordNode?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      }
       assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Cat.swift").contains("unrelated"))
       assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Cat2.swift").contains("lives"))
       val user = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/User.swift")

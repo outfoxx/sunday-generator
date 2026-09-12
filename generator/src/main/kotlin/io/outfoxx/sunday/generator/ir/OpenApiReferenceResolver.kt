@@ -23,6 +23,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceLocations.Kind
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceLocations.componentKinds
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.Shape
+import io.outfoxx.sunday.generator.ir.OpenApiSchemaKeywords.resourceKeywords
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
 
@@ -51,7 +55,6 @@ class OpenApiReferenceResolver(
     private val schemaReferences = mutableMapOf<Target, Node>()
     private val discriminatorMappings = mutableMapOf<Target, Map<String, String>>()
     private val knownKinds = mutableMapOf<Target, Kind>()
-    private var defaultDialect = OAS_DIALECT
     private val schemaNames = mutableMapOf<Target, String>()
     private val schemas = linkedMapOf<String, Map<String, Any?>>()
     private val pendingSchemas = ArrayDeque<Pair<String, Node>>()
@@ -105,9 +108,9 @@ class OpenApiReferenceResolver(
         val (name, schema) = pendingSchemas.removeFirst()
         schemas[name] = normalize(schema, Kind.SCHEMA)
       }
-      val composition = OpenApiSchemaComposition(schemas)
-      normalizedSchemas.forEach { composition.resolve(it) }
-      return OpenApiReferenceResolution(result, capturedDocuments.toMap())
+      return OpenApiReferenceResolution(result, capturedDocuments.toMap()).also { resolution ->
+        normalizedSchemas.forEach { resolution.analysis.validate(it) }
+      }
     }
 
     private fun normalize(
@@ -162,33 +165,28 @@ class OpenApiReferenceResolver(
                 it.startsWith("x-sunday-")
             )
         }.mapValues { (name, child) ->
+          val location = OpenApiReferenceLocations.child(kind, name)
           when {
-            kind == Kind.SCHEMA && name in schemaMaps -> child.children().mapValues { (_, schema) -> schemaUse(schema) }
-            kind == Kind.SCHEMA && name in schemaLists -> child.elements().map(::schemaUse)
-            // An unpromoted boolean keeps the converter's unrestricted-object additionalProperties form.
+            kind == Kind.SCHEMA && name == "discriminator" -> discriminator(child)
+            // An unpromoted boolean retains the converter's unrestricted-object additionalProperties form.
             kind == Kind.SCHEMA &&
               name == "additionalProperties" &&
               child.isTrueSchema() &&
               child.target !in schemaNames -> true
-            kind == Kind.SCHEMA && name in schemaValues && (child.value.isObject || child.isTrueSchema()) ->
-              schemaUse(child)
-            kind == Kind.SCHEMA && name == "discriminator" -> discriminator(child)
-            kind == Kind.PATH_ITEM && name in httpMethods -> normalize(child, Kind.OPERATION)
-            kind in setOf(Kind.PATH_ITEM, Kind.OPERATION) && name == "parameters" ->
-              child.elements().map { normalize(it, Kind.PARAMETER) }
-            kind == Kind.OPERATION && name == "requestBody" -> normalize(child, Kind.REQUEST_BODY)
-            kind == Kind.OPERATION && name == "responses" ->
-              child.children().mapValues { (_, response) -> normalize(response, Kind.RESPONSE) }
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.MEDIA) && name == "schema" -> schemaUse(child)
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.REQUEST_BODY, Kind.RESPONSE) && name == "content" ->
-              child.children().mapValues { (_, media) -> normalize(media, Kind.MEDIA) }
-            kind == Kind.RESPONSE && name == "headers" ->
-              child.children().mapValues { (_, header) -> normalize(header, Kind.HEADER) }
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.MEDIA) && name == "examples" ->
-              child.children().mapValues { (_, example) -> normalize(example, Kind.EXAMPLE) }
-            else -> child.rawValue()
+            location == null -> child.rawValue()
+            else ->
+              when (location.shape) {
+                Shape.MAP -> child.children().mapValues { (_, value) -> normalizeChild(value, location.kind) }
+                Shape.LIST -> child.elements().map { normalizeChild(it, location.kind) }
+                Shape.VALUE -> normalizeChild(child, location.kind)
+              }
           }
         }
+
+    private fun normalizeChild(
+      node: Node,
+      kind: Kind,
+    ): Any? = if (kind == Kind.SCHEMA) schemaUse(node) else normalize(node, kind)
 
     private fun schemaUse(node: Node): Any? {
       if (!node.value.isObject && !node.isTrueSchema()) return node.rawValue()
@@ -200,7 +198,7 @@ class OpenApiReferenceResolver(
 
     private fun Node.isSchemaAlias(): Boolean =
       value.has("\$ref") &&
-        (scope.dialect == OAS_30_DIALECT || children().keys.none(OpenApiSchemaComposition::isAssertion))
+        (scope.dialect == OAS_30_DIALECT || children().keys.none(OpenApiSchemaKeywords::isAssertion))
 
     // An annotated alias is a distinct use of its target, even when its assertions are identical.
     private fun Node.isIdentityAlias(): Boolean =
@@ -505,8 +503,8 @@ class OpenApiReferenceResolver(
                           if (type.isArray) type.all { it.asText() in schemaTypes } else type.asText() in schemaTypes
                         }
                     ) &&
-                    schemaMaps.all { !value.has(it) || value[it].isObject } &&
-                    schemaLists.all { !value.has(it) || value[it].isArray } &&
+                    OpenApiSchemaKeywords.maps.all { !value.has(it) || value[it].isObject } &&
+                    OpenApiSchemaKeywords.lists.all { !value.has(it) || value[it].isArray } &&
                     (!value.has("required") || (value["required"].isArray && value["required"].all { it.isTextual }))
                 else -> true
               }
@@ -521,7 +519,7 @@ class OpenApiReferenceResolver(
     private fun read(
       uri: URI,
       kind: Kind = Kind.SCHEMA,
-      dialect: String = defaultDialect,
+      dialect: String = OAS_DIALECT,
     ): Document {
       documents[uri]?.let { return it }
       val loaded = documentLoader.load(uri)
@@ -552,7 +550,6 @@ class OpenApiReferenceResolver(
       if (document.isOpenApi) {
         val root = document.root()
         knownKinds[root.target] = Kind.DOCUMENT
-        defaultDialect = document.dialect
         indexComponents(root)
         listOf("paths", "webhooks").forEach { section ->
           root
@@ -631,27 +628,14 @@ class OpenApiReferenceResolver(
         if (ignoresSchemaReferenceSiblings(kind)) return@sequence
         if (value.has("\$ref") && kind !in setOf(Kind.SCHEMA, Kind.PATH_ITEM)) return@sequence
         children().forEach { (name, child) ->
-          when {
-            kind == Kind.SCHEMA && name in schemaMaps -> child.children().values.forEach { yield(it to Kind.SCHEMA) }
-            kind == Kind.SCHEMA && name in schemaLists -> child.elements().forEach { yield(it to Kind.SCHEMA) }
-            kind == Kind.SCHEMA && name in schemaValues -> yield(child to Kind.SCHEMA)
-            kind == Kind.PATH_ITEM && name in httpMethods -> yield(child to Kind.OPERATION)
-            kind in setOf(Kind.PATH_ITEM, Kind.OPERATION) && name == "parameters" ->
-              child.elements().forEach { yield(it to Kind.PARAMETER) }
-            kind == Kind.OPERATION && name == "requestBody" -> yield(child to Kind.REQUEST_BODY)
-            kind == Kind.OPERATION && name == "responses" ->
-              child.children().values.forEach {
-                yield(
-                  it to Kind.RESPONSE,
-                )
-              }
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.MEDIA) && name == "schema" -> yield(child to Kind.SCHEMA)
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.REQUEST_BODY, Kind.RESPONSE) && name == "content" ->
-              child.children().values.forEach { yield(it to Kind.MEDIA) }
-            kind == Kind.RESPONSE && name == "headers" -> child.children().values.forEach { yield(it to Kind.HEADER) }
-            kind in setOf(Kind.PARAMETER, Kind.HEADER, Kind.MEDIA) && name == "examples" ->
-              child.children().values.forEach { yield(it to Kind.EXAMPLE) }
-          }
+          val location = OpenApiReferenceLocations.child(kind, name) ?: return@forEach
+          val nodes =
+            when (location.shape) {
+              Shape.MAP -> child.children().values.asSequence()
+              Shape.LIST -> child.elements().asSequence()
+              Shape.VALUE -> sequenceOf(child)
+            }
+          nodes.forEach { yield(it to location.kind) }
         }
       }
 
@@ -741,7 +725,7 @@ class OpenApiReferenceResolver(
       val isOpenApi =
         value.path("openapi").asText().matches(Regex("3\\.[01]\\.[0-9]+.*")) &&
           value.path("info").isObject &&
-          value.properties().none { (name, _) -> OpenApiSchemaComposition.isAssertion(name) }
+          value.properties().none { (name, _) -> OpenApiSchemaKeywords.isAssertion(name) }
       val dialect =
         if (isOpenApi && value.path("openapi").asText().startsWith("3.0")) {
           OAS_30_DIALECT
@@ -760,58 +744,14 @@ class OpenApiReferenceResolver(
     }
   }
 
-  private enum class Kind(
-    val label: String,
-  ) {
-    DOCUMENT("document"),
-    SCHEMA("schema"),
-    PARAMETER("parameter"),
-    REQUEST_BODY("request body"),
-    RESPONSE("response"),
-    HEADER("header"),
-    SECURITY_SCHEME("security scheme"),
-    EXAMPLE("example"),
-    PATH_ITEM("path item"),
-    OPERATION("operation"),
-    MEDIA("media type"),
-  }
-
   private companion object {
     const val OAS_DIALECT = "https://spec.openapis.org/oas/3.1/dialect/base"
     const val OAS_30_DIALECT = "openapi-3.0"
     val supportedDialects = setOf(OAS_DIALECT, "https://json-schema.org/draft/2020-12/schema")
-    val resourceKeywords = setOf("\$id", "\$anchor", "\$dynamicAnchor")
     val anchorName = Regex("[A-Za-z_][A-Za-z0-9_.-]*")
-    val componentKinds =
-      mapOf(
-        "schemas" to Kind.SCHEMA,
-        "parameters" to Kind.PARAMETER,
-        "requestBodies" to Kind.REQUEST_BODY,
-        "responses" to Kind.RESPONSE,
-        "headers" to Kind.HEADER,
-        "securitySchemes" to Kind.SECURITY_SCHEME,
-        "examples" to Kind.EXAMPLE,
-        "pathItems" to Kind.PATH_ITEM,
-      )
-    val httpMethods = setOf("get", "put", "post", "delete", "options", "head", "patch", "trace")
     val parameterLocations = setOf("query", "path", "header", "cookie")
     val securityTypes = setOf("apiKey", "http", "oauth2", "openIdConnect", "mutualTLS")
     val schemaTypes = setOf("object", "array", "string", "integer", "number", "boolean", "null")
-    val schemaMaps = setOf("properties", "patternProperties", "\$defs", "definitions", "dependentSchemas")
-    val schemaLists = setOf("allOf", "oneOf", "anyOf", "prefixItems")
-    val schemaValues =
-      setOf(
-        "items",
-        "additionalProperties",
-        "not",
-        "if",
-        "then",
-        "else",
-        "contains",
-        "propertyNames",
-        "unevaluatedItems",
-        "unevaluatedProperties",
-      )
 
     fun String.escapePointer(): String = replace("~", "~0").replace("/", "~1")
 

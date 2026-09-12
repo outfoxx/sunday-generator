@@ -107,6 +107,18 @@ class KotlinSundayIrGeneratorTest {
         assertEquals(payload, baseRecord.getMethod("getPayload").invoke(decoded))
       }
       val recordNode = result.classLoader.loadClass("io.test.RecordNode")
+      for ((field, method) in listOf("direct" to "getDirect", "wrapped" to "getWrapped")) {
+        val getter = documentedRecord.getMethod(method)
+        assertEquals(baseRecord, getter.declaringClass)
+        assertEquals(recordNode, getter.returnType)
+        assertEquals(recordNode, recordNode.getMethod(method).returnType)
+        val nested = mapOf("id" to "two", field to mapOf("id" to "three"))
+        val decoded = mapper.convertValue(mapOf("id" to "one", field to nested), documentedRecord)
+        val restored = mapper.readValue(mapper.writeValueAsBytes(decoded), documentedRecord)
+        val value = getter.invoke(restored)
+        assertEquals(recordNode, value.javaClass)
+        assertEquals("three", recordNode.getMethod("getId").invoke(recordNode.getMethod(method).invoke(value)))
+      }
       val nextGetter = documentedRecord.getMethod("getNext")
       assertEquals(baseRecord, nextGetter.declaringClass)
       assertEquals(recordNode, nextGetter.returnType)
