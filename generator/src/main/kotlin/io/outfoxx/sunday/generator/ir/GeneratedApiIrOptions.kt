@@ -21,15 +21,19 @@ import io.outfoxx.sunday.generator.GenerationMode
 /**
  * Source-to-IR conversion options.
  */
-data class GeneratedApiIrOptions(
-  /**
-   * Derive generated service grouping from the first operation tag when no explicit Sunday service extension is present.
-   */
-  val deriveServicesFromTags: Boolean = false,
-  /**
-   * Target mode used when applying source-level target-specific generation metadata.
-   *
-   * A null mode preserves target-neutral IR export behavior.
-   */
-  val generationMode: GenerationMode? = null,
-)
+data class GeneratedApiIrOptions
+  @JvmOverloads
+  constructor(
+    /**
+     * Derive generated service grouping from the first operation tag when no explicit Sunday service extension is present.
+     */
+    val deriveServicesFromTags: Boolean = false,
+    /**
+     * Target mode used when applying source-level target-specific generation metadata.
+     *
+     * A null mode preserves target-neutral IR export behavior.
+     */
+    val generationMode: GenerationMode? = null,
+    /** Document retrieval and offline cache options for native OpenAPI conversion. */
+    val openApiReferences: OpenApiReferenceOptions = OpenApiReferenceOptions(),
+  )

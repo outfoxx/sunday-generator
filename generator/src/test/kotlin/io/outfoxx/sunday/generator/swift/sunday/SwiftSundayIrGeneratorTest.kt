@@ -53,16 +53,19 @@ import io.outfoxx.sunday.generator.swift.tools.reusableDiscriminatorMappingApi
 import io.outfoxx.sunday.generator.swift.tools.reusableDiscriminatorMappingRuntimeTest
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.tag
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -70,6 +73,166 @@ import java.nio.file.Path
 @SwiftTest
 @DisplayName("[Swift/Sunday] [IR] Generator Test")
 class SwiftSundayIrGeneratorTest {
+
+  @Test
+  fun `compiles remote schema resources`(
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val api = fixture.export(directory)
+      generateSwiftSundayFiles(compiler, api)
+      Files.createDirectories(compiler.testsDir)
+      Files.writeString(
+        compiler.testsDir.resolve("NullUnionTests.swift"),
+        """
+        import Foundation
+        import XCTest
+        @testable import SundayGenTest
+
+        final class NullUnionTests: XCTestCase {
+          func testDocumentaryInheritance() throws {
+            let child = DocumentedRecord(id: "one", detail: "detail")
+            XCTAssertEqual(child.id, BaseRecord(id: "one").id)
+            let bytes = try JSONEncoder().encode(child)
+            XCTAssertEqual(try JSONDecoder().decode(DocumentedRecord.self, from: bytes).id, "one")
+            for payload in [nil, "value"] as [String?] {
+              let documented = DocumentedRecord(id: "one", payload: payload)
+              let parent = BaseRecord(id: "one", payload: payload)
+              XCTAssertEqual(documented.payload, parent.payload)
+              let encoded = try JSONEncoder().encode(documented)
+              XCTAssertEqual(try JSONDecoder().decode(DocumentedRecord.self, from: encoded).payload, payload)
+            }
+            for next in [nil, RecordNode(id: "two", next: RecordNode(id: "three"))] as [RecordNode?] {
+              let documented = DocumentedRecord(id: "one", next: next)
+              let encoded = try JSONEncoder().encode(documented)
+              let decoded = try JSONDecoder().decode(DocumentedRecord.self, from: encoded)
+              XCTAssertEqual(decoded.next?.id, next?.id)
+              XCTAssertEqual(decoded.next?.next?.id, next?.next?.id)
+            }
+            let recursive = DocumentedRecord(
+              id: "one",
+              direct: RecordNode(id: "two", direct: RecordNode(id: "three")),
+              wrapped: RecordNode(id: "four", wrapped: RecordNode(id: "five"))
+            )
+            let recursiveBytes = try JSONEncoder().encode(recursive)
+            let restored = try JSONDecoder().decode(DocumentedRecord.self, from: recursiveBytes)
+            XCTAssertEqual(restored.direct?.direct?.id, "three")
+            XCTAssertEqual(restored.wrapped?.wrapped?.id, "five")
+            let invalid = Data(#"{"id":"one","next":42}"#.utf8)
+            XCTAssertThrowsError(try JSONDecoder().decode(DocumentedRecord.self, from: invalid))
+            let cat = try JSONDecoder().decode(Cat2.self, from: Data(#"{"kind":"Cat"}"#.utf8))
+            let pet: any Pet = cat
+            XCTAssertEqual(pet.kind, "Cat")
+          }
+
+          func testBooleanSchemas() throws {
+            for value in [0, false, "value", ["nested": true]] as [Any] {
+              let bytes = try JSONSerialization.data(withJSONObject: ["truth": value, "empty": value])
+              let decoded = try JSONDecoder().decode(BooleanValues.self, from: bytes)
+              let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as! NSDictionary
+              XCTAssertEqual(encoded["truth"] as? NSObject, encoded["empty"] as? NSObject)
+            }
+          }
+
+          func testImplicitDiscriminatorValues() throws {
+            for kind in ["Cat", "Dog"] {
+              let bytes = try JSONSerialization.data(withJSONObject: ["animal": ["kind": kind]])
+              let decoded = try JSONDecoder().decode(Pets.self, from: bytes)
+              let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? [String: Any]
+              XCTAssertEqual((encoded?["animal"] as? [String: Any])?["kind"] as? String, kind)
+            }
+            let invalid = try JSONSerialization.data(withJSONObject: ["animal": ["kind": "Cat2"]])
+            XCTAssertThrowsError(try JSONDecoder().decode(Pets.self, from: invalid))
+          }
+
+          func testRelativeDiscriminatorMappings() throws {
+            for animal in [["kind": "kitty", "lives": 9], ["kind": "hound", "barks": true]] as [[String: Any]] {
+              let bytes = try JSONSerialization.data(withJSONObject: ["animal": animal])
+              let decoded = try JSONDecoder().decode(MappedPets.self, from: bytes)
+              if animal["kind"] as? String == "kitty" {
+                XCTAssertEqual((decoded.animal.value as? MappedCat)?.lives, 9)
+              } else {
+                XCTAssertEqual((decoded.animal.value as? MappedDog)?.barks, true)
+              }
+              let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as! NSDictionary
+              XCTAssertEqual(encoded, ["animal": animal] as NSDictionary)
+            }
+            let invalid = Data(#"{"animal":{"kind":"MappedCat","lives":9}}"#.utf8)
+            XCTAssertThrowsError(try JSONDecoder().decode(MappedPets.self, from: invalid))
+          }
+
+          func testNullabilityComposition() throws {
+            let decoder = JSONDecoder()
+            for values in [NSNull(), ["valid"]] as [Any] {
+              let valid: [String: Any] = ["strictText": "valid", "values": values]
+              let decoded = try decoder.decode(Nullability.self, from: JSONSerialization.data(withJSONObject: valid))
+              XCTAssertEqual(decoded.values, values as? [String])
+            }
+            let invalid: [String: Any] = ["strictText": NSNull(), "values": NSNull()]
+            let bytes = try JSONSerialization.data(withJSONObject: invalid)
+            XCTAssertThrowsError(try decoder.decode(Nullability.self, from: bytes))
+          }
+
+          func testConstrainedNullUnions() throws {
+            let valid: [String: Any] = ["address": ["street": "Main"], "text": "hello", "state": "active"]
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(Restrictions.self, from: JSONSerialization.data(withJSONObject: valid))
+            XCTAssertEqual(decoded.text, "hello")
+            for field in valid.keys {
+              for excluded in [42, NSNull()] as [Any] {
+                var invalid = valid
+                invalid[field] = excluded
+                let bytes = try JSONSerialization.data(withJSONObject: invalid)
+                XCTAssertThrowsError(try decoder.decode(Restrictions.self, from: bytes))
+              }
+            }
+          }
+        }
+        """.trimIndent(),
+      )
+      assertTrue(compileAndTestGeneratedFiles(compiler))
+      assertEquals(
+        listOf(GeneratedTypeRef.named("BaseRecord")),
+        api.models.single { it.name == "DocumentedRecord" }.inherits,
+      )
+      val record = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/DocumentedRecord.swift")
+      assertEquals(1, "let id:".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      assertEquals(1, "let payload: String?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      assertEquals(1, "let next: RecordNode?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      for (field in listOf("direct", "wrapped")) {
+        assertEquals(1, "let $field: RecordNode?".toRegex(RegexOption.LITERAL).findAll(record).count(), record)
+      }
+      assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Cat.swift").contains("unrelated"))
+      assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Cat2.swift").contains("lives"))
+      val user = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/User.swift")
+      assertTrue(user.contains("Address"), user)
+      assertTrue(user.contains("node: Node?"), user)
+      assertTrue(user.contains("composedNode: Node?"), user)
+      assertTrue(user.contains("copiedNode: Node?"), user)
+      assertTrue(user.contains("maybeAddress: Address?"), user)
+      assertTrue(user.contains("copiedAddress: Address?"), user)
+      assertTrue(user.contains("composedAddress: Address?"), user)
+      assertTrue(user.contains("UserProfile2"), user)
+      assertFalse(user.contains("UserArbitrary"), user)
+      assertFalse(user.contains("UserNullableArbitrary"), user)
+      val profile = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/UserProfile.swift")
+      assertTrue(profile.contains("remoteValue"), profile)
+      val inlineProfile = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/UserProfile2.swift")
+      assertTrue(inlineProfile.contains("localValue"), inlineProfile)
+      val extended = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/UserExtendedAddress.swift")
+      assertTrue(extended.contains("street"), extended)
+      assertTrue(extended.contains("postalCode"), extended)
+      val node = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Node.swift")
+      assertTrue(node.contains("child: Node?"), node)
+      val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "API.swift")
+      assertTrue(service.contains("= 20"), service)
+      val nullability = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Nullability.swift")
+      assertTrue(nullability.contains("strictText: String"), nullability)
+      assertFalse(nullability.contains("strictText: String?"), nullability)
+      assertTrue(nullability.contains("values: [String]?"), nullability)
+    }
+  }
 
   @Test
   fun `Swift Sunday CLI uses IR exporter directly`() {

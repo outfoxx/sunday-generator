@@ -47,21 +47,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       val rootsIndex = project.layout.buildDirectory.file("generated/sunday/roots/${gen.name}.txt")
       val allSourcesIndex = project.layout.buildDirectory.file("generated/sunday/all-sources/${gen.name}.txt")
-      val resolvedRoots =
-        project.files(
-          Callable {
-            val indexFile = rootsIndex.get().asFile
-            if (!indexFile.exists()) {
-              emptyList<File>()
-            } else {
-              indexFile
-                .readLines()
-                .filter { it.isNotBlank() }
-                .map { File(it) }
-            }
-          },
-        )
-      val resolvedAllSources =
+      val bootstrapSources =
         project.files(
           Callable {
             val indexFile = allSourcesIndex.get().asFile
@@ -82,8 +68,35 @@ class SundayGeneratorPlugin : Plugin<Project> {
           task.source(gen.source)
           task.rootsIndexFile.set(rootsIndex)
           task.allSourcesIndexFile.set(allSourcesIndex)
-          task.bootstrapAllSources.set(resolvedAllSources)
+          task.bootstrapAllSources.set(bootstrapSources)
+          task.openApiReferenceCacheDirectory.set(gen.openApiReferenceCacheDirectory)
+          task.openApiOffline.set(project.gradle.startParameter.isOffline)
+          task.openApiAllowPrivateNetwork.set(gen.openApiAllowPrivateNetwork)
         }
+
+      // Task-backed providers retain the dependency and defer reading indexes until discovery has run.
+      val resolvedRoots =
+        project.files(
+          discoverTask.flatMap { it.rootsIndexFile }.map { index ->
+            index.asFile
+              .takeIf { it.isFile }
+              ?.readLines()
+              .orEmpty()
+              .filter { it.isNotBlank() }
+              .map { File(it) }
+          },
+        )
+      val resolvedAllSources =
+        project.files(
+          discoverTask.flatMap { it.allSourcesIndexFile }.map { index ->
+            index.asFile
+              .takeIf { it.isFile }
+              ?.readLines()
+              .orEmpty()
+              .filter { it.isNotBlank() }
+              .map { File(it) }
+          },
+        )
 
       val genTask =
         project.tasks.register("sundayGenerate_${gen.name}", SundayGenerate::class.java) { genTask ->
@@ -91,6 +104,9 @@ class SundayGeneratorPlugin : Plugin<Project> {
           genTask.source(resolvedRoots)
           genTask.allSources.set(resolvedAllSources)
           genTask.dependsOn(discoverTask)
+          genTask.capturedDocumentsDirectory.set(
+            discoverTask.flatMap { it.capturedDocumentsDirectory }.filter { it.asFile.isDirectory },
+          )
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }

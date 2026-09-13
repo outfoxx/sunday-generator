@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
@@ -70,6 +71,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -80,6 +82,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletionStage
@@ -87,6 +90,205 @@ import java.util.concurrent.CompletionStage
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [IR] Generator Test")
 class KotlinJAXRSIrGeneratorTest {
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `compiles remote schema resources`(
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val api = fixture.export(directory)
+      for (mode in listOf(GenerationMode.Client, GenerationMode.Server)) {
+        val registry =
+          KotlinTypeRegistry("io.test", null, mode, setOf(ValidationConstraints, ImplementModel, JacksonAnnotations))
+        KotlinJAXRSIrGenerator(api, registry, testOptions()).generateServiceTypes()
+        val result = compileTypesResult(registry.buildTypes())
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        val mapper = jacksonObjectMapper()
+        val baseRecord = result.classLoader.loadClass("io.test.BaseRecord")
+        val documentedRecord = result.classLoader.loadClass("io.test.DocumentedRecord")
+        assertTrue(baseRecord.isAssignableFrom(documentedRecord))
+        assertEquals(baseRecord, documentedRecord.getMethod("getId").declaringClass)
+        val record = mapper.convertValue(mapOf("id" to "one", "detail" to "detail"), documentedRecord)
+        assertEquals("one", baseRecord.getMethod("getId").invoke(record))
+        assertEquals(baseRecord, documentedRecord.getMethod("getPayload").declaringClass)
+        assertEquals(String::class.java, documentedRecord.getMethod("getPayload").returnType)
+        for (payload in listOf(null, "value")) {
+          val decoded = mapper.convertValue(mapOf("id" to "one", "payload" to payload), documentedRecord)
+          assertEquals(payload, baseRecord.getMethod("getPayload").invoke(decoded))
+        }
+        val booleanType = result.classLoader.loadClass("io.test.BooleanValues")
+        assertEquals(booleanType.getMethod("getEmpty").returnType, booleanType.getMethod("getTruth").returnType)
+        for (value in listOf(0, false, "value", mapOf("nested" to true))) {
+          val decoded = mapper.convertValue(mapOf("truth" to value, "empty" to value), booleanType)
+          assertEquals(value, booleanType.getMethod("getTruth").invoke(decoded))
+          assertEquals(value, booleanType.getMethod("getEmpty").invoke(decoded))
+        }
+        assertTrue(
+          CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Cat.kt").contains("unrelated"),
+        )
+        assertTrue(CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Cat2.kt").contains("lives"))
+        val recordNode = result.classLoader.loadClass("io.test.RecordNode")
+        for ((field, method) in listOf("direct" to "getDirect", "wrapped" to "getWrapped")) {
+          val getter = documentedRecord.getMethod(method)
+          assertEquals(baseRecord, getter.declaringClass)
+          assertEquals(recordNode, getter.returnType)
+          assertEquals(recordNode, recordNode.getMethod(method).returnType)
+          val nested = mapOf("id" to "two", field to mapOf("id" to "three"))
+          val decoded = mapper.convertValue(mapOf("id" to "one", field to nested), documentedRecord)
+          val restored = mapper.readValue(mapper.writeValueAsBytes(decoded), documentedRecord)
+          val value = getter.invoke(restored)
+          assertEquals(recordNode, value.javaClass)
+          assertEquals("three", recordNode.getMethod("getId").invoke(recordNode.getMethod(method).invoke(value)))
+        }
+        val nextGetter = documentedRecord.getMethod("getNext")
+        assertEquals(baseRecord, nextGetter.declaringClass)
+        assertEquals(recordNode, nextGetter.returnType)
+        for (next in listOf(null, mapOf("id" to "two", "next" to mapOf("id" to "three")))) {
+          val decoded = mapper.convertValue(mapOf("id" to "one", "next" to next), documentedRecord)
+          val roundTrip = mapper.readValue(mapper.writeValueAsBytes(decoded), documentedRecord)
+          val value = nextGetter.invoke(roundTrip)
+          assertEquals(next == null, value == null)
+          if (value != null) {
+            assertEquals(recordNode, value.javaClass)
+            val nested = recordNode.getMethod("getNext").invoke(value)
+            assertEquals("three", recordNode.getMethod("getId").invoke(nested))
+          }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+          mapper.convertValue(mapOf("id" to "one", "next" to 42), documentedRecord)
+        }
+        val petsType = result.classLoader.loadClass("io.test.Pets")
+        val mappedPetsType = result.classLoader.loadClass("io.test.MappedPets")
+        for ((payload, model) in listOf(
+          mapOf("kind" to "kitty", "lives" to 9) to "MappedCat",
+          mapOf("kind" to "hound", "barks" to true) to "MappedDog",
+        )) {
+          val decoded = mapper.convertValue(mapOf("animal" to payload), mappedPetsType)
+          val animal = mappedPetsType.getMethod("getAnimal").invoke(decoded)
+          assertEquals(model, animal.javaClass.simpleName)
+          assertEquals(
+            mapper.readTree(mapper.writeValueAsBytes(mapOf("animal" to payload))),
+            mapper.readTree(mapper.writeValueAsBytes(decoded)),
+          )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+          mapper.convertValue(mapOf("animal" to mapOf("kind" to "MappedCat", "lives" to 9)), mappedPetsType)
+        }
+        for ((kind, model) in listOf("Cat" to "Cat2", "Dog" to "Dog")) {
+          val decoded = mapper.convertValue(mapOf("animal" to mapOf("kind" to kind)), petsType)
+          assertEquals(
+            model,
+            petsType
+              .getMethod("getAnimal")
+              .invoke(decoded)
+              .javaClass.simpleName,
+          )
+          assertEquals(
+            kind,
+            mapper
+              .readTree(mapper.writeValueAsBytes(decoded))
+              .path("animal")
+              .path("kind")
+              .asText(),
+          )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+          mapper.convertValue(mapOf("animal" to mapOf("kind" to "Cat2")), petsType)
+        }
+        val nullabilityType = result.classLoader.loadClass("io.test.Nullability")
+        for (values in listOf(null, listOf("valid"))) {
+          val decoded = mapper.convertValue(mapOf("strictText" to "valid", "values" to values), nullabilityType)
+          assertEquals(values, nullabilityType.getMethod("getValues").invoke(decoded))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+          mapper.convertValue(mapOf("strictText" to null, "values" to null), nullabilityType)
+        }
+        val userType = result.classLoader.loadClass("io.test.User")
+        val addressType = result.classLoader.loadClass("io.test.Address")
+        val payload =
+          mapOf(
+            "id" to "one",
+            "address" to mapOf("street" to "Main"),
+            "node" to null,
+            "composedNode" to null,
+          )
+        for (value in listOf(null, mapOf("street" to "Main"))) {
+          val decoded = mapper.convertValue(payload + ("maybeAddress" to value), userType)
+          val address = userType.getMethod("getMaybeAddress").invoke(decoded)
+          assertEquals(value == null, address == null)
+          if (address != null) assertEquals(addressType, address.javaClass)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+          mapper.convertValue(payload + ("maybeAddress" to 42), userType)
+        }
+        val restrictionsType = result.classLoader.loadClass("io.test.Restrictions")
+        val valid = mapOf("address" to mapOf("street" to "Main"), "text" to "hello", "state" to "active")
+        mapper.convertValue(valid, restrictionsType)
+        for (field in valid.keys) {
+          assertThrows(
+            IllegalArgumentException::class.java,
+          ) { mapper.convertValue(valid + (field to null), restrictionsType) }
+        }
+        assertThrows(
+          IllegalArgumentException::class.java,
+        ) { mapper.convertValue(valid + ("address" to 42), restrictionsType) }
+        val user = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/User.kt")
+        assertTrue(user.contains("Address"), user)
+        assertTrue(user.contains("node: Node?"), user)
+        assertTrue(user.contains("composedNode: Node?"), user)
+        assertTrue(user.contains("copiedNode: Node?"), user)
+        assertTrue(user.contains("maybeAddress: Address?"), user)
+        assertTrue(user.contains("copiedAddress: Address?"), user)
+        assertTrue(user.contains("composedAddress: Address?"), user)
+        assertTrue(user.contains("UserProfile2"), user)
+        assertFalse(user.contains("UserArbitrary"), user)
+        assertFalse(user.contains("UserNullableArbitrary"), user)
+        val profile = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/UserProfile.kt")
+        assertTrue(profile.contains("remoteValue"), profile)
+        val inlineProfile = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/UserProfile2.kt")
+        assertTrue(inlineProfile.contains("localValue"), inlineProfile)
+        val extended = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/UserExtendedAddress.kt")
+        assertTrue(extended.contains("street"), extended)
+        assertTrue(extended.contains("postalCode"), extended)
+        val node = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Node.kt")
+        assertTrue(node.contains("child: Node?"), node)
+        val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/API.kt")
+        assertTrue(service.contains("@DefaultValue(value = \"20\")"), service)
+        val nullability = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Nullability.kt")
+        assertTrue(nullability.contains("strictText: String"), nullability)
+        assertFalse(nullability.contains("strictText: String?"), nullability)
+        assertTrue(nullability.contains("values: List<String>?"), nullability)
+      }
+    }
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `generates typed Quarkus signatures and recursive models from external OpenAPI references`(
+    @ResourceUri("openapi/ir/external-refs/api.yaml") testUri: URI,
+  ) {
+    val api = GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = false)).export(testUri)
+    listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
+      val typeRegistry = KotlinTypeRegistry("io.test", null, mode, setOf(ValidationConstraints))
+      KotlinJAXRSIrGenerator(
+        api,
+        typeRegistry,
+        testOptions(quarkus = true, coroutineServiceMethods = true, alwaysUseResponseReturn = true),
+      ).generateServiceTypes()
+      val compilation = compileTypesResult(typeRegistry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, compilation.exitCode, compilation.messages)
+      val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/service/UsersAPI.kt")
+      val user = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/User.kt")
+      assertTrue(service.contains("q: String"), service)
+      assertTrue(service.contains("@QueryParam") || service.contains("@RestQuery"), service)
+      assertTrue(service.contains("body: User"), service)
+      assertTrue(service.contains("RestResponse<ByteArray>"), service)
+      assertTrue(service.contains("RestResponse<User>"), service)
+      assertTrue(user.contains("`parent`: User?"), user)
+      assertTrue(user.contains("`profile`: Profile?"), user)
+    }
+  }
 
   @Test
   fun `Kotlin JAX-RS CLI uses the IR exporter directly`() {

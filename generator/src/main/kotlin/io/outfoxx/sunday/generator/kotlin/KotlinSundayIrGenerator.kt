@@ -1512,6 +1512,9 @@ class KotlinSundayIrGenerator(
             val hierarchyTypeName = model.kotlinClassName()
             val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
             addMember("defaultImpl = %T::class", fallbackTypeName)
+          }
+          if (include == JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY || discriminatorFallbacks[model] != null) {
+            // Subtype constructors still need the discriminator after Jackson uses it to select the type.
             addMember("visible = true")
           }
         }.build(),

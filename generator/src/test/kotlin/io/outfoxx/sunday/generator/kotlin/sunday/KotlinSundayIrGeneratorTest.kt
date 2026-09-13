@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.sunday
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.TypeSpec
@@ -61,6 +62,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -71,6 +73,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -78,6 +81,85 @@ import java.nio.file.Path
 @KotlinTest
 @DisplayName("[Kotlin/Sunday] [IR] Generator Test")
 class KotlinSundayIrGeneratorTest {
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @Test
+  fun `compiles renamed implicit discriminator values`(
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val registry =
+        typeRegistry(setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations))
+      KotlinSundayIrGenerator(fixture.export(directory), registry, kotlinSundayTestOptions).generateServiceTypes()
+      val result = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      val mapper = jacksonObjectMapper()
+      val baseRecord = result.classLoader.loadClass("io.test.BaseRecord")
+      val documentedRecord = result.classLoader.loadClass("io.test.DocumentedRecord")
+      assertTrue(baseRecord.isAssignableFrom(documentedRecord))
+      assertEquals(baseRecord, documentedRecord.getMethod("getId").declaringClass)
+      val record = mapper.convertValue(mapOf("id" to "one", "detail" to "detail"), documentedRecord)
+      assertEquals("one", baseRecord.getMethod("getId").invoke(record))
+      assertEquals(baseRecord, documentedRecord.getMethod("getPayload").declaringClass)
+      assertEquals(String::class.java, documentedRecord.getMethod("getPayload").returnType)
+      for (payload in listOf(null, "value")) {
+        val decoded = mapper.convertValue(mapOf("id" to "one", "payload" to payload), documentedRecord)
+        assertEquals(payload, baseRecord.getMethod("getPayload").invoke(decoded))
+      }
+      val recordNode = result.classLoader.loadClass("io.test.RecordNode")
+      for ((field, method) in listOf("direct" to "getDirect", "wrapped" to "getWrapped")) {
+        val getter = documentedRecord.getMethod(method)
+        assertEquals(baseRecord, getter.declaringClass)
+        assertEquals(recordNode, getter.returnType)
+        assertEquals(recordNode, recordNode.getMethod(method).returnType)
+        val nested = mapOf("id" to "two", field to mapOf("id" to "three"))
+        val decoded = mapper.convertValue(mapOf("id" to "one", field to nested), documentedRecord)
+        val restored = mapper.readValue(mapper.writeValueAsBytes(decoded), documentedRecord)
+        val value = getter.invoke(restored)
+        assertEquals(recordNode, value.javaClass)
+        assertEquals("three", recordNode.getMethod("getId").invoke(recordNode.getMethod(method).invoke(value)))
+      }
+      val nextGetter = documentedRecord.getMethod("getNext")
+      assertEquals(baseRecord, nextGetter.declaringClass)
+      assertEquals(recordNode, nextGetter.returnType)
+      for (next in listOf(null, mapOf("id" to "two", "next" to mapOf("id" to "three")))) {
+        val decoded = mapper.convertValue(mapOf("id" to "one", "next" to next), documentedRecord)
+        val roundTrip = mapper.readValue(mapper.writeValueAsBytes(decoded), documentedRecord)
+        val value = nextGetter.invoke(roundTrip)
+        assertEquals(next == null, value == null)
+        if (value != null) {
+          assertEquals(recordNode, value.javaClass)
+          val nested = recordNode.getMethod("getNext").invoke(value)
+          assertEquals("three", recordNode.getMethod("getId").invoke(nested))
+        }
+      }
+      assertThrows(IllegalArgumentException::class.java) {
+        mapper.convertValue(mapOf("id" to "one", "next" to 42), documentedRecord)
+      }
+      val petsType = result.classLoader.loadClass("io.test.Pets")
+      for ((kind, model) in listOf("Cat" to "Cat2", "Dog" to "Dog")) {
+        val decoded = mapper.convertValue(mapOf("animal" to mapOf("kind" to kind)), petsType)
+        assertEquals(
+          model,
+          petsType
+            .getMethod("getAnimal")
+            .invoke(decoded)
+            .javaClass.simpleName,
+        )
+        assertEquals(
+          kind,
+          mapper
+            .readTree(mapper.writeValueAsBytes(decoded))
+            .path("animal")
+            .path("kind")
+            .asText(),
+        )
+      }
+      assertThrows(IllegalArgumentException::class.java) {
+        mapper.convertValue(mapOf("animal" to mapOf("kind" to "Cat2")), petsType)
+      }
+    }
+  }
 
   private fun typeRegistry(options: Set<KotlinTypeRegistry.Option> = setOf()): KotlinTypeRegistry =
     KotlinTypeRegistry(

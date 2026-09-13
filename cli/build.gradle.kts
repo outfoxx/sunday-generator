@@ -22,6 +22,8 @@ dependencies {
   // TESTING
   //
 
+  testImplementation(testFixtures(project(":generator")))
+
   testImplementation(libs.junit)
   testImplementation(libs.junitParams)
   testRuntimeOnly(libs.junitEngine)

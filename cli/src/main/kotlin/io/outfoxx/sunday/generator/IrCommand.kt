@@ -21,6 +21,7 @@ import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
@@ -30,11 +31,26 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSourceKind
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceOptions
 
 /**
  * CLI command that exports source documents to Sunday generated API IR YAML.
  */
 class IrCommand : CliktCommand(name = "ir") {
+
+  private val referenceOptions by OpenApiReferenceOptionGroup()
+
+  /** Explicit cache directory, or null when using the default. */
+  val openApiReferenceCacheDirectory get() = referenceOptions.cacheDirectory
+
+  /** Whether remote documents must be loaded without HTTP requests. */
+  val openApiOffline get() = referenceOptions.offline
+
+  /** Whether trusted specifications may access private network destinations and configured proxies. */
+  val openApiAllowPrivateNetwork get() = referenceOptions.allowPrivateNetwork
+
+  /** Retrieval options shared by native OpenAPI export and generation. */
+  protected fun openApiReferenceOptions(): OpenApiReferenceOptions = referenceOptions.options()
 
   override fun help(context: Context): String = "Export source specs to Sunday IR YAML"
 
@@ -78,13 +94,14 @@ class IrCommand : CliktCommand(name = "ir") {
       throw UsageError("Missing source file")
     }
     val output = outputFile ?: throw UsageError("Missing required option '-out'")
-    GeneratedApiIrExporter(GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags))
-      .writeYaml(
-        sourceFiles.map { sourceFile ->
-          sourceFile.toURI()
-        },
-        output.toPath(),
-        sourceKind,
-      )
+    GeneratedApiIrExporter(
+      GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, openApiReferences = openApiReferenceOptions()),
+    ).writeYaml(
+      sourceFiles.map { sourceFile ->
+        sourceFile.toURI()
+      },
+      output.toPath(),
+      sourceKind,
+    )
   }
 }

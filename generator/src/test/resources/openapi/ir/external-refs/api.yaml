@@ -1,0 +1,44 @@
+openapi: 3.1.0
+x-sunday-apiId: external-refs
+info:
+  title: External references
+  version: 1.0.0
+tags:
+  - name: Users
+    x-sunday-service-group: true
+paths:
+  /users/search:
+    get:
+      tags: [Users]
+      operationId: searchUsers
+      parameters:
+        - $ref: './shared/components.yaml#/components/parameters/SearchQuery'
+      responses:
+        '204':
+          description: Search completed
+  /users:
+    post:
+      tags: [Users]
+      operationId: createUser
+      requestBody:
+        $ref: './shared/components.yaml#/components/requestBodies/UserBody'
+      responses:
+        '200':
+          $ref: './shared/components.yaml#/components/responses/UserResponse'
+  /download:
+    get:
+      tags: [Users]
+      operationId: download
+      responses:
+        '200':
+          $ref: './shared/components.yaml#/components/responses/BinaryResponse'
+components:
+  schemas:
+    User:
+      $ref: './shared/components.yaml#/components/schemas/User'
+    Node:
+      type: object
+      required: [local]
+      properties:
+        local:
+          type: integer
