@@ -262,7 +262,9 @@ class OpenApiHttpFixture : AutoCloseable {
       """.trimIndent(),
     )
     return GeneratedApiIrExporter(
-      GeneratedApiIrOptions(openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"))),
+      GeneratedApiIrOptions(
+        openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+      ),
     ).export(source.toUri())
   }
 

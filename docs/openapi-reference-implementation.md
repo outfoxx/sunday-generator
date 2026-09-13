@@ -29,3 +29,11 @@ The generator's `testFixtures` source set contains `OpenApiHttpFixture` and reus
 Run lint, focused resolver/converter tests, compiler-backed fixtures, and CLI/Gradle integration tests before the full `check` task. Generated Kotlin, Swift, TypeScript, and Python must compile before source assertions or snapshots. Keep `GeneratedCodeSnapshotInvariantTest` and coverage for RAML, OpenAPI, AsyncAPI, and composed inputs. Configuration-cache checks also need a standalone Gradle fixture when the existing TestKit Java-agent restriction prevents that check in-process.
 
 CLI export and language commands register the same `OpenApiReferenceOptionGroup`. Each command keeps its existing accessors, flags, validation, help text, and defaults.
+
+## Retrieval boundaries
+
+`OpenApiNetworkPolicy` owns HTTP destination validation and wraps proxy selection for the default loader. Its address and proxy dependencies are injectable internally for deterministic tests. DNS preflight runs only for actual network requests, uses the configured request timeout, and rejects any prohibited address among the returned answers. The address tables derive from IANA's [IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry) and [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry) special-purpose registries. More-specific globally reachable assignments override their enclosing reservations. Multicast, reserved IPv6 space, and transition mechanisms without established global reachability remain excluded. The JDK client still resolves independently, so this is not a DNS-pinning implementation.
+
+The resolver separately checks each reference's effective retrieval origin before loading a local target and before accepting a registered target from a local document. This prevents resource identifiers, anchors, and captured inputs from bypassing the remote-to-file boundary while keeping embedded identifiers usable. The network opt-in only controls network access and cannot authorize remote-to-file references.
+
+Snapshot URI encoding uses a shared path compatibility check before relativizing. Cross-root and cross-provider targets use the existing absolute `uri` representation; loading remains restricted to captured bodies. Local HTTP fixtures explicitly enable private-network access, and policy regressions exercise the production default separately.

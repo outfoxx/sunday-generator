@@ -42,6 +42,9 @@ class SundayGeneration(
       project.gradle.gradleUserHomeDir.resolve("caches/sunday/openapi"),
     )
 
+  /** Allows private network destinations and configured proxies for trusted OpenAPI specifications. */
+  val openApiAllowPrivateNetwork: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
   val source: Property<FileCollection> =
     objects
       .property(FileCollection::class.java)

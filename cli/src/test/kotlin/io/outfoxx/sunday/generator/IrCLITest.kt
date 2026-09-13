@@ -27,6 +27,7 @@ import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -202,7 +203,11 @@ class IrCLITest {
           output.toString(),
           source.toString(),
         )
-      val online = IrCommand().test(arguments)
+      val blocked = assertThrows(GenerationException::class.java) { IrCommand().test(arguments) }
+      assertTrue(blocked.message.orEmpty().contains("prohibited address"), blocked.message)
+      assertEquals(source.toUri().toString(), blocked.file)
+      assertTrue(server.requests.isEmpty())
+      val online = IrCommand().test(arrayOf("--openapi-allow-private-network", *arguments))
       assertEquals(0, online.statusCode, online.output)
       val onlineApi = GeneratedApiYaml.readPath(output)
       assertEquals(

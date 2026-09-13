@@ -51,7 +51,10 @@ class OpenApiDiscriminatorReferencesTest {
     )
     for (reference in listOf("cat", "./cat")) {
       source.writeText(document(version, "kitty: '$reference'"))
-      val loader = OpenApiDocumentLoader.create(OpenApiReferenceOptions(directory.resolve("cache")))
+      val loader =
+        OpenApiDocumentLoader.create(
+          OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
       val resolution = OpenApiReferenceResolver(loader).resolve(source.toUri())
       assertEquals(setOf(source.toUri(), cat.toUri()), resolution.documents.keys)
       val api = OpenApiToGeneratedApi().convert(source.toUri(), loader)
@@ -121,7 +124,7 @@ class OpenApiDiscriminatorReferencesTest {
         }
         if (scoped) server.respond(targetPath, variant)
         server.requests.clear()
-        val options = OpenApiReferenceOptions(directory.resolve("cache"))
+        val options = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true)
         val loader = OpenApiDocumentLoader.create(options)
         val resolution = OpenApiReferenceResolver(loader).resolve(source.toUri())
         assertTrue(targetUri in resolution.documents)
@@ -203,7 +206,10 @@ class OpenApiDiscriminatorReferencesTest {
         document("3.1.0", "kitty: '?schema=missing'")
           .replace("    Pet:\n", "    Pet:\n      ${'$'}id: ${server.baseUri}cat\n"),
       )
-      val options = GeneratedApiIrOptions(openApiReferences = OpenApiReferenceOptions(directory.resolve("cache")))
+      val options =
+        GeneratedApiIrOptions(
+          openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
       val error =
         assertThrows(GenerationException::class.java) { OpenApiToGeneratedApi(options).convert(source.toUri()) }
       assertEquals(source.toUri().toString(), error.file)

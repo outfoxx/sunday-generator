@@ -34,9 +34,15 @@ internal class OpenApiReferenceOptionGroup : OptionGroup() {
     help = "Resolve remote OpenAPI documents from the cache without HTTP requests",
   ).flag(default = false)
 
+  val allowPrivateNetwork by option(
+    "--openapi-allow-private-network",
+    help = "Allow private network destinations and configured proxies for trusted OpenAPI specifications",
+  ).flag(default = false)
+
   fun options(): OpenApiReferenceOptions =
     OpenApiReferenceOptions(
       cacheDirectory = cacheDirectory?.toPath() ?: OpenApiReferenceOptions().cacheDirectory,
       offline = offline,
+      allowPrivateNetwork = allowPrivateNetwork,
     )
 }

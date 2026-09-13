@@ -128,6 +128,7 @@ class OpenApiRemoteReferencesTest {
               disableJacksonAnnotations.set(true)
               generatedAnnotation.set(null)
               openApiReferenceCacheDirectory.set(rootProject.layout.projectDirectory.dir('remote-cache'))
+              openApiAllowPrivateNetwork.set(providers.gradleProperty('allowPrivateOpenApi').map { it.toBoolean() }.orElse(false))
             }
           }
         }
@@ -179,9 +180,19 @@ class OpenApiRemoteReferencesTest {
           .create()
           .withProjectDir(directory)
           .withPluginClasspath()
-          .withArguments("build", "--stacktrace", "--build-cache", "--parallel", "--max-workers=4", *arguments)
-          .withDebug(true)
+          .withArguments(
+            "build",
+            "--stacktrace",
+            "--build-cache",
+            "--parallel",
+            "--max-workers=4",
+            "-PallowPrivateOpenApi=true",
+            *arguments,
+          ).withDebug(true)
 
+      val blocked = runner("-PallowPrivateOpenApi=false").buildAndFail()
+      assertTrue(blocked.output.contains("prohibited address"), blocked.output)
+      assertTrue(requests.isEmpty())
       val first = runner().build()
       assertEquals(8, requests.size, "Generation and source grouping must use captured documents")
       for (project in listOf("one", "two")) {
@@ -312,7 +323,7 @@ class OpenApiRemoteReferencesTest {
         assertEquals(TaskOutcome.FROM_CACHE, restored.task(":$project:sundayGenerate_client")?.outcome)
       }
       requests.clear()
-      val offline = runner("--offline").build()
+      val offline = runner("--offline", "-PallowPrivateOpenApi=false").build()
       assertEquals(0, requests.size)
       for (project in listOf("one", "two")) {
         assertEquals(TaskOutcome.UP_TO_DATE, offline.task(":$project:sundayGenerate_client")?.outcome)
@@ -321,7 +332,7 @@ class OpenApiRemoteReferencesTest {
         val source = directory.resolve("$name/api.yaml")
         source.writeText(source.readText().replace("/entry#", "/schemas/user.yaml#"))
       }
-      runner("--offline").build()
+      runner("--offline", "-PallowPrivateOpenApi=false").build()
       assertEquals(0, requests.size, "Effective redirect URLs must remain available offline in parallel generations")
       documents.remove("/schemas/profile.yaml")
       val failed = runner().buildAndFail()

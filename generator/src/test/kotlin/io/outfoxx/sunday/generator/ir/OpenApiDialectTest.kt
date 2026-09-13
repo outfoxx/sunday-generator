@@ -80,7 +80,10 @@ class OpenApiDialectTest {
             siblings.prependIndent("      "),
         ),
       )
-      val loader = OpenApiDocumentLoader.create(OpenApiReferenceOptions(directory.resolve("cache")))
+      val loader =
+        OpenApiDocumentLoader.create(
+          OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
       val resolution = OpenApiReferenceResolver(loader).resolve(source.toUri())
       val schemas = (resolution.document["components"] as Map<*, *>)["schemas"] as Map<*, *>
       val alias = schemas["Alias"] as Map<*, *>

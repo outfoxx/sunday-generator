@@ -81,7 +81,10 @@ class OpenApiDocumentLoaderTest {
             User: {${'$'}ref: '${server.baseUri}schemas/user%20file.yaml?v=1#user'}
         """.trimIndent(),
       )
-      val options = GeneratedApiIrOptions(openApiReferences = OpenApiReferenceOptions(directory.resolve("cache")))
+      val options =
+        GeneratedApiIrOptions(
+          openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
       val result = OpenApiToGeneratedApi(options).convert(source.toUri())
       assertEquals(
         GeneratedTypeRef.named("User"),
@@ -165,8 +168,12 @@ class OpenApiDocumentLoaderTest {
     server.start()
     try {
       val loader =
-        DefaultOpenApiDocumentLoader(OpenApiReferenceOptions(directory.resolve("cache"))) {
-          HttpClient.newBuilder().sslContext(context).build()
+        DefaultOpenApiDocumentLoader(OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true)) {
+          HttpClient
+            .newBuilder()
+            .sslContext(context)
+            .proxy(it)
+            .build()
         }
       val base = URI("HTTPS://127.0.0.1:${server.address.port}/")
       assertEquals("type: string", String(loader.load(base.resolve("schema")).bytes))
@@ -202,7 +209,9 @@ class OpenApiDocumentLoaderTest {
       )
       val api =
         OpenApiToGeneratedApi(
-          GeneratedApiIrOptions(openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"))),
+          GeneratedApiIrOptions(
+            openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+          ),
         ).convert(source.toUri())
       assertEquals("Schema", api.models.single().name)
     }
@@ -227,7 +236,7 @@ class OpenApiDocumentLoaderTest {
           exchange.sendResponseHeaders(304, -1)
         }
       }
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val uri = server.baseUri.resolve("schema")
       val first = OpenApiDocumentLoader.create(options)
       val bytes = first.load(uri).bytes
@@ -248,7 +257,7 @@ class OpenApiDocumentLoaderTest {
     @TempDir directory: Path,
   ) {
     OpenApiHttpFixture().use { server ->
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val uri = server.baseUri.resolve("schema?version=1")
       server.respond("/schema", "type: string")
       val first = OpenApiDocumentLoader.create(options).load(uri)
@@ -335,7 +344,7 @@ class OpenApiDocumentLoaderTest {
       server.respond("/a", "", 302, mapOf("Location" to "/b"))
       server.respond("/b", "", 302, mapOf("Location" to "/c"))
       server.respond("/c", "type: string", headers = mapOf("ETag" to "\"v1\""))
-      val loader = OpenApiDocumentLoader.create(OpenApiReferenceOptions(directory))
+      val loader = OpenApiDocumentLoader.create(OpenApiReferenceOptions(directory, allowPrivateNetwork = true))
       for (alias in listOf("a", "b", "c", "a")) {
         val document = loader.load(server.baseUri.resolve(alias))
         assertEquals(server.baseUri.resolve("c"), document.uri)
@@ -349,7 +358,11 @@ class OpenApiDocumentLoaderTest {
       assertEquals(
         "type: string",
         String(
-          OpenApiDocumentLoader.create(OpenApiReferenceOptions(directory)).load(server.baseUri.resolve("b")).bytes,
+          OpenApiDocumentLoader
+            .create(
+              OpenApiReferenceOptions(directory, allowPrivateNetwork = true),
+            ).load(server.baseUri.resolve("b"))
+            .bytes,
         ),
       )
     }
@@ -360,7 +373,7 @@ class OpenApiDocumentLoaderTest {
     @TempDir directory: Path,
   ) {
     OpenApiHttpFixture().use { server ->
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val uri = server.baseUri.resolve("schema")
       server.respond("/schema", "type: string")
       OpenApiDocumentLoader.create(options).load(uri)
@@ -384,7 +397,8 @@ class OpenApiDocumentLoaderTest {
       server.respond("/a", "", 302, mapOf("Location" to "/b"))
       server.respond("/b", "", 302, mapOf("Location" to "/c"))
       server.respond("/c", "type: string")
-      val options = OpenApiReferenceOptions(directory, maximumRedirects = 1, maximumDocumentBytes = 32)
+      val options =
+        OpenApiReferenceOptions(directory, allowPrivateNetwork = true, maximumRedirects = 1, maximumDocumentBytes = 32)
       assertTrue(
         assertThrows(IOException::class.java) {
           OpenApiDocumentLoader.create(options).load(server.baseUri.resolve("a"))
@@ -418,7 +432,8 @@ class OpenApiDocumentLoaderTest {
         exchange.responseBody.flush()
         Thread.sleep(500)
       }
-      val options = OpenApiReferenceOptions(directory, requestTimeout = Duration.ofMillis(100))
+      val options =
+        OpenApiReferenceOptions(directory, allowPrivateNetwork = true, requestTimeout = Duration.ofMillis(100))
       assertTrue(
         assertThrows(IOException::class.java) {
           OpenApiDocumentLoader.create(options).load(server.baseUri.resolve("slow"))
@@ -433,7 +448,7 @@ class OpenApiDocumentLoaderTest {
   ) {
     OpenApiHttpFixture().use { server ->
       server.respond("/schema", "type: string")
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val uri = server.baseUri.resolve("schema")
       Executors.newFixedThreadPool(4).use { executor ->
         val results =
@@ -480,7 +495,9 @@ class OpenApiDocumentLoaderTest {
       val failure =
         assertThrows(GenerationException::class.java) {
           OpenApiToGeneratedApi(
-            GeneratedApiIrOptions(openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"))),
+            GeneratedApiIrOptions(
+              openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+            ),
           ).convert(root.toUri())
         }
       assertEquals(root.toUri().toString(), failure.file)

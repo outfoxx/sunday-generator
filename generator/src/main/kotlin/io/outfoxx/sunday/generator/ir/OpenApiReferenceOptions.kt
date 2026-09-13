@@ -27,12 +27,14 @@ data class OpenApiReferenceOptions(
   val offline: Boolean = false,
   /** Maximum time to establish an HTTP connection. */
   val connectionTimeout: Duration = Duration.ofSeconds(10),
-  /** Maximum time to receive an entire HTTP response. */
+  /** Maximum wait for DNS preflight or an entire HTTP response. */
   val requestTimeout: Duration = Duration.ofSeconds(30),
   /** Maximum document size in bytes. */
   val maximumDocumentBytes: Int = 16 * 1024 * 1024,
   /** Maximum number of HTTP redirects for one retrieval. */
   val maximumRedirects: Int = 5,
+  /** Allows private network destinations and configured proxies for trusted specifications. */
+  val allowPrivateNetwork: Boolean = false,
 ) {
   init {
     require(!connectionTimeout.isNegative && !connectionTimeout.isZero)

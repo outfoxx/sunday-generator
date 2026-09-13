@@ -71,6 +71,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           task.bootstrapAllSources.set(bootstrapSources)
           task.openApiReferenceCacheDirectory.set(gen.openApiReferenceCacheDirectory)
           task.openApiOffline.set(project.gradle.startParameter.isOffline)
+          task.openApiAllowPrivateNetwork.set(gen.openApiAllowPrivateNetwork)
         }
 
       // Task-backed providers retain the dependency and defer reading indexes until discovery has run.

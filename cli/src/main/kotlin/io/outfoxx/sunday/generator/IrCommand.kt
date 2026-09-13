@@ -46,6 +46,9 @@ class IrCommand : CliktCommand(name = "ir") {
   /** Whether remote documents must be loaded without HTTP requests. */
   val openApiOffline get() = referenceOptions.offline
 
+  /** Whether trusted specifications may access private network destinations and configured proxies. */
+  val openApiAllowPrivateNetwork get() = referenceOptions.allowPrivateNetwork
+
   /** Retrieval options shared by native OpenAPI export and generation. */
   protected fun openApiReferenceOptions(): OpenApiReferenceOptions = referenceOptions.options()
 

@@ -411,6 +411,7 @@ class OpenApiReferenceResolver(
       val resourceUri = uri.openApiDocumentUri()
       var resource = if (kind == Kind.SCHEMA) resources[resourceUri] else null
       if (resource == null) {
+        validateReferenceOrigin(reference, resourceUri)
         val document =
           try {
             read(resourceUri, kind, reference.scope.dialect)
@@ -419,6 +420,7 @@ class OpenApiReferenceResolver(
           }
         resource = if (kind == Kind.SCHEMA) resources[resourceUri] ?: document.root() else document.root()
       }
+      validateReferenceOrigin(reference, resource.document.uri)
       if (resource.pointer.isEmpty() && fragment.startsWith("/components/")) {
         indexComponents(resource)
       }
@@ -441,9 +443,25 @@ class OpenApiReferenceResolver(
       if (target.value.isMissingNode) {
         reference.error("Unresolved OpenAPI reference '$ref' ($uri): JSON Pointer target does not exist")
       }
+      validateReferenceOrigin(reference, target.document.uri)
       validateTarget(target, kind, reference)
       index(target, kind, target.scope)
       return target
+    }
+
+    private fun validateReferenceOrigin(
+      reference: Node,
+      targetUri: URI,
+    ) {
+      if (reference.document.uri.scheme
+          ?.lowercase() in setOf("http", "https") &&
+        targetUri.scheme.equals("file", ignoreCase = true)
+      ) {
+        reference.error(
+          "Remote OpenAPI document '${reference.document.uri}' cannot access local file '$targetUri' " +
+            "through reference '${reference.value.asText()}'",
+        )
+      }
     }
 
     private fun validateTarget(

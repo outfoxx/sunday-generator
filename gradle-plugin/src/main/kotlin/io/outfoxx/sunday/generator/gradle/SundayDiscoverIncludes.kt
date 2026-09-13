@@ -97,6 +97,10 @@ abstract class SundayDiscoverIncludes
     @get:Input
     val openApiOffline: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+    /** Whether trusted specifications may access private network destinations and configured proxies. */
+    @get:Input
+    val openApiAllowPrivateNetwork: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
     init {
       outputs.upToDateWhen { !hasOpenApiSources() }
       outputs.doNotCacheIf("OpenAPI references must be revalidated for each invocation") { hasOpenApiSources() }
@@ -125,6 +129,7 @@ abstract class SundayDiscoverIncludes
           OpenApiReferenceOptions(
             cacheDirectory = openApiReferenceCacheDirectory.get().asFile.toPath(),
             offline = openApiOffline.get(),
+            allowPrivateNetwork = openApiAllowPrivateNetwork.get(),
           ),
         )
 

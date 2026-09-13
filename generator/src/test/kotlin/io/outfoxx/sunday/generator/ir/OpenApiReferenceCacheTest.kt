@@ -42,7 +42,7 @@ class OpenApiReferenceCacheTest {
       server.respond("/a", "", 302, mapOf("Location" to "/b"))
       server.respond("/b", "", 307, mapOf("Location" to "/c"))
       server.respond("/c", "type: string", headers = mapOf("ETag" to "\"v1\""))
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val online = OpenApiDocumentLoader.create(options)
       val effective = server.baseUri.resolve("c")
       assertEquals(effective, online.load(server.baseUri.resolve("a")).uri)
@@ -88,7 +88,7 @@ class OpenApiReferenceCacheTest {
       val entry = Files.createDirectories(directory.resolve("v1").resolve(requested.toString().toByteArray().sha256()))
       Files.write(entry.resolve("$digest.body"), body)
       entry.resolve("metadata.yaml").writeText("uri: '$effective'\nsha256: '$digest'\netag: '\"legacy\"'\n")
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       assertEquals(effective, OpenApiDocumentLoader.create(options.copy(offline = true)).load(requested).uri)
       server.respond("/old", "", 302, mapOf("Location" to "/schema"))
       server.handlers["/schema"] = { exchange ->
@@ -125,7 +125,7 @@ class OpenApiReferenceCacheTest {
           }
         }
       }
-      val options = OpenApiReferenceOptions(directory)
+      val options = OpenApiReferenceOptions(directory, allowPrivateNetwork = true)
       val executor = Executors.newFixedThreadPool(2)
       try {
         val loads =
@@ -183,7 +183,7 @@ class OpenApiReferenceCacheTest {
             Single: {${'$'}ref: '${server.baseUri}schemas/detail%20file.yaml?kind=%2F'}
         """.trimIndent(),
       )
-      val options = OpenApiReferenceOptions(directory.resolve("cache"))
+      val options = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true)
       val loader = OpenApiDocumentLoader.create(options)
       val resolution = OpenApiReferenceResolver(loader).resolve(source.toUri())
       val result = OpenApiToGeneratedApi().convert(source.toUri(), loader)

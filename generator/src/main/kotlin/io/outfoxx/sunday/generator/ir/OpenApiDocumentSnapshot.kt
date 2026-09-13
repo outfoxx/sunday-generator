@@ -92,20 +92,23 @@ object OpenApiDocumentSnapshot {
   private fun encodeUri(
     uri: URI,
     baseDirectory: Path,
-  ): Map<String, String> =
-    if (uri.scheme == "file") {
-      mapOf(
-        "file" to
-          baseDirectory
-            .toAbsolutePath()
-            .normalize()
-            .relativize(Path.of(uri))
-            .toString()
-            .replace('\\', '/'),
-      )
-    } else {
-      mapOf("uri" to uri.toString())
+  ): Map<String, String> {
+    if (uri.scheme.equals("file", ignoreCase = true)) {
+      relativePath(baseDirectory, Path.of(uri))?.let { return mapOf("file" to it) }
     }
+    return mapOf("uri" to uri.toString())
+  }
+
+  /** Cross-drive and cross-provider documents retain their absolute URI in the manifest. */
+  internal fun relativePath(
+    baseDirectory: Path,
+    target: Path,
+  ): String? {
+    val base = baseDirectory.toAbsolutePath().normalize()
+    val path = target.toAbsolutePath().normalize()
+    if (base.fileSystem != path.fileSystem || base.root != path.root) return null
+    return base.relativize(path).toString().replace('\\', '/')
+  }
 
   private fun decodeUri(
     value: JsonNode,

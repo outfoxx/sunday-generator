@@ -136,7 +136,7 @@ class OpenApiBooleanSchemaTest {
     OpenApiHttpFixture().use { server ->
       server.respond("/anything", "true")
       val source = api(directory, "Anything: {${'$'}ref: '${server.baseUri}anything'}")
-      val options = OpenApiReferenceOptions(directory.resolve("cache"))
+      val options = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true)
       val loader = OpenApiDocumentLoader.create(options)
       val resolution = OpenApiReferenceResolver(loader).resolve(source.toUri())
       val converter = OpenApiToGeneratedApi()

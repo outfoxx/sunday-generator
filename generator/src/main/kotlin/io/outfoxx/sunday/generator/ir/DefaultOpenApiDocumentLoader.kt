@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.ProxySelector
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -43,11 +44,13 @@ import java.util.concurrent.TimeoutException
 /** One loading session; persistent cache locking also coordinates other sessions and processes. */
 internal class DefaultOpenApiDocumentLoader(
   private val options: OpenApiReferenceOptions,
-  private val clientFactory: () -> HttpClient = {
+  private val networkPolicy: OpenApiNetworkPolicy = OpenApiNetworkPolicy(options),
+  private val clientFactory: (ProxySelector) -> HttpClient = { proxySelector ->
     HttpClient
       .newBuilder()
       .connectTimeout(options.connectionTimeout)
       .followRedirects(HttpClient.Redirect.NEVER)
+      .proxy(proxySelector)
       .build()
   },
 ) : OpenApiDocumentLoader {
@@ -136,7 +139,7 @@ internal class DefaultOpenApiDocumentLoader(
     cached: CachedDocument?,
     aliases: MutableSet<URI>,
   ): CachedDocument =
-    clientFactory().use { client ->
+    clientFactory(networkPolicy).use { client ->
       var current = uri
       val visited = mutableSetOf<URI>()
       repeat(options.maximumRedirects + 1) { redirects ->
@@ -148,6 +151,7 @@ internal class DefaultOpenApiDocumentLoader(
           current = next
           return@repeat
         }
+        networkPolicy.validate(current)
         val request = HttpRequest.newBuilder(current).timeout(options.requestTimeout).GET()
         if (cached?.document?.uri == current) {
           cached.etag?.let { request.header("If-None-Match", it) }

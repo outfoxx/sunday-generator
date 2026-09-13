@@ -44,7 +44,12 @@ class OpenApiReferenceOptionsTest {
     for (explicit in listOf(false, true)) {
       val flags =
         if (explicit) {
-          arrayOf("--openapi-offline", "--openapi-reference-cache-dir", directory.resolve("new-cache").toString())
+          arrayOf(
+            "--openapi-offline",
+            "--openapi-allow-private-network",
+            "--openapi-reference-cache-dir",
+            directory.resolve("new-cache").toString(),
+          )
         } else {
           emptyArray()
         }
@@ -59,11 +64,14 @@ class OpenApiReferenceOptionsTest {
       assertEquals(0, exported.statusCode, exported.output)
       assertEquals(explicit, generate.openApiOffline)
       assertEquals(generate.openApiOffline, export.openApiOffline)
+      assertEquals(explicit, generate.openApiAllowPrivateNetwork)
+      assertEquals(generate.openApiAllowPrivateNetwork, export.openApiAllowPrivateNetwork)
       assertEquals(generate.openApiReferenceCacheDirectory, export.openApiReferenceCacheDirectory)
       assertEquals(
         OpenApiReferenceOptions(
           cacheDirectory = if (explicit) directory.resolve("new-cache") else OpenApiReferenceOptions().cacheDirectory,
           offline = explicit,
+          allowPrivateNetwork = explicit,
         ),
         generate.references,
       )
@@ -88,7 +96,7 @@ class OpenApiReferenceOptionsTest {
   ) {
     val help = sundayCommand().test(arrayOf(command, "--help"))
     assertEquals(0, help.statusCode, help.output)
-    for (flag in listOf("--openapi-offline", "--openapi-reference-cache-dir")) {
+    for (flag in listOf("--openapi-offline", "--openapi-reference-cache-dir", "--openapi-allow-private-network")) {
       assertEquals(1, Regex(Regex.escape(flag)).findAll(help.output).count(), help.output)
     }
     val file = directory.resolve("file")
