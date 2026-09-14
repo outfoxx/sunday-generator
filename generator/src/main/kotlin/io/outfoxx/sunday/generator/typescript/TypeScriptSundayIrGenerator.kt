@@ -36,7 +36,9 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
@@ -135,6 +137,7 @@ class TypeScriptSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val index = GeneratedApiIndex(api)
+  private val modelProperties = GeneratedModelProperties(index::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(index) }
@@ -1076,7 +1079,7 @@ class TypeScriptSundayIrGenerator(
           if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
             add("%T.string().refine((value) => ![%L].includes(value)),\n", Z, mappedValues)
           } else {
-            add(property.type.zodSchema(typeName, property.required, property.validation))
+            add(property.zodSchema(typeName))
             add(",\n")
           }
         }
@@ -1460,7 +1463,7 @@ class TypeScriptSundayIrGenerator(
             val model = typeRef.modelOrNull(index) ?: return@mapNotNull null
             discriminatorValue to model
           }
-      val childModels = childModels()
+      val childModels = discriminatorChildren(index) { it.childModels() }
       childModels.forEach { childModel ->
         val childMappings = mappedModels.filter { (_, mappedModel) -> mappedModel == childModel }
         if (childMappings.isEmpty()) {
@@ -1533,13 +1536,12 @@ class TypeScriptSundayIrGenerator(
         PROBLEM,
       ).build()
 
-  private fun GeneratedModel.inheritedProperties(discriminatorName: String?): List<GeneratedModelProperty> {
-    val parent = inherits.firstOrNull()?.modelOrNull(index) ?: return emptyList()
-    val parentProperties =
-      parent.properties.filterNot { property -> property.name == discriminatorName }
-    return parent.inheritedProperties(discriminatorName).withoutOverridesFrom(parentProperties) +
-      parentProperties
-  }
+  private fun GeneratedModel.inheritedProperties(discriminatorName: String?): List<GeneratedModelProperty> =
+    modelProperties
+      .fields(this)
+      .filter { it.inherited }
+      .map { it.effective }
+      .filterNot { it.name == discriminatorName }
 
   private fun List<GeneratedModelProperty>.withoutOverridesFrom(
     properties: List<GeneratedModelProperty>,
@@ -1616,6 +1618,17 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock.of("%T.literal(%S)", Z, discriminatorValue)
   }
 
+  // Zod 4.3 selects discriminated-union branches by their wire tag even while encoding enum objects.
+  private fun hasCodecDiscriminator(
+    discriminator: String,
+    models: List<GeneratedModel>,
+  ): Boolean =
+    models.any { model ->
+      modelProperties.fields(model).any { field ->
+        field.wireName == discriminator && modelProperties.declarationModel(field.effective.type)?.unknownValue != null
+      }
+    }
+
   private fun plainDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
     discriminatorName: String,
@@ -1642,7 +1655,10 @@ class TypeScriptSundayIrGenerator(
         schema to discriminatorValue
       }
     val schemaFactory =
-      if (schemaTypeName == null && variants.map { it.second }.toSet().size == variants.size) {
+      if (schemaTypeName == null &&
+        variants.map { it.second }.toSet().size == variants.size &&
+        !hasCodecDiscriminator(discriminatorName, discriminatorCases.map { it.second })
+      ) {
         "discriminatedUnion"
       } else {
         "union"
@@ -1764,7 +1780,9 @@ class TypeScriptSundayIrGenerator(
         childTypeName.companionSchemaTypeName() to (childModel.discriminatorValue ?: childModel.name)
       }
     val schemaFactory =
-      if (variants.map { it.second }.toSet().size == variants.size) {
+      if (variants.map { it.second }.toSet().size == variants.size &&
+        !hasCodecDiscriminator(discriminatorName, childModels)
+      ) {
         "discriminatedUnion"
       } else {
         "union"
@@ -1857,7 +1875,7 @@ class TypeScriptSundayIrGenerator(
           add("\n")
           properties.forEachIndexed { idx, property ->
             add("    %S: ", property.serializationName ?: property.name)
-            add(property.type.zodSchema(typeName, property.required, property.validation))
+            add(property.zodSchema(typeName))
             if (idx < properties.lastIndex) {
               add(",")
             }
@@ -1905,7 +1923,7 @@ class TypeScriptSundayIrGenerator(
                   if (property.externalDiscriminator != null) {
                     externalDiscriminatedPropertySchema(property.type.typeName(serviceTypeName))
                   } else {
-                    property.type.zodSchema(serviceTypeName, property.required, property.validation, typeName)
+                    property.zodSchema(serviceTypeName, typeName)
                   }
               },
             )
@@ -1964,7 +1982,7 @@ class TypeScriptSundayIrGenerator(
                   if (property.externalDiscriminator != null) {
                     externalDiscriminatedPropertySchema(property.type.typeName(serviceTypeName))
                   } else {
-                    property.type.zodSchema(serviceTypeName, property.required, property.validation)
+                    property.zodSchema(serviceTypeName)
                   }
               },
             )
@@ -2459,11 +2477,23 @@ class TypeScriptSundayIrGenerator(
     return schema.build()
   }
 
+  private fun GeneratedModelProperty.zodSchema(
+    serviceTypeName: TypeName.Standard,
+    lazyRefType: TypeName.Standard? = null,
+  ): CodeBlock {
+    val base = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
+    return modelProperties
+      .scalarDefault(this)
+      ?.takeUnless { required }
+      ?.let { base.appendSchemaCall("prefault(%L)", literal(it)) } ?: base
+  }
+
   private fun GeneratedTypeRef.zodSchema(
     serviceTypeName: TypeName.Standard,
     required: Boolean,
     validation: Map<String, String> = mapOf(),
     lazyRefType: TypeName.Standard? = null,
+    allowedValues: List<Any?>? = null,
   ): CodeBlock {
     val schema =
       when (kind) {
@@ -2489,25 +2519,116 @@ class TypeScriptSundayIrGenerator(
             ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType)
       }
 
-    val constrainedSchema = applyZodValidation(schema, validation)
+    val declaration = modelProperties.declarationType(this)
+    val enumModel = modelProperties.declarationModel(this)?.takeIf { it.kind == GeneratedModel.Kind.ENUM }
+    val wireValidation =
+      allowedValues != null ||
+        validation.isNotEmpty() &&
+        (
+          enumModel != null ||
+            declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+            declaration.formattedScalarTypeName() != null
+        )
+    val constrainedSchema = if (wireValidation) schema else applyZodValidation(schema, validation)
 
-    return when {
-      !required ->
-        CodeBlock
-          .builder()
-          .add(constrainedSchema)
-          .add(".nullish()")
-          .build()
+    val nullableSchema =
+      when {
+        !required ->
+          CodeBlock
+            .builder()
+            .add(constrainedSchema)
+            .add(".nullish()")
+            .build()
 
-      nullable ->
-        CodeBlock
-          .builder()
-          .add(constrainedSchema)
-          .add(".nullable()")
-          .build()
+        nullable ->
+          CodeBlock
+            .builder()
+            .add(constrainedSchema)
+            .add(".nullable()")
+            .build()
 
-      else -> constrainedSchema
+        else -> constrainedSchema
+      }
+    return if (wireValidation) {
+      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues)
+    } else {
+      nullableSchema
     }
+  }
+
+  private fun GeneratedTypeRef.wireConstrainedSchema(
+    schema: CodeBlock,
+    declaration: GeneratedTypeRef,
+    enumModel: GeneratedModel?,
+    required: Boolean,
+    validation: Map<String, String>,
+    allowedValues: List<Any?>?,
+  ): CodeBlock {
+    val formattedType = declaration.takeIf { it.kind == GeneratedTypeRef.Kind.SCALAR }?.formattedScalarTypeName()
+    val primitive =
+      when {
+        enumModel != null || formattedType != null || declaration.name == "string" -> CodeBlock.of("%T.string()", Z)
+        declaration.name in setOf("integer", "number") -> CodeBlock.of("%T.number()", Z)
+        declaration.name == "boolean" -> CodeBlock.of("%T.boolean()", Z)
+        else -> CodeBlock.of("%T.unknown()", Z)
+      }
+    val wireType = if (enumModel != null) GeneratedTypeRef.scalar("string") else declaration
+    var wire = wireType.applyZodValidation(primitive, validation)
+    if (!required) {
+      wire = wire.appendSchemaCall("nullish()")
+    } else if (nullable) {
+      wire =
+        wire.appendSchemaCall("nullable()")
+    }
+    allowedValues?.let { values ->
+      val matches = values.map { CodeBlock.of("value === %L", literal(it)) }.toMutableList()
+      if (!required) matches.add(0, CodeBlock.of("value === undefined"))
+      wire =
+        wire.appendSchemaCall(
+          "refine((value) => %L)",
+          matches.takeIf { it.isNotEmpty() }?.joinToCode(" || ") ?: CodeBlock.of("false"),
+        )
+    }
+    return CodeBlock
+      .builder()
+      .add("(() => { const schema = ")
+      .add(schema)
+      .add("; const wire = ")
+      .add(wire)
+      .add("; ")
+      .apply {
+        if (formattedType != null) {
+          // Convert non-JSON transport values with the selected codec, then compare the JSON scalar contract.
+          add(
+            "const jsonSchema = %Q({ ...runtime.policy, format: 'json', dateEncoding: %T.ISO8601, " +
+              "arrayBufferEncoding: %T.BASE64 }).resolveSchema(",
+            SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+            TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+            TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+          )
+          add(typeRegistry.schemaInitializer(formattedType))
+          add("); ")
+        }
+      }
+      // Retain literal metadata on ordinary enums for Zod's discriminator selection.
+      .add(
+        "return %L.refine((raw) => { ",
+        if (enumModel != null &&
+          enumModel.unknownValue == null
+        ) {
+          CodeBlock.of("schema")
+        } else {
+          CodeBlock.of("%T.unknown()", Z)
+        },
+      ).apply {
+        if (formattedType != null) {
+          add("if (raw != null && typeof raw !== 'string') { ")
+          add("const decoded = schema.safeParse(raw); if (!decoded.success || decoded.data == null) return false; ")
+          add("const encoded = %T.safeEncode(jsonSchema, decoded.data); ", Z)
+          add("return encoded.success && wire.safeParse(encoded.data).success; } ")
+        }
+      }.add("return wire.safeParse(raw).success; }, 'Invalid scalar wire value').pipe(schema); })()")
+      .build()
   }
 
   private fun GeneratedTypeRef.directZodSchema(
@@ -2534,6 +2655,9 @@ class TypeScriptSundayIrGenerator(
               .add(")")
               .build()
           }
+
+        GeneratedTypeRef.Kind.NAMED ->
+          modelOrNull(index)?.aliasedTypeRef()?.directZodSchema(true, mapOf())
 
         else -> null
       } ?: return null

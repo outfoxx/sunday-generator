@@ -28,19 +28,170 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 class PythonModelRendererTest : PythonTest() {
+
+  @Test
+  fun `unique inherited list defaults preserve structured OpenAPI values`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("array-defaults.yaml")
+    source.writeText(
+      OpenApiReferenceDocuments.document(
+        "Array defaults",
+        """
+        DefaultsBase:
+          type: object
+          properties:
+            values: {type: array, items: {}}
+        UniqueDefaults:
+          allOf: [{${'$'}ref: '#/components/schemas/DefaultsBase'}]
+          properties:
+            values:
+              uniqueItems: true
+              default: ['first', {items: [true, 1]}, null, false, 0]
+        DuplicateDefaults:
+          allOf: [{${'$'}ref: '#/components/schemas/DefaultsBase'}]
+          properties:
+            values:
+              uniqueItems: true
+              default: [{items: [1]}, {items: [1.0]}]
+        """.trimIndent(),
+      ),
+    )
+    val api = OpenApiToGeneratedApi().convert(source.toUri())
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("turnpost_api").renderModels(api.models),
+          PythonModuleBuilder("turnpost_api/__init__.py").build(),
+        ),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from turnpost_api.models import DefaultsBase, UniqueDefaults, DuplicateDefaults
+          from pydantic import ValidationError
+          value = UniqueDefaults()
+          assert isinstance(value, DefaultsBase)
+          assert isinstance(value.values, list)
+          assert value.values == ['first', {'items': [True, 1]}, None, False, 0]
+          assert value.model_dump(mode='json')['values'] == value.values
+          try:
+              DuplicateDefaults()
+              raise AssertionError('duplicate structured default accepted')
+          except ValidationError:
+              pass
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
+  fun `unique inherited lists validate raw values aliases and defaults`(compiler: PythonCompiler) {
+    val array =
+      GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(GeneratedTypeRef.scalar("any")))
+    val property =
+      GeneratedModelProperty("wireValues", GeneratedTypeRef.named("ArrayAlias"), serializationName = "wire-values")
+    val base = GeneratedModel(name = "ListBase", kind = GeneratedModel.Kind.OBJECT, properties = listOf(property))
+    val child =
+      GeneratedModel(
+        name = "UniqueList",
+        kind = GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("ListBase")),
+        properties = listOf(property.copy(validation = mapOf("uniqueItems" to "true"), defaultValue = "[2, 1]")),
+      )
+    val models =
+      listOf(
+        GeneratedModel(
+          name = "ArrayValue",
+          kind = GeneratedModel.Kind.ARRAY,
+          aliases = array.arguments,
+        ),
+        GeneratedModel(
+          name = "ArrayAlias",
+          kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("ArrayValue")),
+        ),
+        base,
+        child,
+        child.copy(
+          name = "DuplicateDefault",
+          properties = listOf(property.copy(validation = mapOf("uniqueItems" to "true"), defaultValue = "[1, 1.0]")),
+        ),
+        GeneratedModel(
+          name = "SetValue",
+          kind = GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "values",
+                array.copy(
+                  arguments = listOf(GeneratedTypeRef.scalar("string")),
+                  collection = GeneratedCollectionKind.SET,
+                ),
+                validation =
+                  mapOf(
+                    "uniqueItems" to "true",
+                  ),
+              ),
+            ),
+        ),
+      )
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("turnpost_api").renderModels(models),
+          PythonModuleBuilder("turnpost_api/__init__.py").build(),
+        ),
+        importModules = listOf("turnpost_api.models"),
+        smokeCode =
+          """
+          from turnpost_api.models import ListBase, UniqueList, DuplicateDefault, SetValue
+          from pydantic import ValidationError
+          assert issubclass(UniqueList, ListBase)
+          assert UniqueList().wire_values == [2, 1]
+          assert isinstance(UniqueList().wire_values, list)
+          assert ListBase(wire_values=[1, 1]).wire_values == [1, 1]
+          for values in ([2, 1], [True, 1, False, 0], [{'v': [True]}, {'v': [1]}], [[1, 2], [2, 1]]):
+              assert UniqueList(wire_values=values).wire_values == values
+              assert UniqueList.model_validate({'wire-values': values}).wire_values == values
+          for values in ([1, 1.0], [{'v': [1, {'flag': False}]}, {'v': [1.0, {'flag': False}]}], [[1], [1.0]]):
+              for construct in (lambda: UniqueList(wire_values=values), lambda: UniqueList.model_validate({'wire-values': values}),
+                                lambda: UniqueList(wire_values=iter(values))):
+                  try:
+                      construct()
+                      raise AssertionError('duplicates accepted')
+                  except ValidationError:
+                      pass
+          try:
+              DuplicateDefault()
+              raise AssertionError('duplicate default accepted')
+          except ValidationError:
+              pass
+          assert SetValue(values=['a', 'a']).values == {'a'}
+          """.trimIndent(),
+      ),
+    )
+  }
 
   @Test
   fun `generates constrained aliases inheritance recursive references and open objects`(compiler: PythonCompiler) {
@@ -173,7 +324,7 @@ class PythonModelRendererTest : PythonTest() {
   ) {
     val cases =
       listOf(
-        Triple(defaultUri, "Invalid integer default for property 'count'", "sunday-python-default"),
+        Triple(defaultUri, "Invalid integer default for property 'Counter.count'", "sunday-python-default"),
         Triple(constraintUri, "Invalid numeric OpenAPI schema constraint", "sunday-python-minimum"),
       )
 

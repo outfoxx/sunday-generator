@@ -29,6 +29,33 @@ import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
 class GeneratedApiComposerTest {
+  @Test
+  fun `composition retains scalar restrictions and rejects incompatible restrictions`() {
+    val property =
+      GeneratedModelProperty("restricted", GeneratedTypeRef.scalar("any"), allowedValues = listOf(null, 0, false))
+    val first = fragment(models = listOf(projectModel(property)))
+    val second = fragment(kind = GeneratedSourceSpec.Kind.ASYNCAPI, models = listOf(projectModel(property)))
+    val composed = GeneratedApiComposer().compose(listOf(first, second))
+    assertThat(
+      composed.models
+        .single()
+        .properties
+        .last()
+        .allowedValues,
+      equalTo(property.allowedValues),
+    )
+    assertThat(GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composed)), equalTo(composed))
+    assertThrows(GeneratedApiCompositionException::class.java) {
+      GeneratedApiComposer().compose(
+        listOf(
+          first,
+          second.copy(
+            api = second.api.copy(models = listOf(projectModel(property.copy(allowedValues = listOf(false))))),
+          ),
+        ),
+      )
+    }
+  }
 
   @Test
   fun `preserves OpenAPI security overrides when composing with AsyncAPI in either order`(

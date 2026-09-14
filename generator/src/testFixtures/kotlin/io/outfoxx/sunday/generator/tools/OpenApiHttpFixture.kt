@@ -95,7 +95,10 @@ class OpenApiHttpFixture : AutoCloseable {
   }
 
   /** Exports a fixture combining redirects, relative references, resource IDs, and anchors. */
-  fun export(directory: Path): GeneratedApi {
+  fun export(
+    directory: Path,
+    sdkSchemas: String = OpenApiReferenceDocuments.sdkCompatibility,
+  ): GeneratedApi {
     respond("/redirect", "", 302, mapOf("Location" to "/schemas/user.yaml"))
     respond(
       "/schemas/user.yaml",
@@ -163,6 +166,7 @@ class OpenApiHttpFixture : AutoCloseable {
         OpenApiReferenceDocuments.cat,
         OpenApiReferenceDocuments.dog,
         OpenApiReferenceDocuments.records,
+        sdkSchemas,
         """
         Restrictions:
           ${'$'}id: ./restrictions.yaml
@@ -229,6 +233,7 @@ class OpenApiHttpFixture : AutoCloseable {
           BooleanValues: {${'$'}ref: '${baseUri}redirect#/components/schemas/BooleanValues'}
           Unbounded: {type: integer, exclusiveMinimum: false, exclusiveMaximum: false}
           DocumentedRecord: {${'$'}ref: '${baseUri}redirect#/components/schemas/DocumentedRecord'}
+          SdkEnvelope: {${'$'}ref: '${baseUri}redirect#/components/schemas/SdkEnvelope'}
           MappedPets:
             type: object
             required: [animal]

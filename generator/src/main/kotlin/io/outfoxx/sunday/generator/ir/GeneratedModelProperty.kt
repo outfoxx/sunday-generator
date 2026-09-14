@@ -33,4 +33,6 @@ data class GeneratedModelProperty(
   val writeOnly: Boolean = false,
   val deprecated: Boolean = false,
   val documentation: GeneratedDocumentation? = null,
+  /** Permitted scalar wire values; null means unrestricted, while a list may itself contain null. */
+  val allowedValues: List<Any?>? = null,
 )

@@ -16,11 +16,13 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import java.math.BigDecimal
@@ -35,13 +37,16 @@ class PythonModelRenderer(
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
+  private var modelProperties = GeneratedModelProperties { modelIndex[it.name] }
   private var discriminatorFallbacks: Map<String, GeneratedDiscriminatorFallback> = mapOf()
   private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
+  private val enumStringAdapters = linkedMapOf<Map<String, String>, String>()
 
   /** Renders the given models into the package `models.py` module. */
   fun renderModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
     modelIndex = models.associateBy { model -> model.name }
+    modelProperties = GeneratedModelProperties { modelIndex[it.name] }
     discriminatorFallbacks =
       buildList {
         models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(modelIndex) }
@@ -52,6 +57,99 @@ class PythonModelRenderer(
         }
       }.associateBy { fallback -> fallback.hierarchy.name }
     pythonEnumEntriesByModel.clear()
+    enumStringAdapters.clear()
+    models.flatMap { it.effectiveModelProperties() }.forEach { property ->
+      val constraints = property.enumStringConstraints()
+      if (constraints.isNotEmpty()) {
+        enumStringAdapters.getOrPut(constraints) { "_enum_string_constraints_${enumStringAdapters.size + 1}" }
+      }
+    }
+    enumStringAdapters.forEach { (constraints, name) ->
+      module.addCode(
+        PythonCodeBlock.of(
+          "%L: %T[str] = %T(\n    %T[\n        str,\n        %T(\n%C\n        ),\n    ],\n)",
+          name,
+          PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("typing", "Annotated"),
+          PythonSymbol("pydantic", "StringConstraints"),
+          PythonCodeBlock.join(
+            constraints.renderFieldConstraints("enum string", GeneratedTypeRef.scalar("string")).map {
+              PythonCodeBlock.of("            %C,", it)
+            },
+            "\n",
+          ),
+        ),
+      )
+    }
+
+    if (models.any { model -> model.properties.any { it.allowedValues != null } }) {
+      module.addCode(
+        PythonCodeBlock.of(
+          """
+          def _is_allowed_wire_value(value: object, allowed: tuple[object, ...], format: str = "") -> bool:
+              if isinstance(value, %T):
+                  value = value.value
+              if (
+                  (format == "uuid" and isinstance(value, %T))
+                  or (
+                      format in ("date", "date-only", "full-date") and isinstance(value, %T) and not isinstance(value, %T)
+                  )
+                  or (format in ("date-time", "datetime", "date-time-only", "datetime-only") and isinstance(value, %T))
+                  or (format in ("time", "time-only", "partial-time") and isinstance(value, %T))
+                  or (format in ("uri", "url", "iri") and isinstance(value, (%T, %T)))
+              ):
+                  value = %T(value)
+              elif format in ("byte", "binary") and isinstance(value, bytes):
+                  try:
+                      value = value.decode("utf-8")
+                  except UnicodeDecodeError:
+                      return False
+              return any(value == candidate and isinstance(value, bool) == isinstance(candidate, bool) for candidate in allowed)
+          """.trimIndent(),
+          PythonSymbol("enum", "Enum"),
+          PythonSymbol("uuid", "UUID"),
+          PythonSymbol("datetime", "date"),
+          PythonSymbol("datetime", "datetime"),
+          PythonSymbol("datetime", "datetime"),
+          PythonSymbol("datetime", "time"),
+          PythonSymbol("pydantic", "AnyUrl"),
+          PythonSymbol("pydantic_core", "Url"),
+          PythonSymbol("pydantic_core", "to_jsonable_python"),
+        ),
+      )
+    }
+
+    if (models.any { model -> model.effectiveModelProperties().any { it.requiresUniqueListValidation() } }) {
+      module.addCode(
+        PythonCodeBlock.of(
+          """
+          def _wire_values_equal(left: object, right: object) -> bool:
+              if isinstance(left, %T):
+                  left = left.model_dump(mode="json", by_alias=True)
+              if isinstance(right, %T):
+                  right = right.model_dump(mode="json", by_alias=True)
+              if isinstance(left, %T):
+                  left = left.value
+              if isinstance(right, %T):
+                  right = right.value
+              if isinstance(left, bool) != isinstance(right, bool):
+                  return False
+              if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
+                  if len(left) != len(right):
+                      return False
+                  return all(_wire_values_equal(a, b) for a, b in zip(left, right, strict=True))
+              if isinstance(left, dict) and isinstance(right, dict):
+                  return left.keys() == right.keys() and all(_wire_values_equal(left[key], right[key]) for key in left)
+              return bool(left == right)
+          """.trimIndent(),
+          PythonSymbol("pydantic", "BaseModel"),
+          PythonSymbol("pydantic", "BaseModel"),
+          PythonSymbol("enum", "Enum"),
+          PythonSymbol("enum", "Enum"),
+        ),
+      )
+    }
 
     models
       .filter { model -> model.isSupportedModel() }
@@ -148,7 +246,10 @@ class PythonModelRenderer(
           renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
-          renderWireValueValidator(effectiveProperties),
+          renderWireValueValidator(effectiveModelProperties()),
+          renderAllowedValuesValidator(),
+          renderEnumStringValidator(),
+          renderUniqueListValidator(),
           renderExternalDiscriminatorValidator(),
         )
     val body =
@@ -771,6 +872,156 @@ class PythonModelRenderer(
     return PythonCodeBlock.join(mappings + listOfNotNull(fallbackMapping), separator = "\n")
   }
 
+  private fun GeneratedModelProperty.requiresUniqueListValidation(): Boolean =
+    validation["uniqueItems"] == "true" &&
+      modelProperties.declarationType(type).let {
+        it.kind == GeneratedTypeRef.Kind.ARRAY &&
+          it.collection != io.outfoxx.sunday.generator.ir.GeneratedCollectionKind.SET
+      }
+
+  private fun GeneratedModelProperty.enumStringConstraints(): Map<String, String> =
+    if (modelProperties.declarationModel(type)?.kind == GeneratedModel.Kind.ENUM) {
+      validation.filterKeys { it in setOf("minLength", "maxLength", "pattern") }
+    } else {
+      emptyMap()
+    }
+
+  private fun GeneratedModel.renderEnumStringValidator(): PythonCodeBlock? {
+    val fields = effectiveModelProperties().filter { it.enumStringConstraints().isNotEmpty() }
+    if (fields.isEmpty()) return null
+    return PythonCodeBlock.of(
+      "%C\n" +
+        "    @classmethod\n" +
+        "    def _validate_enum_strings(cls, value: object, info: %T) -> object:\n" +
+        "        if value is None:\n" +
+        "            return value\n" +
+        "        wire_value = value.value if isinstance(value, %T) else value\n" +
+        "%C\n" +
+        "        return value",
+      fields.renderFieldValidator("after"),
+      PythonSymbol("pydantic", "ValidationInfo"),
+      PythonSymbol("enum", "Enum"),
+      PythonCodeBlock.join(
+        fields.map { property ->
+          PythonCodeBlock.of(
+            "        if info.field_name == %S:\n            %L.validate_python(wire_value, strict=True)",
+            property.name.pythonIdentifierName,
+            enumStringAdapters.getValue(property.enumStringConstraints()),
+          )
+        },
+        "\n",
+      ),
+    )
+  }
+
+  private fun GeneratedModel.renderAllowedValuesValidator(): PythonCodeBlock? {
+    val fields = effectiveModelProperties().filter { it.allowedValues != null }
+    if (fields.isEmpty()) return null
+    // Pydantic must inspect discriminator literals before any validator can alter their values.
+    val (discriminatorFields, valueFields) = fields.partition { it.discriminatorLiteralValue(this) != null }
+    return PythonCodeBlock.join(
+      listOf("before" to valueFields, "after" to discriminatorFields)
+        .filter { (_, properties) -> properties.isNotEmpty() }
+        .mapIndexed { index, (mode, properties) ->
+          // Replace the inherited validator even when every restriction is now on a discriminator.
+          properties.renderAllowedValuesValidator(
+            mode,
+            if (index == 0) "_validate_allowed_values" else "_validate_discriminator_allowed_values",
+          )
+        },
+      separator = "\n\n",
+    )
+  }
+
+  private fun List<GeneratedModelProperty>.renderAllowedValuesValidator(
+    mode: String,
+    name: String,
+  ): PythonCodeBlock {
+    val checks =
+      map { property ->
+        val values = property.allowedValues.orEmpty().map { it?.renderPythonValue() ?: PythonCodeBlock.of("None") }
+        val tuple =
+          if (values.size == 1) {
+            PythonCodeBlock.of("(%C,)", values.single())
+          } else {
+            PythonCodeBlock.of("(%C)", PythonCodeBlock.join(values, ", "))
+          }
+        val format =
+          modelProperties
+            .declarationType(
+              property.type,
+            ).let { it.format?.lowercase() ?: it.name.lowercase() }
+        val arguments = PythonCodeBlock.of("value, %C, %S", tuple, format)
+        val fieldName = property.name.pythonIdentifierName.pythonStringLiteral()
+        val prefix = "        if info.field_name == $fieldName and not "
+        val renderedArguments = arguments.render(PythonRenderContext(PythonImportSet()))
+        val condition =
+          if (prefix.length + "_is_allowed_wire_value():".length + renderedArguments.length <= 120) {
+            PythonCodeBlock.of("%L_is_allowed_wire_value(%C):", prefix, arguments)
+          } else {
+            PythonCodeBlock.of("%L_is_allowed_wire_value(\n            %C\n        ):", prefix, arguments)
+          }
+        PythonCodeBlock.of(
+          "%C\n            raise ValueError(%S)",
+          condition,
+          "Invalid value for '${property.serializationName ?: property.name}'",
+        )
+      }
+    return PythonCodeBlock.of(
+      "%C\n" +
+        "    @classmethod\n" +
+        "    def %L(cls, value: object, info: %T) -> object:\n" +
+        "%C\n" +
+        "        return value",
+      renderFieldValidator(mode),
+      name,
+      PythonSymbol("pydantic", "ValidationInfo"),
+      PythonCodeBlock.join(checks, separator = "\n"),
+    )
+  }
+
+  private fun GeneratedModel.renderUniqueListValidator(): PythonCodeBlock? {
+    val fields = effectiveModelProperties().filter { it.requiresUniqueListValidation() }
+    if (fields.isEmpty()) return null
+    return PythonCodeBlock.of(
+      "%C\n" +
+        """
+        @classmethod
+        def _validate_unique_lists(cls, value: object) -> object:
+            if isinstance(value, %T) and not isinstance(value, (str, bytes, dict)):
+                items = value if isinstance(value, list) else list(value)
+                for index, item in enumerate(items):
+                    if any(_wire_values_equal(item, previous) for previous in items[:index]):
+                        raise ValueError("Array items must be unique")
+                return items
+            return value
+        """.trimIndent().prependIndent("    "),
+      fields.renderFieldValidator("before"),
+      PythonSymbol("collections.abc", "Iterable"),
+    )
+  }
+
+  private fun List<GeneratedModelProperty>.renderFieldValidator(mode: String): PythonCodeBlock {
+    val fieldNames = map { it.name.pythonIdentifierName }
+    val arguments = fieldNames.map { it.pythonStringLiteral() } + "mode=${mode.pythonStringLiteral()}"
+    val inline = "    @field_validator(${arguments.joinToString(", ")})"
+    return if (inline.length <= 120) {
+      PythonCodeBlock.of(
+        "    @%T(%C, mode=%S)",
+        PythonSymbol("pydantic", "field_validator"),
+        PythonCodeBlock.join(fieldNames.map { PythonCodeBlock.of("%S", it) }, separator = ", "),
+        mode,
+      )
+    } else {
+      PythonCodeBlock.of(
+        "    @%T(\n%C,\n        mode=%S,\n    )",
+        PythonSymbol("pydantic", "field_validator"),
+        PythonCodeBlock.join(fieldNames.map { PythonCodeBlock.of("        %S", it) }, separator = ",\n"),
+        mode,
+      )
+    }
+  }
+
   private fun GeneratedModelProperty.renderProperty(model: GeneratedModel): PythonCodeBlock {
     val propertyName = name.pythonIdentifierName
     val literalValue = discriminatorLiteralValue(model)
@@ -791,7 +1042,7 @@ class PythonModelRenderer(
       fieldArguments +=
         PythonCodeBlock.of(
           "default=%C",
-          defaultValue?.let { value -> renderDefaultValue(value) } ?: PythonCodeBlock.of("None"),
+          defaultValue?.let { value -> renderDefaultValue(value, model.name) } ?: PythonCodeBlock.of("None"),
         )
     }
     if (defaultValue != null) {
@@ -800,7 +1051,13 @@ class PythonModelRenderer(
     if (alias != propertyName) {
       fieldArguments += PythonCodeBlock.of("alias=%S", alias)
     }
-    fieldArguments += validation.renderFieldConstraints("property '${model.name}.$name'", type)
+    val enumConstraints = enumStringConstraints()
+    fieldArguments +=
+      (validation - enumConstraints.keys).renderFieldConstraints(
+        "property '${model.name}.$name'",
+        type,
+        requiresUniqueListValidation(),
+      )
     documentation?.description?.let { description ->
       fieldArguments += PythonCodeBlock.of("description=%S", description)
     }
@@ -808,6 +1065,18 @@ class PythonModelRenderer(
       fieldArguments += PythonCodeBlock.of("deprecated=True")
     }
     val schemaExtra = mutableListOf<PythonCodeBlock>()
+    enumConstraints.forEach { (constraint, value) ->
+      schemaExtra +=
+        if (constraint == "pattern") {
+          PythonCodeBlock.of("%S: %S", constraint, value)
+        } else {
+          PythonCodeBlock.of(
+            "%S: %L",
+            constraint,
+            value.pythonNonNegativeIntegerLiteral("constraint '$constraint' on property '${model.name}.$name'"),
+          )
+        }
+    }
     if (readOnly) {
       schemaExtra += PythonCodeBlock.of("%S: True", "readOnly")
     }
@@ -831,7 +1100,13 @@ class PythonModelRenderer(
     }
 
     val overrideSuffix =
-      if (model.inheritedPropertyNames().contains(name)) {
+      if (model.inheritedPropertyNames().contains(name) &&
+        modelProperties
+          .fields(model)
+          .single { it.wireName == (serializationName ?: name) }
+          .declaration.type
+          .copy(nullable = false) != type.copy(nullable = false)
+      ) {
         "  # type: ignore[assignment]"
       } else {
         ""
@@ -840,14 +1115,48 @@ class PythonModelRenderer(
     return if (fieldArguments.isEmpty()) {
       PythonCodeBlock.of("    %L: %C%L", propertyName, propertyType, overrideSuffix)
     } else {
-      PythonCodeBlock.of(
-        "    %L: %C = %T(%C)%L",
-        propertyName,
-        propertyType,
-        PythonSymbol("pydantic", "Field"),
-        PythonCodeBlock.join(fieldArguments, separator = ", "),
-        overrideSuffix,
-      )
+      val arguments = PythonCodeBlock.join(fieldArguments, separator = ", ")
+      val inline =
+        PythonCodeBlock.of(
+          "    %L: %C = %T(%C)%L",
+          propertyName,
+          propertyType,
+          PythonSymbol("pydantic", "Field"),
+          arguments,
+          overrideSuffix,
+        )
+      val context = PythonRenderContext(PythonImportSet())
+      if (enumConstraints.isNotEmpty() && inline.render(context).length > 120) {
+        val multilineArguments =
+          if (arguments.render(context).length + 8 <= 120) {
+            PythonCodeBlock.of("        %C", arguments)
+          } else {
+            PythonCodeBlock.join(fieldArguments.map { PythonCodeBlock.of("        %C,", it) }, "\n")
+          }
+        PythonCodeBlock.of(
+          "    %L: %C = %T(\n%C\n    )%L",
+          propertyName,
+          propertyType,
+          PythonSymbol("pydantic", "Field"),
+          multilineArguments,
+          overrideSuffix,
+        )
+      } else if (defaultValue == null ||
+        required ||
+        inline.render(context).length <= 120 ||
+        arguments.render(context).length + 8 > 120
+      ) {
+        inline
+      } else {
+        PythonCodeBlock.of(
+          "    %L: %C = %T(\n        %C\n    )%L",
+          propertyName,
+          propertyType,
+          PythonSymbol("pydantic", "Field"),
+          arguments,
+          overrideSuffix,
+        )
+      }
     }
   }
 
@@ -858,9 +1167,17 @@ class PythonModelRenderer(
         inherited.properties.map { property -> property.name } + inherited.inheritedPropertyNames()
       }
 
-  private fun GeneratedModelProperty.renderDefaultValue(value: String): PythonCodeBlock =
-    when {
-      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "boolean" ->
+  private fun GeneratedModelProperty.renderDefaultValue(
+    value: String,
+    modelName: String,
+  ): PythonCodeBlock {
+    val declarationType = modelProperties.declarationType(type)
+    return when {
+      requiresUniqueListValidation() -> {
+        val parsed = runCatching { ObjectMapper().readValue(value, List::class.java) }.getOrNull()
+        parsed?.renderPythonValue() ?: genError("Invalid array default for property '$name': expected a JSON array")
+      }
+      declarationType.kind == GeneratedTypeRef.Kind.SCALAR && declarationType.name == "boolean" ->
         PythonCodeBlock.of(
           when (value) {
             "true" -> "True"
@@ -868,16 +1185,21 @@ class PythonModelRenderer(
             else -> genError("Invalid boolean default '$value' for property '$name'")
           },
         )
-      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "integer" ->
-        PythonCodeBlock.of("%L", value.pythonIntegerLiteral("default for property '$name'"))
-      type.kind == GeneratedTypeRef.Kind.SCALAR && type.name == "number" ->
+      declarationType.kind == GeneratedTypeRef.Kind.SCALAR && declarationType.name == "integer" ->
+        PythonCodeBlock.of(
+          "%L",
+          value.pythonIntegerDefault("default for property '$modelName.${serializationName ?: name}'"),
+        )
+      declarationType.kind == GeneratedTypeRef.Kind.SCALAR && declarationType.name == "number" ->
         PythonCodeBlock.of("%L", value.pythonNumberLiteral("default for property '$name'"))
       else -> PythonCodeBlock.of("%S", value)
     }
+  }
 
   private fun Map<String, String>.renderFieldConstraints(
     context: String,
     type: GeneratedTypeRef,
+    validatesUniqueList: Boolean = false,
   ): List<PythonCodeBlock> =
     entries.sortedBy { entry -> entry.key }.mapNotNull { (name, value) ->
       when (name) {
@@ -914,7 +1236,12 @@ class PythonModelRenderer(
         "uniqueItems" -> {
           when (value) {
             "true" ->
-              if (type.kind == GeneratedTypeRef.Kind.ARRAY && type.collection?.name != "SET") {
+              if (!validatesUniqueList &&
+                modelProperties.declarationType(type).let {
+                  it.kind == GeneratedTypeRef.Kind.ARRAY &&
+                    it.collection?.name != "SET"
+                }
+              ) {
                 genError("Python $context requires uniqueItems but is not represented as a set")
               }
             "false" -> Unit
@@ -948,7 +1275,14 @@ class PythonModelRenderer(
         )
     }
 
-  private fun String.pythonIntegerLiteral(context: String): String = parsePythonInteger(context).toString()
+  private fun String.pythonIntegerDefault(context: String): String =
+    try {
+      BigDecimal(this).toBigIntegerExact().toString()
+    } catch (_: NumberFormatException) {
+      genError("Invalid integer $context: '$this'")
+    } catch (_: ArithmeticException) {
+      genError("Invalid integer $context: '$this'")
+    }
 
   private fun String.pythonNonNegativeIntegerLiteral(context: String): String {
     val parsed = parsePythonInteger(context)
@@ -982,20 +1316,21 @@ class PythonModelRenderer(
       genError("Invalid number $context: '$this'")
     }
 
-  private fun Any.renderPythonValue(): PythonCodeBlock? =
+  private fun Any?.renderPythonValue(): PythonCodeBlock? =
     when (this) {
+      null -> PythonCodeBlock.of("None")
       is Boolean -> PythonCodeBlock.of(if (this) "True" else "False")
       is Number -> PythonCodeBlock.of("%L", this)
       is String -> PythonCodeBlock.of("%S", this)
       is List<*> ->
         PythonCodeBlock.of(
           "[%C]",
-          PythonCodeBlock.join(mapNotNull { value -> value?.renderPythonValue() }, separator = ", "),
+          PythonCodeBlock.join(mapNotNull { value -> value.renderPythonValue() }, separator = ", "),
         )
       is Map<*, *> -> {
         val entries =
           entries.mapNotNull { (key, value) ->
-            if (key !is String || value == null) {
+            if (key !is String) {
               null
             } else {
               value.renderPythonValue()?.let { rendered -> PythonCodeBlock.of("%S: %C", key, rendered) }
@@ -1029,20 +1364,8 @@ class PythonModelRenderer(
       aliases
     }
 
-  private fun GeneratedModel.effectiveModelProperties(): List<GeneratedModelProperty> {
-    val inheritedProperties =
-      inherits
-        .mapNotNull { inherited -> modelIndex[inherited.name] }
-        .flatMap { model -> model.effectiveModelProperties() }
-    val overrideNames =
-      properties
-        .map { property -> property.serializationName ?: property.name }
-        .toSet()
-    return inheritedProperties
-      .filterNot { property ->
-        (property.serializationName ?: property.name) in overrideNames
-      } + properties
-  }
+  private fun GeneratedModel.effectiveModelProperties(): List<GeneratedModelProperty> =
+    modelProperties.fields(this).map { it.effective }
 
   private fun GeneratedModel.renderedModelProperties(): List<GeneratedModelProperty> {
     val inheritedAliasProperties =

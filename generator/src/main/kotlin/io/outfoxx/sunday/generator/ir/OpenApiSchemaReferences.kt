@@ -28,4 +28,8 @@ internal object OpenApiSchemaReferences {
     val member = (schema["allOf"] as? List<*>)?.singleOrNull() as? Map<*, *> ?: return null
     return name(member) ?: singleAllOfName(member)
   }
+
+  /** Finds a candidate only; callers must establish that the wrapper preserves its effective contract. */
+  fun wrappedName(schema: Map<*, *>): String? =
+    name(schema) ?: ((schema["allOf"] as? List<*>)?.singleOrNull() as? Map<*, *>)?.let(::wrappedName)
 }

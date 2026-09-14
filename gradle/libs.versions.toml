@@ -75,6 +75,7 @@ dockerJava = { module = "com.github.docker-java:docker-java-core", version.ref =
 dockerJavaTransport = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "dockerJava" }
 hamcrest = { module = "org.hamcrest:hamcrest-library", version.ref = "hamcrest" }
 jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jacksonJavaTime = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonKotlin" }
 jacksonYaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
 jakartaJaxrs = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakartaJaxrs" }

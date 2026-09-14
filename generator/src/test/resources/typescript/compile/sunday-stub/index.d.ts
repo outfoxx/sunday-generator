@@ -98,7 +98,7 @@ export declare namespace MediaType {
 	const MergePatch: MediaType;
 }
 export type SchemaFormat = "json" | "cbor";
-declare enum DateEncoding {
+export declare enum DateEncoding {
 	DECIMAL_SECONDS_SINCE_EPOCH = 0,
 	MILLISECONDS_SINCE_EPOCH = 1,
 	ISO8601 = 2
@@ -107,7 +107,7 @@ declare enum NumericDateDecoding {
 	DECIMAL_SECONDS_SINCE_EPOCH = 0,
 	MILLISECONDS_SINCE_EPOCH = 1
 }
-declare enum ArrayBufferEncoding {
+export declare enum ArrayBufferEncoding {
 	BASE64 = 0,
 	BASE64URL = 1,
 	RAW_BYTES = 2
@@ -143,6 +143,7 @@ export declare function defineSchema<S extends AnySchema>(builder: (runtime: Sch
 	id?: symbol;
 	debugName?: string;
 }): SchemaDef<S>;
+export declare function createSchemaRuntime(policy: SchemaPolicy): SchemaRuntime;
 export interface SchemaRuntime {
 	readonly policy: SchemaPolicy;
 	resolveSchema<S extends SchemaLike>(ref: S): ResolvedSchema<S>;
