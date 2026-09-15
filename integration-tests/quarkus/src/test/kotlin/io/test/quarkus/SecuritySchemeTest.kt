@@ -18,6 +18,7 @@ package io.test.quarkus
 
 import io.quarkus.test.common.http.TestHTTPResource
 import io.quarkus.test.junit.QuarkusTest
+import io.smallrye.mutiny.Uni
 import io.test.quarkus.secure.OpenAPISecurity
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -62,6 +63,22 @@ class SecuritySchemeTest {
         .orElseThrow()
         .contains("Bearer"),
     )
+  }
+
+  @Test
+  fun `binding configuration rejects missing readers and invalid subject selections`() {
+    val authenticator = OpenAPISecurity.Authenticator { _, _, _ -> Uni.createFrom().nullItem() }
+    val noReaders = OpenAPISecurity.schemes.mapValues { OpenAPISecurity.SchemeBinding(authenticator) }
+    val subjects = OpenAPISecurity.subjectRequirements.associateWith { "oauth" }
+    assertThrows(IllegalArgumentException::class.java) { OpenAPISecurity(noReaders, subjects) }
+    val bindings = OpenAPISecurity.schemes.mapValues { OpenAPISecurity.SchemeBinding(authenticator) { emptySet() } }
+    assertThrows(IllegalArgumentException::class.java) { OpenAPISecurity(bindings) }
+    assertThrows(IllegalArgumentException::class.java) {
+      OpenAPISecurity(bindings, OpenAPISecurity.subjectRequirements.associateWith { "unknown" })
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      OpenAPISecurity(bindings, subjects + (setOf("extra") to "extra"))
+    }
   }
 
   @Test
