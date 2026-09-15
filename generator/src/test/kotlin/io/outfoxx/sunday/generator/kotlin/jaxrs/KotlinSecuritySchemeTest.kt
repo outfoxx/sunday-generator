@@ -46,6 +46,40 @@ import org.junit.jupiter.params.provider.ValueSource
 class KotlinSecuritySchemeTest {
 
   @ParameterizedTest
+  @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])
+  fun `AsyncAPI security compiles with and without enforcement`(fixture: String) {
+    val paths =
+      if (fixture == "composed-security") {
+        listOf(
+          "openapi/ir/security-enforcement.yaml",
+          "asyncapi/ir/security-enforcement-3.yaml",
+          "asyncapi/ir/security-api-keys-2.yaml",
+        )
+      } else {
+        listOf("asyncapi/ir/$fixture.yaml")
+      }
+    val api =
+      GeneratedApiIrExporter(GeneratedApiIrOptions(generationMode = GenerationMode.Server))
+        .export(paths.map { javaClass.getResource("/$it")!!.toURI() })
+    listOf("javax", "jakarta", "quarkus").forEach { target ->
+      listOf(false, true).forEach { enforce ->
+        val registry = registry(target)
+        KotlinJAXRSIrGenerator(
+          api,
+          registry,
+          options(target, enforce = enforce),
+        ).generateServiceTypes()
+        assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(registry.buildTypes()))
+        if (enforce) {
+          val runtime = source("OpenAPISecurity")
+          listOf("X-API-Key", "api_key", "session_key").forEach { assertTrue(runtime.contains(it), runtime) }
+          assertTrue(!runtime.contains("ResourceInfo"), runtime)
+        }
+      }
+    }
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
   fun `scheme enforcement compiles for every frontend and JAX-RS implementation`(kind: String) {
     val paths =
@@ -218,6 +252,7 @@ class KotlinSecuritySchemeTest {
     target: String,
     adapters: Boolean = true,
     explicitCredentials: Boolean = false,
+    enforce: Boolean = true,
   ) = KotlinJAXRSOptions(
     coroutineFlowMethods = target == "quarkus",
     coroutineServiceMethods = target == "quarkus",
@@ -233,7 +268,7 @@ class KotlinSecuritySchemeTest {
     aggregateServices = true,
     aggregateServiceName = "SecureAPI",
     resourceAdapters = adapters,
-    enforceSecuritySchemes = true,
+    enforceSecuritySchemes = enforce,
   )
 
   private fun source(name: String): String =

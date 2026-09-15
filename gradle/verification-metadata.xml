@@ -2977,6 +2977,30 @@
             <sha256 value="86ee67c7040278bac5204b571f738b8b859f014ceb5f896bd935bacbdaf33cb9" origin="Verified against Maven Central"/>
          </artifact>
       </component>
+      <component group="org.glassfish.grizzly" name="grizzly-framework" version="4.0.2">
+         <artifact name="grizzly-framework-4.0.2.jar">
+            <pgp value="3AC8633E97ACA1E8F2A7ED239052174975143979"/>
+            <sha256 value="cc121e789a65cd542ed451adbd69b1bf163233ff0e55fba66301896fed30c816" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.grizzly" name="grizzly-http" version="4.0.2">
+         <artifact name="grizzly-http-4.0.2.jar">
+            <pgp value="3AC8633E97ACA1E8F2A7ED239052174975143979"/>
+            <sha256 value="83bec0f6c3cf65642bd60f92f69999c8e5f962c31a8c31921f9343dd3451c691" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.grizzly" name="grizzly-http-server" version="4.0.2">
+         <artifact name="grizzly-http-server-4.0.2.jar">
+            <pgp value="3AC8633E97ACA1E8F2A7ED239052174975143979"/>
+            <sha256 value="b407e6745b0981f1f6e70b12f73e077bad8c587ca939f1567a0c66479ec1a21c" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.grizzly" name="grizzly-http-servlet" version="4.0.2">
+         <artifact name="grizzly-http-servlet-4.0.2.jar">
+            <pgp value="3AC8633E97ACA1E8F2A7ED239052174975143979"/>
+            <sha256 value="3822395187b7b1c5c593a58ceccac8e831bfff3127a9e7c7d77198f8367936b1" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="org.glassfish.hk2" name="hk2-api" version="3.0.6">
          <artifact name="hk2-api-3.0.6.jar">
             <ignored-keys>
@@ -3017,6 +3041,24 @@
             <sha256 value="a82b6d1a348324ef88dc807c7cd7aaf633985cbff7b30036fb61a1b86981d840" origin="Verified against Maven Central"/>
          </artifact>
       </component>
+      <component group="org.glassfish.jersey.containers" name="jersey-container-grizzly2-http" version="3.1.11">
+         <artifact name="jersey-container-grizzly2-http-3.1.11.jar">
+            <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
+            <sha256 value="ff39f67a9aa2e8e1c7b59524c6dd9773f607a1c307569c2687c1e48385a1518e" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.jersey.containers" name="jersey-container-grizzly2-servlet" version="3.1.11">
+         <artifact name="jersey-container-grizzly2-servlet-3.1.11.jar">
+            <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
+            <sha256 value="935f02ce42efdf2a995a0e23ce2430d09ff09fb1d7a8113e015a92210db1f93a" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.jersey.containers" name="jersey-container-servlet" version="3.1.11">
+         <artifact name="jersey-container-servlet-3.1.11.jar">
+            <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
+            <sha256 value="dfb7bd433c1648ae0dd037b4d21093225333564ed01d751b5eb6e2a099dec160" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="org.glassfish.jersey.containers" name="jersey-container-servlet-core" version="3.1.11">
          <artifact name="jersey-container-servlet-core-3.1.11.jar">
             <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
@@ -3053,10 +3095,22 @@
             <sha256 value="361902f00c8e5ba182a79340c4cbf4f83bf37e8084c4e6bf699ad8ca5fcc593b" origin="Verified against Maven Central"/>
          </artifact>
       </component>
+      <component group="org.glassfish.jersey.media" name="jersey-media-sse" version="3.1.11">
+         <artifact name="jersey-media-sse-3.1.11.jar">
+            <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
+            <sha256 value="b8d927a9c27f13b19b17f5abf3187b3ba91b2fdce29f90651663b8e7eae753a9" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="org.glassfish.jersey.test-framework" name="jersey-test-framework-core" version="3.1.11">
          <artifact name="jersey-test-framework-core-3.1.11.jar">
             <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
             <sha256 value="8768d2954b192058793b6ed2d7cbc7b13a1bde0b8421ecda826342f066c6ed03" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.glassfish.jersey.test-framework.providers" name="jersey-test-framework-provider-grizzly2" version="3.1.11">
+         <artifact name="jersey-test-framework-provider-grizzly2-3.1.11.jar">
+            <pgp value="0B743A794876D3C78AB542A118D239B1CBCD2236"/>
+            <sha256 value="5fc5b14d74eae8e2132c780d05ebe90174ab736ed9ae7cb3994079bf52807abb" origin="Verified against Maven Central"/>
          </artifact>
       </component>
       <component group="org.glassfish.jersey.test-framework.providers" name="jersey-test-framework-provider-inmemory" version="3.1.11">
