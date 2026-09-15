@@ -30,6 +30,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointAccess
+import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 
@@ -37,6 +38,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 internal class KotlinJAXRSResourceAdapterGenerator(
   private val jaxRsTypes: JaxRsTypes,
   private val quarkus: Boolean,
+  private val securityGenerator: KotlinJAXRSSecurityGenerator? = null,
+  private val quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator? = null,
 ) {
 
   fun resourceTypeName(serviceTypeName: ClassName): ClassName =
@@ -67,19 +70,35 @@ internal class KotlinJAXRSResourceAdapterGenerator(
     service: TypeSpec,
     authentication: Map<String, GeneratedEndpointAccess>,
     root: Boolean,
+    policies: Map<String, GeneratedEndpointPolicy?> = emptyMap(),
   ): TypeSpec.Builder =
     resourceBuilder(resourceTypeName(serviceTypeName), service)
       .apply {
         addKdoc("Generated endpoint implementation delegating operation behavior to [%T].\n", serviceTypeName)
-        addDelegates(mapOf("delegate" to serviceTypeName))
+        addDelegates(
+          mapOf("delegate" to serviceTypeName) +
+            (securityGenerator?.let { mapOf("endpointSecurity" to it.typeName) } ?: emptyMap()),
+        )
         if (root && service.annotations.none { it.typeName == jaxRsTypes.path }) {
           addAnnotation(jaxRsTypes.path, "/")
         }
+        val nativeAnnotations =
+          quarkusSecurityGenerator?.let { generator ->
+            service.funSpecs.associate { it.name to generator.annotations(policies.getValue(it.name)) }
+          }
+        val sharedAnnotations = nativeAnnotations?.values?.distinct()?.singleOrNull()
+        sharedAnnotations?.let(::addAnnotations)
         service.funSpecs.forEach { function ->
           val endpoint = function.toBuilder()
           endpoint.modifiers.remove(KModifier.ABSTRACT)
           endpoint.addKdoc("Invokes the application delegate for %L.\n", function.name)
-          endpoint.applyAuthentication(authentication.getValue(function.name))
+          if (nativeAnnotations != null) {
+            if (sharedAnnotations == null) endpoint.addAnnotations(nativeAnnotations.getValue(function.name))
+          } else if (securityGenerator != null) {
+            policies.getValue(function.name)?.let { endpoint.applySecurityPolicy(it, securityGenerator) }
+          } else {
+            endpoint.applyAuthentication(authentication.getValue(function.name))
+          }
           val arguments = function.parameters.map { CodeBlock.of("%N", it.name) }.joinToCode(", ")
           val statement = if (function.returnType == UNIT) "this.delegate.%N(%L)" else "return this.delegate.%N(%L)"
           endpoint.addStatement(statement, function.name, arguments)
@@ -178,6 +197,41 @@ internal class KotlinJAXRSResourceAdapterGenerator(
         }
       }
     }
+  }
+
+  private fun FunSpec.Builder.applySecurityPolicy(
+    policy: GeneratedEndpointPolicy,
+    generator: KotlinJAXRSSecurityGenerator,
+  ) {
+    // The generated evaluator owns authentication, including schemes outside Quarkus's configured mechanisms.
+    applyAuthentication(GeneratedEndpointAccess.PUBLIC)
+    if (policy.requirements.isEmpty()) return
+    val headers = contextParameter(ClassName(jaxRsTypes.securityContext.packageName, "HttpHeaders"), "httpHeaders")
+    val uriInfo = contextParameter(jaxRsTypes.uriInfo, "uriInfo")
+    val securityContext = contextParameter(jaxRsTypes.securityContext, "securityContext")
+    addStatement(
+      "this.endpointSecurity.authorize(%T(%N, %N, %N), %L)",
+      generator.typeName.nestedClass("Request"),
+      headers,
+      uriInfo,
+      securityContext,
+      generator.renderPolicy(policy),
+    )
+  }
+
+  private fun FunSpec.Builder.contextParameter(
+    type: TypeName,
+    suggestedName: String,
+  ): String {
+    parameters
+      .firstOrNull { parameter ->
+        parameter.type == type && parameter.annotations.any { it.typeName == jaxRsTypes.context }
+      }?.let { return it.name }
+    val names = NameAllocator()
+    parameters.forEach { names.newName(it.name) }
+    val name = names.newName(suggestedName)
+    addParameter(ParameterSpec.builder(name, type).addAnnotation(jaxRsTypes.context).build())
+    return name
   }
 
   private fun ParameterSpec.withoutAnnotations(): ParameterSpec =

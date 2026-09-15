@@ -27,6 +27,7 @@ import amf.apicontract.client.platform.model.domain.Tag
 import amf.apicontract.client.platform.model.domain.api.WebApi
 import amf.apicontract.client.platform.model.domain.security.ApiKeySettings
 import amf.apicontract.client.platform.model.domain.security.HttpSettings
+import amf.apicontract.client.platform.model.domain.security.OAuth2Settings
 import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.apicontract.client.platform.model.domain.security.SecurityScheme
 import amf.core.client.platform.model.DataTypes
@@ -2311,6 +2312,19 @@ class RamlToGeneratedApi(
   private fun SecurityRequirement.securityRequirement(): GeneratedSecurityRequirement =
     GeneratedSecurityRequirement(
       schemes = schemes().mapNotNull { scheme -> scheme.scheme()?.name()?.value() },
+      permissions =
+        schemes()
+          .mapNotNull { scheme ->
+            val name = scheme.scheme()?.name()?.value() ?: return@mapNotNull null
+            val scopes =
+              (scheme.settings() as? OAuth2Settings)
+                ?.flows()
+                .orEmpty()
+                .flatMap { it.scopes() }
+                .mapNotNull { it.name().value() }
+                .distinct()
+            (name to scopes).takeIf { scopes.isNotEmpty() }
+          }.toMap(),
     )
 
   private fun SecurityScheme.securityScheme(localModels: LocalModelRegistry): GeneratedSecurityScheme? {

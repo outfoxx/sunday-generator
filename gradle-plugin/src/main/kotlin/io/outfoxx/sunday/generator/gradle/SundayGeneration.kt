@@ -81,6 +81,9 @@ class SundayGeneration(
 
   /** Generates JAX-RS endpoint implementations backed by application-owned service delegates. */
   val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java)
+
+  /** Enforces named security schemes and permissions in generated resource adapters. */
+  val enforceSecuritySchemes: Property<Boolean> = objects.property(Boolean::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty()
 
   val targetSourceSet: Property<String> =

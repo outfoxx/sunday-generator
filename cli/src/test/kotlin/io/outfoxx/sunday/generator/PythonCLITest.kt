@@ -54,9 +54,13 @@ class PythonCLITest {
     val enabled = PythonLitestarGenerateCommandTest()
     enabled.parse(arrayOf("-enforce-endpoint-security", *requiredOptions))
     assertThat(enabled.enforceEndpointSecurity, equalTo(true))
+    val secured = PythonLitestarGenerateCommandTest()
+    secured.parse(arrayOf("-enforce-security-schemes", *requiredOptions))
+    assertThat(secured.enforceSecuritySchemes, equalTo(true))
     val defaults = PythonLitestarGenerateCommandTest()
     defaults.parse(requiredOptions)
     assertThat(defaults.enforceEndpointSecurity, equalTo(false))
+    assertThat(defaults.enforceSecuritySchemes, equalTo(false))
   }
 
   @Test

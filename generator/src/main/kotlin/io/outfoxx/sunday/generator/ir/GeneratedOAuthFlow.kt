@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Outfox, Inc.
+ * Copyright 2026 Outfox, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package io.outfoxx.sunday.generator.ir
 
-/**
- * Security requirement alternative for a generated API, service, or operation.
- */
-data class GeneratedSecurityRequirement(
-  val schemes: List<String> = listOf(),
-  /** Required OAuth/OIDC scopes or role names, keyed by the security scheme that grants them. */
-  val permissions: Map<String, List<String>> = mapOf(),
+/** OAuth flow metadata; credential validation and provider configuration remain application responsibilities. */
+data class GeneratedOAuthFlow(
+  val authorizationUrl: String? = null,
+  val tokenUrl: String? = null,
+  val refreshUrl: String? = null,
+  val scopes: Map<String, String> = mapOf(),
 )

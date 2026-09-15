@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Outfox, Inc.
+ * Copyright 2026 Outfox, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.generator.ir
+package io.test.quarkus
 
-/**
- * Security requirement alternative for a generated API, service, or operation.
- */
-data class GeneratedSecurityRequirement(
-  val schemes: List<String> = listOf(),
-  /** Required OAuth/OIDC scopes or role names, keyed by the security scheme that grants them. */
-  val permissions: Map<String, List<String>> = mapOf(),
-)
+import io.test.quarkus.secure.SecurityAPI
+import jakarta.inject.Singleton
+import org.jboss.resteasy.reactive.RestResponse
+
+/** Public delegate registered beside the protected resource. */
+@Singleton
+class SecureHealth : SecurityAPI {
+  override fun health(): RestResponse<Unit> = RestResponse.noContent()
+}

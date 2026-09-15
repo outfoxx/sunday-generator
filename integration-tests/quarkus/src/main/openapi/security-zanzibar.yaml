@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: Native Security and Zanzibar
+  version: 1.0.0
+security: [{jwt: [read]}]
+x-sunday-zanzibar:
+  objectType: document
+  pathParam: documentId
+  relation: viewer
+  userType: user
+  user-source:
+    jwt:
+      claims: [preferred_username, sub]
+      principal-fallback: false
+paths:
+  /documents/{documentId}/read:
+    get:
+      operationId: readDocument
+      x-sunday-service: Documents
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/write:
+    get:
+      operationId: writeDocument
+      x-sunday-service: Documents
+      security: [{jwt: [write]}]
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/combined:
+    get:
+      operationId: combinedDocument
+      x-sunday-service: Documents
+      security: [{jwt: [read], tenantKey: []}]
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/simple:
+    get:
+      operationId: simpleDocument
+      x-sunday-service: Documents
+      security: [{jwt: []}]
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/public:
+    get:
+      operationId: publicDocument
+      x-sunday-service: Documents
+      security: []
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/ignored:
+    get:
+      operationId: ignoredDocument
+      x-sunday-service: Documents
+      security: []
+      x-sunday-zanzibar: {ignore: true}
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tenantKey:
+      type: apiKey
+      in: header
+      name: X-Tenant-Key
+  parameters:
+    documentId:
+      in: path
+      name: documentId
+      required: true
+      schema: {type: string}
+  responses:
+    identity:
+      description: Authenticated identity
+      content:
+        text/plain:
+          schema: {type: string}

@@ -32,6 +32,12 @@ open class PythonLitestarGenerateCommand :
     help = "Enforce resolved authentication on generated routes using application-configured authentication middleware",
   ).flag(default = false)
 
+  /** Whether generated routes enforce the declared schemes and permissions. */
+  val enforceSecuritySchemes by option(
+    "-enforce-security-schemes",
+    help = "Enforce named security schemes and permissions using application-provided authenticators",
+  ).flag(default = false)
+
   override fun run() {
     println("Generating ${this.outputCategories} types")
     println("Processing ${files.joinToString()}")
@@ -40,7 +46,10 @@ open class PythonLitestarGenerateCommand :
     val modules =
       PythonLitestarIrGenerator(
         export.api,
-        pythonOptions(export).copy(enforceEndpointSecurity = enforceEndpointSecurity),
+        pythonOptions(export).copy(
+          enforceEndpointSecurity = enforceEndpointSecurity,
+          enforceSecuritySchemes = enforceSecuritySchemes,
+        ),
       ).generateModules(outputCategories.toSet())
 
     PythonModuleWriter().writeModules(modules, outputDirectory.toPath())
