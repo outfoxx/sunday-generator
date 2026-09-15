@@ -1377,10 +1377,24 @@ class PythonModelRenderer(
       properties
         .map { property -> property.serializationName ?: property.name }
         .toSet()
+    val inheritedClassFields =
+      inherits
+        .mapNotNull { modelIndex[it.name]?.takeIf { model -> model.isObjectClass() } }
+        .flatMap { modelProperties.fields(it) }
+        .groupBy { it.wireName }
+    // Pydantic selects one parent's Field metadata; explicitly retain the combined contract where it differs.
+    val combinedProperties =
+      modelProperties
+        .fields(this)
+        .filter { field ->
+          field.wireName !in overrideNames &&
+            inheritedClassFields[field.wireName]?.firstOrNull()?.let { it.effective != field.effective } == true
+        }.map { it.effective }
+    val combinedNames = combinedProperties.map { it.serializationName ?: it.name }.toSet()
     return inheritedAliasProperties
       .filterNot { property ->
-        (property.serializationName ?: property.name) in overrideNames
-      } + properties
+        (property.serializationName ?: property.name) in overrideNames + combinedNames
+      } + properties + combinedProperties
   }
 
   private fun GeneratedModelProperty.discriminatorLiteralValue(model: GeneratedModel): String? {

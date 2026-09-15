@@ -411,6 +411,91 @@ compatibility candidate exactly: Swift 494, Kotlin 482, TypeScript 483, and Pyth
 unchanged. Fresh before/after audits confirm that original SDK working copies,
 specifications, dependency pins, and version pins were not modified.
 
+## PR #213: inherited constraint intersections and numeric multiples
+
+Compatible parent declarations now combine their effective restrictions even when
+an IR child has no local property override. Both parent orders retain lower and
+upper bounds, requiredness, nullability, allowed values, uniqueness, and decimal
+multiples. Unsupported assertion intersections identify the model/property.
+Python explicitly redeclares combined field metadata where Pydantic would otherwise
+select one parent's constraints.
+
+Kotlin Sunday and JAX-RS enforce `multipleOf` using exact decimal remainders. Swift
+checks decimal digits with integer long division, avoiding rounded quotients and
+exponent overflow. Compiler-backed tests cover both parent orders in all four
+languages, aliases, omitted defaults, valid/invalid integer and fractional values,
+and Kotlin/Swift patch omission, deletion, and set operations. Swift also rejects
+a near-multiple with 38 significant digits and accepts multiples whose quotient
+would exceed Foundation Decimal's exponent range.
+
+The shared remote fixture includes `multipleOf` and passes CLI, parallel Gradle,
+offline, captured-document, and standalone configuration-cache verification.
+All four isolated SDK build/test/package workflows pass again using the same
+pinned specification and production arguments. After compilation, all 1,473
+source files remain byte-identical to the preceding candidate (Swift 494, Kotlin
+482, TypeScript 483, Python 14). Original SDK working-copy status is unchanged.
+No dependency or version pins were edited.
+
+Candidate CLI SHA-256:
+`35855e515d44dad9f273bda8e33feae5a4c89c7bd26675a225052c592cc2e7d9`.
+Specification SHA-256:
+`6ac03db18345fc6701a248cbe3624a1b45a04b2a04c016241ee4415dda2282cf`.
+
+## RAML array-item numeric validation
+
+Shared declaration analysis now distinguishes numeric scalars from numeric collection
+items through scalar and array aliases, preserving element nullability. Kotlin
+Sunday/JAX-RS and Swift apply item `multipleOf` and accompanying numeric bounds to
+each non-null element. Size and uniqueness checks remain on the collection; normal
+list/set storage and decoding are unchanged. Empty collections pass element checks,
+and patch omission/deletion still bypass supplied-value validation. Unsupported
+numeric targets identify the affected property during generation.
+
+A RAML frontend regression and direct IR controls compile and run in Kotlin
+Sunday/JAX-RS and Swift. They cover empty, zero, negative, fractional, nullable,
+aliased, inherited, optional, sized, unique, and patch collections. Existing scalar
+multiple controls and Python/TypeScript inherited-constraint runtime checks pass.
+Frontend extraction and the existing RAML item-facet convention remain unchanged.
+
+All four isolated SDK build/test/package workflows pass using the same pinned
+specification and production arguments. After compilation, all 1,473 generated
+source files remain byte-identical to the preceding compiled candidate (Swift
+494, Kotlin 482, TypeScript 483, Python 14); Swift's generated-file manifest is
+also unchanged. Original working-copy status and specification, dependency, and
+version pins remain unchanged. CLI/Gradle online/offline and captured-generation
+checks pass, as does standalone parallel configuration-cache reuse.
+
+Candidate CLI SHA-256:
+`839b7ca0becb5920ded702492da8d23aa07e2e96b0052c63b7c694a634ed9337`.
+
+## Swift numeric range during multiple validation
+
+Swift numeric validation now retains Decimal-supported precision while accepting
+finite Double values outside Decimal's range. The fallback parses the Double's
+canonical decimal representation into normalized sign, digits, and exponent.
+Exact divisibility, accompanying bounds, and numeric uniqueness operate on that
+representation without narrowing it back to Decimal. Each collection element is
+decoded independently, preserving high-precision near-multiple rejection even
+when another element requires the fallback. Normal stored types and decoding,
+optional omission, nullable elements, aliases, inheritance, and patch operations
+retain their existing behavior. Constraint-literal representability limits are
+unchanged; fallback validation does not recover original JSON numeric tokens.
+
+Compiler-backed Swift regressions accept and round-trip `1e200`, negative wide
+values, and finite Double boundaries; reject large nonmultiples, subnormal
+nonmultiples, nonfinite inputs, and excluded bounds; and retain exact Decimal
+near-multiple rejection in mixed-range arrays. Alias, inheritance, collection
+uniqueness, set, optional, and patch controls pass. The original RAML CLI
+reproduction now compiles and decodes `1e200` successfully.
+
+CLI/Gradle integration and standalone online/offline configuration-cache reuse
+pass. All four isolated SDK build/test/package workflows pass with no differences
+in the 1,473 generated source files or Swift's generated-file manifest. Original
+working-copy status and specification, dependency, and version pins are unchanged.
+
+Candidate CLI SHA-256:
+`d0aeb9ee570fcb97db1d12f38cb11126638c7b166bfd86e4853740a4d1f34a88`.
+
 ## Validation
 
 | Scope | Result |
@@ -424,7 +509,7 @@ specifications, dependency pins, and version pins were not modified.
 | Configuration cache | Standalone fixture passes online and offline reuse, default network rejection, and captured generation without extra requests |
 | Full generator gate | `ktlintCheck`, `check --parallel` (including coverage verification), and `git diff --check` pass |
 
-The full repository check passed 1,080 generator tests, 90 CLI tests, and 18 Gradle
+The full repository check passed 1,093 generator tests, 90 CLI tests, and 18 Gradle
 plugin tests. One existing in-process TestKit configuration-cache test was skipped
 under its Java-agent restriction; the standalone fixture verified that behavior
 online and offline.

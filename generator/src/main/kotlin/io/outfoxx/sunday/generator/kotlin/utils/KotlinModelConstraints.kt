@@ -53,6 +53,13 @@ internal object KotlinModelConstraints {
           val storageType = typeName(field.storage.type).copy(nullable = false)
           val untyped = storageType == ANY
           val wireValue = wireValue(field.storage.type, storageType, value, properties)
+          val divisor = GeneratedNumericBounds.multipleOf(property.validation, "property '${field.wireName}'")
+          val numericTarget =
+            divisor?.let {
+              properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            }
+          val numericValue = if (numericTarget?.elements == true) CodeBlock.of("element") else value
+          val numericChecks = mutableListOf<CodeBlock>()
           val checks = mutableListOf<CodeBlock>()
           property.allowedValues?.let { values ->
             checks += values
@@ -100,13 +107,17 @@ internal object KotlinModelConstraints {
               }.joinToCode(" || ")
               .takeUnless { it.isEmpty() } ?: CodeBlock.of("false")
           }
-          if (patch || field.inherited && property.validation != field.declaration.validation) {
+          if (patch ||
+            field.inherited &&
+            property.validation != field.declaration.validation ||
+            numericTarget?.elements == true
+          ) {
             GeneratedNumericBounds.parse(property.validation, "property '${field.wireName}'").forEach { bound ->
-              checks +=
+              numericChecks +=
                 CodeBlock.of(
                   "%T(%L.toString()).compareTo(%T(%S)) %L 0",
                   BigDecimal::class,
-                  value,
+                  numericValue,
                   BigDecimal::class,
                   bound.value.toString(),
                   bound.operator,
@@ -126,6 +137,27 @@ internal object KotlinModelConstraints {
                 "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("%L.toSet().size == %L.size", value, value)
               }
             }
+          }
+          divisor?.let {
+            numericChecks +=
+              CodeBlock.of(
+                "%T(%L.toString()).remainder(%T(%S)).signum() == 0",
+                BigDecimal::class,
+                numericValue,
+                BigDecimal::class,
+                divisor.toPlainString(),
+              )
+          }
+          if (numericTarget?.elements == true) {
+            val predicate = numericChecks.joinToCode(" && ")
+            checks +=
+              if (numericTarget.nullable) {
+                CodeBlock.of("%L.all { element -> element == null || (%L) }", value, predicate)
+              } else {
+                CodeBlock.of("%L.all { element -> %L }", value, predicate)
+              }
+          } else {
+            checks += numericChecks
           }
           val optionalStorage = !patch && (!field.storage.required || field.storage.type.nullable)
           val requiresValue =

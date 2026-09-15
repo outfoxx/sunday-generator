@@ -56,6 +56,15 @@ internal object GeneratedNumericBounds {
       }
     }
 
+  fun multipleOf(
+    validation: Map<String, String>,
+    context: String,
+  ): BigDecimal? =
+    validation["multipleOf"]?.let { literal ->
+      literal.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
+        ?: genError("Invalid multipleOf '$literal' for $context: expected a positive number")
+    }
+
   private fun number(
     value: String,
     keyword: String,

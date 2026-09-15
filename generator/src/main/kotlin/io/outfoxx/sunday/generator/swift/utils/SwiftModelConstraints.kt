@@ -29,6 +29,7 @@ internal object SwiftModelConstraints {
   fun fields(fields: List<GeneratedModelProperties.Field>): List<GeneratedModelProperties.Field> =
     fields.filter { field ->
       field.effective.allowedValues != null ||
+        "multipleOf" in field.effective.validation ||
         field.inherited &&
         (
           field.effective.validation != field.declaration.validation ||
@@ -40,10 +41,17 @@ internal object SwiftModelConstraints {
   fun decode(
     fields: List<GeneratedModelProperties.Field>,
     patchable: Boolean,
+    properties: GeneratedModelProperties,
   ): CodeBlock =
     CodeBlock
       .builder()
       .apply {
+        val needsNumericHelper = fields.any { "multipleOf" in it.effective.validation }
+        if (needsNumericHelper) {
+          // Limit the helper's name to validation, outside normal model type lookup and storage decoding.
+          beginControlFlow("do", "")
+          add(SwiftNumericValidation.helper)
+        }
         fields.forEach { field ->
           val property = field.effective
           val key = field.storage.name.swiftIdentifierName
@@ -70,18 +78,33 @@ internal object SwiftModelConstraints {
           }
           nextControlFlow("else")
           val values = property.allowedValues?.filterNotNull()
+          val divisor = GeneratedNumericBounds.multipleOf(validation, "property '${field.wireName}'")
+          val numericTarget =
+            divisor?.let {
+              properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            }
+          val numericValue = if (numericTarget?.elements == true) "number" else "value"
           val numeric =
             values?.firstOrNull() is Number ||
-              validation.keys.any { it in setOf("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum") }
+              validation.keys.any {
+                it in
+                  setOf("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf")
+              }
           val collection = validation.keys.any { it in setOf("minItems", "maxItems", "uniqueItems") }
           val valueType =
             when {
+              numericTarget?.elements == true ->
+                CodeBlock.of(
+                  if (numericTarget.nullable) "[_SundayValidationNumber?]" else "[_SundayValidationNumber]",
+                )
+              numericTarget != null -> CodeBlock.of("_SundayValidationNumber")
               numeric -> CodeBlock.of("%T", DECIMAL)
               values?.firstOrNull() is Boolean -> CodeBlock.of("Bool")
               collection -> CodeBlock.of("[%T]", ANY_VALUE)
               else -> CodeBlock.of("String")
             }
           val checks = mutableListOf<CodeBlock>()
+          val numericChecks = mutableListOf<CodeBlock>()
           if (values != null) {
             val matches =
               values
@@ -114,9 +137,20 @@ internal object SwiftModelConstraints {
             )
             endControlFlow("if")
           }
-          if (field.inherited) {
+          if (field.inherited || numericTarget != null) {
             GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").forEach { bound ->
-              checks += CodeBlock.of("value %L %L", bound.operator, decimalLiteral(bound.value, field.wireName))
+              val literal = decimalLiteral(bound.value, field.wireName)
+              numericChecks +=
+                if (numericTarget != null) {
+                  CodeBlock.of(
+                    "%L %L _SundayValidationNumber(%S)",
+                    numericValue,
+                    bound.operator,
+                    bound.value.toString(),
+                  )
+                } else {
+                  CodeBlock.of("%L %L %L", numericValue, bound.operator, literal)
+                }
             }
             validation.forEach { (constraint, bound) ->
               when (constraint) {
@@ -128,6 +162,31 @@ internal object SwiftModelConstraints {
                 "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")
               }
             }
+          }
+          divisor?.let {
+            decimalLiteral(divisor, field.wireName)
+            val normalized = divisor.stripTrailingZeros()
+            numericChecks +=
+              CodeBlock.of(
+                "%L.isMultipleOf(digits: %L, exponent: %L)",
+                numericValue,
+                normalized.unscaledValue().toString().map { it.digitToInt() }.joinToString(
+                  prefix = "[",
+                  postfix = "]",
+                ),
+                -normalized.scale().toLong(),
+              )
+          }
+          if (numericTarget?.elements == true) {
+            val predicate = numericChecks.joinToCode(" && ")
+            checks +=
+              if (numericTarget.nullable) {
+                CodeBlock.of("value.allSatisfy { element in element.map { number in %L } ?? true }", predicate)
+              } else {
+                CodeBlock.of("value.allSatisfy { number in %L }", predicate)
+              }
+          } else {
+            checks += numericChecks
           }
           if (checks.isNotEmpty()) {
             addStatement("let value = try container.decode(%L.self, forKey: .%N)", valueType, key)
@@ -145,6 +204,7 @@ internal object SwiftModelConstraints {
           endControlFlow("if")
           endControlFlow("if")
         }
+        if (needsNumericHelper) endControlFlow("do")
       }.build()
 
   fun decimalLiteral(

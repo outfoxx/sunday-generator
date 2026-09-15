@@ -3048,7 +3048,7 @@ class SwiftSundayIrGenerator(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
         if (localProperties.isEmpty() && constraints.isEmpty()) "_" else "container",
       ).apply {
-        addCode(SwiftModelConstraints.decode(constraints, patchable))
+        addCode(SwiftModelConstraints.decode(constraints, patchable, modelProperties))
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
             when {

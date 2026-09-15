@@ -89,13 +89,36 @@ internal class GeneratedModelProperties(
           "array",
           arguments = model.aliases,
           collection = model.collection,
+          nullable = type.nullable,
         )
       }
       if (model.kind != GeneratedModel.Kind.SCALAR_ALIAS) return type
-      type = model.aliases.singleOrNull() ?: return type
+      val target = model.aliases.singleOrNull() ?: return type
+      type = target.copy(nullable = type.nullable || target.nullable)
     }
     return type
   }
+
+  fun numericValidationTarget(
+    reference: GeneratedTypeRef,
+    context: String,
+  ): NumericValidationTarget {
+    val declaration = declarationType(reference)
+    val elements = declaration.kind == GeneratedTypeRef.Kind.ARRAY
+    val numeric = if (elements) declaration.arguments.singleOrNull()?.let(::declarationType) else declaration
+    if (numeric?.kind != GeneratedTypeRef.Kind.SCALAR || numeric.name !in setOf("integer", "number")) {
+      genError(
+        "Unsupported numeric validation target for $context: expected a numeric scalar or numeric collection items",
+      )
+    }
+    return NumericValidationTarget(elements, numeric.nullable)
+  }
+
+  /** Locates the scalar payload of numeric assertions, including legacy RAML array-item metadata. */
+  data class NumericValidationTarget(
+    val elements: Boolean,
+    val nullable: Boolean,
+  )
 
   fun fields(model: GeneratedModel): List<Field> {
     completed[model]?.let { return it }
@@ -124,7 +147,20 @@ internal class GeneratedModelProperties(
           } else {
             field.effective
           }
-        fields[field.wireName] = Field(declaration, effective, true)
+        fields[field.wireName] =
+          Field(
+            declaration,
+            if (previous == null) {
+              effective
+            } else {
+              GeneratedPropertyConstraints.intersect(
+                previous.effective,
+                effective,
+                "property '${model.name}.${field.wireName}'",
+              )
+            },
+            true,
+          )
       }
       model.properties.forEach { property ->
         val wireName = property.serializationName ?: property.name

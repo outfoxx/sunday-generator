@@ -259,10 +259,10 @@ object OpenApiReferenceDocuments {
         state: {type: string, enum: [b, c]}
     SdkMultiChild:
       allOf: [{${'$'}ref: '#/components/schemas/SdkMultiFirst'}, {${'$'}ref: '#/components/schemas/SdkMultiSecond'}]
-      properties: {count: {minimum: 1, const: 2, default: 2}}
+      properties: {count: {minimum: 1, multipleOf: 2, const: 2, default: 2}}
     SdkMultiReversed:
       allOf: [{${'$'}ref: '#/components/schemas/SdkMultiSecond'}, {${'$'}ref: '#/components/schemas/SdkMultiFirst'}]
-      properties: {count: {minimum: 1, const: 2, default: 2}}
+      properties: {count: {minimum: 1, multipleOf: 2, const: 2, default: 2}}
     SdkTimestamp: {type: string, format: date-time}
     SdkTimestampAlias: {${'$'}ref: '#/components/schemas/SdkTimestamp'}
     SdkTemporalBase:

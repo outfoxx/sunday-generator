@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -42,6 +43,35 @@ import java.net.URI
 import java.nio.file.Path
 
 class PythonGeneratedOutputParityTest : PythonTest() {
+
+  @Test
+  fun `every compatible parent constraint remains effective`(compiler: PythonCompiler) {
+    val modules = inheritedConstraintsFixture().sundayModules()
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = listOf("parity_api.models"),
+        smokeCode =
+          """
+          from parity_api.models import Child, Reversed
+          from pydantic import ValidationError
+          for model in (Child, Reversed):
+              payload = {'text': 'abc', 'count': 2, 'amount': 0.3}
+              value = model.model_validate(payload)
+              assert value.model_dump(mode='json') == payload
+              assert model.model_validate_json(value.model_dump_json()).text == 'abc'
+              assert model().count == 2
+              for invalid in ({'text': 'a'}, {'text': 'abcd'}, {'count': 3}, {'amount': 0.31}):
+                  try:
+                      model.model_validate(invalid)
+                      raise AssertionError('parent restriction was lost')
+                  except ValidationError:
+                      pass
+          """.trimIndent(),
+      ),
+    )
+  }
 
   @Test
   @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)

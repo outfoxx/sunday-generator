@@ -38,6 +38,7 @@ import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
+import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
@@ -69,6 +70,47 @@ import java.nio.file.Path
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [IR] Generator Test")
 class TypeScriptSundayIrGeneratorTest {
+
+  @Test
+  fun `every compatible parent constraint remains effective`(compiler: TypeScriptCompiler) {
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(
+      inheritedConstraintsFixture(),
+      registry,
+      typeScriptSundayTestOptions,
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("ParentCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {ChildSchema} from './child';
+            import {ReversedSchema} from './reversed';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            for (const factory of [ChildSchema, ReversedSchema]) {
+              const schema = runtime.resolveSchema(factory);
+              const payload = {text: 'abc', count: 2, amount: 0.3};
+              const decoded = schema.parse(payload);
+              if (JSON.stringify(z.encode(schema, decoded)) !== JSON.stringify(payload)) throw new Error('round trip changed');
+              if (schema.parse({}).count !== 2) throw new Error('default lost');
+              for (const invalid of [{text: 'a'}, {text: 'abcd'}, {count: 3}, {amount: 0.31}]) {
+                if (schema.safeParse(invalid).success) throw new Error('parent restriction lost');
+              }
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("ParentCheck", "!parent-check") to check),
+        "parent-check",
+      ),
+    )
+  }
 
   @Test
   fun `wire refinements retain enum codecs formatted scalars and transport policies`(compiler: TypeScriptCompiler) {

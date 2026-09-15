@@ -24,6 +24,18 @@ import org.junit.jupiter.api.Test
 
 class GeneratedNumericBoundsTest {
   @Test
+  fun `multiples require positive finite divisors`() {
+    for (literal in listOf("0", "-2", "NaN", "Infinity", "bad")) {
+      val error =
+        assertThrows(GenerationException::class.java) {
+          GeneratedNumericBounds.multipleOf(mapOf("multipleOf" to literal), "Child.count")
+        }
+      assertTrue(error.message.orEmpty().contains("Child.count"))
+    }
+    assertTrue(GeneratedNumericBounds.multipleOf(mapOf("multipleOf" to "0.25"), "Child.count") == "0.25".toBigDecimal())
+  }
+
+  @Test
   fun `boolean modifiers and numeric assertions enforce the same intervals`() {
     for (exclusive in listOf("false", "true", "1")) {
       val bounds = GeneratedNumericBounds.parse(mapOf("minimum" to "1", "exclusiveMinimum" to exclusive), "Count.value")
