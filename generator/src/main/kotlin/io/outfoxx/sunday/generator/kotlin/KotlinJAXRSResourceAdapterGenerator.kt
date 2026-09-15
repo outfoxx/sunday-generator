@@ -39,6 +39,7 @@ internal class KotlinJAXRSResourceAdapterGenerator(
   private val jaxRsTypes: JaxRsTypes,
   private val quarkus: Boolean,
   private val securityGenerator: KotlinJAXRSSecurityGenerator? = null,
+  private val quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator? = null,
 ) {
 
   fun resourceTypeName(serviceTypeName: ClassName): ClassName =
@@ -81,11 +82,19 @@ internal class KotlinJAXRSResourceAdapterGenerator(
         if (root && service.annotations.none { it.typeName == jaxRsTypes.path }) {
           addAnnotation(jaxRsTypes.path, "/")
         }
+        val nativeAnnotations =
+          quarkusSecurityGenerator?.let { generator ->
+            service.funSpecs.associate { it.name to generator.annotations(policies.getValue(it.name)) }
+          }
+        val sharedAnnotations = nativeAnnotations?.values?.distinct()?.singleOrNull()
+        sharedAnnotations?.let(::addAnnotations)
         service.funSpecs.forEach { function ->
           val endpoint = function.toBuilder()
           endpoint.modifiers.remove(KModifier.ABSTRACT)
           endpoint.addKdoc("Invokes the application delegate for %L.\n", function.name)
-          if (securityGenerator != null) {
+          if (nativeAnnotations != null) {
+            if (sharedAnnotations == null) endpoint.addAnnotations(nativeAnnotations.getValue(function.name))
+          } else if (securityGenerator != null) {
             policies.getValue(function.name)?.let { endpoint.applySecurityPolicy(it, securityGenerator) }
           } else {
             endpoint.applyAuthentication(authentication.getValue(function.name))

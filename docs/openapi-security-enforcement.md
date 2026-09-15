@@ -54,11 +54,11 @@ The OpenAPI reader preserves required permissions, OAuth flow endpoint/scopes me
 
 The contract describes accepted credentials and permissions, but does not supply passwords, trusted keys, issuer/audience validation policy, TLS trust configuration, or a mapping from scheme names to application identity providers. Those remain application configuration. The generator does not infer OIDC versus SmallRye JWT from `bearerFormat: JWT`, fetch remote discovery metadata at request time, or treat a decoded token as authenticated.
 
-Both runtimes require a validator for every referenced scheme at construction time. Missing bindings fail setup. Validators return a trusted identity and its granted scopes/roles, or null/None when credentials are invalid. Unexpected validator errors propagate and fail the request; they do not grant access. Use maintained authentication libraries or a trusted framework identity whose mechanism matches the named binding.
+All runtimes require a validator for every referenced scheme at construction time. Missing bindings fail setup. Validators return a trusted identity and its granted scopes/roles, or null/None when credentials are invalid. Unexpected validator errors propagate and fail the request; they do not grant access. Use maintained authentication libraries or a trusted framework identity whose mechanism matches the named binding.
 
-Kotlin generates `OpenAPISecurity` once per service package. Its nested `Authenticator` receives `Request`, `Scheme`, and the extracted credential. The `Request` provides JAX-RS headers, URI information, and security context. Validators return `Identity(principal, permissions)`. Construct `OpenAPISecurity(mapOf("userToken" to yourTokenAuthenticator, ...))` and pass it to each `UsersAPIResource(delegate, security)`. For Quarkus, provide the security instance as a CDI bean or producer. Aggregate resources continue to receive the managed service resources.
+Plain JAX-RS generates `OpenAPISecurity` once per service package. Its nested `Authenticator` receives `Request`, `Scheme`, and the extracted credential. The `Request` provides JAX-RS headers, URI information, and security context. Validators return `Identity(principal, permissions)`. Construct `OpenAPISecurity(mapOf("userToken" to yourTokenAuthenticator, ...))` and pass it to each `UsersAPIResource(delegate, security)`. Aggregate resources continue to receive the managed service resources.
 
-Kotlin validators are synchronous. On coroutine, reactive, or other event-loop endpoints they must use non-blocking local validation or an already validated framework identity. Applications needing remote introspection must arrange asynchronous authentication before endpoint execution, or configure worker-thread execution.
+Plain JAX-RS validators are synchronous. On coroutine, reactive, or other event-loop endpoints they must use non-blocking local validation or an already validated framework identity. Applications needing remote introspection must arrange asynchronous authentication before endpoint execution, or configure worker-thread execution.
 
 Python generates `_sunday_security.py` containing `ApiSecurity`, `Scheme`, `OAuthFlow`, `Identity`, and the `Authenticator` type. Validators are async callables receiving the Litestar connection, scheme metadata, and credential, and return `Identity(user, permissions=frozenset(...))` or None. Construct `ApiSecurity({"userToken": your_token_authenticator, ...})` and pass it by keyword:
 
@@ -69,15 +69,52 @@ create_api_router(users_service, health_service, security=security)
 
 The generated guards perform authentication and permission checks before the delegate runs. They work without generic authentication middleware. Existing middleware can supply trusted identities to validators if configured for the declared schemes.
 
-These evaluators authorize the operation; they do not replace Quarkus SecurityIdentity, JAX-RS SecurityContext, or Litestar request user/auth state. Applications that consume a current identity in delegates or authorization interceptors must establish that identity through their framework authentication integration and bind validators to it. With an AND requirement, correlating identities from different credential types is also an application validator responsibility.
+The plain JAX-RS and Litestar evaluators authorize the operation; they do not replace JAX-RS SecurityContext or Litestar request user/auth state. Applications that consume a current identity in delegates or authorization interceptors must establish that identity through their framework authentication integration and bind validators to it. With an AND requirement, correlating identities from different credential types is also an application validator responsibility.
+
+## Native Quarkus bindings
+
+Quarkus generates a native `OpenAPISecurity` binding API for protected operations. Its `Authenticator.authenticate(Request, Scheme, credential)` returns `Uni<SecurityIdentity?>`. The request exposes `context: RoutingContext` and `identityProviderManager: IdentityProviderManager`. Bindings can call configured Quarkus identity providers, including JWT/OIDC providers, or asynchronously validate application-owned credentials. Return null for invalid credentials; Quarkus `AuthenticationFailedException` is also treated as a rejected credential so another OpenAPI alternative can succeed. Other failures propagate.
+
+Provide one `OpenAPISecurity` CDI bean or producer per generated package. Each `SchemeBinding` pairs an authenticator with a permission reader. Permission readers are required only for schemes whose protected operations request scopes or roles. They read trusted permissions from the identity returned by that exact authenticator; OAuth scopes are never inferred from Quarkus roles.
+
+For example, given application-provided `userTokenAuthenticator`, `tenantKeyAuthenticator`, and `trustedScopes`:
+
+```kotlin
+@Produces
+@Singleton
+fun apiSecurity() = OpenAPISecurity(
+  bindings = mapOf(
+    "userToken" to OpenAPISecurity.SchemeBinding(userTokenAuthenticator, permissions = ::trustedScopes),
+    "tenantKey" to OpenAPISecurity.SchemeBinding(tenantKeyAuthenticator),
+  ),
+  subjectSchemes = mapOf(setOf("userToken", "tenantKey") to "userToken"),
+)
+```
+
+A single-scheme requirement automatically selects its identity. Every multi-scheme requirement group needs an explicit `subjectSchemes` entry naming the scheme whose identity becomes the request user. `OpenAPISecurity.subjectRequirements` exposes the canonical sets of scheme names; equivalent groups share one binding regardless of operation or scope list. Missing authenticators, required permission readers, missing/extra subject groups, and subject names outside their group fail initialization. Generated authentication beans initialize at startup.
+
+The selected provider identity retains its principal, credentials, attributes, roles, and permission behavior. Quarkus publishes it before Zanzibar's request filter, so the generated JWT user extractor reads the validated framework JWT. Zanzibar annotations remain on concrete resource endpoints. Public OpenAPI overrides do not add `@FGAIgnore`; a public operation may still be restricted by Zanzibar and use the application's ordinary framework authentication.
+
+### Generated specialization
+
+The generator resolves effective policies before emitting code and uses canonical constants for endpoint bindings. Uniform API-level requirements and equivalent explicit operation requirements share the same implementation:
+
+- A single scheme without required permissions uses one native mechanism and Quarkus's authenticated gate. No custom policy evaluator is generated.
+- Composite requirements or required permissions use a fixed named HTTP security policy. Equivalent policies reuse the same bean; different scopes can reuse one authentication strategy.
+- Uniform resource classes receive shared security annotations. Mixed resources bind only the necessary strategy/policy to each endpoint. Aggregate subresource locators do not receive another generated check.
+- Public-only/unspecified APIs generate no security runtime. No generated strategy performs path matching or an operation lookup.
+
+Credentials are validated once per needed scheme per request. Policies reuse those identities and read each needed permission set at most once. Scheme evidence is stored only for multi-scheme strategies. Method bodies only invoke application delegates; native authentication and authorization happen earlier.
 
 ## Framework policies
 
-Quarkus methods with a generated security policy use `@PermitAll` so a generic authenticated-user interceptor does not block custom scheme validators. The generated method still performs the complete policy check before delegation. When application validators own credential processing, configure `quarkus.http.auth.proactive=false` so an unrelated built-in mechanism does not reject credentials before the generated evaluator runs. See [Quarkus proactive authentication](https://quarkus.io/guides/security-proactive-authentication/).
+Set `quarkus.http.auth.proactive=false`: Quarkus selects generated authentication mechanisms through resource annotations after matching the request. The generated mechanisms decline requests for which Quarkus has not selected them, preserving unrelated application routes. This scopes uniform policies to the generated API rather than creating a global HTTP restriction. Where HTTP path policies overlap these endpoints, use `quarkus.http.auth.permission.<name>.applies-to=jaxrs` and avoid selecting a competing authentication mechanism before endpoint selection. See [Quarkus authentication selection](https://quarkus.io/guides/security-authentication-mechanisms/) and [HTTP security policies](https://quarkus.io/guides/security-authorize-web-endpoints-reference/).
+
+Simple authenticated endpoints use Quarkus's normal authenticated gate. Endpoints with a generated named policy use that policy as their sole OpenAPI authorization gate; it performs the full decision before request filters execute. Quarkus 3.31 treats `@AuthorizationPolicy` as a security annotation, so these methods do not also receive `@Authenticated` or `@PermitAll`. This does not bypass Zanzibar.
 
 Public Litestar routes retain `opt={"exclude_from_auth": True}`. Protected routes use a [Litestar guard](https://docs.litestar.dev/2/usage/security/guards.html). If middleware is installed, configure it to accept the API's alternatives; its earlier rejection cannot be undone by a guard.
 
-Global HTTP path restrictions, middleware, guards, and Zanzibar interceptors remain additional application policies. Authentication validators do not substitute for Zanzibar's framework identity integration. HTTPS alone does not prove mutual TLS: the application must validate the peer using trusted server TLS information, never an arbitrary client-supplied header.
+Global HTTP path restrictions, middleware, guards, and Zanzibar interceptors remain additional application policies. HTTPS alone does not prove mutual TLS: the application must validate the peer using trusted server TLS information, never an arbitrary client-supplied header.
 
 ## Verification
 
@@ -88,3 +125,5 @@ Global HTTP path restrictions, middleware, guards, and Zanzibar interceptors rem
 ```
 
 Tests compile generated Kotlin and Python for RAML, OpenAPI, AsyncAPI, and composed input. Jersey, Quarkus, and Litestar request tests cover transports, wrong mechanisms, scope and role failures, AND/OR alternatives, public overrides, inherited requirements, repeated credentials, setup failures, and rejection before delegation. TLS tests verify rejection without an accepted peer; configuring and validating a real client-certificate handshake remains the application's TLS integration.
+
+Quarkus tests additionally use the real Zanzibar extension, a deterministic relationship backend, and signed JWTs validated by the native provider. They cover identity propagation, explicit subject selection, FGA denial, concurrent-request isolation, validation/permission-reader counts, and native authorization event counts. They verify that proactive authentication fails startup and conflicting early HTTP authentication fails before Zanzibar or delegation. Compile-backed specialization tests verify that uniform policies do not generate per-operation dispatch or redundant evaluators.

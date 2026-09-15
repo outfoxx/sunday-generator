@@ -16,43 +16,68 @@
 
 package io.test.quarkus
 
+import io.quarkus.security.runtime.QuarkusSecurityIdentity
+import io.smallrye.mutiny.Uni
 import io.test.quarkus.secure.OpenAPISecurity
 import jakarta.enterprise.inject.Produces
 import jakarta.inject.Singleton
 import java.security.Principal
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Fixed credential validators used only by the runtime integration fixture. */
 @Singleton
 class SecurityBindings {
+  /** Counts validator and permission-reader invocations independently. */
+  val authentications = ConcurrentHashMap<String, AtomicInteger>()
+  val permissionReads = ConcurrentHashMap<String, AtomicInteger>()
+
   /** Supplies all scheme validators through CDI. */
   @Produces
   @Singleton
   fun endpointSecurity(): OpenAPISecurity =
     OpenAPISecurity(
       OpenAPISecurity.schemes.mapValues { (_, definition) ->
-        OpenAPISecurity.Authenticator { _, scheme, credential ->
-          check(scheme == definition)
-          val permissions =
-            when (scheme.name) {
-              "basicAuth" -> emptySet<String>().takeIf { credential == "YWxpY2U6cGFzc3dvcmQ=" }
-              "bearerAuth" -> emptySet<String>().takeIf { credential == "valid-token" }
-              "headerKey", "queryKey", "cookieKey" ->
-                when (credential) {
-                  "valid-key" -> emptySet()
-                  "admin-key" -> setOf("admin")
-                  else -> null
-                }
-              "oauth", "oidc" ->
-                when (credential) {
-                  "reader-token" -> setOf("read")
-                  "super-token" -> setOf("read", "admin")
-                  "unprivileged-token" -> emptySet()
-                  else -> null
-                }
-              else -> null
-            }
-          permissions?.let { OpenAPISecurity.Identity(Principal { "alice" }, it) }
-        }
+        OpenAPISecurity.SchemeBinding(
+          OpenAPISecurity.Authenticator { _, scheme, credential ->
+            authentications.computeIfAbsent(scheme.name) { AtomicInteger() }.incrementAndGet()
+            check(scheme == definition)
+            val permissions =
+              when (scheme.name) {
+                "basicAuth" -> emptySet<String>().takeIf { credential == "YWxpY2U6cGFzc3dvcmQ=" }
+                "bearerAuth" -> emptySet<String>().takeIf { credential == "valid-token" }
+                "headerKey", "queryKey", "cookieKey" ->
+                  when (credential) {
+                    "valid-key" -> emptySet()
+                    "admin-key" -> setOf("admin")
+                    else -> null
+                  }
+                "oauth", "oidc" ->
+                  when (credential) {
+                    "reader-token" -> setOf("read")
+                    "super-token" -> setOf("read", "admin")
+                    "unprivileged-token" -> emptySet()
+                    else -> null
+                  }
+                else -> null
+              }
+            Uni.createFrom().item(
+              permissions?.let {
+                QuarkusSecurityIdentity
+                  .builder()
+                  .setPrincipal(
+                    Principal { "alice" },
+                  ).addAttribute("permissions", it)
+                  .build()
+              },
+            )
+          },
+          permissions = { identity ->
+            permissionReads.computeIfAbsent(definition.name) { AtomicInteger() }.incrementAndGet()
+            identity.getAttribute<Set<String>>("permissions")
+          },
+        )
       },
+      subjectSchemes = OpenAPISecurity.subjectRequirements.associateWith { "oauth" },
     )
 }

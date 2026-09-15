@@ -251,27 +251,46 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
-    val securityGenerators =
+    val securityPolicies =
       if (options.enforceSecuritySchemes) {
-        serviceTypes.groupBy { it.typeName.packageName }.mapValues { (packageName, group) ->
-          val generator = KotlinJAXRSSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), jaxRsTypes)
-          val policies =
-            group.flatMap { service ->
-              service.service.operations.mapNotNull { operation ->
-                api.endpointSecurityPolicy(service.service, operation)
-              }
+        serviceTypes.groupBy { it.typeName.packageName }.mapValues { (_, group) ->
+          group.flatMap { service ->
+            service.service.operations.mapNotNull { operation ->
+              api.endpointSecurityPolicy(service.service, operation)
             }
-          typeRegistry.addServiceType(generator.typeName, generator.generate(policies.endpointSecuritySchemes()))
-          generator
+          }
+        }
+      } else {
+        emptyMap()
+      }
+    val securityGenerators =
+      if (!options.quarkus) {
+        securityPolicies.mapValues { (packageName, policies) ->
+          KotlinJAXRSSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), jaxRsTypes).also { generator ->
+            typeRegistry.addServiceType(generator.typeName, generator.generate(policies.endpointSecuritySchemes()))
+          }
+        }
+      } else {
+        emptyMap()
+      }
+    val quarkusSecurityGenerators =
+      if (options.quarkus) {
+        securityPolicies.mapValues { (packageName, policies) ->
+          KotlinQuarkusSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), policies).also { generator ->
+            generator.generate().forEach { (name, type) -> typeRegistry.addServiceType(name, type) }
+          }
         }
       } else {
         emptyMap()
       }
 
     serviceTypes.forEach { service ->
-      generateServiceType(service, securityGenerators[service.typeName.packageName])
+      generateServiceType(
+        service,
+        securityGenerators[service.typeName.packageName],
+        quarkusSecurityGenerators[service.typeName.packageName],
+      )
     }
-
 
     if (options.aggregateServices && serviceTypes.size > 1) {
       val aggregateTypeName = aggregateServiceTypeName()
@@ -296,10 +315,17 @@ class KotlinJAXRSIrGenerator(
   private fun generateServiceType(
     service: GeneratedJaxRsService,
     securityGenerator: KotlinJAXRSSecurityGenerator?,
+    quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator?,
   ) {
     val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
     if (options.resourceAdapters) {
-      val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus, securityGenerator)
+      val adapter =
+        KotlinJAXRSResourceAdapterGenerator(
+          jaxRsTypes,
+          options.quarkus,
+          securityGenerator,
+          quarkusSecurityGenerator,
+        )
       val endpointAuthentication =
         service.service.operations.associate { operation ->
           operation.id.kotlinIdentifierName to api.endpointAuthentication(service.service, operation)
@@ -312,7 +338,7 @@ class KotlinJAXRSIrGenerator(
           serviceType.build(),
           endpointAuthentication,
           service.subresourcePath == null,
-          if (securityGenerator != null) {
+          if (options.enforceSecuritySchemes) {
             service.service.operations.associate { operation ->
               operation.id.kotlinIdentifierName to api.endpointSecurityPolicy(service.service, operation)
             }
@@ -443,7 +469,7 @@ class KotlinJAXRSIrGenerator(
         }
     val fallbackExpression =
       if (principalFallback) {
-        CodeBlock.of("principal.name.takeIf·{·it.isNotBlank()·}")
+        CodeBlock.of("principal?.name?.takeIf·{·it.isNotBlank()·}")
       } else {
         CodeBlock.of("null")
       }
@@ -469,7 +495,10 @@ class KotlinJAXRSIrGenerator(
       FunSpec
         .builder("extractUser")
         .addModifiers(KModifier.OVERRIDE)
-        .addParameter(principalParameterName, Principal::class.asTypeName())
+        // Zanzibar passes null for anonymous requests despite its non-null Java parameter annotation.
+        .addAnnotation(
+          AnnotationSpec.builder(Suppress::class).addMember("%S", "WRONG_NULLABILITY_FOR_JAVA_OVERRIDE").build(),
+        ).addParameter(principalParameterName, Principal::class.asTypeName().copy(nullable = true))
         .addParameter("discoveredUserType", STRING.copy(nullable = true))
         .returns(OPTIONAL.parameterizedBy(fgaUser))
         .addCode(

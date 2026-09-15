@@ -51,6 +51,7 @@ dependencies {
   testImplementation(libs.rxJava2)
   testImplementation(libs.quarkusRest)
   testImplementation(libs.quarkusSecurity)
+  testImplementation("io.quarkus:quarkus-vertx-http:${libs.versions.quarkus.rest.get()}")
   testImplementation(libs.quarkiverseZanzibar)
   // END: generated code dependencies
 
