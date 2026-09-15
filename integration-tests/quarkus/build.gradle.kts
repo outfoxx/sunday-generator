@@ -105,6 +105,31 @@ val generateZanzibarApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val asyncSources = layout.buildDirectory.dir("generated/async-security")
+val asyncContracts =
+  listOf("security-enforcement-3.yaml", "security-api-keys-2.yaml").map {
+    rootProject.layout.projectDirectory.file("generator/src/test/resources/asyncapi/ir/$it")
+  }
+val generateAsyncApi by tasks.registering(JavaExec::class) {
+  inputs.files(asyncContracts)
+  outputs.dir(asyncSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.asyncapi",
+    "-out",
+    asyncSources.get().asFile.absolutePath,
+  )
+  args(asyncContracts.map { it.asFile.absolutePath })
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
@@ -112,10 +137,12 @@ kotlin.compilerOptions {
 kotlin.sourceSets.main {
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
+  kotlin.srcDir(generateAsyncApi)
   kotlin.srcDir(generateZanzibarApi)
 }
 
 tasks.compileKotlin {
+  dependsOn(generateAsyncApi)
   dependsOn(generateApi, generateSecuredApi, generateZanzibarApi)
 }
 

@@ -50,6 +50,18 @@ Basic and bearer failures include WWW-Authenticate challenges. Insufficient bear
 
 The OpenAPI reader preserves required permissions, OAuth flow endpoint/scopes metadata, and the OpenID Connect discovery URL. Security scheme references resolve local and external JSON pointers while retaining the name used in the requirement. Invalid security arrays, permission lists, and API-key parameter metadata fail generation. The evaluator rejects undefined, unsupported, or conflicting scheme definitions. Existing RAML and AsyncAPI requirements also retain their scope lists in IR.
 
+## AsyncAPI security
+
+AsyncAPI 2.x uses named requirement maps (`security: [{token: [read]}]`). AsyncAPI 3.x uses inline Security Scheme Objects or local Reference Objects (`security: [{$ref: '#/components/securitySchemes/token'}]`); required OAuth/OIDC permissions come from the scheme's `scopes`, separately from the available scopes advertised by OAuth flows.
+
+Local references support chains and escaped JSON Pointer segments. The referenced component name remains the application binding key, including when that component aliases another scheme. External security references are unsupported and fail generation with a source URI and security location; missing targets, invalid targets, and cycles also fail explicitly.
+
+Inline schemes receive `inline_<sha256>` binding names computed from their canonical authentication fields. Object field order and required scopes do not change the name. Equivalent inline schemes share a binding; explicitly named components remain separate. Use the generated `schemes` registry to discover inline names, or use component references when applications need human-readable binding keys. Name collisions fail generation.
+
+For 3.x operations, applicable server policies are resolved during generation. An omitted or empty channel `servers` list selects all declared servers; a non-empty list selects only its referenced servers. Alternatives within a server or operation remain ordered OR choices; the applicable server requirements and operation requirements are combined with AND. Repeated schemes share authentication while their required permissions are combined. No request-time server or path lookup is added.
+
+Both versions preserve `httpApiKey` transport metadata: `name` is the exact wire name and `in` must be `header`, `query`, or `cookie`. This differs from AsyncAPI's non-HTTP `apiKey` type, whose user/password transports are not supported by HTTP server enforcement.
+
 ## Binding credential validators
 
 The contract describes accepted credentials and permissions, but does not supply passwords, trusted keys, issuer/audience validation policy, TLS trust configuration, or a mapping from scheme names to application identity providers. Those remain application configuration. The generator does not infer OIDC versus SmallRye JWT from `bearerFormat: JWT`, fetch remote discovery metadata at request time, or treat a decoded token as authenticated.

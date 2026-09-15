@@ -1,0 +1,38 @@
+---
+asyncapi: 2.6.0
+info:
+  title: Async Security
+  version: 1.0.0
+x-sunday-apiId: scheme-security
+servers:
+  main:
+    url: https://api.example.com
+    protocol: http
+    security:
+    - headerKey: []
+      queryKey: []
+      cookieKey: []
+channels:
+  "/async2/keys":
+    x-sunday-service: AsyncKeys
+    subscribe:
+      operationId: receiveKeys
+      message:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+components:
+  securitySchemes:
+    headerKey:
+      type: httpApiKey
+      name: X-API-Key
+      in: header
+    queryKey:
+      type: httpApiKey
+      name: api_key
+      in: query
+    cookieKey:
+      type: httpApiKey
+      name: session_key
+      in: cookie

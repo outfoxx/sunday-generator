@@ -34,6 +34,90 @@ import org.junit.jupiter.params.provider.ValueSource
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonSecuritySchemeTest : PythonTest() {
 
+  @ParameterizedTest
+  @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])
+  fun `AsyncAPI security compiles with and without enforcement`(
+    fixture: String,
+    compiler: PythonCompiler,
+  ) {
+    val paths =
+      if (fixture == "composed-security") {
+        listOf(
+          "openapi/ir/security-enforcement.yaml",
+          "asyncapi/ir/security-enforcement-3.yaml",
+          "asyncapi/ir/security-api-keys-2.yaml",
+        )
+      } else {
+        listOf("asyncapi/ir/$fixture.yaml")
+      }
+    listOf(false, true).forEach { enforce -> assertTrue(compileModules(compiler, modules(paths, enforce))) }
+  }
+
+  @Test
+  fun `AsyncAPI generated endpoints enforce transports and server plus operation scopes`(compiler: PythonCompiler) {
+    assertTrue(
+      compileModules(
+        compiler,
+        modules(listOf("asyncapi/ir/security-enforcement-3.yaml", "asyncapi/ir/security-api-keys-2.yaml")),
+        smokeCode =
+          """
+          from litestar import Litestar
+          from litestar.testing import TestClient
+          from sunday.litestar import SundayPlugin
+          from security_api._sunday_security import ApiSecurity, Identity
+          from security_api.api_server import create_secure_router
+
+          calls = []
+          async def authenticate(connection, scheme, credential):
+              if scheme.name.endswith("Key") and credential == "valid-key":
+                  return Identity("alice")
+              if scheme.name == "eventToken":
+                  if credential == "reader":
+                      return Identity("alice", frozenset({"read"}))
+                  if credential == "unscoped":
+                      return Identity("alice")
+              if scheme.name.startswith("inline_") and credential == "valid-token":
+                  return Identity("alice")
+              return None
+
+          class Publisher:
+              def __getattr__(self, name):
+                  async def operation(*args, **kwargs):
+                      calls.append(name)
+                      yield "event"
+                  return operation
+
+          security = ApiSecurity({name: authenticate for name in ApiSecurity.schemes})
+          app = Litestar(route_handlers=[create_secure_router(Publisher(), Publisher(), security=security)], plugins=[SundayPlugin()])
+          with TestClient(app) as client:
+              def send(path, expected, headers=None):
+                  response = client.get(path, headers=headers)
+                  assert response.status_code == expected, (path, response.status_code, response.text)
+              for route in ("header", "query", "cookie", "scoped", "bearer", "combined"):
+                  send("/async3/" + route, 401)
+              assert calls == []
+              key = {"X-API-Key": "valid-key"}
+              reader = {"Authorization": "Bearer reader"}
+              send("/async3/header", 200, key)
+              send("/async3/header", 401, {"X-API-Key": "invalid"})
+              send("/async3/query?api_key=valid-key", 200)
+              send("/async3/query?wrong_name=valid-key", 401)
+              send("/async3/cookie", 200, {"Cookie": "session_key=valid-key"})
+              send("/async3/bearer", 200, {"Authorization": "Bearer valid-token"})
+              send("/async3/scoped", 200, reader)
+              before = len(calls)
+              send("/async3/scoped", 403, {"Authorization": "Bearer unscoped"})
+              send("/async3/combined", 401, reader)
+              send("/async3/combined", 401, key)
+              assert len(calls) == before
+              send("/async3/combined", 200, key | reader)
+              send("/async2/keys?api_key=valid-key", 401, key)
+              send("/async2/keys?api_key=valid-key", 200, key | {"Cookie": "session_key=valid-key"})
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `scheme aware rendering rejects incomplete policy maps`() {
     val api =
@@ -188,7 +272,10 @@ class PythonSecuritySchemeTest : PythonTest() {
     )
   }
 
-  private fun modules(paths: List<String>): List<PythonModule> {
+  private fun modules(
+    paths: List<String>,
+    enforce: Boolean = true,
+  ): List<PythonModule> {
     val api =
       GeneratedApiIrExporter(GeneratedApiIrOptions(generationMode = GenerationMode.Server))
         .export(paths.map { javaClass.getResource("/$it")!!.toURI() })
@@ -198,7 +285,7 @@ class PythonSecuritySchemeTest : PythonTest() {
         packageName = "security_api",
         aggregateServices = true,
         aggregateServiceName = "Secure",
-        enforceSecuritySchemes = true,
+        enforceSecuritySchemes = enforce,
       ),
     ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
   }
