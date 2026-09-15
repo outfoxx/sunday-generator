@@ -1,0 +1,64 @@
+#%RAML 1.0
+title: RAML Security Overrides
+annotationTypes:
+  sunday.apiId: string
+  sunday.group: string
+
+(sunday.apiId): adapter-tests
+securedBy: [basic]
+securitySchemes:
+  basic:
+    type: Basic Authentication
+  other:
+    type: Basic Authentication
+traits:
+  anonymous:
+    securedBy: [null]
+
+/raml:
+  (sunday.group): RamlAccess
+  /public:
+    get:
+      displayName: publicAccess
+      securedBy: [null]
+      responses:
+        204:
+  /mixed:
+    get:
+      displayName: mixedAccess
+      securedBy: [basic, null]
+      responses:
+        204:
+  /inherited:
+    get:
+      displayName: inheritedAccess
+      responses:
+        204:
+  /resource:
+    securedBy: [null]
+    get:
+      displayName: resourcePublic
+      responses:
+        204:
+    post:
+      displayName: methodProtected
+      securedBy: [basic]
+      responses:
+        204:
+    /nested:
+      get:
+        displayName: nestedInherited
+        responses:
+          204:
+  /replacement:
+    securedBy: [other]
+    get:
+      displayName: replacementAccess
+      responses:
+        204:
+  /trait:
+    get:
+      displayName: traitPublic
+      is: [anonymous]
+      responses:
+        204:

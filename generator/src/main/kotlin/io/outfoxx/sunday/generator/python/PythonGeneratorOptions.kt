@@ -24,4 +24,6 @@ data class PythonGeneratorOptions(
   val aggregateServices: Boolean = false,
   val aggregateServiceName: String? = null,
   override val generateBrokerServices: Boolean = false,
+  /** Enforce resolved endpoint authentication in generated Litestar route handlers. */
+  val enforceEndpointSecurity: Boolean = false,
 ) : BrokerGenerationOptions

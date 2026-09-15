@@ -20,6 +20,8 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [Kotlin/Sunday IR Path](docs/kotlin-sunday-ir-path.md)
 
+### [Server Resource Adapters and Endpoint Security](docs/server-resource-adapters.md)
+
 ### [IR Emitter Helper Extraction Plan](docs/ir-emitter-helper-extraction.md)
 
 ### [TypeScript/Sunday Runtime Notes](docs/typescript-sunday-runtime.md)

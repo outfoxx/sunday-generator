@@ -92,6 +92,12 @@ open class KotlinJAXRSGenerateCommand :
       """.trimIndent(),
   ).flag(default = false)
 
+  /** Whether server generation owns the endpoint implementations and delegates operation behavior. */
+  val resourceAdapters by option(
+    "-resource-adapters",
+    help = "Generate server resource implementations backed by application-owned service delegates",
+  ).flag(default = false)
+
   override fun run() {
     println("Generating ${this.outputCategories} types")
     println("Processing ${files.joinToString()}")
@@ -135,5 +141,6 @@ open class KotlinJAXRSGenerateCommand :
       aggregateServiceName,
       servicesFromTags,
       generateBrokerServices,
+      resourceAdapters,
     )
 }

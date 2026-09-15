@@ -35,6 +35,8 @@ class KotlinJAXRSOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
+  /** Generate endpoint resource classes that delegate to annotation-free service interfaces. */
+  val resourceAdapters: Boolean = false,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,

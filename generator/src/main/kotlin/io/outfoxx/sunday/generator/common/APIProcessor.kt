@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.common
 
 import amf.apicontract.client.platform.RAMLConfiguration
+import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.core.client.common.transform.PipelineId
 import amf.core.client.common.validation.SeverityLevels
 import amf.core.client.platform.AMFGraphConfiguration
@@ -42,7 +43,9 @@ import amf.core.internal.metamodel.domain.`ShapeModel$`
 import amf.shapes.client.platform.model.domain.NodeShape
 import io.outfoxx.sunday.generator.utils.LocalSundayDefinitionResourceLoader
 import io.outfoxx.sunday.generator.utils.allUnits
+import io.outfoxx.sunday.generator.utils.api
 import io.outfoxx.sunday.generator.utils.name
+import io.outfoxx.sunday.generator.utils.security
 import io.outfoxx.sunday.generator.utils.value
 import scala.Option
 import scala.collection.JavaConverters.asJavaIterable
@@ -67,6 +70,8 @@ open class APIProcessor {
     val shapeIndex: ShapeIndex,
     private val validationResults: List<AMFValidationResult>,
     val serviceDocument: Document = document,
+    /** API-level declarations retained before AMF moves security onto operations. */
+    val apiSecurity: List<SecurityRequirement>? = null,
   ) {
 
     enum class Level {
@@ -134,13 +139,19 @@ open class APIProcessor {
         throw x.cause ?: x
       }
 
+    val apiSecurity = unresolvedDocument.api.security
     val resolvedDocument = ramlClient.transform(unresolvedDocument, pipelineId).baseUnit() as Document
 
     val validationReport = ramlClient.validate(resolvedDocument).get()
 
     val shapeIndex = ShapeIndex.builder().index(resolvedDocument).build()
 
-    return Result(resolvedDocument, shapeIndex, validationResults + validationReport.results())
+    return Result(
+      resolvedDocument,
+      shapeIndex,
+      validationResults + validationReport.results(),
+      apiSecurity = apiSecurity,
+    )
   }
 }
 

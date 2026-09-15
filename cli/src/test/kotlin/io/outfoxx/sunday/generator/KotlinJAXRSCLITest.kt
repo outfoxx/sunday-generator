@@ -140,6 +140,16 @@ class KotlinJAXRSCLITest {
   }
 
   @Test
+  fun `resource adapters are opt in`() {
+    val enabled = KotlinJAXRSGenerateCommandTest()
+    enabled.parse(arrayOf("-mode", "server", "-resource-adapters", *requiredOptions))
+    assertThat(enabled.resourceAdapters, equalTo(true))
+    val defaults = KotlinJAXRSGenerateCommandTest()
+    defaults.parse(requiredOptions)
+    assertThat(defaults.resourceAdapters, equalTo(false))
+  }
+
+  @Test
   fun `non-Quarkus defaults to Zalando problem library`() {
 
     val command = KotlinJAXRSGenerateCommandTest()

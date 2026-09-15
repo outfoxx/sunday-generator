@@ -45,6 +45,20 @@ class PythonCLITest {
     override fun run() {}
   }
 
+  class PythonLitestarGenerateCommandTest : PythonLitestarGenerateCommand() {
+    override fun run() {}
+  }
+
+  @Test
+  fun `Litestar endpoint security is opt in`() {
+    val enabled = PythonLitestarGenerateCommandTest()
+    enabled.parse(arrayOf("-enforce-endpoint-security", *requiredOptions))
+    assertThat(enabled.enforceEndpointSecurity, equalTo(true))
+    val defaults = PythonLitestarGenerateCommandTest()
+    defaults.parse(requiredOptions)
+    assertThat(defaults.enforceEndpointSecurity, equalTo(false))
+  }
+
   @Test
   fun `python shared options`() {
     val command = PythonSundayGenerateCommandTest()
