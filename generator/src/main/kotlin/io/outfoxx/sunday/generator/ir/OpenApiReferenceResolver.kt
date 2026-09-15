@@ -109,7 +109,7 @@ class OpenApiReferenceResolver(
         schemas[name] = normalize(schema, Kind.SCHEMA)
       }
       return OpenApiReferenceResolution(result, capturedDocuments.toMap()).also { resolution ->
-        normalizedSchemas.forEach { resolution.analysis.validate(it) }
+        resolution.analysis.validateAll(normalizedSchemas)
       }
     }
 
@@ -138,7 +138,11 @@ class OpenApiReferenceResolver(
         val result = referenced.toMutableMap()
         result.putAll(normalizeFields(node, kind))
         return if (kind == Kind.SCHEMA) {
-          node.schema(result, (referenced as? OpenApiSchema)?.usesBooleanExclusiveBounds)
+          node.schema(
+            result,
+            (referenced as? OpenApiSchema)?.usesBooleanExclusiveBounds,
+            node.takeIf { it.isSchemaAlias() }?.let { schemaName(reference(it, kind)) },
+          )
         } else {
           result
         }
@@ -714,12 +718,14 @@ class OpenApiReferenceResolver(
       fun schema(
         fields: Map<String, Any?>,
         usesBooleanExclusiveBounds: Boolean? = null,
+        declarationReference: String? = null,
       ): OpenApiSchema =
         OpenApiSchema(
           fields,
           document.schemaSource,
           pointer,
           usesBooleanExclusiveBounds ?: (scope.dialect == OAS_30_DIALECT),
+          declarationReference,
         ).also { normalizedSchemas.add(it) }
 
       fun rawValue(): Any? = mapper.convertValue(value, Any::class.java)

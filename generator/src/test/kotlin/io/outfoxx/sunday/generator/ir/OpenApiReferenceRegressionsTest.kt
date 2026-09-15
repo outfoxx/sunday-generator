@@ -117,7 +117,7 @@ class OpenApiReferenceRegressionsTest {
     assertFalse(base.required)
     assertEquals(mapOf("minLength" to "2"), base.validation)
     val child = result.models.single { it.name == "Child" }
-    assertTrue(child.inherits.isEmpty())
+    assertEquals(listOf(GeneratedTypeRef.named("Base")), child.inherits)
     assertTrue(child.properties.single().required)
     assertEquals(mapOf("minLength" to "4", "maxLength" to "8"), child.properties.single().validation)
     assertEquals(

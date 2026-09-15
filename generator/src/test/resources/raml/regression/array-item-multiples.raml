@@ -1,0 +1,12 @@
+#%RAML 1.0
+title: Array item multiples
+mediaType: application/json
+types:
+  ArrayMultiples:
+    type: object
+    properties:
+      values:
+        type: array
+        items:
+          type: integer
+          multipleOf: 2

@@ -94,6 +94,7 @@ class OpenApiRemoteReferencesTest {
           OpenApiReferenceDocuments.mappedPet(),
           OpenApiReferenceDocuments.cat,
           OpenApiReferenceDocuments.records,
+          OpenApiReferenceDocuments.sdkCompatibility,
           OpenApiReferenceDocuments.dog,
         )
       documents["/schemas/profile.yaml"] = profileSchema(false)
@@ -117,6 +118,7 @@ class OpenApiRemoteReferencesTest {
           apply plugin: 'org.jetbrains.kotlin.jvm'
           apply plugin: 'io.outfoxx.sunday-generator'
           repositories { mavenCentral() }
+          dependencies { implementation 'io.outfoxx.sunday:sunday-problem:2.0.0-beta.5' }
           sundayGenerations {
             client {
               source.set(files('api.yaml'))
@@ -148,6 +150,7 @@ class OpenApiRemoteReferencesTest {
               Empty: {${'$'}ref: '$base/entry#/components/schemas/Empty'}
               Unbounded: {type: integer, exclusiveMinimum: false, exclusiveMaximum: false}
               DocumentedRecord: {${'$'}ref: '$base/entry#/components/schemas/DocumentedRecord'}
+              SdkEnvelope: {${'$'}ref: '$base/entry#/components/schemas/SdkEnvelope'}
               MappedPet: {${'$'}ref: '$base/entry#/components/schemas/MappedPet'}
               Pets:
                 type: object
@@ -171,7 +174,14 @@ class OpenApiRemoteReferencesTest {
         val sources = directory.resolve("$name/src/main/kotlin").apply { mkdirs() }
         sources.resolve("InheritanceCheck.kt").writeText(
           "package io.test.$name\nfun asParent(child: DocumentedRecord): BaseRecord = child\n" +
-            "fun asMappedParent(child: MappedCat): MappedPet = child\n",
+            "fun asMappedParent(child: MappedCat): MappedPet = child\n" +
+            "fun byteParent(child: SdkByteRestrictions): SdkByteBase = child\n" +
+            "fun byteStorage(child: SdkByteRestrictions): ByteArray? = child.data\n" +
+            "fun secondaryField(child: SdkMultiChild): String = child.b\n" +
+            "fun reversedField(child: SdkMultiReversed): String = child.a\n" +
+            "fun mappedAliasParent(child: SdkWrappedCat): SdkMappedCat = child\n" +
+            "fun aliasParent(child: SdkAliasChild): SdkAliasBase = child\n" +
+            "fun temporalParent(child: SdkTemporalChild): SdkTemporalBase = child\n",
         )
       }
 
@@ -205,6 +215,48 @@ class OpenApiRemoteReferencesTest {
           }
         val captured = OpenApiDocumentSnapshot.loader(manifest.parentFile.toPath(), projectDirectory.toPath())
         val api = OpenApiToGeneratedApi().convert(projectDirectory.resolve("api.yaml").toURI(), captured)
+        assertEquals(
+          GeneratedTypeRef.named("SdkWrappedCat"),
+          api.models.single { it.name == "SdkMappedPet" }.discriminatorMappings["cat"],
+        )
+        assertEquals(
+          listOf(GeneratedTypeRef.named("SdkMappedCat")),
+          api.models.single { it.name == "SdkWrappedCat" }.inherits,
+        )
+        assertEquals(
+          listOf(GeneratedTypeRef.named("SdkAliasBase")),
+          api.models.single { it.name == "SdkAliasChild" }.inherits,
+        )
+        val intersection = api.models.single { it.name == "SdkConflictingChild" }
+        assertTrue(intersection.inherits.isEmpty())
+        assertEquals(listOf("b"), intersection.properties.single().allowedValues)
+        for (name in listOf("SdkMultiChild", "SdkMultiReversed")) {
+          val model = api.models.single { it.name == name }
+          assertTrue(model.inherits.isEmpty())
+          assertEquals(setOf("a", "b", "count", "state"), model.properties.map { it.name }.toSet())
+          val count = model.properties.single { it.name == "count" }
+          assertEquals(listOf(2), count.allowedValues)
+          assertEquals("2", count.defaultValue)
+        }
+        val temporal = api.models.single { it.name == "SdkTemporalChild" }
+        assertEquals(listOf(GeneratedTypeRef.named("SdkTemporalBase")), temporal.inherits)
+        assertEquals(
+          listOf("2026-09-14T00:00:00Z"),
+          temporal.properties.single { it.name == "timestamp" }.allowedValues,
+        )
+        val defaultChild = api.models.single { it.name == "SdkDefaultChild" }
+        assertEquals("2", defaultChild.properties.single().defaultValue)
+        assertEquals(
+          "1",
+          api.models
+            .single { it.name == "SdkIntegerChild" }
+            .properties
+            .single()
+            .defaultValue,
+        )
+        val bytes = api.models.single { it.name == "SdkByteRestrictions" }
+        assertEquals(listOf(GeneratedTypeRef.named("SdkByteBase")), bytes.inherits)
+        assertEquals(listOf("SGk="), bytes.properties.single { it.name == "data" }.allowedValues)
         assertEquals(
           "unrelated",
           api.models

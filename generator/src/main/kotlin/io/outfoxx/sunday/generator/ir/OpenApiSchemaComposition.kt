@@ -33,17 +33,94 @@ internal class OpenApiSchemaComposition(
   private val resolved = IdentityHashMap<Map<*, *>, Map<String, Any?>>()
   private val resolving = Collections.newSetFromMap(IdentityHashMap<Map<*, *>, Boolean>())
   private val compatibility = OpenApiSchemaCompatibility(this)
+  private val nullability = OpenApiSchemaNullability(this)
+  private val models = IdentityHashMap<Map<*, *>, Model>()
+  private val inheritanceNames = mutableMapOf<String, String>()
+  private val discriminatorTargets = Collections.newSetFromMap(IdentityHashMap<Map<*, *>, Boolean>())
+
+  init {
+    retainDiscriminatorTargets(schemas.values)
+  }
+
+  // Inspect only schema locations; example and extension data cannot select a declaration identity.
+  fun retainDiscriminatorTargets(locations: Collection<Map<*, *>>) {
+    val visited = Collections.newSetFromMap(IdentityHashMap<Map<*, *>, Boolean>())
+
+    fun visit(schema: Map<*, *>) {
+      if (!visited.add(schema)) return
+      val discriminator = schema["discriminator"] as? Map<*, *>
+      if (discriminator != null) {
+        val targets = (discriminator["mapping"] as? Map<*, *>)?.values.orEmpty().filterIsInstance<String>()
+        val alternatives =
+          listOf("oneOf", "anyOf").flatMap { keyword ->
+            (schema[keyword] as? List<*>)
+              .orEmpty()
+              .filterIsInstance<Map<*, *>>()
+              .mapNotNull { it["\$ref"] as? String }
+          }
+        (targets + alternatives).forEach { reference ->
+          OpenApiSchemaReferences.name(mapOf("\$ref" to reference))?.let(schemas::get)?.let(discriminatorTargets::add)
+        }
+      }
+      schema.forEach { (key, value) ->
+        val children =
+          when (OpenApiSchemaKeywords.shape(key.toString())) {
+            OpenApiSchemaKeywords.Shape.VALUE -> listOf(value)
+            OpenApiSchemaKeywords.Shape.MAP -> (value as? Map<*, *>)?.values.orEmpty()
+            OpenApiSchemaKeywords.Shape.LIST -> (value as? List<*>).orEmpty()
+            null -> emptyList()
+          }
+        children.filterIsInstance<Map<*, *>>().forEach(::visit)
+      }
+    }
+    locations.forEach(::visit)
+  }
+
+  class PropertyDeclaration(
+    val modelName: String,
+    val wireName: String,
+    val schema: Map<*, *>,
+  )
 
   class Model(
     val schema: Map<String, Any?>,
     val localSchema: Map<String, Any?>,
     val parents: List<String>,
+    val inheritedProperties: Map<String, PropertyDeclaration> = emptyMap(),
   )
 
+  fun canonicalReference(schema: Map<*, *>): String? =
+    OpenApiSchemaReferences.canonicalName(schema) ?: OpenApiSchemaReferences.wrappedName(schema)?.takeIf { name ->
+      schemas[name]?.let { compatibility.equivalent(resolve(schema), resolve(it)) } == true
+    }
+
+  /** Only wrappers emitted as aliases may disappear from the nominal inheritance graph. */
+  fun collapsedAlias(schema: Map<*, *>): String? =
+    canonicalReference(schema).takeIf {
+      schema !in discriminatorTargets && OpenApiSchemaReferences.canonicalName(schema) == null
+    }
+
+  private fun inheritanceName(
+    name: String,
+    origin: Map<*, *>,
+  ): String {
+    inheritanceNames[name]?.let { return it }
+    val visited = linkedSetOf<String>()
+    var current = name
+    while (true) {
+      if (!visited.add(current)) fail(origin, "Cyclic OpenAPI schema inheritance cannot be represented")
+      val target = schemas[current] ?: fail(origin, "Unresolved OpenAPI schema '$current'")
+      current = collapsedAlias(target) ?: break
+    }
+    visited.forEach { inheritanceNames[it] = current }
+    return current
+  }
+
   fun model(schema: Map<*, *>): Model {
+    models[schema]?.let { return it }
     val effective = resolve(schema).filterKeys { it !in declarationAnnotations || schema.containsKey(it) }
     val parents =
-      parentNames(schema).distinct().filter { name ->
+      parentNames(schema).map { inheritanceName(it, schema) }.distinct().filter { name ->
         val parent = resolve(schemas.getValue(name))
         val type = parent["type"]
         parent["properties"] is Map<*, *> ||
@@ -51,23 +128,164 @@ internal class OpenApiSchemaComposition(
       }
     val inherited = parents.map { resolve(schemas.getValue(it)) }
     val properties = effective["properties"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
+    // Root aliases are expanded during normalization but still share their target's inline declarations.
+    val aliasDeclarations =
+      (schema as? OpenApiSchema)
+        ?.declarationReference
+        ?.takeIf { schemas[it] !== schema }
+        ?.let { target ->
+          val declared = (resolve(schemas.getValue(target))["properties"] as? Map<*, *>).orEmpty()
+          properties
+            .filter { (key, property) ->
+              key in declared && canRefine(property, declared[key])
+            }.keys
+            .associate {
+              it.toString() to
+                declaration(declaringModelName(target), it.toString())
+            }
+        }.orEmpty()
     val required = (effective["required"] as? List<*>).orEmpty()
-    val parentProperties =
-      inherited.flatMap { (it["properties"] as? Map<*, *>).orEmpty().entries }.associate {
-        it.key to
-          it.value
+    val parentProperties = inherited.flatMap { (it["properties"] as? Map<*, *>).orEmpty().entries }.groupBy { it.key }
+    val declarations =
+      parentProperties.keys.associateWith { key ->
+        parents
+          .filter { (resolve(schemas.getValue(it))["properties"] as? Map<*, *>)?.containsKey(key) == true }
+          .map { declaration(it, key.toString()) }
       }
-    val parentRequired = inherited.flatMap { (it["required"] as? List<*>).orEmpty() }.toSet()
-    // IR inheritance has no property-override contract. Refinements must become concrete local fields.
-    val refinesParent =
-      parentProperties.any { (name, property) ->
-        !compatibility.equivalent(properties[name], property) || (name in required && name !in parentRequired)
+    val refinements =
+      parentProperties.filter { (name, contributions) ->
+        contributions.any { !compatibility.equivalent(properties[name], it.value) } ||
+          (
+            name in required &&
+              inherited.any {
+                (it["properties"] as? Map<*, *>)?.containsKey(name) == true &&
+                  name !in (it["required"] as? List<*>).orEmpty()
+              }
+          )
       }
-    return if (refinesParent) {
-      Model(effective, effective, emptyList())
-    } else {
-      Model(effective, effective + ("properties" to properties.filterKeys { it !in parentProperties }), parents)
-    }
+    // Retained refinements must fit one superclass constructor without losing secondary-parent fields.
+    val differentParentFields =
+      refinements.isNotEmpty() &&
+        inherited.map { (it["properties"] as? Map<*, *>).orEmpty().keys }.distinct().size > 1
+    val result =
+      if (differentParentFields ||
+        parentProperties.any { (name, contributions) ->
+          contributions.any { !canRefine(properties[name], it.value) }
+        } ||
+        declarations.values.any { sources -> sources.drop(1).any { !sameStorage(sources.first(), it) } }
+      ) {
+        Model(effective, effective, emptyList())
+      } else {
+        Model(
+          effective,
+          effective + ("properties" to properties.filterKeys { it !in parentProperties || it in refinements }),
+          parents,
+          aliasDeclarations +
+            refinements.keys.associate { key ->
+              key.toString() to declarations.getValue(key).first()
+            },
+        )
+      }
+    return result.also { models[schema] = it }
+  }
+
+  private fun declaration(
+    modelName: String,
+    wireName: String,
+  ): PropertyDeclaration {
+    val schema = schemas.getValue(modelName)
+    declaringModelName(modelName).takeUnless { it == modelName }?.let { return declaration(it, wireName) }
+    val projected = model(schema)
+    projected.inheritedProperties[wireName]?.let { return it }
+    val local = (projected.localSchema["properties"] as? Map<*, *>)?.get(wireName) as? Map<*, *>
+    if (local != null) return PropertyDeclaration(modelName, wireName, local)
+    val parent =
+      projected.parents.first {
+        (resolve(schemas.getValue(it))["properties"] as? Map<*, *>)?.containsKey(wireName) ==
+          true
+      }
+    return declaration(parent, wireName)
+  }
+
+  private fun sameStorage(
+    left: PropertyDeclaration,
+    right: PropertyDeclaration,
+  ): Boolean {
+    if (left.modelName == right.modelName && left.wireName == right.wireName) return true
+
+    fun required(declaration: PropertyDeclaration): Boolean =
+      declaration.wireName in (resolve(schemas.getValue(declaration.modelName))["required"] as? List<*>).orEmpty()
+    return required(left) == required(right) &&
+      storageIdentity(left.schema, left.modelName to left.wireName) ==
+      storageIdentity(right.schema, right.modelName to right.wireName)
+  }
+
+  // Compare the types a declaration will allocate without allocating models or expanding recursive fields.
+  private fun storageIdentity(
+    schema: Map<*, *>,
+    inlineIdentity: Pair<String, String>? = null,
+    references: Set<String> = emptySet(),
+  ): List<Any?> {
+    val reference = canonicalReference(schema)
+    if (reference != null && reference in references) return listOf("reference", reference)
+    val nestedReferences = if (reference == null) references else references + reference
+    val effective = resolve(schema)
+    val type = effective.schemaType()
+    val union = (effective["oneOf"] ?: effective["anyOf"]) as? List<*>
+    val additional = effective["additionalProperties"]
+    val properties = effective["properties"] as? Map<*, *>
+    val nominal =
+      reference != null &&
+        effective["enum"] is List<*> ||
+        (reference != null || inlineIdentity != null) &&
+        (
+          union != null ||
+            (type == "object" || type == null) &&
+            (!properties.isNullOrEmpty() || additional !is Map<*, *> && additional != true)
+        )
+    val representation =
+      when {
+        effective.isUnconstrainedSchema() -> listOf("any")
+        nominal -> listOf("nominal", reference ?: inlineIdentity)
+        type == "array" ->
+          listOf(
+            "array",
+            effective["uniqueItems"] == true,
+            storageIdentity((effective["items"] as? Map<*, *>).orEmpty(), references = nestedReferences),
+          )
+        (type == "object" || type == null) && additional is Map<*, *> && properties.isNullOrEmpty() ->
+          listOf("map", storageIdentity(additional, references = nestedReferences))
+        union != null ->
+          listOf(
+            "union",
+            union.filterIsInstance<Map<*, *>>().map { storageIdentity(it, references = nestedReferences) },
+          )
+        else -> listOf(type, effective["format"])
+      }
+    return listOf(nullability.isNullable(effective), representation)
+  }
+
+  private fun declaringModelName(name: String): String {
+    val schema = schemas.getValue(name)
+    val target =
+      ((schema as? OpenApiSchema)?.declarationReference ?: canonicalReference(schema))
+        ?.takeUnless { it == name } ?: return name
+    return declaringModelName(target)
+  }
+
+  // A child's wire restrictions need not replace the inherited storage type or nominal relationship.
+  private fun canRefine(
+    child: Any?,
+    parent: Any?,
+  ): Boolean {
+    if (compatibility.equivalent(child, parent)) return true
+    if (child !is Map<*, *> || parent !is Map<*, *>) return false
+
+    fun representation(schema: Map<*, *>): Map<String, Any?> =
+      resolve(schema).filterKeys { it !in refinementKeywords }.mapValues { (key, value) ->
+        if (key == "type" && value is List<*>) value.filterNot { it == "null" }.singleOrNull() ?: value else value
+      }
+    return compatibility.equivalent(representation(child), representation(parent))
   }
 
   fun resolve(schema: Map<*, *>): Map<String, Any?> {
@@ -313,4 +531,25 @@ internal class OpenApiSchemaComposition(
     origin: Map<*, *>,
     message: String,
   ): Nothing = (origin as? OpenApiSchema)?.error(message) ?: genError(message)
+
+  private companion object {
+    val refinementKeywords =
+      setOf(
+        "enum",
+        "const",
+        "nullable",
+        "default",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+      )
+  }
 }

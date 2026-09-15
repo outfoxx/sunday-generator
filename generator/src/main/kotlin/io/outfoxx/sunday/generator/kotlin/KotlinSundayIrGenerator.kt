@@ -32,6 +32,7 @@ import com.squareup.kotlinpoet.MAP
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.SET
@@ -66,6 +67,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -110,6 +112,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
 import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionGenerator
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH
@@ -177,6 +181,7 @@ class KotlinSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
@@ -997,6 +1002,13 @@ class KotlinSundayIrGenerator(
         !hasDiscriminatorFallbackSubclass &&
         !patchable
 
+  private fun GeneratedModel.patchableProperty(wireName: String): Boolean =
+    inherits
+      .mapNotNull(modelProperties::declarationModel)
+      .firstOrNull { parent -> modelProperties.fields(parent).any { it.wireName == wireName } }
+      ?.patchableProperty(wireName)
+      ?: patchable
+
   private fun GeneratedModel.classTypeSpec(
     inheritedProperties: List<GeneratedModelProperty>,
     localProperties: List<GeneratedModelProperty>,
@@ -1006,10 +1018,32 @@ class KotlinSundayIrGenerator(
         .constructorBuilder()
         .apply {
           inheritedProperties.forEach { property ->
-            addParameter(property.constructorParameterSpec())
+            addParameter(
+              property.constructorParameterSpec(
+                patchable = patchableProperty(property.wireName),
+                effective =
+                  modelProperties
+                    .fields(this@classTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+              ),
+            )
           }
           localProperties.forEach { property ->
-            addParameter(property.constructorParameterSpec(patchable))
+            addParameter(
+              property.constructorParameterSpec(
+                patchable,
+                effective =
+                  modelProperties
+                    .fields(this@classTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+              ),
+            )
           }
         }.build()
     val isProblemRootModel = isProblemRootModel()
@@ -1020,6 +1054,18 @@ class KotlinSundayIrGenerator(
       .primaryConstructor(constructor)
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
+        KotlinModelConstraints
+          .initializer(
+            modelProperties.fields(this@classTypeSpec),
+            modelProperties,
+            patchParameters =
+              constructor.parameters
+                .filter { (it.type as? ParameterizedTypeName)?.rawType in setOf(PATCH_OP, UPDATE_OP) }
+                .mapTo(mutableSetOf()) { it.name },
+          ) { it.kotlinTypeName() }
+          .takeUnless {
+            it.isEmpty()
+          }?.let(::addInitializerBlock)
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
@@ -1070,12 +1116,14 @@ class KotlinSundayIrGenerator(
                 .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName(patchable))
                 .apply {
                   addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
-                  addAnnotations(
-                    property.validation.validationAnnotations(
-                      property.type,
-                      AnnotationSpec.UseSiteTarget.FIELD,
-                    ),
-                  )
+                  if (!patchable) {
+                    addAnnotations(
+                      property.validation.validationAnnotations(
+                        property.type,
+                        AnnotationSpec.UseSiteTarget.FIELD,
+                      ),
+                    )
+                  }
                   if (patchable) {
                     mutable(true)
                   }
@@ -1185,7 +1233,18 @@ class KotlinSundayIrGenerator(
         .constructorBuilder()
         .apply {
           properties.forEach { property ->
-            addParameter(property.constructorParameterSpec())
+            addParameter(
+              property.constructorParameterSpec(
+                effective =
+                  modelProperties
+                    .fields(this@dataClassTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+                declaresProperty = true,
+              ),
+            )
           }
         }.build()
 
@@ -1219,24 +1278,70 @@ class KotlinSundayIrGenerator(
               .build(),
           )
         }
+        KotlinModelConstraints
+          .initializer(
+            modelProperties.fields(this@dataClassTypeSpec),
+            modelProperties,
+          ) { it.kotlinTypeName() }
+          .takeUnless {
+            it.isEmpty()
+          }?.let(::addInitializerBlock)
       }
   }
 
-  private fun GeneratedModelProperty.constructorParameterSpec(patchable: Boolean = false): ParameterSpec =
+  private fun GeneratedModelProperty.constructorParameterSpec(
+    patchable: Boolean = false,
+    effective: GeneratedModelProperty = this,
+    declaresProperty: Boolean = false,
+  ): ParameterSpec =
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
       .apply {
         addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.PARAM))
-        if (serializationName != null || name.kotlinIdentifierName != name) {
+        if (serializationName != null ||
+          name.kotlinIdentifierName != name ||
+          !patchable &&
+          effective.required != required &&
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+        ) {
           addAnnotation(
             AnnotationSpec
               .builder(JACKSON_JSON_PROPERTY)
               .addMember("value = %S", serializationName ?: name)
+              .apply {
+                if (!patchable &&
+                  effective.required != required
+                ) {
+                  addMember("required = %L", effective.required)
+                }
+              }.build(),
+          )
+        }
+        if (!patchable &&
+          (effective != this@constructorParameterSpec || effective.allowedValues != null) &&
+          (!effective.type.nullable || effective.allowedValues?.contains(null) == false) &&
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+        ) {
+          addAnnotation(
+            AnnotationSpec
+              .builder(ClassName("com.fasterxml.jackson.annotation", "JsonSetter"))
+              .apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+              .addMember("nulls = %T.FAIL", ClassName("com.fasterxml.jackson.annotation", "Nulls"))
               .build(),
           )
         }
-        if (!required || type.nullable) {
-          defaultValue("null")
+        if (patchable) {
+          defaultValue("%T.none()", PATCH_OP)
+        } else if (!required || type.nullable) {
+          defaultValue(
+            KotlinModelDefaults.code(
+              defaultValue,
+              modelPropertyTypeName(),
+              modelProperties.declarationModel(type),
+              kotlinEnumEntries,
+            )
+              ?: CodeBlock.of("null"),
+          )
         }
       }.build()
 
@@ -2569,7 +2674,7 @@ class KotlinSundayIrGenerator(
   }
 
   private fun GeneratedModel.inheritedModelProperties(): List<GeneratedModelProperty> =
-    inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() }
+    modelProperties.fields(this).filter { it.inherited }.map { it.storage }
 
   private fun GeneratedModel.localModelProperties(
     inheritedProperties: List<GeneratedModelProperty>,

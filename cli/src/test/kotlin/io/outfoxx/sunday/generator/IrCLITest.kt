@@ -151,6 +151,7 @@ class IrCLITest {
           OpenApiReferenceDocuments.mappedPet(),
           OpenApiReferenceDocuments.cat,
           OpenApiReferenceDocuments.records,
+          OpenApiReferenceDocuments.sdkCompatibilityDecimalDefaults,
           OpenApiReferenceDocuments.dog,
         ),
       )
@@ -176,6 +177,7 @@ class IrCLITest {
             Empty: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/Empty'}
             Unbounded: {type: integer, exclusiveMinimum: false, exclusiveMaximum: false}
             DocumentedRecord: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/DocumentedRecord'}
+            SdkEnvelope: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/SdkEnvelope'}
             MappedPet: {${'$'}ref: '${server.baseUri}redirect#/components/schemas/MappedPet'}
             Pets:
               type: object
@@ -210,6 +212,48 @@ class IrCLITest {
       val online = IrCommand().test(arrayOf("--openapi-allow-private-network", *arguments))
       assertEquals(0, online.statusCode, online.output)
       val onlineApi = GeneratedApiYaml.readPath(output)
+      assertEquals(
+        GeneratedTypeRef.named("SdkWrappedCat"),
+        onlineApi.models.single { it.name == "SdkMappedPet" }.discriminatorMappings["cat"],
+      )
+      assertEquals(
+        listOf(GeneratedTypeRef.named("SdkMappedCat")),
+        onlineApi.models.single { it.name == "SdkWrappedCat" }.inherits,
+      )
+      assertEquals(
+        listOf(GeneratedTypeRef.named("SdkAliasBase")),
+        onlineApi.models.single { it.name == "SdkAliasChild" }.inherits,
+      )
+      val intersection = onlineApi.models.single { it.name == "SdkConflictingChild" }
+      assertTrue(intersection.inherits.isEmpty())
+      assertEquals(listOf("b"), intersection.properties.single().allowedValues)
+      for (name in listOf("SdkMultiChild", "SdkMultiReversed")) {
+        val model = onlineApi.models.single { it.name == name }
+        assertTrue(model.inherits.isEmpty())
+        assertEquals(setOf("a", "b", "count", "state"), model.properties.map { it.name }.toSet())
+        val count = model.properties.single { it.name == "count" }
+        assertEquals(listOf(2), count.allowedValues)
+        assertEquals("2", count.defaultValue)
+      }
+      val temporal = onlineApi.models.single { it.name == "SdkTemporalChild" }
+      assertEquals(listOf(GeneratedTypeRef.named("SdkTemporalBase")), temporal.inherits)
+      assertEquals(
+        listOf("2026-09-14T00:00:00Z"),
+        temporal.properties.single { it.name == "timestamp" }.allowedValues,
+      )
+      val defaultChild = onlineApi.models.single { it.name == "SdkDefaultChild" }
+      assertEquals("2", defaultChild.properties.single().defaultValue)
+      assertEquals(
+        "1.0",
+        onlineApi.models
+          .single { it.name == "SdkIntegerChild" }
+          .properties
+          .single()
+          .defaultValue,
+      )
+      val bytes = onlineApi.models.single { it.name == "SdkByteRestrictions" }
+      assertEquals(listOf(GeneratedTypeRef.named("SdkByteBase")), bytes.inherits)
+      assertEquals(listOf("SGk="), bytes.properties.single { it.name == "data" }.allowedValues)
       assertEquals(
         "unrelated",
         onlineApi.models

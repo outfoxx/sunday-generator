@@ -302,7 +302,7 @@ class OpenApiInheritanceAnnotationsTest {
   }
 
   @Test
-  fun `actual field refinements still flatten and incompatible intersections retain their source`(
+  fun `representable field refinements preserve inheritance and incompatible intersections retain their source`(
     @TempDir directory: Path,
   ) {
     for ((parent, child) in listOf(
@@ -326,7 +326,12 @@ class OpenApiInheritanceAnnotationsTest {
           """.trimIndent(),
         )
       val result = OpenApiToGeneratedApi().convert(source.toUri()).models.single { it.name == "Child" }
-      assertTrue(result.inherits.isEmpty(), child)
+      val changesGenerationMetadata =
+        child.contains("deprecated") ||
+          child.contains("readOnly") ||
+          child.contains("writeOnly") ||
+          child.contains("x-sunday")
+      assertEquals(changesGenerationMetadata, result.inherits.isEmpty(), child)
       assertEquals(listOf("value"), result.properties.map { it.name })
     }
     val source =
@@ -342,7 +347,7 @@ class OpenApiInheritanceAnnotationsTest {
         """.trimIndent(),
       )
     val child = OpenApiToGeneratedApi().convert(source.toUri()).models.single { it.name == "Child" }
-    assertTrue(child.inherits.isEmpty())
+    assertEquals(listOf(GeneratedTypeRef.named("Parent")), child.inherits)
     assertTrue(child.properties.single().required)
     val invalid =
       api(

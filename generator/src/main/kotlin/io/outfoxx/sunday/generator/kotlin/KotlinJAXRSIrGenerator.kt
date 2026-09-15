@@ -64,6 +64,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -113,6 +114,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionGenerator
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -164,6 +167,7 @@ class KotlinJAXRSIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
@@ -1986,7 +1990,18 @@ class KotlinJAXRSIrGenerator(
         .constructorBuilder()
         .apply {
           properties.forEach { property ->
-            addParameter(property.constructorParameterSpec())
+            addParameter(
+              property.constructorParameterSpec(
+                effective =
+                  modelProperties
+                    .fields(this@dataClassTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+                declaresProperty = true,
+              ),
+            )
           }
         }.build()
 
@@ -2020,6 +2035,14 @@ class KotlinJAXRSIrGenerator(
               .build(),
           )
         }
+        KotlinModelConstraints
+          .initializer(
+            modelProperties.fields(this@dataClassTypeSpec),
+            modelProperties,
+          ) { it.kotlinTypeName() }
+          .takeUnless {
+            it.isEmpty()
+          }?.let(::addInitializerBlock)
       }
   }
 
@@ -2033,10 +2056,30 @@ class KotlinJAXRSIrGenerator(
         .constructorBuilder()
         .apply {
           inheritedProperties.forEach { property ->
-            addParameter(property.constructorParameterSpec())
+            addParameter(
+              property.constructorParameterSpec(
+                effective =
+                  modelProperties
+                    .fields(this@classTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+              ),
+            )
           }
           localProperties.forEach { property ->
-            addParameter(property.constructorParameterSpec())
+            addParameter(
+              property.constructorParameterSpec(
+                effective =
+                  modelProperties
+                    .fields(this@classTypeSpec)
+                    .single {
+                      it.wireName ==
+                        property.wireName
+                    }.effective,
+              ),
+            )
           }
         }.build()
 
@@ -2046,6 +2089,14 @@ class KotlinJAXRSIrGenerator(
       .primaryConstructor(constructor)
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
+        KotlinModelConstraints
+          .initializer(
+            modelProperties.fields(this@classTypeSpec),
+            modelProperties,
+          ) { it.kotlinTypeName() }
+          .takeUnless {
+            it.isEmpty()
+          }?.let(::addInitializerBlock)
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
@@ -2244,21 +2295,49 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
-  private fun GeneratedModelProperty.constructorParameterSpec(): ParameterSpec =
+  private fun GeneratedModelProperty.constructorParameterSpec(
+    effective: GeneratedModelProperty = this,
+    declaresProperty: Boolean = false,
+  ): ParameterSpec =
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName())
       .apply {
         addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.PARAM))
-        if (serializationName != null || name.kotlinIdentifierName != name) {
+        if (serializationName != null ||
+          name.kotlinIdentifierName != name ||
+          effective.required != required &&
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+        ) {
           addAnnotation(
             AnnotationSpec
               .builder(JACKSON_JSON_PROPERTY)
               .addMember("value = %S", serializationName ?: name)
+              .apply { if (effective.required != required) addMember("required = %L", effective.required) }
+              .build(),
+          )
+        }
+        if ((effective != this@constructorParameterSpec || effective.allowedValues != null) &&
+          (!effective.type.nullable || effective.allowedValues?.contains(null) == false) &&
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+        ) {
+          addAnnotation(
+            AnnotationSpec
+              .builder(ClassName("com.fasterxml.jackson.annotation", "JsonSetter"))
+              .apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+              .addMember("nulls = %T.FAIL", ClassName("com.fasterxml.jackson.annotation", "Nulls"))
               .build(),
           )
         }
         if (!required || type.nullable) {
-          defaultValue("null")
+          defaultValue(
+            KotlinModelDefaults.code(
+              defaultValue,
+              modelPropertyTypeName(),
+              modelProperties.declarationModel(type),
+              kotlinEnumEntries,
+            )
+              ?: CodeBlock.of("null"),
+          )
         }
       }.build()
 
@@ -2579,7 +2658,7 @@ class KotlinJAXRSIrGenerator(
     inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() } + properties
 
   private fun GeneratedModel.inheritedModelProperties(): List<GeneratedModelProperty> =
-    inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() }
+    modelProperties.fields(this).filter { it.inherited }.map { it.storage }
 
   private fun GeneratedModel.localModelProperties(
     inheritedProperties: List<GeneratedModelProperty>,

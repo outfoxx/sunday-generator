@@ -26,11 +26,13 @@ internal class OpenApiSchema(
   private val source: Source,
   private val pointer: String,
   val usesBooleanExclusiveBounds: Boolean = false,
+  /** Original declaration for an expanded alias, kept outside serialized schema fields. */
+  val declarationReference: String? = null,
 ) : LinkedHashMap<String, Any?>(fields) {
   fun withFields(
     fields: Map<String, Any?>,
     usesBooleanExclusiveBounds: Boolean = this.usesBooleanExclusiveBounds,
-  ): OpenApiSchema = OpenApiSchema(fields, source, pointer, usesBooleanExclusiveBounds)
+  ): OpenApiSchema = OpenApiSchema(fields, source, pointer, usesBooleanExclusiveBounds, declarationReference)
 
   fun error(message: String): Nothing {
     val location = source.location(pointer)
@@ -51,3 +53,21 @@ internal class OpenApiSchema(
     }
   }
 }
+
+internal fun Map<*, *>.schemaType(): String? =
+  when (val type = this["type"]) {
+    is String -> type
+    is List<*> -> type.filterIsInstance<String>().firstOrNull { it != "null" }
+    else ->
+      when {
+        containsKey("properties") || containsKey("additionalProperties") -> "object"
+        containsKey("items") -> "array"
+        containsKey("enum") || containsKey("const") -> "string"
+        else -> null
+      }
+  }
+
+internal fun Map<*, *>.isUnconstrainedSchema(): Boolean =
+  keys.all { key ->
+    key is String && key != "\$ref" && (key == "nullable" || !OpenApiSchemaKeywords.isAssertion(key))
+  }

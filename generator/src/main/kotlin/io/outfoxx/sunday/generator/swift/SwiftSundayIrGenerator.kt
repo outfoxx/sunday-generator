@@ -40,8 +40,11 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
+import io.outfoxx.sunday.generator.ir.emit.ancestorModels
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
@@ -91,6 +94,8 @@ import io.outfoxx.sunday.generator.swift.utils.SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.STREAMING_BODY
 import io.outfoxx.sunday.generator.swift.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.swift.utils.SUNDAY_MODULE
+import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
+import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_RESPONSE
@@ -114,6 +119,7 @@ import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.ExtensionSpec
 import io.outfoxx.swiftpoet.FunctionSpec
 import io.outfoxx.swiftpoet.INT
+import io.outfoxx.swiftpoet.Modifier.CLASS
 import io.outfoxx.swiftpoet.Modifier.FILEPRIVATE
 import io.outfoxx.swiftpoet.Modifier.FINAL
 import io.outfoxx.swiftpoet.Modifier.OVERRIDE
@@ -149,6 +155,8 @@ class SwiftSundayIrGenerator(
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
+  private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val decodingDefaultNames by lazy { inheritedDecodingDefaultNames() }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
@@ -600,13 +608,14 @@ class SwiftSundayIrGenerator(
   }
 
   private val swiftHierarchyCaseModelsByRootKey: Map<SwiftModelKey, List<GeneratedModel>> by lazy {
-    swiftObjectModelsByKey.mapValues { (key, model) ->
-      (
-        swiftInheritingModelsByParentKey[key].orEmpty() +
-          model.discriminatorMappings.values.mapNotNull { type ->
-            type.modelOrNull(apiIndex)?.takeIf { mappedModel -> mappedModel.kind == GeneratedModel.Kind.OBJECT }
-          }
-      ).distinct()
+    swiftObjectModelsByKey.mapValues { (_, model) ->
+      val mapped =
+        model.discriminatorMappings.values.mapNotNull { type ->
+          type.modelOrNull(apiIndex)?.takeIf { it.kind == GeneratedModel.Kind.OBJECT }
+        }
+      val children =
+        model.discriminatorChildren(apiIndex) { swiftInheritingModelsByParentKey[it.swiftModelKey()].orEmpty() }
+      (children + mapped).distinct()
     }
   }
 
@@ -618,7 +627,14 @@ class SwiftSundayIrGenerator(
           swiftHierarchyCaseModelsByRootKey[model.swiftModelKey()].orEmpty().isNotEmpty() &&
           !model.isProblemModel
       }
-    rootModels.mapTo(mutableSetOf()) { model -> model.swiftModelKey() }
+    // A mapped leaf may inherit through another declaration; that declaration must also be a protocol.
+    val intermediates =
+      rootModels.flatMap { root ->
+        root.discriminatorMappings.values.mapNotNull(apiIndex::modelOrNull).flatMap { variant ->
+          variant.ancestorModels(apiIndex).filter { ancestor -> root in ancestor.ancestorModels(apiIndex) }
+        }
+      }
+    (rootModels + intermediates).mapTo(mutableSetOf()) { model -> model.swiftModelKey() }
   }
 
   private val protocolHierarchyValueModelKeys: Set<SwiftModelKey> by lazy {
@@ -1551,6 +1567,28 @@ class SwiftSundayIrGenerator(
         !isProblemModel &&
         !isProtocolHierarchyValueModel
 
+  private val GeneratedModel.isSwiftValueModel: Boolean
+    get() =
+      !isRecursiveSwiftObjectModel &&
+        (
+          isSimpleObjectValueModel ||
+            isPatchableObjectValueModel ||
+            isProtocolHierarchyValueModel ||
+            isProblemHierarchyValueModel ||
+            isInheritedObjectValueModel ||
+            isExternalDiscriminatorEnvelopeValueModel
+        )
+
+  private val GeneratedModel.isSwiftClassModel: Boolean
+    get() =
+      kind == GeneratedModel.Kind.OBJECT &&
+        !isSwiftValueModel &&
+        !isProtocolHierarchyRootModel &&
+        !isProblemHierarchyProtocolModel &&
+        !isExternalDiscriminatorBaseProtocolModel &&
+        !isExternalDiscriminatorCaseValueModel &&
+        typedEventEnvelopeOrNull() == null
+
   private val GeneratedModel.isExternalDiscriminatorEnvelopeValueModel: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
@@ -1629,8 +1667,8 @@ class SwiftSundayIrGenerator(
     }
 
     typeBuilder.addProperty(debugDescriptionProperty(typeName, localProperties))
-    typeBuilder.addFunction(modelConstructor(emptyList(), localProperties, null, false, false))
-    typeBuilder.addFunction(modelDecoderConstructor(localProperties, null, false, false, true))
+    typeBuilder.addFunction(modelConstructor(this, emptyList(), localProperties, null, false, false))
+    typeBuilder.addFunction(modelDecoderConstructor(this, localProperties, null, false, false, true))
     typeBuilder.addFunction(modelEncoderFunction(localProperties, null, null, false, false))
     localProperties.forEach { property ->
       typeBuilder.addFunction(modelWithFunction(typeName, property, localProperties, patchable = false))
@@ -2038,9 +2076,15 @@ class SwiftSundayIrGenerator(
     outputGroup: String? = null,
   ): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
+    val constrainedFields = SwiftModelConstraints.fields(modelProperties.fields(this))
     val inheritedModel = inherits.firstOrNull()?.modelOrNull(apiIndex)
     val inheritedTypeName = inheritedModel?.swiftDeclaredTypeName()
-    val inheritedProperties = inheritedModel?.allConstructorProperties().orEmpty()
+    val inheritedProperties =
+      modelProperties
+        .fields(this)
+        .filter { it.inherited }
+        .map { if (isProblemModel) it.storage.normalizedSwiftBaseProblemProperty() else it.storage }
+        .filterNot { it.name == discriminatorPropertyOrNull()?.name }
     val isRootProblemModel = isProblemModel && inheritedTypeName == null
     val isProtocolHierarchyRoot = isProtocolHierarchyRootModel
     val isProtocolHierarchyValueModel = isProtocolHierarchyValueModel
@@ -2076,16 +2120,7 @@ class SwiftSundayIrGenerator(
       }
     val identifiableProperty = identifiablePropertyOrNull()
     val discriminatorProperty = discriminatorPropertyOrNull()
-    val isValueModel =
-      !isRecursiveReferenceModel &&
-        (
-          isSimpleObjectValueModel ||
-            isPatchableObjectValueModel ||
-            isProtocolHierarchyValueModel ||
-            isProblemHierarchyValueModel ||
-            isInheritedObjectValueModel ||
-            isExternalDiscriminatorEnvelopeValueModel
-        )
+    val isValueModel = isSwiftValueModel
     val isImmutableModel = isValueModel || isRecursiveReferenceModel
     val storedProperties =
       if (flattensInheritedProperties) {
@@ -2112,7 +2147,11 @@ class SwiftSundayIrGenerator(
           if (isProblemHierarchyProtocolModel) {
             addSuperType(inheritedTypeName ?: runtimeProblemTypeName)
           } else if (isProtocolHierarchyRoot) {
-            addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
+            if (inheritedModel?.isProtocolHierarchyRootModel == true) {
+              addSuperType(requireNotNull(inheritedTypeName))
+            } else {
+              addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
+            }
           } else if (inheritedTypeName != null && !flattensInheritedProperties) {
             addSuperType(inheritedTypeName)
           } else if (isProblemHierarchyValueModel) {
@@ -2177,6 +2216,9 @@ class SwiftSundayIrGenerator(
     }
 
     if (!isProtocolModel) {
+      if (!isValueModel && !patchable) {
+        decodingDefaultProperties().forEach(typeBuilder::addProperty)
+      }
       typeBuilder.addProperty(
         debugDescriptionProperty(
           typeName,
@@ -2190,6 +2232,7 @@ class SwiftSundayIrGenerator(
       )
       typeBuilder.addFunction(
         modelConstructor(
+          this,
           if (flattensInheritedProperties) emptyList() else effectiveInheritedProperties,
           if (flattensInheritedProperties) {
             effectiveInheritedProperties + localProperties
@@ -2204,12 +2247,14 @@ class SwiftSundayIrGenerator(
       )
       typeBuilder.addFunction(
         modelDecoderConstructor(
+          this,
           storedProperties,
           inheritedTypeName.takeUnless { flattensInheritedProperties },
           patchable,
           false,
           isValueModel,
           isProblemHierarchyValueModel && storedProperties.none { property -> property.name == "parameters" },
+          constrainedFields,
         ),
       )
       typeBuilder.addFunction(
@@ -2244,7 +2289,7 @@ class SwiftSundayIrGenerator(
     if (!isProtocolModel) {
       typeBuilder.addType(
         codingKeysType(
-          storedProperties,
+          (storedProperties + constrainedFields.map { it.storage }).distinctBy { it.wireName },
           if (inherits.isEmpty() || isProtocolHierarchyValueModel || isProblemHierarchyValueModel) {
             discriminatorProperty
           } else {
@@ -2294,7 +2339,8 @@ class SwiftSundayIrGenerator(
     allowOverrides: Boolean = false,
   ): List<GeneratedModelProperty> {
     if (allowOverrides) {
-      return constructorProperties()
+      val storage = modelProperties.fields(this).associateBy { it.wireName }
+      return constructorProperties().map { storage[it.wireName]?.storage ?: it }
     }
     val inheritedWireNames = inheritedProperties.map { property -> property.wireName }.toSet()
     return constructorProperties().filterNot { property -> property.wireName in inheritedWireNames }
@@ -2889,6 +2935,7 @@ class SwiftSundayIrGenerator(
       ).build()
 
   private fun modelConstructor(
+    model: GeneratedModel,
     inheritedProperties: List<GeneratedModelProperty>,
     localProperties: List<GeneratedModelProperty>,
     inheritedTypeName: DeclaredTypeName?,
@@ -2914,6 +2961,8 @@ class SwiftSundayIrGenerator(
               .apply {
                 if (patchable) {
                   defaultValue(".none")
+                } else if (!property.required && property.swiftDefault(model) != null) {
+                  defaultValue(property.swiftDefault(model)!!)
                 } else if (property.swiftTypeName().optional) {
                   defaultValue("nil")
                 }
@@ -2974,12 +3023,14 @@ class SwiftSundayIrGenerator(
   }
 
   private fun modelDecoderConstructor(
+    model: GeneratedModel,
     localProperties: List<GeneratedModelProperty>,
     inheritedTypeName: DeclaredTypeName?,
     patchable: Boolean,
     isRootProblemModel: Boolean,
     isValueModel: Boolean = false,
     addNilProblemParameters: Boolean = false,
+    constraints: List<GeneratedModelProperties.Field> = emptyList(),
   ): FunctionSpec {
     val modifiers =
       if (isValueModel) {
@@ -2995,8 +3046,9 @@ class SwiftSundayIrGenerator(
       .throws(true)
       .addStatement(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
-        if (localProperties.isEmpty()) "_" else "container",
+        if (localProperties.isEmpty() && constraints.isEmpty()) "_" else "container",
       ).apply {
+        addCode(SwiftModelConstraints.decode(constraints, patchable, modelProperties))
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
             when {
@@ -3010,12 +3062,32 @@ class SwiftSundayIrGenerator(
             } else {
               property.swiftTypeName().makeNonOptional()
             }
+          val default =
+            if (!patchable && !property.required) {
+              decodingDefaultNames[model to property.wireName]?.let { CodeBlock.of("Self.%N", it) }
+                ?: property.swiftDefault(model)
+            } else {
+              null
+            }
+          val decode =
+            CodeBlock.of(
+              "container.decode%L(%T.self, forKey: .%N)",
+              coderSuffix,
+              codingTypeName,
+              property.name.swiftIdentifierName,
+            )
           addStatement(
-            "self.%N = try container.decode%L(%T.self, forKey: .%N)",
+            "self.%N = try %L",
             property.name.swiftIdentifierName,
-            coderSuffix,
-            codingTypeName,
-            property.name.swiftIdentifierName,
+            default?.let {
+              CodeBlock.of(
+                "container.contains(.%N) ? %L : %L",
+                property.name.swiftIdentifierName,
+                decode,
+                it,
+              )
+            }
+              ?: decode,
           )
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
@@ -3233,10 +3305,7 @@ class SwiftSundayIrGenerator(
           addSuperType(STRING)
         }
         addSuperType(CODING_KEY)
-        discriminatorProperty?.let { property ->
-          addEnumCase(property.name.swiftIdentifierName, property.serializationName ?: property.name)
-        }
-        properties.forEach { property ->
+        codingKeyProperties.distinctBy { it.serializationName ?: it.name }.forEach { property ->
           addEnumCase(property.name.swiftIdentifierName, property.serializationName ?: property.name)
         }
       }.build()
@@ -4057,6 +4126,71 @@ class SwiftSundayIrGenerator(
     replace("/*", "/ *")
       .replace("*/", "* /")
 
+  private fun GeneratedModelProperty.swiftDefault(model: GeneratedModel): CodeBlock? {
+    val field = modelProperties.fields(model).firstOrNull { it.wireName == (serializationName ?: name) }
+    if (field?.effective?.required == true) return null
+    return SwiftModelDefaults.render(model.name, field?.effective ?: this, modelProperties) { value ->
+      value.swiftValueCode(swiftTypeName().makeNonOptional(), type)
+    }
+  }
+
+  private fun GeneratedModel.swiftClassChain(): List<GeneratedModel> =
+    generateSequence(this) { it.inherits.firstOrNull()?.modelOrNull(apiIndex) }
+      .takeWhile { it.isSwiftClassModel && !it.patchable }
+      .toList()
+
+  // Dynamic type defaults keep superclass decoding intact and never leak into nested decoded objects.
+  private fun inheritedDecodingDefaultNames(): Map<Pair<GeneratedModel, String>, String> {
+    val declarations = linkedSetOf<Pair<GeneratedModel, String>>()
+    api.models.filter { it.isSwiftClassModel && !it.patchable }.forEach { model ->
+      val chain = model.swiftClassChain()
+      val parent = chain.getOrNull(1) ?: return@forEach
+      val parentFields = modelProperties.fields(parent).associateBy { it.wireName }
+      modelProperties.fields(model).filter { it.inherited && !it.declaration.required }.forEach field@{ field ->
+        val parentField = parentFields[field.wireName] ?: return@field
+        if (field.storage.externalDiscriminator == null &&
+          field.storage.swiftDefault(model) != parentField.storage.swiftDefault(parent)
+        ) {
+          val owner = chain.last { ancestor -> modelProperties.fields(ancestor).any { it.wireName == field.wireName } }
+          declarations += owner to field.wireName
+        }
+      }
+    }
+    val names = NameAllocator()
+    api.models
+      .flatMap { it.properties }
+      .map { it.name.swiftIdentifierName }
+      .distinct()
+      .forEach { names.newName(it) }
+    return declarations
+      .sortedBy { (owner, wireName) ->
+        "${owner.scope}:${owner.name}:$wireName"
+      }.associateWith { declaration ->
+        names.newName("_sundayDefault${declaration.second.toUpperCamelCase()}", declaration)
+      }
+  }
+
+  private fun GeneratedModel.decodingDefaultProperties(): List<PropertySpec> {
+    val chain = swiftClassChain()
+    val parent = chain.getOrNull(1)
+    val fields = modelProperties.fields(this).associateBy { it.wireName }
+    val parentFields = parent?.let(modelProperties::fields).orEmpty().associateBy { it.wireName }
+    return decodingDefaultNames.mapNotNull { (declaration, name) ->
+      val (owner, wireName) = declaration
+      if (owner !in chain) return@mapNotNull null
+      val field = fields.getValue(wireName)
+      val default = field.storage.swiftDefault(this)
+      if (owner != this && default == parentFields.getValue(wireName).storage.swiftDefault(requireNotNull(parent))) {
+        return@mapNotNull null
+      }
+      PropertySpec
+        .builder(name, field.declaration.swiftTypeName().makeOptional(), CLASS)
+        .apply { if (owner != this@decodingDefaultProperties) addModifiers(OVERRIDE) }
+        .getter(FunctionSpec.getterBuilder().addStatement("return %L", default ?: CodeBlock.of("nil")).build())
+        .build()
+    }
+  }
+
   private fun Any.swiftValueCode(
     typeName: TypeName,
     typeRef: GeneratedTypeRef?,
@@ -4065,7 +4199,7 @@ class SwiftSundayIrGenerator(
       is String -> {
         val enumModel =
           typeRef
-            ?.modelOrNull(apiIndex)
+            ?.let(modelProperties::declarationModel)
             ?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
         if (enumModel != null) {
           val caseName = enumModel.requireSwiftEnumCaseNameForValue(this)
@@ -4074,6 +4208,8 @@ class SwiftSundayIrGenerator(
           } else {
             CodeBlock.of("%T.%N", typeName, caseName)
           }
+        } else if (typeName == URL) {
+          CodeBlock.of("%T(string: %S)!", URL, this)
         } else {
           CodeBlock.of("%S", this)
         }

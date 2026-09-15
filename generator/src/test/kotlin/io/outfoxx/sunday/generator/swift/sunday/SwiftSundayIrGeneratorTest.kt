@@ -36,6 +36,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.OpenApiReferenceOptions
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.swift.AssociatedExtensions
@@ -54,7 +55,10 @@ import io.outfoxx.sunday.generator.swift.tools.reusableDiscriminatorMappingRunti
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
+import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
+import io.outfoxx.sunday.generator.tools.arrayMultiplesFixture
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
+import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
@@ -75,12 +79,777 @@ import java.nio.file.Path
 class SwiftSundayIrGeneratorTest {
 
   @Test
+  fun `multiples preserve Double range without rounding Decimal supported values`(compiler: SwiftCompiler) {
+    val number = GeneratedTypeRef.named("WideNumber")
+    val array = GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(number.copy(nullable = true)))
+
+    fun model(
+      name: String,
+      type: GeneratedTypeRef = number,
+      validation: Map<String, String> = mapOf("multipleOf" to "1"),
+    ) = GeneratedModel(
+      name,
+      GeneratedModel.Kind.OBJECT,
+      properties = listOf(GeneratedModelProperty("value", type, validation = validation)),
+    )
+    val base = model("WideBase", validation = emptyMap())
+    val api =
+      inheritedConstraintsFixture().copy(
+        models =
+          listOf(
+            GeneratedModel(
+              "WideNumber",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.scalar("number")),
+            ),
+            GeneratedModel("WideNumbers", GeneratedModel.Kind.ARRAY, aliases = array.arguments),
+            GeneratedModel(
+              "WideSet",
+              GeneratedModel.Kind.ARRAY,
+              aliases = listOf(number),
+              collection = io.outfoxx.sunday.generator.ir.GeneratedCollectionKind.SET,
+            ),
+            base,
+            model(
+              "Wide",
+              validation = mapOf("multipleOf" to "1"),
+            ).copy(inherits = listOf(GeneratedTypeRef.named("WideBase"))),
+            model("WideThrees", validation = mapOf("multipleOf" to "3")),
+            model("WideFraction", validation = mapOf("multipleOf" to "0.1")),
+            model("WidePositive", validation = mapOf("multipleOf" to "1", "minimum" to "0")),
+            model("WideUpper", validation = mapOf("multipleOf" to "1", "maximum" to "1e100")),
+            model("WideLower", validation = mapOf("multipleOf" to "1", "minimum" to "-1e100")),
+            model("WideArray", GeneratedTypeRef.named("WideNumbers"), mapOf("multipleOf" to "0.1")),
+            model("WideUnique", array, mapOf("multipleOf" to "1", "uniqueItems" to "true")),
+            model("WideSetHolder", GeneratedTypeRef.named("WideSet")),
+            model("WidePatch", array.copy(nullable = true)).copy(patchable = true),
+          ),
+      )
+    generateSwiftSundayFiles(compiler, api)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("WideNumberTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class WideNumberTests: XCTestCase {
+        func testRange() throws {
+          let decoder = JSONDecoder()
+          func decode<T: Decodable>(_ type: T.Type, _ value: String) throws -> T {
+            try decoder.decode(type, from: Data("{\"value\":\(value)}".utf8))
+          }
+          for literal in ["1e200", "-1e200", "1.7976931348623157e308", "-1.7976931348623157e308", "0", "-0.0"] {
+            let decoded = try decode(Wide.self, literal)
+            XCTAssertEqual(decoded.value, Double(literal))
+            XCTAssertEqual(try decoder.decode(Wide.self, from: JSONEncoder().encode(decoded)).value, decoded.value)
+            let constructed = Wide(value: Double(literal)!)
+            XCTAssertEqual(try decoder.decode(Wide.self, from: JSONEncoder().encode(constructed)).value, constructed.value)
+          }
+          _ = try decode(WideThrees.self, "3e200")
+          _ = try decode(WideThrees.self, "-3e200")
+          for literal in ["1e200", "-1e200", "1e-129", "5e-324"] {
+            XCTAssertThrowsError(try decode(WideThrees.self, literal))
+          }
+          for literal in ["1e-129", "5e-324", "1e309"] { XCTAssertThrowsError(try decode(Wide.self, literal)) }
+          _ = try decode(WidePositive.self, "1e200")
+          _ = try decode(WidePositive.self, "0")
+          XCTAssertThrowsError(try decode(WidePositive.self, "-1e200"))
+          XCTAssertThrowsError(try decode(WideUpper.self, "1e200"))
+          XCTAssertThrowsError(try decode(WideLower.self, "-1e200"))
+          _ = try decode(WideUpper.self, "-1e200")
+          _ = try decode(WideLower.self, "1e200")
+          _ = try decode(WideFraction.self, "0.3")
+          XCTAssertThrowsError(try decode(WideFraction.self, "0.30000000000000000000000000000000000001"))
+          let mixed = try decode(WideArray.self, "[1e200,0.3,null,-1e200]")
+          XCTAssertEqual(mixed.value, [1e200,0.3,nil,-1e200])
+          XCTAssertEqual(try decoder.decode(WideArray.self, from: JSONEncoder().encode(mixed)).value, mixed.value)
+          _ = try decode(WideArray.self, "[]")
+          XCTAssertThrowsError(try decode(WideArray.self, "[1e200,0.30000000000000000000000000000000000001]"))
+          _ = try decode(WideUnique.self, "[1e200,-1e200,1]")
+          for array in ["[1e200,1e200]", "[1,1.0]", "[0,-0.0]", "[1e200,10e199]"] {
+            XCTAssertThrowsError(try decode(WideUnique.self, array))
+          }
+          let set = try decode(WideSetHolder.self, "[1e200,-1e200]")
+          XCTAssertEqual(try decoder.decode(WideSetHolder.self, from: JSONEncoder().encode(set)).value, set.value)
+          for literal in ["null", "[]", "[1e200,null,-1e200]"] { _ = try decode(WidePatch.self, literal) }
+          _ = try decoder.decode(WidePatch.self, from: Data("{}".utf8))
+          _ = try decoder.decode(Wide.self, from: Data("{}".utf8))
+          XCTAssertThrowsError(try decode(WidePatch.self, "[1e200,0.3]"))
+          decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
+          for literal in ["\"inf\"", "\"-inf\"", "\"nan\""] { XCTAssertThrowsError(try decode(Wide.self, literal)) }
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `array multiples validate decimal elements and preserve collection decoding`(compiler: SwiftCompiler) {
+    generateSwiftSundayFiles(compiler, arrayMultiplesFixture())
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("ArrayMultipleTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class ArrayMultipleTests: XCTestCase {
+        func testArrays() throws {
+          let decoder = JSONDecoder()
+          func check<T: Codable>(_ type: T.Type) throws {
+            for array in ["[]", "[2,4]", "[0,-2]"] {
+              let data = Data("{\"values\":\(array)}".utf8)
+              let decoded = try decoder.decode(type, from: data)
+              let encoded = try JSONEncoder().encode(decoded)
+              XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSDictionary,
+                             try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+            }
+            XCTAssertThrowsError(try decoder.decode(type, from: Data(#"{"values":[2,3]}"#.utf8)))
+          }
+          try check(ArrayMultiples.self)
+          try check(AliasedMultiples.self)
+          try check(NullableMultiples.self)
+          try check(ArrayChild.self)
+          for json in [#"{"values":[]}"#, #"{"values":[2,4]}"#] {
+            let decoded = try decoder.decode(SetMultiples.self, from: Data(json.utf8))
+            XCTAssertEqual(try decoder.decode(SetMultiples.self, from: JSONEncoder().encode(decoded)).values, decoded.values)
+          }
+          XCTAssertThrowsError(try decoder.decode(SetMultiples.self, from: Data(#"{"values":[3]}"#.utf8)))
+          _ = try decoder.decode(NullableMultiples.self, from: Data(#"{"values":[null,2]}"#.utf8))
+          _ = try decoder.decode(AliasedMultiples.self, from: Data("{}".utf8))
+          for number in [-4,6] {
+            XCTAssertThrowsError(try decoder.decode(ArrayChild.self, from: Data("{\"values\":[\(number)]}".utf8)))
+          }
+          _ = try decoder.decode(FractionMultiples.self, from: Data(#"{"values":[0,-0.25,0.5]}"#.utf8))
+          XCTAssertThrowsError(try decoder.decode(FractionMultiples.self, from: Data(#"{"values":[0.3]}"#.utf8)))
+          _ = try decoder.decode(SizedMultiples.self, from: Data(#"{"values":[2,4]}"#.utf8))
+          for array in ["[]", "[2,2]", "[2,4,6]"] {
+            XCTAssertThrowsError(try decoder.decode(SizedMultiples.self, from: Data("{\"values\":\(array)}".utf8)))
+          }
+          for json in ["{}", #"{"values":null}"#, #"{"values":[]}"#, #"{"values":[2,4]}"#] {
+            _ = try decoder.decode(ArrayPatch.self, from: Data(json.utf8))
+          }
+          XCTAssertThrowsError(try decoder.decode(ArrayPatch.self, from: Data(#"{"values":[3]}"#.utf8)))
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `all parent constraints and decimal multiples survive decoding`(compiler: SwiftCompiler) {
+    val fixture = inheritedConstraintsFixture()
+    val tiny =
+      GeneratedModel(
+        "TinyMultiple",
+        GeneratedModel.Kind.OBJECT,
+        properties =
+          listOf(
+            GeneratedModelProperty(
+              "value",
+              GeneratedTypeRef.scalar("number"),
+              validation = mapOf("multipleOf" to "1e-128"),
+            ),
+          ),
+      )
+    generateSwiftSundayFiles(compiler, fixture.copy(models = fixture.models + tiny))
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("MultipleTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class MultipleTests: XCTestCase {
+        func testConstraints() throws {
+          let decoder = JSONDecoder()
+          func check<T: Codable>(_ type: T.Type) throws {
+            for number in [0, 2, -2, 6] {
+              let data = Data("{\"text\":\"abc\",\"count\":\(number),\"amount\":0.3}".utf8)
+              let decoded = try decoder.decode(type, from: data)
+              let encoded = try JSONEncoder().encode(decoded)
+              XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSDictionary,
+                             try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+            }
+            for json in [#"{"text":"a"}"#, #"{"text":"abcd"}"#, #"{"count":3}"#,
+                         #"{"count":-3}"#, #"{"amount":0.31}"#, #"{"amount":0.30000000000000000000000000000000000001}"#] {
+              XCTAssertThrowsError(try decoder.decode(type, from: Data(json.utf8)))
+            }
+            _ = try decoder.decode(type, from: Data("{}".utf8))
+          }
+          try check(Child.self)
+          try check(Reversed.self)
+          for json in [#"{"value":1e127}"#, #"{"value":1e-128}"#, #"{"value":-1e127}"#] {
+            _ = try decoder.decode(TinyMultiple.self, from: Data(json.utf8))
+          }
+          for json in ["{}", #"{"count":null}"#, #"{"count":2}"#] {
+            _ = try decoder.decode(MultiplePatch.self, from: Data(json.utf8))
+          }
+          XCTAssertThrowsError(try decoder.decode(MultiplePatch.self, from: Data(#"{"count":3}"#.utf8)))
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `integer defaults preserve exact values through aliases and inheritance`(compiler: SwiftCompiler) {
+    val count = GeneratedModelProperty("count", GeneratedTypeRef.named("IntegerAlias"), defaultValue = "1.0")
+    val defaults =
+      GeneratedModel(
+        "IntegerDefaults",
+        GeneratedModel.Kind.OBJECT,
+        properties =
+          listOf(count) +
+            listOf(
+              "exponent" to "1e3",
+              "negativeZero" to "-0.0",
+              "maximum" to "9223372036854775807.0",
+              "minimum" to "-9223372036854775808.0",
+            ).map { (name, value) ->
+              GeneratedModelProperty(name, GeneratedTypeRef.scalar("integer"), defaultValue = value)
+            } +
+            listOf(
+              GeneratedModelProperty("fraction", GeneratedTypeRef.scalar("number"), defaultValue = "1.25"),
+              GeneratedModelProperty(
+                "nullable",
+                GeneratedTypeRef.scalar("integer", nullable = true),
+                defaultValue = "2.0",
+              ),
+            ),
+      )
+    val child =
+      GeneratedModel(
+        "RefinedIntegerDefaults",
+        GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("IntegerDefaults")),
+        properties =
+          listOf(
+            count.copy(defaultValue = "2.0", allowedValues = listOf(2), validation = mapOf("minimum" to "2")),
+          ),
+      )
+    val api =
+      GeneratedApi(
+        name = "Integer defaults",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            child,
+            child.copy(name = "RequiredIntegerDefaults", properties = listOf(count.copy(required = true))),
+            GeneratedModel(
+              "IntegerPatch",
+              GeneratedModel.Kind.OBJECT,
+              properties = listOf(count, defaults.properties.last()),
+              patchable = true,
+            ),
+            defaults,
+            GeneratedModel(
+              "IntegerAlias",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.named("IntegerValue")),
+            ),
+            GeneratedModel(
+              "IntegerValue",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.scalar("integer")),
+            ),
+          ),
+      )
+    generateSwiftSundayFiles(compiler, api)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("IntegerDefaultsTests.swift"),
+      """
+      import Foundation
+      import Sunday
+      import XCTest
+      @testable import SundayGenTest
+
+      final class IntegerDefaultsTests: XCTestCase {
+        func testExactDefaults() throws {
+          let decoder = JSONDecoder()
+          for value in [IntegerDefaults(), try decoder.decode(IntegerDefaults.self, from: Data("{}".utf8))] {
+            XCTAssertEqual(value.count, 1)
+            XCTAssertEqual(value.exponent, 1000)
+            XCTAssertEqual(value.negativeZero, 0)
+            XCTAssertEqual(value.maximum, Int.max)
+            XCTAssertEqual(value.minimum, Int.min)
+            XCTAssertEqual(value.fraction, 1.25)
+            XCTAssertEqual(value.nullable, 2)
+            let roundTrip = try decoder.decode(IntegerDefaults.self, from: JSONEncoder().encode(value))
+            XCTAssertEqual(roundTrip.maximum, Int.max)
+            XCTAssertEqual(roundTrip.minimum, Int.min)
+          }
+          for value in [RefinedIntegerDefaults(), try decoder.decode(RefinedIntegerDefaults.self, from: Data("{}".utf8))] {
+            let parent = IntegerDefaults(count: value.count)
+            XCTAssertEqual(parent.count, 2)
+          }
+          XCTAssertEqual(IntegerDefaults().count, 1)
+          XCTAssertThrowsError(try decoder.decode(RefinedIntegerDefaults.self, from: Data(#"{"count":1}"#.utf8)))
+          let null = try decoder.decode(IntegerDefaults.self, from: Data(#"{"count":null,"nullable":null}"#.utf8))
+          XCTAssertNil(null.count)
+          XCTAssertNil(null.nullable)
+          XCTAssertNil(RequiredIntegerDefaults().count)
+          XCTAssertThrowsError(try decoder.decode(RequiredIntegerDefaults.self, from: Data("{}".utf8)))
+          for value in [IntegerPatch(), try decoder.decode(IntegerPatch.self, from: Data("{}".utf8))] {
+            XCTAssertNil(value.count)
+            XCTAssertNil(value.nullable)
+            XCTAssertEqual(String(data: try JSONEncoder().encode(value), encoding: .utf8), "{}")
+          }
+          let deleted = try decoder.decode(IntegerPatch.self, from: Data(#"{"nullable":null}"#.utf8))
+          guard case .delete? = deleted.nullable else { return XCTFail("null must remain a delete") }
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `invalid integer defaults report the wire property and literal`() {
+    val integer =
+      GeneratedModel(
+        "IntegerValue",
+        GeneratedModel.Kind.SCALAR_ALIAS,
+        aliases = listOf(GeneratedTypeRef.scalar("integer")),
+      )
+    for (literal in listOf(
+      "1.1",
+      "1e-1",
+      "NaN",
+      "Infinity",
+      "bad",
+      "9223372036854775808",
+      "-9223372036854775809.0",
+      "1e1000",
+    )) {
+      val property =
+        GeneratedModelProperty(
+          "count",
+          GeneratedTypeRef.named("IntegerValue"),
+          serializationName = "wire-count",
+          defaultValue = literal,
+        )
+      val api =
+        GeneratedApi(
+          name = "Invalid defaults",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+          models = listOf(GeneratedModel("Counts", GeneratedModel.Kind.OBJECT, properties = listOf(property)), integer),
+        )
+      val error =
+        assertThrows(GenerationException::class.java) {
+          SwiftSundayIrGenerator(api, SwiftTypeRegistry(setOf()), swiftSundayTestOptions).generateServiceTypes()
+        }
+      assertTrue(error.message.orEmpty().contains("Counts.wire-count"), error.message)
+      assertTrue(error.message.orEmpty().contains(literal), error.message)
+      assertTrue(error.message.orEmpty().contains("integer"), error.message)
+    }
+  }
+
+  @Test
+  fun `exclusive bounds and validated defaults preserve inherited storage`(compiler: SwiftCompiler) {
+    val property = GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"))
+    val base = GeneratedModel("BoundBase", GeneratedModel.Kind.OBJECT, properties = listOf(property))
+
+    fun child(
+      name: String,
+      validation: Map<String, String>,
+      default: String? = "2",
+    ) = GeneratedModel(
+      name,
+      GeneratedModel.Kind.OBJECT,
+      inherits = listOf(GeneratedTypeRef.named("BoundBase")),
+      properties = listOf(property.copy(validation = validation, defaultValue = default)),
+    )
+    val booleanBounds =
+      child(
+        "BooleanBounds",
+        mapOf(
+          "minimum" to "1",
+          "exclusiveMinimum" to "true",
+          "maximum" to "3",
+          "exclusiveMaximum" to "true",
+        ),
+      )
+    val numericBounds = child("NumericBounds", mapOf("exclusiveMinimum" to "1", "exclusiveMaximum" to "3"))
+    val disabledBounds =
+      child("DisabledBounds", mapOf("exclusiveMinimum" to "false", "exclusiveMaximum" to "false"), "0")
+    val api =
+      GeneratedApi(
+        name = "Bounds",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "memory"),
+        models = listOf(base, booleanBounds, numericBounds, disabledBounds),
+      )
+    generateSwiftSundayFiles(compiler, api)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("BoundTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class BoundTests: XCTestCase {
+        func testBounds() throws {
+          let decoder = JSONDecoder()
+          XCTAssertEqual(BooleanBounds().count, 2)
+          XCTAssertEqual(NumericBounds().count, 2)
+          XCTAssertEqual(try decoder.decode(BooleanBounds.self, from: Data("{}".utf8)).count, 2)
+          XCTAssertEqual(try decoder.decode(NumericBounds.self, from: Data("{}".utf8)).count, 2)
+          XCTAssertEqual(try decoder.decode(DisabledBounds.self, from: Data("{}".utf8)).count, 0)
+          for value in [1, 3, 0, 4] {
+            let data = try JSONSerialization.data(withJSONObject: ["count": value])
+            XCTAssertThrowsError(try decoder.decode(BooleanBounds.self, from: data))
+            XCTAssertThrowsError(try decoder.decode(NumericBounds.self, from: data))
+            XCTAssertEqual(try decoder.decode(DisabledBounds.self, from: data).count, value)
+          }
+          let data = Data(#"{"count":2}"#.utf8)
+          XCTAssertEqual(try decoder.decode(BooleanBounds.self, from: data).count, 2)
+          XCTAssertEqual(try decoder.decode(NumericBounds.self, from: data).count, 2)
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `invalid effective defaults and unrepresentable bounds fail generation`() {
+    val count = GeneratedModelProperty("count", GeneratedTypeRef.scalar("integer"))
+    val parent = GeneratedModel("Parent", GeneratedModel.Kind.OBJECT, properties = listOf(count))
+    val invalid =
+      listOf(
+        count.copy(defaultValue = "0", validation = mapOf("minimum" to "1")),
+        count.copy(defaultValue = "1", validation = mapOf("minimum" to "1", "exclusiveMinimum" to "true")),
+        count.copy(defaultValue = "3", validation = mapOf("maximum" to "3", "exclusiveMaximum" to "true")),
+        count.copy(defaultValue = "1", allowedValues = listOf(2)),
+        count.copy(
+          type = GeneratedTypeRef.scalar("date"),
+          defaultValue = "2026-01-01",
+          allowedValues = listOf("2027-01-01"),
+        ),
+        count.copy(defaultValue = "0", allowedValues = listOf(false)),
+        count.copy(defaultValue = "1", validation = mapOf("multipleOf" to "2")),
+        count.copy(validation = mapOf("exclusiveMinimum" to "true")),
+        count.copy(validation = mapOf("exclusiveMaximum" to "bad")),
+        count.copy(validation = mapOf("minimum" to "1e1000")),
+        count.copy(
+          type = GeneratedTypeRef.scalar("string"),
+          defaultValue = "bad",
+          validation = mapOf("minLength" to "4"),
+        ),
+        count.copy(
+          type = GeneratedTypeRef.scalar("string"),
+          defaultValue = "bad",
+          validation = mapOf("maxLength" to "2"),
+        ),
+        count.copy(
+          type = GeneratedTypeRef.scalar("string"),
+          defaultValue = "bad",
+          validation =
+            mapOf(
+              "pattern" to "^good$",
+            ),
+        ),
+      )
+    for (property in invalid) {
+      val child =
+        GeneratedModel(
+          "Child",
+          GeneratedModel.Kind.OBJECT,
+          inherits = listOf(GeneratedTypeRef.named("Parent")),
+          properties = listOf(property),
+        )
+      val api =
+        GeneratedApi(
+          name = "Defaults",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+          models = listOf(parent, child),
+        )
+      val error =
+        assertThrows(GenerationException::class.java) {
+          SwiftSundayIrGenerator(api, SwiftTypeRegistry(setOf()), swiftSundayTestOptions).generateServiceTypes()
+        }
+      assertTrue(error.message.orEmpty().contains("count"), error.message)
+      if (property.defaultValue != null) assertTrue(error.message.orEmpty().contains("Child.count"), error.message)
+    }
+  }
+
+  @Test
+  fun `formatted defaults and patch constraints preserve wire operations`(compiler: SwiftCompiler) {
+    val formats =
+      listOf(
+        Triple("uuid", "uuid", "00000000-0000-0000-0000-000000000000"),
+        Triple("timestamp", "date-time", "2026-01-01T01:00:00.125+01:00"),
+        Triple("local", "date-time-only", "2026-01-01T00:00:00"),
+        Triple("date", "date", "2026-01-01"),
+        Triple("time", "time", "01:30:00+01:00"),
+        Triple("partial", "partial-time", "01:00:00.5"),
+        Triple("url", "uri", "https://example.com/a%20b"),
+        Triple("bytes", "byte", "aGVsbG8="),
+      )
+    val defaults =
+      GeneratedModel(
+        name = "FormattedDefaults",
+        kind = GeneratedModel.Kind.OBJECT,
+        properties =
+          formats.map { (name, format, value) ->
+            GeneratedModelProperty(
+              name,
+              if (name ==
+                "uuid"
+              ) {
+                GeneratedTypeRef.named("UuidAlias")
+              } else {
+                GeneratedTypeRef.scalar("string", format = format)
+              },
+              defaultValue = value,
+            )
+          },
+      )
+    val patch =
+      GeneratedModel(
+        name = "ConstrainedPatch",
+        kind = GeneratedModel.Kind.OBJECT,
+        patchable = true,
+        properties =
+          listOf(
+            GeneratedModelProperty(
+              "value",
+              GeneratedTypeRef.scalar("string"),
+              required = true,
+              defaultValue = "valid",
+              allowedValues = listOf("valid"),
+            ),
+            GeneratedModelProperty(
+              "nullable",
+              GeneratedTypeRef.scalar("string", nullable = true),
+              required = true,
+              defaultValue = "valid",
+              allowedValues = listOf("valid"),
+            ),
+          ),
+      )
+    val api =
+      GeneratedApi(
+        name = "Defaults",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            defaults,
+            GeneratedModel(
+              name = "RequiredDefaults",
+              kind = GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("FormattedDefaults")),
+              properties = listOf(defaults.properties.first().copy(required = true)),
+            ),
+            patch,
+            patch.copy(name = "OrdinaryRequired", patchable = false),
+            GeneratedModel(
+              name = "UuidAlias",
+              kind = GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.named("UuidValue")),
+            ),
+            GeneratedModel(
+              name = "UuidValue",
+              kind = GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.scalar("string", format = "uuid")),
+            ),
+          ),
+      )
+    generateSwiftSundayFiles(compiler, api)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("DefaultsTests.swift"),
+      """
+      import Foundation
+      import Sunday
+      import XCTest
+      @testable import SundayGenTest
+      final class DefaultsTests: XCTestCase {
+        func testDefaults() throws {
+          let decoder = JSONDecoder()
+          for value in [FormattedDefaults(), try decoder.decode(FormattedDefaults.self, from: Data("{}".utf8))] {
+            XCTAssertEqual(value.uuid, UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
+            XCTAssertEqual(value.timestamp?.timeIntervalSince1970, 1767225600.125)
+            XCTAssertEqual(value.local?.timeIntervalSince1970, 1767225600)
+            XCTAssertEqual(value.date?.timeIntervalSince1970, 1767225600)
+            XCTAssertEqual(value.time?.timeIntervalSince1970, 1800)
+            XCTAssertEqual(value.partial?.timeIntervalSince1970, 3600.5)
+            XCTAssertEqual(value.url?.absoluteString, "https://example.com/a%20b")
+            XCTAssertEqual(value.bytes, Data("hello".utf8))
+          }
+          let nullData = Data(#"{"uuid":null,"timestamp":null,"bytes":null}"#.utf8)
+          let explicitNull = try decoder.decode(FormattedDefaults.self, from: nullData)
+          XCTAssertNil(explicitNull.uuid)
+          XCTAssertNil(explicitNull.timestamp)
+          XCTAssertNil(explicitNull.bytes)
+          XCTAssertNil(RequiredDefaults().uuid)
+          XCTAssertThrowsError(try decoder.decode(RequiredDefaults.self, from: Data("{}".utf8)))
+        }
+        func testPatches() throws {
+          let decoder = JSONDecoder()
+          for json in ["{}", #"{"value":null}"#] {
+            let patch = try decoder.decode(ConstrainedPatch.self, from: Data(json.utf8))
+            XCTAssertNil(patch.value)
+            XCTAssertNil(patch.nullable)
+            XCTAssertEqual(String(data: try JSONEncoder().encode(patch), encoding: .utf8), "{}")
+          }
+          let deleted = try decoder.decode(ConstrainedPatch.self, from: Data(#"{"nullable":null}"#.utf8))
+          guard case .delete? = deleted.nullable else { return XCTFail("null must remain a delete") }
+          let supplied = try decoder.decode(ConstrainedPatch.self, from: Data(#"{"value":"valid","nullable":"valid"}"#.utf8))
+          guard case .set("valid")? = supplied.value, case .set("valid")? = supplied.nullable else { return XCTFail("set lost") }
+          for json in [#"{"value":"invalid"}"#, #"{"nullable":"invalid"}"#] {
+            XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(json.utf8)))
+          }
+          XCTAssertThrowsError(try decoder.decode(OrdinaryRequired.self, from: Data("{}".utf8)))
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+    for ((format, literal) in listOf(
+      "uuid" to "bad",
+      "date-time" to "not-a-date",
+      "date" to "2026-02-30",
+      "uri" to "bad uri",
+      "byte" to "???",
+      "binary" to "abc",
+    )) {
+      val malformed =
+        defaults.copy(
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "invalid",
+                GeneratedTypeRef.scalar("string", format = format),
+                defaultValue = literal,
+              ),
+            ),
+        )
+      val error =
+        assertThrows(GenerationException::class.java) {
+          SwiftSundayIrGenerator(
+            api.copy(models = listOf(malformed)),
+            SwiftTypeRegistry(setOf()),
+            swiftSundayTestOptions,
+          ).generateServiceTypes()
+        }
+      assertTrue(error.message.orEmpty().contains("FormattedDefaults.invalid"), error.message)
+    }
+  }
+
+  @Test
+  fun `superclass decoders use the most derived typed defaults`(
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    OpenApiHttpFixture().use { fixture ->
+      val schemas =
+        """
+        DefaultCount: {type: integer}
+        DefaultIdentifier: {type: string, format: uuid}
+        DefaultParent:
+          type: object
+          properties:
+            count: {${'$'}ref: '#/components/schemas/DefaultCount', default: 1}
+            added: {type: integer}
+            identifier: {${'$'}ref: '#/components/schemas/DefaultIdentifier', default: '00000000-0000-0000-0000-000000000000'}
+            next: {${'$'}ref: '#/components/schemas/DefaultChild'}
+            other: {${'$'}ref: '#/components/schemas/DefaultParent'}
+            grandchild: {${'$'}ref: '#/components/schemas/DefaultGrandchild'}
+            requiredChild: {${'$'}ref: '#/components/schemas/RequiredDefaultChild'}
+        DefaultChild:
+          allOf: [{${'$'}ref: '#/components/schemas/DefaultParent'}]
+          properties:
+            count: {minimum: 2, default: 2}
+            added: {minimum: 4, default: 4.0}
+            identifier: {default: '00000000-0000-0000-0000-000000000001'}
+        DefaultGrandchild:
+          allOf: [{${'$'}ref: '#/components/schemas/DefaultChild'}]
+          properties: {count: {minimum: 3, default: 3}}
+        RequiredDefaultChild:
+          allOf: [{${'$'}ref: '#/components/schemas/DefaultChild'}]
+          required: [count]
+        """.trimIndent()
+      fixture.respond("/defaults.yaml", OpenApiReferenceDocuments.document("Defaults", schemas))
+      val source = directory.resolve("defaults.yaml")
+      Files.writeString(
+        source,
+        OpenApiReferenceDocuments.document(
+          "Inherited defaults",
+          listOf("DefaultParent", "DefaultChild", "DefaultGrandchild", "RequiredDefaultChild").joinToString("\n") {
+            "$it: {${'$'}ref: '${fixture.baseUri}defaults.yaml#/components/schemas/$it'}"
+          },
+        ),
+      )
+      val options =
+        GeneratedApiIrOptions(
+          openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
+      val api = OpenApiToGeneratedApi(options).convert(source.toUri())
+      generateSwiftSundayFiles(compiler, api)
+      Files.createDirectories(compiler.testsDir)
+      Files.writeString(
+        compiler.testsDir.resolve("InheritedDefaultsTests.swift"),
+        """
+        import Foundation
+        import XCTest
+        @testable import SundayGenTest
+
+        final class InheritedDefaultsTests: XCTestCase {
+          func testDynamicDefaults() throws {
+            let decoder = JSONDecoder()
+            let parent = try decoder.decode(DefaultParent.self, from: Data("{}".utf8))
+            XCTAssertEqual(parent.count, 1)
+            XCTAssertNil(parent.added)
+            XCTAssertEqual(parent.identifier, UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
+            for child in [DefaultChild(), try decoder.decode(DefaultChild.self, from: Data("{}".utf8))] {
+              let assigned: DefaultParent = child
+              XCTAssertEqual(assigned.count, 2)
+              XCTAssertEqual(assigned.added, 4)
+              XCTAssertEqual(assigned.identifier, UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+            }
+            for grandchild in [DefaultGrandchild(), try decoder.decode(DefaultGrandchild.self, from: Data("{}".utf8))] {
+              XCTAssertEqual(grandchild.count, 3)
+              XCTAssertEqual(grandchild.added, 4)
+            }
+            let nested = try decoder.decode(DefaultGrandchild.self, from: Data(#"{"next":{},"other":{}}"#.utf8))
+            XCTAssertEqual(nested.count, 3)
+            XCTAssertEqual(nested.next?.count, 2)
+            XCTAssertEqual(nested.other?.count, 1)
+            XCTAssertThrowsError(try decoder.decode(DefaultChild.self, from: Data(#"{"count":1}"#.utf8)))
+            XCTAssertThrowsError(try decoder.decode(DefaultChild.self, from: Data(#"{"count":null}"#.utf8)))
+            XCTAssertThrowsError(try decoder.decode(DefaultChild.self, from: Data(#"{"added":3}"#.utf8)))
+            XCTAssertThrowsError(try decoder.decode(RequiredDefaultChild.self, from: Data("{}".utf8)))
+            XCTAssertEqual(try decoder.decode(RequiredDefaultChild.self, from: Data(#"{"count":5}"#.utf8)).count, 5)
+            let supplied = try decoder.decode(DefaultChild.self, from: Data(#"{"count":6,"identifier":null}"#.utf8))
+            XCTAssertEqual(supplied.count, 6)
+            XCTAssertNil(supplied.identifier)
+          }
+        }
+        """.trimIndent(),
+      )
+      assertTrue(compileAndTestGeneratedFiles(compiler))
+      val parent = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/DefaultParent.swift")
+      val child = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/DefaultChild.swift")
+      assertTrue(parent.contains("class var _sundayDefaultCount"), parent)
+      assertTrue(child.contains("class override var _sundayDefaultCount"), child)
+      assertTrue(child.contains("try super.init(from: decoder)"), child)
+      assertFalse(child.contains("public let count"), child)
+    }
+  }
+
+  @Test
   fun `compiles remote schema resources`(
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
     OpenApiHttpFixture().use { fixture ->
-      val api = fixture.export(directory)
+      val api = fixture.export(directory, OpenApiReferenceDocuments.sdkCompatibilityDecimalDefaults)
       generateSwiftSundayFiles(compiler, api)
       Files.createDirectories(compiler.testsDir)
       Files.writeString(
@@ -91,6 +860,98 @@ class SwiftSundayIrGeneratorTest {
         @testable import SundayGenTest
 
         final class NullUnionTests: XCTestCase {
+          func testSdkContracts() throws {
+            let decoder = JSONDecoder()
+            let mappedPayload = Data(#"{"kind":"cat","name":"Mittens"}"#.utf8)
+            let mapped = try decoder.decode(SdkMappedPetRef.self, from: mappedPayload)
+            let mappedParent: any SdkMappedCat = try XCTUnwrap(mapped.value as? SdkWrappedCat)
+            XCTAssertEqual(mappedParent.name, "Mittens")
+            let mappedData = try JSONEncoder().encode(mapped)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: mappedData) as! NSDictionary,
+                           try JSONSerialization.jsonObject(with: mappedPayload) as! NSDictionary)
+            _ = try decoder.decode(SdkMappedPetRef.self, from: mappedData)
+            let aliasPayload = Data(#"{"label":"base","count":2,"extra":"child"}"#.utf8)
+            let aliasChild = try decoder.decode(SdkAliasChild.self, from: aliasPayload)
+            XCTAssertEqual(aliasChild.label, "base")
+            XCTAssertEqual(aliasChild.extra, "child")
+            XCTAssertEqual(SdkAliasBase(label: aliasChild.label, count: aliasChild.count).count, 2)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(aliasChild)) as! NSDictionary,
+                           try JSONSerialization.jsonObject(with: aliasPayload) as! NSDictionary)
+            XCTAssertThrowsError(try decoder.decode(SdkAliasChild.self, from: Data(#"{"label":"base","count":0,"extra":"child"}"#.utf8)))
+            let multiPayload = Data(#"{"a":"first","b":"second","count":2,"state":"b"}"#.utf8)
+            let multi = try decoder.decode(SdkMultiChild.self, from: multiPayload)
+            let reversed = try decoder.decode(SdkMultiReversed.self, from: multiPayload)
+            XCTAssertEqual(multi.a, "first")
+            XCTAssertEqual(multi.b, "second")
+            XCTAssertEqual(reversed.a, "first")
+            XCTAssertEqual(reversed.b, "second")
+            for data in [try JSONEncoder().encode(multi), try JSONEncoder().encode(reversed)] {
+              XCTAssertEqual(try JSONSerialization.jsonObject(with: data) as! NSDictionary,
+                             try JSONSerialization.jsonObject(with: multiPayload) as! NSDictionary)
+            }
+            XCTAssertEqual(try decoder.decode(SdkMultiChild.self, from: Data(#"{"a":"first","b":"second"}"#.utf8)).count, 2)
+            for invalid in [#"{"a":"first","b":"second","count":0}"#, #"{"a":"first","b":"second","state":"a"}"#] {
+              XCTAssertThrowsError(try decoder.decode(SdkMultiChild.self, from: Data(invalid.utf8)))
+              XCTAssertThrowsError(try decoder.decode(SdkMultiReversed.self, from: Data(invalid.utf8)))
+            }
+            let intersected = try decoder.decode(SdkConflictingChild.self, from: Data(#"{"status":"b"}"#.utf8))
+            XCTAssertEqual(intersected.status, "b")
+            XCTAssertThrowsError(try decoder.decode(SdkConflictingChild.self, from: Data(#"{"status":"a"}"#.utf8)))
+            let envelopeDefaults = try decoder.decode(SdkEnvelope.self, from: Data("{}".utf8))
+            XCTAssertEqual(envelopeDefaults.uuid, UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
+            XCTAssertEqual(envelopeDefaults.timestamp?.timeIntervalSince1970, 1767225600.125)
+            for value in [SdkIntegerChild(), try decoder.decode(SdkIntegerChild.self, from: Data("{}".utf8))] {
+              XCTAssertEqual(value.count, 1)
+              XCTAssertEqual(SdkIntegerBase(count: value.count).count, 1)
+            }
+            for (state, field) in [("rendered", "versionId"), ("refused", "refusalReason")] {
+              let payload = ["currentAsset": ["state": state, field: "value"]]
+              let data = try JSONSerialization.data(withJSONObject: payload)
+              let entity = try decoder.decode(EntityDetails.self, from: data)
+              let asset: (any CurrentAsset)? = entity.currentAsset?.value
+              if state == "rendered" {
+                XCTAssertEqual((asset as? RenderedAsset)?.versionId, "value")
+              } else {
+                XCTAssertEqual((asset as? RefusedAsset)?.refusalReason, "value")
+              }
+              let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(entity)) as! NSDictionary
+              XCTAssertEqual(encoded, payload as NSDictionary)
+            }
+            let inline = try decoder.decode(SdkInlineChild.self, from: Data(#"{"detail":{"value":"value"},"selection":"text","tags":["b","a"]}"#.utf8))
+            let inlineParent = SdkInlineBase(detail: inline.detail, selection: inline.selection, tags: inline.tags)
+            XCTAssertEqual(inlineParent.detail?.value, "value")
+            XCTAssertEqual(inline.tags, ["b", "a"])
+            XCTAssertThrowsError(try decoder.decode(SdkInlineChild.self, from: Data(#"{"detail":{},"selection":"text","tags":["a","a"]}"#.utf8)))
+            let event = try decoder.decode(CharacterChangeEvent.self, from: Data(#"{"type":"character","id":"one"}"#.utf8))
+            let eventType: NarrativeChangeEventType = event.type
+            XCTAssertEqual(eventType.rawValue, "character")
+            XCTAssertEqual(event.count, 20)
+            for json in [#"{"type":"prop","id":"one"}"#, #"{"type":"future","id":"one"}"#,
+                         #"{"type":"character","id":"one","count":0}"#, #"{"type":"character","id":"one","count":21}"#] {
+              XCTAssertThrowsError(try decoder.decode(CharacterChangeEvent.self, from: Data(json.utf8)))
+            }
+            let edit = try decoder.decode(AddFactOp.self, from: Data(#"{"op":"addFact","value":"fact"}"#.utf8))
+            let parent: any FactEditOp = edit
+            XCTAssertEqual(parent.op, "addFact")
+            let problem = try decoder.decode(BadRequestProblem.self, from: Data(#"{"type":"about:blank","title":"Bad request","status":400}"#.utf8))
+            XCTAssertEqual(problem.detail, "Invalid request")
+            for status in ["401", "null", "false"] {
+              XCTAssertThrowsError(try decoder.decode(BadRequestProblem.self, from: Data("{\"status\":\(status)}".utf8)))
+            }
+            let defaults = try decoder.decode(ScalarRestrictions.self, from: Data(#"{"value":"present"}"#.utf8))
+            XCTAssertEqual(defaults.zero, 0)
+            XCTAssertEqual(defaults.flag, false)
+            XCTAssertEqual(defaults.mode?.rawValue, "character")
+            for choice in ["null", "0", "false"] {
+              _ = try decoder.decode(ScalarRestrictions.self, from: Data("{\"value\":\"present\",\"choice\":\(choice)}".utf8))
+            }
+            for json in [#"{}"#, #"{"value":null}"#, #"{"value":""}"#, #"{"value":"present","zero":1}"#,
+                         #"{"value":"present","flag":true}"#, #"{"value":"present","choice":"0"}"#,
+                         #"{"value":"present","choice":true}"#, #"{"value":"present","mode":"future"}"#] {
+              XCTAssertThrowsError(try decoder.decode(ScalarRestrictions.self, from: Data(json.utf8)))
+            }
+          }
+
           func testDocumentaryInheritance() throws {
             let child = DocumentedRecord(id: "one", detail: "detail")
             XCTAssertEqual(child.id, BaseRecord(id: "one").id)

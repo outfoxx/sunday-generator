@@ -28,6 +28,11 @@ internal class OpenApiSchemaAnalysis(
   private val results = IdentityHashMap<Map<*, *>, Result>()
 
   /** Discovery validates every normalized location even when no generated type will use it. */
+  fun validateAll(schemas: Collection<Map<*, *>>) {
+    composition.retainDiscriminatorTargets(schemas)
+    schemas.forEach(::validate)
+  }
+
   fun validate(schema: Map<*, *>) {
     composition.resolve(schema)
   }
@@ -44,7 +49,8 @@ internal class OpenApiSchemaAnalysis(
     val effective: Map<String, Any?>,
     val projection: OpenApiNullUnionProjection.Projection?,
   ) {
-    val canonicalReference = OpenApiSchemaReferences.canonicalName(source)
+    val canonicalReference = composition.canonicalReference(source)
+    val collapsedAlias = composition.collapsedAlias(source)
     val nullable: Boolean by lazy { projection?.nullable ?: nullability.isNullable(effective) }
     val metadata: Map<String, Any?> by lazy { projection?.let { composition.resolve(it.schema) } ?: effective }
     val model: OpenApiSchemaComposition.Model by lazy { composition.model(source) }

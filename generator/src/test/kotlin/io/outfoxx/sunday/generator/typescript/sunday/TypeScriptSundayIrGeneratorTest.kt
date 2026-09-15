@@ -38,6 +38,7 @@ import io.outfoxx.sunday.generator.ir.RamlToGeneratedApi
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
+import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayIrGenerator
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayOptions
 import io.outfoxx.sunday.generator.typescript.TypeScriptTest
@@ -69,6 +70,191 @@ import java.nio.file.Path
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [IR] Generator Test")
 class TypeScriptSundayIrGeneratorTest {
+
+  @Test
+  fun `every compatible parent constraint remains effective`(compiler: TypeScriptCompiler) {
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(
+      inheritedConstraintsFixture(),
+      registry,
+      typeScriptSundayTestOptions,
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("ParentCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {ChildSchema} from './child';
+            import {ReversedSchema} from './reversed';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            for (const factory of [ChildSchema, ReversedSchema]) {
+              const schema = runtime.resolveSchema(factory);
+              const payload = {text: 'abc', count: 2, amount: 0.3};
+              const decoded = schema.parse(payload);
+              if (JSON.stringify(z.encode(schema, decoded)) !== JSON.stringify(payload)) throw new Error('round trip changed');
+              if (schema.parse({}).count !== 2) throw new Error('default lost');
+              for (const invalid of [{text: 'a'}, {text: 'abcd'}, {count: 3}, {amount: 0.31}]) {
+                if (schema.safeParse(invalid).success) throw new Error('parent restriction lost');
+              }
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("ParentCheck", "!parent-check") to check),
+        "parent-check",
+      ),
+    )
+  }
+
+  @Test
+  fun `wire refinements retain enum codecs formatted scalars and transport policies`(compiler: TypeScriptCompiler) {
+    val plain = GeneratedTypeRef.named("PlainState")
+    val tolerant = GeneratedTypeRef.named("StateAlias")
+    val properties =
+      listOf(
+        GeneratedModelProperty(
+          "plain",
+          plain,
+          validation =
+            mapOf(
+              "minLength" to "2",
+              "maxLength" to "4",
+              "pattern" to "^go",
+            ),
+        ),
+        GeneratedModelProperty(
+          "mode",
+          tolerant,
+          defaultValue = "good",
+          allowedValues = listOf("good"),
+          validation =
+            mapOf(
+              "minLength" to "2",
+            ),
+        ),
+        GeneratedModelProperty(
+          "url",
+          GeneratedTypeRef.named("UrlAlias"),
+          defaultValue = "https://example.test/",
+          allowedValues = listOf("https://example.test/"),
+        ),
+        GeneratedModelProperty(
+          "instant",
+          GeneratedTypeRef.scalar("string", format = "date-time"),
+          allowedValues = listOf("2026-01-01T00:00:01Z"),
+        ),
+        GeneratedModelProperty(
+          "bytes",
+          GeneratedTypeRef.scalar("string", format = "byte"),
+          allowedValues = listOf("SGk"),
+        ),
+        GeneratedModelProperty(
+          "zero",
+          GeneratedTypeRef.scalar("integer"),
+          defaultValue = "0",
+          allowedValues = listOf(0),
+        ),
+        GeneratedModelProperty(
+          "flag",
+          GeneratedTypeRef.scalar("boolean"),
+          defaultValue = "false",
+          allowedValues = listOf(false),
+        ),
+      )
+    val api =
+      GeneratedApi(
+        name = "Wire restrictions",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel("PlainState", GeneratedModel.Kind.ENUM, values = listOf("a", "good", "bad", "longer")),
+            GeneratedModel(
+              "State",
+              GeneratedModel.Kind.ENUM,
+              values = listOf("good", "bad", "unknown"),
+              unknownValue = "unknown",
+            ),
+            GeneratedModel(
+              "StateAlias",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.named("State")),
+            ),
+            GeneratedModel(
+              "UrlAlias",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.scalar("string", format = "uri")),
+            ),
+            GeneratedModel(
+              "Base",
+              GeneratedModel.Kind.OBJECT,
+              properties =
+                properties.map {
+                  it.copy(validation = emptyMap(), allowedValues = null, defaultValue = null)
+                },
+            ),
+            GeneratedModel(
+              "Child",
+              GeneratedModel.Kind.OBJECT,
+              inherits = listOf(GeneratedTypeRef.named("Base")),
+              properties = properties,
+            ),
+          ),
+      )
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(api, registry, typeScriptSundayTestOptions).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("WireCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {ChildSchema} from './child';
+            import {BaseSchema} from './base';
+            import {PlainState} from './plain-state';
+            const policy = {format: 'json' as const, dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64};
+            const runtime = createSchemaRuntime(policy);
+            const schema = runtime.resolveSchema(ChildSchema);
+            const wire = {plain: 'good', mode: 'good', url: 'https://example.test/', instant: '2026-01-01T00:00:01Z', bytes: 'SGk', zero: 0, flag: false};
+            const decoded = schema.parse(wire);
+            const canonical: PlainState | null | undefined = decoded.plain;
+            if (canonical !== PlainState.Good || !(decoded.url instanceof URL) || !(decoded.bytes instanceof ArrayBuffer)) throw new Error('canonical types lost');
+            const encoded = z.encode(schema, decoded);
+            if (JSON.stringify(encoded) !== JSON.stringify(wire)) throw new Error('wire round trip changed');
+            const omitted = schema.parse({});
+            if (omitted.mode?.toString() !== 'good' || omitted.url?.href !== wire.url || omitted.zero !== 0 || omitted.flag !== false) throw new Error('prefaults lost');
+            for (const [field, value] of [['plain', 'a'], ['plain', 'longer'], ['plain', 'bad'], ['mode', 'future'], ['url', 'https://other.test/'], ['url', null], ['instant', '2027-01-01T00:00:01Z'], ['bytes', 'QQ'], ['zero', false], ['flag', 0]] as const) {
+              if (schema.safeParse({...wire, [field]: value}).success) throw new Error('accepted invalid ' + field);
+            }
+            const base = runtime.resolveSchema(BaseSchema);
+            const invalid = {...decoded, plain: PlainState.A};
+            if (z.safeEncode(schema, invalid).success) throw new Error('encoding bypassed restriction');
+            if (base.parse({mode: 'future'}).mode?.toString() !== 'future') throw new Error('tolerant base changed');
+            const other = createSchemaRuntime({...policy, format: 'cbor', dateEncoding: DateEncoding.MILLISECONDS_SINCE_EPOCH, numericDateDecoding: 1, arrayBufferEncoding: ArrayBufferEncoding.RAW_BYTES});
+            const otherSchema = other.resolveSchema(ChildSchema);
+            const alternative = {...wire, instant: 1767225601000, bytes: decoded.bytes};
+            const alternateDecoded = otherSchema.parse(alternative);
+            const alternateEncoded = z.encode(otherSchema, alternateDecoded) as Record<string, unknown>;
+            if (alternateEncoded.instant !== alternative.instant || !(alternateEncoded.bytes instanceof ArrayBuffer)) throw new Error('transport policy lost');
+            if (otherSchema.safeParse({...alternative, instant: 1767225602000}).success) throw new Error('numeric timestamp bypassed restriction');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("WireCheck", "!wire-check") to check),
+        "wire-check",
+      ),
+    )
+  }
 
   @Test
   fun `compiles remote schema resources`(
@@ -213,6 +399,101 @@ class TypeScriptSundayIrGeneratorTest {
                     TypeName.namedImport("RestrictionsSchema", "!restrictions"),
                     TypeName.namedImport("NullabilitySchema", "!nullability"),
                     TypeName.namedImport("BooleanValuesSchema", "!boolean-values"),
+                  ),
+                ).addCode(
+                  CodeBlock.of(
+                    """
+                    |const mappedAliasSchema = runtime.resolveSchema(%T);
+                    |const mappedAliasPayload = {kind: 'cat', name: 'Mittens'};
+                    |const mappedAlias = mappedAliasSchema.parse(mappedAliasPayload);
+                    |const mappedEncoded: any = %T.encode(mappedAliasSchema, mappedAlias);
+                    |if (mappedEncoded.kind !== 'cat' || mappedEncoded.name !== 'Mittens') throw new Error('mapped alias lost');
+                    |mappedAliasSchema.parse(mappedEncoded);
+                    |const aliasSchema = runtime.resolveSchema(%T);
+                    |const aliasPayload = {label: 'base', count: 2, extra: 'child'};
+                    |const aliasChild = aliasSchema.parse(aliasPayload);
+                    |const aliasParent: %T = aliasChild;
+                    |if (aliasParent.label !== 'base' || aliasChild.extra !== 'child') throw new Error('alias inheritance lost');
+                    |if (JSON.stringify(%T.encode(aliasSchema, aliasChild)) !== JSON.stringify(aliasPayload)) throw new Error('alias fields lost');
+                    |if (aliasSchema.safeParse({...aliasPayload, count: 0}).success) throw new Error('alias restriction lost');
+                    |for (const reference of [%T, %T]) {
+                    |  const schema = runtime.resolveSchema(reference);
+                    |  const payload = {a: 'first', b: 'second', count: 2, state: 'b'};
+                    |  const value = schema.parse(payload);
+                    |  const encoded: any = %T.encode(schema, value);
+                    |  for (const key of Object.keys(payload) as (keyof typeof payload)[]) {
+                    |    if (encoded[key] !== payload[key]) throw new Error('multi-parent field lost: ' + key);
+                    |  }
+                    |  if (schema.parse({a: 'first', b: 'second'}).count !== 2) throw new Error('multi-parent default lost');
+                    |  for (const invalid of [{...payload, count: 0}, {...payload, count: 3}, {...payload, state: 'a'}]) {
+                    |    if (schema.safeParse(invalid).success) throw new Error('multi-parent intersection lost');
+                    |  }
+                    |}
+                    |const inlineSchema = runtime.resolveSchema(%T);
+                    |const inline: %T = inlineSchema.parse({detail: {value: 'value'}, selection: 'text', tags: ['b', 'a']});
+                    |const inlineParent: %T = inline;
+                    |if (inlineParent.detail?.value !== 'value' || inline.tags?.join(',') !== 'b,a') throw new Error('inline declaration changed');
+                    |const entitySchema = runtime.resolveSchema(%T);
+                    |for (const [state, field] of [['rendered', 'versionId'], ['refused', 'refusalReason']]) {
+                    |  const payload = {currentAsset: {state, [field]: 'value'}};
+                    |  const entity: %T = entitySchema.parse(payload);
+                    |  const asset: %T | null | undefined = entity.currentAsset;
+                    |  const restored: any = %T.encode(entitySchema, entity);
+                    |  if (restored.currentAsset.state !== state || restored.currentAsset[field] !== 'value') throw new Error('asset subtype lost');
+                    |  entitySchema.parse(restored);
+                    |  if (String(asset?.state) !== state) throw new Error('canonical discriminator lost');
+                    |}
+                    |const eventSchema = runtime.resolveSchema(%T);
+                    |const event: %T = eventSchema.parse({type: 'character', id: 'one'});
+                    |const baseEvent: %T = event;
+                    |const eventType: %T = baseEvent.type;
+                    |if (event.count !== 20 || String(eventType) !== 'character') throw new Error('inherited default or enum changed');
+                    |for (const invalid of [{type: 'prop', id: 'one'}, {type: 'future', id: 'one'},
+                    |                       {type: 'character', id: 'one', count: 0}, {type: 'character', id: 'one', count: 21}]) {
+                    |  if (eventSchema.safeParse(invalid).success) throw new Error('inherited refinement was not enforced');
+                    |}
+                    |const edit: %T = runtime.resolveSchema(%T).parse({op: 'addFact', value: 'fact'});
+                    |if (String(edit.op) !== 'addFact') throw new Error('inherited discriminator enum changed');
+                    |const problemSchema = runtime.resolveSchema(%T);
+                    |const problem: %T = problemSchema.parse({});
+                    |if (problem.detail !== 'Invalid request') throw new Error('inherited default lost');
+                    |for (const status of [401, null, false]) {
+                    |  if (problemSchema.safeParse({status}).success) throw new Error('invalid inherited constant accepted');
+                    |}
+                    |const scalarSchema = runtime.resolveSchema(%T);
+                    |const defaults = scalarSchema.parse({value: 'present'});
+                    |if (defaults.zero !== 0 || defaults.flag !== false || String(defaults.mode) !== 'character') throw new Error('scalar defaults changed');
+                    |for (const choice of [null, 0, false]) scalarSchema.parse({value: 'present', choice});
+                    |for (const invalid of [{}, {value: null}, {value: ''}, {value: 'present', zero: 1},
+                    |                       {value: 'present', flag: true}, {value: 'present', choice: '0'},
+                    |                       {value: 'present', choice: true}, {value: 'present', mode: 'future'}]) {
+                    |  if (scalarSchema.safeParse(invalid).success) throw new Error('invalid scalar restriction accepted');
+                    |}
+                    """.trimMargin(),
+                    TypeName.namedImport("SdkMappedPetSchema", "!sdk-mapped-pet"),
+                    TypeName.namedImport("z", "zod"),
+                    TypeName.namedImport("SdkAliasChildSchema", "!sdk-alias-child"),
+                    TypeName.namedImport("SdkAliasBase", "!sdk-alias-base"),
+                    TypeName.namedImport("z", "zod"),
+                    TypeName.namedImport("SdkMultiChildSchema", "!sdk-multi-child"),
+                    TypeName.namedImport("SdkMultiReversedSchema", "!sdk-multi-reversed"),
+                    TypeName.namedImport("z", "zod"),
+                    TypeName.namedImport("SdkInlineChildSchema", "!sdk-inline-child"),
+                    TypeName.namedImport("SdkInlineChild", "!sdk-inline-child"),
+                    TypeName.namedImport("SdkInlineBase", "!sdk-inline-base"),
+                    TypeName.namedImport("EntityDetailsSchema", "!entity-details"),
+                    TypeName.namedImport("EntityDetails", "!entity-details"),
+                    TypeName.namedImport("CurrentAsset", "!current-asset"),
+                    TypeName.namedImport("z", "zod"),
+                    TypeName.namedImport("CharacterChangeEventSchema", "!character-change-event"),
+                    TypeName.namedImport("CharacterChangeEvent", "!character-change-event"),
+                    TypeName.namedImport("BaseNarrativeChangeEvent", "!base-narrative-change-event"),
+                    TypeName.namedImport("NarrativeChangeEventType", "!narrative-change-event-type"),
+                    TypeName.namedImport("FactEditOp", "!fact-edit-op"),
+                    TypeName.namedImport("AddFactOpSchema", "!add-fact-op"),
+                    TypeName.namedImport("BadRequestProblemSchema", "!bad-request-problem"),
+                    TypeName.namedImport("HttpProblem", "!http-problem"),
+                    TypeName.namedImport("ScalarRestrictionsSchema", "!scalar-restrictions"),
                   ),
                 ).build()
           )
@@ -771,6 +1052,92 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(requestSource.contains("'tags': z.array(z.string().uuid()).min(1).max(5).nullish()"), requestSource)
     assertTrue(serviceSource.contains("const searchUsersQParameterType = z.string().min(2).max(80);"), serviceSource)
     assertTrue(serviceSource.contains("q: searchUsersQParameterType.parse(q)"), serviceSource)
+  }
+
+  @Test
+  fun `validates scalar alias parameters without requiring optional values`(compiler: TypeScriptCompiler) {
+    val registry = TypeScriptTypeRegistry(setOf())
+    val api =
+      GeneratedApi(
+        name = "Aliases",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              "Identifier",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.scalar("string")),
+            ),
+            GeneratedModel(
+              "IdentifierAlias",
+              GeneratedModel.Kind.SCALAR_ALIAS,
+              aliases = listOf(GeneratedTypeRef.named("Identifier")),
+            ),
+          ),
+        services =
+          listOf(
+            GeneratedService(
+              name = "UsersService",
+              operations =
+                listOf(
+                  GeneratedOperation(
+                    id = "searchUsers",
+                    method = "GET",
+                    path = "/users",
+                    parameters =
+                      listOf(
+                        GeneratedParameter(
+                          "id",
+                          GeneratedParameter.Location.QUERY,
+                          GeneratedTypeRef.named("Identifier"),
+                          required = true,
+                          validation =
+                            mapOf(
+                              "pattern" to "^[A-Z]+$",
+                            ),
+                        ),
+                        GeneratedParameter(
+                          "filter",
+                          GeneratedParameter.Location.QUERY,
+                          GeneratedTypeRef.named("IdentifierAlias"),
+                          validation =
+                            mapOf(
+                              "pattern" to "^[A-Z]+$",
+                            ),
+                        ),
+                      ),
+                  ),
+                ),
+            ),
+          ),
+      )
+    TypeScriptSundayIrGenerator(api, registry, TypeScriptSundayOptions("http://example.com/", emptyList(), "API"))
+      .generateServiceTypes()
+    val checked =
+      registry.buildTypes() +
+        (
+          TypeName.namedImport("AliasParameterCheck", "!alias-parameter-check") to
+            ModuleSpec
+              .builder("AliasParameterCheck", ModuleSpec.Kind.MODULE)
+              .addCode(
+                CodeBlock.of(
+                  """
+                  |const api = %T({} as any);
+                  |const omitted = api.searchUsers('ID', undefined) as any;
+                  |if (omitted.request.queryParameters.filter !== undefined) throw new Error('optional filter changed');
+                  |const supplied = api.searchUsers('ID', 'FILTER') as any;
+                  |if (supplied.request.queryParameters.filter !== 'FILTER') throw new Error('filter changed');
+                  |for (const [id, filter] of [[undefined, undefined], ['invalid!', undefined], ['ID', 'invalid!']]) {
+                  |  let rejected = false;
+                  |  try { api.searchUsers(id as string, filter); } catch { rejected = true; }
+                  |  if (!rejected) throw new Error('invalid alias parameter accepted');
+                  |}
+                  """.trimMargin(),
+                  TypeName.namedImport("createUsersAPI", "!users-api"),
+                ),
+              ).build()
+        )
+    assertTrue(compileAndRunTypes(compiler, checked, "alias-parameter-check"))
   }
 
   @Test
@@ -1469,6 +1836,10 @@ class TypeScriptSundayIrGeneratorTest {
                   |if (aliased.event.data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
                   |  throw new Error('aliased canonical event did not decode');
                   |}
+                  |const encodedAlias = %T.encode(notificationSchema, aliased);
+                  |if (encodedAlias.event.type !== 'event.legacy' || encodedAlias.event.data.id !== 'legacy') {
+                  |  throw new Error('aliased canonical event did not encode');
+                  |}
                   |const unknown = notificationSchema.parse({event: {type: 'future.event', detail: 'preserved'}});
                   |if (unknown.event.type.rawValue !== 'future.event' || unknown.event.rawBody.detail !== 'preserved') {
                   |  throw new Error('unknown event did not preserve its discriminator and raw body');
@@ -1486,6 +1857,7 @@ class TypeScriptSundayIrGeneratorTest {
                   """.trimMargin(),
                   TypeName.namedImport("EventEnvelopeSchema", "!event-envelope"),
                   TypeName.namedImport("NotificationSchema", "!notification"),
+                  TypeName.namedImport("z", "zod"),
                 ),
               ).build()
         )
@@ -1507,7 +1879,7 @@ class TypeScriptSundayIrGeneratorTest {
       ),
       envelopeSource,
     )
-    assertTrue(envelopeSource.contains("z.discriminatedUnion('type', ["), envelopeSource)
+    assertTrue(envelopeSource.contains("const knownSchema = z.union(["), envelopeSource)
   }
 
   @Test

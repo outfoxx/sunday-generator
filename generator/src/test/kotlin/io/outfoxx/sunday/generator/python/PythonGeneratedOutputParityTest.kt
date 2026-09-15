@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
+import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
@@ -42,6 +43,35 @@ import java.net.URI
 import java.nio.file.Path
 
 class PythonGeneratedOutputParityTest : PythonTest() {
+
+  @Test
+  fun `every compatible parent constraint remains effective`(compiler: PythonCompiler) {
+    val modules = inheritedConstraintsFixture().sundayModules()
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = listOf("parity_api.models"),
+        smokeCode =
+          """
+          from parity_api.models import Child, Reversed
+          from pydantic import ValidationError
+          for model in (Child, Reversed):
+              payload = {'text': 'abc', 'count': 2, 'amount': 0.3}
+              value = model.model_validate(payload)
+              assert value.model_dump(mode='json') == payload
+              assert model.model_validate_json(value.model_dump_json()).text == 'abc'
+              assert model().count == 2
+              for invalid in ({'text': 'a'}, {'text': 'abcd'}, {'count': 3}, {'amount': 0.31}):
+                  try:
+                      model.model_validate(invalid)
+                      raise AssertionError('parent restriction was lost')
+                  except ValidationError:
+                      pass
+          """.trimIndent(),
+      ),
+    )
+  }
 
   @Test
   @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
@@ -62,7 +92,101 @@ class PythonGeneratedOutputParityTest : PythonTest() {
               from parity_api.models import User, Node, Restrictions, Nullability, Pets, Cat, Cat2, Dog, BooleanValues
               from parity_api.models import BaseRecord, DocumentedRecord, RecordNode
               from parity_api.models import MappedPets, MappedCat, MappedDog
+              from parity_api.models import EntityDetails, CurrentAsset, RenderedAsset, RefusedAsset
+              from parity_api.models import BaseNarrativeChangeEvent, CharacterChangeEvent, NarrativeChangeEventType
+              from parity_api.models import FactEditOp, AddFactOp, HttpProblem, BadRequestProblem
+              from parity_api.models import ScalarRestrictions
+              from parity_api.models import SdkInlineBase, SdkInlineChild
+              inline = SdkInlineChild.model_validate({'detail': {'value': 'value'}, 'selection': 'text', 'tags': ['b', 'a']})
+              assert isinstance(inline, SdkInlineBase) and inline.detail.value == 'value'
+              assert inline.tags == ['b', 'a'] and isinstance(inline.tags, list)
               from pydantic import ValidationError
+              from parity_api.models import SdkAliasBase, SdkAliasChild, SdkMappedPet, SdkMappedCat, SdkWrappedCat
+              from pydantic import TypeAdapter
+              mapped_adapter = TypeAdapter(SdkMappedPet)
+              mapped_payload = {'kind': 'cat', 'name': 'Mittens'}
+              mapped_value = mapped_adapter.validate_python(mapped_payload)
+              assert isinstance(mapped_value, SdkWrappedCat)
+              assert isinstance(mapped_value, SdkMappedCat)
+              assert mapped_adapter.dump_python(mapped_value, mode='json') == mapped_payload
+              assert isinstance(mapped_adapter.validate_json(mapped_adapter.dump_json(mapped_value)), SdkWrappedCat)
+              alias_payload = {'label': 'base', 'count': 2, 'extra': 'child'}
+              alias_value = SdkAliasChild.model_validate(alias_payload)
+              assert isinstance(alias_value, SdkAliasBase)
+              assert alias_value.model_dump(mode='json') == alias_payload
+              assert SdkAliasChild.model_validate_json(alias_value.model_dump_json()).extra == 'child'
+              try:
+                  SdkAliasChild.model_validate(dict(alias_payload, count=0))
+                  raise AssertionError('alias child restriction lost')
+              except ValidationError:
+                  pass
+              from parity_api.models import SdkConflictingChild, SdkDefaultChild, ScalarWireChild, ScalarWireState
+              from parity_api.models import SdkMultiChild, SdkMultiReversed
+              for model in (SdkMultiChild, SdkMultiReversed):
+                  payload = {'a': 'first', 'b': 'second', 'count': 2, 'state': 'b'}
+                  value = model.model_validate(payload)
+                  assert value.model_dump(mode='json') == payload
+                  assert model.model_validate_json(value.model_dump_json()).b == 'second'
+                  assert model(a='first', b='second').count == 2
+                  for invalid in (dict(payload, count=0), dict(payload, count=3), dict(payload, state='a')):
+                      try:
+                          model.model_validate(invalid)
+                          raise AssertionError('multi-parent intersection lost')
+                      except ValidationError:
+                          pass
+              assert SdkConflictingChild(status='b').status == 'b'
+              assert SdkDefaultChild().count == 2
+              assert isinstance(ScalarWireChild(state='good').state, ScalarWireState)
+              for excluded in ('a', 'c'):
+                  try:
+                      SdkConflictingChild(status=excluded)
+                      raise AssertionError('conflicting parent restriction lost')
+                  except ValidationError:
+                      pass
+              try:
+                  SdkInlineChild.model_validate({'detail': {}, 'selection': 'text', 'tags': ['a', 'a']})
+                  raise AssertionError('duplicate list accepted')
+              except ValidationError:
+                  pass
+              for state, field, variant in [('rendered', 'versionId', RenderedAsset), ('refused', 'refusalReason', RefusedAsset)]:
+                  payload = {'currentAsset': {'state': state, field: 'value'}}
+                  entity = EntityDetails.model_validate(payload)
+                  assert type(entity.current_asset) is variant
+                  assert entity.model_dump(mode='json', exclude_unset=True) == payload
+                  assert type(EntityDetails.model_validate_json(entity.model_dump_json()).current_asset) is variant
+              assert issubclass(CharacterChangeEvent, BaseNarrativeChangeEvent)
+              assert CharacterChangeEvent.model_fields['type'].annotation is NarrativeChangeEventType
+              event = CharacterChangeEvent.model_validate({'type': 'character', 'id': 'one'})
+              assert event.count == 20
+              for invalid in [{'type': 'prop', 'id': 'one'}, {'type': 'future', 'id': 'one'},
+                              {'type': 'character', 'id': 'one', 'count': 0}, {'type': 'character', 'id': 'one', 'count': 21}]:
+                  try:
+                      CharacterChangeEvent.model_validate(invalid)
+                      raise AssertionError('inherited refinement was not enforced')
+                  except ValidationError:
+                      pass
+              BaseNarrativeChangeEvent.model_validate({'type': 'prop', 'id': 'one', 'count': 100})
+              assert AddFactOp.model_validate({'op': 'addFact', 'value': 'fact'}).op == 'addFact'
+              assert issubclass(BadRequestProblem, HttpProblem)
+              assert BadRequestProblem.model_validate({}).detail == 'Invalid request'
+              defaults = ScalarRestrictions.model_validate({'value': 'present'})
+              assert defaults.zero == 0 and defaults.flag is False and str(defaults.mode) == 'character'
+              for choice in (None, 0, False):
+                  ScalarRestrictions.model_validate({'value': 'present', 'choice': choice})
+              for invalid in [{}, {'value': None}, {'value': ''}, {'value': 'present', 'zero': 1},
+                              {'value': 'present', 'flag': True}, {'value': 'present', 'choice': '0'},
+                              {'value': 'present', 'choice': True}, {'value': 'present', 'mode': 'future'}]:
+                  try:
+                      ScalarRestrictions.model_validate(invalid)
+                      raise AssertionError('invalid scalar restriction accepted')
+                  except ValidationError:
+                      pass
+              for status in (401, None, False):
+                  try:
+                      BadRequestProblem.model_validate({'status': status})
+                      raise AssertionError('invalid inherited constant accepted')
+                  except ValidationError:
+                      pass
               assert issubclass(DocumentedRecord, BaseRecord)
               record = DocumentedRecord.model_validate({'id': 'one', 'detail': 'detail'})
               assert isinstance(record, BaseRecord) and record.id == 'one'

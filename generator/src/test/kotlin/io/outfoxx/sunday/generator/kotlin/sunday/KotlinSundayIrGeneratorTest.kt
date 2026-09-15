@@ -52,6 +52,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.assertReusableDiscriminatorMappingRoundTrips
+import io.outfoxx.sunday.generator.kotlin.tools.assertSdkCompatibility
 import io.outfoxx.sunday.generator.kotlin.tools.assertTolerantEnumCollectionParity
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
@@ -93,6 +94,7 @@ class KotlinSundayIrGeneratorTest {
       KotlinSundayIrGenerator(fixture.export(directory), registry, kotlinSundayTestOptions).generateServiceTypes()
       val result = compileTypesResult(registry.buildTypes())
       assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      assertSdkCompatibility(result.classLoader)
       val mapper = jacksonObjectMapper()
       val baseRecord = result.classLoader.loadClass("io.test.BaseRecord")
       val documentedRecord = result.classLoader.loadClass("io.test.DocumentedRecord")
