@@ -363,6 +363,11 @@ internal class KotlinQuarkusSecurityGenerator(
               .builder("identitiesKey", STRING, KModifier.PRIVATE)
               .initializer("%S", "${typeName.canonicalName}.identities")
               .build(),
+          ).addProperty(
+            PropertySpec
+              .builder("failuresKey", STRING, KModifier.PRIVATE)
+              .initializer("%S", "${typeName.canonicalName}.failures")
+              .build(),
           ).build(),
       ).addFunction(authenticate())
       .addFunction(authenticateScheme())
@@ -395,13 +400,23 @@ internal class KotlinQuarkusSecurityGenerator(
         """
         if (names.size == 1) return authenticateScheme(request, names.single())
         val identities = linkedMapOf<String, %T?>()
+        val failures = linkedMapOf<String, Throwable>()
         var pending = %T.createFrom().item(identities)
         for (name in names) {
-          pending = pending.flatMap { results -> authenticateScheme(request, name).map { result -> results.apply { put(name, result) } } }
+          pending = pending.flatMap { results ->
+            // Shared strategies cannot know which permission alternative will authorize this endpoint.
+            authenticateScheme(request, name).onFailure().recoverWithItem { failure ->
+              failures[name] = failure
+              null
+            }.map { result -> results.apply { put(name, result) } }
+          }
         }
         return pending.map { results ->
+          val identity = results.values.firstOrNull { it != null }
+          if (identity == null && failures.isNotEmpty()) throw failures.values.first()
           request.context.put(identitiesKey, results.toMap())
-          results.values.firstOrNull { it != null }
+          request.context.put(failuresKey, failures.toMap())
+          identity
         }
         """.trimIndent().replace(' ', '·'),
         identity,
@@ -445,9 +460,12 @@ internal class KotlinQuarkusSecurityGenerator(
         } else {
           checkNotNull(context.get<Map<String, %T?>>(identitiesKey)) { "Generated authentication strategy did not run" }
         }
+        val failures = context.get<Map<String, Throwable>>(failuresKey).orEmpty()
         val permissions = mutableMapOf<String, Set<String>>()
         var forbidden = false
         for (alternative in requirements) {
+          // A successful earlier alternative makes later provider failures irrelevant.
+          alternative.keys.forEach { name -> failures[name]?.let { throw it } }
           if (alternative.keys.any { identities[it] == null }) continue
           if (alternative.all { (name, required) ->
             required.isEmpty() || permissions.getOrPut(name) { bindings.getValue(name).permissions!!.invoke(identities.getValue(name)!!) }.containsAll(required)

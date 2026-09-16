@@ -67,6 +67,10 @@ class NativeSecurityBindings {
             OpenAPISecurity.Authenticator { request, _, credential ->
               val id = request.context.request().getHeader("X-Request-ID") ?: "default"
               authentications.computeIfAbsent("$id:jwt") { AtomicInteger() }.incrementAndGet()
+              if (credential == "provider-throw") error("JWT provider unavailable")
+              if (credential == "provider-failure") {
+                return@Authenticator Uni.createFrom().failure(IllegalStateException("JWT provider unavailable"))
+              }
               request.identityProviderManager
                 .authenticate(
                   HttpSecurityUtils.setRoutingContextAttribute(
@@ -99,6 +103,10 @@ class NativeSecurityBindings {
             OpenAPISecurity.Authenticator { request, _, credential ->
               val id = request.context.request().getHeader("X-Request-ID") ?: "default"
               authentications.computeIfAbsent("$id:tenantKey") { AtomicInteger() }.incrementAndGet()
+              if (credential == "provider-throw") error("Tenant provider unavailable")
+              if (credential == "provider-failure") {
+                return@Authenticator Uni.createFrom().failure(IllegalStateException("Tenant provider unavailable"))
+              }
               Uni
                 .createFrom()
                 .item<SecurityIdentity?>(

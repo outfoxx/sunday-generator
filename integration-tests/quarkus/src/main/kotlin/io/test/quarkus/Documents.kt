@@ -39,6 +39,13 @@ class Documents : DocumentsAPI {
 
   override fun combinedDocument(documentId: String): RestResponse<String> = respond(documentId)
 
+  override fun alternativeDocument(documentId: String): RestResponse<String> = respond(documentId)
+
+  override fun keyFirstDocument(documentId: String): RestResponse<String> {
+    calls.incrementAndGet()
+    return RestResponse.ok(identity.principal.name)
+  }
+
   override fun simpleDocument(documentId: String): RestResponse<String> = respond(documentId)
 
   override fun publicDocument(documentId: String): RestResponse<String> = respond(documentId)

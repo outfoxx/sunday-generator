@@ -33,6 +33,21 @@ paths:
       security: [{jwt: [read], tenantKey: []}]
       parameters: [{$ref: '#/components/parameters/documentId'}]
       responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/alternative:
+    get:
+      operationId: alternativeDocument
+      x-sunday-service: Documents
+      security: [{jwt: [read]}, {tenantKey: []}]
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /documents/{documentId}/key-first:
+    get:
+      operationId: keyFirstDocument
+      x-sunday-service: Documents
+      security: [{tenantKey: []}, {jwt: [read]}]
+      x-sunday-zanzibar: {ignore: true}
+      parameters: [{$ref: '#/components/parameters/documentId'}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
   /documents/{documentId}/simple:
     get:
       operationId: simpleDocument
