@@ -243,28 +243,7 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
-    serviceTypes.forEach { service ->
-      val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
-      if (options.resourceAdapters) {
-        val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus)
-        val endpointAuthentication =
-          service.service.operations.associate { operation ->
-            operation.id.kotlinIdentifierName to api.endpointAuthentication(service.service, operation)
-          }
-        typeRegistry.addServiceType(service.typeName, adapter.handler(serviceType.build()))
-        typeRegistry.addServiceType(
-          adapter.resourceTypeName(service.typeName),
-          adapter.resource(
-            service.typeName,
-            serviceType.build(),
-            endpointAuthentication,
-            service.subresourcePath == null,
-          ),
-        )
-      } else {
-        typeRegistry.addServiceType(service.typeName, serviceType)
-      }
-    }
+    serviceTypes.forEach(::generateServiceType)
 
     if (options.aggregateServices && serviceTypes.size > 1) {
       val aggregateTypeName = aggregateServiceTypeName()
@@ -283,6 +262,29 @@ class KotlinJAXRSIrGenerator(
       } else {
         typeRegistry.addServiceType(aggregateTypeName, aggregateType)
       }
+    }
+  }
+
+  private fun generateServiceType(service: GeneratedJaxRsService) {
+    val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
+    if (options.resourceAdapters) {
+      val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus)
+      val endpointAuthentication =
+        service.service.operations.associate { operation ->
+          operation.id.kotlinIdentifierName to api.endpointAuthentication(service.service, operation)
+        }
+      typeRegistry.addServiceType(service.typeName, adapter.handler(serviceType.build()))
+      typeRegistry.addServiceType(
+        adapter.resourceTypeName(service.typeName),
+        adapter.resource(
+          service.typeName,
+          serviceType.build(),
+          endpointAuthentication,
+          service.subresourcePath == null,
+        ),
+      )
+    } else {
+      typeRegistry.addServiceType(service.typeName, serviceType)
     }
   }
 

@@ -6,11 +6,11 @@ val generator by configurations.creating
 
 dependencies {
   generator(project(":cli"))
-  implementation("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
-  implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
-  implementation("jakarta.validation:jakarta.validation-api:3.1.1")
-  testImplementation("org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-inmemory:3.1.11")
-  testImplementation("org.glassfish.jersey.inject:jersey-hk2:3.1.11")
+  implementation(libs.jakartaJaxrs31)
+  implementation(libs.jakartaAnnotations)
+  implementation(libs.jakartaValidation)
+  testImplementation(libs.jerseyInMemory)
+  testImplementation(libs.jerseyHk2)
   testImplementation(libs.junit)
   testRuntimeOnly(libs.junitEngine)
   testRuntimeOnly(libs.junitPlatform)

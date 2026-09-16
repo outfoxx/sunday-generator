@@ -18,8 +18,11 @@ hamcrest = "3.0"
 jackson = "2.21.0"
 jacksonKotlin = "2.21.0"
 jakartaJaxrs = "4.0.0"
+# Keep Jersey integration fixtures on REST 3.1; compiler fixtures also cover REST 4.0.
+jakartaJaxrs31 = "3.1.0"
 javaxJaxrs = "2.0.2.Final"
 jcolor = "5.5.1"
+jersey = "3.1.11"
 jib = "3.5.3"
 jimfs = "1.3.0"
 junit = "5.14.3"
@@ -79,11 +82,15 @@ jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref 
 jacksonJavaTime = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonKotlin" }
 jacksonYaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+jakartaAnnotations = { module = "jakarta.annotation:jakarta.annotation-api", version = "2.1.1" }
 jakartaJaxrs = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakartaJaxrs" }
+jakartaJaxrs31 = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakartaJaxrs31" }
 jakartaValidation = { module = "jakarta.validation:jakarta.validation-api", version = "3.1.1" }
 javaxAnnotations = { module = "javax.annotation:javax.annotation-api", version = "1.3.2" }
 javaxJaxrs = { module = "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec", version.ref = "javaxJaxrs" }
 jcolor = { module = "com.diogonunes:JColor", version.ref = "jcolor" }
+jerseyHk2 = { module = "org.glassfish.jersey.inject:jersey-hk2", version.ref = "jersey" }
+jerseyInMemory = { module = "org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-inmemory", version.ref = "jersey" }
 jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
 junit = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junitEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
