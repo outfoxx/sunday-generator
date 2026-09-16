@@ -24,6 +24,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
+import io.outfoxx.sunday.generator.ir.OpenApiLoadedDocument
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -177,6 +179,14 @@ class GeneratedEndpointPolicyTest {
     assertEquals("http", scheme.type)
     assertEquals("bearer", scheme.scheme)
     assertEquals("JWT", scheme.bearerFormat)
+
+    val documents =
+      listOf(path, directory.resolve("schemes.yaml")).associate { source ->
+        source.toUri() to OpenApiLoadedDocument(source.toUri(), Files.readAllBytes(source))
+      }
+    Files.delete(directory.resolve("schemes.yaml"))
+    val capturedApi = OpenApiToGeneratedApi().convert(path.toUri()) { uri -> documents.getValue(uri) }
+    assertEquals(scheme, policy(capturedApi, "inherited")!!.schemes.getValue("bearerAuth"))
 
     Files.writeString(
       directory.resolve("schemes.yaml"),

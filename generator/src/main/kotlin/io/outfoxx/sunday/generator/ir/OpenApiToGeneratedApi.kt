@@ -777,7 +777,7 @@ class OpenApiToGeneratedApi(
     )
 
   private fun OpenApiSourceDocument.securityScheme(name: String): GeneratedSecurityScheme? {
-    val scheme = resolveSecurityScheme(securitySchemes[name] ?: return null, mutableSetOf())
+    val scheme = securitySchemes[name] ?: return null
     val type = scheme["type"] as? String
     val parameter =
       if (type == "apiKey") {
@@ -826,32 +826,6 @@ class OpenApiToGeneratedApi(
             )
         },
     )
-  }
-
-  private fun OpenApiSourceDocument.resolveSecurityScheme(
-    value: Map<*, *>,
-    visited: MutableSet<URI>,
-  ): Map<*, *> {
-    if (!value.containsKey("\$ref")) return value
-    val reference = value["\$ref"] as? String ?: genError("Security scheme references must be strings")
-    val resolved = URI(location).resolve(reference)
-    if (!visited.add(resolved)) genError("Cyclic security scheme reference '$resolved'")
-    val documentUri = URI(resolved.scheme, resolved.authority, resolved.path, resolved.query, null)
-    val document = if (documentUri.toString() == location) this else OpenApiSourceDocument.read(documentUri.toString())
-    val pointer = resolved.fragment.orEmpty()
-    if (pointer.isNotEmpty() && !pointer.startsWith("/")) {
-      genError("Security scheme references must use a JSON pointer: '$resolved'")
-    }
-    val target =
-      if (pointer.isEmpty()) {
-        document.source
-      } else {
-        pointer.drop(1).split('/').fold(document.source) { current, token ->
-          current[token.replace("~1", "/").replace("~0", "~")] as? Map<*, *>
-            ?: genError("Unresolved security scheme reference '$resolved'")
-        }
-      }
-    return document.resolveSecurityScheme(target, visited)
   }
 
   private fun OpenApiSourceDocument.headerParameter(
