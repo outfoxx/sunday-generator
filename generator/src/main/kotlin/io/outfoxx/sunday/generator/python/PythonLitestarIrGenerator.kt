@@ -46,17 +46,7 @@ class PythonLitestarIrGenerator(
     if (GeneratedTypeCategory.Service in outputCategories) {
       val litestarRenderer = PythonLitestarRenderer(packageName)
       if (options.enforceSecuritySchemes) {
-        val policies =
-          services
-            .flatMap { service ->
-              service.operations.mapNotNull { operation ->
-                api.endpointSecurityPolicy(service, operation)?.let { (service.name + "." + operation.id) to it }
-              }
-            }.groupBy({ it.first }, { it.second })
-            .mapValues { (name, policies) ->
-              policies.singleOrNull() ?: genError("Duplicate security policy key '$name'")
-            }
-        modules += PythonSecurityRenderer(packageName).render(policies.values.endpointSecuritySchemes(), policies)
+        modules += renderSecurity(packageName, services)
       }
       modules +=
         services.map { service ->
@@ -84,6 +74,23 @@ class PythonLitestarIrGenerator(
     }
 
     return modules
+  }
+
+  private fun renderSecurity(
+    packageName: String,
+    services: List<GeneratedService>,
+  ): PythonModule {
+    val policies =
+      services
+        .flatMap { service ->
+          service.operations.mapNotNull { operation ->
+            api.endpointSecurityPolicy(service, operation)?.let { (service.name + "." + operation.id) to it }
+          }
+        }.groupBy({ it.first }, { it.second })
+        .mapValues { (name, policies) ->
+          policies.singleOrNull() ?: genError("Duplicate security policy key '$name'")
+        }
+    return PythonSecurityRenderer(packageName).render(policies.values.endpointSecuritySchemes(), policies)
   }
 
   private fun renderAggregate(

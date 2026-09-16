@@ -45,16 +45,8 @@ class AsyncSecurityBindings {
               )
             }
             validations.computeIfAbsent(name) { AtomicInteger() }.incrementAndGet()
-            val permissions =
-              when {
-                name.endsWith("Key") && credential == "valid-key" -> emptySet<String>()
-                name.startsWith("inline_") && credential == "valid-token" -> emptySet()
-                name == "eventToken" && credential == "reader" -> setOf("read")
-                name == "eventToken" && credential == "unscoped" -> emptySet()
-                else -> null
-              }
             Uni.createFrom().item(
-              permissions?.let {
+              permissions(name, credential)?.let {
                 QuarkusSecurityIdentity
                   .builder()
                   .setPrincipal(
@@ -85,4 +77,16 @@ class AsyncSecurityBindings {
           }
         },
     )
+
+  private fun permissions(
+    name: String,
+    credential: String?,
+  ): Set<String>? =
+    when {
+      name.endsWith("Key") && credential == "valid-key" -> emptySet()
+      name.startsWith("inline_") && credential == "valid-token" -> emptySet()
+      name == "eventToken" && credential == "reader" -> setOf("read")
+      name == "eventToken" && credential == "unscoped" -> emptySet()
+      else -> null
+    }
 }

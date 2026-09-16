@@ -59,7 +59,7 @@ class Documents : DocumentsAPI {
     calls.incrementAndGet()
     check(identity.principal is JsonWebToken)
     check(identity.principal.name == jwt.name)
-    check(identity.getCredential(TokenCredential::class.java) != null)
+    checkNotNull(identity.getCredential(TokenCredential::class.java))
     return RestResponse.ok("$documentId:${jwt.subject}:${identity.getAttribute<String>("binding") ?: "framework"}")
   }
 }

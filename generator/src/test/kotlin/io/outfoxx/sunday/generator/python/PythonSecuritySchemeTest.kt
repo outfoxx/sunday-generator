@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -125,6 +126,24 @@ class PythonSecuritySchemeTest : PythonTest() {
           """.trimIndent(),
       ),
     )
+  }
+
+  @Test
+  fun `scheme enforcement rejects duplicate operation policy keys`() {
+    val api =
+      GeneratedApiIrExporter(GeneratedApiIrOptions(generationMode = GenerationMode.Server))
+        .export(javaClass.getResource("/openapi/ir/security-enforcement.yaml")!!.toURI())
+    val service = api.services.first()
+    val operation = service.operations.first()
+    val duplicate = service.copy(operations = listOf(operation, operation))
+    val error =
+      assertThrows(GenerationException::class.java) {
+        PythonLitestarIrGenerator(
+          api.copy(services = listOf(duplicate)),
+          PythonGeneratorOptions(packageName = "security_api", enforceSecuritySchemes = true),
+        ).generateModules(setOf(GeneratedTypeCategory.Service))
+      }
+    assertEquals("Duplicate security policy key '${service.name}.${operation.id}'", error.message)
   }
 
   @Test

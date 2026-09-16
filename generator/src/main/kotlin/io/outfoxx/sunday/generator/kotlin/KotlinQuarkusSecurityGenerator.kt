@@ -37,6 +37,11 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 
+private const val QUARKUS_HTTP_SECURITY_PACKAGE = "io.quarkus.vertx.http.runtime.security"
+private const val QUARKUS_SECURITY_PACKAGE = "io.quarkus.security"
+private const val LIST_INITIALIZER = "listOf(%L)"
+private const val SET_INITIALIZER = "setOf(%L)"
+
 /** Emits native authentication strategies and constant authorization policies shared by equivalent endpoints. */
 internal class KotlinQuarkusSecurityGenerator(
   val typeName: ClassName,
@@ -52,8 +57,8 @@ internal class KotlinQuarkusSecurityGenerator(
   private val manager = ClassName("io.quarkus.security.identity", "IdentityProviderManager")
   private val routingContext = ClassName("io.vertx.ext.web", "RoutingContext")
   private val uni = ClassName("io.smallrye.mutiny", "Uni")
-  private val mechanism = ClassName("io.quarkus.vertx.http.runtime.security", "HttpAuthenticationMechanism")
-  private val httpPolicy = ClassName("io.quarkus.vertx.http.runtime.security", "HttpSecurityPolicy")
+  private val mechanism = ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "HttpAuthenticationMechanism")
+  private val httpPolicy = ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "HttpSecurityPolicy")
   private val checkResult = httpPolicy.nestedClass("CheckResult")
   private val singleton = ClassName("jakarta.inject", "Singleton")
   private val requirements = LIST.parameterizedBy(MAP.parameterizedBy(STRING, SET.parameterizedBy(STRING)))
@@ -84,7 +89,7 @@ internal class KotlinQuarkusSecurityGenerator(
           .build(),
       )
       if (policy.simple) {
-        add(AnnotationSpec.builder(ClassName("io.quarkus.security", "Authenticated")).build())
+        add(AnnotationSpec.builder(ClassName(QUARKUS_SECURITY_PACKAGE, "Authenticated")).build())
       } else {
         add(
           AnnotationSpec
@@ -136,7 +141,7 @@ internal class KotlinQuarkusSecurityGenerator(
       .addProperty(
         PropertySpec
           .builder("names", LIST.parameterizedBy(STRING), KModifier.PRIVATE)
-          .initializer("listOf(%L)", strings(policy.schemes))
+          .initializer(LIST_INITIALIZER, strings(policy.schemes))
           .build(),
       ).addFunction(
         FunSpec
@@ -163,12 +168,12 @@ internal class KotlinQuarkusSecurityGenerator(
           .addModifiers(KModifier.OVERRIDE)
           .addKdoc("Identifies this strategy for Quarkus's annotation-based selection.\n")
           .addParameter("context", routingContext)
-          .returns(uni.parameterizedBy(ClassName("io.quarkus.vertx.http.runtime.security", "HttpCredentialTransport")))
+          .returns(uni.parameterizedBy(ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "HttpCredentialTransport")))
           .addStatement(
             "return %T.createFrom().item(%T(%T.Type.AUTHORIZATION, %S, NAME))",
             uni,
-            ClassName("io.quarkus.vertx.http.runtime.security", "HttpCredentialTransport"),
-            ClassName("io.quarkus.vertx.http.runtime.security", "HttpCredentialTransport"),
+            ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "HttpCredentialTransport"),
+            ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "HttpCredentialTransport"),
             "Authorization",
           ).build(),
       ).addFunction(
@@ -177,12 +182,12 @@ internal class KotlinQuarkusSecurityGenerator(
           .addModifiers(KModifier.OVERRIDE)
           .addKdoc("Returns the scheme-specific challenges after an authentication failure.\n")
           .addParameter("context", routingContext)
-          .returns(uni.parameterizedBy(ClassName("io.quarkus.vertx.http.runtime.security", "ChallengeData")))
+          .returns(uni.parameterizedBy(ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "ChallengeData")))
           .addStatement("security.challengeHeaders(context, names, false)")
           .addStatement(
             "return %T.createFrom().item(%T(401, null, null))",
             uni,
-            ClassName("io.quarkus.vertx.http.runtime.security", "ChallengeData"),
+            ClassName(QUARKUS_HTTP_SECURITY_PACKAGE, "ChallengeData"),
           ).build(),
       )
 
@@ -193,7 +198,7 @@ internal class KotlinQuarkusSecurityGenerator(
         PropertySpec
           .builder("requirements", requirements, KModifier.PRIVATE)
           .initializer(
-            "listOf(%L)",
+            LIST_INITIALIZER,
             policy.alternatives
               .map { alternative ->
                 CodeBlock.of(
@@ -208,7 +213,7 @@ internal class KotlinQuarkusSecurityGenerator(
       ).addProperty(
         PropertySpec
           .builder("names", LIST.parameterizedBy(STRING), KModifier.PRIVATE)
-          .initializer("listOf(%L)", strings(policy.schemes))
+          .initializer(LIST_INITIALIZER, strings(policy.schemes))
           .build(),
       ).addFunction(
         FunSpec
@@ -347,16 +352,16 @@ internal class KotlinQuarkusSecurityGenerator(
               .builder("subjectRequirements", SET.parameterizedBy(SET.parameterizedBy(STRING)))
               .addKdoc("Canonical multi-scheme groups requiring an application-selected subject.\n")
               .initializer(
-                "setOf(%L)",
+                SET_INITIALIZER,
                 plan.subjectRequirements
                   .map {
-                    CodeBlock.of("setOf(%L)", strings(it))
+                    CodeBlock.of(SET_INITIALIZER, strings(it))
                   }.joinToCode(", "),
               ).build(),
           ).addProperty(
             PropertySpec
               .builder("permissionSchemes", SET.parameterizedBy(STRING), KModifier.PRIVATE)
-              .initializer("setOf(%L)", strings(plan.permissionSchemes))
+              .initializer(SET_INITIALIZER, strings(plan.permissionSchemes))
               .build(),
           ).addProperty(
             PropertySpec
@@ -441,7 +446,7 @@ internal class KotlinQuarkusSecurityGenerator(
         """.trimIndent().replace(' ', '·'),
         uni,
         uni,
-        ClassName("io.quarkus.security", "AuthenticationFailedException"),
+        ClassName(QUARKUS_SECURITY_PACKAGE, "AuthenticationFailedException"),
       ).build()
 
   private fun authorize(): FunSpec =
@@ -485,8 +490,8 @@ internal class KotlinQuarkusSecurityGenerator(
         identity,
         checkResult,
         ClassName("io.quarkus.security.runtime", "QuarkusSecurityIdentity"),
-        ClassName("io.quarkus.security", "ForbiddenException"),
-        ClassName("io.quarkus.security", "UnauthorizedException"),
+        ClassName(QUARKUS_SECURITY_PACKAGE, "ForbiddenException"),
+        ClassName(QUARKUS_SECURITY_PACKAGE, "UnauthorizedException"),
       ).build()
 
   private fun credential(): FunSpec =

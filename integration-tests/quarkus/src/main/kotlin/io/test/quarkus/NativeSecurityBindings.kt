@@ -34,6 +34,8 @@ import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+private const val REQUEST_ID_HEADER = "X-Request-ID"
+
 /** Native provider bindings with per-request instrumentation, used only by the integration fixture. */
 @Singleton
 class NativeSecurityBindings {
@@ -47,7 +49,7 @@ class NativeSecurityBindings {
     @Observes event: AuthorizationSuccessEvent,
   ) {
     val context = event.eventProperties[RoutingContext::class.java.name] as? RoutingContext ?: return
-    val id = context.request().getHeader("X-Request-ID") ?: return
+    val id = context.request().getHeader(REQUEST_ID_HEADER) ?: return
     authorizations.computeIfAbsent(id) { AtomicInteger() }.incrementAndGet()
     if (event.eventProperties[AuthorizationSuccessEvent.AUTHORIZATION_CONTEXT] ==
       "io.quarkus.security.runtime.interceptor.check.AuthenticatedCheck"
@@ -65,7 +67,7 @@ class NativeSecurityBindings {
         "jwt" to
           OpenAPISecurity.SchemeBinding(
             OpenAPISecurity.Authenticator { request, _, credential ->
-              val id = request.context.request().getHeader("X-Request-ID") ?: "default"
+              val id = request.context.request().getHeader(REQUEST_ID_HEADER) ?: "default"
               authentications.computeIfAbsent("$id:jwt") { AtomicInteger() }.incrementAndGet()
               if (credential == "provider-throw") error("JWT provider unavailable")
               if (credential == "provider-failure") {
@@ -101,7 +103,7 @@ class NativeSecurityBindings {
         "tenantKey" to
           OpenAPISecurity.SchemeBinding(
             OpenAPISecurity.Authenticator { request, _, credential ->
-              val id = request.context.request().getHeader("X-Request-ID") ?: "default"
+              val id = request.context.request().getHeader(REQUEST_ID_HEADER) ?: "default"
               authentications.computeIfAbsent("$id:tenantKey") { AtomicInteger() }.incrementAndGet()
               if (credential == "provider-throw") error("Tenant provider unavailable")
               if (credential == "provider-failure") {

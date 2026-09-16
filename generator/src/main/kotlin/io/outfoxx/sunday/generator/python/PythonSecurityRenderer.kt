@@ -19,6 +19,8 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 
+private const val COLLECTIONS_ABC = "collections.abc"
+
 /** Renders Litestar credential bindings and the complete security requirement evaluator. */
 internal class PythonSecurityRenderer(
   private val packageName: String,
@@ -76,29 +78,29 @@ internal class PythonSecurityRenderer(
           Guard = %T[[Connection, %T], %T[None]]
           """.trimIndent(),
           PythonSymbol("dataclasses", "dataclass"),
-          PythonSymbol("collections.abc", "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
           PythonSymbol("dataclasses", "dataclass"),
-          PythonSymbol("collections.abc", "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
           PythonSymbol("dataclasses", "dataclass"),
           PythonSymbol("litestar.connection", "ASGIConnection"),
           PythonSymbol("typing", "Any"),
           PythonSymbol("typing", "Any"),
           PythonSymbol("typing", "Any"),
           PythonSymbol("typing", "Any"),
-          PythonSymbol("collections.abc", "Mapping"),
-          PythonSymbol("collections.abc", "Callable"),
-          PythonSymbol("collections.abc", "Awaitable"),
-          PythonSymbol("collections.abc", "Callable"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Callable"),
+          PythonSymbol(COLLECTIONS_ABC, "Awaitable"),
+          PythonSymbol(COLLECTIONS_ABC, "Callable"),
           PythonSymbol("litestar.handlers", "BaseRouteHandler"),
-          PythonSymbol("collections.abc", "Awaitable"),
+          PythonSymbol(COLLECTIONS_ABC, "Awaitable"),
         ),
       ).addCode(
         PythonCodeBlock.of(
           "_SCHEMES: %T[str, Scheme] = %T(\n    %C,\n)\n\n_POLICIES: %T[str, Requirements] = %T(\n    %C,\n)",
-          PythonSymbol("collections.abc", "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
           PythonSymbol("types", "MappingProxyType"),
           dictionary(schemes.map { (name, scheme) -> name to renderScheme(scheme, 8) }, 4),
-          PythonSymbol("collections.abc", "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
           PythonSymbol("types", "MappingProxyType"),
           dictionary(policies.map { (name, policy) -> name to renderPolicy(policy, 8) }, 4),
         ),
@@ -195,8 +197,8 @@ internal class PythonSecurityRenderer(
                   return None
           """.trimIndent(),
           PythonSymbol("typing", "ClassVar"),
-          PythonSymbol("collections.abc", "Mapping"),
-          PythonSymbol("collections.abc", "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
           PythonSymbol("litestar.handlers", "BaseRouteHandler"),
           PythonSymbol("litestar.exceptions", "PermissionDeniedException"),
           PythonSymbol("litestar.exceptions", "NotAuthorizedException"),

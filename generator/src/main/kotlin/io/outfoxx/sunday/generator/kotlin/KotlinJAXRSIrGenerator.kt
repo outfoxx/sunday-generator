@@ -64,6 +64,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
+import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
@@ -251,18 +252,7 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
-    val securityPolicies =
-      if (options.enforceSecuritySchemes) {
-        serviceTypes.groupBy { it.typeName.packageName }.mapValues { (_, group) ->
-          group.flatMap { service ->
-            service.service.operations.mapNotNull { operation ->
-              api.endpointSecurityPolicy(service.service, operation)
-            }
-          }
-        }
-      } else {
-        emptyMap()
-      }
+    val securityPolicies = securityPolicies(serviceTypes)
     val securityGenerators =
       if (!options.quarkus) {
         securityPolicies.mapValues { (packageName, policies) ->
@@ -292,6 +282,23 @@ class KotlinJAXRSIrGenerator(
       )
     }
 
+    generateAggregateService(serviceTypes)
+  }
+
+  private fun securityPolicies(serviceTypes: List<GeneratedJaxRsService>): Map<String, List<GeneratedEndpointPolicy>> =
+    if (options.enforceSecuritySchemes) {
+      serviceTypes.groupBy { it.typeName.packageName }.mapValues { (_, group) ->
+        group.flatMap { service ->
+          service.service.operations.mapNotNull { operation ->
+            api.endpointSecurityPolicy(service.service, operation)
+          }
+        }
+      }
+    } else {
+      emptyMap()
+    }
+
+  private fun generateAggregateService(serviceTypes: List<GeneratedJaxRsService>) {
     if (options.aggregateServices && serviceTypes.size > 1) {
       val aggregateTypeName = aggregateServiceTypeName()
       if (serviceTypes.any { service -> service.typeName == aggregateTypeName }) {

@@ -46,43 +46,9 @@ internal class AsyncApiSecurity(
       security.mapIndexed { index, entry ->
         val entryPath = "$path/$index"
         if (isVersion3) {
-          val resolved = resolve(entry, entryPath)
-          val ref = entry["\$ref"] as? String
-          val tokens = ref?.let { pointer(it, entryPath) }
-          val name =
-            if (tokens?.size == 3 && tokens.take(2) == listOf("components", "securitySchemes")) {
-              tokens.last()
-            } else {
-              inlineName(resolved, entryPath)
-            }
-          definitions[name] =
-            scheme(
-              name,
-              if (name.startsWith("inline_") &&
-                name !in components
-              ) {
-                resolved.filterKeys { it != "summary" && it != "description" }
-              } else {
-                resolved
-              },
-              entryPath,
-            )
-          GeneratedSecurityRequirement(
-            listOf(name),
-            permissions(if (resolved.containsKey("scopes")) resolved["scopes"] else emptyList<String>(), entryPath)
-              .takeIf { it.isNotEmpty() }
-              ?.let { mapOf(name to it) }
-              .orEmpty(),
-          )
+          parseSchemeRequirement(entry, entryPath, definitions)
         } else {
-          val required =
-            entry.entries.associate { (key, value) ->
-              val name = key as? String ?: fail("Security requirement scheme names must be strings", entryPath)
-              val definition = components[name] as? Map<*, *> ?: fail("Undefined security scheme '$name'", entryPath)
-              definitions[name] = scheme(name, resolve(definition, entryPath), entryPath)
-              name to permissions(value, entryPath)
-            }
-          GeneratedSecurityRequirement(required.keys.toList(), required.filterValues { it.isNotEmpty() })
+          parseNamedRequirement(entry, entryPath, definitions)
         }
       }
     return GeneratedAuth(
@@ -90,6 +56,56 @@ internal class AsyncApiSecurity(
       requirements = requirements,
       securitySchemes = definitions.values.toList(),
     )
+  }
+
+  private fun parseSchemeRequirement(
+    entry: Map<*, *>,
+    path: String,
+    definitions: MutableMap<String, GeneratedSecurityScheme>,
+  ): GeneratedSecurityRequirement {
+    val resolved = resolve(entry, path)
+    val ref = entry["\$ref"] as? String
+    val tokens = ref?.let { pointer(it, path) }
+    val name =
+      if (tokens?.size == 3 && tokens.take(2) == listOf("components", "securitySchemes")) {
+        tokens.last()
+      } else {
+        inlineName(resolved, path)
+      }
+    definitions[name] =
+      scheme(
+        name,
+        if (name.startsWith("inline_") &&
+          name !in components
+        ) {
+          resolved.filterKeys { it != "summary" && it != "description" }
+        } else {
+          resolved
+        },
+        path,
+      )
+    return GeneratedSecurityRequirement(
+      listOf(name),
+      permissions(if (resolved.containsKey("scopes")) resolved["scopes"] else emptyList<String>(), path)
+        .takeIf { it.isNotEmpty() }
+        ?.let { mapOf(name to it) }
+        .orEmpty(),
+    )
+  }
+
+  private fun parseNamedRequirement(
+    entry: Map<*, *>,
+    path: String,
+    definitions: MutableMap<String, GeneratedSecurityScheme>,
+  ): GeneratedSecurityRequirement {
+    val required =
+      entry.entries.associate { (key, value) ->
+        val name = key as? String ?: fail("Security requirement scheme names must be strings", path)
+        val definition = components[name] as? Map<*, *> ?: fail("Undefined security scheme '$name'", path)
+        definitions[name] = scheme(name, resolve(definition, path), path)
+        name to permissions(value, path)
+      }
+    return GeneratedSecurityRequirement(required.keys.toList(), required.filterValues { it.isNotEmpty() })
   }
 
   /** Resolves server alternatives and conjoins them with the operation requirements before emission. */
