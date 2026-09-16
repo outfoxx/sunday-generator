@@ -87,6 +87,9 @@ class SundayGeneration(
   val useResultResponseReturn: Property<Boolean> = objects.property(Boolean::class.java)
   val useJakartaPackages: Property<Boolean> = objects.property(Boolean::class.java)
   val quarkus: Property<Boolean> = objects.property(Boolean::class.java)
+
+  /** Generates JAX-RS endpoint implementations backed by application-owned service delegates. */
+  val resourceAdapters: Property<Boolean> = objects.property(Boolean::class.java)
   val outputDir: Property<Directory> = objects.directoryProperty()
 
   val targetSourceSet: Property<String> =

@@ -70,6 +70,7 @@ import io.outfoxx.sunday.generator.ir.emit.contextParameters
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
+import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
@@ -197,7 +198,10 @@ class KotlinJAXRSIrGenerator(
       options.reactiveResponseType?.let { ClassName.bestGuess(it) }
     }
   private val beanValidationTypes =
-    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages)) {
+    if (
+      (options.resourceAdapters && options.quarkus) ||
+      typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages)
+    ) {
       BeanValidationTypes.JAKARTA
     } else {
       BeanValidationTypes.JAVAX
@@ -216,6 +220,9 @@ class KotlinJAXRSIrGenerator(
    */
   fun generateServiceTypes() {
     options.requireBrokerServicesSupported("Kotlin/JAX-RS")
+    if (options.resourceAdapters && generationMode != Server) {
+      genError("Kotlin/JAX-RS resource adapters require server mode")
+    }
     val services = api.jaxRsServices()
 
     generateModelTypes()
@@ -236,12 +243,7 @@ class KotlinJAXRSIrGenerator(
         )
       }
 
-    serviceTypes.forEach { service ->
-      typeRegistry.addServiceType(
-        service.typeName,
-        service.service.serviceType(service.typeName, service.subresourcePath),
-      )
-    }
+    serviceTypes.forEach(::generateServiceType)
 
     if (options.aggregateServices && serviceTypes.size > 1) {
       val aggregateTypeName = aggregateServiceTypeName()
@@ -250,7 +252,39 @@ class KotlinJAXRSIrGenerator(
           "Cannot generate Kotlin/JAX-RS aggregate service '$aggregateTypeName' because it matches a generated service",
         )
       }
-      typeRegistry.addServiceType(aggregateTypeName, generateAggregateServiceType(aggregateTypeName, serviceTypes))
+      val aggregateType = generateAggregateServiceType(aggregateTypeName, serviceTypes)
+      if (options.resourceAdapters) {
+        val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus)
+        typeRegistry.addServiceType(
+          adapter.resourceTypeName(aggregateTypeName),
+          adapter.aggregateResource(aggregateTypeName, aggregateType.build()),
+        )
+      } else {
+        typeRegistry.addServiceType(aggregateTypeName, aggregateType)
+      }
+    }
+  }
+
+  private fun generateServiceType(service: GeneratedJaxRsService) {
+    val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
+    if (options.resourceAdapters) {
+      val adapter = KotlinJAXRSResourceAdapterGenerator(jaxRsTypes, options.quarkus)
+      val endpointAuthentication =
+        service.service.operations.associate { operation ->
+          operation.id.kotlinIdentifierName to api.endpointAuthentication(service.service, operation)
+        }
+      typeRegistry.addServiceType(service.typeName, adapter.handler(serviceType.build()))
+      typeRegistry.addServiceType(
+        adapter.resourceTypeName(service.typeName),
+        adapter.resource(
+          service.typeName,
+          serviceType.build(),
+          endpointAuthentication,
+          service.subresourcePath == null,
+        ),
+      )
+    } else {
+      typeRegistry.addServiceType(service.typeName, serviceType)
     }
   }
 
@@ -461,7 +495,12 @@ class KotlinJAXRSIrGenerator(
     problemRegistrationType()?.let(typeBuilder::addType)
 
     operations.forEach { operation ->
-      val renderedOperation = operation.withoutSubresourcePath(subresourcePath)
+      val renderedOperation =
+        if (options.resourceAdapters && subresourcePath != null) {
+          operation.copy(path = operation.path.relativeToSubresourcePath(subresourcePath))
+        } else {
+          operation.withoutSubresourcePath(subresourcePath)
+        }
       val operationParameters = renderedOperation.operationParameters()
       renderedOperation.nullifyFunction(operationParameters)?.let(typeBuilder::addFunction)
       typeBuilder.addFunction(renderedOperation.operationFunction(this, operationParameters))

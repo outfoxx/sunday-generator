@@ -1,0 +1,97 @@
+openapi: 3.1.0
+info:
+  title: Adapter Test API
+  version: 1.0.0
+x-sunday-apiId: adapter-tests
+security:
+  - bearerAuth: []
+paths:
+  /accounts/{accountId}:
+    get:
+      operationId: getAccount
+      x-sunday-service: Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Protected account with a path parameter bound by the aggregate locator
+          content:
+            text/plain:
+              schema:
+                type: string
+  /users/{userId}:
+    get:
+      operationId: getUser
+      x-sunday-service: Users
+      x-sunday-jaxrs:
+        context: [securityContext]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        '200':
+          description: Protected user
+          content:
+            text/plain:
+              schema:
+                type: string
+  /users:
+    post:
+      operationId: createUser
+      x-sunday-service: Users
+      security: []
+      responses:
+        '201':
+          description: Public registration
+          content:
+            text/plain:
+              schema:
+                type: string
+  /users/optional:
+    get:
+      operationId: optionalUser
+      x-sunday-service: Users
+      security: [{}]
+      responses:
+        '200':
+          description: Optional authentication
+          content:
+            text/plain:
+              schema:
+                type: string
+  /users/mixed:
+    get:
+      operationId: mixedUser
+      x-sunday-service: Users
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Anonymous alternative
+          content:
+            text/plain:
+              schema:
+                type: string
+  /health:
+    get:
+      operationId: health
+      x-sunday-service: Health
+      security: []
+      responses:
+        '204':
+          description: Public health check
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

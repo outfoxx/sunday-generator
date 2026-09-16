@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import io.outfoxx.sunday.generator.GenerationMode
 
 /** CLI command that generates Python Litestar server stubs from supported source specs. */
@@ -24,14 +26,22 @@ open class PythonLitestarGenerateCommand :
 
   override val generationMode: GenerationMode = GenerationMode.Server
 
+  /** Whether generated routes enforce resolved authentication requirements. */
+  val enforceEndpointSecurity by option(
+    "-enforce-endpoint-security",
+    help = "Enforce resolved authentication on generated routes using application-configured authentication middleware",
+  ).flag(default = false)
+
   override fun run() {
     println("Generating ${this.outputCategories} types")
     println("Processing ${files.joinToString()}")
 
     val export = exportApi()
     val modules =
-      PythonLitestarIrGenerator(export.api, pythonOptions(export))
-        .generateModules(outputCategories.toSet())
+      PythonLitestarIrGenerator(
+        export.api,
+        pythonOptions(export).copy(enforceEndpointSecurity = enforceEndpointSecurity),
+      ).generateModules(outputCategories.toSet())
 
     PythonModuleWriter().writeModules(modules, outputDirectory.toPath())
   }
