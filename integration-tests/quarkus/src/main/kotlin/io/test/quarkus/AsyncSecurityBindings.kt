@@ -37,7 +37,13 @@ class AsyncSecurityBindings {
     OpenAPISecurity(
       OpenAPISecurity.schemes.mapValues { (name, _) ->
         OpenAPISecurity.SchemeBinding(
-          OpenAPISecurity.Authenticator { _, _, credential ->
+          OpenAPISecurity.Authenticator { _, scheme, credential ->
+            if (name == "eventToken") {
+              check(
+                scheme.oauthFlows.getValue("clientCredentials").scopes ==
+                  mapOf("read" to "Read events", "write" to "Write events"),
+              )
+            }
             validations.computeIfAbsent(name) { AtomicInteger() }.incrementAndGet()
             val permissions =
               when {

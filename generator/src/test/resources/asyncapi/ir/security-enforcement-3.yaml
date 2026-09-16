@@ -151,6 +151,6 @@ components:
       flows:
         clientCredentials:
           tokenUrl: https://issuer.example/token
-          scopes:
+          availableScopes:
             read: Read events
             write: Write events

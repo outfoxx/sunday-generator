@@ -74,6 +74,9 @@ class KotlinSecuritySchemeTest {
           val runtime = source("OpenAPISecurity")
           listOf("X-API-Key", "api_key", "session_key").forEach { assertTrue(runtime.contains(it), runtime) }
           assertTrue(!runtime.contains("ResourceInfo"), runtime)
+          if (fixture != "security-api-keys-2") {
+            assertTrue(runtime.contains("\"write\" to \"Write events\""), runtime)
+          }
         }
       }
     }

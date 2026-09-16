@@ -52,7 +52,7 @@ The OpenAPI reader preserves required permissions, OAuth flow endpoint/scopes me
 
 ## AsyncAPI security
 
-AsyncAPI 2.x uses named requirement maps (`security: [{token: [read]}]`). AsyncAPI 3.x uses inline Security Scheme Objects or local Reference Objects (`security: [{$ref: '#/components/securitySchemes/token'}]`); required OAuth/OIDC permissions come from the scheme's `scopes`, separately from the available scopes advertised by OAuth flows.
+AsyncAPI 2.x uses named requirement maps (`security: [{token: [read]}]`). AsyncAPI 3.x uses inline Security Scheme Objects or local Reference Objects (`security: [{$ref: '#/components/securitySchemes/token'}]`); required OAuth/OIDC permissions come from the scheme's `scopes`, separately from the available scopes advertised by OAuth flows. Advertised scopes come from flow `scopes` in 2.x and `availableScopes` in 3.x; both populate the existing IR and binding `OAuthFlow.scopes` map without becoming required permissions.
 
 Local references support chains and escaped JSON Pointer segments. The referenced component name remains the application binding key, including when that component aliases another scheme. External security references are unsupported and fail generation with a source URI and security location; missing targets, invalid targets, and cycles also fail explicitly.
 

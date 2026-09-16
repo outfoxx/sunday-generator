@@ -90,7 +90,13 @@ class AsyncSecurityTest : JerseyTest() {
   private fun security(): OpenAPISecurity =
     OpenAPISecurity(
       OpenAPISecurity.schemes.mapValues { (name, _) ->
-        OpenAPISecurity.Authenticator { _, _, credential ->
+        OpenAPISecurity.Authenticator { _, scheme, credential ->
+          if (name == "eventToken") {
+            check(
+              scheme.oauthFlows.getValue("clientCredentials").scopes ==
+                mapOf("read" to "Read events", "write" to "Write events"),
+            )
+          }
           val permissions =
             when {
               name.endsWith("Key") && credential == "valid-key" -> emptySet<String>()

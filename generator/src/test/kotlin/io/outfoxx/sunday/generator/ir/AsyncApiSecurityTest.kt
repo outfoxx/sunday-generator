@@ -45,7 +45,7 @@ class AsyncApiSecurityTest {
             "clientCredentials" to
               mapOf(
                 "tokenUrl" to "https://issuer/token",
-                "scopes" to mapOf("write" to "Available only"),
+                "availableScopes" to mapOf("write" to "Available only"),
               ),
           ),
       )
@@ -77,6 +77,89 @@ class AsyncApiSecurityTest {
     assertNull(api.auth)
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["2.6.0", "3.0.0", "3.1.0"])
+  fun `OAuth flow metadata uses the versioned field independently of required permissions`(version: String) {
+    val version3 = version.startsWith("3")
+    val field = if (version3) "availableScopes" else "scopes"
+    val wrongField = if (version3) "scopes" else "availableScopes"
+    val advertised = mapOf("read" to "Read events", "write" to "Write events")
+    val flow =
+      mapOf(
+        "tokenUrl" to "https://issuer/token",
+        field to advertised,
+        wrongField to mapOf("ignored" to "Wrong version"),
+      )
+    val definition = mapOf("type" to "oauth2", "flows" to mapOf("clientCredentials" to flow))
+    val references = if (version3) listOf(false, true) else listOf(true)
+    references.forEach { referenced ->
+      listOf(emptyList(), listOf("read")).forEach { required ->
+        val scheme = if (version3 && required.isNotEmpty()) definition + ("scopes" to required) else definition
+        val entry =
+          when {
+            !version3 -> mapOf("oauth" to required)
+            referenced -> ref("#/components/securitySchemes/oauth")
+            else -> scheme
+          }
+        val api = convert(document(listOf(entry), mapOf("oauth" to scheme), version))
+        val decoded = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api))
+        assertEquals(api, decoded)
+        val auth = if (version3) operationAuth(decoded) else decoded.auth!!
+        val name = auth.schemes.single()
+        assertEquals(
+          required,
+          auth.requirements
+            .single()
+            .permissions[name]
+            .orEmpty(),
+        )
+        assertEquals(
+          advertised,
+          auth.securitySchemes
+            .single()
+            .oauthFlows
+            .getValue("clientCredentials")
+            .scopes,
+        )
+      }
+    }
+    val wrongDefinition = definition + ("flows" to mapOf("clientCredentials" to (flow - field)))
+    val entry = if (version3) ref("#/components/securitySchemes/oauth") else mapOf("oauth" to emptyList<String>())
+    val api = convert(document(listOf(entry), mapOf("oauth" to wrongDefinition), version))
+    val auth = if (version3) operationAuth(api) else api.auth!!
+    assertTrue(
+      auth.securitySchemes
+        .single()
+        .oauthFlows
+        .getValue("clientCredentials")
+        .scopes
+        .isEmpty(),
+    )
+  }
+
+  @Test
+  fun `advertised scopes survive composition without adding permissions`() {
+    val api =
+      GeneratedApiIrExporter().export(
+        listOf("openapi/ir/security-enforcement.yaml", "asyncapi/ir/security-enforcement-3.yaml")
+          .map { javaClass.getResource("/$it")!!.toURI() },
+      )
+    val auth =
+      api.services
+        .flatMap { it.operations }
+        .single { it.id == "receiveScoped" }
+        .auth!!
+    assertEquals(mapOf("eventToken" to listOf("read")), auth.requirements.single().permissions)
+    assertEquals(
+      mapOf("read" to "Read events", "write" to "Write events"),
+      auth.securitySchemes
+        .single()
+        .oauthFlows
+        .getValue("clientCredentials")
+        .scopes,
+    )
+  }
+
   @Test
   fun `local reference chains preserve the requested component name and decode pointer escapes`() {
     val api =
@@ -92,7 +175,16 @@ class AsyncApiSecurityTest {
 
   @Test
   fun `equivalent inline authentication shares identity independently of required scopes and field ordering`() {
-    val first = operationAuth(convert(document(listOf(oauth + ("scopes" to listOf("read"))))))
+    val flows =
+      mapOf(
+        "clientCredentials" to
+          mapOf(
+            "tokenUrl" to "https://issuer/token",
+            "availableScopes" to linkedMapOf("read" to "Read events", "write" to "Write events"),
+          ),
+      )
+    val definition = oauth + ("flows" to flows)
+    val first = operationAuth(convert(document(listOf(definition + ("scopes" to listOf("read"))))))
     val second =
       operationAuth(
         convert(
@@ -100,7 +192,14 @@ class AsyncApiSecurityTest {
             listOf(
               linkedMapOf(
                 "scopes" to listOf("write"),
-                "flows" to emptyMap<String, Any?>(),
+                "flows" to
+                  mapOf(
+                    "clientCredentials" to
+                      linkedMapOf(
+                        "availableScopes" to linkedMapOf("write" to "Write events", "read" to "Read events"),
+                        "tokenUrl" to "https://issuer/token",
+                      ),
+                  ),
                 "type" to "oauth2",
               ),
             ),

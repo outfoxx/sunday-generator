@@ -297,7 +297,7 @@ internal class AsyncApiSecurity(
               tokenUrl = flow["tokenUrl"] as? String,
               refreshUrl = flow["refreshUrl"] as? String,
               scopes =
-                (flow["scopes"] as? Map<*, *>).orEmpty().entries.associate {
+                (flow[if (isVersion3) "availableScopes" else "scopes"] as? Map<*, *>).orEmpty().entries.associate {
                   it.key.toString() to it.value.toString()
                 },
             )

@@ -23,6 +23,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -50,7 +52,13 @@ class PythonSecuritySchemeTest : PythonTest() {
       } else {
         listOf("asyncapi/ir/$fixture.yaml")
       }
-    listOf(false, true).forEach { enforce -> assertTrue(compileModules(compiler, modules(paths, enforce))) }
+    listOf(false, true).forEach { enforce ->
+      assertTrue(compileModules(compiler, modules(paths, enforce)))
+      if (enforce && fixture != "security-api-keys-2") {
+        val runtime = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "security_api/_sunday_security.py")
+        assertTrue(runtime.contains("\"write\": \"Write events\""), runtime)
+      }
+    }
   }
 
   @Test
@@ -72,6 +80,7 @@ class PythonSecuritySchemeTest : PythonTest() {
               if scheme.name.endswith("Key") and credential == "valid-key":
                   return Identity("alice")
               if scheme.name == "eventToken":
+                  assert scheme.oauth_flows["clientCredentials"].scopes == {"read": "Read events", "write": "Write events"}
                   if credential == "reader":
                       return Identity("alice", frozenset({"read"}))
                   if credential == "unscoped":
