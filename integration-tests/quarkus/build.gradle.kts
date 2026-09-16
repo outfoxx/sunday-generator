@@ -11,9 +11,14 @@ dependencies {
   implementation("io.quarkus:quarkus-kotlin")
   implementation("io.quarkus:quarkus-rest")
   implementation("io.quarkus:quarkus-arc")
+  implementation("io.quarkus:quarkus-smallrye-jwt")
+  implementation(libs.quarkiverseZanzibar)
   implementation("io.quarkus:quarkus-hibernate-validator")
   implementation("io.quarkus:quarkus-elytron-security-properties-file")
+  testImplementation("io.smallrye:smallrye-jwt-build")
   testImplementation("io.quarkus:quarkus-junit5")
+  testImplementation("io.quarkus:quarkus-junit5-internal")
+  testImplementation("io.quarkus:quarkus-arc-deployment")
   testImplementation(libs.junit)
   testRuntimeOnly(libs.junitEngine)
   testRuntimeOnly(libs.junitPlatform)
@@ -49,26 +54,121 @@ val generateApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val securedSources = layout.buildDirectory.dir("generated/security")
+val securedContract =
+  rootProject.layout.projectDirectory.file(
+    "generator/src/test/resources/openapi/ir/security-enforcement.yaml",
+  )
+
+val generateSecuredApi by tasks.registering(JavaExec::class) {
+  inputs.file(securedContract)
+  outputs.dir(securedSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-aggregate-services",
+    "-aggregate-service-name",
+    "SecureAPI",
+    "-pkg",
+    "io.test.quarkus.secure",
+    "-out",
+    securedSources.get().asFile.absolutePath,
+    securedContract.asFile.absolutePath,
+  )
+}
+
+val zanzibarSources = layout.buildDirectory.dir("generated/zanzibar")
+val zanzibarContract = layout.projectDirectory.file("src/main/openapi/security-zanzibar.yaml")
+val generateZanzibarApi by tasks.registering(JavaExec::class) {
+  inputs.file(zanzibarContract)
+  outputs.dir(zanzibarSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.zanzibar",
+    "-out",
+    zanzibarSources.get().asFile.absolutePath,
+    zanzibarContract.asFile.absolutePath,
+  )
+}
+
+val asyncSources = layout.buildDirectory.dir("generated/async-security")
+val asyncContracts =
+  listOf("security-enforcement-3.yaml", "security-api-keys-2.yaml").map {
+    rootProject.layout.projectDirectory.file("generator/src/test/resources/asyncapi/ir/$it")
+  }
+val generateAsyncApi by tasks.registering(JavaExec::class) {
+  inputs.files(asyncContracts)
+  outputs.dir(asyncSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.asyncapi",
+    "-out",
+    asyncSources.get().asFile.absolutePath,
+  )
+  args(asyncContracts.map { it.asFile.absolutePath })
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
 
 kotlin.sourceSets.main {
   kotlin.srcDir(generateApi)
+  kotlin.srcDir(generateSecuredApi)
+  kotlin.srcDir(generateAsyncApi)
+  kotlin.srcDir(generateZanzibarApi)
 }
 
 tasks.compileKotlin {
-  dependsOn(generateApi)
+  dependsOn(generateAsyncApi)
+  dependsOn(generateApi, generateSecuredApi, generateZanzibarApi)
 }
 
 tasks.test {
+  exclude("**/ProactiveAuthenticationConfigurationTest*")
   systemProperty("junit.jupiter.execution.parallel.enabled", "false")
   systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
 }
 
+// Quarkus requires its expected-boot-failure extension to run separately from @QuarkusTest.
+val configurationTest by tasks.registering(Test::class) {
+  testClassesDirs =
+    sourceSets.test
+      .get()
+      .output.classesDirs
+  classpath = sourceSets.test.get().runtimeClasspath
+  include("**/ProactiveAuthenticationConfigurationTest*")
+  systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+  shouldRunAfter(tasks.test)
+}
+
+tasks.check { dependsOn(configurationTest) }
+
 // Generated sources are compiled before the runtime tests, and retain the generator's formatting.
 ktlint {
   filter {
-    exclude { it.file.path.contains("/generated/sunday/") }
+    exclude { it.file.path.contains("/generated/") }
   }
 }

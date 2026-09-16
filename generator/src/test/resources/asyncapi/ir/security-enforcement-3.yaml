@@ -1,0 +1,156 @@
+---
+asyncapi: 3.0.0
+info:
+  title: Async Security
+  version: 1.0.0
+x-sunday-apiId: scheme-security
+servers:
+  public:
+    host: api.example.com
+    protocol: http
+  tenant:
+    host: api.example.com
+    protocol: http
+    security:
+    - "$ref": "#/components/securitySchemes/headerKey"
+channels:
+  header:
+    address: "/async3/header"
+    servers:
+    - "$ref": "#/servers/public"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+  query:
+    address: "/async3/query"
+    servers:
+    - "$ref": "#/servers/public"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+  cookie:
+    address: "/async3/cookie"
+    servers:
+    - "$ref": "#/servers/public"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+  scoped:
+    address: "/async3/scoped"
+    servers:
+    - "$ref": "#/servers/public"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+  bearer:
+    address: "/async3/bearer"
+    servers:
+    - "$ref": "#/servers/public"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+  combined:
+    address: "/async3/combined"
+    servers:
+    - "$ref": "#/servers/tenant"
+    messages:
+      event:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+operations:
+  receiveHeader:
+    action: receive
+    channel:
+      "$ref": "#/channels/header"
+    messages:
+    - "$ref": "#/channels/header/messages/event"
+    security:
+    - "$ref": "#/components/securitySchemes/headerKey"
+    x-sunday-service: AsyncEvents
+  receiveQuery:
+    action: receive
+    channel:
+      "$ref": "#/channels/query"
+    messages:
+    - "$ref": "#/channels/query/messages/event"
+    security:
+    - "$ref": "#/components/securitySchemes/queryKey"
+    x-sunday-service: AsyncEvents
+  receiveCookie:
+    action: receive
+    channel:
+      "$ref": "#/channels/cookie"
+    messages:
+    - "$ref": "#/channels/cookie/messages/event"
+    security:
+    - "$ref": "#/components/securitySchemes/cookieKey"
+    x-sunday-service: AsyncEvents
+  receiveScoped:
+    action: receive
+    channel:
+      "$ref": "#/channels/scoped"
+    messages:
+    - "$ref": "#/channels/scoped/messages/event"
+    security:
+    - "$ref": "#/components/securitySchemes/eventToken"
+    x-sunday-service: AsyncEvents
+  receiveBearer:
+    action: receive
+    channel:
+      "$ref": "#/channels/bearer"
+    messages:
+    - "$ref": "#/channels/bearer/messages/event"
+    security:
+    - type: http
+      scheme: bearer
+    x-sunday-service: AsyncEvents
+  receiveCombined:
+    action: receive
+    channel:
+      "$ref": "#/channels/combined"
+    messages:
+    - "$ref": "#/channels/combined/messages/event"
+    security:
+    - "$ref": "#/components/securitySchemes/eventToken"
+    x-sunday-service: AsyncEvents
+components:
+  securitySchemes:
+    headerKey:
+      type: httpApiKey
+      name: X-API-Key
+      in: header
+    queryKey:
+      type: httpApiKey
+      name: api_key
+      in: query
+    cookieKey:
+      type: httpApiKey
+      name: session_key
+      in: cookie
+    eventToken:
+      type: oauth2
+      scopes:
+      - read
+      flows:
+        clientCredentials:
+          tokenUrl: https://issuer.example/token
+          availableScopes:
+            read: Read events
+            write: Write events

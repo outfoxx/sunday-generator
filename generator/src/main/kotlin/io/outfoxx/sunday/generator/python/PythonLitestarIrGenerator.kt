@@ -17,9 +17,12 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
+import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
+import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates Python Litestar server modules from generated IR. */
@@ -42,17 +45,28 @@ class PythonLitestarIrGenerator(
 
     if (GeneratedTypeCategory.Service in outputCategories) {
       val litestarRenderer = PythonLitestarRenderer(packageName)
+      if (options.enforceSecuritySchemes) {
+        modules += renderSecurity(packageName, services)
+      }
       modules +=
         services.map { service ->
           val authentication =
-            if (options.enforceEndpointSecurity) {
+            if (options.enforceEndpointSecurity || options.enforceSecuritySchemes) {
               service.operations.associate { operation ->
                 operation.id to api.endpointAuthentication(service, operation)
               }
             } else {
               emptyMap()
             }
-          litestarRenderer.renderService(service, authentication)
+          litestarRenderer.renderService(
+            service,
+            authentication,
+            if (options.enforceSecuritySchemes) {
+              service.operations.associate { it.id to api.endpointSecurityPolicy(service, it) }
+            } else {
+              null
+            },
+          )
         }
       if (options.aggregateServices && services.size > 1) {
         modules += renderAggregate(packageName, services)
@@ -60,6 +74,23 @@ class PythonLitestarIrGenerator(
     }
 
     return modules
+  }
+
+  private fun renderSecurity(
+    packageName: String,
+    services: List<GeneratedService>,
+  ): PythonModule {
+    val policies =
+      services
+        .flatMap { service ->
+          service.operations.mapNotNull { operation ->
+            api.endpointSecurityPolicy(service, operation)?.let { (service.name + "." + operation.id) to it }
+          }
+        }.groupBy({ it.first }, { it.second })
+        .mapValues { (name, policies) ->
+          policies.singleOrNull() ?: genError("Duplicate security policy key '$name'")
+        }
+    return PythonSecurityRenderer(packageName).render(policies.values.endpointSecuritySchemes(), policies)
   }
 
   private fun renderAggregate(
@@ -70,6 +101,13 @@ class PythonLitestarIrGenerator(
     val aggregateName = options.aggregateServiceName?.pythonIdentifierName ?: api.aggregateIdentifierName
     val routerFactoryName = "create_${aggregateName}_router"
 
+    val names = if (options.enforceSecuritySchemes) mutableSetOf("security") else mutableSetOf()
+    val parameters =
+      services.associateWith { service ->
+        var name = service.pythonServiceIdentifierName
+        while (!names.add(name)) name += "_"
+        name
+      }
     module.addExport(routerFactoryName)
     module.addCode(
       PythonCodeBlock.of(
@@ -78,7 +116,7 @@ class PythonLitestarIrGenerator(
         %C
         ) -> %T:
             ${"\"\"\"Create an aggregate Litestar router for all generated service routers.\n\n            Configure Litestar with SundayPlugin() for alias-aware models and RFC problem responses.\n            \"\"\""}
-            return %T(
+        %C    return %T(
                 path="/",
                 route_handlers=[
         %C
@@ -86,33 +124,54 @@ class PythonLitestarIrGenerator(
             )
         """.trimIndent(),
         routerFactoryName,
-        PythonCodeBlock.join(services.map { service -> service.renderAggregateParameter() }, separator = "\n"),
+        PythonCodeBlock.join(
+          services.map { service -> service.renderAggregateParameter(parameters.getValue(service)) } +
+            if (options.enforceSecuritySchemes) {
+              listOf(
+                PythonCodeBlock.of("    *,\n    security: %T,", PythonSecurityRenderer(packageName).securityType),
+              )
+            } else {
+              emptyList()
+            },
+          separator = "\n",
+        ),
         PythonSymbol("litestar", "Router"),
+        if (options.enforceSecuritySchemes) {
+          PythonCodeBlock.of(
+            "    _sunday_security = security\n",
+          )
+        } else {
+          PythonCodeBlock.of("")
+        },
         PythonSymbol("litestar", "Router"),
-        PythonCodeBlock.join(services.map { service -> service.renderAggregateRouteHandler() }, separator = "\n"),
+        PythonCodeBlock.join(
+          services.map { service -> service.renderAggregateRouteHandler(parameters.getValue(service)) },
+          separator = "\n",
+        ),
       ),
     )
 
     return module.build()
   }
 
-  private fun GeneratedService.renderAggregateParameter(): PythonCodeBlock =
+  private fun GeneratedService.renderAggregateParameter(parameterName: String): PythonCodeBlock =
     PythonCodeBlock.of(
       "    %L: %T,",
-      pythonServiceIdentifierName,
+      parameterName,
       PythonSymbol(
         ".$pythonServiceServerModuleName",
         "${pythonServiceBaseName.pythonTypeName}Service",
       ),
     )
 
-  private fun GeneratedService.renderAggregateRouteHandler(): PythonCodeBlock =
+  private fun GeneratedService.renderAggregateRouteHandler(parameterName: String): PythonCodeBlock =
     PythonCodeBlock.of(
-      "            %T(%L),",
+      "            %T(%L%C),",
       PythonSymbol(
         ".$pythonServiceServerModuleName",
         pythonServiceRouterFactoryName,
       ),
-      pythonServiceIdentifierName,
+      parameterName,
+      if (options.enforceSecuritySchemes) PythonCodeBlock.of(", security=_sunday_security") else PythonCodeBlock.of(""),
     )
 }

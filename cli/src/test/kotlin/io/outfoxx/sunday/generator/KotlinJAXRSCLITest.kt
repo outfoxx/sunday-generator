@@ -144,9 +144,13 @@ class KotlinJAXRSCLITest {
     val enabled = KotlinJAXRSGenerateCommandTest()
     enabled.parse(arrayOf("-mode", "server", "-resource-adapters", *requiredOptions))
     assertThat(enabled.resourceAdapters, equalTo(true))
+    val secured = KotlinJAXRSGenerateCommandTest()
+    secured.parse(arrayOf("-mode", "server", "-resource-adapters", "-enforce-security-schemes", *requiredOptions))
+    assertThat(secured.enforceSecuritySchemes, equalTo(true))
     val defaults = KotlinJAXRSGenerateCommandTest()
     defaults.parse(requiredOptions)
     assertThat(defaults.resourceAdapters, equalTo(false))
+    assertThat(defaults.enforceSecuritySchemes, equalTo(false))
   }
 
   @Test

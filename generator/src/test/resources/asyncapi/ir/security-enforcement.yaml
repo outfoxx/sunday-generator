@@ -1,0 +1,30 @@
+asyncapi: '2.6.0'
+info:
+  title: Adapter Test API
+  version: 1.0.0
+x-sunday-apiId: scheme-security
+servers:
+  events:
+    url: https://api.example.com
+    protocol: http
+    security:
+      - eventToken: [read]
+channels:
+  /events:
+    x-sunday-service: Events
+    subscribe:
+      operationId: streamEvents
+      message:
+        name: Event
+        contentType: application/json
+        payload:
+          type: string
+components:
+  securitySchemes:
+    eventToken:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://issuer.example/token
+          scopes:
+            read: Read events

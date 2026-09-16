@@ -1810,7 +1810,7 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(userExtractorSource.contains("public class ZanzibarJwtUserExtractor"), userExtractorSource)
     assertTrue(userExtractorSource.contains("jwt.getClaim<String>(\"azp\")"), userExtractorSource)
     assertTrue(userExtractorSource.contains("jwt.subject"), userExtractorSource)
-    assertFalse(userExtractorSource.contains("principal.name"), userExtractorSource)
+    assertFalse(userExtractorSource.contains("principal?.name"), userExtractorSource)
   }
 
   @Test
@@ -1921,7 +1921,7 @@ class KotlinJAXRSIrGeneratorTest {
       )
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
-    assertTrue(userExtractorSource.contains(" ?: principal.name.takeIf { it.isNotBlank() }"), userExtractorSource)
+    assertTrue(userExtractorSource.contains(" ?: principal?.name?.takeIf { it.isNotBlank() }"), userExtractorSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -1966,10 +1966,10 @@ class KotlinJAXRSIrGeneratorTest {
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(
-      userExtractorSource.contains("val userId = principal.name.takeIf { it.isNotBlank() }"),
+      userExtractorSource.contains("val userId = principal?.name?.takeIf { it.isNotBlank() }"),
       userExtractorSource,
     )
-    assertFalse(userExtractorSource.contains("null ?: principal.name"), userExtractorSource)
+    assertFalse(userExtractorSource.contains("null ?: principal?.name"), userExtractorSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

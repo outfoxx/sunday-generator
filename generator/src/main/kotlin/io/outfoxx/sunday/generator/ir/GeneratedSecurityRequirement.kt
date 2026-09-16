@@ -21,4 +21,6 @@ package io.outfoxx.sunday.generator.ir
  */
 data class GeneratedSecurityRequirement(
   val schemes: List<String> = listOf(),
+  /** Required OAuth/OIDC scopes or role names, keyed by the security scheme that grants them. */
+  val permissions: Map<String, List<String>> = mapOf(),
 )

@@ -168,7 +168,7 @@ class AsyncApiToGeneratedApi(
     location: String,
     localModels: MutableMap<String, GeneratedModel>,
   ): OperationFragment? {
-    val operation = operation(method) ?: return null
+    val operation = operation(method, currentSourceDocument.security) ?: return null
     val message = operation.message?.resolvedMessage() ?: return null
     val payload = message.payload ?: return null
     val publish = method == "publish"
@@ -218,7 +218,7 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
-          auth = sourceAuth(security + operation.security),
+          auth = sourceAuth(security + operation.security, "#/channels/$name/$method/security"),
           protocol = protocol,
           documentation = GeneratedDocumentation(summary = operation.summary, description = operation.description),
         ),
@@ -280,7 +280,12 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
-          auth = sourceAuth(channel.security + security),
+          auth =
+            if (currentSourceDocument.security.isVersion3) {
+              currentSourceDocument.security.operationAuth(channel.source, security, "#/operations/$operationId")
+            } else {
+              sourceAuth(channel.security + security)
+            },
           protocol = protocol,
           documentation = GeneratedDocumentation(summary = summary, description = description),
         ),
@@ -664,43 +669,18 @@ class AsyncApiToGeneratedApi(
       url = url ?: "",
       protocol = protocol,
       protocolVersion = protocolVersion,
-      auth = sourceAuth(security),
+      auth = sourceAuth(security, "#/servers/$name/security"),
       bindings = sourceDocument.serverBindings(name),
       documentation = GeneratedDocumentation(description = description).takeUnless { it == GeneratedDocumentation() },
     )
 
   private fun AsyncApiSourceDocument.auth(): GeneratedAuth? =
-    sourceAuth(security() + servers().flatMap { server -> server.security })
+    if (security.isVersion3) null else sourceAuth(security() + servers().flatMap { server -> server.security })
 
-  private fun sourceAuth(securityRequirements: List<Map<*, *>>): GeneratedAuth? {
-    val requirements =
-      securityRequirements
-        .map { requirement -> GeneratedSecurityRequirement(schemes = requirement.keys.filterIsInstance<String>()) }
-        .filter { requirement -> requirement.schemes.isNotEmpty() }
-    val schemes = requirements.flatMap { requirement -> requirement.schemes }.distinct()
-    val securitySchemes =
-      currentSourceDocument
-        .securitySchemes()
-        .mapNotNull { (name, value) ->
-          val scheme = value
-          GeneratedSecurityScheme(
-            name = name,
-            type = scheme["type"] as? String,
-            scheme = scheme["scheme"] as? String,
-            bearerFormat = scheme["bearerFormat"] as? String,
-            documentation =
-              GeneratedDocumentation(
-                summary = scheme["summary"] as? String,
-                description = scheme["description"] as? String,
-              ).takeUnless { documentation -> documentation == GeneratedDocumentation() },
-          )
-        }.filter { scheme -> scheme.name in schemes }
-    return GeneratedAuth(
-      schemes = schemes,
-      requirements = requirements,
-      securitySchemes = securitySchemes,
-    ).takeUnless { it == GeneratedAuth() }
-  }
+  private fun sourceAuth(
+    requirements: List<Map<*, *>>,
+    path: String = "#/security",
+  ): GeneratedAuth? = currentSourceDocument.security.parse(requirements, path)
 
   private fun AsyncApiChannel.serviceIdentitySeed(operation: AsyncApiOperation?): ServiceIdentitySeed {
     val explicitService =
@@ -725,8 +705,10 @@ class AsyncApiToGeneratedApi(
 
   private fun AsyncApiChannel.taggedServiceLabel(): String? {
     val tagNames =
-      listOfNotNull(operation("publish"), operation("subscribe"))
-        .mapNotNull { operation -> operation.serviceTagName() }
+      listOfNotNull(
+        operation("publish", currentSourceDocument.security),
+        operation("subscribe", currentSourceDocument.security),
+      ).mapNotNull { operation -> operation.serviceTagName() }
         .distinct()
 
     require(tagNames.size <= 1) {
@@ -1082,11 +1064,14 @@ class AsyncApiToGeneratedApi(
 
   private class AsyncApiSourceDocument(
     private val source: Map<*, *>,
+    location: String,
   ) {
+
+    val security = AsyncApiSecurity(source, location)
 
     fun title(): String? = source.mapValue("info")?.get("title") as? String
 
-    fun security(): List<Map<*, *>> = source.listValue("security").orEmpty()
+    fun security(): List<Map<*, *>> = security.declarations(source, "#/security")
 
     fun schemas(): Map<String, Map<*, *>> =
       source
@@ -1097,17 +1082,6 @@ class AsyncApiToGeneratedApi(
           val schemaName = name as? String ?: return@mapNotNull null
           val schema = value as? Map<*, *> ?: return@mapNotNull null
           schemaName to schema
-        }.toMap()
-
-    fun securitySchemes(): Map<String, Map<*, *>> =
-      source
-        .mapValue("components")
-        ?.mapValue("securitySchemes")
-        .orEmpty()
-        .mapNotNull { (name, value) ->
-          val schemeName = name as? String ?: return@mapNotNull null
-          val scheme = value as? Map<*, *> ?: return@mapNotNull null
-          schemeName to scheme
         }.toMap()
 
     fun messages(): Map<String, Map<*, *>> =
@@ -1134,7 +1108,7 @@ class AsyncApiToGeneratedApi(
             protocol = server["protocol"] as? String,
             protocolVersion = server["protocolVersion"] as? String,
             description = server["description"] as? String,
-            security = server.listValue("security").orEmpty(),
+            security = security.declarations(server, "#/servers/$serverName/security"),
           )
         }
 
@@ -1155,7 +1129,7 @@ class AsyncApiToGeneratedApi(
                   servers as? List<*>
                 }.orEmpty()
                 .filterIsInstance<String>(),
-            security = channel.listValue("security").orEmpty(),
+            security = security.declarations(channel, "#/channels/$channelName/security"),
           )
         }
 
@@ -1187,7 +1161,7 @@ class AsyncApiToGeneratedApi(
                 .orEmpty()
                 .firstNotNullOfOrNull { message -> resolveMessage(message) }
                 ?: operation.mapValue("message")?.let(::resolveMessage),
-            security = operation.listValue("security").orEmpty(),
+            security = security.declarations(operation, "#/operations/$operationId/security"),
           )
         }
     }
@@ -1344,6 +1318,7 @@ class AsyncApiToGeneratedApi(
           URI(location).toURL().openStream().use { input ->
             yamlMapper.readValue(input, object : TypeReference<Map<String, Any?>>() {})
           },
+          location,
         )
     }
   }
@@ -1365,7 +1340,10 @@ class AsyncApiToGeneratedApi(
     val security: List<Map<*, *>>,
   ) {
 
-    fun operation(method: String): AsyncApiOperation? =
+    fun operation(
+      method: String,
+      securityParser: AsyncApiSecurity,
+    ): AsyncApiOperation? =
       source.mapValue(method)?.let { operation ->
         AsyncApiOperation(
           operationId = operation["operationId"] as? String ?: method,
@@ -1383,7 +1361,7 @@ class AsyncApiToGeneratedApi(
                 }
               },
           message = operation.mapValue("message")?.let(::AsyncApiMessage),
-          security = operation.listValue("security").orEmpty(),
+          security = securityParser.declarations(operation, "#/channels/$name/$method/security"),
         )
       }
 

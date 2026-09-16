@@ -91,6 +91,8 @@ javaxJaxrs = { module = "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec", v
 jcolor = { module = "com.diogonunes:JColor", version.ref = "jcolor" }
 jerseyHk2 = { module = "org.glassfish.jersey.inject:jersey-hk2", version.ref = "jersey" }
 jerseyInMemory = { module = "org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-inmemory", version.ref = "jersey" }
+jerseySse = { module = "org.glassfish.jersey.media:jersey-media-sse", version.ref = "jersey" }
+jerseyGrizzly = { module = "org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2", version.ref = "jersey" }
 jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
 junit = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junitEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
