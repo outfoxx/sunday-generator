@@ -70,6 +70,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1618,6 +1620,105 @@ class SwiftSundayIrGeneratorTest {
     )
     assertTrue(eventDataSource.contains("case projectCreatedData(ProjectCreatedData)"), eventDataSource)
     assertTrue(projectCreatedSource.contains("public struct ProjectCreatedData : Codable"), projectCreatedSource)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `AsyncAPI enum refinements retain inherited storage and validate allowed values`(
+    composed: Boolean,
+    compiler: SwiftCompiler,
+    @ResourceUri("asyncapi/ir/inherited-enum.yaml") asyncApiUri: URI,
+    @ResourceUri("openapi/ir/composition-identity-3.1.yaml") openApiUri: URI,
+  ) {
+    val sources = if (composed) listOf(openApiUri, asyncApiUri) else listOf(asyncApiUri)
+    generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(sources))
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("InheritedEnumTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+
+      final class InheritedEnumTests: XCTestCase {
+        func testInheritedStorageAndRequiredness() throws {
+          let types: [EventType] = [AlphaEvent(type: .alpha).type, BetaEvent(type: .beta).type,
+                                   AlphaLeafEvent(type: .alpha).type, ReferencedAlphaEvent(type: .alpha).type]
+          XCTAssertEqual(types, [.alpha, .beta, .alpha, .alpha])
+          func check<T: Codable>(_ type: T.Type, value: String, invalidValue: String) throws -> T {
+            let data = Data("{\"type\":\"\(value)\"}".utf8)
+            let decoded = try JSONDecoder().decode(type, from: data)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary,
+                           try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+            for json in ["{}", #"{"type":null}"#, "{\"type\":\"\(invalidValue)\"}"] {
+              XCTAssertThrowsError(try JSONDecoder().decode(type, from: Data(json.utf8)))
+            }
+            return decoded
+          }
+          XCTAssertEqual(try check(AlphaEvent.self, value: "alpha", invalidValue: "beta").type, .alpha)
+          XCTAssertEqual(try check(AlphaLeafEvent.self, value: "alpha", invalidValue: "beta").type, .alpha)
+          XCTAssertEqual(try check(ReferencedAlphaEvent.self, value: "alpha", invalidValue: "beta").type, .alpha)
+          XCTAssertEqual(try check(BetaEvent.self, value: "beta", invalidValue: "alpha").type, .beta)
+          for value in ["alpha", "beta"] {
+            let data = Data("{\"type\":\"\(value)\"}".utf8)
+            XCTAssertEqual(try JSONDecoder().decode(BaseEvent.self, from: data).type.rawValue, value)
+          }
+        }
+
+        func testOptionalWireProperty() throws {
+          let decoder = JSONDecoder()
+          XCTAssertNil(try decoder.decode(OptionalAlphaEvent.self, from: Data("{}".utf8)).eventType)
+          let data = Data(#"{"event-type":"alpha"}"#.utf8)
+          let decoded = try decoder.decode(OptionalAlphaEvent.self, from: data)
+          let canonical: EventType? = decoded.eventType
+          XCTAssertEqual(canonical, .alpha)
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary,
+                         try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+          XCTAssertThrowsError(try decoder.decode(OptionalAlphaEvent.self, from: Data(#"{"event-type":"beta"}"#.utf8)))
+        }
+
+        func testDiscriminatorMapping() throws {
+          let decoder = JSONDecoder()
+          for value in ["alpha", "beta"] {
+            let data = Data("{\"type\":\"\(value)\"}".utf8)
+            let decoded = try decoder.decode(MappedEvent.self, from: data)
+            switch decoded {
+            case .mappedAlphaEvent(let event):
+              XCTAssertEqual(value, "alpha")
+              XCTAssertEqual(event.type, .alpha)
+            case .mappedBetaEvent(let event):
+              XCTAssertEqual(value, "beta")
+              XCTAssertEqual(event.type, .beta)
+            }
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary,
+                           try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+          }
+          for json in ["{}", #"{"type":null}"#, #"{"type":"unknown"}"#] {
+            XCTAssertThrowsError(try decoder.decode(MappedEvent.self, from: Data(json.utf8)))
+          }
+        }
+
+        func testRecursiveRefinement() throws {
+          func requireSendable<T: Sendable>(_ value: T) {}
+          let decoder = JSONDecoder()
+          let data = Data(#"{"type":"alpha","next":{"type":"alpha"}}"#.utf8)
+          let decoded = try decoder.decode(RecursiveAlphaEvent.self, from: data)
+          let base: RecursiveBaseEvent = decoded
+          let canonical: EventType = decoded.type
+          XCTAssertEqual(canonical, .alpha)
+          XCTAssertEqual(base.type, .alpha)
+          XCTAssertEqual(decoded.next?.type, .alpha)
+          requireSendable(decoded)
+          requireSendable(try decoder.decode(RecursiveBaseEvent.self, from: data))
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary,
+                         try JSONSerialization.jsonObject(with: data) as? NSDictionary)
+          XCTAssertThrowsError(try decoder.decode(RecursiveAlphaEvent.self,
+            from: Data(#"{"type":"alpha","next":{"type":"beta"}}"#.utf8)))
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
   }
 
   @Test

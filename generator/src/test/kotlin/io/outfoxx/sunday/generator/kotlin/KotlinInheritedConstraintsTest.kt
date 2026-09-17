@@ -20,20 +20,76 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.arrayMultiplesFixture
 import io.outfoxx.sunday.generator.tools.inheritedConstraintsFixture
 import io.outfoxx.sunday.json.patch.PatchOp
+import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.lang.reflect.InvocationTargetException
+import java.net.URI
 
 @KotlinTest
 class KotlinInheritedConstraintsTest {
+  @OptIn(ExperimentalCompilerApi::class)
+  @ParameterizedTest
+  @CsvSource("false, false", "true, false", "false, true", "true, true")
+  fun `AsyncAPI enum refinements retain inherited storage and validate allowed values`(
+    jaxrs: Boolean,
+    composed: Boolean,
+    @ResourceUri("asyncapi/ir/inherited-enum.yaml") uri: URI,
+    @ResourceUri("openapi/ir/composition-identity-3.1.yaml") openApiUri: URI,
+  ) {
+    val sources = if (composed) listOf(openApiUri, uri) else listOf(uri)
+    val result = compileFixture(GeneratedApiIrExporter().export(sources), jaxrs)
+    val mapper = jacksonObjectMapper()
+    val enumType = result.classLoader.loadClass("io.test.EventType")
+    val alpha = mapper.convertValue("alpha", enumType)
+    val beta = mapper.convertValue("beta", enumType)
+    for (name in listOf("AlphaEvent", "AlphaLeafEvent", "ReferencedAlphaEvent")) {
+      val model = result.classLoader.loadClass("io.test.$name")
+      val constructor = model.getConstructor(enumType)
+      assertEquals(alpha, model.getMethod("getType").invoke(constructor.newInstance(alpha)))
+      assertEquals(alpha, model.getMethod("getType").invoke(mapper.readValue("""{"type":"alpha"}""", model)))
+      assertThrows(InvocationTargetException::class.java) { constructor.newInstance(beta) }
+      for (json in listOf("{}", """{"type":null}""", """{"type":"beta"}""")) {
+        assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) {
+          mapper.readValue(json, model)
+        }
+      }
+    }
+    val betaModel = result.classLoader.loadClass("io.test.BetaEvent")
+    assertEquals(beta, betaModel.getMethod("getType").invoke(mapper.readValue("""{"type":"beta"}""", betaModel)))
+    assertThrows(InvocationTargetException::class.java) { betaModel.getConstructor(enumType).newInstance(alpha) }
+    val optional = result.classLoader.loadClass("io.test.OptionalAlphaEvent")
+    mapper.readValue("{}", optional)
+    val json = """{"event-type":"alpha"}"""
+    assertEquals(mapper.readTree(json), mapper.valueToTree(mapper.readValue(json, optional)))
+    assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) {
+      mapper.readValue("""{"event-type":"beta"}""", optional)
+    }
+    val mapped = result.classLoader.loadClass("io.test.MappedEvent")
+    for (value in listOf("alpha", "beta")) {
+      val payload = """{"type":"$value"}"""
+      val decoded = mapper.readValue(payload, mapped)
+      assertEquals("Mapped${value.replaceFirstChar(Char::titlecase)}Event", decoded.javaClass.simpleName)
+      assertEquals(mapper.readTree(payload), mapper.valueToTree(decoded))
+    }
+    val recursive = result.classLoader.loadClass("io.test.RecursiveAlphaEvent")
+    mapper.readValue("""{"type":"alpha","next":{"type":"alpha"}}""", recursive)
+    assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) {
+      mapper.readValue("""{"type":"alpha","next":{"type":"beta"}}""", recursive)
+    }
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @ParameterizedTest
   @ValueSource(booleans = [false, true])

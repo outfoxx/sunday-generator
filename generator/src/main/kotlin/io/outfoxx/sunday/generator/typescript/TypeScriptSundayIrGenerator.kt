@@ -1491,7 +1491,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.referencedModels(): List<GeneratedModel> =
     buildList {
-      properties.forEach { property -> addAll(property.type.referencedModels()) }
+      modelProperties.fields(this@referencedModels).forEach { field -> addAll(field.storage.type.referencedModels()) }
       aliases.forEach { alias -> addAll(alias.referencedModels()) }
       childModels().forEach { childModel -> add(childModel) }
       additionalProperties?.type?.let { additionalPropertiesType ->

@@ -667,7 +667,7 @@ class PythonModelRendererTest : PythonTest() {
           """
           from pydantic import TypeAdapter
 
-          from turnpost_api.models import AccountsTeamCreatedData, EventEnvelope
+          from turnpost_api.models import AccountsTeamCreatedData, BaseEventEnvelope, EventEnvelope
 
           envelope = TypeAdapter(EventEnvelope).validate_python(
               {
@@ -689,6 +689,8 @@ class PythonModelRendererTest : PythonTest() {
           )
 
           assert envelope.id == "event-1"
+          assert isinstance(envelope, BaseEventEnvelope)
+          assert envelope.type == "accounts.team.created"
           assert isinstance(envelope.data, AccountsTeamCreatedData)
           assert envelope.data.team_id == "team-1"
           """.trimIndent(),

@@ -45,7 +45,7 @@ class AsyncApiToGeneratedApi(
           name = sourceDocument.title() ?: "API",
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, sourceUri.toString()),
           services = services,
-          models = localModels.values.toList(),
+          models = AsyncApiModelRefinements(localModels.values.toList()).refine(),
           auth = sourceDocument.auth(),
           protocol = GeneratedProtocol(servers = servers).takeUnless { it == GeneratedProtocol() },
         )
@@ -577,6 +577,14 @@ class AsyncApiToGeneratedApi(
           writeOnly = propertyMetadata["writeOnly"] == true,
           deprecated = propertyMetadata["deprecated"] == true,
           documentation = documentation(description = propertyMetadata["description"] as? String),
+          allowedValues =
+            (
+              when {
+                propertySchemaMap.containsKey("const") -> listOf(propertySchemaMap["const"])
+                propertySchemaMap["enum"] is List<*> -> propertySchemaMap["enum"] as List<*>
+                else -> null
+              }
+            )?.takeIf { values -> values.all { it == null || it is String || it is Number || it is Boolean } },
         )
       }
 

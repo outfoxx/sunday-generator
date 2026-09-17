@@ -99,6 +99,7 @@ import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_RESPONSE
+import io.outfoxx.sunday.generator.swift.utils.UNCHECKED_SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.URL
 import io.outfoxx.sunday.generator.swift.utils.swiftEnumCaseName
@@ -2169,6 +2170,12 @@ class SwiftSundayIrGenerator(
               },
             )
           }
+          if (isRecursiveReferenceModel &&
+            (hasInheritingModels || inheritedTypeName != null && !flattensInheritedProperties)
+          ) {
+            // Recursive models only emit immutable storage; Swift requires unchecked conformance for class inheritance.
+            addSuperType(UNCHECKED_SENDABLE)
+          }
           if (identifiableProperty != null) {
             addSuperType(IDENTIFIABLE)
           }
@@ -2440,7 +2447,7 @@ class SwiftSundayIrGenerator(
         (isProtocolHierarchyValueModel && !isRecursiveSwiftObjectModel) ||
         isProblemHierarchyValueModel ||
         isExternalDiscriminatorEnvelopeValueModel ||
-        (isRecursiveSwiftObjectModel && !hasInheritingModels)
+        isRecursiveSwiftObjectModel
 
   private fun GeneratedModel.swiftHierarchyCaseModels(): List<GeneratedModel> =
     swiftHierarchyCaseModelsByRootKey[swiftModelKey()].orEmpty()

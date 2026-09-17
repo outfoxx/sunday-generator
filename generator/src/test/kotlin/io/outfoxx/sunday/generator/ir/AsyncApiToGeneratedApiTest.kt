@@ -21,12 +21,35 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 
 @ExtendWith(ResourceExtension::class)
 class AsyncApiToGeneratedApiTest {
+
+  @Test
+  fun `enum refinements preserve inherited declarations and intersect restrictions`(
+    @ResourceUri("asyncapi/ir/inherited-enum.yaml") testUri: URI,
+  ) {
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+    val models = api.models.associateBy { it.name }
+    for (name in listOf("AlphaEvent", "BetaEvent", "AlphaLeafEvent", "ReferencedAlphaEvent", "RecursiveAlphaEvent")) {
+      val property = models.getValue(name).properties.single()
+      assertEquals(GeneratedTypeRef.named("EventType"), property.type)
+      assertTrue(property.required)
+      assertEquals(listOf(if (name == "BetaEvent") "beta" else "alpha"), property.allowedValues)
+    }
+    val base = models.getValue("BaseEvent").properties.single()
+    assertNull(base.allowedValues)
+    val optional = models.getValue("OptionalAlphaEvent").properties.single()
+    assertEquals(GeneratedTypeRef.named("EventType"), optional.type)
+    assertEquals(false, optional.required)
+    assertEquals("event-type", optional.serializationName)
+    assertEquals(listOf("alpha"), optional.allowedValues)
+  }
 
   @Test
   fun `maps AsyncAPI tolerant enum fallback to generated API IR`(
