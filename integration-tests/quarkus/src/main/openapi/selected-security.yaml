@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Selected Authentication
+  version: 1.0.0
+security: [{bearerAuth: []}]
+paths:
+  /selected/bearer:
+    get:
+      operationId: readBearer
+      x-sunday-service: SelectedBearer
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /selected/bearer/second:
+    get:
+      operationId: readSecondBearer
+      x-sunday-service: SelectedBearer
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+  /selected/key:
+    get:
+      operationId: readKey
+      x-sunday-service: SelectedKey
+      security: [{apiKey: []}]
+      responses: {'200': {$ref: '#/components/responses/identity'}}
+components:
+  responses:
+    identity:
+      description: Selected identity
+      content:
+        text/plain:
+          schema: {type: string}
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+    apiKey: {type: apiKey, in: header, name: X-Selected-Key}

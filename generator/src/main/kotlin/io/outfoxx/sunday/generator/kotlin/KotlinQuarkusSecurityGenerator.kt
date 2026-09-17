@@ -153,10 +153,16 @@ internal class KotlinQuarkusSecurityGenerator(
           .returns(uni.parameterizedBy(identity.copy(nullable = true)))
           .addCode(
             """
-            // Quarkus also tries installed mechanisms on unrelated routes; only its selected mechanism owns this request.
-            if (context.get<%T>(%T::class.java.name) !== this) return %T.createFrom().nullItem()
+            // Quarkus 3.34+ stores selected instances as a list; older releases store a single instance.
+            // Read selection evidence only: transport discovery can also visit mechanisms that were not selected.
+            val selected = context.get<%T>(%S)
+            val selectedForRequest = selected?.any { it === this }
+              ?: (context.get<%T>(%T::class.java.name) === this)
+            if (!selectedForRequest) return %T.createFrom().nullItem()
             return security.authenticate(%T(context, identityProviderManager), names)
             """.trimIndent().replace(' ', '·'),
+            LIST.parameterizedBy(mechanism),
+            "$QUARKUS_HTTP_SECURITY_PACKAGE.HttpAuthenticator#selected-auth-mechanism-instances",
             mechanism,
             mechanism,
             uni,

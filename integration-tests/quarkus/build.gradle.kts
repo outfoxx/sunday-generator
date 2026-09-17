@@ -130,6 +130,28 @@ val generateAsyncApi by tasks.registering(JavaExec::class) {
   args(asyncContracts.map { it.asFile.absolutePath })
 }
 
+val selectedSources = layout.buildDirectory.dir("generated/selected-security")
+val selectedContract = layout.projectDirectory.file("src/main/openapi/selected-security.yaml")
+val generateSelectedApi by tasks.registering(JavaExec::class) {
+  inputs.file(selectedContract)
+  outputs.dir(selectedSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-enforce-security-schemes",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.selected",
+    "-out",
+    selectedSources.get().asFile.absolutePath,
+    selectedContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
@@ -138,11 +160,12 @@ kotlin.sourceSets.main {
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
   kotlin.srcDir(generateAsyncApi)
+  kotlin.srcDir(generateSelectedApi)
   kotlin.srcDir(generateZanzibarApi)
 }
 
 tasks.compileKotlin {
-  dependsOn(generateAsyncApi)
+  dependsOn(generateAsyncApi, generateSelectedApi)
   dependsOn(generateApi, generateSecuredApi, generateZanzibarApi)
 }
 
