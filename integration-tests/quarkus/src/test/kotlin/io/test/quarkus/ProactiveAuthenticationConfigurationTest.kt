@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// QuarkusExtensionTest replaces this API in 3.36 but is unavailable on the 3.31 compatibility baseline.
+@file:Suppress("DEPRECATION")
+
 package io.test.quarkus
 
 import io.quarkus.test.QuarkusUnitTest

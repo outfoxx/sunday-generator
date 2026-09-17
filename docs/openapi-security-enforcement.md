@@ -122,6 +122,8 @@ Credentials are validated once per needed scheme per request. Policies reuse tho
 
 Set `quarkus.http.auth.proactive=false`: Quarkus selects generated authentication mechanisms through resource annotations after matching the request. The generated mechanisms decline requests for which Quarkus has not selected them, preserving unrelated application routes. This scopes uniform policies to the generated API rather than creating a global HTTP restriction. Where HTTP path policies overlap these endpoints, use `quarkus.http.auth.permission.<name>.applies-to=jaxrs` and avoid selecting a competing authentication mechanism before endpoint selection. See [Quarkus authentication selection](https://quarkus.io/guides/security-authentication-mechanisms/) and [HTTP security policies](https://quarkus.io/guides/security-authorize-web-endpoints-reference/).
 
+Generated mechanisms recognize Quarkus's selected mechanism instance on 3.31.2 and its selected-instance list on 3.34.5, 3.36.3, 3.38.3, and 3.39.3. This compatibility check reads framework selection evidence without writing it, authenticating during credential-transport discovery, or matching request paths. Quarkus does not expose this distinction through the `HttpAuthenticationMechanism` interface, so the integration suite exercises both internal layouts. Existing beta.30 generated sources must be regenerated to receive this fix.
+
 Simple authenticated endpoints use Quarkus's normal authenticated gate. Endpoints with a generated named policy use that policy as their sole OpenAPI authorization gate; it performs the full decision before request filters execute. Quarkus 3.31 treats `@AuthorizationPolicy` as a security annotation, so these methods do not also receive `@Authenticated` or `@PermitAll`. This does not bypass Zanzibar.
 
 Public Litestar routes retain `opt={"exclude_from_auth": True}`. Protected routes use a [Litestar guard](https://docs.litestar.dev/2/usage/security/guards.html). If middleware is installed, configure it to accept the API's alternatives; its earlier rejection cannot be undone by a guard.
@@ -139,3 +141,12 @@ Global HTTP path restrictions, middleware, guards, and Zanzibar interceptors rem
 Tests compile generated Kotlin and Python for RAML, OpenAPI, AsyncAPI, and composed input. Jersey, Quarkus, and Litestar request tests cover transports, wrong mechanisms, scope and role failures, AND/OR alternatives, public overrides, inherited requirements, repeated credentials, setup failures, and rejection before delegation. TLS tests verify rejection without an accepted peer; configuring and validating a real client-certificate handshake remains the application's TLS integration.
 
 Quarkus tests additionally use the real Zanzibar extension, a deterministic relationship backend, and signed JWTs validated by the native provider. They cover identity propagation, explicit subject selection, FGA denial, concurrent-request isolation, validation/permission-reader counts, and native authorization event counts. They verify that proactive authentication fails startup and conflicting early HTTP authentication fails before Zanzibar or delegation. Compile-backed specialization tests verify that uniform policies do not generate per-operation dispatch or redundant evaluators.
+
+The Quarkus HTTP suite runs against the default 3.31.2 and CI versions 3.34.5, 3.36.3, 3.38.3, and 3.39.3. Run a particular version locally with:
+
+```sh
+./gradlew --dependency-verification strict --no-configuration-cache \
+  -PquarkusVersion=3.39.3 :integration-tests:quarkus:check
+```
+
+The selection regression uses generated class-level bearer annotations, a separate API-key strategy, and application-provided bindings. It checks valid/missing/invalid credentials, exactly one selected provider call, and no generated provider calls on unrelated fallback or Basic-authenticated routes.

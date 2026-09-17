@@ -7,6 +7,7 @@ dependencies {
   kover(project(":generator"))
   kover(project(":cli"))
   kover(project(":gradle-plugin"))
+  kover(project(":integration-tests:quarkus"))
 }
 
 tasks {
