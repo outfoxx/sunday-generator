@@ -63,6 +63,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -2940,6 +2942,105 @@ class TypeScriptSundayIrGeneratorTest {
     assertFalse(identityOutput.contains("z.discriminatedUnion("), identityOutput)
     assertTrue(serviceOutput.contains("Operation<void, EventEnvelope, Factory>"), serviceOutput)
     assertTrue(serviceOutput.contains("SchemaLike<EventEnvelope>"), serviceOutput)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `AsyncAPI enum refinements retain inherited storage and validate allowed values`(
+    composed: Boolean,
+    compiler: TypeScriptCompiler,
+    @ResourceUri("asyncapi/ir/inherited-enum.yaml") asyncApiUri: URI,
+    @ResourceUri("openapi/ir/composition-identity-3.1.yaml") openApiUri: URI,
+  ) {
+    val sources = if (composed) listOf(openApiUri, asyncApiUri) else listOf(asyncApiUri)
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(GeneratedApiIrExporter().export(sources), registry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("InheritedEnumCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {EventType} from './event-type';
+            import {BaseEvent, BaseEventSchema} from './base-event';
+            import {AlphaEvent, AlphaEventSchema} from './alpha-event';
+            import {BetaEvent, BetaEventSchema} from './beta-event';
+            import {AlphaLeafEvent, AlphaLeafEventSchema} from './alpha-leaf-event';
+            import {ReferencedAlphaEvent, ReferencedAlphaEventSchema} from './referenced-alpha-event';
+            import {OptionalAlphaEventSchema} from './optional-alpha-event';
+            import {MappedEventSchema} from './mapped-event';
+            import {RecursiveAlphaEventSchema} from './recursive-alpha-event';
+
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const events: BaseEvent[] = [
+              {type: EventType.Alpha} satisfies AlphaEvent,
+              {type: EventType.Beta} satisfies BetaEvent,
+              {type: EventType.Alpha} satisfies AlphaLeafEvent,
+              {type: EventType.Alpha} satisfies ReferencedAlphaEvent,
+            ];
+            const canonical: EventType[] = events.map(event => event.type);
+            // @ts-expect-error inherited requiredness must survive the subtype refinement
+            const missing: AlphaEvent = {};
+            // @ts-expect-error subtype storage must use the named enum rather than a string
+            const stringType: AlphaEvent = {type: 'alpha'};
+            if (canonical[0] !== EventType.Alpha) throw new Error('enum storage changed');
+            for (const [factory, value, invalidValue] of [
+              [AlphaEventSchema, EventType.Alpha, EventType.Beta],
+              [AlphaLeafEventSchema, EventType.Alpha, EventType.Beta],
+              [ReferencedAlphaEventSchema, EventType.Alpha, EventType.Beta],
+              [BetaEventSchema, EventType.Beta, EventType.Alpha],
+            ] as const) {
+              const schema = runtime.resolveSchema(factory);
+              const wire = {type: value};
+              const decoded = schema.parse(wire);
+              const type: EventType = decoded.type;
+              if (type !== value) throw new Error('wrong enum value');
+              if (JSON.stringify(z.encode(schema, decoded)) !== JSON.stringify(wire)) throw new Error('round trip changed');
+              for (const invalid of [{}, {type: null}, {type: invalidValue}]) {
+                if (schema.safeParse(invalid).success) throw new Error('requiredness or narrowing lost');
+              }
+              if (z.safeEncode(schema, {type: invalidValue}).success) throw new Error('encoding bypassed narrowing');
+            }
+            for (const type of [EventType.Alpha, EventType.Beta]) {
+              if (runtime.resolveSchema(BaseEventSchema).parse({type}).type !== type) throw new Error('base enum narrowed');
+            }
+            const optional = runtime.resolveSchema(OptionalAlphaEventSchema);
+            if (optional.parse({})['event-type'] !== undefined) throw new Error('optional property became required');
+            const wire = {'event-type': 'alpha'};
+            const decoded = optional.parse(wire);
+            const optionalType: EventType | null | undefined = decoded['event-type'];
+            if (optionalType !== EventType.Alpha) throw new Error('optional enum storage changed');
+            if (JSON.stringify(z.encode(optional, decoded)) !== JSON.stringify(wire)) throw new Error('wire name changed');
+            if (optional.safeParse({'event-type': 'beta'}).success) throw new Error('optional restriction lost');
+            const mapped = runtime.resolveSchema(MappedEventSchema);
+            for (const type of ['alpha', 'beta']) {
+              const decoded = mapped.parse({type});
+              if (decoded.type !== type || JSON.stringify(z.encode(mapped, decoded)) !== JSON.stringify({type})) {
+                throw new Error('mapped discriminator round trip changed');
+              }
+            }
+            for (const invalid of [{}, {type: null}, {type: 'unknown'}]) {
+              if (mapped.safeParse(invalid).success) throw new Error('invalid discriminator accepted');
+            }
+            const recursive = runtime.resolveSchema(RecursiveAlphaEventSchema);
+            const nested = {type: 'alpha', next: {type: 'alpha'}};
+            const roundTripped = recursive.parse(z.encode(recursive, recursive.parse(nested)));
+            const nestedType: EventType | undefined = roundTripped.next?.type;
+            if (roundTripped.type !== EventType.Alpha || nestedType !== EventType.Alpha) throw new Error('recursive round trip changed');
+            if (recursive.safeParse({type: 'alpha', next: {type: 'beta'}}).success) throw new Error('recursive restriction lost');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("InheritedEnumCheck", "!inherited-enum-check") to check),
+        "inherited-enum-check",
+      ),
+    )
   }
 
   @Test

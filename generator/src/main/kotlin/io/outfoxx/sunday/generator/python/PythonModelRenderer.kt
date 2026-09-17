@@ -1105,7 +1105,13 @@ class PythonModelRenderer(
           .fields(model)
           .single { it.wireName == (serializationName ?: name) }
           .declaration.type
-          .copy(nullable = false) != type.copy(nullable = false)
+          .let { declaration ->
+            declaration.copy(nullable = false) != type.copy(nullable = false) ||
+              (
+                literalValue != null &&
+                  modelProperties.declarationModel(declaration)?.kind == GeneratedModel.Kind.ENUM
+              )
+          }
       ) {
         "  # type: ignore[assignment]"
       } else {

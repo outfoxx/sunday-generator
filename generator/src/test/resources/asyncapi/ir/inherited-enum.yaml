@@ -1,0 +1,106 @@
+asyncapi: '3.0.0'
+info:
+  title: Inherited Enum API
+  version: '1.0.0'
+x-sunday-apiId: craft
+channels:
+  events:
+    address: /events
+    messages:
+      events:
+        payload:
+          $ref: '#/components/schemas/Events'
+operations:
+  receiveEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/events'
+    messages:
+      - $ref: '#/channels/events/messages/events'
+components:
+  schemas:
+    Events:
+      type: object
+      properties:
+        alpha: {$ref: '#/components/schemas/AlphaEvent'}
+        beta: {$ref: '#/components/schemas/BetaEvent'}
+        leaf: {$ref: '#/components/schemas/AlphaLeafEvent'}
+        optional: {$ref: '#/components/schemas/OptionalAlphaEvent'}
+        mapped: {$ref: '#/components/schemas/MappedEvent'}
+        referenced: {$ref: '#/components/schemas/ReferencedAlphaEvent'}
+        recursive: {$ref: '#/components/schemas/RecursiveBaseEvent'}
+    EventType:
+      type: string
+      enum: [alpha, beta]
+    BaseEvent:
+      type: object
+      required: [type]
+      properties:
+        type: {$ref: '#/components/schemas/EventType'}
+    AlphaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          properties:
+            type: {type: string, enum: [alpha]}
+    BetaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          properties:
+            type: {type: string, const: beta}
+    AlphaLeafEvent:
+      allOf:
+        - $ref: '#/components/schemas/AlphaEvent'
+        - type: object
+          properties:
+            type: {type: string, enum: [alpha, beta]}
+    ReferencedAlphaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          properties:
+            type: {$ref: '#/components/schemas/EventType', enum: [alpha]}
+    RecursiveBaseEvent:
+      type: object
+      required: [type]
+      properties:
+        type: {$ref: '#/components/schemas/EventType'}
+        next: {$ref: '#/components/schemas/RecursiveAlphaEvent'}
+    RecursiveAlphaEvent:
+      allOf:
+        - $ref: '#/components/schemas/RecursiveBaseEvent'
+        - type: object
+          properties:
+            type: {type: string, enum: [alpha]}
+    OptionalBaseEvent:
+      type: object
+      properties:
+        event-type: {$ref: '#/components/schemas/EventType'}
+    OptionalAlphaEvent:
+      allOf:
+        - $ref: '#/components/schemas/OptionalBaseEvent'
+        - type: object
+          properties:
+            event-type: {type: string, enum: [alpha]}
+    MappedEvent:
+      oneOf:
+        - $ref: '#/components/schemas/MappedAlphaEvent'
+        - $ref: '#/components/schemas/MappedBetaEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          alpha: '#/components/schemas/MappedAlphaEvent'
+          beta: '#/components/schemas/MappedBetaEvent'
+    MappedAlphaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          properties:
+            type: {type: string, enum: [alpha]}
+    MappedBetaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseEvent'
+        - type: object
+          properties:
+            type: {type: string, const: beta}
