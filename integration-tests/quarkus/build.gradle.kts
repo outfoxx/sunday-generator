@@ -7,6 +7,7 @@ val generator by configurations.creating
 
 dependencies {
   generator(project(":cli"))
+  implementation(libs.jackson)
   implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
   implementation("io.quarkus:quarkus-kotlin")
   implementation("io.quarkus:quarkus-rest")
@@ -152,11 +153,33 @@ val generateSelectedApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val uploadSources = layout.buildDirectory.dir("generated/uploads")
+val uploadContract = rootProject.layout.projectDirectory.file("generator/src/test/resources/raml/ir/content-type.raml")
+val generateUploadApi by tasks.registering(JavaExec::class) {
+  inputs.file(uploadContract)
+  outputs.dir(uploadSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.uploads",
+    "-out",
+    uploadSources.get().asFile.absolutePath,
+    uploadContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
   kotlin.srcDir(generateAsyncApi)
@@ -165,6 +188,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateUploadApi)
   dependsOn(generateAsyncApi, generateSelectedApi)
   dependsOn(generateApi, generateSecuredApi, generateZanzibarApi)
 }

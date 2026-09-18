@@ -1,0 +1,113 @@
+#%RAML 1.0
+title: Uploads API
+mediaType: application/json
+annotationTypes:
+  sunday.apiId: string
+  sunday.unknownValue: string
+(sunday.apiId): uploads
+types:
+  AvatarContentType:
+    type: string
+    enum: [image/png, image/jpeg]
+  TolerantContentType:
+    type: string
+    enum: [image/png, image/jpeg, unknown]
+    (sunday.unknownValue): unknown
+/uploads/raw:
+  put:
+    displayName: putRaw
+    headers:
+      Content-Type: string
+    body:
+      "*/*":
+        type: file
+    responses:
+      204:
+/uploads/image:
+  put:
+    displayName: putImage
+    headers:
+      Content-Type: string
+    body:
+      "image/*":
+        type: file
+    responses:
+      204:
+/uploads/fixed:
+  put:
+    displayName: putFixed
+    headers:
+      Content-Type: string
+    body:
+      "application/octet-stream":
+        type: file
+    responses:
+      204:
+/uploads/enum:
+  put:
+    displayName: putEnum
+    headers:
+      Content-Type: AvatarContentType
+    body:
+      "image/*":
+        type: file
+    responses:
+      204:
+/uploads/optional:
+  put:
+    displayName: putOptional
+    headers:
+      cOnTeNt-TyPe?: string
+    body:
+      "*/*": { type: file }
+    responses:
+      204:
+/uploads/default:
+  put:
+    displayName: putDefault
+    headers:
+      Content-Type:
+        type: string
+        required: false
+        default: application/octet-stream
+    body:
+      "*/*": { type: file }
+    responses:
+      204:
+/uploads/constant:
+  put:
+    displayName: putConstant
+    headers:
+      Content-Type:
+        type: string
+        enum: [image/png]
+    body:
+      "image/*": { type: file }
+    responses:
+      204:
+/uploads/multiple:
+  put:
+    displayName: putMultiple
+    headers:
+      Content-Type: string
+    body:
+      image/png: { type: file }
+      image/jpeg: { type: file }
+    responses:
+      204:
+/uploads/tolerant:
+  put:
+    displayName: putTolerant
+    headers:
+      Content-Type: TolerantContentType
+    body:
+      "image/*": { type: file }
+    responses:
+      204:
+/uploads/header:
+  get:
+    displayName: getHeader
+    headers:
+      Content-Type?: string
+    responses:
+      204:

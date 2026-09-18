@@ -17,19 +17,27 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointAccess
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 
-/** Renders Litestar server stubs from generated IR. */
+/** Renders Litestar server stubs, using [api] to resolve named request body aliases. */
 class PythonLitestarRenderer(
   private val packageName: String,
+  api: GeneratedApi? = null,
 ) {
+
+  private val apiIndex = api?.let(::GeneratedApiIndex)
+  private val modelProperties = GeneratedModelProperties { type -> apiIndex?.modelOrNull(type) }
 
   /** Renders a Litestar service protocol and router factory module. */
   fun renderService(
@@ -43,6 +51,12 @@ class PythonLitestarRenderer(
     val routerFactoryName = service.pythonServiceRouterFactoryName
 
     service.operations.forEach { operation ->
+      operation.requestBody?.let { body ->
+        val binaryTypes = body.bodyTypes().flatMap { it.bodyAlternatives() }.map { type -> type.isBinaryBody() }
+        if (true in binaryTypes && false in binaryTypes) {
+          genError("Python/Litestar operation '${operation.id}' mixes binary and structured request bodies")
+        }
+      }
       operation.renderResponseHeadersType()?.let { headersType ->
         module.addExport(operation.responseHeadersTypeName())
         module.addCode(headersType)
@@ -347,10 +361,10 @@ class PythonLitestarRenderer(
     PythonCodeBlock.join(
       routeParameters().map { parameter -> parameter.renderPathHandlerParameter() } +
         listOfNotNull(
-          requestBody?.takeUnless { body -> body.requiresRuntimeDecode() }?.renderBodyHandlerParameter(),
+          requestBody?.takeUnless { body -> body.requiresRequestBody() }?.renderBodyHandlerParameter(),
         ) +
         listOfNotNull(
-          (queryString != null || requestBody?.requiresRuntimeDecode() == true).takeIf { it }?.let {
+          (queryString != null || requestBody?.requiresRequestBody() == true).takeIf { it }?.let {
             PythonCodeBlock.of(
               "        request: %T[%T, %T, %T],",
               PythonSymbol("litestar", "Request"),
@@ -374,7 +388,18 @@ class PythonLitestarRenderer(
       routeParameters().map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) } +
         listOfNotNull(
           requestBody?.let { body ->
-            if (body.requiresRuntimeDecode()) {
+            if (body.isBinaryBody()) {
+              PythonCodeBlock.of(
+                "await %T(request, [%C])",
+                PythonSymbol("sunday.litestar", "request_bytes", "_read_body"),
+                PythonCodeBlock.join(
+                  (body.mediaTypes + body.payloads.flatMap { it.mediaTypes })
+                    .distinct()
+                    .map { PythonCodeBlock.of("%S", it) },
+                  separator = ", ",
+                ),
+              )
+            } else if (body.requiresRuntimeDecode()) {
               PythonCodeBlock.of(
                 "await %T(%C, request, %S)",
                 PythonSymbol("sunday.litestar", "request_model", "_decode_body"),
@@ -431,7 +456,7 @@ class PythonLitestarRenderer(
         PythonCodeBlock.of(
           "        %L: %C = %C,",
           parameter.name.pythonIdentifierName,
-          parameter.type.renderOptionalParameterType(),
+          parameter.renderParameterType(optional = true),
           parameter.renderDefaultValue(),
         )
       }
@@ -440,7 +465,7 @@ class PythonLitestarRenderer(
     PythonCodeBlock.of(
       "        %L: %C,",
       name.pythonIdentifierName,
-      type.renderServerPythonType(),
+      renderParameterType(),
     )
 
   private fun GeneratedPayload.renderServiceBodyParameter(): PythonCodeBlock =
@@ -457,11 +482,38 @@ class PythonLitestarRenderer(
 
   private fun GeneratedPayload.renderServerBodyType(): PythonCodeBlock =
     PythonCodeBlock.join(
-      (payloads.map { payload -> payload.type }.ifEmpty { listOf(type) })
+      bodyTypes()
         .distinct()
         .map { bodyType -> bodyType.renderServerPythonType(nullable = false) },
       separator = " | ",
     )
+
+  private fun GeneratedPayload.bodyTypes(): List<GeneratedTypeRef> =
+    payloads.map { payload -> payload.type }.ifEmpty { listOf(type) }
+
+  private fun GeneratedTypeRef.isBinaryBody(): Boolean {
+    val declaration = modelProperties.declarationType(this)
+    return declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+      (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
+  }
+
+  private fun GeneratedTypeRef.bodyAlternatives(visited: Set<GeneratedTypeRef> = emptySet()): List<GeneratedTypeRef> {
+    if (this in visited) return listOf(this)
+    val declaration = modelProperties.declarationType(this)
+    val model = modelProperties.declarationModel(declaration)
+    val alternatives =
+      when {
+        declaration.kind == GeneratedTypeRef.Kind.UNION -> declaration.arguments
+        model?.kind == GeneratedModel.Kind.UNION -> model.aliases
+        else -> emptyList()
+      }
+    return alternatives.flatMap { it.bodyAlternatives(visited + this) }.ifEmpty { listOf(declaration) }
+  }
+
+  private fun GeneratedPayload.isBinaryBody(): Boolean =
+    bodyTypes().flatMap { type -> type.bodyAlternatives() }.all { type -> type.isBinaryBody() }
+
+  private fun GeneratedPayload.requiresRequestBody(): Boolean = isBinaryBody() || requiresRuntimeDecode()
 
   private fun GeneratedPayload.requiresRuntimeDecode(): Boolean =
     mediaTypes.firstOrNull()?.let { mediaType ->
@@ -489,7 +541,7 @@ class PythonLitestarRenderer(
         GeneratedParameter.Location.COOKIE -> PythonSymbol("litestar.params", "CookieParameter")
         else -> error("Only query, header, and cookie parameters use annotated handler parameters")
       }
-    val type = if (required) type.renderServerPythonType() else type.renderOptionalParameterType()
+    val type = renderParameterType(optional = !required)
     val defaultValue = if (required) PythonCodeBlock.of("") else PythonCodeBlock.of(" = %C", renderDefaultValue())
     return PythonCodeBlock.of(
       "        %L: %T[%C, %T(name=%S)]%C,",
@@ -637,12 +689,14 @@ class PythonLitestarRenderer(
 
   private fun GeneratedParameter.wireName(): String = serializationName ?: name
 
-  private fun GeneratedTypeRef.renderOptionalParameterType(): PythonCodeBlock =
-    if (nullable) {
-      renderServerPythonType()
-    } else {
-      PythonCodeBlock.of("%C | None", renderServerPythonType(nullable = false))
-    }
+  private fun GeneratedParameter.renderParameterType(optional: Boolean = false): PythonCodeBlock {
+    val constantContentType =
+      (constantValue as? String)?.takeIf {
+        location == GeneratedParameter.Location.HEADER && wireName().equals("Content-Type", ignoreCase = true)
+      }
+    val valueType = constantContentType?.renderPythonLiteralType() ?: type.renderServerPythonType(nullable = false)
+    return if (optional || type.nullable) PythonCodeBlock.of("%C | None", valueType) else valueType
+  }
 
   private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock =
     defaultValue?.renderPythonValue() ?: PythonCodeBlock.of("None")
@@ -660,7 +714,12 @@ class PythonLitestarRenderer(
     policyKey: String?,
     strictSecurity: Boolean,
   ): PythonCodeBlock {
-    val methodName = method.uppercase()
+    val methodName =
+      when (method.uppercase()) {
+        "PUBLISH" -> "POST"
+        "SUBSCRIBE" -> "GET"
+        else -> method.uppercase()
+      }
     val arguments =
       buildList {
         add(PythonCodeBlock.of("%S", litestarPath()))

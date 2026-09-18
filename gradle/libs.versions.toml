@@ -90,6 +90,7 @@ javaxAnnotations = { module = "javax.annotation:javax.annotation-api", version =
 javaxJaxrs = { module = "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.1_spec", version.ref = "javaxJaxrs" }
 jcolor = { module = "com.diogonunes:JColor", version.ref = "jcolor" }
 jerseyHk2 = { module = "org.glassfish.jersey.inject:jersey-hk2", version.ref = "jersey" }
+jerseyValidation = { module = "org.glassfish.jersey.ext:jersey-bean-validation", version.ref = "jersey" }
 jerseyInMemory = { module = "org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-inmemory", version.ref = "jersey" }
 jerseySse = { module = "org.glassfish.jersey.media:jersey-media-sse", version.ref = "jersey" }
 jerseyGrizzly = { module = "org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2", version.ref = "jersey" }
