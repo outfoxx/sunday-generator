@@ -1,0 +1,1 @@
+sourceset_dependencies = '{":cli/main":[],":generator/main":[],":gradle-plugin/main":[]}'
