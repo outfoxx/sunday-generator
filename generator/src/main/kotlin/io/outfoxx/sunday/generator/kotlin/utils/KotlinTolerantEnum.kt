@@ -30,6 +30,7 @@ internal fun GeneratedModel.tolerantEnumTypeSpec(
   className: ClassName,
   entries: List<KotlinEnumEntry>,
   jacksonAnnotations: Boolean,
+  restParameterConversion: Boolean = false,
 ): TypeSpec.Builder {
   val fallbackValue = unknownValue ?: genError("Kotlin tolerant enum '$name' is missing its unknown value")
   val fallbackEntry =
@@ -99,7 +100,7 @@ internal fun GeneratedModel.tolerantEnumTypeSpec(
           .build(),
       )
 
-      addType(tolerantEnumCompanionType(entries, fallbackEntry, className, jacksonAnnotations))
+      addType(tolerantEnumCompanionType(entries, fallbackEntry, className, jacksonAnnotations, restParameterConversion))
     }
 }
 
@@ -108,6 +109,7 @@ private fun tolerantEnumCompanionType(
   fallbackEntry: KotlinEnumEntry,
   className: ClassName,
   jacksonAnnotations: Boolean,
+  restParameterConversion: Boolean,
 ): TypeSpec =
   TypeSpec
     .companionObjectBuilder()
@@ -129,4 +131,17 @@ private fun tolerantEnumCompanionType(
         }.addStatement("else -> %L(rawValue)", fallbackEntry.name)
         .endControlFlow()
         .build(),
-    ).build()
+    ).apply {
+      if (restParameterConversion) {
+        addFunction(
+          FunSpec
+            .builder("fromString")
+            .addKdoc("Converts a REST parameter from its declared wire value, preserving unknown values.\n")
+            .addAnnotation(ClassName("kotlin.jvm", "JvmStatic"))
+            .addParameter("rawValue", STRING)
+            .returns(className)
+            .addStatement("return fromValue(rawValue)")
+            .build(),
+        )
+      }
+    }.build()

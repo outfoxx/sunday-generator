@@ -38,7 +38,7 @@ class PythonCompiler(
   companion object {
 
     private const val SUNDAY_PYTHON_REPOSITORY = "https://github.com/outfoxx/sunday-python.git"
-    private const val SUNDAY_PYTHON_TAG = "2.0.0-beta.1"
+    private const val SUNDAY_PYTHON_TAG = "2.0.0-beta.2"
 
     fun create(
       workDir: Path,

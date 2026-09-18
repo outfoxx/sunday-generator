@@ -25,7 +25,19 @@ With `-aggregate-services`, only the aggregate resource has a root `@Path`. It r
 
 Coroutine `suspend` methods, reactive return types, asynchronous `AsyncResponse`, SSE context parameters and streaming return shapes retain their existing generator semantics. `201 Created` operations receive `UriInfo`; delegates remain responsible for constructing the declared response and its `Location` header. Quarkus fault-tolerance and Zanzibar annotations remain on endpoint implementations alongside authentication.
 
-Interface-only generation remains the default. Resource adapters are a server-only option. Existing clients and interfaces keep their current output.
+Interface-only generation remains the default. Resource adapters are a server-only option and do not affect client generation.
+
+### Explicit Content-Type parameters
+
+An explicitly declared `Content-Type` header is included in server signatures, including interface-only generation and resource delegates. Standard JAX-RS uses `@HeaderParam`; Quarkus uses `@RestHeader`. The parameter keeps its declared type, requiredness, default and validation constraints. Singleton string constants receive a matching validation constraint when validation generation is enabled; configure Bean Validation in the server to enforce those constraints.
+
+The request body's media declarations continue to determine `@Consumes`. A string header does not broaden a body declared as `application/octet-stream`. To accept several image formats, declare `image/*` on the body; to accept arbitrary media, declare `*/*`. Media matching is case-insensitive and accepts parameters such as `image/png; profile=example`, while the injected string preserves the actual header. Existing class-level media defaults still apply when there is no method-level override, including operations without a body.
+
+Server enum models expose a static `fromString` converter using their declared wire values, with or without Jackson annotations. Strict enums accept exact values such as `image/png` and reject undeclared spellings, casing and parameters. Use a string header when those variations should reach application code, or a tolerant enum to retain unknown values. Enum conversion does not change JSON decoding or the allowed-value restrictions on inherited model properties.
+
+Regenerate and update application overrides/delegates to accept the new argument. Client parameter and media behavior is unchanged. Python service protocols already included explicit headers.
+
+OpenAPI specifies that explicit `Content-Type` header parameters are ignored. Sunday retains them as an existing extension for applications that need the header value; `requestBody.content` remains the portable declaration of accepted media. RAML header declarations and HTTP AsyncAPI message headers are retained as well. See the [OpenAPI parameter rules](https://spec.openapis.org/oas/v3.1.1.html#parameter-object), [Jakarta REST header conversion](https://jakarta.ee/specifications/restful-ws/4.0/apidocs/jakarta.ws.rs/jakarta/ws/rs/headerparam), and [Jersey validation configuration](https://eclipse-ee4j.github.io/jersey.github.io/documentation/latest31x/bean-validation.html).
 
 ## Python/Litestar
 
@@ -40,6 +52,24 @@ The programmatic option is `PythonGeneratorOptions(enforceEndpointSecurity = tru
 Protected routes receive a guard that rejects requests with no authenticated user in `connection.scope["user"]` with HTTP 401. The application configures authentication middleware to validate credentials and populate that user. Explicitly public routes set Litestar's standard `opt={"exclude_from_auth": True}`; the middleware must honor that option key. Higher-level guards remain cumulative and can still restrict these routes.
 
 This option is disabled by default, preserving existing Litestar output.
+
+### Binary request bodies
+
+Whole-body `file`/`binary` schemas, including aliases, use `sunday.litestar.request_bytes` to read the request without JSON/base64 decoding. The helper checks all declared media ranges and rejects unsupported media with HTTP 415 before invoking the service. It uses the runtime's shared `MediaType` parser and matcher, preserves the original bytes, and retains Litestar's body-size limit. Missing `Content-Type` is treated as `application/octet-stream`; an explicitly required header is still independently required. Malformed media types produce HTTP 400. Explicit header arguments retain their declared string, enum or singleton-literal type.
+
+JSON `format: byte` values and binary fields inside structured models continue through structured decoding. Multiple binary media representations are supported. An operation mixing binary and structured representations fails generation with a diagnostic naming the operation, rather than selecting the first representation.
+
+This output requires Sunday Python `2.0.0-beta.2` or later, which provides `request_bytes`. Until PyPI publication, install the Litestar extra from the released Git tag:
+
+```sh
+python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.2'
+```
+
+Compiler-backed tests use this tag by default. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
+
+```sh
+SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*PythonContentTypeTest'
+```
 
 ## Authentication policy and application configuration
 
@@ -72,6 +102,9 @@ The runtime fixtures generate source from OpenAPI and RAML contracts during the 
 ```sh
 ./gradlew :integration-tests:jaxrs:check :integration-tests:quarkus:check
 ./gradlew :generator:test --tests '*PythonEndpointSecurityTest'
+./gradlew :generator:test --tests '*ContentTypeTest'
 ```
 
 Jersey exercises the standard JAX-RS request pipeline. Quarkus runs HTTP requests against the CDI-managed aggregate and verifies public access, anonymous 401 responses, and authenticated delegation. Litestar tests verify middleware exclusions, protected access, and a fail-closed guard when no authentication middleware supplies a user.
+
+Content-Type fixtures additionally verify raw binary delegation, exact and wildcard media restrictions, strict and tolerant enum conversion, constants, defaults and missing headers. Compiler-backed AsyncAPI and composed cases reuse an enum for header binding and an `allOf` child restriction, preserving the behavior fixed by #217.

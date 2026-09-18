@@ -1024,12 +1024,13 @@ class KotlinJAXRSIrGeneratorTest {
       assertTrue(serviceSource.contains("(value = \"Content-Type\") contentType: AvatarContentType"), serviceSource)
       assertTrue(enumSource.contains("ImagePng(\"image/png\")"), enumSource)
       assertTrue(enumSource.contains("override fun toString(): String = wireValue"), enumSource)
+      assertFalse(enumSource.contains("fun fromString("), enumSource)
     }
   }
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
-  fun `omits server content type header parameters and wires enum JSON values`() {
+  fun `retains server content type header parameters and wires enum JSON values`() {
     val typeRegistry =
       KotlinTypeRegistry(
         "io.test",
@@ -1052,11 +1053,12 @@ class KotlinJAXRSIrGeneratorTest {
       serviceSource.contains("@Consumes(value = [\"image/png\", \"image/jpeg\", \"image/webp\"])"),
       serviceSource,
     )
-    assertFalse(serviceSource.contains("contentType: AvatarContentType"), serviceSource)
+    assertTrue(serviceSource.contains("contentType: AvatarContentType"), serviceSource)
     assertTrue(enumSource.contains("@JsonValue"), enumSource)
     assertTrue(enumSource.contains("@JsonCreator"), enumSource)
     assertTrue(enumSource.contains("@JvmStatic"), enumSource)
     assertTrue(enumSource.contains("public fun fromValue(rawValue: String): AvatarContentType"), enumSource)
+    assertTrue(enumSource.contains("public fun fromString(rawValue: String): AvatarContentType"), enumSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)

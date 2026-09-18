@@ -1,0 +1,159 @@
+openapi: 3.1.0
+info: { title: Uploads API, version: "1.0" }
+x-sunday-apiId: uploads
+components:
+  schemas:
+    AvatarContentType:
+      type: string
+      enum: [image/png, image/jpeg]
+    TolerantContentType:
+      type: string
+      enum: [image/png, image/jpeg, unknown]
+      x-unknown-value: unknown
+paths:
+  /uploads/raw:
+    put:
+      operationId: putRaw
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          "*/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/image:
+    put:
+      operationId: putImage
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          "image/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/fixed:
+    put:
+      operationId: putFixed
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          "application/octet-stream":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/enum:
+    put:
+      operationId: putEnum
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { $ref: '#/components/schemas/AvatarContentType' }
+      requestBody:
+        required: true
+        content:
+          "image/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/optional:
+    put:
+      operationId: putOptional
+      parameters:
+        - in: header
+          name: cOnTeNt-TyPe
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          "*/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/default:
+    put:
+      operationId: putDefault
+      parameters:
+        - in: header
+          name: Content-Type
+          required: false
+          schema: { type: string, default: application/octet-stream }
+      requestBody:
+        required: true
+        content:
+          "*/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/constant:
+    put:
+      operationId: putConstant
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { type: string, enum: [image/png] }
+      requestBody:
+        required: true
+        content:
+          "image/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/multiple:
+    put:
+      operationId: putMultiple
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          "image/png":
+            schema: { type: string, format: binary }
+          "image/jpeg":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/tolerant:
+    put:
+      operationId: putTolerant
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema: { $ref: '#/components/schemas/TolerantContentType' }
+      requestBody:
+        required: true
+        content:
+          "image/*":
+            schema: { type: string, format: binary }
+      responses:
+        '204': { description: Updated }
+  /uploads/header:
+    get:
+      operationId: getHeader
+      parameters:
+        - in: header
+          name: Content-Type
+          schema: { type: string }
+      responses:
+        '204': { description: Header received }

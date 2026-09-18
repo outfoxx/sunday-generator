@@ -44,7 +44,7 @@ class PythonLitestarIrGenerator(
     }
 
     if (GeneratedTypeCategory.Service in outputCategories) {
-      val litestarRenderer = PythonLitestarRenderer(packageName)
+      val litestarRenderer = PythonLitestarRenderer(packageName, api)
       if (options.enforceSecuritySchemes) {
         modules += renderSecurity(packageName, services)
       }

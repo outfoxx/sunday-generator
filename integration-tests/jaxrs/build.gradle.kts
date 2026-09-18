@@ -9,6 +9,8 @@ dependencies {
   implementation(libs.jakartaJaxrs31)
   implementation(libs.jakartaAnnotations)
   implementation(libs.jakartaValidation)
+  implementation(libs.jackson)
+  testImplementation(libs.jerseyValidation)
   testImplementation(libs.jerseyInMemory)
   testImplementation(libs.jerseyHk2)
   testImplementation(libs.jerseySse)
@@ -96,17 +98,40 @@ val generateAsyncApi by tasks.registering(JavaExec::class) {
   args(asyncContracts.map { it.asFile.absolutePath })
 }
 
+val uploadSources = layout.buildDirectory.dir("generated/uploads")
+val uploadContract = rootProject.layout.projectDirectory.file("generator/src/test/resources/raml/ir/content-type.raml")
+val generateUploadApi by tasks.registering(JavaExec::class) {
+  inputs.file(uploadContract)
+  outputs.dir(uploadSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-use-jakarta-packages",
+    "-pkg",
+    "io.test.jaxrs.uploads",
+    "-out",
+    uploadSources.get().asFile.absolutePath,
+    uploadContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
   kotlin.srcDir(generateAsyncApi)
 }
 
 tasks.compileKotlin {
+  dependsOn(generateUploadApi)
   dependsOn(generateAsyncApi)
   dependsOn(generateApi, generateSecuredApi)
 }

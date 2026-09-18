@@ -1601,10 +1601,6 @@ class KotlinJAXRSIrGenerator(
     functionBuilder: FunSpec.Builder,
   ): ParameterSpec? {
     val wireName = serializationName ?: this.name
-    if (generationMode == Server && wireName.equals("Content-Type", ignoreCase = true)) {
-      return null
-    }
-
     if (constantValue != null) {
       val clientHeaderParam = jaxRsTypes.clientHeaderParam
       if (generationMode == Client && clientHeaderParam != null) {
@@ -1616,7 +1612,7 @@ class KotlinJAXRSIrGenerator(
             .build(),
         )
         return null
-      } else if (generationMode == Server) {
+      } else if (generationMode == Server && !wireName.equals("Content-Type", ignoreCase = true)) {
         return null
       }
     }
@@ -1697,6 +1693,19 @@ class KotlinJAXRSIrGenerator(
     }
 
     parameter.validation.validationAnnotations(parameter.type).forEach(::addAnnotation)
+    if (generationMode == Server &&
+      parameter.location == GeneratedParameter.Location.HEADER &&
+      (parameter.serializationName ?: parameter.name).equals("Content-Type", ignoreCase = true) &&
+      parameter.constantValue is String &&
+      typeName.copy(nullable = false) == STRING
+    ) {
+      addAnnotation(
+        AnnotationSpec
+          .builder(beanValidationTypes.pattern)
+          .addMember("regexp = %S", Regex.escape(parameter.constantValue))
+          .build(),
+      )
+    }
 
     return this
   }
@@ -1980,6 +1989,7 @@ class KotlinJAXRSIrGenerator(
             kotlinClassName(),
             entries,
             typeRegistry.options.contains(JacksonAnnotations),
+            generationMode == Server,
           )
         } else {
           TypeSpec
@@ -2007,8 +2017,8 @@ class KotlinJAXRSIrGenerator(
                 }.addStatement("return wireValue")
                 .build(),
             ).apply {
-              if (typeRegistry.options.contains(JacksonAnnotations)) {
-                addType(jsonCreatorCompanionType())
+              if (typeRegistry.options.contains(JacksonAnnotations) || generationMode == Server) {
+                addType(enumCompanionType())
               }
               entries.forEach { entry ->
                 addEnumConstant(
@@ -2454,14 +2464,17 @@ class KotlinJAXRSIrGenerator(
         }
       }.build()
 
-  private fun GeneratedModel.jsonCreatorCompanionType(): TypeSpec =
+  private fun GeneratedModel.enumCompanionType(): TypeSpec =
     TypeSpec
       .companionObjectBuilder()
       .addFunction(
         FunSpec
           .builder("fromValue")
-          .addAnnotation(JACKSON_JSON_CREATOR)
-          .addAnnotation(ClassName("kotlin.jvm", "JvmStatic"))
+          .apply {
+            if (typeRegistry.options.contains(JacksonAnnotations)) {
+              addAnnotation(JACKSON_JSON_CREATOR)
+            }
+          }.addAnnotation(ClassName("kotlin.jvm", "JvmStatic"))
           .addParameter("rawValue", STRING)
           .returns(kotlinClassName())
           .beginControlFlow("for (entry in entries)")
@@ -2474,7 +2487,20 @@ class KotlinJAXRSIrGenerator(
             IllegalArgumentException::class.asTypeName(),
             "Unknown ${name.toUpperCamelCase()} value: ",
           ).build(),
-      ).build()
+      ).apply {
+        if (generationMode == Server) {
+          addFunction(
+            FunSpec
+              .builder("fromString")
+              .addKdoc("Converts a REST parameter from its declared wire value.\n")
+              .addAnnotation(ClassName("kotlin.jvm", "JvmStatic"))
+              .addParameter("rawValue", STRING)
+              .returns(kotlinClassName())
+              .addStatement("return fromValue(rawValue)")
+              .build(),
+          )
+        }
+      }.build()
 
   private fun GeneratedModel.objectUnionTypeSpecOrNull(): TypeSpec.Builder? {
     if (!isObjectUnionSealedInterface) {
