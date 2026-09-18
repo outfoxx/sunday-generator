@@ -59,7 +59,13 @@ Whole-body `file`/`binary` schemas, including aliases, use `sunday.litestar.requ
 
 JSON `format: byte` values and binary fields inside structured models continue through structured decoding. Multiple binary media representations are supported. An operation mixing binary and structured representations fails generation with a diagnostic naming the operation, rather than selecting the first representation.
 
-This output requires the companion Sunday Python runtime change providing `request_bytes`; the `2.0.0-beta.1` runtime does not provide it. Before releasing this generator change, release the runtime helper, update the Python compiler's pinned runtime tag and minimum test dependency, and verify the published artifact. Local verification uses the matching checkout:
+This output requires Sunday Python `2.0.0-beta.2` or later, which provides `request_bytes`. Until PyPI publication, install the Litestar extra from the released Git tag:
+
+```sh
+python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.2'
+```
+
+Compiler-backed tests use this tag by default. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
 
 ```sh
 SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*PythonContentTypeTest'
@@ -96,7 +102,7 @@ The runtime fixtures generate source from OpenAPI and RAML contracts during the 
 ```sh
 ./gradlew :integration-tests:jaxrs:check :integration-tests:quarkus:check
 ./gradlew :generator:test --tests '*PythonEndpointSecurityTest'
-SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*ContentTypeTest'
+./gradlew :generator:test --tests '*ContentTypeTest'
 ```
 
 Jersey exercises the standard JAX-RS request pipeline. Quarkus runs HTTP requests against the CDI-managed aggregate and verifies public access, anonymous 401 responses, and authenticated delegation. Litestar tests verify middleware exclusions, protected access, and a fail-closed guard when no authentication middleware supplies a user.
