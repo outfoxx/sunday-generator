@@ -3099,6 +3099,13 @@ class SwiftSundayIrGeneratorTest {
                 listOf(
                   GeneratedModelProperty("type", GeneratedTypeRef.named("EventType"), required = true),
                   GeneratedModelProperty(
+                    "requiredNullable",
+                    GeneratedTypeRef.scalar("string", nullable = true),
+                    required = true,
+                  ),
+                  GeneratedModelProperty("optionalNullable", GeneratedTypeRef.scalar("string", nullable = true)),
+                  GeneratedModelProperty("optionalText", GeneratedTypeRef.scalar("string")),
+                  GeneratedModelProperty(
                     "data",
                     GeneratedTypeRef.named("EventData"),
                     required = true,
@@ -3112,10 +3119,38 @@ class SwiftSundayIrGeneratorTest {
     SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
       .generateServiceTypes()
 
-    assertTrue(compileTypes(compiler, typeRegistry.buildTypes()))
+    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("EventNullabilityTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      @testable import SundayGenTest
+      final class EventNullabilityTests: XCTestCase {
+        func testKnownAndFallbackEvents() throws {
+          for kind in ["created", "future"] {
+            let base: [String: Any] = [
+              "type": kind, "data": ["version": 1, "name": "test"],
+              "requiredNullable": NSNull(), "optionalNullable": NSNull()
+            ]
+            var populated = base
+            populated["optionalText"] = ""
+            for wire in [base, populated] {
+              let data = try JSONSerialization.data(withJSONObject: wire)
+              let event = try JSONDecoder().decode(EventEnvelope.self, from: data)
+              let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(event)) as! NSDictionary
+              XCTAssertEqual(encoded, wire as NSDictionary)
+            }
+          }
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
 
-    val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "EventEnvelope.swift")
-    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "EventDataUnknown.swift")
+    val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Events/EventEnvelope.swift")
+    val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Events/EventDataUnknown.swift")
     assertTrue(envelopeSource.contains("case unknown(UnknownEvent)"), envelopeSource)
     assertTrue(envelopeSource.contains("public let data: EventDataUnknown"), envelopeSource)
     assertTrue(envelopeSource.contains("self = .unknown(try UnknownEvent(from: decoder))"), envelopeSource)

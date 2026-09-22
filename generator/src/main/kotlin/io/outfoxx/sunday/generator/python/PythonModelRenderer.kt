@@ -326,7 +326,7 @@ class PythonModelRenderer(
     )
 
   private fun GeneratedModel.renderArrayAliasModel(): PythonCodeBlock {
-    val elementType = aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object")
+    val elementType = aliases.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object")
     val collectionType =
       PythonCodeBlock.of(
         "%L[%C]",
@@ -349,7 +349,7 @@ class PythonModelRenderer(
     val mapType =
       PythonCodeBlock.of(
         "dict[str, %C]",
-        aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
+        aliases.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
       )
     return PythonCodeBlock.of(
       "type %L = %C",
@@ -1473,13 +1473,5 @@ class PythonModelRenderer(
         }
       }
 
-  private fun GeneratedTypeRef.acceptsNull(visited: Set<String> = emptySet()): Boolean =
-    nullable ||
-      (kind == GeneratedTypeRef.Kind.SCALAR && name.lowercase() in setOf("any", "object", "nil")) ||
-      (kind == GeneratedTypeRef.Kind.UNION && arguments.any { argument -> argument.acceptsNull(visited) }) ||
-      (
-        kind == GeneratedTypeRef.Kind.NAMED &&
-          name !in visited &&
-          modelIndex[name]?.aliases?.any { alias -> alias.acceptsNull(visited + name) } == true
-      )
+  private fun GeneratedTypeRef.acceptsNull(): Boolean = modelProperties.acceptsNull(this)
 }

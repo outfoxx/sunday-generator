@@ -46,6 +46,15 @@ class SwiftOptionalSerializationTest {
       @testable import SundayGenTest
       final class OptionalSerializationTests: XCTestCase {
         func testSerialization() throws {
+          for wire in [
+            #"{"nullableEntries":null,"nullableLookup":null}"#,
+            #"{"entries":[null],"lookup":{"key":null},"aliasedEntries":[],"aliasedLookup":{},"nullableEntries":null,"nullableLookup":null}"#
+          ] {
+            let data = Data(wire.utf8)
+            let collection = try JSONDecoder().decode(CollectionRequest.self, from: data)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(collection)) as! NSDictionary,
+                           try JSONSerialization.jsonObject(with: data) as! NSDictionary)
+          }
           let alias = AliasRequest(nullableAlias: nil, anyValue: nil)
           XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(alias)) as! NSDictionary,
                          ["nullableAlias": NSNull(), "anyValue": NSNull()] as NSDictionary)

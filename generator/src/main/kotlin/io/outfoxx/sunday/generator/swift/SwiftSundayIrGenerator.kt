@@ -1350,7 +1350,7 @@ class SwiftSundayIrGenerator(
               model.properties.forEach { property ->
                 addStatement(
                   "try container.encode%L(self.%N, forKey: .%N)",
-                  if (property.swiftModelPropertyTypeName(false).optional) "IfPresent" else "",
+                  property.swiftEncodingSuffix(),
                   property.name.swiftIdentifierName,
                   property.name.swiftIdentifierName,
                 )
@@ -1500,7 +1500,7 @@ class SwiftSundayIrGenerator(
         properties.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
-            if (property.swiftTypeName().optional) "IfPresent" else "",
+            property.swiftEncodingSuffix(),
             property.name.swiftIdentifierName,
             property.name.swiftIdentifierName,
           )
@@ -3143,11 +3143,7 @@ class SwiftSundayIrGenerator(
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
-            when {
-              patchable -> "IfExists"
-              !property.required && !modelProperties.acceptsNull(property.type) -> "IfPresent"
-              else -> ""
-            },
+            if (patchable) "IfExists" else property.swiftEncodingSuffix(),
             property.name.swiftIdentifierName,
             property.name.swiftIdentifierName,
           )
@@ -3206,7 +3202,7 @@ class SwiftSundayIrGenerator(
   ) {
     val discriminatorProperty = property.externalDiscriminatorProperty(properties)
     val propertyTypeName = property.swiftTypeName()
-    val coderSuffix = if (!property.required && !modelProperties.acceptsNull(property.type)) "IfPresent" else ""
+    val coderSuffix = property.swiftEncodingSuffix()
     val propertyTypeSuffix = if (propertyTypeName.optional) "?" else ""
 
     beginControlFlow("switch", "self.%N", discriminatorProperty.name.swiftIdentifierName)
@@ -3316,6 +3312,9 @@ class SwiftSundayIrGenerator(
           addEnumCase(property.name.swiftIdentifierName, property.serializationName ?: property.name)
         }
       }.build()
+
+  private fun GeneratedModelProperty.swiftEncodingSuffix(): String =
+    if (!required && !modelProperties.acceptsNull(type)) "IfPresent" else ""
 
   private fun GeneratedModelProperty.swiftTypeName(): TypeName =
     type

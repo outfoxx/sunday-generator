@@ -35,12 +35,12 @@ private fun GeneratedTypeRef.renderNonNullablePythonType(): PythonCodeBlock =
       PythonCodeBlock.of(
         "%L[%C]",
         if (collection?.name == "SET") "set" else "list",
-        arguments.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
+        arguments.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
       )
     GeneratedTypeRef.Kind.MAP ->
       PythonCodeBlock.of(
         "dict[str, %C]",
-        arguments.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
+        arguments.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
       )
     GeneratedTypeRef.Kind.UNION ->
       if (arguments.isEmpty()) {

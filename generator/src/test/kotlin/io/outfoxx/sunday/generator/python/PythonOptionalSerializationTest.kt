@@ -49,7 +49,20 @@ class PythonOptionalSerializationTest : PythonTest() {
           from sunday.litestar import SundayPlugin
           from sunday import JsonCodec
           from pydantic import ValidationError
-          from test_api.models import Request, AliasRequest
+          from test_api.models import Request, AliasRequest, CollectionRequest
+          collection_nulls = {"nullableEntries": None, "nullableLookup": None}
+          for fields in ({}, {"entries": [None], "lookup": {"key": None}, "aliasedEntries": [], "aliasedLookup": {}}):
+              wire = dict(collection_nulls, **fields)
+              collection = CollectionRequest.model_validate(wire)
+              assert json.loads(collection.model_dump_json(by_alias=True)) == wire
+          contents = {"nullableEntries": [None], "nullableLookup": {"key": None}}
+          assert CollectionRequest.model_validate(contents).model_dump(mode="json", by_alias=True) == contents
+          for field in ("entries", "lookup", "aliasedEntries", "aliasedLookup"):
+              try:
+                  CollectionRequest.model_validate({field: None})
+                  raise AssertionError("non-nullable container accepted null")
+              except ValidationError:
+                  pass
           alias = AliasRequest(nullableAlias=None, anyValue=None)
           assert json.loads(alias.model_dump_json(by_alias=True)) == {"nullableAlias": None, "anyValue": None}
           expected = {"name": "test", "requiredNullable": None, "optionalNullable": None}

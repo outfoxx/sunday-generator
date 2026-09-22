@@ -51,7 +51,17 @@ class TypeScriptOptionalSerializationTest {
             import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
             import {Request, RequestSchema} from './request';
             import {AliasRequestSchema} from './alias-request';
+            import {CollectionRequestSchema} from './collection-request';
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const collectionSchema = runtime.resolveSchema(CollectionRequestSchema);
+            for (const fields of [{}, {entries: [null], lookup: {key: null}, aliasedEntries: [], aliasedLookup: {}}]) {
+              const wire = {nullableEntries: null, nullableLookup: null, ...fields};
+              const restored = JSON.parse(JSON.stringify(z.encode(collectionSchema, collectionSchema.parse(wire))));
+              for (const key of Object.keys(wire)) {
+                if (JSON.stringify(restored[key]) !== JSON.stringify((wire as any)[key])) throw new Error('collection changed: ' + key);
+              }
+            }
+            if (collectionSchema.safeParse({entries: null}).success) throw new Error('nullable items made container nullable');
             const aliasSchema = runtime.resolveSchema(AliasRequestSchema);
             const alias = {nullableAlias: null, anyValue: null};
             if (JSON.stringify(z.encode(aliasSchema, aliasSchema.parse(alias))) !== JSON.stringify(alias)) throw new Error('nullable alias changed');

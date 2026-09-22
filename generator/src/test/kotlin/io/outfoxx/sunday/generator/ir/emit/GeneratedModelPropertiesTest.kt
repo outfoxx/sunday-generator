@@ -27,6 +27,37 @@ import org.junit.jupiter.api.Test
 
 class GeneratedModelPropertiesTest {
   @Test
+  fun `nullability follows aliases and unions but not collection contents`() {
+    val nullableString = GeneratedTypeRef.scalar("string").copy(nullable = true)
+    val models =
+      listOf(
+        GeneratedModel("Text", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(nullableString)),
+        GeneratedModel("Items", GeneratedModel.Kind.ARRAY, aliases = listOf(nullableString)),
+        GeneratedModel("Values", GeneratedModel.Kind.MAP, aliases = listOf(nullableString)),
+        GeneratedModel(
+          "ItemsAlias",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("Items")),
+        ),
+        GeneratedModel(
+          "ValuesAlias",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("Values")),
+        ),
+        GeneratedModel("Choice", GeneratedModel.Kind.UNION, aliases = listOf(GeneratedTypeRef.named("Text"))),
+        GeneratedModel("Cycle", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(GeneratedTypeRef.named("Cycle"))),
+      ).associateBy { it.name }
+    val properties = GeneratedModelProperties { models[it.name] }
+    for (name in listOf("Text", "Choice")) {
+      assertTrue(properties.acceptsNull(GeneratedTypeRef.named(name)), name)
+    }
+    for (name in listOf("Items", "Values", "ItemsAlias", "ValuesAlias", "Cycle")) {
+      assertEquals(false, properties.acceptsNull(GeneratedTypeRef.named(name)), name)
+      assertTrue(properties.acceptsNull(GeneratedTypeRef.named(name).copy(nullable = true)), name)
+    }
+  }
+
+  @Test
   fun `numeric validation follows scalar and array aliases with nullable elements`() {
     val integer = GeneratedTypeRef.scalar("integer")
     val item = GeneratedModel("Item", GeneratedModel.Kind.SCALAR_ALIAS, aliases = listOf(integer.copy(nullable = true)))

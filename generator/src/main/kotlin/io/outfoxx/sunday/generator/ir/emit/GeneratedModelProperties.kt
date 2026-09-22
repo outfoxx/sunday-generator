@@ -89,7 +89,10 @@ internal class GeneratedModelProperties(
       (
         reference.kind == GeneratedTypeRef.Kind.NAMED &&
           reference.name !in visited &&
-          modelFor(reference)?.aliases?.any { acceptsNull(it, visited + reference.name) } == true
+          modelFor(reference)
+            ?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS || it.kind == GeneratedModel.Kind.UNION }
+            ?.aliases
+            ?.any { acceptsNull(it, visited + reference.name) } == true
       )
 
   fun declarationType(reference: GeneratedTypeRef): GeneratedTypeRef {

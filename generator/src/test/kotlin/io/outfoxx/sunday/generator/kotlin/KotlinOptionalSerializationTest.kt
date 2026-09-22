@@ -103,6 +103,14 @@ class KotlinOptionalSerializationTest {
       mapper.readTree(aliasJson),
       mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(aliasJson, aliasType))),
     )
+    val collectionType = result.classLoader.loadClass("io.test.CollectionRequest")
+    for (json in listOf(
+      """{"nullableEntries":null,"nullableLookup":null}""",
+      """{"entries":[null],"lookup":{"key":null},"aliasedEntries":[],"aliasedLookup":{},"nullableEntries":null,"nullableLookup":null}""",
+    )) {
+      val value = mapper.readValue(json, collectionType)
+      assertEquals(mapper.readTree(json), mapper.readTree(mapper.writeValueAsBytes(value)))
+    }
     val callsType = result.classLoader.loadClass("io.test.Calls")
     val callsInstance = callsType.getField("INSTANCE").get(null)
     val requestType = result.classLoader.loadClass("io.test.Request")

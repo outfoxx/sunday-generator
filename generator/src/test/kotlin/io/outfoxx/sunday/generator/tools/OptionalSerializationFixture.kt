@@ -28,6 +28,27 @@ internal fun optionalSerializationApi(directory: Path): GeneratedApi {
     OpenApiReferenceDocuments.document(
       "Optional serialization",
       """
+      NullableItems:
+        type: array
+        items: {type: [string, 'null']}
+      NullableValues:
+        type: object
+        additionalProperties: {type: [string, 'null']}
+      ItemsAlias: {${'$'}ref: '#/components/schemas/NullableItems'}
+      ValuesAlias: {${'$'}ref: '#/components/schemas/NullableValues'}
+      CollectionRequest:
+        type: object
+        properties:
+          entries: {${'$'}ref: '#/components/schemas/NullableItems'}
+          lookup: {${'$'}ref: '#/components/schemas/NullableValues'}
+          aliasedEntries: {${'$'}ref: '#/components/schemas/ItemsAlias'}
+          aliasedLookup: {${'$'}ref: '#/components/schemas/ValuesAlias'}
+          nullableEntries:
+            type: [array, 'null']
+            items: {type: [string, 'null']}
+          nullableLookup:
+            type: [object, 'null']
+            additionalProperties: {type: [string, 'null']}
       NullableText: {type: [string, 'null']}
       AliasRequest:
         type: object
