@@ -46,6 +46,14 @@ Swift patch constraints validate only supplied non-null values. Omission and nul
 
 Ordinary OpenAPI Reference Objects are already expanded when the converter sees them. Only schema uses retain canonical references, interpreted through `OpenApiSchemaReferences`.
 
+## Presence and nullability on the wire
+
+Optional properties may be omitted; nullability independently determines whether an explicit JSON `null` is valid. Kotlin/JAX-RS and Kotlin/Sunday add getter-level Jackson `NON_NULL` inclusion only to optional, non-nullable model fields when Jackson annotations are enabled. Python emits equivalent Pydantic field-level exclusion metadata, supported by the runtime's Pydantic 2.12 minimum. Empty strings and collections, zero, and false remain present. Nullable aliases and unconstrained values retain null.
+
+Swift ordinary models encode nullable properties with `encode`, preserving explicit null even for required fields, and omit unset non-nullable optional properties with `encodeIfPresent`. Kotlin and Swift still use nullable storage for ordinary optional fields; this does not introduce a separate presence wrapper for optional nullable values. Existing patch operations retain their own omission/deletion representation.
+
+TypeScript uses `undefined` for optional presence and adds `null` only when the schema permits it. Generated Zod schemas use `optional()` for non-nullable optional properties and `nullish()` for nullable optional properties. This tightens previously over-permissive generated types and validation; callers that supplied null to a non-nullable optional field must omit it instead.
+
 ## Shared test support
 
 The generator's `testFixtures` source set contains `OpenApiHttpFixture` and reusable `OpenApiReferenceDocuments` fragments. Library, CLI, and Gradle tests share transport setup and schema scenarios while retaining their own contract and build assertions. The fixture supports exact query routes, redirects, and conditional responses to changing documents. Fixtures are test dependencies only, and their variants are excluded from publication.

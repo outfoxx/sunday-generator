@@ -3145,7 +3145,7 @@ class SwiftSundayIrGenerator(
             "try container.encode%L(self.%N, forKey: .%N)",
             when {
               patchable -> "IfExists"
-              property.swiftTypeName().optional -> "IfPresent"
+              !property.required && !modelProperties.acceptsNull(property.type) -> "IfPresent"
               else -> ""
             },
             property.name.swiftIdentifierName,
@@ -3206,7 +3206,7 @@ class SwiftSundayIrGenerator(
   ) {
     val discriminatorProperty = property.externalDiscriminatorProperty(properties)
     val propertyTypeName = property.swiftTypeName()
-    val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
+    val coderSuffix = if (!property.required && !modelProperties.acceptsNull(property.type)) "IfPresent" else ""
     val propertyTypeSuffix = if (propertyTypeName.optional) "?" else ""
 
     beginControlFlow("switch", "self.%N", discriminatorProperty.name.swiftIdentifierName)

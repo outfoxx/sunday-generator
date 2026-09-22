@@ -40,12 +40,12 @@ class ProjectView(SundayModel):
     unique_id: UniqueId = Field(alias="uniqueId")
     resource_id: UUID = Field(alias="resourceId")
     created_at: AwareDatetime = Field(alias="createdAt")
-    release_date: date | None = Field(default=None, alias="releaseDate")
-    home_page: AnyUrl | None = Field(default=None, alias="homePage")
-    avatar: bytes | None = Field(default=None)
-    display_name: str | None = Field(default=None, alias="display-name")
+    release_date: date | None = Field(default=None, exclude_if=lambda value: value is None, alias="releaseDate")
+    home_page: AnyUrl | None = Field(default=None, exclude_if=lambda value: value is None, alias="homePage")
+    avatar: bytes | None = Field(default=None, exclude_if=lambda value: value is None)
+    display_name: str | None = Field(default=None, exclude_if=lambda value: value is None, alias="display-name")
     status: ProjectStatus
-    tags: list[str] | None = Field(default=None)
+    tags: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="before")
     @classmethod
@@ -137,7 +137,7 @@ class ProjectDeletedData(SundayModel):
     """Generated ProjectDeletedData model."""
 
     project_id: str = Field(alias="projectId")
-    reason: str | None = Field(default=None)
+    reason: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="before")
     @classmethod

@@ -943,7 +943,7 @@ class TypeScriptSundayIrGeneratorTest {
 
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(source.contains("export type User = SchemaOutput<typeof UserSchema>;"), source)
-    assertTrue(source.contains("'displayName': z.string().nullish()"), source)
+    assertTrue(source.contains("'displayName': z.string().optional()"), source)
     assertTrue(source.contains("export const UserSchema"), source)
     assertFalse(source.contains("export interface UserSpec"), source)
     assertFalse(source.contains("export class User"), source)
@@ -1050,8 +1050,8 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(requestSource.contains("'email': z.string().email()"), requestSource)
     assertTrue(requestSource.contains("'displayName': z.string().min(2).max(50).regex(/^[A-Za-z].*$/)"), requestSource)
-    assertTrue(requestSource.contains("'luckyNumber': z.number().gte(1).lte(100).nullish()"), requestSource)
-    assertTrue(requestSource.contains("'tags': z.array(z.string().uuid()).min(1).max(5).nullish()"), requestSource)
+    assertTrue(requestSource.contains("'luckyNumber': z.number().gte(1).lte(100).optional()"), requestSource)
+    assertTrue(requestSource.contains("'tags': z.array(z.string().uuid()).min(1).max(5).optional()"), requestSource)
     assertTrue(serviceSource.contains("const searchUsersQParameterType = z.string().min(2).max(80);"), serviceSource)
     assertTrue(serviceSource.contains("q: searchUsersQParameterType.parse(q)"), serviceSource)
   }
@@ -1162,7 +1162,7 @@ class TypeScriptSundayIrGeneratorTest {
       }
 
     assertTrue(compileTypes(compiler, builtTypes))
-    assertTrue(updateSource.contains("'location': z.string().regex(/^[A-Z2-7]{26}$/).nullish()"), updateSource)
+    assertTrue(updateSource.contains("'location': z.string().regex(/^[A-Z2-7]{26}$/).optional()"), updateSource)
     assertFalse(updateSource.contains("z.record(z.string(), z.unknown()).regex"), updateSource)
   }
 
@@ -1197,9 +1197,9 @@ class TypeScriptSundayIrGeneratorTest {
         }.single { source -> source.contains("updateValue") }
 
     assertTrue(compileTypes(compiler, builtTypes))
-    assertTrue(holderSource.contains("'value': z.unknown().nullish()"), holderSource)
-    assertTrue(holderSource.contains("'documented': z.unknown().nullish()"), holderSource)
-    assertTrue(holderSource.contains("'named': z.unknown().nullish()"), holderSource)
+    assertTrue(holderSource.contains("'value': z.unknown().optional()"), holderSource)
+    assertTrue(holderSource.contains("'documented': z.unknown().optional()"), holderSource)
+    assertTrue(holderSource.contains("'named': z.unknown().optional()"), holderSource)
     assertTrue(serviceSource.contains("body: unknown"), serviceSource)
     assertTrue(serviceSource.contains("Operation<unknown, unknown, Factory>"), serviceSource)
   }
@@ -2654,7 +2654,7 @@ class TypeScriptSundayIrGeneratorTest {
       locationSource,
     )
     assertTrue(
-      locationSource.contains("'parent': z.lazy(() => runtime.resolveSchema(LocationSummarySchema)).nullish()"),
+      locationSource.contains("'parent': z.lazy(() => runtime.resolveSchema(LocationSummarySchema)).optional()"),
       locationSource,
     )
     assertTrue(
@@ -2921,10 +2921,10 @@ class TypeScriptSundayIrGeneratorTest {
     )
     assertFalse(envelopeOutput.contains("event-identity-schema"), envelopeOutput)
     assertTrue(
-      envelopeOutput.contains("'actor': z.lazy(() => runtime.resolveSchema(EventIdentitySchema)).nullish()"),
+      envelopeOutput.contains("'actor': z.lazy(() => runtime.resolveSchema(EventIdentitySchema)).optional()"),
       envelopeOutput,
     )
-    assertTrue(envelopeOutput.contains("'description': z.string().nullish()"), envelopeOutput)
+    assertTrue(envelopeOutput.contains("'description': z.string().optional()"), envelopeOutput)
     assertTrue(envelopeOutput.contains("z.discriminatedUnion('type', ["), envelopeOutput)
     assertTrue(
       dataOutput.contains(

@@ -1045,6 +1045,9 @@ class PythonModelRenderer(
           defaultValue?.let { value -> renderDefaultValue(value, model.name) } ?: PythonCodeBlock.of("None"),
         )
     }
+    if (!required && !type.acceptsNull()) {
+      fieldArguments += PythonCodeBlock.of("exclude_if=lambda value: value is None")
+    }
     if (defaultValue != null) {
       fieldArguments += PythonCodeBlock.of("validate_default=True")
     }
@@ -1132,7 +1135,7 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
-      if (enumConstraints.isNotEmpty() && inline.render(context).length > 120) {
+      if ((enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) && inline.render(context).length > 120) {
         val multilineArguments =
           if (arguments.render(context).length + 8 <= 120) {
             PythonCodeBlock.of("        %C", arguments)
