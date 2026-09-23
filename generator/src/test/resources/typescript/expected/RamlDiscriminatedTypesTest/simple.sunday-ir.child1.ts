@@ -7,7 +7,7 @@ export type Child1 = SchemaOutput<typeof Child1Schema>;
 export const Child1Schema = defineSchema((runtime: SchemaRuntime) => {
   const wireSchema = z.looseObject({
     'type': z.literal('Child1'),
-    'value': z.string().nullish(),
+    'value': z.string().optional(),
     'value1': z.number()
   });
   return wireSchema;

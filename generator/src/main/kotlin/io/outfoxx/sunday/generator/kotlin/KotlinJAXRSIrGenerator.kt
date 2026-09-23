@@ -101,6 +101,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_DESERIALIZE
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_DESERIALIZER
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_DESERIALIZER_NONE
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_IGNORE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE
+import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_INCLUDE_INCLUDE
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_MAPPING_EXCEPTION
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_PARSER
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_PROPERTY
@@ -2149,6 +2151,7 @@ class KotlinJAXRSIrGenerator(
             PropertySpec
               .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
               .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+              .addAnnotations(property.jacksonInclusionAnnotations())
               .addAnnotations(
                 property.validation.validationAnnotations(
                   property.type,
@@ -2259,6 +2262,7 @@ class KotlinJAXRSIrGenerator(
               PropertySpec
                 .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
                 .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+                .addAnnotations(property.jacksonInclusionAnnotations())
                 .addAnnotations(
                   property.validation.validationAnnotations(
                     property.type,
@@ -2735,7 +2739,21 @@ class KotlinJAXRSIrGenerator(
     PropertySpec
       .builder("`${name.kotlinIdentifierName}`", modelPropertyTypeName())
       .addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+      .addAnnotations(jacksonInclusionAnnotations())
       .build()
+
+  private fun GeneratedModelProperty.jacksonInclusionAnnotations(): List<AnnotationSpec> =
+    if (!required && !modelProperties.acceptsNull(type) && typeRegistry.options.contains(JacksonAnnotations)) {
+      listOf(
+        AnnotationSpec
+          .builder(JACKSON_JSON_INCLUDE)
+          .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+          .addMember("%T.NON_NULL", JACKSON_JSON_INCLUDE_INCLUDE)
+          .build(),
+      )
+    } else {
+      emptyList()
+    }
 
   private fun GeneratedModelProperty.jacksonExternalDiscriminatorAnnotations(
     useSiteTarget: AnnotationSpec.UseSiteTarget,

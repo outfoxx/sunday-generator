@@ -95,7 +95,7 @@ class PythonClientRendererTest : PythonTest() {
                   ),
                   GeneratedModelProperty(
                     "fromCommitId",
-                    GeneratedTypeRef.scalar("string"),
+                    GeneratedTypeRef.scalar("string", nullable = true),
                     serializationName = "fromCommitId",
                   ),
                 ),

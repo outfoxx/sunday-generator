@@ -1117,6 +1117,7 @@ class KotlinSundayIrGenerator(
                 .apply {
                   addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
                   if (!patchable) {
+                    addAnnotations(property.jacksonInclusionAnnotations())
                     addAnnotations(
                       property.validation.validationAnnotations(
                         property.type,
@@ -1269,6 +1270,7 @@ class KotlinSundayIrGenerator(
             PropertySpec
               .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
               .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+              .addAnnotations(property.jacksonInclusionAnnotations())
               .addAnnotations(
                 property.validation.validationAnnotations(
                   property.type,
@@ -1509,6 +1511,7 @@ class KotlinSundayIrGenerator(
       .builder("`${property.name.kotlinIdentifierName}`", propertyType)
       .apply {
         addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
+        if (!patchable) addAnnotations(property.jacksonInclusionAnnotations())
         addAnnotations(
           property.validation.validationAnnotations(
             property.type,
@@ -1528,6 +1531,22 @@ class KotlinSundayIrGenerator(
         }
       }.build()
   }
+
+  private fun GeneratedModelProperty.jacksonInclusionAnnotations(): List<AnnotationSpec> =
+    if (!required &&
+      !modelProperties.acceptsNull(type) &&
+      typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
+    ) {
+      listOf(
+        AnnotationSpec
+          .builder(JACKSON_JSON_INCLUDE)
+          .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+          .addMember("%T.NON_NULL", JACKSON_JSON_INCLUDE_INCLUDE)
+          .build(),
+      )
+    } else {
+      emptyList()
+    }
 
   private fun GeneratedModelProperty.jacksonExternalDiscriminatorAnnotations(
     useSiteTarget: AnnotationSpec.UseSiteTarget,

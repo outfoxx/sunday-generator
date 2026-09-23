@@ -326,7 +326,7 @@ class PythonModelRenderer(
     )
 
   private fun GeneratedModel.renderArrayAliasModel(): PythonCodeBlock {
-    val elementType = aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object")
+    val elementType = aliases.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object")
     val collectionType =
       PythonCodeBlock.of(
         "%L[%C]",
@@ -349,7 +349,7 @@ class PythonModelRenderer(
     val mapType =
       PythonCodeBlock.of(
         "dict[str, %C]",
-        aliases.firstOrNull()?.renderPythonType(nullable = false) ?: PythonCodeBlock.of("object"),
+        aliases.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
       )
     return PythonCodeBlock.of(
       "type %L = %C",
@@ -1045,6 +1045,9 @@ class PythonModelRenderer(
           defaultValue?.let { value -> renderDefaultValue(value, model.name) } ?: PythonCodeBlock.of("None"),
         )
     }
+    if (!required && !type.acceptsNull()) {
+      fieldArguments += PythonCodeBlock.of("exclude_if=lambda value: value is None")
+    }
     if (defaultValue != null) {
       fieldArguments += PythonCodeBlock.of("validate_default=True")
     }
@@ -1132,7 +1135,7 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
-      if (enumConstraints.isNotEmpty() && inline.render(context).length > 120) {
+      if ((enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) && inline.render(context).length > 120) {
         val multilineArguments =
           if (arguments.render(context).length + 8 <= 120) {
             PythonCodeBlock.of("        %C", arguments)
@@ -1470,13 +1473,5 @@ class PythonModelRenderer(
         }
       }
 
-  private fun GeneratedTypeRef.acceptsNull(visited: Set<String> = emptySet()): Boolean =
-    nullable ||
-      (kind == GeneratedTypeRef.Kind.SCALAR && name.lowercase() in setOf("any", "object", "nil")) ||
-      (kind == GeneratedTypeRef.Kind.UNION && arguments.any { argument -> argument.acceptsNull(visited) }) ||
-      (
-        kind == GeneratedTypeRef.Kind.NAMED &&
-          name !in visited &&
-          modelIndex[name]?.aliases?.any { alias -> alias.acceptsNull(visited + name) } == true
-      )
+  private fun GeneratedTypeRef.acceptsNull(): Boolean = modelProperties.acceptsNull(this)
 }

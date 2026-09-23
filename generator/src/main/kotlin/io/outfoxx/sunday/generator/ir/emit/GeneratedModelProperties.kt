@@ -78,6 +78,23 @@ internal class GeneratedModelProperties(
     }
   }
 
+  /** Whether a property may carry an explicit null, including aliases and union alternatives. */
+  fun acceptsNull(
+    reference: GeneratedTypeRef,
+    visited: Set<String> = emptySet(),
+  ): Boolean =
+    reference.nullable ||
+      (reference.kind == GeneratedTypeRef.Kind.SCALAR && reference.name.lowercase() in setOf("any", "object", "nil")) ||
+      (reference.kind == GeneratedTypeRef.Kind.UNION && reference.arguments.any { acceptsNull(it, visited) }) ||
+      (
+        reference.kind == GeneratedTypeRef.Kind.NAMED &&
+          reference.name !in visited &&
+          modelFor(reference)
+            ?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS || it.kind == GeneratedModel.Kind.UNION }
+            ?.aliases
+            ?.any { acceptsNull(it, visited + reference.name) } == true
+      )
+
   fun declarationType(reference: GeneratedTypeRef): GeneratedTypeRef {
     var type = reference
     val aliases = mutableSetOf<GeneratedTypeRef>()

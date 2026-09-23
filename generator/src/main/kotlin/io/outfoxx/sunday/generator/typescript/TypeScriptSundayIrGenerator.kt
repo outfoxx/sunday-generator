@@ -2469,7 +2469,7 @@ class TypeScriptSundayIrGenerator(
         .add("%T.custom<%T>()", Z, propertyTypeName.nonUndefinable)
         .apply {
           if (propertyTypeName.isUndefinable) {
-            add(".nullish()")
+            add(if (propertyTypeName.isNullable) ".nullish()" else ".optional()")
           } else if (propertyTypeName.isNullable) {
             add(".nullable()")
           }
@@ -2537,7 +2537,7 @@ class TypeScriptSundayIrGenerator(
           CodeBlock
             .builder()
             .add(constrainedSchema)
-            .add(".nullish()")
+            .add(if (nullable) ".nullish()" else ".optional()")
             .build()
 
         nullable ->
@@ -2575,7 +2575,7 @@ class TypeScriptSundayIrGenerator(
     val wireType = if (enumModel != null) GeneratedTypeRef.scalar("string") else declaration
     var wire = wireType.applyZodValidation(primitive, validation)
     if (!required) {
-      wire = wire.appendSchemaCall("nullish()")
+      wire = wire.appendSchemaCall(if (nullable) "nullish()" else "optional()")
     } else if (nullable) {
       wire =
         wire.appendSchemaCall("nullable()")
@@ -2669,7 +2669,7 @@ class TypeScriptSundayIrGenerator(
         CodeBlock
           .builder()
           .add(constrainedSchema)
-          .add(".nullish()")
+          .add(if (nullable) ".nullish()" else ".optional()")
           .build()
 
       nullable ->
@@ -3532,7 +3532,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun TypeName.modelPropertyType(property: io.outfoxx.sunday.generator.ir.GeneratedModelProperty): TypeName =
     if (!property.required) {
-      nullable.undefinable
+      undefinable
     } else {
       this
     }
