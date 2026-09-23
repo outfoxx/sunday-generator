@@ -246,7 +246,8 @@ class PythonModelRenderer(
           renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
-          renderWireValueValidator(effectiveModelProperties()),
+          renderNonNullableOptionalValidator(),
+          renderWireValueValidator(),
           renderAllowedValuesValidator(),
           renderEnumStringValidator(),
           renderUniqueListValidator(),
@@ -378,83 +379,92 @@ class PythonModelRenderer(
     }
   }
 
-  private fun GeneratedModel.renderWireValueValidator(
-    effectiveProperties: List<GeneratedModelProperty>,
-  ): PythonCodeBlock? {
-    val nonNullableOptionalProperties =
-      effectiveProperties.filter { property -> !property.required && !property.type.acceptsNull() }
+  private fun GeneratedModel.renderNonNullableOptionalValidator(): PythonCodeBlock? {
+    val fields = effectiveModelProperties().filter { !it.required && !it.type.acceptsNull() }
+    if (fields.isEmpty()) return null
+    // Field validation lets Pydantic select the effective input spelling before checking nullability.
+    return PythonCodeBlock.of(
+      "%C\n" +
+        "    @classmethod\n" +
+        "    def _validate_non_nullable_optional(cls, value: object, info: %T) -> object:\n" +
+        "        if value is not None:\n" +
+        "            return value\n" +
+        "%C\n" +
+        "        return value",
+      fields.renderFieldValidator("after"),
+      PythonSymbol("pydantic", "ValidationInfo"),
+      PythonCodeBlock.join(
+        fields.map { property ->
+          val wireName = property.serializationName ?: property.name
+          PythonCodeBlock.of(
+            "        if info.field_name == %S:\n" +
+              "            raise ValueError(%S)",
+            property.name.pythonIdentifierName,
+            "Property '$wireName' is not nullable",
+          )
+        },
+        separator = "\n",
+      ),
+    )
+  }
+
+  private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
     val validatesAdditionalProperties =
       patternProperties.isNotEmpty() || additionalProperties?.type != null
-    if (nonNullableOptionalProperties.isEmpty() && !validatesAdditionalProperties) {
-      return null
-    }
+    if (!validatesAdditionalProperties) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
-    nonNullableOptionalProperties.forEach { property ->
-      val wireName = property.serializationName ?: property.name
+    statements +=
+      PythonCodeBlock.of(
+        "        declared_names = set(cls.model_fields)\n" +
+          "        declared_names.update(" +
+          "field.alias for field in cls.model_fields.values() if field.alias is not None)\n" +
+          "        for key in list(data):\n" +
+          "            if key in declared_names:\n" +
+          "                continue\n" +
+          "            matched = False",
+      )
+    patternProperties.forEach { patternProperty ->
+      val validatedType =
+        renderValidatedType(
+          patternProperty.type.renderPythonType(nullable = patternProperty.type.nullable),
+          patternProperty.validation,
+          "pattern property '${patternProperty.pattern}' on model '$name'",
+          patternProperty.type,
+        )
       statements +=
         PythonCodeBlock.of(
-          "        if %S in data and data[%S] is None:\n" +
-            "            raise ValueError(%S)",
-          wireName,
-          wireName,
-          "Property '$wireName' is not nullable",
+          "            if %T(%S, key) is not None:\n" +
+            "                data[key] = %T(%C).validate_python(data[key])\n" +
+            "                matched = True",
+          PythonSymbol("re", "search"),
+          patternProperty.pattern,
+          PythonSymbol("pydantic", "TypeAdapter"),
+          validatedType,
         )
     }
-
-    if (validatesAdditionalProperties) {
+    val additionalType = additionalProperties?.type
+    if (additionalType != null) {
+      val validatedType =
+        renderValidatedType(
+          additionalType.renderPythonType(nullable = additionalType.nullable),
+          additionalProperties.validation,
+          "additional properties on model '$name'",
+          additionalType,
+        )
       statements +=
         PythonCodeBlock.of(
-          "        declared_names = set(cls.model_fields)\n" +
-            "        declared_names.update(" +
-            "field.alias for field in cls.model_fields.values() if field.alias is not None)\n" +
-            "        for key in list(data):\n" +
-            "            if key in declared_names:\n" +
-            "                continue\n" +
-            "            matched = False",
+          "            if not matched:\n" +
+            "                data[key] = %T(%C).validate_python(data[key])",
+          PythonSymbol("pydantic", "TypeAdapter"),
+          validatedType,
         )
-      patternProperties.forEach { patternProperty ->
-        val validatedType =
-          renderValidatedType(
-            patternProperty.type.renderPythonType(nullable = patternProperty.type.nullable),
-            patternProperty.validation,
-            "pattern property '${patternProperty.pattern}' on model '$name'",
-            patternProperty.type,
-          )
-        statements +=
-          PythonCodeBlock.of(
-            "            if %T(%S, key) is not None:\n" +
-              "                data[key] = %T(%C).validate_python(data[key])\n" +
-              "                matched = True",
-            PythonSymbol("re", "search"),
-            patternProperty.pattern,
-            PythonSymbol("pydantic", "TypeAdapter"),
-            validatedType,
-          )
-      }
-      val additionalType = additionalProperties?.type
-      if (additionalType != null) {
-        val validatedType =
-          renderValidatedType(
-            additionalType.renderPythonType(nullable = additionalType.nullable),
-            additionalProperties.validation,
-            "additional properties on model '$name'",
-            additionalType,
-          )
-        statements +=
-          PythonCodeBlock.of(
-            "            if not matched:\n" +
-              "                data[key] = %T(%C).validate_python(data[key])",
-            PythonSymbol("pydantic", "TypeAdapter"),
-            validatedType,
-          )
-      } else if (additionalProperties?.allowed == false || closed == true) {
-        statements +=
-          PythonCodeBlock.of(
-            "            if not matched:\n" +
-              "                raise ValueError(f\"Extra property '{key}' is not allowed\")",
-          )
-      }
+    } else if (additionalProperties?.allowed == false || closed == true) {
+      statements +=
+        PythonCodeBlock.of(
+          "            if not matched:\n" +
+            "                raise ValueError(f\"Extra property '{key}' is not allowed\")",
+        )
     }
 
     return PythonCodeBlock.of(
