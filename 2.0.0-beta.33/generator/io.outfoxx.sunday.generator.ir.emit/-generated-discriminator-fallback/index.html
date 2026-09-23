@@ -1,0 +1,296 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>GeneratedDiscriminatorFallback</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    sunday-generator
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":generator/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":generator/main" data-filter=":generator/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    sunday-generator
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="generator::io.outfoxx.sunday.generator.ir.emit/GeneratedDiscriminatorFallback///PointingToDeclaration//-1790917311">
+  <div class="breadcrumbs"><a href="../../index.html">generator</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.generator.ir.emit</a><span class="delimiter">/</span><span class="current">GeneratedDiscriminatorFallback</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Generated</span><wbr><span>Discriminator</span><wbr><span><span>Fallback</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="index.html">GeneratedDiscriminatorFallback</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>hierarchy<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>discriminatorProperty<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>enumModel<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>fallbackValue<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>fallbackName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>mappedValues<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>baseProperties<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>externallyDiscriminated<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span></span></span><span class="token punctuation">)</span></div><p class="paragraph">Resolved catch-all contract for a discriminator backed by a tolerant enum.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="1281557747%2FConstructors%2F-1790917311" anchor-label="GeneratedDiscriminatorFallback" id="1281557747%2FConstructors%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-generated-discriminator-fallback.html"><span>Generated</span><wbr><span>Discriminator</span><wbr><span><span>Fallback</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1281557747%2FConstructors%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">hierarchy<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a><span class="token punctuation">, </span></span><span class="parameter ">discriminatorProperty<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a><span class="token punctuation">, </span></span><span class="parameter ">enumModel<span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a><span class="token punctuation">, </span></span><span class="parameter ">fallbackValue<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">fallbackName<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">mappedValues<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">baseProperties<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">externallyDiscriminated<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator"> = </span><span class="token boolean">false</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-2026717910%2FProperties%2F-1790917311" anchor-label="baseProperties" id="-2026717910%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="base-properties.html"><span>base</span><wbr><span><span>Properties</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2026717910%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="base-properties.html">baseProperties</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-212361381%2FProperties%2F-1790917311" anchor-label="discriminatorProperty" id="-212361381%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="discriminator-property.html"><span>discriminator</span><wbr><span><span>Property</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-212361381%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="discriminator-property.html">discriminatorProperty</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model-property/index.html">GeneratedModelProperty</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1738114272%2FProperties%2F-1790917311" anchor-label="discriminatorWireName" id="1738114272%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="discriminator-wire-name.html"><span>discriminator</span><wbr><span>Wire</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1738114272%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="discriminator-wire-name.html">discriminatorWireName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Serialized discriminator property name.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1640303708%2FProperties%2F-1790917311" anchor-label="enumModel" id="-1640303708%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="enum-model.html"><span>enum</span><wbr><span><span>Model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1640303708%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="enum-model.html">enumModel</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1179582828%2FProperties%2F-1790917311" anchor-label="externallyDiscriminated" id="1179582828%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="externally-discriminated.html"><span>externally</span><wbr><span><span>Discriminated</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1179582828%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="externally-discriminated.html">externallyDiscriminated</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1977976801%2FProperties%2F-1790917311" anchor-label="fallbackName" id="1977976801%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fallback-name.html"><span>fallback</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1977976801%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="fallback-name.html">fallbackName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="870936829%2FProperties%2F-1790917311" anchor-label="fallbackValue" id="870936829%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fallback-value.html"><span>fallback</span><wbr><span><span>Value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="870936829%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="fallback-value.html">fallbackValue</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="579074231%2FProperties%2F-1790917311" anchor-label="hierarchy" id="579074231%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="hierarchy.html"><span><span>hierarchy</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="579074231%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="hierarchy.html">hierarchy</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday.generator.ir/-generated-model/index.html">GeneratedModel</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2114923463%2FProperties%2F-1790917311" anchor-label="mappedValues" id="-2114923463%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mapped-values.html"><span>mapped</span><wbr><span><span>Values</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2114923463%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="mapped-values.html">mappedValues</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-set/index.html">Set</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-11088264%2FProperties%2F-1790917311" anchor-label="modelName" id="-11088264%2FProperties%2F-1790917311" data-filterable-set=":generator/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":generator/main" data-filterable-set=":generator/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="model-name.html"><span>model</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-11088264%2FProperties%2F-1790917311"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":generator/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="model-name.html">modelName</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Generated model name used for the catch-all payload.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
