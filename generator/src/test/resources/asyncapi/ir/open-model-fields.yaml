@@ -41,6 +41,16 @@ components:
           $ref: '#/components/schemas/ClosedChild'
         namedChild:
           $ref: '#/components/schemas/NamedChild'
+        typedChild:
+          $ref: '#/components/schemas/TypedChild'
+        objectChild:
+          $ref: '#/components/schemas/ObjectChild'
+        collectionChild:
+          $ref: '#/components/schemas/CollectionChild'
+        integerChild:
+          $ref: '#/components/schemas/IntegerChild'
+        nullableChild:
+          $ref: '#/components/schemas/NullableChild'
     NoticeData:
       type: object
       required: [name, additionalProperties]
@@ -98,6 +108,55 @@ components:
           properties:
             additionalProperties:
               type: string
+    TypedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: integer
+    ObjectChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        $ref: '#/components/schemas/NoticeData'
+    NumberBase:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: number
+    IntegerChild:
+      allOf:
+        - $ref: '#/components/schemas/NumberBase'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: integer
+    NullableChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: [integer, 'null']
+    CollectionChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: array
+        items:
+          $ref: '#/components/schemas/NoticeData'
     OtherRecord:
       type: object
       required: [other]

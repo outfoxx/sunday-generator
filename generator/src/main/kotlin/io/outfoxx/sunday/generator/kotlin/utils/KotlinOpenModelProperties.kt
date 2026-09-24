@@ -77,7 +77,7 @@ internal fun addOpenModelProperties(
     if (type in completed) return completed[type]
     val (model, builder) = classes.getValue(type)
     val parent = parents[type]?.takeIf { it in classes }?.let(::decorate)
-    return builder.addOpenModelStorage(model, namesByRoot.getValue(root(type)), parent, typeName).also {
+    return builder.addOpenModelStorage(type, model, namesByRoot.getValue(root(type)), parent, typeName).also {
       completed[type] = it
     }
   }
@@ -88,9 +88,12 @@ internal fun addOpenModelProperties(
 private data class OpenModelExtensionStorage(
   val permitsName: String,
   val closed: Boolean,
+  val setterName: String,
+  val valueType: TypeName,
 )
 
 private fun TypeSpec.Builder.addOpenModelStorage(
+  className: ClassName,
   model: GeneratedModel,
   knownNames: Set<String>,
   parent: OpenModelExtensionStorage?,
@@ -110,6 +113,10 @@ private fun TypeSpec.Builder.addOpenModelStorage(
           .initializer("false")
           .build(),
       )
+    }
+    val valueType = model.additionalProperties?.type?.let(typeName)
+    if (!closed && valueType != null && valueType != parent.valueType) {
+      addTypedExtensionDecoder(className, parent, valueType)
     }
     return parent.copy(closed = closed)
   }
@@ -132,10 +139,15 @@ private fun TypeSpec.Builder.addOpenModelStorage(
     )
   }
   val valueType = model.additionalProperties?.type?.let(typeName) ?: ANY.copy(nullable = true)
-  val mapType = MAP.parameterizedBy(STRING, valueType)
+  // Schema refinements can change JVM representations (for example Double to Int).
+  // Share storage, but let each model's Jackson decoder enforce its own value type.
+  val storageType = if (inheritable) ANY.copy(nullable = true) else valueType
+  val decoder =
+    if (model.additionalProperties?.type != null) extensionDecoder(className, storageType, valueType) else null
+  val mapType = MAP.parameterizedBy(STRING, storageType)
   addProperty(
     PropertySpec
-      .builder(storageName, MUTABLE_MAP.parameterizedBy(STRING, valueType), KModifier.PRIVATE)
+      .builder(storageName, MUTABLE_MAP.parameterizedBy(STRING, storageType), KModifier.PRIVATE)
       .initializer("linkedMapOf()")
       .build(),
   )
@@ -167,13 +179,85 @@ private fun TypeSpec.Builder.addOpenModelStorage(
       .addKdoc("Preserves one extension field, including a permitted explicit null.\n")
       .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
       .addParameter("name", STRING)
-      .addParameter("value", valueType)
+      .addParameter("value", storageType)
       .apply {
+        decoder?.let(::addAnnotation)
         if (inheritable) {
+          addModifiers(KModifier.OPEN)
           addStatement("require(%N) { %S + name }", permitsName, "Additional properties are not allowed: ")
         }
       }.addStatement("%N[name] = value", storageName)
       .build(),
   )
-  return OpenModelExtensionStorage(permitsName, closed = false)
+  return OpenModelExtensionStorage(permitsName, closed = false, setterName, storageType)
+}
+
+/** Keeps one inherited storage map while letting Jackson decode the child's complete extension type. */
+private fun TypeSpec.Builder.addTypedExtensionDecoder(
+  className: ClassName,
+  parent: OpenModelExtensionStorage,
+  valueType: TypeName,
+) {
+  val decoder = extensionDecoder(className, parent.valueType, valueType)
+  addFunction(
+    FunSpec
+      .builder(parent.setterName)
+      .addKdoc("Preserves extension values decoded according to this model's schema.\n")
+      .addModifiers(KModifier.OVERRIDE)
+      .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
+      .addAnnotation(decoder)
+      .addParameter("name", STRING)
+      .addParameter("value", parent.valueType)
+      .addStatement("super.%N(name, value)", parent.setterName)
+      .build(),
+  )
+}
+
+private fun TypeSpec.Builder.extensionDecoder(
+  className: ClassName,
+  storageType: TypeName,
+  valueType: TypeName,
+): AnnotationSpec {
+  val names = NameAllocator()
+  build().typeSpecs.mapNotNull { it.name }.forEach { names.newName(it) }
+  val decoderType = className.nestedClass(names.newName("AdditionalPropertyDeserializer"))
+  addType(
+    TypeSpec
+      .classBuilder(decoderType)
+      .addKdoc("Decodes inherited extension values with the active Jackson context and full generic type.\n")
+      .superclass(JACKSON_JSON_DESERIALIZER.parameterizedBy(storageType))
+      .addFunction(
+        FunSpec
+          .builder("deserialize")
+          .addModifiers(KModifier.OVERRIDE)
+          .addParameter("parser", JACKSON_JSON_PARSER)
+          .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
+          .returns(storageType)
+          .addStatement(
+            "return context.readValue(parser, context.typeFactory.constructType(object : %T() {}.type))",
+            ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(valueType),
+          ).build(),
+      ).addFunction(
+        FunSpec
+          .builder("getNullValue")
+          .addModifiers(KModifier.OVERRIDE)
+          .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
+          .returns(storageType)
+          .apply {
+            if (valueType.isNullable && storageType.isNullable) {
+              addStatement("return null")
+            } else {
+              addStatement(
+                "throw %T.from(context, %S)",
+                ClassName("com.fasterxml.jackson.databind", "JsonMappingException"),
+                "Null is not allowed for this model's additional properties",
+              )
+            }
+          }.build(),
+      ).build(),
+  )
+  return AnnotationSpec
+    .builder(JACKSON_JSON_DESERIALIZE)
+    .addMember("contentUsing = %T::class", decoderType)
+    .build()
 }

@@ -120,6 +120,45 @@ class KotlinOpenModelPropertiesTest {
       expectThat(mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(typedOriginal, typed))))
         .isEqualTo(typedOriginal)
       expectThrows<Exception> { mapper.readValue("""{"id":"one","count":"invalid"}""", typed) }
+      expectThrows<Exception> { mapper.readValue("""{"id":"one","count":null}""", typed) }
+      val typedChild = compiled.classLoader.loadClass("io.test.TypedChild")
+      expectThat(mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(typedOriginal, typedChild))))
+        .isEqualTo(typedOriginal)
+      expectThrows<Exception> { mapper.readValue("""{"id":"one","count":"invalid"}""", typedChild) }
+      expectThrows<Exception> { mapper.readValue("""{"id":"one","count":null}""", typedChild) }
+      val integerChild = compiled.classLoader.loadClass("io.test.IntegerChild")
+      expectThat(mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(typedOriginal, integerChild))))
+        .isEqualTo(typedOriginal)
+      expectThrows<Exception> { mapper.readValue("""{"id":"one","count":"invalid"}""", integerChild) }
+      val nullableChild = compiled.classLoader.loadClass("io.test.NullableChild")
+      val nullOriginal = mapper.readTree("""{"id":"one","count":null}""")
+      expectThat(mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(nullOriginal, nullableChild))))
+        .isEqualTo(nullOriginal)
+      for (childName in listOf("ObjectChild", "CollectionChild")) {
+        val child = compiled.classLoader.loadClass("io.test.$childName")
+        val value = """{"name":"name","additionalProperties":"declared","future":null}"""
+        val extension = if (childName == "CollectionChild") "[$value]" else value
+        val childOriginal = mapper.readTree("""{"id":"one","extension":$extension}""")
+        val childDecoded = mapper.treeToValue(childOriginal, child)
+        expectThat(mapper.readTree(mapper.writeValueAsBytes(childDecoded))).isEqualTo(childOriginal)
+        val getter =
+          child.methods.single {
+            it.isAnnotationPresent(
+              com.fasterxml.jackson.annotation.JsonAnyGetter::class.java,
+            )
+          }
+        val fields = getter.invoke(childDecoded) as Map<*, *>
+        val decodedValue =
+          if (childName ==
+            "CollectionChild"
+          ) {
+            (fields["extension"] as List<*>).single()
+          } else {
+            fields["extension"]
+          }
+        expectThat(decodedValue?.javaClass?.name).isEqualTo("io.test.NoticeData")
+        expectThrows<Exception> { mapper.readValue("""{"id":"one","extension":false}""", child) }
+      }
     }
   }
 

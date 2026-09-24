@@ -244,6 +244,8 @@ abstract class SundayGenerate
         .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
 
     init {
+      // Ownership must match after restoring output cached by another task or checkout.
+      inputs.property("outputOwner", path)
       // Output paths are not part of the cache key; validate before Gradle can
       // restore a previously cached generation into a newly configured location.
       outputs.upToDateWhen {
@@ -317,6 +319,8 @@ abstract class SundayGenerate
       val staging = Files.createTempDirectory(temporaryDir.toPath(), "generated-").toFile()
       try {
         typeRegistry.generateFiles(categories, staging.toPath())
+        GeneratedOutputOwnership.record(staging, path)
+        validateOutputDirectory(outputDirFile)
         fileSystem.sync {
           it.from(staging)
           it.into(outputDirFile)
@@ -340,6 +344,7 @@ abstract class SundayGenerate
       require(protectedPaths.none { it.canonicalFile.toPath().startsWith(outputPath) }) {
         "Unsafe generated output directory '$outputPath': it contains the project, source inputs, or task staging"
       }
+      GeneratedOutputOwnership.validate(outputDirectory, path)
     }
 
     private fun processFiles(

@@ -17,9 +17,11 @@
 package io.outfoxx.sunday.generator.gradle.tests
 
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -32,6 +34,58 @@ import java.io.File
 class GeneratedOutputReplacementTest {
   @TempDir
   lateinit var directory: File
+
+  @ParameterizedTest
+  @CsvSource("false, false", "true, false", "false, true", "true, true")
+  fun `unowned handwritten output is rejected before execution or cache restoration`(
+    cached: Boolean,
+    alreadyOwned: Boolean,
+  ) {
+    directory.resolve("settings.gradle").writeText("rootProject.name = 'unowned-output'")
+    directory.resolve("api.yaml").writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Items, version: 1.0.0}
+      paths: {}
+      components:
+        schemas:
+          Item:
+            type: object
+            properties: {id: {type: string}}
+      """.trimIndent(),
+    )
+    directory.resolve("build.gradle").writeText(
+      """
+      plugins { id 'java'; id 'io.outfoxx.sunday-generator' }
+      tasks.register('generate', io.outfoxx.sunday.generator.gradle.SundayGenerate) {
+        source(file('api.yaml'))
+        framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
+        mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
+        outputDir.set(layout.projectDirectory.dir(providers.gradleProperty('targetOutput').get()))
+        generateService.set(false)
+      }
+      """.trimIndent(),
+    )
+
+    fun runner(output: String) =
+      GradleRunner.create().withProjectDir(directory).withPluginClasspath().withArguments(
+        "generate",
+        "-PtargetOutput=$output",
+        if (cached) "--build-cache" else "--no-build-cache",
+        "--stacktrace",
+      )
+    if (cached) runner("build/generated/safe").build()
+    if (alreadyOwned) {
+      val generated = runner("src/main/kotlin").build()
+      if (cached) expectThat(generated.task(":generate")?.outcome).isEqualTo(TaskOutcome.FROM_CACHE)
+    }
+    val handwritten = directory.resolve("src/main/kotlin/Handwritten.kt").also { it.parentFile.mkdirs() }
+    val original = "class Handwritten"
+    handwritten.writeText(original)
+    val result = runner("src/main/kotlin").buildAndFail()
+    expectThat(result.output).contains("Unsafe generated output directory")
+    expectThat(handwritten.readText()).isEqualTo(original)
+  }
 
   @ParameterizedTest
   @ValueSource(strings = ["project", "source", "included-source", "staging"])

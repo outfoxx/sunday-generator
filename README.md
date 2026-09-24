@@ -37,7 +37,10 @@ Gradle Plugin Cache Notes
   other generations or handwritten sources. A successful generation replaces
   that directory from staged output, so removed types, renamed packages, and
   disabled categories do not leave stale classes. A failed generation preserves
-  the previous output.
+  the previous output. A cached ownership manifest records generated file hashes;
+  unowned or modified files are rejected before replacement or cache restoration.
+  When upgrading from an older generator without a manifest, use an empty output
+  directory or inspect and remove only the old generated files before rebuilding.
 - For shared models, generate models once (`generateModel=true`,
   `generateService=false`) and make facade modules depend on that artifact with
   model output disabled. Use distinct service packages when client/server

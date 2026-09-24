@@ -513,7 +513,10 @@ class AsyncApiToGeneratedApi(
           is Map<*, *> ->
             GeneratedAdditionalProperties(
               allowed = true,
-              type = schemaTypeRef(additional, "${name}AdditionalProperty", location, localModels),
+              type =
+                schemaTypeRef(additional, "${name}AdditionalProperty", location, localModels).let { type ->
+                  type.copy(nullable = type.nullable || (additional["type"] as? List<*>)?.contains("null") == true)
+                },
               validation = validation(additional),
             )
           else -> null
