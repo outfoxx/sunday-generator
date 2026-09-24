@@ -109,7 +109,6 @@ import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPEINFO_ID_NAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_TYPENAME
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_VALUE
-import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionGenerator
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
@@ -121,6 +120,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_AMQP_BROKER_PROTOCOL_SPEC
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_CONSUMER
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_CONSUME_SPEC
+import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_DECODE_FAILURE_HANDLER
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_DELIVERY
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_MESSAGE_CODEC
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_BROKER_PRODUCER
@@ -143,6 +143,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
+import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
@@ -324,10 +325,17 @@ class KotlinSundayIrGenerator(
       url.hasHttpScheme()
 
   private fun generateModelTypes(services: List<GeneratedService>) {
-    modelsForGeneration(services)
+    val models = modelsForGeneration(services)
+    val modelTypes =
+      models
+        .mapNotNull { model ->
+          model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
+        }.toMap()
+    addOpenModelProperties(modelTypes, typeRegistry.options) { it.kotlinTypeName() }
+    models
       .flatMap { model ->
         buildList {
-          model.modelType()?.let { type -> add(model.kotlinClassName() to type) }
+          modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
           model.discriminatorFallbackType()?.let { fallback -> add(fallback) }
         }
       }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
@@ -617,6 +625,14 @@ class KotlinSundayIrGenerator(
         .defaultValue("%T()", SUNDAY_BROKER_MESSAGE_CODEC)
         .build(),
     )
+    if (hasSubscribeOperations) {
+      constructorBuilder.addParameter(
+        ParameterSpec
+          .builder("onDecodeFailure", SUNDAY_BROKER_DECODE_FAILURE_HANDLER)
+          .defaultValue("%T.Rethrow", SUNDAY_BROKER_DECODE_FAILURE_HANDLER)
+          .build(),
+      )
+    }
 
     val serviceTypeBuilder =
       TypeSpec
@@ -636,6 +652,12 @@ class KotlinSundayIrGenerator(
         PropertySpec
           .builder("consumer", SUNDAY_BROKER_CONSUMER, KModifier.PRIVATE)
           .initializer("consumer")
+          .build(),
+      )
+      serviceTypeBuilder.addProperty(
+        PropertySpec
+          .builder("onDecodeFailure", SUNDAY_BROKER_DECODE_FAILURE_HANDLER, KModifier.PRIVATE)
+          .initializer("onDecodeFailure")
           .build(),
       )
     }
@@ -787,13 +809,15 @@ class KotlinSundayIrGenerator(
         CodeBlock
           .builder()
           .add("return this.consumer.consume(%T.%N)\n", specsTypeName, id.kotlinIdentifierName)
-          .add("  .%M { delivery ->\n", FLOW_MAP)
+          .add("  .%M(⇥\n", BROKER_DECODE_DELIVERIES)
+          .add("%T.%N,\n", specsTypeName, id.kotlinIdentifierName)
           .add(
-            "    %T(this.codec.decode(delivery, %M<%T>()), delivery)\n",
-            SUNDAY_BROKER_DELIVERY,
+            "%M<%T>(),\n",
             TYPE_OF,
             responseType,
-          ).add("  }\n")
+          ).add("this.codec,\n")
+          .add("this.onDecodeFailure,⇤\n")
+          .add("  )\n")
           .build(),
       ).build()
   }
@@ -824,7 +848,8 @@ class KotlinSundayIrGenerator(
       GeneratedModel.Kind.ENUM ->
         enumTypeSpec()
 
-      GeneratedModel.Kind.OBJECT -> objectTypeSpec()
+      GeneratedModel.Kind.OBJECT ->
+        objectTypeSpec()
 
       GeneratedModel.Kind.UNION -> objectUnionTypeSpecOrNull()
 
@@ -1414,7 +1439,7 @@ class KotlinSundayIrGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = parser.codec.readTree<%T>(parser)", JSON_NODE)
+        .addStatement("val tree = context.readTree(parser)")
         .apply {
           val discriminator = unionDiscriminator(cases)
           if (discriminator != null) {
@@ -2855,7 +2880,7 @@ class KotlinSundayIrGenerator(
   private companion object {
     val SUNDAY_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "operation")
     val SUNDAY_NULLABLE_OPERATION_FUNCTION = MemberName("io.outfoxx.sunday", "nullableOperation")
-    val FLOW_MAP = MemberName("kotlinx.coroutines.flow", "map")
+    val BROKER_DECODE_DELIVERIES = MemberName("io.outfoxx.sunday.broker", "decodeDeliveries")
     val TYPE_OF = MemberName("kotlin.reflect", "typeOf")
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")

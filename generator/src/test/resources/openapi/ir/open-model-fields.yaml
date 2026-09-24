@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: Open Models
+  version: 1.0.0
+x-sunday-apiId: open-models
+paths:
+  /notices:
+    get:
+      operationId: getNotice
+      responses:
+        '200':
+          description: Notice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notice'
+components:
+  schemas:
+    Notice:
+      type: object
+      required: [id, data]
+      properties:
+        id:
+          type: string
+        data:
+          $ref: '#/components/schemas/NoticeData'
+        closed:
+          $ref: '#/components/schemas/ClosedRecord'
+        typed:
+          $ref: '#/components/schemas/TypedRecord'
+        choice:
+          $ref: '#/components/schemas/RecordChoice'
+        closedChild:
+          $ref: '#/components/schemas/ClosedChild'
+        namedChild:
+          $ref: '#/components/schemas/NamedChild'
+        typedChild:
+          $ref: '#/components/schemas/TypedChild'
+        objectChild:
+          $ref: '#/components/schemas/ObjectChild'
+        collectionChild:
+          $ref: '#/components/schemas/CollectionChild'
+        integerChild:
+          $ref: '#/components/schemas/IntegerChild'
+        nullableChild:
+          $ref: '#/components/schemas/NullableChild'
+    NoticeData:
+      type: object
+      required: [name, additionalProperties]
+      properties:
+        name:
+          type: string
+        additionalProperties:
+          type: string
+    ClosedRecord:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+    TypedRecord:
+      type: object
+      additionalProperties:
+        type: integer
+      required: [id]
+      properties:
+        id:
+          type: string
+    BaseRecord:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+    ExtendedRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          required: [kind]
+          properties:
+            kind:
+              type: string
+              enum: [extended]
+    ClosedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    NamedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          required: [additionalProperties]
+          properties:
+            additionalProperties:
+              type: string
+    TypedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: integer
+    ObjectChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        $ref: '#/components/schemas/NoticeData'
+    NumberBase:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: number
+    IntegerChild:
+      allOf:
+        - $ref: '#/components/schemas/NumberBase'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: integer
+    NullableChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: [integer, 'null']
+    CollectionChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      properties:
+        id: {type: string}
+      additionalProperties:
+        type: array
+        items:
+          $ref: '#/components/schemas/NoticeData'
+    OtherRecord:
+      type: object
+      required: [other]
+      properties:
+        other:
+          type: string
+    RecordChoice:
+      oneOf:
+        - $ref: '#/components/schemas/ExtendedRecord'
+        - $ref: '#/components/schemas/OtherRecord'

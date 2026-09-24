@@ -8,7 +8,9 @@ dependencies {
 
   shadow(gradleApi())
 
-  implementation(project(path = ":generator"))
+  // GenerationMode and other generator types are part of the public DSL.
+  // Source-composite/precompiled convention consumers need them at compile time.
+  api(project(path = ":generator"))
 
   //
   // TESTING
@@ -22,11 +24,15 @@ dependencies {
   testRuntimeOnly(libs.junitPlatform)
 
   testImplementation(libs.hamcrest)
+  testImplementation("io.strikt:strikt-core:0.35.1")
 
   testImplementation(libs.kotlinCompileTesting)
 }
 
 tasks {
+  test {
+    systemProperty("sunday.generator.source-root", rootProject.projectDir.absolutePath)
+  }
   shadowJar.configure {
     dependsOn(jar)
     isZip64 = true

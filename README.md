@@ -33,6 +33,23 @@ Gradle Plugin Cache Notes
 - Includes are discovered by parsing RAML sources; changes in nested include chains are tracked automatically.
 - The `includes` DSL property is deprecated and has no effect.
 - To opt in to a timestamp, set `generationTimestamp` on a generation (for example, a fixed string or a time you compute in the build script).
+- Each generation exclusively owns its output directory. Do not share it with
+  other generations or handwritten sources. A successful generation replaces
+  that directory from staged output, so removed types, renamed packages, and
+  disabled categories do not leave stale classes. A failed generation preserves
+  the previous output. A cached ownership manifest records generated file hashes;
+  unowned or modified files are rejected before replacement or cache restoration.
+  When upgrading from an older generator without a manifest, use an empty output
+  directory or inspect and remove only the old generated files before rebuilding.
+- For shared models, generate models once (`generateModel=true`,
+  `generateService=false`) and make facade modules depend on that artifact with
+  model output disabled. Use distinct service packages when client/server
+  interfaces share names. `preserveUnknownFields=true` enables Jackson extension
+  properties on open Kotlin models without altering their declared fields.
+- Generated Kotlin broker consumers require `sunday-broker` 2.0.0-beta.6 or newer
+  for decode-failure recovery. A sibling `sunday-kt` checkout is substituted by
+  default during local development. Run `./gradlew -PuseLocalSundayKt=false check`
+  to validate against published runtime artifacts instead.
 
 
 License

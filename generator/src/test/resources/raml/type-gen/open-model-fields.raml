@@ -1,0 +1,57 @@
+#%RAML 1.0
+title: Open Models
+version: 1.0.0
+types:
+  Notice:
+    type: object
+    additionalProperties: true
+    properties:
+      id: string
+      data: NoticeData
+      closed?: ClosedRecord
+      choice?: RecordChoice
+      closedChild?: ClosedChild
+      namedChild?: NamedChild
+  NoticeData:
+    type: object
+    additionalProperties: true
+    properties:
+      name: string
+      additionalProperties: string
+  ClosedRecord:
+    type: object
+    additionalProperties: false
+    properties:
+      id: string
+  BaseRecord:
+    type: object
+    properties:
+      id: string
+  ExtendedRecord:
+    type: BaseRecord
+    properties:
+      kind: RecordKind
+  RecordKind:
+    type: string
+    enum: [extended]
+  ClosedChild:
+    type: BaseRecord
+    additionalProperties: false
+    properties:
+      name: string
+  NamedChild:
+    type: BaseRecord
+    properties:
+      additionalProperties: string
+  OtherRecord:
+    type: object
+    properties:
+      other: string
+  RecordChoice:
+    type: ExtendedRecord | OtherRecord
+/notices:
+  get:
+    responses:
+      200:
+        body:
+          application/json: Notice

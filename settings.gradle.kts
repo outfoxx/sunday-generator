@@ -40,7 +40,8 @@ includeBuild("build-logic") {
 }
 
 val localSundayKt = rootDir.parentFile.resolve("sunday-kt")
-if (localSundayKt.isDirectory) {
+val useLocalSundayKt = providers.gradleProperty("useLocalSundayKt").map { it.toBooleanStrict() }.getOrElse(true)
+if (useLocalSundayKt && localSundayKt.isDirectory) {
   includeBuild(localSundayKt) {
     dependencySubstitution {
       substitute(module("io.outfoxx.sunday:sunday-core")).using(project(":sunday-core"))

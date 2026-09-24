@@ -506,6 +506,21 @@ class AsyncApiToGeneratedApi(
       source = source,
       properties = properties,
       inherits = inherits,
+      closed = true.takeIf { schema["additionalProperties"] == false },
+      additionalProperties =
+        when (val additional = schema["additionalProperties"]) {
+          is Boolean -> GeneratedAdditionalProperties(allowed = additional)
+          is Map<*, *> ->
+            GeneratedAdditionalProperties(
+              allowed = true,
+              type =
+                schemaTypeRef(additional, "${name}AdditionalProperty", location, localModels).let { type ->
+                  type.copy(nullable = type.nullable || (additional["type"] as? List<*>)?.contains("null") == true)
+                },
+              validation = validation(additional),
+            )
+          else -> null
+        },
       discriminator = discriminator,
       discriminatorMappings = schema.objectDiscriminatorMappings(location, localModels),
       discriminatorValue = discriminatorValue,

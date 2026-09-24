@@ -125,6 +125,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.disableValidationConstraints.takeIf { it.isPresent }?.let { genTask.disableValidationConstraints.set(it) }
           gen.disableContainerElementValid.takeIf { it.isPresent }?.let { genTask.disableContainerElementValid.set(it) }
           gen.disableJacksonAnnotations.takeIf { it.isPresent }?.let { genTask.disableJacksonAnnotations.set(it) }
+          gen.preserveUnknownFields.takeIf { it.isPresent }?.let { genTask.preserveUnknownFields.set(it) }
           gen.disableModelImplementations.takeIf { it.isPresent }?.let { genTask.disableModelImplementations.set(it) }
           gen.coroutines.takeIf { it.isPresent }?.let { genTask.coroutines.set(it) }
           gen.flowCoroutines.takeIf { it.isPresent }?.let { genTask.flowCoroutines.set(it) }

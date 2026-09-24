@@ -40,6 +40,7 @@ import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileTree
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.LogLevel
@@ -58,6 +59,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import java.io.File
+import java.nio.file.Files
 import java.util.EnumSet
 import javax.inject.Inject
 
@@ -67,7 +69,10 @@ abstract class SundayGenerate
   constructor(
     objects: ObjectFactory,
     layout: ProjectLayout,
+    private val fileSystem: FileSystemOperations,
   ) : SourceTask() {
+
+    private val projectDirectory = layout.projectDirectory.asFile
 
     /** Captured OpenAPI documents produced by discovery; HTTP cache metadata is not an input. */
     @get:InputDirectory
@@ -153,6 +158,10 @@ abstract class SundayGenerate
     @get:Optional
     val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
 
+    /** Preserve permitted additional fields when generating implemented Jackson models. */
+    @get:Input
+    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
     @get:Input
     @get:Optional
     val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
@@ -227,11 +236,23 @@ abstract class SundayGenerate
         .property(KotlinProblemRfc::class.java)
         .convention(KotlinProblemRfc.RFC9457)
 
+    /** Exclusively owned generated output. Use a distinct directory for each generation. */
     @get:OutputDirectory
     val outputDir: Property<Directory> =
       objects
         .directoryProperty()
         .convention(project.layout.buildDirectory.dir("generated/sources/sunday/$name"))
+
+    init {
+      // Ownership must match after restoring output cached by another task or checkout.
+      inputs.property("outputOwner", path)
+      // Output paths are not part of the cache key; validate before Gradle can
+      // restore a previously cached generation into a newly configured location.
+      outputs.upToDateWhen {
+        validateOutputDirectory(outputDir.get().asFile)
+        true
+      }
+    }
 
     @TaskAction
     fun generate() {
@@ -240,6 +261,7 @@ abstract class SundayGenerate
 
       val mode = this.mode.get()
       val outputDirFile = outputDir.get().asFile
+      validateOutputDirectory(outputDirFile)
 
       val categories = EnumSet.noneOf(GeneratedTypeCategory::class.java)
       if (generateModel.get()) {
@@ -250,6 +272,9 @@ abstract class SundayGenerate
       }
 
       val options = EnumSet.allOf(KotlinTypeRegistry.Option::class.java)
+      if (!preserveUnknownFields.get()) {
+        options.remove(KotlinTypeRegistry.Option.PreserveUnknownFields)
+      }
       if (disableJacksonAnnotations.get()) {
         options.remove(JacksonAnnotations)
       }
@@ -289,7 +314,37 @@ abstract class SundayGenerate
         typeRegistry,
       )
 
-      typeRegistry.generateFiles(categories, outputDirFile.toPath())
+      // Publish a complete successful generation, removing stale packages and disabled
+      // categories while retaining the previous output if generation itself fails.
+      val staging = Files.createTempDirectory(temporaryDir.toPath(), "generated-").toFile()
+      try {
+        typeRegistry.generateFiles(categories, staging.toPath())
+        GeneratedOutputOwnership.record(staging, path)
+        validateOutputDirectory(outputDirFile)
+        fileSystem.sync {
+          it.from(staging)
+          it.into(outputDirFile)
+        }
+      } finally {
+        fileSystem.delete { it.delete(staging) }
+      }
+    }
+
+    private fun validateOutputDirectory(outputDirectory: File) {
+      val outputPath = outputDirectory.canonicalFile.toPath()
+      val protectedPaths =
+        buildList {
+          add(projectDirectory)
+          add(sourceBaseDirectory.get().asFile)
+          add(temporaryDir)
+          addAll(source.files)
+          addAll(allSources.orNull?.files.orEmpty())
+          capturedDocumentsDirectory.orNull?.asFile?.let(::add)
+        }
+      require(protectedPaths.none { it.canonicalFile.toPath().startsWith(outputPath) }) {
+        "Unsafe generated output directory '$outputPath': it contains the project, source inputs, or task staging"
+      }
+      GeneratedOutputOwnership.validate(outputDirectory, path)
     }
 
     private fun processFiles(

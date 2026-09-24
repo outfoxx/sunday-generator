@@ -54,6 +54,7 @@ class KotlinTypeRegistry(
     ValidationConstraints,
     ContainerElementValid,
     JacksonAnnotations,
+    PreserveUnknownFields,
     AddGeneratedAnnotation,
     SuppressPublicApiWarnings,
     UseJakartaPackages,
