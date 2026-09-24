@@ -114,7 +114,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = parser.codec.readTree<%T>(parser)", JSON_NODE)
+        .addStatement("val tree = context.readTree(parser)")
         .addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminatorWireName)
         .apply {
           mappedTypes.forEach { (value, mappedTypeName) ->

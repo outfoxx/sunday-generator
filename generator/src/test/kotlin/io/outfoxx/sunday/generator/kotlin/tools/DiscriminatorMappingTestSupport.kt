@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.kotlin.tools
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.JvmCompilationResult
 import io.outfoxx.sunday.generator.ir.GeneratedApi
@@ -25,7 +27,8 @@ import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import org.junit.jupiter.api.Assertions.assertEquals
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 
 internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
   GeneratedApi(
@@ -124,7 +127,7 @@ internal fun reusableDiscriminatorMappingApi(): GeneratedApi =
 
 @OptIn(ExperimentalCompilerApi::class)
 internal fun assertReusableDiscriminatorMappingRoundTrips(compilation: JvmCompilationResult) {
-  val mapper = jacksonObjectMapper()
+  val mapper = jacksonObjectMapper().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
   compilation.classLoader.use { classLoader ->
     val notificationClass = classLoader.loadClass("io.test.Notification")
     val eventGetter = notificationClass.getMethod("getEvent")
@@ -137,8 +140,15 @@ internal fun assertReusableDiscriminatorMappingRoundTrips(compilation: JvmCompil
       val notification = mapper.readValue(json, notificationClass)
       val event = eventGetter.invoke(notification)
 
-      assertEquals(expectedEventClassName, event.javaClass.name)
-      assertEquals(mapper.readTree(json), mapper.valueToTree(notification))
+      expectThat(event.javaClass.name).isEqualTo(expectedEventClassName)
+      expectThat(mapper.valueToTree<JsonNode>(notification)).isEqualTo(mapper.readTree(json))
+      val sequence = "[$json,$json]"
+      val nested =
+        mapper.readValue<Any>(
+          sequence,
+          mapper.typeFactory.constructCollectionType(List::class.java, notificationClass),
+        )
+      expectThat(mapper.valueToTree<JsonNode>(nested)).isEqualTo(mapper.readTree(sequence))
     }
   }
 }

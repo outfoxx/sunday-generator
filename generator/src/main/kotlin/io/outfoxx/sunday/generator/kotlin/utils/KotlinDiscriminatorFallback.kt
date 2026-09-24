@@ -169,7 +169,7 @@ private fun deserializerType(
       .addParameter("parser", JACKSON_JSON_PARSER)
       .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
       .returns(fallbackTypeName)
-      .addStatement("val tree = parser.codec.readTree<%T>(parser)", OBJECT_NODE)
+      .addStatement("val tree = context.readTree(parser) as %T", OBJECT_NODE)
       .addStatement("val projection = parser.codec.treeToValue(tree, Projection::class.java)")
       .addStatement(
         "return %T(%L)",

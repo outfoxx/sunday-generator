@@ -139,6 +139,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
+import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
@@ -362,11 +363,17 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun generateModelTypes() {
-    api.models
-      .filter { model -> model.scope == null }
+    val models = api.models.filter { model -> model.scope == null }
+    val modelTypes =
+      models
+        .mapNotNull { model ->
+          model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
+        }.toMap()
+    addOpenModelProperties(modelTypes, typeRegistry.options) { it.kotlinTypeName() }
+    models
       .flatMap { model ->
         buildList {
-          model.modelType()?.let { type -> add(model.kotlinClassName() to type) }
+          modelTypes[model.kotlinClassName()]?.let { (_, type) -> add(model.kotlinClassName() to type) }
           model.discriminatorFallbackType()?.let { fallback -> add(fallback) }
         }
       }.forEach { (className, typeBuilder) -> typeRegistry.addModelType(className, typeBuilder) }
@@ -2573,7 +2580,7 @@ class KotlinJAXRSIrGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = parser.codec.readTree<%T>(parser)", JSON_NODE)
+        .addStatement("val tree = context.readTree(parser)")
         .apply {
           val discriminator = unionDiscriminator(cases)
           if (discriminator != null) {

@@ -1,0 +1,110 @@
+asyncapi: 3.1.0
+info:
+  title: Open Models
+  version: 1.0.0
+x-sunday-apiId: open-models
+channels:
+  notice:
+    address: notices
+    messages:
+      notice:
+        payload:
+          $ref: '#/components/schemas/Notice'
+    bindings:
+      amqp:
+        exchange:
+          name: notices
+operations:
+  sendNotice:
+    action: send
+    channel:
+      $ref: '#/channels/notice'
+    messages:
+      - $ref: '#/channels/notice/messages/notice'
+components:
+  schemas:
+    Notice:
+      type: object
+      required: [id, data]
+      properties:
+        id:
+          type: string
+        data:
+          $ref: '#/components/schemas/NoticeData'
+        closed:
+          $ref: '#/components/schemas/ClosedRecord'
+        typed:
+          $ref: '#/components/schemas/TypedRecord'
+        choice:
+          $ref: '#/components/schemas/RecordChoice'
+        closedChild:
+          $ref: '#/components/schemas/ClosedChild'
+        namedChild:
+          $ref: '#/components/schemas/NamedChild'
+    NoticeData:
+      type: object
+      required: [name, additionalProperties]
+      properties:
+        name:
+          type: string
+        additionalProperties:
+          type: string
+    ClosedRecord:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+    TypedRecord:
+      type: object
+      additionalProperties:
+        type: integer
+      required: [id]
+      properties:
+        id:
+          type: string
+    BaseRecord:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+    ExtendedRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          required: [kind]
+          properties:
+            kind:
+              type: string
+              enum: [extended]
+    ClosedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    NamedChild:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          required: [additionalProperties]
+          properties:
+            additionalProperties:
+              type: string
+    OtherRecord:
+      type: object
+      required: [other]
+      properties:
+        other:
+          type: string
+    RecordChoice:
+      oneOf:
+        - $ref: '#/components/schemas/ExtendedRecord'
+        - $ref: '#/components/schemas/OtherRecord'

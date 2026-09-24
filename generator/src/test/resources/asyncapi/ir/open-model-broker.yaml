@@ -1,0 +1,38 @@
+asyncapi: 3.1.0
+info:
+  title: Open Model Receipts
+  version: 1.0.0
+x-sunday-apiId: open-models
+servers:
+  rabbitmq:
+    host: broker.example.com
+    protocol: amqp
+channels:
+  receipts:
+    address: receipts
+    x-sunday-service: Receipts
+    messages:
+      receipt:
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/Receipt'
+    bindings:
+      amqp:
+        exchange:
+          name: receipts
+          type: topic
+operations:
+  consumeReceipts:
+    action: receive
+    channel:
+      $ref: '#/channels/receipts'
+    messages:
+      - $ref: '#/channels/receipts/messages/receipt'
+components:
+  schemas:
+    Receipt:
+      type: object
+      required: [noticeId]
+      properties:
+        noticeId:
+          type: string

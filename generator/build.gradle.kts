@@ -63,6 +63,7 @@ dependencies {
   testRuntimeOnly(libs.junitPlatform)
 
   testImplementation(libs.hamcrest)
+  testImplementation("io.strikt:strikt-core:0.35.1")
   testImplementation(libs.diffutils)
   testImplementation(libs.cliktMarkdown)
 
