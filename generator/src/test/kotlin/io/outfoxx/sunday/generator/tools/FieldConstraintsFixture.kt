@@ -36,6 +36,7 @@ internal fun fieldConstraintsApi(
         pattern: '^ID-[A-Z]+${'$'}'
       IdentifierAlias:
         ${'$'}ref: '#/components/schemas/Identifier'
+        ${if (sourceKind == "asyncapi") "pattern: 'ABC${'$'}'" else ""}
       Probe:
         type: object
         required: [name]
@@ -65,6 +66,15 @@ internal fun fieldConstraintsApi(
               tags?: {type: array, minItems: 1, maxItems: 2, items: string}
               count?: {type: integer, minimum: 0, maximum: 10}
               id?: IdentifierAlias
+          NumericProbe:
+            type: object
+            properties:
+              samples:
+                type: array
+                items: {type: integer, minimum: 0, maximum: 10}
+              optionalSamples?:
+                type: array
+                items: {type: integer, minimum: 0, maximum: 10}
         """.trimIndent(),
       )
       val raml = directory.resolve("constraints.raml")

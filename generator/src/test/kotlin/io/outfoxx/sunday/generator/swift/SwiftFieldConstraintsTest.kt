@@ -76,9 +76,13 @@ class SwiftFieldConstraintsTest {
             ("name", "a"), ("name", "abcdef"), ("name", "BAD"),
             ("tags", [String]()), ("tags", ["a", "b", "c"]),
             ("count", -1), ("count", 11), ("id", "invalid"),
+            ${if (sourceKind == "asyncapi") "(\"id\", \"ID-XYZ\"), (\"id\", \"bad-ABC\")," else ""}
             ("tags", NSNull()), ("count", NSNull()), ("id", NSNull())
           ]
           for (field, bad) in invalid {
+            if field == "id", let text = bad as? String {
+              XCTAssertThrowsError(try Probe(name: "valid", id: text))
+            }
             let payload: [String: Any] = ["name": "valid"].merging([field: bad]) { _, new in new }
             let json = try JSONSerialization.data(withJSONObject: payload)
             XCTAssertThrowsError(try JSONDecoder().decode(Probe.self, from: json)) { error in
@@ -89,9 +93,31 @@ class SwiftFieldConstraintsTest {
             }
           }
         }
+        ${if (sourceKind == "raml") numericArrayTests else ""}
       }
       """.trimIndent(),
     )
     assertTrue(compileAndTestGeneratedFiles(compiler))
   }
+
+  private val numericArrayTests =
+    """
+    func testNumericArrays() throws {
+      let value = try NumericProbe(samples: [0, 5, 10], optionalSamples: [1, 9])
+      let decoded = try JSONDecoder().decode(NumericProbe.self, from: JSONEncoder().encode(value))
+      XCTAssertEqual(decoded.samples, [0, 5, 10])
+      XCTAssertEqual(decoded.optionalSamples, [1, 9])
+      _ = try NumericProbe(samples: [0, 10])
+      _ = try JSONDecoder().decode(NumericProbe.self, from: Data(#"{"samples":[0,10]}"#.utf8))
+      for invalid in [[-1], [11], [0, 11]] {
+        XCTAssertThrowsError(try NumericProbe(samples: invalid))
+        XCTAssertThrowsError(try NumericProbe(samples: [0, 10], optionalSamples: invalid))
+        for field in ["samples", "optionalSamples"] {
+          let payload = ["samples": [0, 10]].merging([field: invalid]) { _, new in new }
+          let data = try JSONSerialization.data(withJSONObject: payload)
+          XCTAssertThrowsError(try JSONDecoder().decode(NumericProbe.self, from: data))
+        }
+      }
+    }
+    """.trimIndent()
 }

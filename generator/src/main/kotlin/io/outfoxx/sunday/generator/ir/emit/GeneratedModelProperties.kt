@@ -146,13 +146,30 @@ internal class GeneratedModelProperties(
       val alias = modelFor(reference)?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS } ?: break
       effective =
         GeneratedPropertyConstraints.intersect(
-          property.copy(validation = alias.validation),
+          property.copy(
+            // Patterns remain on their aliases and are checked independently by patterns().
+            validation = if ("pattern" in effective.validation) alias.validation - "pattern" else alias.validation,
+          ),
           effective,
           "property '${property.serializationName ?: property.name}'",
         )
       reference = alias.aliases.singleOrNull() ?: break
     }
     return effective
+  }
+
+  /** All regular-expression assertions contributed by a property and its scalar alias chain. */
+  fun patterns(property: GeneratedModelProperty): List<String> {
+    val patterns = linkedSetOf<String>()
+    property.validation["pattern"]?.let(patterns::add)
+    var reference = property.type
+    val visited = mutableSetOf<String>()
+    while (reference.kind == GeneratedTypeRef.Kind.NAMED && visited.add(reference.name)) {
+      val alias = modelFor(reference)?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS } ?: break
+      alias.validation["pattern"]?.let(patterns::add)
+      reference = alias.aliases.singleOrNull() ?: break
+    }
+    return patterns.toList()
   }
 
   fun fields(model: GeneratedModel): List<Field> {

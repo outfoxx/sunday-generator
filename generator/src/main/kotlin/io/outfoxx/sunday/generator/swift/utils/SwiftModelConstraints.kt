@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.swift.utils
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.swiftpoet.CodeBlock
@@ -57,7 +58,12 @@ internal object SwiftModelConstraints {
     CodeBlock
       .builder()
       .apply {
-        val needsNumericHelper = fields.any { "multipleOf" in it.effective.validation }
+        val needsNumericHelper =
+          fields.any {
+            "multipleOf" in it.effective.validation ||
+              GeneratedNumericBounds.parse(it.effective.validation, "property '${it.wireName}'").isNotEmpty() &&
+              properties.declarationType(it.storage.type).kind == GeneratedTypeRef.Kind.ARRAY
+          }
         if (needsNumericHelper) {
           // Limit the helper's name to validation, outside normal model type lookup and storage decoding.
           beginControlFlow("do", "")
@@ -93,8 +99,14 @@ internal object SwiftModelConstraints {
           val values = property.allowedValues?.filterNotNull()
           val divisor = GeneratedNumericBounds.multipleOf(validation, "property '${field.wireName}'")
           val numericTarget =
-            divisor?.let {
-              properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            if (divisor != null ||
+              properties.declarationType(field.storage.type).kind == GeneratedTypeRef.Kind.ARRAY &&
+              GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").isNotEmpty()
+            ) {
+              properties
+                .numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            } else {
+              null
             }
           val numericValue = if (numericTarget?.elements == true) "number" else "value"
           val numeric =
@@ -170,8 +182,10 @@ internal object SwiftModelConstraints {
                 "minLength" -> checks += CodeBlock.of("value.unicodeScalars.count >= %L", bound)
                 "maxLength" -> checks += CodeBlock.of("value.unicodeScalars.count <= %L", bound)
                 "pattern" ->
-                  checks +=
-                    CodeBlock.of("value.range(of: %L, options: .regularExpression) != nil", regexLiteral(bound))
+                  properties.patterns(property).forEach { pattern ->
+                    checks +=
+                      CodeBlock.of("value.range(of: %L, options: .regularExpression) != nil", regexLiteral(pattern))
+                  }
                 "minItems" -> checks += CodeBlock.of("value.count >= %L", bound)
                 "maxItems" -> checks += CodeBlock.of("value.count <= %L", bound)
                 "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")
@@ -305,8 +319,14 @@ internal object SwiftModelConstraints {
               "minLength" -> checks += CodeBlock.of("%L.unicodeScalars.count >= %L", stringValue, bound)
               "maxLength" -> checks += CodeBlock.of("%L.unicodeScalars.count <= %L", stringValue, bound)
               "pattern" ->
-                checks +=
-                  CodeBlock.of("%L.range(of: %L, options: .regularExpression) != nil", stringValue, regexLiteral(bound))
+                properties.patterns(field.effective).forEach { pattern ->
+                  checks +=
+                    CodeBlock.of(
+                      "%L.range(of: %L, options: .regularExpression) != nil",
+                      stringValue,
+                      regexLiteral(pattern),
+                    )
+                }
               "minItems" -> checks += CodeBlock.of("value.count >= %L", bound)
               "maxItems" -> checks += CodeBlock.of("value.count <= %L", bound)
               "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")

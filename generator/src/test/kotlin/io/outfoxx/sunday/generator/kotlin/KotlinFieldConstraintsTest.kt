@@ -115,16 +115,18 @@ class KotlinFieldConstraintsTest {
         }
       assertTrue(failure.message!!.contains(field))
     }
-    for ((field, invalid) in listOf(
-      "name" to "a",
-      "name" to "abcdef",
-      "name" to "BAD",
-      "tags" to emptyList<String>(),
-      "tags" to listOf("a", "b", "c"),
-      "count" to -1,
-      "count" to 11,
-      "id" to "invalid",
-    )) {
+    val invalidValues =
+      listOf(
+        "name" to "a",
+        "name" to "abcdef",
+        "name" to "BAD",
+        "tags" to emptyList<String>(),
+        "tags" to listOf("a", "b", "c"),
+        "count" to -1,
+        "count" to 11,
+        "id" to "invalid",
+      ) + if (sourceKind == "asyncapi") listOf("id" to "ID-XYZ", "id" to "bad-ABC") else emptyList()
+    for ((field, invalid) in invalidValues) {
       val arguments = valid.toMutableList().apply { this[fields.indexOf(field)] = invalid }
       val failure =
         assertThrows(java.lang.reflect.InvocationTargetException::class.java) {
@@ -136,6 +138,25 @@ class KotlinFieldConstraintsTest {
           mapper.convertValue(payload + (field to invalid), model)
         }
       assertTrue(decodeFailure.message!!.contains(field))
+    }
+    if (sourceKind == "raml") {
+      val arrays = result.classLoader.loadClass("io.test.NumericProbe")
+      val arrayConstructor = arrays.constructors.single { it.parameterCount == 2 }
+      val validArrays = mapOf("samples" to listOf(0, 5, 10), "optionalSamples" to listOf(1, 9))
+      val instance = arrayConstructor.newInstance(validArrays["samples"], validArrays["optionalSamples"])
+      assertEquals(mapper.valueToTree(validArrays), mapper.valueToTree(instance))
+      assertEquals(mapper.valueToTree(validArrays), mapper.valueToTree(mapper.convertValue(validArrays, arrays)))
+      arrayConstructor.newInstance(listOf(0, 10), null)
+      mapper.readValue("""{"samples":[0,10]}""", arrays)
+      for (invalid in listOf(listOf(-1), listOf(11), listOf(0, 11))) {
+        for (field in listOf("samples", "optionalSamples")) {
+          val payload = validArrays + (field to invalid)
+          assertThrows(java.lang.reflect.InvocationTargetException::class.java) {
+            arrayConstructor.newInstance(payload["samples"], payload["optionalSamples"])
+          }
+          assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, arrays) }
+        }
+      }
     }
   }
 }
