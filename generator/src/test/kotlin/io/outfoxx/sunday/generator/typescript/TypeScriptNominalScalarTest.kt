@@ -57,8 +57,8 @@ class TypeScriptNominalScalarTest {
             import {BaseLossSid, isBaseLossSid} from './base-loss-sid';
             import {AnySid, AnySidSchema} from './any-sid';
             import {AmbiguousSidSchema} from './ambiguous-sid';
-            import {PositiveCount} from './positive-count';
-            import {Ratio} from './ratio';
+            import {PositiveCount, PositiveCountSchema, isPositiveCount} from './positive-count';
+            import {Ratio, RatioSchema, isRatio} from './ratio';
             import {RecordSchema} from './record';
             import {DefaultsSchema} from './defaults';
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
@@ -83,12 +83,20 @@ class TypeScriptNominalScalarTest {
             rejects(() => BaseFactSidSchema.parse('invalid'));
             rejects(() => schema.parse('invalid'));
             rejects(() => PositiveCount(0));
+            rejects(() => PositiveCount(1.5));
+            rejects(() => PositiveCountSchema.parse(1.5));
+            if (isPositiveCount(1.5)) throw new Error('fractional integer accepted');
+            const count = PositiveCount(2);
+            if (!isPositiveCount(count) || z.encode(PositiveCountSchema, count) !== 2) throw new Error('integer roundtrip failed');
             rejects(() => Ratio(2));
+            const ratio = Ratio(0.5);
+            if (!isRatio(ratio) || z.encode(RatioSchema, ratio) !== 0.5) throw new Error('fractional number roundtrip failed');
             if (runtime.resolveSchema(DefaultsSchema).parse({}).fact !== ${if (frontend == "raml") "undefined" else "'sid:f:default'"}) throw new Error('nominal default lost');
             const ambiguous = runtime.resolveSchema(AmbiguousSidSchema);
             ${if (frontend == "raml") "ambiguous.parse('sid:f:abc');" else "rejects(() => ambiguous.parse('sid:f:abc'));"}
             const wire = {fact: 'sid:f:abc', identifiers: ['sid:l:abc'], count: 2, ratio: 0.5, enabled: true};
             const recordSchema = runtime.resolveSchema(RecordSchema);
+            rejects(() => recordSchema.parse({...wire, count: 1.5}));
             const record = recordSchema.parse(wire);
             if (JSON.stringify(z.encode(recordSchema, record)) !== JSON.stringify(wire)) throw new Error('record roundtrip failed');
             """.trimIndent(),

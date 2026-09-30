@@ -1000,6 +1000,9 @@ class TypeScriptSundayIrGenerator(
           model.name,
           name.simpleName(),
         ).add(scalar.type.directZodSchema(true, scalar.property.validation)!!)
+    if (scalar.type.name == "integer") {
+      schema.add(".refine(Number.isInteger)")
+    }
     scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
       schema.add(".regex(new RegExp(%S))", it)
     }
