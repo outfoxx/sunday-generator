@@ -40,5 +40,36 @@ class OpenApiPatternPropertiesTest {
     assertEquals(false, inline.additionalProperties?.allowed)
     assertNotNull(inline.properties.single { it.name == "label" })
     assertEquals(GeneratedModel.Kind.OBJECT, api.models.single { it.name == "PatternOnly" }.kind)
+    val nestedTypes =
+      model.properties
+        .filter {
+          it.serializationName in setOf("nested-array", "nested-map")
+        }.map { it.type.arguments.single() } +
+        listOf("PatternArray", "PatternMap").map { name ->
+          api.models
+            .single { it.name == name }
+            .aliases
+            .single()
+        } +
+        listOf(
+          api.services
+            .flatMap { it.operations }
+            .single { it.id == "submitAnonymous" }
+            .requestBody!!
+            .type.arguments
+            .single(),
+          api.models
+            .single { it.name == "NestedAdditionalPattern" }
+            .additionalProperties!!
+            .type!!,
+        )
+    assertEquals(6, nestedTypes.size)
+    nestedTypes.forEach { type ->
+      assertEquals(GeneratedTypeRef.Kind.NAMED, type.kind)
+      val nested = api.models.single { it.name == type.name }
+      assertEquals(false, nested.additionalProperties?.allowed)
+      assertEquals("^x-", nested.patternProperties.single().pattern)
+      assertEquals(mapOf("minLength" to "2"), nested.patternProperties.single().validation)
+    }
   }
 }

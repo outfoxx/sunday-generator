@@ -19,11 +19,13 @@ package io.outfoxx.sunday.generator.python
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
+import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
 import io.outfoxx.sunday.generator.tools.patternModelsApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -51,6 +53,7 @@ class PythonPatternModelsTest : PythonTest() {
           """
           import json
           from pydantic import ValidationError
+          from test_api.models import PatternClosedInherited, PatternFieldInherited, NestedAdditionalPattern, PatternObject
           from test_api.models import PatternInherited, PatternRecord, PatternOnly, OpenPattern
           for wire in [${patternModelValid.joinToString { "'$it'" }}]:
               PatternRecord.model_validate(json.loads(wire))
@@ -67,6 +70,21 @@ class PythonPatternModelsTest : PythonTest() {
               pass
           else:
               raise AssertionError("named pattern constraint bypassed through Python field name")
+          ${patternModelRegressions.entries.joinToString("\n          ") { (name, values) ->
+            """
+            for wire in [${values.first.joinToString { "'$it'" }}]:
+                $name.model_validate(json.loads(wire))
+                $name(**json.loads(wire))
+            for wire in [${values.second.joinToString { "'$it'" }}]:
+                for validate in [$name.model_validate, lambda data: $name(**data)]:
+                    try:
+                        validate(json.loads(wire))
+                    except ValidationError:
+                        pass
+                    else:
+                        raise AssertionError("$name accepted: " + wire)
+            """.trimIndent().prependIndent("          ").trimStart()
+          }}
           PatternInherited.model_validate({"x-valid": "ok"})
           for invalid in [{"x-invalid": "a"}, {"extra": 1}]:
               try:
@@ -83,6 +101,44 @@ class PythonPatternModelsTest : PythonTest() {
           else:
               raise AssertionError("invalid fallback accepted")
           PatternOnly.model_validate({"x-valid": "ok"})
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
+  fun `pattern validator enforces closedness inherited through IR`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val models =
+      patternModelsApi(
+        directory,
+      ).models.filter { it.name in setOf("ClosedFieldParent", "PatternClosedInherited") }.map {
+        if (it.name == "PatternClosedInherited") it.copy(closed = null, additionalProperties = null) else it
+      }
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        importModules = listOf("test_api.models"),
+        smokeCode =
+          """
+          from pydantic import ValidationError
+          from test_api.models import PatternClosedInherited
+          PatternClosedInherited(x_fixed="okay")
+          PatternClosedInherited.model_validate({"x-fixed": "okay"})
+          for data in [{"extra": 1}, {"extra": None}, {"x-fixed": "a"}, {"x_fixed": "a"}]:
+              for validate in [PatternClosedInherited.model_validate, lambda data: PatternClosedInherited(**data)]:
+                  try:
+                      validate(data)
+                  except ValidationError:
+                      pass
+                  else:
+                      raise AssertionError("inherited closed contract ignored: " + repr(data))
           """.trimIndent(),
       ),
     )

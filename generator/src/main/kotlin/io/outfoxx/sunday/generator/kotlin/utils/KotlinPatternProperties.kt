@@ -63,7 +63,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
       properties,
       additional = model.additionalProperties,
     )
-  if (preserve && parent == null) {
+  if (preserve && parent?.preserves != true) {
     addProperty(
       PropertySpec
         .builder(
@@ -111,7 +111,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
           addModifiers(KModifier.OPEN)
         }
         if (preserve) {
-          if (parent == null) {
+          if (parent?.preserves != true) {
             addStatement("%N[name] = value", storageName)
           } else {
             addStatement("super.%N(name, value)", parent.setterName)
@@ -119,19 +119,37 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
         }
       }.build(),
   )
-  // Declared properties are also subject to every pattern matching their wire name.
-  propertySpecs.replaceAll { property ->
-    val field =
-      model.properties.firstOrNull { it.name.kotlinIdentifierName == property.name }
-        ?: return@replaceAll property
-    val matching =
-      model.patternProperties.filter {
-        Regex(it.pattern).containsMatchIn(
-          field.serializationName ?: field.name,
-        )
+  // Constructor annotations enforce child constraints even for storage declared by a superclass.
+  val decoders =
+    properties
+      .fields(model)
+      .mapNotNull { field ->
+        val matching = model.patternProperties.filter { Regex(it.pattern).containsMatchIn(field.wireName) }
+        if (matching.isEmpty()) return@mapNotNull null
+        val name = field.storage.name.kotlinIdentifierName
+        name to patternDecoder(className, matching, false, typeName, properties, field.storage.type, name)
+      }.toMap()
+  val localPropertyNames = propertySpecs.mapTo(mutableSetOf()) { it.name }
+  build()
+    .primaryConstructor
+    ?.toBuilder()
+    ?.apply {
+      parameters.replaceAll { parameter ->
+        if (parameter.name in localPropertyNames) return@replaceAll parameter
+        val fieldDecoder = decoders[parameter.name] ?: return@replaceAll parameter
+        parameter
+          .toBuilder()
+          .addAnnotation(
+            AnnotationSpec
+              .builder(JACKSON_JSON_DESERIALIZE)
+              .addMember("using = %T::class", fieldDecoder)
+              .build(),
+          ).build()
       }
-    if (matching.isEmpty()) return@replaceAll property
-    val fieldDecoder = patternDecoder(className, matching, false, typeName, properties, field.type, property.name)
+    }?.build()
+    ?.let(::primaryConstructor)
+  propertySpecs.replaceAll { property ->
+    val fieldDecoder = decoders[property.name] ?: return@replaceAll property
     property
       .toBuilder()
       .addAnnotation(
@@ -142,7 +160,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
           .build(),
       ).build()
   }
-  return OpenModelExtensionStorage("", closed, setterName, parent?.valueType ?: any)
+  return OpenModelExtensionStorage("", closed, setterName, parent?.valueType ?: any, preserves = preserve)
 }
 
 private fun TypeSpec.Builder.patternDecoder(

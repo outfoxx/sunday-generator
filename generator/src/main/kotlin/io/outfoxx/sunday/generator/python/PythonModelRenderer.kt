@@ -501,7 +501,12 @@ class PythonModelRenderer(
     }
     statements += PythonCodeBlock.of("            if matched:\n                continue")
     val additionalType = additionalProperties?.type
-    if (additionalType != null) {
+    if (modelProperties.isClosed(this)) {
+      statements +=
+        PythonCodeBlock.of(
+          "            raise ValueError(f\"Extra property '{key}' is not allowed\")",
+        )
+    } else if (additionalType != null) {
       val validatedType =
         renderValidatedType(
           additionalType.renderPatternValueType(),
@@ -514,11 +519,6 @@ class PythonModelRenderer(
           "            data[key] = %T(%C).validate_python(data[key])",
           PythonSymbol("pydantic", "TypeAdapter"),
           validatedType,
-        )
-    } else if (additionalProperties?.allowed == false || closed == true) {
-      statements +=
-        PythonCodeBlock.of(
-          "            raise ValueError(f\"Extra property '{key}' is not allowed\")",
         )
     }
 

@@ -100,6 +100,7 @@ internal data class OpenModelExtensionStorage(
   val closed: Boolean,
   val setterName: String,
   val valueType: TypeName,
+  val preserves: Boolean,
 )
 
 private fun TypeSpec.Builder.addOpenModelStorage(
@@ -142,11 +143,13 @@ private fun TypeSpec.Builder.addOpenModelStorage(
 
   val names = NameAllocator()
   knownNames.forEach { names.newName(it) }
+  val inheritable = build().modifiers.any { it in setOf(KModifier.OPEN, KModifier.ABSTRACT, KModifier.SEALED) }
   if (closed) {
     val setterName = names.newName("rejectAdditionalProperty")
     addFunction(
       FunSpec
         .builder(setterName)
+        .apply { if (inheritable) addModifiers(KModifier.OPEN) }
         .addKdoc("Rejects undeclared fields even when the mapper ignores unknown properties globally.\n")
         .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
         .addAnnotation(AnnotationSpec.builder(Suppress::class).addMember("%S", "UNUSED_PARAMETER").build())
@@ -155,13 +158,12 @@ private fun TypeSpec.Builder.addOpenModelStorage(
         .addStatement("throw %T(%S + name)", IllegalArgumentException::class, "Additional properties are not allowed: ")
         .build(),
     )
-    return OpenModelExtensionStorage("", closed = true, setterName, ANY.copy(nullable = true))
+    return OpenModelExtensionStorage("", closed = true, setterName, ANY.copy(nullable = true), preserves = false)
   }
   val storageName = names.newName("extensionFields")
   val accessorName = names.newName("additionalProperties")
   val setterName = names.newName("setAdditionalProperty")
   val permitsName = names.newName("permitsAdditionalProperties")
-  val inheritable = build().modifiers.any { it in setOf(KModifier.OPEN, KModifier.ABSTRACT, KModifier.SEALED) }
   if (inheritable) {
     addProperty(
       PropertySpec
@@ -222,7 +224,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
       }.addStatement("%N[name] = value", storageName)
       .build(),
   )
-  return OpenModelExtensionStorage(permitsName, closed = false, setterName, storageType)
+  return OpenModelExtensionStorage(permitsName, closed = false, setterName, storageType, preserves = true)
 }
 
 /** Keeps one inherited storage map while letting Jackson decode the child's complete extension type. */

@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
+import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
 import io.outfoxx.sunday.generator.tools.patternModelsApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -79,6 +80,15 @@ class KotlinPatternModelsTest {
         }
         patternModelInvalid.forEach { wire ->
           assertThrows(JsonMappingException::class.java, { mapper.readValue(wire, model) }, wire)
+        }
+        mapper.readValue("""{"x-fixed":"a"}""", result.classLoader.loadClass("io.test.ClosedFieldParent"))
+        mapper.readValue("""{"x-fixed":"ok"}""", result.classLoader.loadClass("io.test.PatternFieldParent"))
+        patternModelRegressions.forEach { (name, values) ->
+          val regressionModel = result.classLoader.loadClass("io.test.$name")
+          values.first.forEach { wire -> mapper.readValue(wire, regressionModel) }
+          values.second.forEach { wire ->
+            assertThrows(JsonMappingException::class.java, { mapper.readValue(wire, regressionModel) }, "$name: $wire")
+          }
         }
         val inherited = result.classLoader.loadClass("io.test.PatternInherited")
         mapper.readValue("""{"x-valid":"ok"}""", inherited)

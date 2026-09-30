@@ -46,6 +46,7 @@ internal val patternModelValid =
   listOf(
     """{"name":"known","x-value":"ok","x-end":"okay","n-count":2,"v-list":[1,2],"r-object":{"label":"child"},"maybe-value":null,"alias-value":"valid","ref-enum-value":"first","enum-value":"yes-value","const-value":3,"inline-object":{"label":"child"}}""",
     """{"name":"known","x-fixed":"okay","end":"ok"}""",
+    """{"nested-array":[{"x-value":"ok"}],"nested-map":{"first":{"x-value":"ok"}},"named-array":[{"x-value":"ok"}],"named-map":{"first":{"x-value":"ok"}}}""",
   )
 
 internal val patternModelInvalid =
@@ -75,4 +76,34 @@ internal val patternModelInvalid =
     """{"v-list":["wrong"]}""",
     """{"r-object":{"extra":1}}""",
     """{"maybe-value":1}""",
+  )
+
+/** Descendant and nested contracts shared by each target's compiled runtime checks. */
+internal val patternModelRegressions =
+  mapOf(
+    "PatternObject" to (
+      listOf("""{"x-value":"okay"}""") to
+        listOf("""{"x-value":"a"}""", """{"extra":1}""")
+    ),
+    "PatternClosedInherited" to (
+      listOf("""{"x-fixed":"okay"}""") to
+        listOf("""{"x-fixed":"a"}""", """{"x-fixed":null}""", """{"extra":1}""", """{"extra":null}""")
+    ),
+    "PatternFieldInherited" to (
+      listOf("""{"x-fixed":"okay","x-other":"okay"}""") to
+        listOf("""{"x-fixed":"ok"}""", """{"x-fixed":"bad"}""", """{"x-other":"ok"}""")
+    ),
+    "NestedAdditionalPattern" to (
+      listOf("""{"label-name":"value","nested":{"x-value":"ok"}}""") to
+        listOf("""{"nested":{"extra":1}}""", """{"nested":{"x-value":"a"}}""", """{"nested":{"x-value":1}}""")
+    ),
+    "PatternRecord" to (
+      patternModelValid to
+        listOf("nested-array", "named-array", "nested-map", "named-map").flatMap { name ->
+          listOf("""{"extra":1}""", """{"x-value":"a"}""", """{"x-value":1}""").map { invalid ->
+            val value = if (name.endsWith("array")) "[$invalid]" else """{"first":$invalid}"""
+            """{"$name":$value}"""
+          }
+        }
+    ),
   )

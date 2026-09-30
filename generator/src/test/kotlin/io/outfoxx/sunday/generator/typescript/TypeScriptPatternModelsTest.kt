@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
+import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
 import io.outfoxx.sunday.generator.tools.patternModelsApi
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
@@ -52,24 +53,36 @@ class TypeScriptPatternModelsTest {
         .addCode(
           CodeBlock.of(
             """
-            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
-            import {PatternRecordSchema} from './pattern-record';
-            import {PatternInheritedSchema} from './pattern-inherited';
-            import {PatternOnlySchema} from './pattern-only';
-            import {OpenPatternSchema} from './open-pattern';
-            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
-            const schema = runtime.resolveSchema(PatternRecordSchema);
-            for (const valid of [${patternModelValid.joinToString()}]) schema.parse(valid);
-            for (const invalid of [${patternModelInvalid.joinToString()}]) {
-              if (schema.safeParse(invalid).success) throw new Error('invalid pattern value accepted: ' + JSON.stringify(invalid));
-            }
-            runtime.resolveSchema(PatternInheritedSchema).parse({'x-valid':'ok'});
-            for (const invalid of [{'x-invalid':'a'}, {extra:1}]) {
-              if (runtime.resolveSchema(PatternInheritedSchema).safeParse(invalid).success) throw new Error('inherited constraint ignored');
-            }
-            runtime.resolveSchema(OpenPatternSchema).parse({'extra':1,'x-valid':'ok'});
-            if (runtime.resolveSchema(OpenPatternSchema).safeParse({'extra':'wrong'}).success) throw new Error('invalid fallback accepted');
-            runtime.resolveSchema(PatternOnlySchema).parse({'x-valid':'ok'});
+              import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+              import {PatternRecordSchema} from './pattern-record';
+              import {PatternInheritedSchema} from './pattern-inherited';
+              import {PatternOnlySchema} from './pattern-only';
+              import {PatternObjectSchema} from './pattern-object';
+              import {PatternClosedInheritedSchema} from './pattern-closed-inherited';
+              import {PatternFieldInheritedSchema} from './pattern-field-inherited';
+              import {NestedAdditionalPatternSchema} from './nested-additional-pattern';
+              import {OpenPatternSchema} from './open-pattern';
+              const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+              const schema = runtime.resolveSchema(PatternRecordSchema);
+              for (const valid of [${patternModelValid.joinToString()}]) schema.parse(valid);
+              for (const invalid of [${patternModelInvalid.joinToString()}]) {
+                if (schema.safeParse(invalid).success) throw new Error('invalid pattern value accepted: ' + JSON.stringify(invalid));
+              }
+              ${patternModelRegressions.entries.joinToString("\n") { (name, values) ->
+              """
+              for (const valid of [${values.first.joinToString()}]) runtime.resolveSchema(${name}Schema).parse(valid);
+              for (const invalid of [${values.second.joinToString()}]) {
+                if (runtime.resolveSchema(${name}Schema).safeParse(invalid).success) throw new Error('$name accepted: ' + JSON.stringify(invalid));
+              }
+              """.trimIndent()
+            }}
+              runtime.resolveSchema(PatternInheritedSchema).parse({'x-valid':'ok'});
+              for (const invalid of [{'x-invalid':'a'}, {extra:1}]) {
+                if (runtime.resolveSchema(PatternInheritedSchema).safeParse(invalid).success) throw new Error('inherited constraint ignored');
+              }
+              runtime.resolveSchema(OpenPatternSchema).parse({'extra':1,'x-valid':'ok'});
+              if (runtime.resolveSchema(OpenPatternSchema).safeParse({'extra':'wrong'}).success) throw new Error('invalid fallback accepted');
+              runtime.resolveSchema(PatternOnlySchema).parse({'x-valid':'ok'});
             """.trimIndent(),
           ),
         ).build()

@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
+import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
 import io.outfoxx.sunday.generator.tools.patternModelsApi
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -61,6 +62,16 @@ class SwiftPatternModelsTest {
           for wire in invalid {
             XCTAssertThrowsError(try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8)), wire)
           }
+          ${patternModelRegressions.entries.joinToString("\n") { (name, values) ->
+        """
+        for wire in [${values.first.joinToString { "#\"$it\"#" }}] {
+          _ = try JSONDecoder().decode($name.self, from: Data(wire.utf8))
+        }
+        for wire in [${values.second.joinToString { "#\"$it\"#" }}] {
+          XCTAssertThrowsError(try JSONDecoder().decode($name.self, from: Data(wire.utf8)), wire)
+        }
+        """.trimIndent()
+      }}
           _ = try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"x-valid":"ok"}"#.utf8))
           XCTAssertThrowsError(try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"x-invalid":"a"}"#.utf8)))
           XCTAssertThrowsError(try JSONDecoder().decode(PatternInherited.self, from: Data(#"{"extra":1}"#.utf8)))
