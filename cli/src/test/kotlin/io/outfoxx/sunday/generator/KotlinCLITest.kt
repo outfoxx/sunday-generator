@@ -171,9 +171,11 @@ class KotlinCLITest {
 
     val help = sundayCommand().test(arrayOf("kotlin/sunday", "--help"))
     assertThat(help.statusCode, equalTo(0))
+    val optionName = "-no-${option.name.camelCaseToKebabCase()}"
+    assertThat(help.stdout, containsStringIgnoringCase(optionName))
     val optionHelp =
       help.stdout
-        .substringAfter("-no-${option.name.camelCaseToKebabCase()}")
+        .substringAfter(optionName)
         .substringBefore("\n  -")
         .replace(Regex("\\s+"), " ")
     val expectedDefault = if (enabledByDefault) "enabled" else "disabled"
