@@ -76,6 +76,21 @@ Current tenth slice:
 - Confirms the only remaining AMF boundary for Kotlin/JAX-RS source generation is RAML -> IR conversion.
 - Marks Kotlin/JAX-RS service generation migration complete for the current fixture and snapshot surface.
 
+## Nested model validation
+
+With validation constraints enabled, generated interfaces and implemented models
+use getter-level `@Valid` for nested objects and object unions. Collections use
+type-use `@Valid` on their object or union elements, including map values, without
+the deprecated container-level annotation. Scalars and enums do not need cascading;
+the current wire-schema maps have string keys. Nested containers are traversed to
+annotate their bean elements. Annotations use the configured `javax` or `jakarta` namespace.
+
+Compile consuming applications with `-Xemit-jvm-type-annotations` so validation
+providers can discover container-element annotations in bytecode. This follows
+[Kotlin's JVM type-annotation guidance](https://kotlinlang.org/docs/whatsnew14.html#type-annotations-in-the-jvm-bytecode).
+The Quarkus integration fixture enables this option and checks both HTTP rejection
+and validation metadata, independently of model constructor checks.
+
 ## Exit Status
 
 Kotlin/JAX-RS generation is fully IR-backed after source parsing. RAML uses AMF only before `RamlToGeneratedApi`; OpenAPI and AsyncAPI use native YAML readers before composition into `GeneratedApi`.

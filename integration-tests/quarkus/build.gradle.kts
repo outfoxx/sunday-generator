@@ -11,6 +11,8 @@ dependencies {
   implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
   implementation("io.quarkus:quarkus-kotlin")
   implementation("io.quarkus:quarkus-rest")
+  implementation("io.quarkus:quarkus-rest-jackson")
+  implementation(libs.jacksonKotlin)
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-smallrye-jwt")
   implementation(libs.quarkiverseZanzibar)
@@ -174,11 +176,35 @@ val generateUploadApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val validationSources = layout.buildDirectory.dir("generated/validation")
+val validationContract =
+  rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/cascaded-validation.yaml")
+val generateValidationApi by tasks.registering(JavaExec::class) {
+  inputs.file(validationContract)
+  outputs.dir(validationSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.validation",
+    "-out",
+    validationSources.get().asFile.absolutePath,
+    validationContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
+  freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateValidationApi)
   kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
@@ -188,6 +214,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateValidationApi)
   dependsOn(generateUploadApi)
   dependsOn(generateAsyncApi, generateSelectedApi)
   dependsOn(generateApi, generateSecuredApi, generateZanzibarApi)
