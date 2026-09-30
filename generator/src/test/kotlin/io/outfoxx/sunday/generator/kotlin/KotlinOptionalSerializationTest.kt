@@ -127,6 +127,11 @@ class KotlinOptionalSerializationTest {
       assertEquals(mapper.readTree(json), mapper.readTree(mapper.writeValueAsBytes(value)))
     }
     assertThrows(Exception::class.java) { mapper.readValue("{}", requestType) }
+    for (field in listOf("text", "number", "flag", "items")) {
+      assertThrows(Exception::class.java) {
+        mapper.readValue("""{"name":"test","requiredNullable":null,"$field":null}""", requestType)
+      }
+    }
     assertThrows(Exception::class.java) { mapper.readValue("""{"name":null}""", requestType) }
 
     val strict = mapper.copy().enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)

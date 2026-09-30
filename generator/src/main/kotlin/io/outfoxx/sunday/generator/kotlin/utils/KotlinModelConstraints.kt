@@ -55,8 +55,13 @@ internal object KotlinModelConstraints {
           val wireValue = wireValue(field.storage.type, storageType, value, properties)
           val divisor = GeneratedNumericBounds.multipleOf(property.validation, "property '${field.wireName}'")
           val numericTarget =
-            divisor?.let {
+            if (divisor != null ||
+              properties.declarationType(field.storage.type).kind == GeneratedTypeRef.Kind.ARRAY &&
+              GeneratedNumericBounds.parse(property.validation, "property '${field.wireName}'").isNotEmpty()
+            ) {
               properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            } else {
+              null
             }
           val numericValue = if (numericTarget?.elements == true) CodeBlock.of("element") else value
           val numericChecks = mutableListOf<CodeBlock>()
@@ -107,11 +112,7 @@ internal object KotlinModelConstraints {
               }.joinToCode(" || ")
               .takeUnless { it.isEmpty() } ?: CodeBlock.of("false")
           }
-          if (patch ||
-            field.inherited &&
-            property.validation != field.declaration.validation ||
-            numericTarget?.elements == true
-          ) {
+          if (property.validation.isNotEmpty()) {
             GeneratedNumericBounds.parse(property.validation, "property '${field.wireName}'").forEach { bound ->
               numericChecks +=
                 CodeBlock.of(
@@ -131,7 +132,10 @@ internal object KotlinModelConstraints {
                 "maxLength" ->
                   checks +=
                     CodeBlock.of("%L.codePointCount(0, %L.length) <= %L", wireValue, wireValue, bound)
-                "pattern" -> checks += CodeBlock.of("%T(%S).containsMatchIn(%L)", Regex::class, bound, wireValue)
+                "pattern" ->
+                  properties.patterns(property).forEach { pattern ->
+                    checks += CodeBlock.of("%T(%S).containsMatchIn(%L)", Regex::class, pattern, wireValue)
+                  }
                 "minItems" -> checks += CodeBlock.of("%L.size >= %L", value, bound)
                 "maxItems" -> checks += CodeBlock.of("%L.size <= %L", value, bound)
                 "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("%L.toSet().size == %L.size", value, value)

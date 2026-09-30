@@ -72,6 +72,10 @@ class SwiftOptionalSerializationTest {
                            try JSONSerialization.jsonObject(with: data) as! NSDictionary)
           }
           XCTAssertThrowsError(try decoder.decode(Request.self, from: Data("{}".utf8)))
+          for field in ["text", "number", "flag", "items"] {
+            let wire = "{\"name\":\"test\",\"requiredNullable\":null,\"\(field)\":null}"
+            XCTAssertThrowsError(try decoder.decode(Request.self, from: Data(wire.utf8)))
+          }
         }
       }
       """.trimIndent(),
