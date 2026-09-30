@@ -66,8 +66,6 @@ abstract class KotlinGenerateCommand(
   val registryOptions by flags<KotlinTypeRegistry.Option> {
     ImplementModel to "Generate classes for model types, instead of interfaces".default(true)
     JacksonAnnotations to "Add Jackson annotations to model classes".default(true)
-    KotlinTypeRegistry.Option.PreserveUnknownFields to
-      "Preserve permitted unknown fields in open Jackson model classes".default(false)
     ValidationConstraints to "Add validation constraints to model classes".default(true)
     ContainerElementValid to "Use container element @Valid for cascaded validation".default(true)
     SuppressPublicApiWarnings to "Suppress warnings for Kotlin Public API style code".default(false)
@@ -99,7 +97,9 @@ abstract class KotlinGenerateCommand(
     return options.toSet()
   }
 
-  fun allRegistryOptions() = registryOptions + implyRegistryOptions()
+  fun allRegistryOptions() =
+    registryOptions + implyRegistryOptions() +
+      if (preserveUnknownFields) setOf(KotlinTypeRegistry.Option.PreserveUnknownFields) else emptySet()
 
   protected open fun effectiveProblemLibrary(): KotlinProblemLibrary = problemLibrary
 

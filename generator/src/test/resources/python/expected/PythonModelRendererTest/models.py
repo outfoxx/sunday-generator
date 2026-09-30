@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
-from pydantic import AnyUrl, AwareDatetime, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from sunday import SundayModel
 from typing import Annotated, Literal
 from uuid import UUID
@@ -36,6 +45,8 @@ type UniqueId = str
 class ProjectView(SundayModel):
     """Generated ProjectView model."""
 
+    model_config = ConfigDict(extra="allow")
+
     project_id: str = Field(alias="projectId")
     unique_id: UniqueId = Field(alias="uniqueId")
     resource_id: UUID = Field(alias="resourceId")
@@ -68,12 +79,16 @@ class ProjectView(SundayModel):
 class UserSummaryResponse(SundayModel):
     """Generated UserSummaryResponse model."""
 
+    model_config = ConfigDict(extra="allow")
+
     user_id: str = Field(alias="userId")
     email: str
 
 
 class UserSelfResponse(SundayModel):
     """Generated UserSelfResponse model."""
+
+    model_config = ConfigDict(extra="allow")
 
     user_id: str = Field(alias="userId")
     email: str
@@ -86,12 +101,16 @@ type UserResponse = UserSelfResponse | UserSummaryResponse
 class UserIdentity(SundayModel):
     """Generated UserIdentity model."""
 
+    model_config = ConfigDict(extra="allow")
+
     kind: Literal["user"]
     user_id: str = Field(alias="userId")
 
 
 class ServiceIdentity(SundayModel):
     """Generated ServiceIdentity model."""
+
+    model_config = ConfigDict(extra="allow")
 
     kind: Literal["service"]
     service_id: str = Field(alias="serviceId")
@@ -105,6 +124,8 @@ type Identity = Annotated[
 
 class EventEnvelope(SundayModel):
     """Generated EventEnvelope model."""
+
+    model_config = ConfigDict(extra="allow")
 
     type: str
     data: EventData
@@ -129,11 +150,15 @@ type EventData = ProjectCreatedData | ProjectDeletedData
 class ProjectCreatedData(SundayModel):
     """Generated ProjectCreatedData model."""
 
+    model_config = ConfigDict(extra="allow")
+
     project_id: str = Field(alias="projectId")
 
 
 class ProjectDeletedData(SundayModel):
     """Generated ProjectDeletedData model."""
+
+    model_config = ConfigDict(extra="allow")
 
     project_id: str = Field(alias="projectId")
     reason: str | None = Field(default=None, exclude_if=lambda value: value is None)

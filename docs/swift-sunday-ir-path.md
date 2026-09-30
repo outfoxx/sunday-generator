@@ -50,4 +50,7 @@ Remaining AMF-backed pieces:
 Models with `additionalProperties: false` inspect all input keys using an unrestricted
 `CodingKey` type and reject undeclared keys with `DecodingError.dataCorrupted`. The
 allowed names include inherited wire properties. A finite `CodingKeys` enum alone
-cannot detect unknown input keys. Open models continue to accept unknown fields.
+cannot detect unknown input keys. Permitted dynamic fields are retained and
+encoded again by default, including nested JSON objects and explicit nulls.
+`-no-preserve-unknown-fields` validates and discards them. See
+[dynamic model fields](unknown-fields.md).

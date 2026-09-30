@@ -28,15 +28,16 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonPatternModelsTest : PythonTest() {
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @CsvSource("false,true", "true,true", "false,false", "true,false")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
+    preserve: Boolean,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
@@ -45,7 +46,7 @@ class PythonPatternModelsTest : PythonTest() {
       compileModules(
         compiler,
         listOf(
-          PythonModelRenderer("test_api").renderModels(api.models),
+          PythonModelRenderer("test_api", preserve).renderModels(api.models),
           PythonModuleBuilder("test_api/__init__.py").build(),
         ),
         importModules = listOf("test_api.models"),
@@ -56,7 +57,13 @@ class PythonPatternModelsTest : PythonTest() {
           from test_api.models import PatternClosedInherited, PatternFieldInherited, NestedAdditionalPattern, PatternObject
           from test_api.models import PatternInherited, PatternRecord, PatternOnly, OpenPattern
           for wire in [${patternModelValid.joinToString { "'$it'" }}]:
-              PatternRecord.model_validate(json.loads(wire))
+              decoded = PatternRecord.model_validate(json.loads(wire))
+              output = decoded.model_dump(mode="json", by_alias=True, exclude_unset=True)
+              if ${if (preserve) "True" else "False"}:
+                  for key, value in json.loads(wire).items():
+                      assert output[key] == value, (key, output)
+              else:
+                  assert "x-value" not in output and "maybe-value" not in output
           for wire in [${patternModelInvalid.joinToString { "'$it'" }}]:
               try:
                   PatternRecord.model_validate(json.loads(wire))

@@ -21,8 +21,6 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
-import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.closedModelsApi
@@ -59,9 +57,36 @@ class KotlinClosedModelsTest {
             problemLibrary = KotlinProblemLibrary.SUNDAY,
           )
         if (jaxrs) {
-          KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+          KotlinJAXRSIrGenerator(
+            api,
+            registry,
+            KotlinJAXRSOptions(
+              false,
+              false,
+              null,
+              false,
+              null,
+              false,
+              "io.test.service",
+              "http://example.com/",
+              listOf("application/json"),
+              "API",
+              false,
+              preserveUnknownFields = preserve,
+            ),
+          ).generateServiceTypes()
         } else {
-          KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+          KotlinSundayIrGenerator(
+            api,
+            registry,
+            KotlinSundayOptions(
+              "io.test.service",
+              "http://example.com/",
+              listOf("application/json"),
+              "API",
+              preserveUnknownFields = preserve,
+            ),
+          ).generateServiceTypes()
         }
         val result = compileTypesResult(registry.buildTypes())
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
@@ -94,7 +119,15 @@ class KotlinClosedModelsTest {
         assertThrows(JsonMappingException::class.java) {
           mapper.readValue("""{"display-name":"valid","empty":{"extra":1}}""", closed)
         }
-        mapper.readValue("""{"name":"valid","extra":1}""", result.classLoader.loadClass("io.test.OpenRecord"))
+        for (strict in listOf(false, true)) {
+          val configured = mapper.copy().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, strict)
+          val open =
+            configured.readValue(
+              """{"name":"valid","extra":1}""",
+              result.classLoader.loadClass("io.test.OpenRecord"),
+            )
+          assertEquals(preserve, configured.readTree(configured.writeValueAsBytes(open)).has("extra"))
+        }
       }
     }
   }

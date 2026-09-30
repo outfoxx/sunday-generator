@@ -68,5 +68,6 @@ open class SwiftSundayGenerateCommand :
       aggregateServiceName,
       servicesFromTags,
       generateBrokerServices,
+      preserveUnknownFields,
     )
 }

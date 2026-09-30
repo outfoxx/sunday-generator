@@ -22,4 +22,6 @@ open class GenerationOptions(
   val defaultMediaTypes: List<String>,
   val serviceSuffix: String,
   override val generateBrokerServices: Boolean = false,
+  /** Retain schema-permitted dynamic model fields for serialization. */
+  val preserveUnknownFields: Boolean = true,
 ) : BrokerGenerationOptions

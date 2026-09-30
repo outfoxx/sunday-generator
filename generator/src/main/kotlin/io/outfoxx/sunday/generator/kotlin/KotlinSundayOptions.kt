@@ -28,9 +28,11 @@ class KotlinSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = true,
+  preserveUnknownFields: Boolean = true,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
+    preserveUnknownFields,
   )

@@ -29,4 +29,11 @@ class SwiftSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
-) : GenerationOptions(defaultProblemBaseUri, defaultMediaTypes, serviceSuffix, generateBrokerServices)
+  preserveUnknownFields: Boolean = true,
+) : GenerationOptions(
+    defaultProblemBaseUri,
+    defaultMediaTypes,
+    serviceSuffix,
+    generateBrokerServices,
+    preserveUnknownFields,
+  )

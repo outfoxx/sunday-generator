@@ -69,6 +69,12 @@ abstract class CommonGenerateCommand(
     defaultForHelp = if (generateBrokerServicesDefault) "enabled" else "disabled",
   )
 
+  /** Controls storage of dynamic fields without relaxing schema validation. */
+  val preserveUnknownFields by option(
+    "-preserve-unknown-fields",
+    help = "Preserve schema-permitted dynamic model fields for serialization",
+  ).flag("-no-preserve-unknown-fields", default = true, defaultForHelp = "enabled")
+
   val mediaTypes by option(
     "-media-type",
     help = "Specify order of default media types",

@@ -160,7 +160,7 @@ abstract class SundayGenerate
 
     /** Preserve permitted additional fields when generating implemented Jackson models. */
     @get:Input
-    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+    val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     @get:Input
     @get:Optional
@@ -411,6 +411,7 @@ abstract class SundayGenerate
                   aggregateServiceName = aggregateServiceName.orNull,
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
+                  preserveUnknownFields = preserveUnknownFields.get(),
                   resourceAdapters = resourceAdapters.get(),
                   enforceSecuritySchemes = enforceSecuritySchemes.get(),
                 ),
@@ -429,6 +430,7 @@ abstract class SundayGenerate
                   aggregateServiceName = aggregateServiceName.orNull,
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
+                  preserveUnknownFields = preserveUnknownFields.get(),
                 ),
               ).generateServiceTypes()
           }

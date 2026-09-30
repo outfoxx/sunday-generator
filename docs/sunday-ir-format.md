@@ -291,6 +291,8 @@ semantics, and every matching pattern applies, including to named properties.
 
 Kotlin/Jackson, Swift decoding, TypeScript/Zod, and Python/Pydantic validate the
 matching value types and emitted constraints. Closed schemas still reject
-unmatched keys with null, scalar, array, or object values. Kotlin's
-`PreserveUnknownFields` option retains accepted pattern fields for serialization.
-Compile-backed runtime regressions cover standalone OpenAPI and composed inputs.
+unmatched keys with null, scalar, array, or object values. Every target preserves
+accepted dynamic fields by default. `-no-preserve-unknown-fields` discards them
+after validation; it never relaxes closed schemas or value constraints. This is
+a generation option and does not change the IR contract. See
+[dynamic model fields](unknown-fields.md) for configuration and model access.

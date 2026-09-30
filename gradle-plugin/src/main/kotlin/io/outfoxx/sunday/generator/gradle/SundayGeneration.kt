@@ -74,7 +74,7 @@ class SundayGeneration(
   val disableValidationConstraints: Property<Boolean> = objects.property(Boolean::class.java)
   val disableContainerElementValid: Property<Boolean> = objects.property(Boolean::class.java)
   val disableJacksonAnnotations: Property<Boolean> = objects.property(Boolean::class.java)
-  val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java)
+  val preserveUnknownFields: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
   val disableModelImplementations: Property<Boolean> = objects.property(Boolean::class.java)
   val coroutines: Property<Boolean> = objects.property(Boolean::class.java)
   val flowCoroutines: Property<Boolean> = objects.property(Boolean::class.java)

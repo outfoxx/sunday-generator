@@ -39,11 +39,13 @@ class KotlinJAXRSOptions(
   val resourceAdapters: Boolean = false,
   /** Enforce complete scheme and permission requirements through generated resources and application authenticators. */
   val enforceSecuritySchemes: Boolean = false,
+  preserveUnknownFields: Boolean = true,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
+    preserveUnknownFields,
   ) {
 
   /** Base URI emission mode for service-level JAX-RS path annotations. */

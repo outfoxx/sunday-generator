@@ -101,4 +101,6 @@ Models with `additionalProperties: false` reject undeclared JSON fields when Jac
 annotations are enabled. A generated `@JsonAnySetter` rejects those fields even when
 `FAIL_ON_UNKNOWN_PROPERTIES` is disabled; `@JsonIgnoreProperties(ignoreUnknown = false)`
 alone does not override that mapper setting. This enforcement is independent of the
-option to preserve unknown fields on open models.
+default-enabled option to preserve permitted dynamic fields.
+`-no-preserve-unknown-fields` validates and discards those fields. See
+[dynamic model fields](unknown-fields.md).

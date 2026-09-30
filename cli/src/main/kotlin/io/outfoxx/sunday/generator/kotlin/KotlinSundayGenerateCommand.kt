@@ -83,5 +83,6 @@ open class KotlinSundayGenerateCommand :
       aggregateServiceName,
       servicesFromTags,
       generateBrokerServices,
+      preserveUnknownFields,
     )
 }

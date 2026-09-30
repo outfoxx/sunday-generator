@@ -36,6 +36,7 @@ private const val FALLBACK_TAG = "__unknown__"
 /** Renders IR models into a Python Pydantic models module. */
 class PythonModelRenderer(
   private val packageName: String,
+  private val preserveUnknownFields: Boolean = true,
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
@@ -286,12 +287,9 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderObjectConfiguration(): PythonCodeBlock? {
     val extra =
       when {
-        modelProperties.patternProperties(this).isNotEmpty() ||
-          additionalProperties?.allowed == true ||
-          additionalProperties?.type != null ->
-          "allow"
-        closed == true || additionalProperties?.allowed == false -> "forbid"
-        else -> null
+        modelProperties.isClosed(this) && modelProperties.patternProperties(this).isEmpty() -> "forbid"
+        preserveUnknownFields -> "allow"
+        else -> "ignore"
       }
     val schemaExtra = mutableListOf<PythonCodeBlock>()
     if (examples.isNotEmpty()) {
@@ -305,11 +303,8 @@ class PythonModelRenderer(
     if (deprecated) {
       schemaExtra += PythonCodeBlock.of("%S: True", "deprecated")
     }
-    if (extra == null && schemaExtra.isEmpty()) {
-      return null
-    }
     val arguments = mutableListOf<PythonCodeBlock>()
-    extra?.let { value -> arguments += PythonCodeBlock.of("extra=%S", value) }
+    arguments += PythonCodeBlock.of("extra=%S", extra)
     if (schemaExtra.isNotEmpty()) {
       arguments +=
         PythonCodeBlock.of(

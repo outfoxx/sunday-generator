@@ -7,7 +7,7 @@ import {z} from 'zod';
 export type Parent = SchemaOutput<typeof ParentSchema>;
 
 export const ParentSchema = defineSchema((runtime: SchemaRuntime) => {
-  return z.discriminatedUnion('type', [
+  return z.union([
     runtime.resolveSchema(Child1Schema),
     runtime.resolveSchema(Child2Schema)
   ]);

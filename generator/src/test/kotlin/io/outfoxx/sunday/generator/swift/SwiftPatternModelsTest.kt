@@ -17,7 +17,6 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
-import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.patternModelInvalid
@@ -27,16 +26,17 @@ import io.outfoxx.sunday.generator.tools.patternModelsApi
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
 class SwiftPatternModelsTest {
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @CsvSource("false,true", "true,true", "false,false", "true,false")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
+    preserve: Boolean,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
@@ -44,7 +44,7 @@ class SwiftPatternModelsTest {
     SwiftSundayIrGenerator(
       patternModelsApi(directory, composed),
       registry,
-      swiftSundayTestOptions,
+      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API", preserveUnknownFields = preserve),
     ).generateServiceTypes()
     registry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
     Files.createDirectories(compiler.testsDir)
@@ -58,7 +58,18 @@ class SwiftPatternModelsTest {
         func testPatterns() throws {
           let valid = [${patternModelValid.joinToString { "#\"$it\"#" }}]
           let invalid = [${patternModelInvalid.joinToString { "#\"$it\"#" }}]
-          for wire in valid { _ = try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8)) }
+          for wire in valid {
+            let decoded = try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8))
+            let encoded = try JSONEncoder().encode(decoded)
+            let input = try JSONSerialization.jsonObject(with: Data(wire.utf8)) as! NSDictionary
+            let output = try JSONSerialization.jsonObject(with: encoded) as! NSDictionary
+            if $preserve {
+              for (key, value) in input { XCTAssertEqual(output[key] as? NSObject, value as? NSObject) }
+            } else {
+              XCTAssertNil(output["x-value"])
+              XCTAssertNil(output["maybe-value"])
+            }
+          }
           for wire in invalid {
             XCTAssertThrowsError(try JSONDecoder().decode(PatternRecord.self, from: Data(wire.utf8)), wire)
           }

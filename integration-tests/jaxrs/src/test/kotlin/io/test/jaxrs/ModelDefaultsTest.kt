@@ -18,10 +18,11 @@ package io.test.jaxrs
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.test.defaults.Probe
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import javax.validation.constraints.Size
 
@@ -29,15 +30,17 @@ import javax.validation.constraints.Size
 class ModelDefaultsTest {
 
   @Test
-  fun `default models use javax validation without unknown field storage`() {
+  fun `default models use javax validation and preserve unknown fields`() {
     val model = Probe("valid")
     assertEquals("valid", model.name)
     assertNotNull(Probe::class.java.getDeclaredField("name").getAnnotation(Size::class.java))
-    assertFalse(Probe::class.java.declaredFields.any { Map::class.java.isAssignableFrom(it.type) })
-    assertFalse(
-      Probe::class.java.declaredMethods.any {
-        it.isAnnotationPresent(JsonAnyGetter::class.java) || it.isAnnotationPresent(JsonAnySetter::class.java)
-      },
+    assertTrue(Probe::class.java.declaredMethods.any { it.isAnnotationPresent(JsonAnyGetter::class.java) })
+    assertTrue(Probe::class.java.declaredMethods.any { it.isAnnotationPresent(JsonAnySetter::class.java) })
+    model.setAdditionalProperty("future", mapOf("nested" to listOf(null, true)))
+    val mapper = ObjectMapper()
+    assertEquals(
+      mapper.readTree("""{"name":"valid","future":{"nested":[null,true]}}"""),
+      mapper.readTree(mapper.writeValueAsBytes(model)),
     )
   }
 }

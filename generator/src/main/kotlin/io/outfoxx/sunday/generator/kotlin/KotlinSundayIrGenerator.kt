@@ -346,7 +346,9 @@ class KotlinSundayIrGenerator(
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties) { it.kotlinTypeName() }
+    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties, options.preserveUnknownFields) {
+      it.kotlinTypeName()
+    }
     addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
     models
       .flatMap { model ->

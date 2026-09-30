@@ -76,14 +76,26 @@ internal fun addModelDecodingDefaults(
             parameter.defaultValue != CodeBlock.of("null") &&
             (parameter.type as? ParameterizedTypeName)?.rawType !in setOf(PATCH_OP, UPDATE_OP)
         }.mapTo(mutableSetOf()) { it.name }
-    if (defaulted.isEmpty()) return@forEach
+    val extensionParameters =
+      constructor.parameters
+        .filter { parameter ->
+          parameter.annotations.any { it.typeName == ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter") }
+        }.mapTo(mutableSetOf()) { it.name }
+    if (defaulted.isEmpty() && extensionParameters.isEmpty()) return@forEach
+    // Keep extension storage in data-class copy(), but never bind its implementation name as a JSON field.
+    val decodedParameters = constructor.parameters.filter { it.name !in extensionParameters }
     if (KotlinTypeRegistry.Option.JacksonAnnotations in options) bindWireNames(name)
     builder.primaryConstructor(
       constructor
         .toBuilder()
         .apply {
           parameters.replaceAll { parameter ->
-            if (parameter.name in defaulted) parameter.toBuilder().defaultValue("null").build() else parameter
+            parameter
+              .toBuilder()
+              .apply {
+                if (parameter.name in defaulted) defaultValue("null")
+                if (parameter.name in extensionParameters) annotations.clear()
+              }.build()
           }
           annotations.removeIf { it.typeName == JACKSON_JSON_CREATOR }
         }.build(),
@@ -108,7 +120,7 @@ internal fun addModelDecodingDefaults(
                 .build(),
             )
           }
-          constructor.parameters.forEach { parameter ->
+          decodedParameters.forEach { parameter ->
             addParameter(
               parameter
                 .toBuilder()
@@ -124,7 +136,7 @@ internal fun addModelDecodingDefaults(
           CodeBlock
             .builder()
             .apply {
-              constructor.parameters.forEachIndexed { index, parameter ->
+              decodedParameters.forEachIndexed { index, parameter ->
                 if (index > 0) add(", ")
                 add("%N = %N", parameter.name, parameter.name)
               }
