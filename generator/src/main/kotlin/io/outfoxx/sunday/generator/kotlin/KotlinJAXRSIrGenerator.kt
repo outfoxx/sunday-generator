@@ -369,7 +369,7 @@ class KotlinJAXRSIrGenerator(
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options) { it.kotlinTypeName() }
+    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties) { it.kotlinTypeName() }
     models
       .flatMap { model ->
         buildList {
@@ -3253,6 +3253,7 @@ class KotlinJAXRSIrGenerator(
   private val GeneratedModel.isFreeformObject: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
+        !modelProperties.isClosed(this) &&
         scope != null &&
         properties.isEmpty() &&
         patternProperties.isEmpty() &&

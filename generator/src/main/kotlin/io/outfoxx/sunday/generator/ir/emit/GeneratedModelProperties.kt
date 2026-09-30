@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir.emit
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -51,6 +52,33 @@ internal class GeneratedModelProperties(
 
   private val completed = IdentityHashMap<GeneratedModel, List<Field>>()
   private val visiting = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+  /** Whether this model or an inherited schema forbids undeclared wire properties. */
+  fun isClosed(model: GeneratedModel): Boolean {
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun closed(candidate: GeneratedModel): Boolean =
+      visited.add(candidate) &&
+        (
+          candidate.closed == true ||
+            candidate.additionalProperties?.allowed == false ||
+            candidate.inherits.mapNotNull(modelFor).any(::closed)
+        )
+    return closed(model)
+  }
+
+  /** All pattern assertions applying to a model, including inherited constraints. */
+  fun patternProperties(model: GeneratedModel): List<GeneratedPatternProperty> {
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun collect(candidate: GeneratedModel): List<GeneratedPatternProperty> =
+      if (visited.add(candidate)) {
+        candidate.inherits.mapNotNull(modelFor).flatMap(::collect) + candidate.patternProperties
+      } else {
+        emptyList()
+      }
+    return collect(model).distinct()
+  }
 
   fun declarationModel(type: GeneratedTypeRef): GeneratedModel? {
     var model = modelFor(type) ?: return null

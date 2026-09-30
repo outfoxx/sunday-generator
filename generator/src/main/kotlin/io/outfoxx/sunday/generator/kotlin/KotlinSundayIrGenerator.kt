@@ -332,7 +332,7 @@ class KotlinSundayIrGenerator(
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options) { it.kotlinTypeName() }
+    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties) { it.kotlinTypeName() }
     models
       .flatMap { model ->
         buildList {
@@ -2670,6 +2670,7 @@ class KotlinSundayIrGenerator(
   private val GeneratedModel.isFreeformObject: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
+        !modelProperties.isClosed(this) &&
         properties.isEmpty() &&
         patternProperties.isEmpty() &&
         discriminatorMappings.isEmpty() &&

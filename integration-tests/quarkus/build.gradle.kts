@@ -198,12 +198,35 @@ val generateValidationApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val closedModelSources = layout.buildDirectory.dir("generated/closed-models")
+val closedModelContract =
+  rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/closed-models.yaml")
+val generateClosedModelApi by tasks.registering(JavaExec::class) {
+  inputs.file(closedModelContract)
+  outputs.dir(closedModelSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.closed",
+    "-out",
+    closedModelSources.get().asFile.absolutePath,
+    closedModelContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
   freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateClosedModelApi)
   kotlin.srcDir(generateValidationApi)
   kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
@@ -214,6 +237,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(generateClosedModelApi)
   dependsOn(generateValidationApi)
   dependsOn(generateUploadApi)
   dependsOn(generateAsyncApi, generateSelectedApi)

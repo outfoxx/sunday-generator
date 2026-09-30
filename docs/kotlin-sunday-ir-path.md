@@ -29,3 +29,11 @@ Kotlin/Sunday generation now has one public IR-backed path:
 Regression tests assert that the public generator path contains `GeneratedApiIrExporter` and `KotlinSundayIrGenerator`, does not reference removed wrapper generators, does not expose AMF service hook overrides, and does not walk AMF operation request/response surfaces.
 
 Phase 2D is complete for Kotlin/Sunday.
+
+## Closed model decoding
+
+Models with `additionalProperties: false` reject undeclared JSON fields when Jackson
+annotations are enabled. A generated `@JsonAnySetter` rejects those fields even when
+`FAIL_ON_UNKNOWN_PROPERTIES` is disabled; `@JsonIgnoreProperties(ignoreUnknown = false)`
+alone does not override that mapper setting. This enforcement is independent of the
+option to preserve unknown fields on open models.

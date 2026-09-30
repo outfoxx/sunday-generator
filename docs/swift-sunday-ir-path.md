@@ -44,3 +44,10 @@ Remaining AMF-backed pieces:
 
 - RAML source front-end state: `Document` and `ShapeIndex` are still needed to build the `RamlToGeneratedApi` input.
 - No Swift/Sunday service, model, operation-local model, or problem generation uses AMF after the source has been converted to IR.
+
+## Closed model decoding
+
+Models with `additionalProperties: false` inspect all input keys using an unrestricted
+`CodingKey` type and reject undeclared keys with `DecodingError.dataCorrupted`. The
+allowed names include inherited wire properties. A finite `CodingKeys` enum alone
+cannot detect unknown input keys. Open models continue to accept unknown fields.

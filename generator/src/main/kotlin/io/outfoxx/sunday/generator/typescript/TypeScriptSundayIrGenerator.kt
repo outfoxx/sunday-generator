@@ -1072,8 +1072,11 @@ class TypeScriptSundayIrGenerator(
         SCHEMA_LIKE.parameterized(typeName),
         DEFINE_SCHEMA,
         SCHEMA_RUNTIME,
-      ).add("  const wireSchema = %T.looseObject({\n", Z)
-      .apply {
+      ).add(
+        "  const wireSchema = %T.%L({\n",
+        Z,
+        if (modelProperties.isClosed(fallback.hierarchy)) "strictObject" else "looseObject",
+      ).apply {
         exposedProperties.forEach { property ->
           add("    %S: ", property.serializationName ?: property.name)
           if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
@@ -1283,7 +1286,7 @@ class TypeScriptSundayIrGenerator(
     val schemaCode =
       if (isDiscriminatorBase) {
         if (model.externallyDiscriminated) {
-          externallyDiscriminatedObjectSchemaCode(typeName, allSerializableProperties)
+          externallyDiscriminatedObjectSchemaCode(typeName, allSerializableProperties, model)
         } else {
           discriminatedObjectSchemaCode(
             typeName,
@@ -1297,6 +1300,7 @@ class TypeScriptSundayIrGenerator(
           ownerTypeName,
           typeName,
           allSerializableProperties,
+          model = model,
           leafDiscriminator =
             leafDiscriminatorValue?.let { value ->
               requireNotNull(discriminatorProperty) to value
@@ -1389,6 +1393,7 @@ class TypeScriptSundayIrGenerator(
           ownerTypeName,
           typeName,
           allSerializableProperties,
+          model = model,
           schemaTypeName = typeName.takeIf { needsExplicitSchemaType },
           leafDiscriminator =
             leafDiscriminatorValue?.let { value ->
@@ -1418,7 +1423,7 @@ class TypeScriptSundayIrGenerator(
     leafDiscriminator?.let { (property, _) ->
       interfaceBuilder.addProperty(
         PropertySpec
-          .builder(property.name.typeScriptIdentifierName, property.type.typeName(typeName))
+          .builder(property.wireName.quotedIfNotTypeScriptIdentifier, property.type.typeName(typeName))
           .build(),
       )
     }
@@ -1427,7 +1432,7 @@ class TypeScriptSundayIrGenerator(
       val propertyType = property.type.typeName(typeName).modelPropertyType(property)
       interfaceBuilder.addProperty(
         PropertySpec
-          .builder(property.name.typeScriptIdentifierName, propertyType.nonUndefinable)
+          .builder(property.wireName.quotedIfNotTypeScriptIdentifier, propertyType.nonUndefinable)
           .optional(propertyType.isUndefinable)
           .build(),
       )
@@ -1721,8 +1726,7 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add(
-        "    %T.looseObject({ ...runtime.resolveSchema(%T).shape, %S: ",
-        Z,
+        "    runtime.resolveSchema(%T).extend({ %S: ",
         schemaTypeName,
         discriminatorProperty.serializationName ?: discriminatorProperty.name,
       ).add(
@@ -1862,15 +1866,97 @@ class TypeScriptSundayIrGenerator(
       .build()
   }
 
+  private fun CodeBlock.Builder.applyPatternPropertyConstraints(
+    model: GeneratedModel,
+    owner: TypeName.Standard,
+    schema: String,
+  ): String {
+    val patterns = modelProperties.patternProperties(model)
+    if (patterns.isEmpty()) return schema
+    val checked = "patternCheckedSchema"
+    add("  const %L = %L.superRefine((value, context) => {\n", checked, schema)
+    add(
+      "    const declared = new Set<string>([%L]);\n",
+      modelProperties
+        .fields(model)
+        .map {
+          CodeBlock.of("%S", it.wireName)
+        }.joinToCode(", "),
+    )
+    add("    for (const [key, item] of Object.entries(value)) {\n")
+    add("      let matched = declared.has(key);\n")
+    patterns.forEach { pattern ->
+      add("      if (new RegExp(%S).test(key)) {\n", pattern.pattern)
+      add("        matched = true;\n")
+      add("        const result = ")
+      add(pattern.type.zodSchema(owner, true, pattern.validation, allowedValues = pattern.allowedValues))
+      patternIntegerCheck(pattern.type, "value")?.let { check -> add(".refine((value) => %L)", check) }
+      add(".safeParse(item);\n")
+      add(
+        "        if (!result.success) for (const issue of result.error.issues) context.addIssue({...issue, path: [key, ...issue.path]});\n",
+      )
+      add("      }\n")
+    }
+    if (modelProperties.isClosed(model)) {
+      add(
+        "      if (!matched) context.addIssue({code: 'custom', path: [key], message: 'Additional properties are not allowed'});\n",
+      )
+    }
+    model.additionalProperties?.type?.let { additional ->
+      add("      if (!matched) {\n        const result = ")
+      add(additional.zodSchema(owner, true, model.additionalProperties.validation))
+      add(".safeParse(item);\n")
+      add(
+        "        if (!result.success) for (const issue of result.error.issues) context.addIssue({...issue, path: [key, ...issue.path]});\n      }\n",
+      )
+    }
+    add("    }\n  });\n")
+    return checked
+  }
+
+  private fun patternIntegerCheck(
+    type: GeneratedTypeRef,
+    value: String,
+  ): CodeBlock? {
+    val declaration = modelProperties.declarationType(type)
+    val check =
+      when (declaration.kind) {
+        GeneratedTypeRef.Kind.SCALAR ->
+          if (declaration.name ==
+            "integer"
+          ) {
+            CodeBlock.of("Number.isInteger(%L)", value)
+          } else {
+            null
+          }
+        GeneratedTypeRef.Kind.ARRAY ->
+          declaration.arguments.singleOrNull()?.let { element ->
+            patternIntegerCheck(element, "element")?.let { CodeBlock.of("%L.every((element) => %L)", value, it) }
+          }
+        else -> null
+      } ?: return null
+    return if (modelProperties.acceptsNull(type)) CodeBlock.of("%L == null || %L", value, check) else check
+  }
+
   private fun externallyDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    model: GeneratedModel,
   ): CodeBlock =
     CodeBlock
       .builder()
       .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
-      .apply {
+      .add(
+        "  const wireSchema = %T.%L({",
+        Z,
+        if (modelProperties.isClosed(model) &&
+          modelProperties.patternProperties(model).isEmpty()
+        ) {
+          "strictObject"
+        } else {
+          "looseObject"
+        },
+      ).apply {
         if (properties.isNotEmpty()) {
           add("\n")
           properties.forEachIndexed { idx, property ->
@@ -1884,8 +1970,10 @@ class TypeScriptSundayIrGenerator(
           add("  ")
         }
       }.add("});\n")
-      .add("  return %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
-      .add(
+      .apply {
+        val schema = applyPatternPropertyConstraints(model, typeName, "wireSchema")
+        add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, schema, Z, typeName)
+      }.add(
         "    decode: () => { throw new TypeError(%P); },\n",
         "${typeName.simpleName()} requires external discriminator",
       ).add("    encode: (value) => value as unknown as Record<string, unknown>,\n")
@@ -1897,6 +1985,7 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    model: GeneratedModel,
     schemaTypeName: TypeName.Standard? = null,
     leafDiscriminator: Pair<GeneratedModelProperty, String>? = null,
   ): CodeBlock {
@@ -1909,8 +1998,17 @@ class TypeScriptSundayIrGenerator(
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
-      .apply {
+      .add(
+        "  const wireSchema = %T.%L({",
+        Z,
+        if (modelProperties.isClosed(model) &&
+          modelProperties.patternProperties(model).isEmpty()
+        ) {
+          "strictObject"
+        } else {
+          "looseObject"
+        },
+      ).apply {
         val wireProperties =
           buildList {
             leafDiscriminator?.let { (property, value) ->
@@ -1951,6 +2049,8 @@ class TypeScriptSundayIrGenerator(
             serviceTypeName,
             this,
           )
+      }.apply {
+        resolvedWireSchemaName = applyPatternPropertyConstraints(model, serviceTypeName, resolvedWireSchemaName)
       }.add("  return %L;\n", resolvedWireSchemaName)
       .add("});\n")
       .build()
@@ -1960,6 +2060,7 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    model: GeneratedModel,
     leafDiscriminator: Pair<GeneratedModelProperty, String>? = null,
   ): CodeBlock {
     val externalDiscriminatedPropertyPairs = properties.externalDiscriminatedPropertyPairs()
@@ -1968,8 +2069,17 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
-      .apply {
+      .add(
+        "  const wireSchema = %T.%L({",
+        Z,
+        if (modelProperties.isClosed(model) &&
+          modelProperties.patternProperties(model).isEmpty()
+        ) {
+          "strictObject"
+        } else {
+          "looseObject"
+        },
+      ).apply {
         val wireProperties =
           buildList {
             leafDiscriminator?.let { (property, value) ->
@@ -2010,6 +2120,7 @@ class TypeScriptSundayIrGenerator(
             serviceTypeName,
             this,
           )
+        resolvedWireSchemaName = applyPatternPropertyConstraints(model, serviceTypeName, resolvedWireSchemaName)
         add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, resolvedWireSchemaName, Z, typeName)
       }.apply {
         if (properties.isEmpty()) {
@@ -2250,7 +2361,7 @@ class TypeScriptSundayIrGenerator(
       discriminatedModel.externalDiscriminatorVariants(serviceTypeName) { childSchema, discriminatorValue ->
         CodeBlock
           .builder()
-          .add("%T.looseObject({ ...%L.shape, %S: ", Z, baseWireSchemaName, discriminatorProperty.wireName)
+          .add("%L.extend({ %S: ", baseWireSchemaName, discriminatorProperty.wireName)
           .add(
             discriminatorLiteralSchema(
               discriminatorProperty,
@@ -2282,8 +2393,7 @@ class TypeScriptSundayIrGenerator(
         if (discriminatedPropertyTypeName.isUndefinable) {
           add(
             CodeBlock.of(
-              "%T.looseObject({ ...%L.shape, %S: %T.undefined().optional() })",
-              Z,
+              "%L.extend({ %S: %T.undefined().optional() })",
               baseWireSchemaName,
               discriminatedProperty.wireName,
               Z,
@@ -2293,8 +2403,7 @@ class TypeScriptSundayIrGenerator(
         if (discriminatedPropertyTypeName.isNullable) {
           add(
             CodeBlock.of(
-              "%T.looseObject({ ...%L.shape, %S: %T.null() })",
-              Z,
+              "%L.extend({ %S: %T.null() })",
               baseWireSchemaName,
               discriminatedProperty.wireName,
               Z,
@@ -2440,9 +2549,12 @@ class TypeScriptSundayIrGenerator(
     val mappedValues = fallback.mappedValuesCode()
     return CodeBlock
       .builder()
-      .add("%T.looseObject({ ", Z)
       .apply {
-        baseWireSchemaName?.let { schemaName -> add("...%L.shape, ", schemaName) }
+        if (baseWireSchemaName != null) {
+          add("%L.extend({ ", baseWireSchemaName)
+        } else {
+          add("%T.looseObject({ ", Z)
+        }
       }.add(
         "%S: %T.string().refine((value) => ![%L].includes(value)).pipe(",
         discriminatorProperty.wireName,
@@ -3467,6 +3579,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.isFreeformMapModel(): Boolean =
     kind == GeneratedModel.Kind.OBJECT &&
+      !modelProperties.isClosed(this) &&
       properties.isEmpty() &&
       patternProperties.isEmpty() &&
       !externallyDiscriminated &&

@@ -323,6 +323,7 @@ class SwiftSundayIrGenerator(
           }
         },
       ).apply {
+        if (modelProperties.isClosed(this@swiftFallbackTypeSpec)) addType(unknownPropertyCodingKeyType())
         exposedProperties.forEach { property ->
           addProperty(
             PropertySpec
@@ -353,6 +354,7 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("from", "decoder", DECODER)
             .throws(true)
+            .addCode(closedModelDecodeValidation(this@swiftFallbackTypeSpec))
             .apply {
               if (exposedProperties.isNotEmpty()) {
                 addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
@@ -1025,7 +1027,7 @@ class SwiftSundayIrGenerator(
 
       GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
       else -> null
-    }
+    }?.also { it.addClosedModelSupport(this) }
 
   private fun GeneratedModel.swiftTolerantEnumTypeSpec(): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
@@ -1230,6 +1232,7 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addParameter("from", "decoder", DECODER)
       .throws(true)
+      .addCode(closedModelDecodeValidation(model))
       .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
       .addStatement(
         "let discriminatorValue = try container.decode(%T.self, forKey: .%N)",
@@ -1318,6 +1321,7 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("from", "decoder", DECODER)
             .throws(true)
+            .addCode(closedModelDecodeValidation(model))
             .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
             .apply {
               model.properties.forEach { property ->
@@ -1469,6 +1473,7 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addParameter("from", "decoder", DECODER)
       .throws(true)
+      .addCode(closedModelDecodeValidation(model))
       .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
       .apply {
         properties.forEach { property ->
@@ -3084,6 +3089,157 @@ class SwiftSundayIrGenerator(
     }
   }
 
+  private fun TypeSpec.Builder.addClosedModelSupport(model: GeneratedModel) {
+    if (model.kind != GeneratedModel.Kind.OBJECT ||
+      (!modelProperties.isClosed(model) && modelProperties.patternProperties(model).isEmpty()) ||
+      model.isProtocolHierarchyRootModel ||
+      model.isProblemHierarchyProtocolModel ||
+      model.isExternalDiscriminatorBaseProtocolModel
+    ) {
+      return
+    }
+    addType(unknownPropertyCodingKeyType())
+    if (model.isSwiftClassModel && modelProperties.isClosed(model)) {
+      addProperty(
+        PropertySpec
+          .builder("_sundayAllowedPropertyNames", SET.parameterizedBy(STRING), CLASS)
+          .apply {
+            if (model.inherits.mapNotNull { it.modelOrNull(apiIndex) }.any {
+                it.isSwiftClassModel && modelProperties.isClosed(it)
+              }
+            ) {
+              addModifiers(OVERRIDE)
+            }
+          }.getter(FunctionSpec.getterBuilder().addStatement("return %L", allowedPropertyNames(model)).build())
+          .build(),
+      )
+    }
+  }
+
+  private fun closedModelDecodeValidation(
+    model: GeneratedModel,
+    dynamic: Boolean = false,
+  ): CodeBlock =
+    CodeBlock
+      .builder()
+      .apply {
+        val patterns = modelProperties.patternProperties(model)
+        if (patterns.isEmpty()) {
+          if (modelProperties.isClosed(model)) {
+            addStatement("let allProperties = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
+            addStatement(
+              "let allowedProperties: %T = %L",
+              SET.parameterizedBy(STRING),
+              if (dynamic) CodeBlock.of("Self._sundayAllowedPropertyNames") else allowedPropertyNames(model),
+            )
+            beginControlFlow("for", "key in allProperties.allKeys where !allowedProperties.contains(key.stringValue)")
+            addStatement(
+              "throw %T.dataCorruptedError(forKey: key, in: allProperties, debugDescription: %S + key.stringValue)",
+              DECODING_ERROR,
+              "Additional properties are not allowed: ",
+            )
+            endControlFlow("for")
+          }
+          return@apply
+        }
+        if (modelProperties.isClosed(model) || patterns.isNotEmpty()) {
+          addStatement("let allProperties = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
+          addStatement(
+            "let allowedProperties: %T = %L",
+            SET.parameterizedBy(STRING),
+            if (dynamic &&
+              modelProperties.isClosed(model)
+            ) {
+              CodeBlock.of("Self._sundayAllowedPropertyNames")
+            } else {
+              allowedPropertyNames(model)
+            },
+          )
+          beginControlFlow("for", "key in allProperties.allKeys")
+          addStatement(
+            "%L matched = allowedProperties.contains(key.stringValue)",
+            if (patterns.isEmpty()) "let" else "var",
+          )
+          patterns.forEach { pattern ->
+            beginControlFlow(
+              "if",
+              "key.stringValue.range(of: %L, options: .regularExpression) != nil",
+              SwiftModelConstraints.regexLiteral(pattern.pattern),
+            )
+            addStatement("matched = true")
+            addStatement("_ = try allProperties.decode(%T.self, forKey: key)", pattern.type.swiftStoredTypeName())
+            val property =
+              GeneratedModelProperty(
+                "value",
+                pattern.type,
+                validation = pattern.validation,
+                allowedValues = pattern.allowedValues,
+              )
+            val field = GeneratedModelProperties.Field(property, property, false)
+            if (pattern.validation.isNotEmpty() || pattern.allowedValues != null) {
+              addStatement("let container = allProperties")
+              add(SwiftModelConstraints.decode(listOf(field), false, modelProperties) { CodeBlock.of("key") })
+            }
+            endControlFlow("if")
+          }
+          if (modelProperties.isClosed(model)) {
+            beginControlFlow("if", "!matched")
+            addStatement(
+              "throw %T.dataCorruptedError(forKey: key, in: allProperties, debugDescription: %S + key.stringValue)",
+              DECODING_ERROR,
+              "Additional properties are not allowed: ",
+            )
+            endControlFlow("if")
+          } else if (model.additionalProperties?.type != null) {
+            beginControlFlow("if", "!matched")
+            val additional = model.additionalProperties
+            addStatement("_ = try allProperties.decode(%T.self, forKey: key)", additional.type.swiftStoredTypeName())
+            if (additional.validation.isNotEmpty()) {
+              val property = GeneratedModelProperty("value", additional.type, validation = additional.validation)
+              addStatement("let container = allProperties")
+              add(
+                SwiftModelConstraints.decode(
+                  listOf(GeneratedModelProperties.Field(property, property, false)),
+                  false,
+                  modelProperties,
+                ) {
+                  CodeBlock.of("key")
+                },
+              )
+            }
+            endControlFlow("if")
+          } else {
+            addStatement("_ = matched")
+          }
+          endControlFlow("for")
+        }
+      }.build()
+
+  private fun allowedPropertyNames(model: GeneratedModel): CodeBlock =
+    CodeBlock.of("[%L]", modelProperties.fields(model).map { CodeBlock.of("%S", it.wireName) }.joinToCode(", "))
+
+  // Unlike the model's finite CodingKeys enum, this key accepts every input property name.
+  private fun unknownPropertyCodingKeyType(): TypeSpec =
+    TypeSpec
+      .structBuilder("UnknownPropertyCodingKey")
+      .addModifiers(FILEPRIVATE)
+      .addSuperType(CODING_KEY)
+      .addProperty(PropertySpec.builder("stringValue", STRING).build())
+      .addProperty(PropertySpec.builder("intValue", INT.makeOptional()).initializer("nil").build())
+      .addFunction(
+        FunctionSpec
+          .constructorBuilder()
+          .addParameter("stringValue", STRING)
+          .addStatement("self.stringValue = stringValue")
+          .build(),
+      ).addFunction(
+        FunctionSpec
+          .constructorBuilder()
+          .addParameter("intValue", INT)
+          .addStatement("self.stringValue = String(intValue)")
+          .build(),
+      ).build()
+
   private fun modelDecoderConstructor(
     model: GeneratedModel,
     localProperties: List<GeneratedModelProperty>,
@@ -3110,6 +3266,7 @@ class SwiftSundayIrGenerator(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
         if (localProperties.isEmpty() && constraints.isEmpty()) "_" else "container",
       ).apply {
+        addCode(closedModelDecodeValidation(model, model.isSwiftClassModel))
         addCode(SwiftModelConstraints.decode(constraints, patchable, modelProperties))
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
@@ -4118,6 +4275,7 @@ class SwiftSundayIrGenerator(
   private val GeneratedModel.isFreeformObject: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
+        !modelProperties.isClosed(this) &&
         properties.isEmpty() &&
         patternProperties.isEmpty() &&
         discriminatorMappings.isEmpty()

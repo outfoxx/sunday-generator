@@ -23,5 +23,7 @@ data class GeneratedPatternProperty(
   val pattern: String,
   val type: GeneratedTypeRef,
   val validation: Map<String, String> = mapOf(),
+  /** Scalar wire values permitted by enum or const; null means unrestricted. */
+  val allowedValues: List<Any?>? = null,
   val documentation: GeneratedDocumentation? = null,
 )
