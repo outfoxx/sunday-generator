@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointAccess
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 
 /** Renders Litestar server stubs, using [api] to resolve named request body aliases. */
 class PythonLitestarRenderer(
@@ -38,6 +39,7 @@ class PythonLitestarRenderer(
 
   private val apiIndex = api?.let(::GeneratedApiIndex)
   private val modelProperties = GeneratedModelProperties { type -> apiIndex?.modelOrNull(type) }
+  private val nominalTypes = GeneratedNominalTypes { type -> apiIndex?.modelOrNull(type) }
 
   /** Renders a Litestar service protocol and router factory module. */
   fun renderService(
@@ -60,6 +62,46 @@ class PythonLitestarRenderer(
       operation.renderResponseHeadersType()?.let { headersType ->
         module.addExport(operation.responseHeadersTypeName())
         module.addCode(headersType)
+      }
+    }
+    if (service.operations.any { operation -> operation.parameters.any { it.nominalWireType() != null } }) {
+      module.addCode(
+        PythonCodeBlock.of(
+          """
+          def _decode_nominal_parameter[T](adapter: %T[T], value: object) -> T:
+              try:
+                  return adapter.validate_python(value)
+              except ValueError as error:
+                  raise %T(detail=str(error)) from error
+          """.trimIndent(),
+          PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("litestar.exceptions", "ValidationException"),
+        ),
+      )
+      service.operations.forEach { operation ->
+        operation.parameters.filter { it.nominalWireType() != null }.forEach { parameter ->
+          val type = parameter.renderParameterType(optional = !parameter.required)
+          module.addCode(
+            PythonCodeBlock.of(
+              "%L: %T[%C] = %T(%C)",
+              operation.nominalAdapterName(parameter),
+              PythonSymbol("pydantic", "TypeAdapter"),
+              type,
+              PythonSymbol("pydantic", "TypeAdapter"),
+              type,
+            ),
+          )
+          if (parameter.defaultValue != null) {
+            module.addCode(
+              PythonCodeBlock.of(
+                "%L = %L.validate_python(%C)",
+                operation.nominalDefaultName(parameter),
+                operation.nominalAdapterName(parameter),
+                parameter.renderDefaultValue(),
+              ),
+            )
+          }
+        }
       }
     }
     module.addExport(serviceName)
@@ -385,7 +427,7 @@ class PythonLitestarRenderer(
 
   private fun GeneratedOperation.renderServiceArguments(): PythonCodeBlock {
     val arguments =
-      routeParameters().map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) } +
+      routeParameters().map { parameter -> renderParameterArgument(parameter) } +
         listOfNotNull(
           requestBody?.let { body ->
             if (body.isBinaryBody()) {
@@ -422,12 +464,24 @@ class PythonLitestarRenderer(
         ) +
         (queryParameters() + headerParameters() + cookieParameters())
           .filter { parameter -> parameter.required }
-          .map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) } +
+          .map { parameter -> renderParameterArgument(parameter) } +
         (queryParameters() + headerParameters() + cookieParameters())
           .filterNot { parameter -> parameter.required }
-          .map { parameter -> PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName) }
+          .map { parameter -> renderParameterArgument(parameter) }
 
-    return PythonCodeBlock.join(arguments, separator = ", ")
+    return if (parameters.any { it.nominalWireType() != null }) {
+      PythonCodeBlock.of(
+        "\n%C,\n        ",
+        PythonCodeBlock.join(
+          arguments.map {
+            PythonCodeBlock.of("            %C", it)
+          },
+          ",\n",
+        ),
+      )
+    } else {
+      PythonCodeBlock.join(arguments, separator = ", ")
+    }
   }
 
   private fun GeneratedOperation.requiredServiceParameters(): List<PythonCodeBlock> =
@@ -457,7 +511,11 @@ class PythonLitestarRenderer(
           "        %L: %C = %C,",
           parameter.name.pythonIdentifierName,
           parameter.renderParameterType(optional = true),
-          parameter.renderDefaultValue(),
+          if (parameter.defaultValue != null && parameter.nominalWireType() != null) {
+            PythonCodeBlock.of("%L", nominalDefaultName(parameter))
+          } else {
+            parameter.renderDefaultValue()
+          },
         )
       }
 
@@ -525,12 +583,36 @@ class PythonLitestarRenderer(
         mediaType.equals("text/yaml", ignoreCase = true)
     } == true
 
+  private fun GeneratedParameter.nominalWireType(): GeneratedTypeRef? {
+    val model = apiIndex?.modelOrNull(type) ?: return null
+    return when {
+      model.nominal -> nominalTypes.scalar(model).type
+      nominalTypes.branches(model).isNotEmpty() -> nominalTypes.unionType(model)
+      else -> null
+    }
+  }
+
+  private fun GeneratedOperation.nominalAdapterName(parameter: GeneratedParameter): String =
+    "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_adapter"
+
+  private fun GeneratedOperation.nominalDefaultName(parameter: GeneratedParameter): String =
+    "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_default"
+
+  private fun GeneratedOperation.renderParameterArgument(parameter: GeneratedParameter): PythonCodeBlock {
+    val value = PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
+    return if (parameter.nominalWireType() != null) {
+      PythonCodeBlock.of("_decode_nominal_parameter(%L, %C)", nominalAdapterName(parameter), value)
+    } else {
+      value
+    }
+  }
+
   private fun GeneratedParameter.renderPathHandlerParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
       "        %L: %T[%C],",
       name.pythonIdentifierName,
       PythonSymbol("litestar.params", "FromPath"),
-      type.renderServerPythonType(nullable = false),
+      (nominalWireType() ?: type).renderServerPythonType(nullable = false),
     )
 
   private fun GeneratedParameter.renderHandlerParameter(): PythonCodeBlock {
@@ -541,8 +623,15 @@ class PythonLitestarRenderer(
         GeneratedParameter.Location.COOKIE -> PythonSymbol("litestar.params", "CookieParameter")
         else -> error("Only query, header, and cookie parameters use annotated handler parameters")
       }
-    val type = renderParameterType(optional = !required)
-    val defaultValue = if (required) PythonCodeBlock.of("") else PythonCodeBlock.of(" = %C", renderDefaultValue())
+    val type = copy(type = nominalWireType() ?: type).renderParameterType(optional = !required)
+    val defaultValue =
+      if (required) {
+        PythonCodeBlock.of(
+          "",
+        )
+      } else {
+        PythonCodeBlock.of(" = %C", renderDefaultValue())
+      }
     return PythonCodeBlock.of(
       "        %L: %T[%C, %T(name=%S)]%C,",
       name.pythonIdentifierName,

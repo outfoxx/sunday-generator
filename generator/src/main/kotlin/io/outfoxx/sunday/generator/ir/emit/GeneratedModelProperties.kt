@@ -172,6 +172,12 @@ internal class GeneratedModelProperties(
     val visited = mutableSetOf<String>()
     while (reference.kind == GeneratedTypeRef.Kind.NAMED && visited.add(reference.name)) {
       val alias = modelFor(reference)?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS } ?: break
+      if (alias.nominal) {
+        // Frontends may copy referenced scalar restrictions onto a use site; the wrapper enforces these itself.
+        effective =
+          effective.copy(validation = effective.validation.filter { (key, value) -> alias.validation[key] != value })
+        break
+      }
       effective =
         GeneratedPropertyConstraints.intersect(
           property.copy(

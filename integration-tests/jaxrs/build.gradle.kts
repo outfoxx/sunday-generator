@@ -138,11 +138,33 @@ val generateUploadApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val nominalSources = layout.buildDirectory.dir("generated/nominal")
+val nominalContract = layout.projectDirectory.file("src/main/openapi/nominal-scalars.yaml")
+val generateNominalApi by tasks.registering(JavaExec::class) {
+  inputs.file(nominalContract)
+  outputs.dir(nominalSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-use-jakarta-packages",
+    "-pkg",
+    "io.test.jaxrs.nominal",
+    "-out",
+    nominalSources.get().asFile.absolutePath,
+    nominalContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateNominalApi)
   kotlin.srcDir(generateDefaultModels)
   kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)

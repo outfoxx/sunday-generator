@@ -269,13 +269,18 @@ internal object SwiftModelConstraints {
         constrained.forEach { field ->
           val validation = field.effective.validation
           val optional = !field.storage.required || properties.acceptsNull(field.storage.type)
+          val nominal = properties.declarationModel(field.storage.type)?.nominal == true
+          val binding = if (nominal) "wrappedValue" else "value"
           if (patchable) {
-            beginControlFlow("if", "case .set(let value)? = %N", field.storage.name.swiftIdentifierName)
+            beginControlFlow("if", "case .set(let %L)? = %N", binding, field.storage.name.swiftIdentifierName)
           } else if (optional) {
-            beginControlFlow("if", "let value = %N", field.storage.name.swiftIdentifierName)
+            beginControlFlow("if", "let %L = %N", binding, field.storage.name.swiftIdentifierName)
           } else {
             beginControlFlow("do", "")
-            addStatement("let value = %N", field.storage.name.swiftIdentifierName)
+            addStatement("let %L = %N", binding, field.storage.name.swiftIdentifierName)
+          }
+          if (nominal) {
+            addStatement("let value = wrappedValue.rawValue")
           }
           val checks = mutableListOf<CodeBlock>()
           val declaration = properties.declarationType(field.storage.type)

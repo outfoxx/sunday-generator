@@ -69,6 +69,7 @@ models:
     name: "Bug"
   - kind: "NAMED"
     name: "Feature"
+  unionMode: "ONE_OF"
   discriminator: "kind"
   discriminatorMappings:
     bug:
@@ -114,6 +115,7 @@ models:
     name: "Bug"
   - kind: "NAMED"
     name: "Feature"
+  unionMode: "ONE_OF"
 - name: "WorkItem"
   kind: "OBJECT"
   properties:

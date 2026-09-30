@@ -452,6 +452,7 @@ class OpenApiToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        nominal = schema["x-sunday-wrapper-type"] == true,
         scope = scope,
         aliases = listOf(GeneratedTypeRef.named(target, nullable = analyzed.nullable)),
         documentation = documentation(description = schema["description"] as? String),
@@ -471,6 +472,7 @@ class OpenApiToGeneratedApi(
           GeneratedModel(
             name = name,
             kind = GeneratedModel.Kind.SCALAR_ALIAS,
+            nominal = schema["x-sunday-wrapper-type"] == true,
             scope = scope,
             aliases = listOf(schemaTypeRef(payload, null, null, localModels).copy(nullable = projection.nullable)),
             validation = validation(resolveSchema(payload)),
@@ -517,6 +519,7 @@ class OpenApiToGeneratedApi(
         GeneratedModel(
           name = name,
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          nominal = schema["x-sunday-wrapper-type"] == true,
           scope = scope,
           aliases = listOf(scalar("any", nullable = nullable)),
           documentation = documentation(description = resolved["description"] as? String),
@@ -542,6 +545,7 @@ class OpenApiToGeneratedApi(
         GeneratedModel(
           name = name,
           kind = GeneratedModel.Kind.SCALAR_ALIAS,
+          nominal = schema["x-sunday-wrapper-type"] == true,
           scope = scope,
           aliases = listOf(schemaTypeRef(resolved, null, null, localModels)),
           validation = validation(resolved),
@@ -603,6 +607,7 @@ class OpenApiToGeneratedApi(
     GeneratedModel(
       name = name,
       kind = GeneratedModel.Kind.UNION,
+      unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
       scope = scope,
       aliases = branches.map { branch -> schemaTypeRef(branch, null, null, localModels) },
       discriminator = schema.discriminatorProperty(),

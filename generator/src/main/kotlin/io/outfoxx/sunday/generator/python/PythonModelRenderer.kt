@@ -24,6 +24,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import java.math.BigDecimal
@@ -38,6 +39,7 @@ class PythonModelRenderer(
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
+  private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
   private var modelProperties = GeneratedModelProperties { modelIndex[it.name] }
   private var discriminatorFallbacks: Map<String, GeneratedDiscriminatorFallback> = mapOf()
   private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
@@ -210,13 +212,19 @@ class PythonModelRenderer(
       kind == GeneratedModel.Kind.MAP
 
   private fun GeneratedModel.renderModel(): PythonCodeBlock =
-    when (kind) {
-      GeneratedModel.Kind.OBJECT -> renderObjectModel()
-      GeneratedModel.Kind.ENUM -> renderEnumModel()
-      GeneratedModel.Kind.SCALAR_ALIAS -> renderScalarAliasModel()
-      GeneratedModel.Kind.UNION -> renderUnionModel()
-      GeneratedModel.Kind.ARRAY -> renderArrayAliasModel()
-      GeneratedModel.Kind.MAP -> renderMapAliasModel()
+    if (nominal) {
+      renderNominalScalar()
+    } else if (nominalTypes.branches(this).isNotEmpty()) {
+      renderNominalUnion()
+    } else {
+      when (kind) {
+        GeneratedModel.Kind.OBJECT -> renderObjectModel()
+        GeneratedModel.Kind.ENUM -> renderEnumModel()
+        GeneratedModel.Kind.SCALAR_ALIAS -> renderScalarAliasModel()
+        GeneratedModel.Kind.UNION -> renderUnionModel()
+        GeneratedModel.Kind.ARRAY -> renderArrayAliasModel()
+        GeneratedModel.Kind.MAP -> renderMapAliasModel()
+      }
     }
 
   private fun GeneratedModel.isObjectClass(): Boolean =
@@ -313,6 +321,176 @@ class PythonModelRenderer(
       "    model_config = %T(%C)",
       PythonSymbol("pydantic", "ConfigDict"),
       PythonCodeBlock.join(arguments, separator = ", "),
+    )
+  }
+
+  private fun GeneratedModel.renderNominalScalar(): PythonCodeBlock {
+    val scalar = nominalTypes.scalar(this)
+    val base = scalar.type.renderPythonType(nullable = false)
+    val validated = renderValidatedType(base, scalar.property.validation, "model '$name'", scalar.type)
+    val boolean = scalar.type.name == "boolean"
+    val checks =
+      scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.map {
+        PythonCodeBlock.of(
+          "        if %T(%S, value) is None:\n            raise ValueError(%S)",
+          PythonSymbol("re", "search"),
+          it,
+          "Invalid value for '$name'",
+        )
+      }
+    val constructor =
+      if (boolean) {
+        PythonCodeBlock.of(
+          """
+          value: bool
+
+          def __post_init__(self) -> None:
+              self._adapter.validate_python(self.value, strict=True)
+
+          def __bool__(self) -> bool:
+              return self.value
+
+          def __str__(self) -> str:
+              return "true" if self.value else "false"
+          """.trimIndent().lines().joinToString("\n") {
+            if (it.isEmpty()) it else "    $it"
+          },
+        )
+      } else {
+        PythonCodeBlock.of(
+          """
+              def __new__(cls, value: %C) -> %T:
+                  value = cls._adapter.validate_python(value, strict=True)
+          %C
+                  return %C.__new__(cls, value)
+          """.trimIndent(),
+          base,
+          PythonSymbol("typing", "Self"),
+          PythonCodeBlock.join(checks, "\n"),
+          base,
+        )
+      }
+    return PythonCodeBlock.of(
+      """
+      %Cclass %L%C:
+          "Validated scalar wire value."
+
+          _adapter: %T[%T[%C]] = %T(%C)
+
+      %C
+
+          @classmethod
+          def __get_pydantic_core_schema__(cls, source_type: object, handler: %T) -> %T:
+              return %T(
+                  cls,
+                  %C,
+                  serialization=%T(
+                      lambda value: %C, return_schema=handler.generate_schema(%C)
+                  ),
+              )
+      """.trimIndent(),
+      if (boolean) {
+        PythonCodeBlock.of(
+          "@%T(frozen=True)\n",
+          PythonSymbol("dataclasses", "dataclass"),
+        )
+      } else {
+        PythonCodeBlock.of("")
+      },
+      name.pythonTypeName,
+      if (boolean) PythonCodeBlock.of("") else PythonCodeBlock.of("(%C)", base),
+      PythonSymbol("typing", "ClassVar"),
+      PythonSymbol("pydantic", "TypeAdapter"),
+      base,
+      PythonSymbol("pydantic", "TypeAdapter"),
+      validated,
+      constructor,
+      PythonSymbol("pydantic", "GetCoreSchemaHandler"),
+      PythonSymbol("pydantic_core.core_schema", "CoreSchema"),
+      PythonSymbol("pydantic_core.core_schema", "no_info_after_validator_function"),
+      if (boolean) {
+        PythonCodeBlock.of(
+          "%T(\n                lambda value: value.value if isinstance(value, cls) else value,\n" +
+            "                cls._adapter.core_schema,\n            )",
+          PythonSymbol("pydantic_core.core_schema", "no_info_before_validator_function"),
+        )
+      } else {
+        PythonCodeBlock.of("cls._adapter.core_schema")
+      },
+      PythonSymbol("pydantic_core.core_schema", "plain_serializer_function_ser_schema"),
+      if (boolean) PythonCodeBlock.of("value.value") else PythonCodeBlock.of("%C(value)", base),
+      base,
+    )
+  }
+
+  private fun GeneratedModel.renderNominalUnion(): PythonCodeBlock {
+    val branches = nominalTypes.branches(this)
+    val raw = nominalTypes.unionType(this)
+    val function = "_validate_${name.pythonIdentifierName}"
+    val union = aliases.renderUnionType()
+    val branchesCode = PythonCodeBlock.join(branches.map { PythonCodeBlock.of("%L", it.name.pythonTypeName) }, ", ")
+    return PythonCodeBlock.of(
+      """
+      def %L(value: object) -> %C:
+          matches: list[%C] = []
+      %C
+          if not isinstance(value, %C):
+              raise ValueError(%S)
+          for branch in (%C):
+              with %T(TypeError, ValueError):
+                  matches.append(branch(value))
+          if not matches:
+              raise ValueError(%S)
+      %C
+          return matches[0]
+
+
+      type %L = %T[
+          %C,
+          %T(%L, json_schema_input_type=%C),
+          %T(lambda value: %C, return_type=%C),
+      ]
+      """.trimIndent(),
+      function,
+      union,
+      union,
+      if (raw.name ==
+        "boolean"
+      ) {
+        PythonCodeBlock.of("    if isinstance(value, (%C,)):\n        value = value.value", branchesCode)
+      } else {
+        PythonCodeBlock.of("")
+      },
+      if (raw.name == "number") PythonCodeBlock.of("(int, float)") else raw.renderPythonType(),
+      "No branch matched $name",
+      if (branches.size == 1) PythonCodeBlock.of("%C,", branchesCode) else branchesCode,
+      PythonSymbol("contextlib", "suppress"),
+      "No branch matched $name",
+      if (unionMode ==
+        GeneratedModel.UnionMode.ONE_OF
+      ) {
+        PythonCodeBlock.of(
+          "    if len(matches) != 1:\n        raise ValueError(%S)",
+          "Ambiguous value for $name: multiple branches matched",
+        )
+      } else {
+        PythonCodeBlock.of("")
+      },
+      name.pythonTypeName,
+      PythonSymbol("typing", "Annotated"),
+      union,
+      PythonSymbol("pydantic", "PlainValidator"),
+      function,
+      union,
+      PythonSymbol("pydantic", "PlainSerializer"),
+      if (raw.name ==
+        "boolean"
+      ) {
+        PythonCodeBlock.of("value.value")
+      } else {
+        PythonCodeBlock.of("%C(value)", raw.renderPythonType())
+      },
+      raw.renderPythonType(),
     )
   }
 
@@ -945,7 +1123,7 @@ class PythonModelRenderer(
       }
 
   private fun GeneratedModelProperty.enumStringConstraints(): Map<String, String> =
-    if (modelProperties.declarationModel(type)?.kind == GeneratedModel.Kind.ENUM) {
+    if (modelProperties.declarationModel(type)?.let { it.kind == GeneratedModel.Kind.ENUM || it.nominal } == true) {
       validation.filterKeys { it in setOf("minLength", "maxLength", "pattern") }
     } else {
       emptyMap()
@@ -1060,7 +1238,9 @@ class PythonModelRenderer(
                         raise ValueError("Array items must be unique")
                 return items
             return value
-        """.trimIndent().prependIndent("    "),
+        """.trimIndent().lines().joinToString("\n") {
+          if (it.isEmpty()) it else "    $it"
+        },
       fields.renderFieldValidator("before"),
       PythonSymbol("collections.abc", "Iterable"),
     )
@@ -1468,7 +1648,14 @@ class PythonModelRenderer(
     return inheritedAliasProperties
       .filterNot { property ->
         (property.serializationName ?: property.name) in overrideNames + combinedNames
-      } + properties + combinedProperties
+      } +
+      properties.map { property ->
+        if (modelProperties.declarationModel(property.type)?.nominal == true) {
+          modelProperties.fields(this).first { it.wireName == (property.serializationName ?: property.name) }.effective
+        } else {
+          property
+        }
+      } + combinedProperties
   }
 
   private fun GeneratedModelProperty.discriminatorLiteralValue(model: GeneratedModel): String? {

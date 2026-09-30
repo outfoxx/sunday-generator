@@ -1276,10 +1276,20 @@ class RamlToGeneratedApi(
         }
 
       is ScalarShape ->
-        shape.name?.takeIf { shape.values.isNotEmpty() }?.let { name ->
+        shape.name?.takeIf { shape.values.isNotEmpty() || shape.isNominalScalar() }?.let { name ->
           GeneratedModel(
             name = name,
-            kind = GeneratedModel.Kind.ENUM,
+            kind = if (shape.isNominalScalar()) GeneratedModel.Kind.SCALAR_ALIAS else GeneratedModel.Kind.ENUM,
+            nominal = shape.isNominalScalar(),
+            aliases =
+              if (shape.isNominalScalar()) {
+                listOf(
+                  GeneratedTypeRef.scalar(shape.scalarName(), format = shape.format),
+                )
+              } else {
+                emptyList()
+              },
+            validation = if (shape.isNominalScalar()) validation(shape) else emptyMap(),
             source = declaringUnit.sourceSpec(rootLocation),
             values = shape.values.mapNotNull { value -> value.rawScalarValue },
             unknownValue = shape.unknownEnumValue(name),
@@ -1372,6 +1382,7 @@ class RamlToGeneratedApi(
         name = name,
         kind = GeneratedModel.Kind.UNION,
         source = declaringUnit.sourceSpec(rootLocation),
+        unionMode = if (xone.isNotEmpty()) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
         aliases = unionBranches.map { branch -> typeRef(shapeIndex.resolve(branch), rootLocation = rootLocation) },
         targets = declaringUnit.targetDefaults().mergeWith(targets()),
         examples =
@@ -1782,7 +1793,10 @@ class RamlToGeneratedApi(
 
       is ScalarShape ->
         localModels?.refFor(shape)
-          ?: if (shape.name != null && shape.name !in syntheticShapeNames && shape.values.isNotEmpty()) {
+          ?: if (shape.name != null &&
+            shape.name !in syntheticShapeNames &&
+            (shape.values.isNotEmpty() || shape.isNominalScalar())
+          ) {
             GeneratedTypeRef.named(shape.name!!, source = shape.sourceSpec(rootLocation))
           } else {
             GeneratedTypeRef.scalar(shape.scalarName(), format = shape.format?.ifBlank { null })
@@ -2181,6 +2195,9 @@ class RamlToGeneratedApi(
     return unknownValue
   }
 
+  private fun Shape.isNominalScalar(): Boolean =
+    this is ScalarShape && values.isEmpty() && findBoolAnnotation(APIAnnotationName.WrapperType, null) == true
+
   private fun validation(shape: Shape): Map<String, String> =
     when (val constrained = shape.nonNullableType) {
       is ScalarShape -> scalarValidation(constrained)
@@ -2194,12 +2211,14 @@ class RamlToGeneratedApi(
     shapeIndex: ShapeIndex,
   ): Map<String, String> {
     val resolved = shapeIndex.resolve(shape)
+    if (resolved is UnionShape && !resolved.makesNullable) return emptyMap()
     val validation = validation(resolved)
     if (validation.isNotEmpty()) {
       return validation
     }
 
     val itemShape = (resolved.nonNullableType as? ArrayShape)?.items()?.let(shapeIndex::resolve)
+    if (itemShape?.isNominalScalar() == true || itemShape is UnionShape) return emptyMap()
     return itemShape?.let(::validation).orEmpty()
   }
 

@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
@@ -40,6 +41,7 @@ class PythonClientRenderer(
 ) {
 
   private val modelIndex = models.associateBy { model -> model.name }
+  private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
 
   /** Renders one generated service client. */
   fun renderService(service: GeneratedService): PythonModule {
@@ -59,6 +61,11 @@ class PythonClientRenderer(
     module.addExport(className)
     service.adapterTypes().forEach { type -> module.addCode(type.renderAdapterConstant()) }
     service.operations.forEach { operation ->
+      operation.parameters.filter { it.hasNominalDefault() }.forEach { parameter ->
+        module.addCode(
+          PythonCodeBlock.of("%L = %C", operation.defaultName(parameter), parameter.renderDefaultValue()),
+        )
+      }
       operation.renderDecoderFunctions()?.let(module::addCode)
       operation.renderResponseSpecConstant()?.let(module::addCode)
       operation.renderRequestPayloadFunction()?.let(module::addCode)
@@ -675,7 +682,7 @@ class PythonClientRenderer(
       }
 
     return PythonCodeBlock.join(
-      required + optional.map { it.renderOptionalParameter() },
+      required + optional.map { it.renderOptionalParameter(this) },
       separator = "\n",
     )
   }
@@ -699,7 +706,7 @@ class PythonClientRenderer(
       separator = " | ",
     )
 
-  private fun GeneratedParameter.renderOptionalParameter(): PythonCodeBlock =
+  private fun GeneratedParameter.renderOptionalParameter(operation: GeneratedOperation): PythonCodeBlock =
     PythonCodeBlock.of(
       "        %L: %C = %C,",
       name.pythonIdentifierName,
@@ -708,8 +715,30 @@ class PythonClientRenderer(
       } else {
         PythonCodeBlock.of("%C | None", type.renderClientPythonType(nullable = false))
       },
-      defaultValue?.renderPythonValue() ?: PythonCodeBlock.of("None"),
+      if (hasNominalDefault()) PythonCodeBlock.of("%L", operation.defaultName(this)) else renderDefaultValue(),
     )
+
+  private fun GeneratedOperation.defaultName(parameter: GeneratedParameter): String =
+    "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_default"
+
+  private fun GeneratedParameter.hasNominalDefault(): Boolean {
+    val model = modelIndex[type.name] ?: return false
+    return defaultValue != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())
+  }
+
+  private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock {
+    val value = defaultValue?.renderPythonValue() ?: return PythonCodeBlock.of("None")
+    return if (hasNominalDefault()) {
+      PythonCodeBlock.of(
+        "%T(%C).validate_python(%C)",
+        PythonSymbol("pydantic", "TypeAdapter"),
+        type.renderClientPythonType(nullable = false),
+        value,
+      )
+    } else {
+      value
+    }
+  }
 
   private fun GeneratedOperation.renderSuccessType(): PythonCodeBlock {
     val types = responseVariants().mapNotNull { variant -> variant.type }.distinct()

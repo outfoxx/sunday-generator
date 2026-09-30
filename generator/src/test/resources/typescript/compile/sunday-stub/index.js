@@ -68,6 +68,7 @@ function createOperation(transport, spec) {
 }
 
 module.exports = {
+  MediaType: {JSON: 'application/json'},
   defineSchema,
   createSchemaRuntime,
   DateEncoding,
