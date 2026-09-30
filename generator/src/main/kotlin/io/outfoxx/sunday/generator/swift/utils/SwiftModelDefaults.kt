@@ -33,7 +33,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalQueries
 import java.util.Base64
 
-/** Uses the same validated literal for a constructor default and an omitted-field decoder fallback. */
+/** Renders validated literals for omitted-field decoder fallbacks. */
 internal object SwiftModelDefaults {
   fun render(
     modelName: String,

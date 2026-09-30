@@ -3020,8 +3020,6 @@ class SwiftSundayIrGenerator(
               .apply {
                 if (patchable) {
                   defaultValue(".none")
-                } else if (!property.required && property.swiftDefault(model) != null) {
-                  defaultValue(property.swiftDefault(model)!!)
                 } else if (property.swiftTypeName().optional) {
                   defaultValue("nil")
                 }

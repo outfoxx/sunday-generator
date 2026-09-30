@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
+import io.outfoxx.sunday.generator.tools.modelDefaultsApi
 import io.outfoxx.sunday.generator.tools.optionalSerializationApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -31,6 +32,39 @@ import kotlin.io.path.writeText
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonOptionalSerializationTest : PythonTest() {
+  @Test
+  fun `schema defaults remain unset when encoding requests`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("test_api").renderModels(modelDefaultsApi("openapi", directory).models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        importModules = listOf("test_api.models"),
+        smokeCode =
+          """
+          import json
+          from sunday import JsonCodec
+          from test_api.models import DefaultRecord, DefaultChild
+          for model in (DefaultRecord, DefaultChild):
+              unset = model(name="test")
+              assert json.loads(JsonCodec().encode(unset)) == {"name": "test"}
+              assert model.model_validate({"name": "test"}).execution_mode == "fast"
+              for key in ("execution-mode", "execution_mode"):
+                  fields = {"name": "test", key: "fast", "count": 3, "enabled": True, "choice": "fast"}
+                  supplied = model(**fields)
+                  assert json.loads(JsonCodec().encode(supplied)) == {
+                      "name": "test", "execution-mode": "fast", "count": 3, "enabled": True, "choice": "fast"
+                  }
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `optional scalar null validation follows pydantic input selection`(
     compiler: PythonCompiler,

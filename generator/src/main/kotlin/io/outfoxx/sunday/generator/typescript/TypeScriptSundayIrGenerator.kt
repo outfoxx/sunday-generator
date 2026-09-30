@@ -2594,10 +2594,27 @@ class TypeScriptSundayIrGenerator(
     lazyRefType: TypeName.Standard? = null,
   ): CodeBlock {
     val base = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
-    return modelProperties
-      .scalarDefault(this)
-      ?.takeUnless { required }
-      ?.let { base.appendSchemaCall("prefault(%L)", literal(it)) } ?: base
+    val default = modelProperties.scalarDefault(this)?.takeUnless { required } ?: return base
+    val enumModel =
+      modelProperties.declarationModel(type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM && it.unknownValue == null }
+    val value =
+      if (default is String && enumModel != null) {
+        CodeBlock.of(
+          "%T.%L",
+          modelProperties.declarationType(type).copy(nullable = false).typeName(serviceTypeName),
+          enumModel.requireTypeScriptEnumMemberNameForValue(default, "default"),
+        )
+      } else {
+        literal(default)
+      }
+    // Prefault makes the output required; the outer optional preserves omission when encoding requests.
+    return CodeBlock
+      .builder()
+      .add(base)
+      .add(".prefault(")
+      .add(value)
+      .add(").optional()")
+      .build()
   }
 
   private fun GeneratedTypeRef.zodSchema(
