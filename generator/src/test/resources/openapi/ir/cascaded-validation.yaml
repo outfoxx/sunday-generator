@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info: {title: Cascaded validation, version: 1.0.0}
+paths:
+  /w:
+    post:
+      operationId: validateWrapper
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Wrapper'}
+      responses:
+        '204': {description: Valid}
+components:
+  schemas:
+    Status: {type: string, enum: [ready, done]}
+    Child:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, pattern: '^[a-z]+$'}
+        email: {type: string, format: email}
+    Cat:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: {type: string, const: cat}
+        name: {type: string, pattern: '^[a-z]+$'}
+        email: {type: string, format: email}
+    Dog:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: {type: string, const: dog}
+        name: {type: string, pattern: '^[a-z]+$'}
+        email: {type: string, format: email}
+    Choice:
+      oneOf:
+        - {$ref: '#/components/schemas/Cat'}
+        - {$ref: '#/components/schemas/Dog'}
+      discriminator:
+        propertyName: kind
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+    Wrapper:
+      type: object
+      properties:
+        child: {$ref: '#/components/schemas/Child'}
+        choice: {$ref: '#/components/schemas/Choice'}
+        childMap: {type: object, additionalProperties: {$ref: '#/components/schemas/Child'}}
+        choiceMap: {type: object, additionalProperties: {$ref: '#/components/schemas/Choice'}}
+        statuses: {type: object, additionalProperties: {$ref: '#/components/schemas/Status'}}
+        groups: {type: object, additionalProperties: {type: array, items: {$ref: '#/components/schemas/Child'}}}
+        children: {type: array, items: {$ref: '#/components/schemas/Child'}}
+        choices: {type: array, items: {$ref: '#/components/schemas/Choice'}}
+        names: {type: array, items: {type: string}}

@@ -1696,8 +1696,7 @@ class KotlinJAXRSIrGenerator(
       addAnnotation(beanValidationTypes.notNull)
     }
 
-    val model = parameter.type.modelOrNull(apiIndex)
-    if (model?.kind == GeneratedModel.Kind.OBJECT && typeName != ANY) {
+    if (parameter.type.requiresCascadedValidation() && typeName.copy(nullable = false) != ANY) {
       addAnnotation(beanValidationTypes.valid)
     }
 
@@ -1730,36 +1729,59 @@ class KotlinJAXRSIrGenerator(
       return this
     }
 
-    val model = type.modelOrNull(apiIndex)
+    val resolved = modelProperties.declarationType(type)
+    val model = modelProperties.declarationModel(type)
     val typeRefArguments =
       when {
-        type.arguments.isNotEmpty() -> type.arguments
+        resolved.kind == GeneratedTypeRef.Kind.MAP -> listOf(GeneratedTypeRef.scalar("string")) + resolved.arguments
+        model?.kind == GeneratedModel.Kind.MAP -> listOf(GeneratedTypeRef.scalar("string")) + model.aliases
+        resolved.arguments.isNotEmpty() -> resolved.arguments
         model?.kind == GeneratedModel.Kind.ARRAY -> model.aliases
-        model?.kind == GeneratedModel.Kind.MAP -> model.aliases
         else -> emptyList()
       }
-    if (typeRefArguments.isEmpty()) {
+    if (typeRefArguments.size != typeArguments.size) {
       return this
     }
 
     val argumentTypes =
       typeArguments.zip(typeRefArguments).map { (argumentTypeName, argumentType) ->
-        val argumentModel = argumentType.modelOrNull(apiIndex)
-        if (argumentModel?.kind == GeneratedModel.Kind.OBJECT) {
-          argumentTypeName.copy(
+        val annotatedType = argumentTypeName.withUseSiteValidationAnnotations(argumentType)
+        if (argumentType.requiresCascadedValidation() && argumentTypeName !is ParameterizedTypeName) {
+          annotatedType.copy(
             annotations =
-              argumentTypeName.annotations +
+              annotatedType.annotations +
                 AnnotationSpec
                   .builder(beanValidationTypes.valid)
                   .build(),
           )
         } else {
-          argumentTypeName.withUseSiteValidationAnnotations(argumentType)
+          annotatedType
         }
       }
 
-    return rawType.parameterizedBy(argumentTypes)
+    return rawType.parameterizedBy(argumentTypes).copy(nullable = isNullable, annotations = annotations)
   }
+
+  private fun GeneratedTypeRef.requiresCascadedValidation(): Boolean {
+    val model = modelProperties.declarationModel(this)
+    return when {
+      model?.kind == GeneratedModel.Kind.OBJECT -> !model.isFreeformObject
+      model?.kind == GeneratedModel.Kind.UNION -> model.isObjectUnionSealedInterface
+      else -> false
+    }
+  }
+
+  private fun GeneratedModelProperty.modelValidationAnnotations(): List<AnnotationSpec> =
+    if (!typeRegistry.options.contains(ValidationConstraints)) {
+      emptyList()
+    } else {
+      buildList {
+        addAll(validation.validationAnnotations(type, AnnotationSpec.UseSiteTarget.GET))
+        if (type.requiresCascadedValidation()) {
+          add(AnnotationSpec.builder(beanValidationTypes.valid).useSiteTarget(AnnotationSpec.UseSiteTarget.GET).build())
+        }
+      }
+    }
 
   private fun Map<String, String>.validationAnnotations(
     type: GeneratedTypeRef,
@@ -2159,12 +2181,8 @@ class KotlinJAXRSIrGenerator(
               .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
               .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
               .addAnnotations(property.jacksonInclusionAnnotations())
-              .addAnnotations(
-                property.validation.validationAnnotations(
-                  property.type,
-                  AnnotationSpec.UseSiteTarget.GET,
-                ),
-              ).initializer(property.name.kotlinIdentifierName)
+              .addAnnotations(property.modelValidationAnnotations())
+              .initializer(property.name.kotlinIdentifierName)
               .build(),
           )
         }
@@ -2270,12 +2288,7 @@ class KotlinJAXRSIrGenerator(
                 .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
                 .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
                 .addAnnotations(property.jacksonInclusionAnnotations())
-                .addAnnotations(
-                  property.validation.validationAnnotations(
-                    property.type,
-                    AnnotationSpec.UseSiteTarget.GET,
-                  ),
-                )
+                .addAnnotations(property.modelValidationAnnotations())
             addProperty(
               propertyBuilder
                 .initializer(property.name.kotlinIdentifierName)
@@ -2747,6 +2760,7 @@ class KotlinJAXRSIrGenerator(
       .builder("`${name.kotlinIdentifierName}`", modelPropertyTypeName())
       .addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
       .addAnnotations(jacksonInclusionAnnotations())
+      .addAnnotations(modelValidationAnnotations())
       .build()
 
   private fun GeneratedModelProperty.jacksonInclusionAnnotations(): List<AnnotationSpec> =
@@ -2816,7 +2830,7 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedModelProperty.modelPropertyTypeName(): TypeName =
-    type.kotlinTypeName().copy(nullable = type.nullable || !required)
+    type.kotlinTypeName().withUseSiteValidationAnnotations(type).copy(nullable = type.nullable || !required)
 
   private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> =
     inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() } + properties
