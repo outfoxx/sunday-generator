@@ -118,4 +118,9 @@ fun GeneratedTypeRef.flattenedUnionTypes(): List<GeneratedTypeRef> =
   }
 
 private val GeneratedModel.isFreeformObject: Boolean
-  get() = kind == GeneratedModel.Kind.OBJECT && properties.isEmpty() && patternProperties.isEmpty()
+  get() =
+    kind == GeneratedModel.Kind.OBJECT &&
+      closed != true &&
+      additionalProperties?.allowed != false &&
+      properties.isEmpty() &&
+      patternProperties.isEmpty()

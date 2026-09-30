@@ -3253,6 +3253,7 @@ class KotlinJAXRSIrGenerator(
   private val GeneratedModel.isFreeformObject: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
+        !modelProperties.isClosed(this) &&
         scope != null &&
         properties.isEmpty() &&
         patternProperties.isEmpty() &&

@@ -94,3 +94,11 @@ and validation metadata, independently of model constructor checks.
 ## Exit Status
 
 Kotlin/JAX-RS generation is fully IR-backed after source parsing. RAML uses AMF only before `RamlToGeneratedApi`; OpenAPI and AsyncAPI use native YAML readers before composition into `GeneratedApi`.
+
+## Closed model decoding
+
+Models with `additionalProperties: false` reject undeclared JSON fields when Jackson
+annotations are enabled. A generated `@JsonAnySetter` rejects those fields even when
+`FAIL_ON_UNKNOWN_PROPERTIES` is disabled; `@JsonIgnoreProperties(ignoreUnknown = false)`
+alone does not override that mapper setting. This enforcement is independent of the
+option to preserve unknown fields on open models.

@@ -2670,6 +2670,7 @@ class KotlinSundayIrGenerator(
   private val GeneratedModel.isFreeformObject: Boolean
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
+        !modelProperties.isClosed(this) &&
         properties.isEmpty() &&
         patternProperties.isEmpty() &&
         discriminatorMappings.isEmpty() &&

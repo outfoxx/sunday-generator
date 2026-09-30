@@ -13,8 +13,8 @@ export const TestSchema = defineSchema((runtime: SchemaRuntime) => {
     'parentType': z.string()
   });
   const externallyConstrainedWireSchema1 = z.discriminatedUnion('parentType', [
-z.looseObject({ ...wireSchema.shape, 'parentType': z.literal('Child1'), 'parent': runtime.resolveSchema(Child1Schema) }),
-z.looseObject({ ...wireSchema.shape, 'parentType': z.literal('child2'), 'parent': runtime.resolveSchema(Child2Schema) })
+wireSchema.extend({ 'parentType': z.literal('Child1'), 'parent': runtime.resolveSchema(Child1Schema) }),
+wireSchema.extend({ 'parentType': z.literal('child2'), 'parent': runtime.resolveSchema(Child2Schema) })
   ]);
   return externallyConstrainedWireSchema1;
 });

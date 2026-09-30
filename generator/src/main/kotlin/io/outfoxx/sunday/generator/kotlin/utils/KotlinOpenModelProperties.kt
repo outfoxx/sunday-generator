@@ -35,15 +35,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import java.util.Collections
 
-/** Adds extension storage using the emitted class hierarchy rather than schema inheritance. */
+/** Enforces closed schemas and optionally preserves extensions using the emitted class hierarchy. */
 internal fun addOpenModelProperties(
   modelTypes: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
-  if (KotlinTypeRegistry.Option.PreserveUnknownFields !in options ||
-    KotlinTypeRegistry.Option.JacksonAnnotations !in options
-  ) {
+  if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
     return
   }
   val classes =
@@ -77,9 +75,17 @@ internal fun addOpenModelProperties(
     if (type in completed) return completed[type]
     val (model, builder) = classes.getValue(type)
     val parent = parents[type]?.takeIf { it in classes }?.let(::decorate)
-    return builder.addOpenModelStorage(type, model, namesByRoot.getValue(root(type)), parent, typeName).also {
-      completed[type] = it
-    }
+    return builder
+      .addOpenModelStorage(
+        type,
+        model,
+        namesByRoot.getValue(root(type)),
+        parent,
+        KotlinTypeRegistry.Option.PreserveUnknownFields in options,
+        typeName,
+      ).also {
+        completed[type] = it
+      }
   }
 
   classes.keys.forEach(::decorate)
@@ -97,9 +103,13 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   model: GeneratedModel,
   knownNames: Set<String>,
   parent: OpenModelExtensionStorage?,
+  preserve: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
 ): OpenModelExtensionStorage? {
   val closed = model.closed == true || model.additionalProperties?.allowed == false || parent?.closed == true
+  if (closed) {
+    addAnnotation(AnnotationSpec.builder(JACKSON_JSON_IGNORE_PROPERTIES).addMember("ignoreUnknown = false").build())
+  }
   if (parent != null) {
     if (closed && !parent.closed) {
       addProperty(
@@ -120,10 +130,25 @@ private fun TypeSpec.Builder.addOpenModelStorage(
     }
     return parent.copy(closed = closed)
   }
-  if (closed) return null
+  if (!closed && !preserve) return null
 
   val names = NameAllocator()
   knownNames.forEach { names.newName(it) }
+  if (closed) {
+    val setterName = names.newName("rejectAdditionalProperty")
+    addFunction(
+      FunSpec
+        .builder(setterName)
+        .addKdoc("Rejects undeclared fields even when the mapper ignores unknown properties globally.\n")
+        .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
+        .addAnnotation(AnnotationSpec.builder(Suppress::class).addMember("%S", "UNUSED_PARAMETER").build())
+        .addParameter("name", STRING)
+        .addParameter("value", ANY.copy(nullable = true))
+        .addStatement("throw %T(%S + name)", IllegalArgumentException::class, "Additional properties are not allowed: ")
+        .build(),
+    )
+    return OpenModelExtensionStorage("", closed = true, setterName, ANY.copy(nullable = true))
+  }
   val storageName = names.newName("extensionFields")
   val accessorName = names.newName("additionalProperties")
   val setterName = names.newName("setAdditionalProperty")

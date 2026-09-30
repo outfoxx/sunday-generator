@@ -1072,8 +1072,11 @@ class TypeScriptSundayIrGenerator(
         SCHEMA_LIKE.parameterized(typeName),
         DEFINE_SCHEMA,
         SCHEMA_RUNTIME,
-      ).add("  const wireSchema = %T.looseObject({\n", Z)
-      .apply {
+      ).add(
+        "  const wireSchema = %T.%L({\n",
+        Z,
+        if (modelProperties.isClosed(fallback.hierarchy)) "strictObject" else "looseObject",
+      ).apply {
         exposedProperties.forEach { property ->
           add("    %S: ", property.serializationName ?: property.name)
           if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
@@ -1283,7 +1286,7 @@ class TypeScriptSundayIrGenerator(
     val schemaCode =
       if (isDiscriminatorBase) {
         if (model.externallyDiscriminated) {
-          externallyDiscriminatedObjectSchemaCode(typeName, allSerializableProperties)
+          externallyDiscriminatedObjectSchemaCode(typeName, allSerializableProperties, modelProperties.isClosed(model))
         } else {
           discriminatedObjectSchemaCode(
             typeName,
@@ -1297,6 +1300,7 @@ class TypeScriptSundayIrGenerator(
           ownerTypeName,
           typeName,
           allSerializableProperties,
+          closed = modelProperties.isClosed(model),
           leafDiscriminator =
             leafDiscriminatorValue?.let { value ->
               requireNotNull(discriminatorProperty) to value
@@ -1389,6 +1393,7 @@ class TypeScriptSundayIrGenerator(
           ownerTypeName,
           typeName,
           allSerializableProperties,
+          closed = modelProperties.isClosed(model),
           schemaTypeName = typeName.takeIf { needsExplicitSchemaType },
           leafDiscriminator =
             leafDiscriminatorValue?.let { value ->
@@ -1418,7 +1423,7 @@ class TypeScriptSundayIrGenerator(
     leafDiscriminator?.let { (property, _) ->
       interfaceBuilder.addProperty(
         PropertySpec
-          .builder(property.name.typeScriptIdentifierName, property.type.typeName(typeName))
+          .builder(property.wireName.quotedIfNotTypeScriptIdentifier, property.type.typeName(typeName))
           .build(),
       )
     }
@@ -1427,7 +1432,7 @@ class TypeScriptSundayIrGenerator(
       val propertyType = property.type.typeName(typeName).modelPropertyType(property)
       interfaceBuilder.addProperty(
         PropertySpec
-          .builder(property.name.typeScriptIdentifierName, propertyType.nonUndefinable)
+          .builder(property.wireName.quotedIfNotTypeScriptIdentifier, propertyType.nonUndefinable)
           .optional(propertyType.isUndefinable)
           .build(),
       )
@@ -1721,8 +1726,7 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add(
-        "    %T.looseObject({ ...runtime.resolveSchema(%T).shape, %S: ",
-        Z,
+        "    runtime.resolveSchema(%T).extend({ %S: ",
         schemaTypeName,
         discriminatorProperty.serializationName ?: discriminatorProperty.name,
       ).add(
@@ -1865,11 +1869,12 @@ class TypeScriptSundayIrGenerator(
   private fun externallyDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    closed: Boolean,
   ): CodeBlock =
     CodeBlock
       .builder()
       .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
+      .add("  const wireSchema = %T.%L({", Z, if (closed) "strictObject" else "looseObject")
       .apply {
         if (properties.isNotEmpty()) {
           add("\n")
@@ -1897,6 +1902,7 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    closed: Boolean,
     schemaTypeName: TypeName.Standard? = null,
     leafDiscriminator: Pair<GeneratedModelProperty, String>? = null,
   ): CodeBlock {
@@ -1909,7 +1915,7 @@ class TypeScriptSundayIrGenerator(
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
+      .add("  const wireSchema = %T.%L({", Z, if (closed) "strictObject" else "looseObject")
       .apply {
         val wireProperties =
           buildList {
@@ -1960,6 +1966,7 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     typeName: TypeName.Standard,
     properties: List<GeneratedModelProperty>,
+    closed: Boolean,
     leafDiscriminator: Pair<GeneratedModelProperty, String>? = null,
   ): CodeBlock {
     val externalDiscriminatedPropertyPairs = properties.externalDiscriminatedPropertyPairs()
@@ -1968,7 +1975,7 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.looseObject({", Z)
+      .add("  const wireSchema = %T.%L({", Z, if (closed) "strictObject" else "looseObject")
       .apply {
         val wireProperties =
           buildList {
@@ -2250,7 +2257,7 @@ class TypeScriptSundayIrGenerator(
       discriminatedModel.externalDiscriminatorVariants(serviceTypeName) { childSchema, discriminatorValue ->
         CodeBlock
           .builder()
-          .add("%T.looseObject({ ...%L.shape, %S: ", Z, baseWireSchemaName, discriminatorProperty.wireName)
+          .add("%L.extend({ %S: ", baseWireSchemaName, discriminatorProperty.wireName)
           .add(
             discriminatorLiteralSchema(
               discriminatorProperty,
@@ -2282,8 +2289,7 @@ class TypeScriptSundayIrGenerator(
         if (discriminatedPropertyTypeName.isUndefinable) {
           add(
             CodeBlock.of(
-              "%T.looseObject({ ...%L.shape, %S: %T.undefined().optional() })",
-              Z,
+              "%L.extend({ %S: %T.undefined().optional() })",
               baseWireSchemaName,
               discriminatedProperty.wireName,
               Z,
@@ -2293,8 +2299,7 @@ class TypeScriptSundayIrGenerator(
         if (discriminatedPropertyTypeName.isNullable) {
           add(
             CodeBlock.of(
-              "%T.looseObject({ ...%L.shape, %S: %T.null() })",
-              Z,
+              "%L.extend({ %S: %T.null() })",
               baseWireSchemaName,
               discriminatedProperty.wireName,
               Z,
@@ -2440,9 +2445,12 @@ class TypeScriptSundayIrGenerator(
     val mappedValues = fallback.mappedValuesCode()
     return CodeBlock
       .builder()
-      .add("%T.looseObject({ ", Z)
       .apply {
-        baseWireSchemaName?.let { schemaName -> add("...%L.shape, ", schemaName) }
+        if (baseWireSchemaName != null) {
+          add("%L.extend({ ", baseWireSchemaName)
+        } else {
+          add("%T.looseObject({ ", Z)
+        }
       }.add(
         "%S: %T.string().refine((value) => ![%L].includes(value)).pipe(",
         discriminatorProperty.wireName,
@@ -3467,6 +3475,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.isFreeformMapModel(): Boolean =
     kind == GeneratedModel.Kind.OBJECT &&
+      !modelProperties.isClosed(this) &&
       properties.isEmpty() &&
       patternProperties.isEmpty() &&
       !externallyDiscriminated &&

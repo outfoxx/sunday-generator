@@ -52,6 +52,20 @@ internal class GeneratedModelProperties(
   private val completed = IdentityHashMap<GeneratedModel, List<Field>>()
   private val visiting = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
 
+  /** Whether this model or an inherited schema forbids undeclared wire properties. */
+  fun isClosed(model: GeneratedModel): Boolean {
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun closed(candidate: GeneratedModel): Boolean =
+      visited.add(candidate) &&
+        (
+          candidate.closed == true ||
+            candidate.additionalProperties?.allowed == false ||
+            candidate.inherits.mapNotNull(modelFor).any(::closed)
+        )
+    return closed(model)
+  }
+
   fun declarationModel(type: GeneratedTypeRef): GeneratedModel? {
     var model = modelFor(type) ?: return null
     val aliases = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
