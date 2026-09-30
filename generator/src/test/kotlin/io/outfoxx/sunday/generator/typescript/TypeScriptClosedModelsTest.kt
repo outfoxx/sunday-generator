@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.tools.closedModelsApi
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
@@ -24,13 +25,69 @@ import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
+import kotlin.io.path.writeText
 
 @TypeScriptTest
 class TypeScriptClosedModelsTest {
+  @Test
+  fun `closed external discriminator envelopes reject unknown siblings`(
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val original =
+      requireNotNull(
+        javaClass.getResource("/raml/type-gen/annotations/type-external-discriminator.raml"),
+      ).readText()
+    for (closed in listOf(false, true)) {
+      val source = directory.resolve("external.raml")
+      source.writeText(
+        if (closed) {
+          original.replace("  Test:\n    type: object", "  Test:\n    type: object\n    additionalProperties: false")
+        } else {
+          original
+        },
+      )
+      val registry = TypeScriptTypeRegistry(setOf())
+      TypeScriptSundayIrGenerator(
+        GeneratedApiIrExporter().export(source.toUri()),
+        registry,
+        typeScriptSundayTestOptions,
+      ).generateServiceTypes()
+      val check =
+        ModuleSpec
+          .builder("ExternalCheck", ModuleSpec.Kind.MODULE)
+          .addCode(
+            CodeBlock.of(
+              """
+              import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+              import {TestSchema} from './test';
+              const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+              const schema = runtime.resolveSchema(TestSchema);
+              for (const parentType of ['Child1', 'child2']) {
+                const valid = {parentType, parent: {type: parentType, value: 'valid'}};
+                schema.parse(valid);
+                for (const extra of [1, null, {}, []]) {
+                  if (schema.safeParse({...valid, extra}).success === $closed) throw new Error('incorrect sibling handling');
+                }
+              }
+              """.trimIndent(),
+            ),
+          ).build()
+      assertTrue(
+        compileAndRunTypes(
+          compiler,
+          registry.buildTypes() + (TypeName.namedImport("ExternalCheck", "!external-check") to check),
+          "external-check",
+        ),
+      )
+    }
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
   fun `closed objects reject unknown fields`(

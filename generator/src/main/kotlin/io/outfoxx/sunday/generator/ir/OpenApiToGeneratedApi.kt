@@ -380,8 +380,12 @@ class OpenApiToGeneratedApi(
         val properties = effective.mapValue("properties").orEmpty()
         val additionalProperties = effective["additionalProperties"]
         when {
-          properties.isEmpty() && additionalProperties == true -> scalar("object", nullable = nullable)
-          properties.isEmpty() && additionalProperties is Map<*, *> ->
+          properties.isEmpty() &&
+            effective.mapValue("patternProperties").orEmpty().isEmpty() &&
+            additionalProperties == true -> scalar("object", nullable = nullable)
+          properties.isEmpty() &&
+            effective.mapValue("patternProperties").orEmpty().isEmpty() &&
+            additionalProperties is Map<*, *> ->
             GeneratedTypeRef(
               kind = GeneratedTypeRef.Kind.MAP,
               name = "object",
@@ -562,6 +566,7 @@ class OpenApiToGeneratedApi(
           scope = scope,
           properties = properties(composed.localSchema, name, required, localModels, composed.inheritedProperties),
           closed = true.takeIf { resolved["additionalProperties"] == false },
+          patternProperties = patternProperties(name, resolved, localModels),
           additionalProperties = additionalProperties(resolved, localModels),
           inherits = composed.parents.map(GeneratedTypeRef::named),
           discriminator = resolved.discriminatorProperty(),
@@ -666,6 +671,24 @@ class OpenApiToGeneratedApi(
       this["enum"] is List<*> -> this["enum"] as List<*>
       else -> null
     }?.takeIf { values -> values.all { it == null || it is String || it is Number || it is Boolean } }
+
+  private fun OpenApiSourceDocument.patternProperties(
+    owner: String,
+    schema: Map<*, *>,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): List<GeneratedPatternProperty> =
+    schema.mapValue("patternProperties").orEmpty().entries.mapIndexed { index, (pattern, value) ->
+      val propertySchema = value as? Map<*, *> ?: error("Pattern property '$pattern' must be a schema")
+      val effective = resolveSchema(propertySchema)
+      val hint = "${owner}Pattern${index + 1}"
+      GeneratedPatternProperty(
+        pattern = pattern as String,
+        type = schemaTypeRef(propertySchema, hint, null, localModels),
+        validation = validation(effective),
+        allowedValues = effective.allowedValues(),
+        documentation = documentation(description = effective["description"] as? String),
+      )
+    }
 
   private fun OpenApiSourceDocument.additionalProperties(
     schema: Map<*, *>,
@@ -1217,6 +1240,7 @@ class OpenApiToGeneratedApi(
   private fun Map<*, *>.isMapModel(): Boolean =
     schemaType() == "object" &&
       mapValue("properties").orEmpty().isEmpty() &&
+      mapValue("patternProperties").orEmpty().isEmpty() &&
       this["additionalProperties"] is Map<*, *>
 
   private fun Map<*, *>.isScalarAliasModel(): Boolean = schemaType() in setOf("string", "integer", "number", "boolean")

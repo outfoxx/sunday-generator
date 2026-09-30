@@ -205,7 +205,7 @@ Models declared outside the root source document may carry `source` with the def
 
 Array type refs and array models may carry `collection: "SET"` when the source shape has unique item semantics. Scalar type refs may carry `format` when the source scalar format is needed to select target-specific scalar types.
 
-Object models may carry `closed` when the source object disallows unknown properties. OpenAPI additional property semantics are represented as `additionalProperties`, with `allowed`, optional value `type`, optional `validation`, and optional `documentation`. Pattern properties are represented as `patternProperties`, each with a source regex `pattern`, value `type`, optional `validation`, and optional `documentation`. Pure pattern-property object shapes are represented as `kind: "MAP"` with the map value type in `aliases`.
+Object models may carry `closed` when the source object disallows unknown properties. OpenAPI additional property semantics are represented as `additionalProperties`, with `allowed`, optional value `type`, optional `validation`, and optional `documentation`. Pattern properties are represented as `patternProperties`, each with a source regex `pattern`, value `type`, optional `validation`, optional scalar `allowedValues` from enum/const, and optional `documentation`. RAML pure pattern-property shapes may use `kind: "MAP"` with the map value type in `aliases`. OpenAPI 3.1 pattern-property shapes remain object models, including schemas without named properties, so key matching and closed-object restrictions are retained.
 
 ## Target Metadata
 
@@ -265,3 +265,16 @@ Generated SDK output can consequently differ from older betas: canonical wrapper
 TypeScript hierarchies with tolerant enum discriminator codecs use ordinary unions so both decoding wire strings and encoding enum objects work with Zod 4.3.6. Each variant still validates its configured discriminator values; unconstrained tolerant enum uses retain their existing behavior.
 
 TypeScript parameter validation follows scalar alias chains before applying constraints and optionality. Optional referenced filters remain omittable, and supplied values receive the referenced schema's supported validation.
+
+### OpenAPI 3.1 pattern properties
+
+The native OpenAPI frontend preserves `patternProperties`, including referenced
+and inline value schemas. `additionalProperties: false` forbids only keys that
+are neither declared in `properties` nor matched by a pattern. Patterns use search
+semantics, and every matching pattern applies, including to named properties.
+
+Kotlin/Jackson, Swift decoding, TypeScript/Zod, and Python/Pydantic validate the
+matching value types and emitted constraints. Closed schemas still reject
+unmatched keys with null, scalar, array, or object values. Kotlin's
+`PreserveUnknownFields` option retains accepted pattern fields for serialization.
+Compile-backed runtime regressions cover standalone OpenAPI and composed inputs.

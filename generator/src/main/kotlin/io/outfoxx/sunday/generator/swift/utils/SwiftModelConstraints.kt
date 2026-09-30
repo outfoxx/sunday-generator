@@ -54,6 +54,9 @@ internal object SwiftModelConstraints {
     fields: List<GeneratedModelProperties.Field>,
     patchable: Boolean,
     properties: GeneratedModelProperties,
+    codingKey: (
+      GeneratedModelProperties.Field,
+    ) -> CodeBlock = { CodeBlock.of(".%N", it.storage.name.swiftIdentifierName) },
   ): CodeBlock =
     CodeBlock
       .builder()
@@ -71,25 +74,25 @@ internal object SwiftModelConstraints {
         }
         fields.forEach { field ->
           val property = field.effective
-          val key = field.storage.name.swiftIdentifierName
+          val key = codingKey(field)
           val validation = property.validation
           if (property.required && !patchable) {
-            beginControlFlow("if", "!container.contains(.%N)", key)
+            beginControlFlow("if", "!container.contains(%L)", key)
             addStatement(
-              "throw %T.keyNotFound(CodingKeys.%N, .init(codingPath: decoder.codingPath, debugDescription: %S))",
+              "throw %T.keyNotFound(%L, .init(codingPath: decoder.codingPath, debugDescription: %S))",
               DECODING_ERROR,
-              key,
+              CodeBlock.of("CodingKeys.%N", field.storage.name.swiftIdentifierName),
               "Property '${field.wireName}' is required",
             )
             endControlFlow("if")
           }
-          beginControlFlow("if", "container.contains(.%N)", key)
-          beginControlFlow("if", "try container.decodeNil(forKey: .%N)", key)
+          beginControlFlow("if", "container.contains(%L)", key)
+          beginControlFlow("if", "try container.decodeNil(forKey: %L)", key)
           if (!patchable &&
             (!properties.acceptsNull(property.type) || property.allowedValues?.contains(null) == false)
           ) {
             addStatement(
-              "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
+              "throw %T.dataCorruptedError(forKey: %L, in: container, debugDescription: %S)",
               DECODING_ERROR,
               key,
               "Property '${field.wireName}' cannot be null",
@@ -137,16 +140,16 @@ internal object SwiftModelConstraints {
                   when (value) {
                     is Number ->
                       CodeBlock.of(
-                        "(try? container.decode(%T.self, forKey: .%N)) == " +
+                        "(try? container.decode(%T.self, forKey: %L)) == " +
                           "%L",
                         DECIMAL,
                         key,
                         decimalLiteral(value.toString().toBigDecimal(), field.wireName),
                       )
-                    is Boolean -> CodeBlock.of("(try? container.decode(Bool.self, forKey: .%N)) == %L", key, value)
+                    is Boolean -> CodeBlock.of("(try? container.decode(Bool.self, forKey: %L)) == %L", key, value)
                     else ->
                       CodeBlock.of(
-                        "(try? container.decode(String.self, forKey: .%N)) == %S",
+                        "(try? container.decode(String.self, forKey: %L)) == %S",
                         key,
                         value.toString(),
                       )
@@ -155,7 +158,7 @@ internal object SwiftModelConstraints {
                 .takeUnless { it.isEmpty() } ?: CodeBlock.of("false")
             beginControlFlow("if", "!(%L)", matches)
             addStatement(
-              "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
+              "throw %T.dataCorruptedError(forKey: %L, in: container, debugDescription: %S)",
               DECODING_ERROR,
               key,
               "Invalid value for '${field.wireName}'",
@@ -218,11 +221,11 @@ internal object SwiftModelConstraints {
             checks += numericChecks
           }
           if (checks.isNotEmpty()) {
-            addStatement("let value = try container.decode(%L.self, forKey: .%N)", valueType, key)
+            addStatement("let value = try container.decode(%L.self, forKey: %L)", valueType, key)
             checks.forEach { condition ->
               beginControlFlow("if", "!(%L)", condition)
               addStatement(
-                "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
+                "throw %T.dataCorruptedError(forKey: %L, in: container, debugDescription: %S)",
                 DECODING_ERROR,
                 key,
                 "Invalid value for '${field.wireName}'",
@@ -392,7 +395,7 @@ internal object SwiftModelConstraints {
       }.build()
 
   // SwiftPoet's quoted-string formatter escapes dollar signs using Kotlin interpolation syntax.
-  private fun regexLiteral(pattern: String): CodeBlock =
+  fun regexLiteral(pattern: String): CodeBlock =
     CodeBlock.of("%L", CodeBlock.of("%S", pattern).toString().replace("\${'$'}", "$"))
 
   fun decimalLiteral(

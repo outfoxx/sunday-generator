@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -277,7 +278,9 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderObjectConfiguration(): PythonCodeBlock? {
     val extra =
       when {
-        patternProperties.isNotEmpty() || additionalProperties?.allowed == true || additionalProperties?.type != null ->
+        modelProperties.patternProperties(this).isNotEmpty() ||
+          additionalProperties?.allowed == true ||
+          additionalProperties?.type != null ->
           "allow"
         closed == true || additionalProperties?.allowed == false -> "forbid"
         else -> null
@@ -408,34 +411,87 @@ class PythonModelRenderer(
     )
   }
 
+  // Strict primitive leaves reject JSON coercions while enums and formatted scalars retain their wire decoders.
+  private fun GeneratedTypeRef.renderPatternValueType(): PythonCodeBlock {
+    val type = modelProperties.declarationType(this)
+    val base =
+      when (type.kind) {
+        GeneratedTypeRef.Kind.ARRAY ->
+          PythonCodeBlock.of(
+            "%L[%C]",
+            if (type.collection == GeneratedCollectionKind.SET) "set" else "list",
+            type.arguments.single().renderPatternValueType(),
+          )
+        GeneratedTypeRef.Kind.MAP -> PythonCodeBlock.of("dict[str, %C]", type.arguments.last().renderPatternValueType())
+        GeneratedTypeRef.Kind.SCALAR ->
+          if (type.format == null &&
+            type.name in setOf("string", "integer", "number", "boolean")
+          ) {
+            PythonCodeBlock.of(
+              "%T[%C, %T()]",
+              PythonSymbol("typing", "Annotated"),
+              renderPythonType(nullable = false),
+              PythonSymbol("pydantic", "Strict"),
+            )
+          } else {
+            renderPythonType(nullable = false)
+          }
+        else -> renderPythonType(nullable = false)
+      }
+    return if (type.nullable) PythonCodeBlock.of("%C | None", base) else base
+  }
+
   private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
+    val patterns = modelProperties.patternProperties(this)
     val validatesAdditionalProperties =
-      patternProperties.isNotEmpty() || additionalProperties?.type != null
+      patterns.isNotEmpty() || additionalProperties?.type != null
     if (!validatesAdditionalProperties) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
+    if (patterns.isNotEmpty()) {
+      statements +=
+        PythonCodeBlock.of(
+          "        adapter: %T[%T]",
+          PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("typing", "Any"),
+        )
+    }
     statements +=
       PythonCodeBlock.of(
         "        declared_names = set(cls.model_fields)\n" +
           "        declared_names.update(" +
           "field.alias for field in cls.model_fields.values() if field.alias is not None)\n" +
+          "        wire_names = {name: field.alias or name for name, field in cls.model_fields.items()}\n" +
           "        for key in list(data):\n" +
-          "            if key in declared_names:\n" +
-          "                continue\n" +
-          "            matched = False",
+          "            wire_key = wire_names.get(key, key)\n" +
+          "            matched = wire_key in declared_names",
       )
-    patternProperties.forEach { patternProperty ->
+    if (patterns.isNotEmpty()) statements += PythonCodeBlock.of("            original_value = data[key]")
+    patterns.forEach { patternProperty ->
       val validatedType =
         renderValidatedType(
-          patternProperty.type.renderPythonType(nullable = patternProperty.type.nullable),
+          patternProperty.type.renderPatternValueType(),
           patternProperty.validation,
           "pattern property '${patternProperty.pattern}' on model '$name'",
           patternProperty.type,
         )
+      patternProperty.allowedValues?.let { values ->
+        statements +=
+          PythonCodeBlock.of(
+            "            if %T(%S, wire_key) is not None and original_value not in [%C]:\n" +
+              "                raise ValueError(f\"Invalid pattern property value: {key}\")",
+            PythonSymbol("re", "search"),
+            patternProperty.pattern,
+            PythonCodeBlock.join(values.map { it.renderPythonValue() ?: PythonCodeBlock.of("None") }, separator = ", "),
+          )
+      }
       statements +=
         PythonCodeBlock.of(
-          "            if %T(%S, key) is not None:\n" +
-            "                data[key] = %T(%C).validate_python(data[key])\n" +
+          "            if %T(%S, wire_key) is not None:\n" +
+            "                adapter = %T(%C)\n" +
+            "                validated = adapter.validate_python(original_value)\n" +
+            "                if key not in declared_names:\n" +
+            "                    data[key] = validated\n" +
             "                matched = True",
           PythonSymbol("re", "search"),
           patternProperty.pattern,
@@ -443,27 +499,26 @@ class PythonModelRenderer(
           validatedType,
         )
     }
+    statements += PythonCodeBlock.of("            if matched:\n                continue")
     val additionalType = additionalProperties?.type
     if (additionalType != null) {
       val validatedType =
         renderValidatedType(
-          additionalType.renderPythonType(nullable = additionalType.nullable),
+          additionalType.renderPatternValueType(),
           additionalProperties.validation,
           "additional properties on model '$name'",
           additionalType,
         )
       statements +=
         PythonCodeBlock.of(
-          "            if not matched:\n" +
-            "                data[key] = %T(%C).validate_python(data[key])",
+          "            data[key] = %T(%C).validate_python(data[key])",
           PythonSymbol("pydantic", "TypeAdapter"),
           validatedType,
         )
     } else if (additionalProperties?.allowed == false || closed == true) {
       statements +=
         PythonCodeBlock.of(
-          "            if not matched:\n" +
-            "                raise ValueError(f\"Extra property '{key}' is not allowed\")",
+          "            raise ValueError(f\"Extra property '{key}' is not allowed\")",
         )
     }
 

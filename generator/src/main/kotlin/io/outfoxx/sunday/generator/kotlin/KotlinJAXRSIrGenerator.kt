@@ -369,7 +369,7 @@ class KotlinJAXRSIrGenerator(
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options) { it.kotlinTypeName() }
+    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties) { it.kotlinTypeName() }
     models
       .flatMap { model ->
         buildList {

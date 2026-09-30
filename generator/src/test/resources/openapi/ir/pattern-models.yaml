@@ -1,0 +1,65 @@
+openapi: 3.1.0
+info: {title: Pattern models, version: 1.0.0}
+paths:
+  /patterns:
+    post:
+      operationId: submit
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PatternRecord'}
+      responses:
+        '204': {description: Accepted}
+components:
+  schemas:
+    PatternRecord:
+      type: object
+      properties:
+        name: {type: string}
+        x-fixed: {type: string}
+      patternProperties:
+        '^x-': {type: string, minLength: 2}
+        'end$': {type: string, pattern: '^ok'}
+        '^n-': {type: integer, minimum: 1}
+        '^v-': {type: array, items: {type: integer}}
+        '^r-': {$ref: '#/components/schemas/PatternChild'}
+        '^alias-': {$ref: '#/components/schemas/PatternText'}
+        '^ref-enum-': {$ref: '#/components/schemas/PatternEnum'}
+        '^enum-': {type: string, enum: [yes-value, no-value]}
+        '^const-': {type: integer, const: 3}
+        '^inline-': {type: object, required: [label], properties: {label: {type: string}}, additionalProperties: false}
+        '^maybe-': {type: [string, 'null']}
+      additionalProperties: false
+    PatternText:
+      type: string
+      minLength: 3
+    PatternEnum:
+      type: string
+      enum: [first, second]
+    PatternParent:
+      type: object
+      patternProperties:
+        '^x-': {type: string}
+      additionalProperties: true
+    PatternInherited:
+      allOf:
+        - $ref: '#/components/schemas/PatternParent'
+        - type: object
+          patternProperties:
+            '^x-': {type: string, minLength: 2}
+          additionalProperties: false
+    PatternChild:
+      type: object
+      required: [label]
+      properties:
+        label: {type: string}
+      additionalProperties: false
+    PatternOnly:
+      patternProperties:
+        '^x-': {type: string}
+      additionalProperties: false
+    OpenPattern:
+      type: object
+      patternProperties:
+        '^x-': {type: string}
+      additionalProperties: {type: integer}

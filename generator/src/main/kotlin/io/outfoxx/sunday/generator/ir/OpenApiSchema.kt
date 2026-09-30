@@ -60,7 +60,7 @@ internal fun Map<*, *>.schemaType(): String? =
     is List<*> -> type.filterIsInstance<String>().firstOrNull { it != "null" }
     else ->
       when {
-        containsKey("properties") || containsKey("additionalProperties") -> "object"
+        containsKey("properties") || containsKey("patternProperties") || containsKey("additionalProperties") -> "object"
         containsKey("items") -> "array"
         containsKey("enum") || containsKey("const") -> "string"
         else -> null

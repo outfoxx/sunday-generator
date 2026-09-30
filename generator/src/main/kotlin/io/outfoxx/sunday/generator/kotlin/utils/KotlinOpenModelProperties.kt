@@ -32,6 +32,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import java.util.Collections
 
@@ -39,6 +40,7 @@ import java.util.Collections
 internal fun addOpenModelProperties(
   modelTypes: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
+  properties: GeneratedModelProperties,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
@@ -78,11 +80,12 @@ internal fun addOpenModelProperties(
     return builder
       .addOpenModelStorage(
         type,
-        model,
+        model.copy(patternProperties = properties.patternProperties(model)),
         namesByRoot.getValue(root(type)),
         parent,
         KotlinTypeRegistry.Option.PreserveUnknownFields in options,
         typeName,
+        properties,
       ).also {
         completed[type] = it
       }
@@ -91,7 +94,8 @@ internal fun addOpenModelProperties(
   classes.keys.forEach(::decorate)
 }
 
-private data class OpenModelExtensionStorage(
+/** Storage and setter contract shared by generated descendants. */
+internal data class OpenModelExtensionStorage(
   val permitsName: String,
   val closed: Boolean,
   val setterName: String,
@@ -105,10 +109,14 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   parent: OpenModelExtensionStorage?,
   preserve: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
+  properties: GeneratedModelProperties,
 ): OpenModelExtensionStorage? {
   val closed = model.closed == true || model.additionalProperties?.allowed == false || parent?.closed == true
   if (closed) {
     addAnnotation(AnnotationSpec.builder(JACKSON_JSON_IGNORE_PROPERTIES).addMember("ignoreUnknown = false").build())
+  }
+  if (model.patternProperties.isNotEmpty()) {
+    return addPatternModelStorage(className, model, knownNames, parent, closed, preserve, typeName, properties)
   }
   if (parent != null) {
     if (closed && !parent.closed) {
