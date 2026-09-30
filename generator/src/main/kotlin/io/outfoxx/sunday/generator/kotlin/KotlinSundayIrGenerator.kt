@@ -68,6 +68,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
@@ -114,6 +115,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionG
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
 import io.outfoxx.sunday.generator.kotlin.utils.PATCH
@@ -185,6 +187,17 @@ class KotlinSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
+  private val nominalGenerator by lazy {
+    KotlinNominalTypes(
+      api.models,
+      nominalTypes,
+      modelProperties,
+      typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
+      { it.kotlinClassName() },
+      { it.kotlinTypeName() },
+    )
+  }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
@@ -847,7 +860,7 @@ class KotlinSundayIrGenerator(
       .joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
-    when (kind) {
+    nominalGenerator.generate(this) ?: when (kind) {
       GeneratedModel.Kind.ENUM ->
         enumTypeSpec()
 
@@ -1723,7 +1736,9 @@ class KotlinSundayIrGenerator(
     type: GeneratedTypeRef,
     useSiteTarget: AnnotationSpec.UseSiteTarget? = null,
   ): List<AnnotationSpec> {
-    if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+    if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) ||
+      modelProperties.declarationModel(type)?.nominal == true
+    ) {
       return emptyList()
     }
 
@@ -2238,7 +2253,20 @@ class KotlinSundayIrGenerator(
       .builder(parameter.name, parameter.typeName())
       .apply {
         when {
-          parameter.defaultValue != null -> defaultValue("%L", valueCode(parameter.defaultValue))
+          parameter.defaultValue != null -> {
+            val model = modelProperties.declarationModel(parameter.type)
+            defaultValue(
+              if (model?.nominal == true || model?.let(nominalTypes::branches)?.isNotEmpty() == true) {
+                CodeBlock.of(
+                  "%T.fromString(%S)",
+                  parameter.typeName().copy(nullable = false),
+                  parameter.defaultValue.toString(),
+                )
+              } else {
+                valueCode(parameter.defaultValue)
+              },
+            )
+          }
           parameter.typeName().isNullable -> defaultValue("null")
         }
       }.build()
@@ -2887,10 +2915,10 @@ class KotlinSundayIrGenerator(
 
   private val GeneratedModel.isAliasLike: Boolean
     get() =
-      kind == GeneratedModel.Kind.SCALAR_ALIAS ||
+      (kind == GeneratedModel.Kind.SCALAR_ALIAS && !nominal) ||
         kind == GeneratedModel.Kind.ARRAY ||
         kind == GeneratedModel.Kind.MAP ||
-        (kind == GeneratedModel.Kind.UNION && !isObjectUnionSealedInterface)
+        (kind == GeneratedModel.Kind.UNION && !isObjectUnionSealedInterface && nominalTypes.branches(this).isEmpty())
 
   private fun mediaTypesArray(mimeTypes: List<String>): CodeBlock = mediaTypesArray(*mimeTypes.toTypedArray())
 

@@ -41,6 +41,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.ancestorModels
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
@@ -96,6 +97,7 @@ import io.outfoxx.sunday.generator.swift.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.swift.utils.SUNDAY_MODULE
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
+import io.outfoxx.sunday.generator.swift.utils.SwiftNominalTypes
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_RESPONSE
@@ -157,6 +159,9 @@ class SwiftSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
+  private val nominalGenerator =
+    SwiftNominalTypes(nominalTypes, modelProperties, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
   private val decodingDefaultNames by lazy { inheritedDecodingDefaultNames() }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
@@ -1000,34 +1005,36 @@ class SwiftSundayIrGenerator(
     outputDirectory: OutputDirectory = OutputDirectory.Models,
     outputGroup: String? = null,
   ): TypeSpec.Builder? =
-    when (kind) {
-      GeneratedModel.Kind.ENUM ->
-        if (unknownValue != null) {
-          swiftTolerantEnumTypeSpec()
-        } else {
-          TypeSpec
-            .enumBuilder(swiftDeclaredTypeName())
-            .addModifiers(PUBLIC)
-            .addSwiftDoc(documentation)
-            .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
-            .apply {
-              swiftEnumEntries().forEach { entry ->
-                addEnumCase(entry.name, entry.value)
-              }
-            }.addProperty(swiftEnumDescriptionProperty())
-        }
-
-      GeneratedModel.Kind.OBJECT ->
-        typedEventEnvelopeOrNull()?.swiftTypeSpec()
-          ?: when {
-            isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
-            isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
-            else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+    (
+      nominalGenerator.generate(this) ?: when (kind) {
+        GeneratedModel.Kind.ENUM ->
+          if (unknownValue != null) {
+            swiftTolerantEnumTypeSpec()
+          } else {
+            TypeSpec
+              .enumBuilder(swiftDeclaredTypeName())
+              .addModifiers(PUBLIC)
+              .addSwiftDoc(documentation)
+              .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+              .apply {
+                swiftEnumEntries().forEach { entry ->
+                  addEnumCase(entry.name, entry.value)
+                }
+              }.addProperty(swiftEnumDescriptionProperty())
           }
 
-      GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
-      else -> null
-    }?.also { it.addClosedModelSupport(this) }
+        GeneratedModel.Kind.OBJECT ->
+          typedEventEnvelopeOrNull()?.swiftTypeSpec()
+            ?: when {
+              isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
+              isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
+              else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+            }
+
+        GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
+        else -> null
+      }
+    )?.also { it.addClosedModelSupport(this) }
 
   private fun GeneratedModel.swiftTolerantEnumTypeSpec(): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
@@ -4280,10 +4287,10 @@ class SwiftSundayIrGenerator(
 
   private val GeneratedModel.isAliasLike: Boolean
     get() =
-      kind == GeneratedModel.Kind.SCALAR_ALIAS ||
+      (kind == GeneratedModel.Kind.SCALAR_ALIAS && !nominal) ||
         kind == GeneratedModel.Kind.ARRAY ||
         kind == GeneratedModel.Kind.MAP ||
-        (kind == GeneratedModel.Kind.UNION && !isObjectUnionEnum)
+        (kind == GeneratedModel.Kind.UNION && !isObjectUnionEnum && nominalTypes.branches(this).isEmpty())
 
   private fun GeneratedTypeRef.scalarTypeName(): TypeName =
     swiftStringFormatTypeName(format) ?: when (name) {
@@ -4348,6 +4355,31 @@ class SwiftSundayIrGenerator(
   private fun GeneratedModelProperty.swiftDefault(model: GeneratedModel): CodeBlock? {
     val field = modelProperties.fields(model).firstOrNull { it.wireName == (serializationName ?: name) }
     if (field?.effective?.required == true) return null
+    val nominal = modelProperties.declarationModel(type)?.takeIf { it.nominal }
+    if (nominal != null) {
+      val scalar = nominalTypes.scalar(nominal)
+      val effective = field?.effective ?: this
+      val rawProperty =
+        effective.copy(
+          type = scalar.type,
+          validation =
+            scalar.property.validation + effective.validation,
+        )
+      val rawDefault =
+        SwiftModelDefaults.render(model.name, rawProperty, modelProperties) { value ->
+          value.swiftValueCode(scalar.type.swiftTypeName(), scalar.type)
+        } ?: return null
+      scalar.patterns.forEach { pattern ->
+        SwiftModelDefaults.render(
+          model.name,
+          rawProperty.copy(validation = mapOf("pattern" to pattern)),
+          modelProperties,
+        ) {
+          rawDefault
+        }
+      }
+      return CodeBlock.of("%T(rawValue: %L)!", swiftTypeName().makeNonOptional(), rawDefault)
+    }
     return SwiftModelDefaults.render(model.name, field?.effective ?: this, modelProperties) { value ->
       value.swiftValueCode(swiftTypeName().makeNonOptional(), type)
     }
@@ -4413,8 +4445,13 @@ class SwiftSundayIrGenerator(
   private fun Any.swiftValueCode(
     typeName: TypeName,
     typeRef: GeneratedTypeRef?,
-  ): CodeBlock =
-    when (this) {
+  ): CodeBlock {
+    val nominal = typeRef?.let(modelProperties::declarationModel)?.takeIf { it.nominal }
+    if (nominal != null) {
+      val rawType = nominalTypes.scalar(nominal).type.swiftTypeName()
+      return CodeBlock.of("%T(rawValue: %L)!", typeName.makeNonOptional(), swiftValueCode(rawType, null))
+    }
+    return when (this) {
       is String -> {
         val enumModel =
           typeRef
@@ -4448,6 +4485,7 @@ class SwiftSundayIrGenerator(
 
       else -> CodeBlock.of("%S", toString())
     }
+  }
 
   private fun GeneratedModel.swiftEnumCaseNameForValue(value: String): String? =
     swiftEnumEntries().singleOrNull { entry -> entry.value == value }?.name

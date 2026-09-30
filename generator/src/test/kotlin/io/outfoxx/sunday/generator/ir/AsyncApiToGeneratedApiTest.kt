@@ -442,6 +442,7 @@ class AsyncApiToGeneratedApiTest {
         GeneratedModel(
           name = "EventData",
           kind = GeneratedModel.Kind.UNION,
+          unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
           aliases =
             listOf(
@@ -683,6 +684,7 @@ class AsyncApiToGeneratedApiTest {
         GeneratedModel(
           name = "EventIdentity",
           kind = GeneratedModel.Kind.UNION,
+          unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
           aliases =
             listOf(
@@ -732,6 +734,7 @@ class AsyncApiToGeneratedApiTest {
         GeneratedModel(
           name = "EventEnvelope",
           kind = GeneratedModel.Kind.UNION,
+          unionMode = GeneratedModel.UnionMode.ONE_OF,
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, fragment.api.source.location),
           aliases =
             listOf(

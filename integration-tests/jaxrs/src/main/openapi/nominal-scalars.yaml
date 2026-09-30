@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info: {title: Nominal scalars, version: 1.0.0}
+paths:
+  /ids/{id}:
+    get:
+      operationId: identify
+      x-sunday-service: Nominal
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/AnySid'}}
+        - {name: fact, in: query, required: true, schema: {$ref: '#/components/schemas/BaseFactSid'}}
+      responses:
+        '200':
+          description: Converted nominal values
+          content:
+            text/plain: {schema: {type: string}}
+  /ambiguous/{id}:
+    get:
+      operationId: ambiguous
+      x-sunday-service: Nominal
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/AmbiguousSid'}}
+      responses:
+        '204': {description: Converted nominal value}
+components:
+  schemas:
+    BaseFactSid: {type: string, pattern: '^sid:f:[A-Za-z0-9_-]+$', x-sunday-wrapper-type: true}
+    BaseLossSid: {type: string, pattern: '^sid:l:[A-Za-z0-9_-]+$', x-sunday-wrapper-type: true}
+    BroadSid: {type: string, pattern: '^sid:', x-sunday-wrapper-type: true}
+    AnySid:
+      oneOf:
+        - {$ref: '#/components/schemas/BaseFactSid'}
+        - {$ref: '#/components/schemas/BaseLossSid'}
+    AmbiguousSid:
+      oneOf:
+        - {$ref: '#/components/schemas/BaseFactSid'}
+        - {$ref: '#/components/schemas/BroadSid'}

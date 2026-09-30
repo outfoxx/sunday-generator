@@ -41,6 +41,7 @@ internal object KotlinModelDefaults {
   ): CodeBlock? {
     if (value == null) return null
     val type = typeName.copy(nullable = false)
+    if (enumModel?.nominal == true) return CodeBlock.of("%T.fromString(%S)", type, value)
     if (enumModel?.kind == GeneratedModel.Kind.ENUM) {
       return if (enumModel.unknownValue != null) {
         CodeBlock.of("%T.fromValue(%S)", type, value)

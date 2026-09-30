@@ -431,6 +431,7 @@ class AsyncApiToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        nominal = schema["x-sunday-wrapper-type"] == true,
         source = source,
         aliases = listOf(materializedNamedTypeRef(target, location, localModels)),
         validation = validation(schema),
@@ -448,6 +449,7 @@ class AsyncApiToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.UNION,
+        unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
         source = source,
         aliases = aliases,
         discriminator = discriminator,
@@ -473,6 +475,7 @@ class AsyncApiToGeneratedApi(
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        nominal = schema["x-sunday-wrapper-type"] == true,
         source = source,
         aliases = listOf(GeneratedTypeRef.scalar(scalarTypeName, format = schema["format"] as? String)),
         validation = validation(schema),

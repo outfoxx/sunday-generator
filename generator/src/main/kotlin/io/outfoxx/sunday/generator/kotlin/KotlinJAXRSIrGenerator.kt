@@ -66,6 +66,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -122,6 +123,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionG
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -176,6 +178,17 @@ class KotlinJAXRSIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
+  private val nominalGenerator by lazy {
+    KotlinNominalTypes(
+      api.models,
+      nominalTypes,
+      modelProperties,
+      typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
+      { it.kotlinClassName() },
+      { it.kotlinTypeName() },
+    )
+  }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(apiIndex) }
@@ -1789,63 +1802,67 @@ class KotlinJAXRSIrGenerator(
     type: GeneratedTypeRef,
     useSiteTarget: AnnotationSpec.UseSiteTarget? = null,
   ): List<AnnotationSpec> =
-    buildList {
-      val sizeBuilder = sizeAnnotationBuilder()
-      if (sizeBuilder != null) {
-        add(sizeBuilder.withUseSiteTarget(useSiteTarget).build())
-      }
+    if (modelProperties.declarationModel(type)?.nominal == true) {
+      emptyList()
+    } else {
+      buildList {
+        val sizeBuilder = sizeAnnotationBuilder()
+        if (sizeBuilder != null) {
+          add(sizeBuilder.withUseSiteTarget(useSiteTarget).build())
+        }
 
-      if (type.format.equals("email", ignoreCase = true)) {
-        add(AnnotationSpec.builder(beanValidationTypes.email).withUseSiteTarget(useSiteTarget).build())
-      }
+        if (type.format.equals("email", ignoreCase = true)) {
+          add(AnnotationSpec.builder(beanValidationTypes.email).withUseSiteTarget(useSiteTarget).build())
+        }
 
-      this@validationAnnotations["pattern"]?.let { pattern ->
-        add(
-          AnnotationSpec
-            .builder(beanValidationTypes.pattern)
-            .withUseSiteTarget(useSiteTarget)
-            .addMember("regexp = %P", pattern)
-            .build(),
-        )
-      }
-
-      if (type.name in listOf("integer", "int32", "int64", "long")) {
-        this@validationAnnotations["maximum"]?.let { maximum ->
+        this@validationAnnotations["pattern"]?.let { pattern ->
           add(
             AnnotationSpec
-              .builder(beanValidationTypes.max)
+              .builder(beanValidationTypes.pattern)
               .withUseSiteTarget(useSiteTarget)
-              .addMember("value = %L", maximum)
+              .addMember("regexp = %P", pattern)
               .build(),
           )
         }
-        this@validationAnnotations["minimum"]?.let { minimum ->
-          add(
-            AnnotationSpec
-              .builder(beanValidationTypes.min)
-              .withUseSiteTarget(useSiteTarget)
-              .addMember("value = %L", minimum)
-              .build(),
-          )
-        }
-      } else if (type.name in listOf("number", "double")) {
-        this@validationAnnotations["maximum"]?.let { maximum ->
-          add(
-            AnnotationSpec
-              .builder(beanValidationTypes.decimalMax)
-              .withUseSiteTarget(useSiteTarget)
-              .addMember("value = %S", maximum)
-              .build(),
-          )
-        }
-        this@validationAnnotations["minimum"]?.let { minimum ->
-          add(
-            AnnotationSpec
-              .builder(beanValidationTypes.decimalMin)
-              .withUseSiteTarget(useSiteTarget)
-              .addMember("value = %S", minimum)
-              .build(),
-          )
+
+        if (type.name in listOf("integer", "int32", "int64", "long")) {
+          this@validationAnnotations["maximum"]?.let { maximum ->
+            add(
+              AnnotationSpec
+                .builder(beanValidationTypes.max)
+                .withUseSiteTarget(useSiteTarget)
+                .addMember("value = %L", maximum)
+                .build(),
+            )
+          }
+          this@validationAnnotations["minimum"]?.let { minimum ->
+            add(
+              AnnotationSpec
+                .builder(beanValidationTypes.min)
+                .withUseSiteTarget(useSiteTarget)
+                .addMember("value = %L", minimum)
+                .build(),
+            )
+          }
+        } else if (type.name in listOf("number", "double")) {
+          this@validationAnnotations["maximum"]?.let { maximum ->
+            add(
+              AnnotationSpec
+                .builder(beanValidationTypes.decimalMax)
+                .withUseSiteTarget(useSiteTarget)
+                .addMember("value = %S", maximum)
+                .build(),
+            )
+          }
+          this@validationAnnotations["minimum"]?.let { minimum ->
+            add(
+              AnnotationSpec
+                .builder(beanValidationTypes.decimalMin)
+                .withUseSiteTarget(useSiteTarget)
+                .addMember("value = %S", minimum)
+                .build(),
+            )
+          }
         }
       }
     }
@@ -2014,7 +2031,7 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedModel.modelType(): TypeSpec.Builder? =
-    when (kind) {
+    nominalGenerator.generate(this) ?: when (kind) {
       GeneratedModel.Kind.ENUM -> {
         val entries = kotlinEnumEntries.entries(this)
         if (unknownValue != null) {
@@ -3247,10 +3264,10 @@ class KotlinJAXRSIrGenerator(
 
   private val GeneratedModel.isAliasLike: Boolean
     get() =
-      kind == GeneratedModel.Kind.SCALAR_ALIAS ||
+      (kind == GeneratedModel.Kind.SCALAR_ALIAS && !nominal) ||
         kind == GeneratedModel.Kind.ARRAY ||
         kind == GeneratedModel.Kind.MAP ||
-        (kind == GeneratedModel.Kind.UNION && !isObjectUnionSealedInterface)
+        (kind == GeneratedModel.Kind.UNION && !isObjectUnionSealedInterface && nominalTypes.branches(this).isEmpty())
 
   private val GeneratedModel.isFreeformObject: Boolean
     get() =

@@ -201,6 +201,22 @@ When a discriminator property uses a tolerant enum, the same `unknownValue` auto
 
 Models declared outside the root source document may carry `source` with the defining source location. Named type references may also carry `source` when the referenced declaration is imported. This allows IR to preserve duplicate declaration names across RAML documents and libraries without depending on AMF unit state during IR-to-code emission.
 
+### Nominal scalar models
+
+A `SCALAR_ALIAS` may set `nominal: true` to preserve its identity instead of being inlined as its underlying primitive. OpenAPI and AsyncAPI use `x-sunday-wrapper-type: true`; RAML uses `(sunday.wrapperType): true`. The underlying scalar is the single entry in `aliases`, with constraints in `validation`. Enum schemas retain their existing enum representation. `nominal` defaults to false and is omitted when false, so existing IR retains its previous behavior.
+
+```yaml
+name: BaseFactSid
+kind: SCALAR_ALIAS
+nominal: true
+aliases: [{kind: SCALAR, name: string}]
+validation: {pattern: '^sid:f:[A-Za-z0-9_-]+$'}
+```
+
+Swift emits a validating `RawRepresentable` struct; Kotlin emits a final data class with a delegating Jackson creator and scalar `JsonValue` getter. Kotlin wrappers and their unions expose static `fromString` methods so JAX-RS can bind path and query parameters without value-class name mangling. Python emits a `str`, `int`, or `float` subclass with a Pydantic core schema; boolean wrappers use a frozen value object because Python does not permit subclassing `bool`. TypeScript emits a Zod-branded scalar, a same-name parsing function, and an `isName` guard. Construction and decoding validate restrictions; encoding preserves the primitive wire representation. Litestar handlers bind primitive route parameters and convert them with Pydantic before invoking the service protocol, retaining nominal parameter types and reporting invalid values as HTTP 400.
+
+`UNION` models may retain `unionMode: ONE_OF` or `ANY_OF`. An omitted value retains legacy union behavior. A union whose branches are nominal scalars with the same underlying representation preserves each branch's identity. `ONE_OF` validates every branch and requires exactly one match, rejecting zero matches and ambiguous values. `ANY_OF` and RAML unions select the first matching branch. Both encode the selected wrapper as its raw scalar. Ordinary unmarked scalar aliases and other union representations retain their existing behavior.
+
 ## Model Source Fidelity
 
 Array type refs and array models may carry `collection: "SET"` when the source shape has unique item semantics. Scalar type refs may carry `format` when the source scalar format is needed to select target-specific scalar types.

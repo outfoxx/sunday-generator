@@ -37,6 +37,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -138,6 +139,7 @@ class TypeScriptSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val index = GeneratedApiIndex(api)
   private val modelProperties = GeneratedModelProperties(index::modelOrNull)
+  private val nominalTypes = GeneratedNominalTypes(index::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
       api.models.mapNotNullTo(this) { model -> model.discriminatorFallbackOrNull(index) }
@@ -258,10 +260,11 @@ class TypeScriptSundayIrGenerator(
         model.scope == null
       }.forEach { model ->
         generateDiscriminatorFallbackType(model)
-        when (model.kind) {
-          GeneratedModel.Kind.ENUM -> generateSharedEnumModelType(model)
-          GeneratedModel.Kind.OBJECT -> generateSharedObjectModelType(model)
-          GeneratedModel.Kind.UNION -> generateSharedUnionModelType(model)
+        when {
+          model.nominal -> generateNominalModelType(model)
+          model.kind == GeneratedModel.Kind.ENUM -> generateSharedEnumModelType(model)
+          model.kind == GeneratedModel.Kind.OBJECT -> generateSharedObjectModelType(model)
+          model.kind == GeneratedModel.Kind.UNION -> generateSharedUnionModelType(model)
           else -> Unit
         }
       }
@@ -984,6 +987,40 @@ class TypeScriptSundayIrGenerator(
     val simpleName = model.name.toUpperCamelCase()
     val typeName = model.typeName(simpleName)
     generateObjectModelType(typeName, model, typeName, typeName.sibling("Spec"))
+  }
+
+  private fun generateNominalModelType(model: GeneratedModel) {
+    val name = model.typeName(model.name.toUpperCamelCase())
+    val scalar = nominalTypes.scalar(model)
+    val schema =
+      CodeBlock
+        .builder()
+        .add(
+          "/** Validating schema for %L. */\nexport const %LSchema = ",
+          model.name,
+          name.simpleName(),
+        ).add(scalar.type.directZodSchema(true, scalar.property.validation)!!)
+    scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
+      schema.add(".regex(new RegExp(%S))", it)
+    }
+    schema
+      .add(".brand<%S>();\n", model.name)
+      .add(
+        "/** Validates and brands a raw scalar. */\nexport function %L(value: %T): %T {\n",
+        name.simpleName(),
+        scalar.type.typeName(name),
+        name,
+      ).add("  return %LSchema.parse(value);\n}\n", name.simpleName())
+      .add(
+        "/** Tests whether a value satisfies this scalar's schema. */\nexport function is%L(value: unknown): value is %T {\n",
+        name.simpleName(),
+        name,
+      ).add("  return %LSchema.safeParse(value).success;\n}\n", name.simpleName())
+    typeRegistry.addModelType(
+      name,
+      TypeAliasSpec.builder(name.simpleName(), schemaOutputType(name)).addModifiers(Modifier.EXPORT),
+      listOf(schema.build()),
+    )
   }
 
   private fun generateSharedUnionModelType(model: GeneratedModel) {
@@ -1831,6 +1868,29 @@ class TypeScriptSundayIrGenerator(
     model: GeneratedModel,
     schemaTypeName: TypeName.Standard? = null,
   ): CodeBlock {
+    if (nominalTypes.branches(model).isNotEmpty()) {
+      nominalTypes.unionType(model)
+      val schemas = model.aliases.map { typeRegistry.schemaInitializer(it.typeName(typeName)) }
+      return CodeBlock
+        .builder()
+        .add("export const %LSchema = %T.union([", typeName.simpleName(), Z)
+        .add(schemas.joinToCode(", "))
+        .add("], {error: %S})", "No branch matched ${model.name}")
+        .apply {
+          if (model.unionMode == GeneratedModel.UnionMode.ONE_OF) {
+            add(".superRefine((value, context) => {\n")
+            add("  const matches = [")
+              .add(schemas.joinToCode(", "))
+              .add("].filter(schema => schema.safeParse(value).success).length;\n")
+            add(
+              "  if (matches !== 1) context.addIssue({code: 'custom', message: %S});\n",
+              "Ambiguous value for ${model.name}: multiple branches matched",
+            )
+            add("})")
+          }
+        }.add(";\n")
+        .build()
+    }
     val aliasSchemas =
       model.aliases.map { alias ->
         CodeBlock
@@ -2655,6 +2715,7 @@ class TypeScriptSundayIrGenerator(
         validation.isNotEmpty() &&
         (
           enumModel != null ||
+            modelProperties.declarationModel(this)?.nominal == true ||
             declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
             declaration.formattedScalarTypeName() != null
         )
@@ -3392,9 +3453,18 @@ class TypeScriptSundayIrGenerator(
       .associateWith { parameter ->
         val propertyName = "${id.typeScriptIdentifierName}${parameter.name.toUpperCamelCase()}ParameterType"
         val parameterTypeName = parameter.source.type.typeName(serviceTypeName)
+        val direct = parameter.source.type.directZodSchema(parameter.source.required, parameter.source.validation)
         val schema =
-          parameter.source.type.directZodSchema(parameter.source.required, parameter.source.validation)
-            ?: typeRegistry.schemaInitializer(parameterTypeName)
+          direct ?: CodeBlock
+            .builder()
+            .add(typeRegistry.schemaInitializer(parameterTypeName))
+            .apply {
+              val model = parameter.source.type.modelOrNull(index)
+              if (model != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())) {
+                if (!parameter.source.required) add(".optional()")
+                if (parameter.source.type.nullable) add(".nullable()")
+              }
+            }.build()
         addTypeProperty(typeBuilder, propertyName, parameterTypeName, schema, schemaLikeType = null)
         propertyName
       }
@@ -3605,7 +3675,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.aliasedTypeRef(): GeneratedTypeRef? =
     when (kind) {
-      GeneratedModel.Kind.SCALAR_ALIAS -> aliases.firstOrNull()
+      GeneratedModel.Kind.SCALAR_ALIAS -> aliases.firstOrNull().takeUnless { nominal }
       GeneratedModel.Kind.ARRAY ->
         GeneratedTypeRef(
           kind = GeneratedTypeRef.Kind.ARRAY,

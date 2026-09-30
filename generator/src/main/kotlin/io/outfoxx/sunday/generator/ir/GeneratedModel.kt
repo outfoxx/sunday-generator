@@ -29,6 +29,8 @@ data class GeneratedModel(
   val enumValueNames: List<String> = listOf(),
   val unknownValue: String? = null,
   val aliases: List<GeneratedTypeRef> = listOf(),
+  val nominal: Boolean = false,
+  val unionMode: UnionMode? = null,
   val collection: GeneratedCollectionKind? = null,
   val closed: Boolean? = null,
   val additionalProperties: GeneratedAdditionalProperties? = null,
@@ -47,6 +49,12 @@ data class GeneratedModel(
   val deprecated: Boolean = false,
   val documentation: GeneratedDocumentation? = null,
 ) {
+
+  /** Matching rule of a source union; absent retains the legacy emitter behavior. */
+  enum class UnionMode {
+    ANY_OF,
+    ONE_OF,
+  }
 
   /** Shape categories represented by generated models. */
   enum class Kind {
