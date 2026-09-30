@@ -71,7 +71,7 @@ inline fun <reified E : Enum<E>> ParameterHolder.flags(entries: Map<E, EnumFlag>
     val disableName = "no-$enableName"
     val helpDefault = if (flag.default) "enabled" else "disabled"
     option("-$enableName", help = flag.help ?: "")
-      .flag("-$disableName", default = true, defaultForHelp = helpDefault)
+      .flag("-$disableName", default = flag.default, defaultForHelp = helpDefault)
   }
 
 class EnumFlagsOptionGroup<E : Enum<E>>(
