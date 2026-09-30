@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.tools.modelDefaultsApi
 import io.outfoxx.sunday.generator.tools.optionalSerializationApi
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
@@ -26,10 +27,59 @@ import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @TypeScriptTest
 class TypeScriptOptionalSerializationTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `schema defaults only apply when decoding requests`(
+    frontend: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(modelDefaultsApi(frontend, directory), registry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("DefaultsCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {DefaultRecord, DefaultRecordSchema} from './default-record';
+            import {DefaultChildSchema} from './default-child';
+            import {Mode} from './mode';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            for (const factory of [DefaultRecordSchema, DefaultChildSchema]) {
+              const schema = runtime.resolveSchema(factory);
+              const unset: DefaultRecord = {name: 'test'};
+              if (JSON.stringify(z.encode(schema, unset)) !== JSON.stringify(unset)) throw new Error('default selected during encoding');
+              if (schema.parse({name: 'test'})['execution-mode'] !== ${if (frontend == "raml") "undefined" else "'fast'"}) throw new Error('read default lost');
+              const supplied: DefaultRecord = {...unset, 'execution-mode': 'fast', count: 3, enabled: true, choice: Mode.Fast};
+              const encoded = z.encode(schema, supplied) as Record<string, unknown>;
+              for (const [key, expected] of Object.entries({'execution-mode': 'fast', count: 3, enabled: true, choice: 'fast'})) {
+                if (encoded[key] !== expected) throw new Error('explicit default omitted: ' + key);
+              }
+              if (schema.safeParse({}).success) throw new Error('required field became optional');
+              if (schema.safeParse({name: 'test', 'execution-mode': null}).success) throw new Error('default replaced explicit null');
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("DefaultsCheck", "!defaults-check") to check),
+        "defaults-check",
+      ),
+    )
+  }
+
   @Test
   fun `optional fields serialize according to presence and nullability`(
     compiler: TypeScriptCompiler,

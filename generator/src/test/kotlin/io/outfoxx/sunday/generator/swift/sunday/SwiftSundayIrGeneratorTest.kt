@@ -378,7 +378,7 @@ class SwiftSundayIrGeneratorTest {
       final class IntegerDefaultsTests: XCTestCase {
         func testExactDefaults() throws {
           let decoder = JSONDecoder()
-          for value in [IntegerDefaults(), try decoder.decode(IntegerDefaults.self, from: Data("{}".utf8))] {
+          for value in [try decoder.decode(IntegerDefaults.self, from: Data("{}".utf8))] {
             XCTAssertEqual(value.count, 1)
             XCTAssertEqual(value.exponent, 1000)
             XCTAssertEqual(value.negativeZero, 0)
@@ -390,11 +390,12 @@ class SwiftSundayIrGeneratorTest {
             XCTAssertEqual(roundTrip.maximum, Int.max)
             XCTAssertEqual(roundTrip.minimum, Int.min)
           }
-          for value in [try RefinedIntegerDefaults(), try decoder.decode(RefinedIntegerDefaults.self, from: Data("{}".utf8))] {
+          for value in [try decoder.decode(RefinedIntegerDefaults.self, from: Data("{}".utf8))] {
             let parent = IntegerDefaults(count: value.count)
             XCTAssertEqual(parent.count, 2)
           }
-          XCTAssertEqual(IntegerDefaults().count, 1)
+          XCTAssertNil(IntegerDefaults().count)
+          XCTAssertNil(try RefinedIntegerDefaults().count)
           XCTAssertThrowsError(try decoder.decode(RefinedIntegerDefaults.self, from: Data(#"{"count":1}"#.utf8)))
           XCTAssertThrowsError(try decoder.decode(IntegerDefaults.self, from: Data(#"{"count":null}"#.utf8)))
           let null = try decoder.decode(IntegerDefaults.self, from: Data(#"{"nullable":null}"#.utf8))
@@ -502,8 +503,8 @@ class SwiftSundayIrGeneratorTest {
       final class BoundTests: XCTestCase {
         func testBounds() throws {
           let decoder = JSONDecoder()
-          XCTAssertEqual(try BooleanBounds().count, 2)
-          XCTAssertEqual(try NumericBounds().count, 2)
+          XCTAssertNil(try BooleanBounds().count)
+          XCTAssertNil(try NumericBounds().count)
           XCTAssertEqual(try decoder.decode(BooleanBounds.self, from: Data("{}".utf8)).count, 2)
           XCTAssertEqual(try decoder.decode(NumericBounds.self, from: Data("{}".utf8)).count, 2)
           XCTAssertEqual(try decoder.decode(DisabledBounds.self, from: Data("{}".utf8)).count, 0)
@@ -679,7 +680,7 @@ class SwiftSundayIrGeneratorTest {
       final class DefaultsTests: XCTestCase {
         func testDefaults() throws {
           let decoder = JSONDecoder()
-          for value in [FormattedDefaults(), try decoder.decode(FormattedDefaults.self, from: Data("{}".utf8))] {
+          for value in [try decoder.decode(FormattedDefaults.self, from: Data("{}".utf8))] {
             XCTAssertEqual(value.uuid, UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
             XCTAssertEqual(value.timestamp?.timeIntervalSince1970, 1767225600.125)
             XCTAssertEqual(value.local?.timeIntervalSince1970, 1767225600)
@@ -689,6 +690,7 @@ class SwiftSundayIrGeneratorTest {
             XCTAssertEqual(value.url?.absoluteString, "https://example.com/a%20b")
             XCTAssertEqual(value.bytes, Data("hello".utf8))
           }
+          XCTAssertEqual(String(data: try JSONEncoder().encode(FormattedDefaults()), encoding: .utf8), "{}")
           let nullData = Data(#"{"uuid":null,"timestamp":null,"bytes":null}"#.utf8)
           XCTAssertThrowsError(try decoder.decode(FormattedDefaults.self, from: nullData))
           XCTAssertNil(RequiredDefaults().uuid)
@@ -811,16 +813,18 @@ class SwiftSundayIrGeneratorTest {
             XCTAssertEqual(parent.count, 1)
             XCTAssertNil(parent.added)
             XCTAssertEqual(parent.identifier, UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
-            for child in [try DefaultChild(), try decoder.decode(DefaultChild.self, from: Data("{}".utf8))] {
+            for child in [try decoder.decode(DefaultChild.self, from: Data("{}".utf8))] {
               let assigned: DefaultParent = child
               XCTAssertEqual(assigned.count, 2)
               XCTAssertEqual(assigned.added, 4)
               XCTAssertEqual(assigned.identifier, UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
             }
-            for grandchild in [try DefaultGrandchild(), try decoder.decode(DefaultGrandchild.self, from: Data("{}".utf8))] {
+            for grandchild in [try decoder.decode(DefaultGrandchild.self, from: Data("{}".utf8))] {
               XCTAssertEqual(grandchild.count, 3)
               XCTAssertEqual(grandchild.added, 4)
             }
+            XCTAssertNil(try DefaultChild().count)
+            XCTAssertNil(try DefaultGrandchild().count)
             let nested = try decoder.decode(DefaultGrandchild.self, from: Data(#"{"next":{},"other":{}}"#.utf8))
             XCTAssertEqual(nested.count, 3)
             XCTAssertEqual(nested.next?.count, 2)
@@ -909,7 +913,8 @@ class SwiftSundayIrGeneratorTest {
             XCTAssertThrowsError(try SdkTemporalChild(timestamp: midnight.addingTimeInterval(1)))
             _ = try SdkByteRestrictions(data: Data("Hi".utf8), encoded: Data("Hi".utf8))
             XCTAssertThrowsError(try SdkByteRestrictions(data: Data("Hi".utf8), encoded: Data("No".utf8)))
-            for value in [try SdkIntegerChild(), try decoder.decode(SdkIntegerChild.self, from: Data("{}".utf8))] {
+            XCTAssertNil(try SdkIntegerChild().count)
+            for value in [try SdkIntegerChild(count: 1), try decoder.decode(SdkIntegerChild.self, from: Data("{}".utf8))] {
               XCTAssertEqual(value.count, 1)
               XCTAssertEqual(SdkIntegerBase(count: value.count).count, 1)
             }

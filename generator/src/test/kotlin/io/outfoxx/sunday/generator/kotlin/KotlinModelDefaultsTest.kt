@@ -24,9 +24,12 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
+import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
+import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
+import io.outfoxx.sunday.generator.tools.modelDefaultsApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -40,6 +43,139 @@ import kotlin.io.path.writeText
 
 @KotlinTest
 class KotlinModelDefaultsTest {
+  @OptIn(ExperimentalCompilerApi::class)
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `unset constructor defaults are omitted while decoding applies them`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api = modelDefaultsApi(frontend, directory)
+    for (jaxrs in listOf(false, true)) {
+      val registry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          GenerationMode.Client,
+          setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
+          problemLibrary = KotlinProblemLibrary.SUNDAY,
+        )
+      if (jaxrs) {
+        KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+      } else {
+        KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+      }
+      val callsName = ClassName("io.test", "DefaultCalls")
+      val calls = TypeSpec.objectBuilder(callsName)
+      for (name in listOf("DefaultRecord", "DefaultChild")) {
+        val type = ClassName("io.test", name)
+        calls.addFunction(
+          FunSpec
+            .builder("unset$name")
+            .returns(type)
+            .addStatement("return %T(name = %S)", type, "test")
+            .build(),
+        )
+        calls.addFunction(
+          FunSpec
+            .builder("set$name")
+            .returns(type)
+            .addStatement(
+              "return %T(name = %S, executionMode = %S, count = 3, enabled = true, choice = %T.fromValue(%S))",
+              type,
+              "test",
+              "fast",
+              ClassName("io.test", "Mode"),
+              "fast",
+            ).build(),
+        )
+      }
+      val result = compileTypesResult(registry.buildTypes() + (callsName to calls.build()))
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      val mapper = jacksonObjectMapper()
+      val callsType = result.classLoader.loadClass("io.test.DefaultCalls")
+      val instance = callsType.getField("INSTANCE").get(null)
+      for (name in listOf("DefaultRecord", "DefaultChild")) {
+        val type = result.classLoader.loadClass("io.test.$name")
+        val unset = callsType.getMethod("unset$name").invoke(instance)
+        assertEquals(mapper.readTree("""{"name":"test"}"""), mapper.readTree(mapper.writeValueAsBytes(unset)))
+        val set = callsType.getMethod("set$name").invoke(instance)
+        val wire = mapper.readTree(mapper.writeValueAsBytes(set))
+        assertEquals("fast", wire["execution-mode"].textValue())
+        assertEquals(3, wire["count"].intValue())
+        assertEquals(true, wire["enabled"].booleanValue())
+        assertEquals("fast", wire["choice"].textValue())
+        val decoded = mapper.readValue("""{"name":"test"}""", type)
+        assertEquals(if (frontend == "raml") null else "fast", type.getMethod("getExecutionMode").invoke(decoded))
+        assertEquals(if (frontend == "raml") null else 3, type.getMethod("getCount").invoke(decoded))
+        assertEquals(if (frontend == "raml") null else true, type.getMethod("getEnabled").invoke(decoded))
+        val choice = type.getMethod("getChoice").invoke(decoded)
+        val expectedChoice = if (frontend == "raml") mapper.nullNode() else mapper.readTree("\"fast\"")
+        assertEquals(expectedChoice, mapper.valueToTree(choice))
+        if (name == "DefaultChild") {
+          val expectedLocal = if (frontend == "raml") null else "child"
+          assertEquals(expectedLocal, type.getMethod("getLocal").invoke(decoded))
+        }
+        assertThrows(Exception::class.java) { mapper.readValue("{}", type) }
+        assertThrows(Exception::class.java) { mapper.readValue("""{"name":"test","execution-mode":null}""", type) }
+      }
+    }
+  }
+
+  @OptIn(ExperimentalCompilerApi::class)
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `decoding factories retain inherited pattern validation and avoid property collisions`(
+    jaxrs: Boolean,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("pattern-defaults.yaml")
+    source.writeText(
+      OpenApiReferenceDocuments.document(
+        "Pattern defaults",
+        """
+        FactoryBase:
+          type: object
+          properties:
+            x-fixed: {type: string, default: okay}
+            fromJson: {type: string}
+        FactoryChild:
+          allOf: [{${'$'}ref: '#/components/schemas/FactoryBase'}]
+          properties:
+            x-fixed: {type: string}
+            fromJson: {type: string}
+          patternProperties:
+            '^x-': {type: string, minLength: 3}
+          additionalProperties: false
+        """.trimIndent(),
+      ),
+    )
+    val api = OpenApiToGeneratedApi().convert(source.toUri())
+    val registry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(KotlinTypeRegistry.Option.ImplementModel, KotlinTypeRegistry.Option.JacksonAnnotations),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+      )
+    if (jaxrs) {
+      KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+    } else {
+      KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+    }
+    val result = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    val type = result.classLoader.loadClass("io.test.FactoryChild")
+    val mapper = jacksonObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+    val unset = type.getConstructor().newInstance()
+    assertEquals(mapper.readTree("{}"), mapper.readTree(mapper.writeValueAsBytes(unset)))
+    val decoded = mapper.readValue("{}", type)
+    assertEquals("okay", type.getMethod("getXFixed").invoke(decoded))
+    assertThrows(Exception::class.java) { mapper.readValue("""{"x-fixed":"ab"}""", type) }
+    assertThrows(Exception::class.java) { mapper.readValue("""{"extra":true}""", type) }
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @ParameterizedTest
   @ValueSource(booleans = [false, true])
@@ -148,10 +284,12 @@ class KotlinModelDefaultsTest {
       if (name == "LongChild") assertTrue(parent.isAssignableFrom(type))
       val constructed = callsType.getMethod("create$name").invoke(callsInstance)
       val decoded = mapper.readValue("{}", type)
-      for (instance in listOf(constructed, decoded)) {
-        assertEquals(mapper.valueToTree(expected), mapper.valueToTree(instance))
-        assertEquals(mapper.valueToTree(expected), mapper.readTree(mapper.writeValueAsBytes(instance)))
+      for (property in expected.keys) {
+        val getter = "get" + property.replaceFirstChar { it.uppercase() }
+        assertNull(type.getMethod(getter).invoke(constructed))
       }
+      assertEquals(mapper.valueToTree(expected), mapper.valueToTree(decoded))
+      assertEquals(mapper.valueToTree(expected), mapper.readTree(mapper.writeValueAsBytes(decoded)))
       val supplied = expected.mapValues { 7L }
       val suppliedValue = mapper.convertValue(supplied, type)
       assertEquals(mapper.valueToTree(supplied), mapper.valueToTree(suppliedValue))

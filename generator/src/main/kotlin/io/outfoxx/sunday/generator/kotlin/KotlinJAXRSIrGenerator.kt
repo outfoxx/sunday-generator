@@ -139,6 +139,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
+import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
@@ -370,6 +371,7 @@ class KotlinJAXRSIrGenerator(
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
     addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties) { it.kotlinTypeName() }
+    addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
     models
       .flatMap { model ->
         buildList {
