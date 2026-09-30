@@ -107,11 +107,7 @@ internal object KotlinModelConstraints {
               }.joinToCode(" || ")
               .takeUnless { it.isEmpty() } ?: CodeBlock.of("false")
           }
-          if (patch ||
-            field.inherited &&
-            property.validation != field.declaration.validation ||
-            numericTarget?.elements == true
-          ) {
+          if (property.validation.isNotEmpty()) {
             GeneratedNumericBounds.parse(property.validation, "property '${field.wireName}'").forEach { bound ->
               numericChecks +=
                 CodeBlock.of(

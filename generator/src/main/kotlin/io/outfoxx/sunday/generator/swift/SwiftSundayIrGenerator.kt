@@ -1669,10 +1669,22 @@ class SwiftSundayIrGenerator(
 
     typeBuilder.addProperty(debugDescriptionProperty(typeName, localProperties))
     typeBuilder.addFunction(modelConstructor(this, emptyList(), localProperties, null, false, false))
-    typeBuilder.addFunction(modelDecoderConstructor(this, localProperties, null, false, false, true))
+    typeBuilder.addFunction(
+      modelDecoderConstructor(
+        this,
+        localProperties,
+        null,
+        false,
+        false,
+        true,
+        constraints = SwiftModelConstraints.fields(modelProperties.fields(this), modelProperties, false),
+      ),
+    )
     typeBuilder.addFunction(modelEncoderFunction(localProperties, null, null, false, false))
     localProperties.forEach { property ->
-      typeBuilder.addFunction(modelWithFunction(typeName, property, localProperties, patchable = false))
+      typeBuilder.addFunction(
+        modelWithFunction(typeName, property, localProperties, patchable = false, validates = constructorThrows()),
+      )
     }
     typeBuilder.addType(codingKeysType(localProperties))
 
@@ -2077,7 +2089,7 @@ class SwiftSundayIrGenerator(
     outputGroup: String? = null,
   ): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
-    val constrainedFields = SwiftModelConstraints.fields(modelProperties.fields(this))
+    val constrainedFields = SwiftModelConstraints.fields(modelProperties.fields(this), modelProperties, patchable)
     val inheritedModel = inherits.firstOrNull()?.modelOrNull(apiIndex)
     val inheritedTypeName = inheritedModel?.swiftDeclaredTypeName()
     val inheritedProperties =
@@ -2281,6 +2293,7 @@ class SwiftSundayIrGenerator(
             effectiveInheritedProperties + localProperties,
             property in effectiveInheritedProperties && !flattensInheritedProperties,
             patchable,
+            constructorThrows(),
           ),
         )
       }
@@ -2290,7 +2303,12 @@ class SwiftSundayIrGenerator(
         typeBuilder.addType(referenceType)
       }
     }
-    patchOpExtensionOrNull(typeName, effectiveInheritedProperties + localProperties, patchable)?.let { extension ->
+    patchOpExtensionOrNull(
+      typeName,
+      effectiveInheritedProperties + localProperties,
+      patchable,
+      constructorThrows(),
+    )?.let { extension ->
       typeBuilder.associatedExtensions.add(extension)
     }
     if (!isProtocolModel) {
@@ -2835,6 +2853,7 @@ class SwiftSundayIrGenerator(
     typeName: DeclaredTypeName,
     properties: List<GeneratedModelProperty>,
     patchable: Boolean,
+    validates: Boolean,
   ): ExtensionSpec? {
     if (!patchable) {
       return null
@@ -2857,6 +2876,7 @@ class SwiftSundayIrGenerator(
         FunctionSpec
           .builder("merge")
           .addModifiers(PUBLIC, STATIC)
+          .throws(validates)
           .returns(SelfTypeName.INSTANCE)
           .apply {
             properties.forEach { property ->
@@ -2868,7 +2888,7 @@ class SwiftSundayIrGenerator(
               )
             }
           }.addStatement(
-            "%T.merge(%T(%L))",
+            if (validates) "try %T.merge(%T(%L))" else "%T.merge(%T(%L))",
             SelfTypeName.INSTANCE,
             typeName,
             mergeParameters,
@@ -2941,6 +2961,27 @@ class SwiftSundayIrGenerator(
           ).build(),
       ).build()
 
+  // Swift overrides cannot add throws, so a class family shares the initializer and with-method contract.
+  private fun GeneratedModel.constructorThrows(): Boolean {
+    fun GeneratedModel.constrained() =
+      modelProperties.fields(this).any {
+        SwiftModelConstraints.hasValueConstraints(it.effective) && it.effective.name != discriminatorNameOrNull()
+      }
+    if (isSwiftValueModel || patchable) return constrained()
+    val family = mutableSetOf<GeneratedModel>()
+    val pending = ArrayDeque<GeneratedModel>()
+    pending.add(this)
+    while (pending.isNotEmpty()) {
+      val model = pending.removeFirst()
+      if (model.isSwiftValueModel || !family.add(model)) continue
+      pending.addAll(model.inherits.mapNotNull { it.modelOrNull(apiIndex) })
+      pending.addAll(api.models.filter { candidate -> candidate.inherits.any { it.modelOrNull(apiIndex) == model } })
+    }
+    return family.any { model ->
+      !model.patchable && model.constrained()
+    }
+  }
+
   private fun modelConstructor(
     model: GeneratedModel,
     inheritedProperties: List<GeneratedModelProperty>,
@@ -2957,9 +2998,15 @@ class SwiftSundayIrGenerator(
         arrayOf(PUBLIC)
       }
 
+    val constraints =
+      modelProperties.fields(model).filter { field ->
+        (inheritedProperties + localProperties).any { it.wireName == field.wireName }
+      }
+    val validates = constraints.any { SwiftModelConstraints.hasValueConstraints(it.effective) }
     return FunctionSpec
       .constructorBuilder()
       .addModifiers(*modifiers)
+      .throws(model.constructorThrows())
       .apply {
         (inheritedProperties + localProperties).forEach { property ->
           addParameter(
@@ -2976,6 +3023,7 @@ class SwiftSundayIrGenerator(
               }.build(),
           )
         }
+        if (validates) addCode(SwiftModelConstraints.initializer(constraints, modelProperties, patchable))
         localProperties
           .filterNot { property -> isRootProblemModel && property.isSatisfiedByBaseProblemClass() }
           .forEach { property ->
@@ -3005,7 +3053,14 @@ class SwiftSundayIrGenerator(
               }.joinToCode(",%W")
 
           addStatement(
-            "super.init(%L)",
+            if (model.inherits.any {
+                it.modelOrNull(apiIndex)?.constructorThrows() == true
+              }
+            ) {
+              "try super.init(%L)"
+            } else {
+              "super.init(%L)"
+            },
             inheritedConstructorParameters,
           )
         }
@@ -3270,10 +3325,12 @@ class SwiftSundayIrGenerator(
     properties: List<GeneratedModelProperty>,
     override: Boolean = false,
     patchable: Boolean = false,
+    validates: Boolean = false,
   ): FunctionSpec =
     FunctionSpec
       .builder("with${property.name.toUpperCamelCase()}")
       .addModifiers(PUBLIC)
+      .throws(validates)
       .apply {
         if (override) {
           addModifiers(OVERRIDE)
@@ -3281,7 +3338,7 @@ class SwiftSundayIrGenerator(
       }.addParameter(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(patchable))
       .returns(typeName)
       .addStatement(
-        "return %T(%L)",
+        if (validates) "return try %T(%L)" else "return %T(%L)",
         typeName,
         properties
           .map { current ->

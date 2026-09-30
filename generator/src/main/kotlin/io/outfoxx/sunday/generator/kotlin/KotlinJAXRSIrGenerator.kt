@@ -2450,8 +2450,8 @@ class KotlinJAXRSIrGenerator(
               .build(),
           )
         }
-        if ((effective != this@constructorParameterSpec || effective.allowedValues != null) &&
-          (!effective.type.nullable || effective.allowedValues?.contains(null) == false) &&
+        if ((!effective.required || effective != this@constructorParameterSpec || effective.allowedValues != null) &&
+          (!modelProperties.acceptsNull(effective.type) || effective.allowedValues?.contains(null) == false) &&
           typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
         ) {
           addAnnotation(

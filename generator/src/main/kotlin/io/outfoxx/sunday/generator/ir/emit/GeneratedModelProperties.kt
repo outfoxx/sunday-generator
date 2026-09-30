@@ -137,6 +137,24 @@ internal class GeneratedModelProperties(
     val nullable: Boolean,
   )
 
+  /** Retains restrictions carried by named scalar aliases at every property use. */
+  private fun withScalarConstraints(property: GeneratedModelProperty): GeneratedModelProperty {
+    var effective = property
+    var reference = property.type
+    val visited = mutableSetOf<String>()
+    while (reference.kind == GeneratedTypeRef.Kind.NAMED && visited.add(reference.name)) {
+      val alias = modelFor(reference)?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS } ?: break
+      effective =
+        GeneratedPropertyConstraints.intersect(
+          property.copy(validation = alias.validation),
+          effective,
+          "property '${property.serializationName ?: property.name}'",
+        )
+      reference = alias.aliases.singleOrNull() ?: break
+    }
+    return effective
+  }
+
   fun fields(model: GeneratedModel): List<Field> {
     completed[model]?.let { return it }
     if (!visiting.add(model)) genError("Cyclic model inheritance for '${model.name}'")
@@ -179,7 +197,8 @@ internal class GeneratedModelProperties(
             true,
           )
       }
-      model.properties.forEach { property ->
+      model.properties.forEach { declaredProperty ->
+        val property = withScalarConstraints(declaredProperty)
         val wireName = property.serializationName ?: property.name
         val parent = fields[wireName]
         fields[wireName] =

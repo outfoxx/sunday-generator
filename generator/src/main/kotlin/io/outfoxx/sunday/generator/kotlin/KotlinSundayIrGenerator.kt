@@ -68,6 +68,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -1345,8 +1346,8 @@ class KotlinSundayIrGenerator(
           )
         }
         if (!patchable &&
-          (effective != this@constructorParameterSpec || effective.allowedValues != null) &&
-          (!effective.type.nullable || effective.allowedValues?.contains(null) == false) &&
+          (!effective.required || effective != this@constructorParameterSpec || effective.allowedValues != null) &&
+          (!modelProperties.acceptsNull(effective.type) || effective.allowedValues?.contains(null) == false) &&
           typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
         ) {
           addAnnotation(
@@ -1731,6 +1732,43 @@ class KotlinSundayIrGenerator(
 
       if (type.format.equals("email", ignoreCase = true)) {
         add(AnnotationSpec.builder(typeRegistry.beanValidationTypes.email).withUseSiteTarget(useSiteTarget).build())
+      }
+
+      val declaration = modelProperties.declarationType(type)
+      if (declaration.kind == GeneratedTypeRef.Kind.SCALAR && declaration.name in setOf("integer", "number")) {
+        GeneratedNumericBounds
+          .parse(
+            this@validationAnnotations,
+            "property",
+          ).forEach { bound ->
+            val integral =
+              declaration.name == "integer" &&
+                !bound.exclusive &&
+                runCatching { bound.value.longValueExact() }.isSuccess
+            val annotation =
+              if (integral) {
+                if (bound.lower) typeRegistry.beanValidationTypes.min else typeRegistry.beanValidationTypes.max
+              } else {
+                if (bound.lower) {
+                  typeRegistry.beanValidationTypes.decimalMin
+                } else {
+                  typeRegistry.beanValidationTypes.decimalMax
+                }
+              }
+            add(
+              AnnotationSpec
+                .builder(annotation)
+                .withUseSiteTarget(useSiteTarget)
+                .apply {
+                  if (integral) {
+                    addMember("value = %L", bound.value.longValueExact())
+                  } else {
+                    addMember("value = %S", bound.value.toPlainString())
+                    addMember("inclusive = %L", !bound.exclusive)
+                  }
+                }.build(),
+            )
+          }
       }
 
       this@validationAnnotations["pattern"]?.let { pattern ->

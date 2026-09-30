@@ -148,7 +148,11 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
         byteConstructor.newInstance(*args)
       }.cause is IllegalArgumentException,
     )
-    mapper.convertValue(payload, byteParent)
+    if (invalid == null) {
+      assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, byteParent) }
+    } else {
+      mapper.convertValue(payload, byteParent)
+    }
   }
   assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(emptyMap<String, Any>(), byteChild) }
   mapper.convertValue(mapOf("data" to "SGk="), byteChild)

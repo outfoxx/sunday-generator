@@ -427,6 +427,16 @@ class AsyncApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel {
     val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, location)
+    schema.refName()?.let { target ->
+      return GeneratedModel(
+        name = name,
+        kind = GeneratedModel.Kind.SCALAR_ALIAS,
+        source = source,
+        aliases = listOf(materializedNamedTypeRef(target, location, localModels)),
+        validation = validation(schema),
+        documentation = documentation(description = schema["description"] as? String),
+      )
+    }
     val oneOf = schema.schemaList("oneOf").ifEmpty { schema.schemaList("anyOf") }
     if (oneOf.isNotEmpty()) {
       val discriminator = schema.discriminatorName()

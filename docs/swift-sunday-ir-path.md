@@ -17,6 +17,20 @@ Current coverage:
 - Removes the legacy `SwiftSundayGenerator` wrapper; the CLI now exports source specs to `GeneratedApi` and delegates directly to `SwiftSundayIrGenerator`.
 - Removes the temporary AMF shared model and problem type seeding boundaries. Operation-local enum and object types referenced by IR service methods are emitted from scoped IR models.
 
+## Model validation
+
+Generated models enforce declared string, numeric, and collection constraints during
+decoding and memberwise construction, including constraints supplied by named scalar
+aliases. Invalid input reports the wire property name. Optional non-nullable fields
+may be absent, but an explicit JSON `null` is rejected; nullable fields and patch
+delete operations retain their existing semantics.
+
+Constrained models have throwing initializers and throwing `with…` methods. Callers
+must use `try` when constructing or copying these models. A class inheritance family
+shares the throwing signature when any member requires validation, because Swift
+does not permit an override to add `throws`. Unconstrained value models keep their
+non-throwing initializers.
+
 ## Exit Audit
 
 Swift/Sunday generation is fully IR-backed after RAML parsing.

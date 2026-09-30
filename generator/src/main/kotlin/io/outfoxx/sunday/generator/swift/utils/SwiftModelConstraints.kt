@@ -17,19 +17,30 @@
 package io.outfoxx.sunday.generator.swift.utils
 
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.swiftpoet.CodeBlock
+import io.outfoxx.swiftpoet.DATA
+import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.joinToCode
 import java.math.BigDecimal
 import java.math.BigInteger
 
-/** Validates refined wire fields before decoding them into their inherited Swift storage types. */
+/** Validates declared wire restrictions while preserving inherited Swift storage types. */
 internal object SwiftModelConstraints {
-  fun fields(fields: List<GeneratedModelProperties.Field>): List<GeneratedModelProperties.Field> =
+  fun fields(
+    fields: List<GeneratedModelProperties.Field>,
+    properties: GeneratedModelProperties,
+    patchable: Boolean,
+  ): List<GeneratedModelProperties.Field> =
     fields.filter { field ->
-      field.effective.allowedValues != null ||
-        "multipleOf" in field.effective.validation ||
+      !patchable &&
+        !field.effective.required &&
+        !properties.acceptsNull(field.effective.type) ||
+        field.effective.allowedValues != null ||
+        field.effective.validation.isNotEmpty() ||
         field.inherited &&
         (
           field.effective.validation != field.declaration.validation ||
@@ -68,7 +79,9 @@ internal object SwiftModelConstraints {
           }
           beginControlFlow("if", "container.contains(.%N)", key)
           beginControlFlow("if", "try container.decodeNil(forKey: .%N)", key)
-          if (!patchable && (!property.type.nullable || property.allowedValues?.contains(null) == false)) {
+          if (!patchable &&
+            (!properties.acceptsNull(property.type) || property.allowedValues?.contains(null) == false)
+          ) {
             addStatement(
               "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
               DECODING_ERROR,
@@ -137,7 +150,7 @@ internal object SwiftModelConstraints {
             )
             endControlFlow("if")
           }
-          if (field.inherited || numericTarget != null) {
+          if (validation.isNotEmpty()) {
             GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").forEach { bound ->
               val literal = decimalLiteral(bound.value, field.wireName)
               numericChecks +=
@@ -156,7 +169,9 @@ internal object SwiftModelConstraints {
               when (constraint) {
                 "minLength" -> checks += CodeBlock.of("value.unicodeScalars.count >= %L", bound)
                 "maxLength" -> checks += CodeBlock.of("value.unicodeScalars.count <= %L", bound)
-                "pattern" -> checks += CodeBlock.of("value.range(of: %S, options: .regularExpression) != nil", bound)
+                "pattern" ->
+                  checks +=
+                    CodeBlock.of("value.range(of: %L, options: .regularExpression) != nil", regexLiteral(bound))
                 "minItems" -> checks += CodeBlock.of("value.count >= %L", bound)
                 "maxItems" -> checks += CodeBlock.of("value.count <= %L", bound)
                 "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")
@@ -206,6 +221,159 @@ internal object SwiftModelConstraints {
         }
         if (needsNumericHelper) endControlFlow("do")
       }.build()
+
+  /** Whether a field has an active assertion requiring a throwing initializer. */
+  fun hasValueConstraints(property: GeneratedModelProperty): Boolean =
+    property.validation.keys.any {
+      it in
+        setOf("minLength", "maxLength", "pattern", "minItems", "maxItems", "multipleOf")
+    } ||
+      property.validation["uniqueItems"] == "true" ||
+      GeneratedNumericBounds.parse(property.validation, "property '${property.name}'").isNotEmpty()
+
+  /** Validates supplied memberwise initializer values without serializing a partially initialized model. */
+  fun initializer(
+    fields: List<GeneratedModelProperties.Field>,
+    properties: GeneratedModelProperties,
+    patchable: Boolean,
+  ): CodeBlock =
+    CodeBlock
+      .builder()
+      .apply {
+        val constrained = fields.filter { hasValueConstraints(it.effective) }
+        val numeric = setOf("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf")
+        if (constrained.any { field ->
+            field.effective.validation.keys
+              .any { it in numeric }
+          }
+        ) {
+          add(SwiftNumericValidation.helper)
+        }
+        constrained.forEach { field ->
+          val validation = field.effective.validation
+          val optional = !field.storage.required || properties.acceptsNull(field.storage.type)
+          if (patchable) {
+            beginControlFlow("if", "case .set(let value)? = %N", field.storage.name.swiftIdentifierName)
+          } else if (optional) {
+            beginControlFlow("if", "let value = %N", field.storage.name.swiftIdentifierName)
+          } else {
+            beginControlFlow("do", "")
+            addStatement("let value = %N", field.storage.name.swiftIdentifierName)
+          }
+          val checks = mutableListOf<CodeBlock>()
+          val declaration = properties.declarationType(field.storage.type)
+          val format = declaration.format ?: declaration.name
+          if (swiftStringFormatTypeName(format) == DATE &&
+            validation.keys.any { it in setOf("minLength", "maxLength", "pattern") }
+          ) {
+            val options =
+              when (format.lowercase()) {
+                "date", "full-date" -> ".withFullDate, .withDashSeparatorInDate"
+                "time", "partial-time" -> ".withTime, .withColonSeparatorInTime"
+                "datetime-only", "date-time-only" ->
+                  ".withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime"
+                else -> ".withInternetDateTime"
+              }
+            addStatement(
+              "let formatter = %T()",
+              DeclaredTypeName.typeName("Foundation.ISO8601DateFormatter"),
+            )
+            addStatement("formatter.formatOptions = [%L]", options)
+            if (format.lowercase() !in setOf("date", "full-date")) {
+              beginControlFlow("if", "value.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) != 0")
+              addStatement("formatter.formatOptions.insert(.withFractionalSeconds)")
+              endControlFlow("if")
+            }
+            addStatement("let wireValue = formatter.string(from: value)")
+          }
+          val stringValue =
+            if (properties.declarationModel(field.storage.type)?.kind ==
+              GeneratedModel.Kind.ENUM
+            ) {
+              "value.rawValue"
+            } else {
+              when (swiftStringFormatTypeName(format)) {
+                DATA -> "value.base64EncodedString()"
+                UUID -> "value.uuidString"
+                URL -> "value.absoluteString"
+                DATE -> "wireValue"
+                else -> "value"
+              }
+            }
+          validation.forEach { (key, bound) ->
+            when (key) {
+              "minLength" -> checks += CodeBlock.of("%L.unicodeScalars.count >= %L", stringValue, bound)
+              "maxLength" -> checks += CodeBlock.of("%L.unicodeScalars.count <= %L", stringValue, bound)
+              "pattern" ->
+                checks +=
+                  CodeBlock.of("%L.range(of: %L, options: .regularExpression) != nil", stringValue, regexLiteral(bound))
+              "minItems" -> checks += CodeBlock.of("value.count >= %L", bound)
+              "maxItems" -> checks += CodeBlock.of("value.count <= %L", bound)
+              "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")
+            }
+          }
+          if (GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").isNotEmpty() ||
+            "multipleOf" in validation
+          ) {
+            val target = properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
+            val numericChecks = mutableListOf<CodeBlock>()
+            GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").forEach { bound ->
+              numericChecks +=
+                CodeBlock.of("number %L _SundayValidationNumber(%S)", bound.operator, bound.value.toString())
+            }
+            GeneratedNumericBounds.multipleOf(validation, "property '${field.wireName}'")?.let { divisor ->
+              val normalized = divisor.stripTrailingZeros()
+              numericChecks +=
+                CodeBlock.of(
+                  "number.isMultipleOf(digits: %L, exponent: %L)",
+                  normalized
+                    .unscaledValue()
+                    .toString()
+                    .map { it.digitToInt() }
+                    .joinToString(prefix = "[", postfix = "]"),
+                  -normalized.scale().toLong(),
+                )
+            }
+            val predicate = numericChecks.joinToCode(" && ")
+            if (target.elements) {
+              checks +=
+                CodeBlock.of(
+                  if (target.nullable) {
+                    "value.allSatisfy { element in element.map { value in Double(value).isFinite && " +
+                      "{ let number = _SundayValidationNumber(String(describing: value)); return %L }() } ?? true }"
+                  } else {
+                    "value.allSatisfy { value in Double(value).isFinite && " +
+                      "{ let number = _SundayValidationNumber(String(describing: value)); return %L }() }"
+                  },
+                  predicate,
+                )
+            } else {
+              // Double conversion checks finiteness for both integral and floating point storage.
+              checks += CodeBlock.of("Double(value).isFinite")
+              checks +=
+                CodeBlock.of(
+                  "{ let number = _SundayValidationNumber(String(describing: value)); return %L }()",
+                  predicate,
+                )
+            }
+          }
+          checks.forEach { condition ->
+            beginControlFlow("if", "!(%L)", condition)
+            addStatement(
+              "throw %T.invalidValue(value, .init(codingPath: [CodingKeys.%N], debugDescription: %S))",
+              ENCODING_ERROR,
+              field.storage.name.swiftIdentifierName,
+              "Invalid value for '${field.wireName}'",
+            )
+            endControlFlow("if")
+          }
+          endControlFlow(if (optional || patchable) "if" else "do")
+        }
+      }.build()
+
+  // SwiftPoet's quoted-string formatter escapes dollar signs using Kotlin interpolation syntax.
+  private fun regexLiteral(pattern: String): CodeBlock =
+    CodeBlock.of("%L", CodeBlock.of("%S", pattern).toString().replace("\${'$'}", "$"))
 
   fun decimalLiteral(
     value: BigDecimal,

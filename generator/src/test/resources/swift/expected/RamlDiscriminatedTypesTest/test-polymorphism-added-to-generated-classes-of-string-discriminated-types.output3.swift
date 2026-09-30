@@ -22,6 +22,12 @@ public struct Child2 : Parent {
 
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
+    if container.contains(.value) {
+      if try container.decodeNil(forKey: .value) {
+        throw DecodingError.dataCorruptedError(forKey: .value, in: container, debugDescription: "Property 'value' cannot be null")
+      } else {
+      }
+    }
     self.value = try container.decodeIfPresent(String.self, forKey: .value)
     self.value2 = try container.decode(Int.self, forKey: .value2)
   }
