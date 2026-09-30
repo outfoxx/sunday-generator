@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator
 
 import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.testing.test
 import io.outfoxx.sunday.generator.kotlin.KotlinGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
@@ -147,6 +148,36 @@ class KotlinCLITest {
     assertDoesNotThrow { command.parse(arrayOf("-generated-annotation", "io.test.Generated", *requiredOptions)) }
     assertThat(command.generatedAnnotationName, equalTo("io.test.Generated"))
     assertThat(command.allRegistryOptions(), hasItems(KotlinTypeRegistry.Option.AddGeneratedAnnotation))
+  }
+
+  @ParameterizedTest
+  @EnumSource(KotlinTypeRegistry.Option::class)
+  fun `type registry defaults agree with help`(option: KotlinTypeRegistry.Option) {
+    if (option in KotlinGenerateCommand.impliedRegistryOptions) {
+      return
+    }
+
+    val enabledByDefault =
+      option in
+        setOf(
+          KotlinTypeRegistry.Option.ImplementModel,
+          KotlinTypeRegistry.Option.JacksonAnnotations,
+          KotlinTypeRegistry.Option.ValidationConstraints,
+          KotlinTypeRegistry.Option.ContainerElementValid,
+        )
+    val command = KotlinGenerateCommandTest()
+    command.parse(requiredOptions)
+    assertThat(command.allRegistryOptions().contains(option), equalTo(enabledByDefault))
+
+    val help = sundayCommand().test(arrayOf("kotlin/sunday", "--help"))
+    assertThat(help.statusCode, equalTo(0))
+    val optionHelp =
+      help.stdout
+        .substringAfter("-no-${option.name.camelCaseToKebabCase()}")
+        .substringBefore("\n  -")
+        .replace(Regex("\\s+"), " ")
+    val expectedDefault = if (enabledByDefault) "enabled" else "disabled"
+    assertThat(optionHelp, containsStringIgnoringCase("default: $expectedDefault"))
   }
 
   @ParameterizedTest

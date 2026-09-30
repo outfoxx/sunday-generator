@@ -9,6 +9,7 @@ dependencies {
   implementation(libs.jakartaJaxrs31)
   implementation(libs.jakartaAnnotations)
   implementation(libs.jakartaValidation)
+  implementation(libs.validation)
   implementation(libs.jackson)
   testImplementation(libs.jerseyValidation)
   testImplementation(libs.jerseyInMemory)
@@ -21,6 +22,24 @@ dependencies {
 }
 
 val generatedSources = layout.buildDirectory.dir("generated/sunday")
+val defaultModels = layout.buildDirectory.dir("generated/default-models")
+val defaultModelsContract = layout.projectDirectory.file("src/main/openapi/default-models.yaml")
+
+val generateDefaultModels by tasks.registering(JavaExec::class) {
+  inputs.file(defaultModelsContract)
+  outputs.dir(defaultModels)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/sunday",
+    "-pkg",
+    "io.test.defaults",
+    "-out",
+    defaultModels.get().asFile.absolutePath,
+    defaultModelsContract.asFile.absolutePath,
+  )
+}
+
 val contract = rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/server-adapters.yaml")
 val ramlContract =
   rootProject.layout.projectDirectory.file(
@@ -124,6 +143,7 @@ kotlin.compilerOptions {
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateDefaultModels)
   kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
   kotlin.srcDir(generateSecuredApi)
