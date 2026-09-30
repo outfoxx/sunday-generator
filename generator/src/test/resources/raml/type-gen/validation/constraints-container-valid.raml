@@ -17,7 +17,8 @@ types:
       children: Child[]
       childMap:
         type: object
-        additionalProperties: true
+        properties:
+          /.*/: Child
       names: string[]
 
 /tests:

@@ -56,6 +56,8 @@ class KotlinCascadedValidationTest {
       )
     val result = compileTypesResult(registry(api, jakarta = false, implement = false, enabled = true).buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    val model = result.classLoader.loadClass("io.test.Test")
+    assertEquals(Map::class.java, model.getMethod("getChildMap").returnType)
     assertKotlinSnapshot(
       "RamlValidationConstraintsTest/test-container-element-validation-annotations.output.kt",
       CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Test.kt"),
@@ -131,7 +133,31 @@ class KotlinCascadedValidationTest {
     val sources = mutableListOf(source.toUri())
     if (frontend == "composed") {
       val extra = directory.resolve("events.yaml")
-      extra.writeText("asyncapi: 3.0.0\ninfo: {title: Cascaded validation, version: 1.0.0}\nchannels: {}\n")
+      extra.writeText(
+        """
+        asyncapi: 3.0.0
+        info: {title: Cascaded validation, version: 1.0.0}
+        channels:
+          validated:
+            address: /validated
+            messages:
+              validated: {payload: {${'$'}ref: '#/components/schemas/ValidationEvent'}}
+        operations:
+          receiveValidationEvent:
+            action: receive
+            channel: {${'$'}ref: '#/channels/validated'}
+            messages: [{${'$'}ref: '#/channels/validated/messages/validated'}]
+        components:
+          schemas:
+            ValidationEvent:
+              type: object
+              properties:
+                wrapper: {${'$'}ref: './validation.yaml#/components/schemas/Wrapper'}
+                children:
+                  type: array
+                  items: {${'$'}ref: './validation.yaml#/components/schemas/Child'}
+        """.trimIndent(),
+      )
       sources += extra.toUri()
     }
     val api = GeneratedApiIrExporter().export(sources)
@@ -150,6 +176,15 @@ class KotlinCascadedValidationTest {
             field,
           )
         }
+        if (frontend == "composed") {
+          val event = result.classLoader.loadClass("io.test.ValidationEvent")
+          val wrapper = event.getMethod("getWrapper")
+          assertEquals(model, wrapper.returnType)
+          assertTrue(wrapper.annotations.any { it.annotationClass.java.name == annotation })
+          val compiledEvent =
+            CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/ValidationEvent.kt")
+          assertTrue(compiledEvent.contains("List<@Valid Child>"), compiledEvent)
+        }
         val compiled = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Wrapper.kt")
         assertTrue(compiled.contains("List<@Valid Child>"), compiled)
         assertTrue(compiled.contains("List<@Valid Choice>"), compiled)
@@ -162,6 +197,10 @@ class KotlinCascadedValidationTest {
     val disabled = compileTypesResult(registry(api, jakarta = false, implement = true, enabled = false).buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, disabled.exitCode, disabled.messages)
     assertFalse(CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Wrapper.kt").contains("@Valid"))
+    if (frontend == "composed") {
+      val compiledEvent = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/ValidationEvent.kt")
+      assertFalse(compiledEvent.contains("@Valid"))
+    }
   }
 
   private fun registry(

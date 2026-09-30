@@ -1,9 +1,9 @@
 package io.test
 
 import javax.validation.Valid
-import kotlin.Any
 import kotlin.String
 import kotlin.collections.List
+import kotlin.collections.Map
 
 public interface Test {
   @get:Valid
@@ -11,7 +11,7 @@ public interface Test {
 
   public val `children`: List<@Valid Child>
 
-  public val `childMap`: Any
+  public val `childMap`: Map<String, @Valid Child>
 
   public val `names`: List<String>
 }
