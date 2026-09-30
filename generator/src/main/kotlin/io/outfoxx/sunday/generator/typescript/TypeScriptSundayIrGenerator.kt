@@ -1267,14 +1267,32 @@ class TypeScriptSundayIrGenerator(
       )
     }
 
-    if (allSerializableProperties.isNotEmpty()) {
+    if (options.preserveUnknownFields && superTypeName == null) {
+      val extensionType = TypeName.implicit("{readonly [key: string]: unknown}")
+      interfaceBuilder.addProperty(PropertySpec.builder(extensionFieldName, extensionType).optional(true).build())
+      classBuilder.addProperty(
+        PropertySpec
+          .builder(extensionFieldName, extensionType)
+          .addModifiers(Modifier.READONLY)
+          .addTSDoc("Schema-permitted dynamic fields, serialized at their original JSON level.")
+          .build(),
+      )
+    }
+
+    if (allSerializableProperties.isNotEmpty() || options.preserveUnknownFields) {
       val constructorBuilder =
         FunctionSpec
           .constructorBuilder()
-          .addParameter("init", specName)
+          .addParameter(
+            ParameterSpec
+              .builder("init", specName)
+              .apply {
+                if (allSerializableProperties.isEmpty()) defaultValue("{}")
+              }.build(),
+          )
 
       if (superTypeName != null) {
-        if (inheritedProperties.isNotEmpty()) {
+        if (inheritedProperties.isNotEmpty() || options.preserveUnknownFields) {
           constructorBuilder.addStatement("super(init)")
         } else {
           constructorBuilder.addStatement("super()")
@@ -1290,6 +1308,15 @@ class TypeScriptSundayIrGenerator(
           !(isProblemModel && superTypeName != null && property.name in inheritedPropertyNames)
         ) {
           constructorBuilder.addStatement("this.%N = init.%N", propertyName, propertyName)
+        }
+      }
+      if (options.preserveUnknownFields) {
+        if (superTypeName == null) {
+          constructorBuilder.addStatement(
+            "this.%N = Object.freeze({...init.%N})",
+            extensionFieldName,
+            extensionFieldName,
+          )
         }
       }
       classBuilder.constructor(constructorBuilder.build())
@@ -1330,7 +1357,6 @@ class TypeScriptSundayIrGenerator(
         } else {
           discriminatedObjectSchemaCode(
             typeName,
-            requireNotNull(rootDiscriminatorName),
             childModels,
             discriminatorFallbacks[model],
           )
@@ -1663,17 +1689,6 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock.of("%T.literal(%S)", Z, discriminatorValue)
   }
 
-  // Zod 4.3 selects discriminated-union branches by their wire tag even while encoding enum objects.
-  private fun hasCodecDiscriminator(
-    discriminator: String,
-    models: List<GeneratedModel>,
-  ): Boolean =
-    models.any { model ->
-      modelProperties.fields(model).any { field ->
-        field.wireName == discriminator && modelProperties.declarationModel(field.effective.type)?.unknownValue != null
-      }
-    }
-
   private fun plainDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
     discriminatorName: String,
@@ -1685,29 +1700,19 @@ class TypeScriptSundayIrGenerator(
       discriminatorCases.map { (mappedDiscriminator, caseModel) ->
         val caseTypeName = caseModel.typeName(caseModel.name.toUpperCamelCase())
         val caseSchemaTypeName = caseTypeName.sibling("Schema")
-        val discriminatorValue = mappedDiscriminator ?: caseModel.discriminatorValue ?: caseModel.name
-        val schema =
-          if (mappedDiscriminator == null || mappedDiscriminator == caseModel.discriminatorValue) {
-            CodeBlock.of("    runtime.resolveSchema(%T)", caseSchemaTypeName)
-          } else {
-            caseModel.mappedDiscriminatorSchema(
-              caseTypeName,
-              caseSchemaTypeName,
-              discriminatorName,
-              mappedDiscriminator,
-            )
-          }
-        schema to discriminatorValue
+        if (mappedDiscriminator == null || mappedDiscriminator == caseModel.discriminatorValue) {
+          CodeBlock.of("    runtime.resolveSchema(%T)", caseSchemaTypeName)
+        } else {
+          caseModel.mappedDiscriminatorSchema(
+            caseTypeName,
+            caseSchemaTypeName,
+            discriminatorName,
+            mappedDiscriminator,
+          )
+        }
       }
-    val schemaFactory =
-      if (schemaTypeName == null &&
-        variants.map { it.second }.toSet().size == variants.size &&
-        !hasCodecDiscriminator(discriminatorName, discriminatorCases.map { it.second })
-      ) {
-        "discriminatedUnion"
-      } else {
-        "union"
-      }
+    // Preserving model codecs validate their tags themselves and can have distinct wire/output types.
+    // A union composes those codecs without depending on ZodObject discriminator metadata.
     val fallbackSchema =
       fallback?.let {
         val fallbackTypeName = it.hierarchy.typeName(it.modelName.toUpperCamelCase())
@@ -1721,19 +1726,15 @@ class TypeScriptSundayIrGenerator(
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
       .apply {
-        if (fallbackSchema != null && schemaFactory == "discriminatedUnion") {
-          add("  const knownSchema = %T.discriminatedUnion(%S, [\n", Z, discriminatorName)
-        } else if (fallbackSchema != null) {
+        if (fallbackSchema != null) {
           add("  const knownSchema = %T.union([\n", Z)
-        } else if (schemaFactory == "discriminatedUnion") {
-          add("  return %T.discriminatedUnion(%S, [\n", Z, discriminatorName)
         } else if (schemaTypeName != null) {
           add("  const wireSchema = %T.union([\n", Z)
         } else {
           add("  return %T.union([\n", Z)
         }
       }.add(
-        variants.map { (schema, _) -> schema }.joinToCode(",\n"),
+        variants.joinToCode(",\n"),
       ).add("\n  ]);\n")
       .apply {
         if (fallbackSchema != null) {
@@ -1762,21 +1763,16 @@ class TypeScriptSundayIrGenerator(
       (inheritedProperties(null) + properties)
         .firstOrNull { property -> property.name == discriminatorName }
         ?: return CodeBlock.of("    runtime.resolveSchema(%T)", schemaTypeName)
-    val discriminatorTypeName = discriminatorProperty.type.typeName(typeName)
-    return CodeBlock
-      .builder()
-      .add(
-        "    runtime.resolveSchema(%T).extend({ %S: ",
-        schemaTypeName,
-        discriminatorProperty.serializationName ?: discriminatorProperty.name,
-      ).add(
-        discriminatorLiteralSchema(
-          discriminatorProperty,
-          discriminatorTypeName,
-          discriminatorValue,
-        ),
-      ).add(" })")
-      .build()
+    val inherited = inheritedProperties(null)
+    val serializable = inherited.withoutOverridesFrom(properties) + properties
+    return plainObjectSchemaCode(
+      typeName,
+      typeName,
+      serializable.filterNot { it.name == discriminatorProperty.name },
+      this,
+      leafDiscriminator = discriminatorProperty to discriminatorValue,
+      inlineSchema = true,
+    )
   }
 
   private fun plainExternallyDiscriminatedObjectSchemaCode(
@@ -1814,36 +1810,21 @@ class TypeScriptSundayIrGenerator(
 
   private fun discriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
-    discriminatorName: String,
     childModels: List<GeneratedModel>,
     fallback: GeneratedDiscriminatorFallback? = null,
   ): CodeBlock {
     val variants =
       childModels.map { childModel ->
         val childTypeName = childModel.typeName(childModel.name.toUpperCamelCase())
-        childTypeName.companionSchemaTypeName() to (childModel.discriminatorValue ?: childModel.name)
+        childTypeName.companionSchemaTypeName()
       }
-    val schemaFactory =
-      if (variants.map { it.second }.toSet().size == variants.size &&
-        !hasCodecDiscriminator(discriminatorName, childModels)
-      ) {
-        "discriminatedUnion"
-      } else {
-        "union"
-      }
-
     return CodeBlock
       .builder()
       .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .apply {
-        if (schemaFactory == "discriminatedUnion") {
-          add("  const wireSchema = %T.discriminatedUnion(%S, [\n", Z, discriminatorName)
-        } else {
-          add("  const wireSchema = %T.union([\n", Z)
-        }
-      }.add(
+      .add("  const wireSchema = %T.union([\n", Z)
+      .add(
         variants
-          .map { (childSchemaTypeName, _) -> CodeBlock.of("runtime.resolveSchema(%T)", childSchemaTypeName) }
+          .map { childSchemaTypeName -> CodeBlock.of("runtime.resolveSchema(%T)", childSchemaTypeName) }
           .joinToCode(",\n"),
       ).add("\n  ]);\n")
       .apply {
@@ -1929,13 +1910,105 @@ class TypeScriptSundayIrGenerator(
       .build()
   }
 
+  // One name across a generated hierarchy prevents an inherited accessor from hiding a schema field.
+  private val extensionFieldName by lazy {
+    val names = api.models.flatMap { it.properties }.mapTo(mutableSetOf()) { it.name.typeScriptIdentifierName }
+    generateSequence("additionalProperties") { "${it}_" }.first { it !in names }
+  }
+
+  private fun GeneratedModel.declaredWireNames(): CodeBlock =
+    modelProperties.fields(this).map { CodeBlock.of("%S", it.wireName) }.joinToCode(", ")
+
+  private fun CodeBlock.Builder.applyUnknownFieldPolicy(
+    model: GeneratedModel,
+    owner: TypeName.Standard,
+    schema: String,
+  ): String {
+    // Zod drops __proto__ while cloning objects. Keep it as an own data property and validate it explicitly.
+    // A codec also avoids a one-way transform, which would disable schema.encode().
+    add(
+      "  const preservedSchema = %T.codec(%T.custom<%T.input<typeof %L>>(), %T.custom<%T.output<typeof %L>>(), {\n",
+      Z,
+      Z,
+      Z,
+      schema,
+      Z,
+      Z,
+      schema,
+    )
+    for (encoding in listOf(false, true)) {
+      add("    %L: (value, context) => {\n", if (encoding) "encode" else "decode")
+      add("      const result = %L.%L(value);\n", schema, if (encoding) "safeEncode" else "safeParse")
+      add(
+        "      if (!result.success) { context.issues.push(...result.error.issues.map(issue => ({...issue, input: undefined}))); return %T.NEVER; }\n",
+        Z,
+      )
+      add("      const entries: [string, unknown][] = Object.entries(result.data);\n")
+      add("      if (typeof value === 'object' && value !== null && Object.hasOwn(value, '__proto__')) {\n")
+      add("        const item = (value as {[key: string]: unknown})['__proto__'];\n")
+      val matches = modelProperties.patternProperties(model).filter { Regex(it.pattern).containsMatchIn("__proto__") }
+      val checks =
+        matches
+          .map { pattern ->
+            CodeBlock
+              .builder()
+              .add(
+                pattern.type.zodSchema(owner, true, pattern.validation, allowedValues = pattern.allowedValues),
+              ).apply {
+                patternIntegerCheck(pattern.type, "value")?.let { check -> add(".refine((value) => %L)", check) }
+              }.build()
+          }.toMutableList()
+      if (matches.isEmpty() && modelProperties.fields(model).none { it.wireName == "__proto__" }) {
+        if (modelProperties.isClosed(model)) {
+          add(
+            "        context.issues.push({code: 'custom', path: ['__proto__'], input: value, message: 'Additional properties are not allowed'});\n",
+          )
+        } else {
+          model.additionalProperties?.type?.let {
+            checks +=
+              it.zodSchema(owner, true, model.additionalProperties.validation)
+          }
+        }
+      }
+      checks.forEachIndexed { index, check ->
+        add("        const checked%L = %L.safeParse(item);\n", index, check)
+        add(
+          "        if (!checked%L.success) for (const issue of checked%L.error.issues) context.issues.push({...issue, input: undefined, path: ['__proto__', ...issue.path]});\n",
+          index,
+          index,
+        )
+      }
+      if (options.preserveUnknownFields) add("        entries.push(['__proto__', item]);\n")
+      add("      }\n")
+      if (!options.preserveUnknownFields) {
+        add("      const declared = new Set<string>([%L]);\n", model.declaredWireNames())
+        add(
+          "      return Object.fromEntries(entries.filter(([key]) => declared.has(key))) as %T.%L<typeof %L>;\n",
+          Z,
+          if (encoding) "input" else "output",
+          schema,
+        )
+      } else {
+        add(
+          "      return Object.fromEntries(entries) as %T.%L<typeof %L>;\n",
+          Z,
+          if (encoding) "input" else "output",
+          schema,
+        )
+      }
+      add("    },\n")
+    }
+    add("  });\n")
+    return "preservedSchema"
+  }
+
   private fun CodeBlock.Builder.applyPatternPropertyConstraints(
     model: GeneratedModel,
     owner: TypeName.Standard,
     schema: String,
   ): String {
     val patterns = modelProperties.patternProperties(model)
-    if (patterns.isEmpty()) return schema
+    if (patterns.isEmpty() && model.additionalProperties?.type == null) return schema
     val checked = "patternCheckedSchema"
     add("  const %L = %L.superRefine((value, context) => {\n", checked, schema)
     add(
@@ -2051,17 +2124,22 @@ class TypeScriptSundayIrGenerator(
     model: GeneratedModel,
     schemaTypeName: TypeName.Standard? = null,
     leafDiscriminator: Pair<GeneratedModelProperty, String>? = null,
+    inlineSchema: Boolean = false,
   ): CodeBlock {
     val externalDiscriminatedPropertyPairs = properties.externalDiscriminatedPropertyPairs()
     var resolvedWireSchemaName = "wireSchema"
 
     return CodeBlock
       .builder()
-      .add("export const %LSchema", typeName.simpleName())
       .apply {
-        schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
-      }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add(
+        if (inlineSchema) {
+          add("(() => {\n")
+        } else {
+          add("export const %LSchema", typeName.simpleName())
+          schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
+          add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
+        }
+      }.add(
         "  const wireSchema = %T.%L({",
         Z,
         if (modelProperties.isClosed(model) &&
@@ -2114,8 +2192,9 @@ class TypeScriptSundayIrGenerator(
           )
       }.apply {
         resolvedWireSchemaName = applyPatternPropertyConstraints(model, serviceTypeName, resolvedWireSchemaName)
+        resolvedWireSchemaName = applyUnknownFieldPolicy(model, serviceTypeName, resolvedWireSchemaName)
       }.add("  return %L;\n", resolvedWireSchemaName)
-      .add("});\n")
+      .add(if (inlineSchema) "})()" else "});\n")
       .build()
   }
 
@@ -2184,12 +2263,20 @@ class TypeScriptSundayIrGenerator(
             this,
           )
         resolvedWireSchemaName = applyPatternPropertyConstraints(model, serviceTypeName, resolvedWireSchemaName)
+        resolvedWireSchemaName = applyUnknownFieldPolicy(model, serviceTypeName, resolvedWireSchemaName)
         add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, resolvedWireSchemaName, Z, typeName)
       }.apply {
-        if (properties.isEmpty()) {
+        if (properties.isEmpty() && !options.preserveUnknownFields) {
           add("    decode: () => new %T(),\n", typeName)
         } else {
           add("    decode: (value) => new %T({\n", typeName)
+          if (options.preserveUnknownFields) {
+            add(
+              "      %N: Object.fromEntries(Object.entries(value).filter(([key]) => !new Set<string>([%L]).has(key))),\n",
+              extensionFieldName,
+              model.declaredWireNames(),
+            )
+          }
           properties.forEachIndexed { idx, property ->
             val propertyName = property.name.typeScriptIdentifierName
             val wireValue = CodeBlock.of("value[%S]", property.serializationName ?: property.name)
@@ -2212,6 +2299,13 @@ class TypeScriptSundayIrGenerator(
         }
       }.add("    encode: (value) => ({\n")
       .apply {
+        if (options.preserveUnknownFields) {
+          add(
+            "      ...Object.fromEntries(Object.entries(value.%N).filter(([key]) => !new Set<string>([%L]).has(key))),\n",
+            extensionFieldName,
+            model.declaredWireNames(),
+          )
+        }
         val encodeProperties =
           buildList<Pair<String, CodeBlock>> {
             leafDiscriminator?.let { (property, value) ->

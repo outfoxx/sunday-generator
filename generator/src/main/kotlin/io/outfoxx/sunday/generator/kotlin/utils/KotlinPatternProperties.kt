@@ -23,7 +23,6 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MAP
-import com.squareup.kotlinpoet.MUTABLE_MAP
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
@@ -63,16 +62,9 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
       properties,
       additional = model.additionalProperties,
     )
+  val constructorStorage = preserve && parent?.preserves != true && KModifier.DATA in build().modifiers
   if (preserve && parent?.preserves != true) {
-    addProperty(
-      PropertySpec
-        .builder(
-          storageName,
-          MUTABLE_MAP.parameterizedBy(STRING, any),
-          KModifier.PRIVATE,
-        ).initializer("linkedMapOf()")
-        .build(),
-    )
+    addExtensionStorage(storageName, any)
     addProperty(
       PropertySpec
         .builder(names.newName("additionalProperties"), MAP.parameterizedBy(STRING, any))
@@ -83,6 +75,15 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
               ClassName("com.fasterxml.jackson.annotation", "JsonAnyGetter"),
             ).useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
             .build(),
+        ).addAnnotation(
+          AnnotationSpec
+            .builder(JACKSON_JSON_INCLUDE)
+            .useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+            .addMember(
+              "value = %T.ALWAYS, content = %T.ALWAYS",
+              JACKSON_JSON_INCLUDE_INCLUDE,
+              JACKSON_JSON_INCLUDE_INCLUDE,
+            ).build(),
         ).getter(
           FunSpec
             .getterBuilder()
@@ -112,7 +113,11 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
         }
         if (preserve) {
           if (parent?.preserves != true) {
-            addStatement("%N[name] = value", storageName)
+            if (constructorStorage) {
+              addStatement("%N = %N + (name to value)", storageName, storageName)
+            } else {
+              addStatement("%N[name] = value", storageName)
+            }
           } else {
             addStatement("super.%N(name, value)", parent.setterName)
           }
@@ -248,7 +253,10 @@ private fun TypeSpec.Builder.patternDecoder(
       body.addStatement("return if (matched) decoded else context.readTreeAsValue(node, Any::class.java)")
     }
   }
-  val nullBody = CodeBlock.builder().addStatement("val name = context.parser.currentName()")
+  val nullBody = CodeBlock.builder()
+  if (patterns.isNotEmpty() || closed || additional?.type?.let { !properties.acceptsNull(it) } == true) {
+    nullBody.addStatement("val name = context.parser.currentName()")
+  }
   if (closed) nullBody.addStatement("var matched = false")
   patterns.forEach { pattern ->
     nullBody.beginControlFlow("if (%T(%S).containsMatchIn(name))", Regex::class, pattern.pattern)
@@ -271,7 +279,11 @@ private fun TypeSpec.Builder.patternDecoder(
       if (index > 0) condition.add(" || ")
       condition.add(match)
     }
-    nullBody.addStatement("require(%L) { %S + name }", condition.build(), "Null is not allowed: ")
+    nullBody.addStatement(
+      "require(%L) { %S + name }",
+      if (matches.isEmpty()) CodeBlock.of("false") else condition.build(),
+      "Null is not allowed: ",
+    )
   }
   nullBody.addStatement("return null")
   addType(

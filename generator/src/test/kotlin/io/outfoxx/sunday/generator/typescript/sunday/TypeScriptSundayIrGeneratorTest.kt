@@ -779,7 +779,36 @@ class TypeScriptSundayIrGeneratorTest {
           .writeTo(this)
       }
 
-    assertTrue(compileTypes(compiler, builtTypes))
+    val check =
+      ModuleSpec
+        .builder("ProblemFieldsCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {BadRequestProblem, BadRequestProblemSchema} from './bad-request-problem';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const schema = runtime.resolveSchema(BadRequestProblemSchema);
+            const dynamic = {nested: [null, true, {value: 'future'}]};
+            const problem = schema.parse({detail: 'before', validation: {name: 'bad'}, future: dynamic, additionalProperties: {wire: true}});
+            const copied = problem.copy({detail: 'after'});
+            const output = schema.encode(copied) as Record<string, unknown>;
+            if (output.detail !== 'after' || problem.detail !== 'before') throw new Error('copy changed declared fields');
+            if (JSON.stringify(output.future) !== JSON.stringify(dynamic)) throw new Error('class copy lost dynamic fields');
+            if (JSON.stringify(output.additionalProperties) !== '{"wire":true}') throw new Error('storage-name wire collision');
+            const constructed = new BadRequestProblem({detail: 'declared', validation: {}, additionalProperties: {detail: 'spoofed', future: null}});
+            const constructedOutput = schema.encode(constructed) as Record<string, unknown>;
+            if (constructedOutput.detail !== 'declared' || constructedOutput.future !== null) throw new Error('extension overwrote declared field');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        builtTypes + (TypeName.namedImport("ProblemFieldsCheck", "!problem-fields-check") to check),
+        "problem-fields-check",
+      ),
+    )
     assertTrue(
       httpProblemOutput.contains("Problem") &&
         httpProblemOutput.contains("from '@outfoxx/sunday'"),
@@ -1757,16 +1786,26 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(unionSource.contains("JobEventUnknownSchema"), unionSource)
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
   fun `generates discriminated unions for mappings that reuse canonical schemas`(
+    preserve: Boolean,
     compiler: TypeScriptCompiler,
     @ResourceUri("openapi/ir/reusable-discriminator-mapping.yaml") openApiUri: URI,
   ) {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val api = GeneratedApiIrExporter().export(listOf(openApiUri))
 
-    TypeScriptSundayIrGenerator(api, typeRegistry, typeScriptSundayTestOptions)
-      .generateServiceTypes()
+    TypeScriptSundayIrGenerator(
+      api,
+      typeRegistry,
+      TypeScriptSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = preserve,
+      ),
+    ).generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
     val typeCheckedTypes =
@@ -1834,13 +1873,16 @@ class TypeScriptSundayIrGeneratorTest {
                   |if (recognized.event.data.id !== 'known' || recognized.event.type.rawValue !== 'event.one') {
                   |  throw new Error('recognized canonical event did not decode');
                   |}
-                  |const aliased = notificationSchema.parse({event: {type: 'event.legacy', data: {id: 'legacy'}}});
+                  |const aliased = notificationSchema.parse({event: {type: 'event.legacy', data: {id: 'legacy', future: null}, future: {nested: [null, true]}}});
                   |if (aliased.event.data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
                   |  throw new Error('aliased canonical event did not decode');
                   |}
                   |const encodedAlias = %T.encode(notificationSchema, aliased);
                   |if (encodedAlias.event.type !== 'event.legacy' || encodedAlias.event.data.id !== 'legacy') {
                   |  throw new Error('aliased canonical event did not encode');
+                  |}
+                  |if (('future' in encodedAlias.event) !== $preserve || ('future' in encodedAlias.event.data) !== $preserve) {
+                  |  throw new Error('mapped discriminator lost field-preservation policy');
                   |}
                   |const unknown = notificationSchema.parse({event: {type: 'future.event', detail: 'preserved'}});
                   |if (unknown.event.type.rawValue !== 'future.event' || unknown.event.rawBody.detail !== 'preserved') {

@@ -39,9 +39,9 @@ class LocalTypeScriptCompiler(
 
     println("### Installing NPM packages")
 
+    val output = buildPkg.inputStream.readAllBytes().decodeToString()
     buildPkg.waitFor()
-
-    println(buildPkg.inputStream.readAllBytes().decodeToString())
+    println(output)
   }
 
   override fun compile(): Pair<Int, String> = executeCommand(tscCommand())
@@ -67,8 +67,10 @@ class LocalTypeScriptCompiler(
           environment().putAll(env)
         }.redirectErrorStream(true)
         .start()
+    // Drain diagnostics before waiting so a full pipe cannot deadlock the compiler.
+    val output = process.inputStream.readAllBytes().decodeToString()
     val result = process.waitFor()
-    return result to process.inputStream.readAllBytes().decodeToString()
+    return result to output
   }
 
   private fun tscCommand(outputDir: String? = null): List<String> =

@@ -28,4 +28,6 @@ data class PythonGeneratorOptions(
   val enforceEndpointSecurity: Boolean = false,
   /** Enforce complete scheme and permission requirements using application-provided authenticators. */
   val enforceSecuritySchemes: Boolean = false,
+  /** Retain schema-permitted dynamic model fields for serialization. */
+  val preserveUnknownFields: Boolean = true,
 ) : BrokerGenerationOptions

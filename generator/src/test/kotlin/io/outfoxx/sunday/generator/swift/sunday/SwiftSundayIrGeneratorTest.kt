@@ -2965,7 +2965,7 @@ class SwiftSundayIrGeneratorTest {
     val referenceSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "JobProgressRef.swift")
     val unionSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "JobEvent.swift")
     assertTrue(fallbackSource.contains("public let rawBody: [String : AnyValue]"), fallbackSource)
-    assertTrue(fallbackSource.contains("try container.encode(rawBody)"), fallbackSource)
+    assertTrue(fallbackSource.contains("AdditionalPropertyValue(value: value)"), fallbackSource)
     assertTrue(referenceSource.contains("case unknown(JobProgressUnknown)"), referenceSource)
     assertTrue(
       referenceSource.contains("default: self = .unknown(try JobProgressUnknown(from: decoder))"),
@@ -3143,8 +3143,9 @@ class SwiftSundayIrGeneratorTest {
         func testKnownAndFallbackEvents() throws {
           for kind in ["created", "future"] {
             let base: [String: Any] = [
-              "type": kind, "data": ["version": 1, "name": "test"],
-              "requiredNullable": NSNull(), "optionalNullable": NSNull()
+              "type": kind, "data": ["version": 1, "name": "test", "future": ["nested": [NSNull(), true]]],
+              "requiredNullable": NSNull(), "optionalNullable": NSNull(),
+              "future": ["nested": ["value": NSNull()]]
             ]
             var populated = base
             populated["optionalText"] = ""

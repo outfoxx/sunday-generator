@@ -27,9 +27,11 @@ class TypeScriptSundayOptions(
   val aggregateServiceName: String? = null,
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
+  preserveUnknownFields: Boolean = true,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
+    preserveUnknownFields,
   )

@@ -20,7 +20,6 @@ import io.outfoxx.sunday.generator.tools.patternModelInvalid
 import io.outfoxx.sunday.generator.tools.patternModelRegressions
 import io.outfoxx.sunday.generator.tools.patternModelValid
 import io.outfoxx.sunday.generator.tools.patternModelsApi
-import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
 import io.outfoxx.typescriptpoet.CodeBlock
@@ -29,15 +28,16 @@ import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 
 @TypeScriptTest
 class TypeScriptPatternModelsTest {
   @ParameterizedTest
-  @ValueSource(booleans = [false, true])
+  @CsvSource("false,true", "true,true", "false,false", "true,false")
   fun `OpenAPI patterns validate keys and values`(
     composed: Boolean,
+    preserve: Boolean,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
@@ -45,7 +45,12 @@ class TypeScriptPatternModelsTest {
     TypeScriptSundayIrGenerator(
       patternModelsApi(directory, composed),
       registry,
-      typeScriptSundayTestOptions,
+      TypeScriptSundayOptions(
+        "http://example.com/",
+        listOf("application/json"),
+        "API",
+        preserveUnknownFields = preserve,
+      ),
     ).generateServiceTypes()
     val check =
       ModuleSpec
@@ -64,7 +69,15 @@ class TypeScriptPatternModelsTest {
               import {OpenPatternSchema} from './open-pattern';
               const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
               const schema = runtime.resolveSchema(PatternRecordSchema);
-              for (const valid of [${patternModelValid.joinToString()}]) schema.parse(valid);
+              for (const valid of [${patternModelValid.joinToString()}]) {
+                const decoded = schema.parse(valid);
+                const output = schema.encode(decoded) as Record<string, unknown>;
+                if ($preserve) {
+                  for (const [key, value] of Object.entries(valid)) {
+                    if (JSON.stringify(output[key]) !== JSON.stringify(value)) throw new Error('round trip lost ' + key);
+                  }
+                } else if ('x-value' in output || 'maybe-value' in output) throw new Error('extensions retained when disabled');
+              }
               for (const invalid of [${patternModelInvalid.joinToString()}]) {
                 if (schema.safeParse(invalid).success) throw new Error('invalid pattern value accepted: ' + JSON.stringify(invalid));
               }

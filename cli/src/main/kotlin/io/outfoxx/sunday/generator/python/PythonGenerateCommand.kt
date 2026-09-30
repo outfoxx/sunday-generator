@@ -70,5 +70,6 @@ abstract class PythonGenerateCommand(
       aggregateServices = aggregateServices,
       aggregateServiceName = aggregateServiceName,
       generateBrokerServices = generateBrokerServices,
+      preserveUnknownFields = preserveUnknownFields,
     )
 }

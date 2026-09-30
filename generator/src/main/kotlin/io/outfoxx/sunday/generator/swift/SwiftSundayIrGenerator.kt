@@ -65,6 +65,7 @@ import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.OutputDirectory
 import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE
+import io.outfoxx.sunday.generator.swift.utils.ANY_VALUE_DECODER
 import io.outfoxx.sunday.generator.swift.utils.ASYNC_STREAM
 import io.outfoxx.sunday.generator.swift.utils.CODABLE
 import io.outfoxx.sunday.generator.swift.utils.CODING_KEY
@@ -126,6 +127,7 @@ import io.outfoxx.swiftpoet.Modifier.CLASS
 import io.outfoxx.swiftpoet.Modifier.FILEPRIVATE
 import io.outfoxx.swiftpoet.Modifier.FINAL
 import io.outfoxx.swiftpoet.Modifier.OVERRIDE
+import io.outfoxx.swiftpoet.Modifier.PRIVATE
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.Modifier.REQUIRED
 import io.outfoxx.swiftpoet.Modifier.STATIC
@@ -328,7 +330,8 @@ class SwiftSundayIrGenerator(
           }
         },
       ).apply {
-        if (modelProperties.isClosed(this@swiftFallbackTypeSpec)) addType(unknownPropertyCodingKeyType())
+        addType(unknownPropertyCodingKeyType())
+        addType(extensionValueEncoderType())
         exposedProperties.forEach { property ->
           addProperty(
             PropertySpec
@@ -382,8 +385,11 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("to", "encoder", ENCODER)
             .throws(true)
-            .addStatement("var container = encoder.singleValueContainer()")
-            .addStatement("try container.encode(rawBody)")
+            .addStatement("var container = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
+            .beginControlFlow("for", "(key, value) in rawBody")
+            .addStatement(
+              "try container.encode(AdditionalPropertyValue(value: value), forKey: UnknownPropertyCodingKey(stringValue: key))",
+            ).endControlFlow("for")
             .build(),
         )
         if (exposedProperties.isNotEmpty()) {
@@ -1034,7 +1040,7 @@ class SwiftSundayIrGenerator(
         GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
         else -> null
       }
-    )?.also { it.addClosedModelSupport(this) }
+    )?.also { it.addClosedModelSupport(this, typedEventEnvelopeOrNull() == null) }
 
   private fun GeneratedModel.swiftTolerantEnumTypeSpec(): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
@@ -1169,6 +1175,35 @@ class SwiftSundayIrGenerator(
         }
         model.properties.forEach { property ->
           addProperty(swiftEventEnvelopeProperty(property))
+        }
+        if (model.preservesExtensions()) {
+          addProperty(
+            PropertySpec
+              .builder(extensionFieldName, DICTIONARY.parameterizedBy(STRING, ANY_VALUE), PUBLIC)
+              .addDoc(CodeBlock.of("Schema-permitted fields retained by the selected event case."))
+              .getter(
+                FunctionSpec
+                  .getterBuilder()
+                  .apply {
+                    beginControlFlow("switch", "self")
+                    cases.forEach {
+                      addStatement(
+                        "case .%N(let value): return value.%N",
+                        it.caseName,
+                        extensionFieldName,
+                      )
+                    }
+                    fallback?.let {
+                      addStatement(
+                        "case .%N(let value): return value.%N",
+                        it.fallbackName.swiftEnumCaseName,
+                        extensionFieldName,
+                      )
+                    }
+                    endControlFlow("switch")
+                  }.build(),
+              ).build(),
+          )
         }
         addProperty(swiftEventEnvelopeDescriptionProperty())
         addFunction(swiftEventEnvelopeDecoder(typeName))
@@ -1307,12 +1342,14 @@ class SwiftSundayIrGenerator(
               ).build(),
           )
         }
+        addClosedModelSupport(model)
         addProperty(debugDescriptionProperty(typeName, model.properties))
         addFunction(
           FunctionSpec
             .constructorBuilder()
             .addModifiers(PUBLIC)
             .apply {
+              addExtensionParameter(model)
               model.properties.forEach { property ->
                 addParameter(
                   property.name.swiftIdentifierName,
@@ -1331,6 +1368,7 @@ class SwiftSundayIrGenerator(
             .addCode(closedModelDecodeValidation(model))
             .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
             .apply {
+              if (model.preservesExtensions()) addCode(extensionDecode(model))
               model.properties.forEach { property ->
                 val propertyType =
                   if (property ==
@@ -1358,6 +1396,7 @@ class SwiftSundayIrGenerator(
             .throws(true)
             .addStatement("var container = encoder.container(keyedBy: CodingKeys.self)")
             .apply {
+              if (model.preservesExtensions()) addCode(extensionEncode())
               model.properties.forEach { property ->
                 addStatement(
                   "try container.encode%L(self.%N, forKey: .%N)",
@@ -1421,6 +1460,7 @@ class SwiftSundayIrGenerator(
           )
         }
         addProperty(debugDescriptionProperty(caseTypeName, listOf(envelope.discriminatorProperty) + allProperties))
+        addClosedModelSupport(envelope.model)
         addFunction(envelope.caseConstructor(allProperties))
         addFunction(envelope.caseDecoderConstructor(allProperties))
         addFunction(envelope.caseEncoderFunction(this@swiftTypeSpec, allProperties))
@@ -1458,6 +1498,7 @@ class SwiftSundayIrGenerator(
       .constructorBuilder()
       .addModifiers(PUBLIC)
       .apply {
+        addExtensionParameter(model)
         properties.forEach { property ->
           addParameter(
             ParameterSpec
@@ -1483,6 +1524,7 @@ class SwiftSundayIrGenerator(
       .addCode(closedModelDecodeValidation(model))
       .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
       .apply {
+        if (model.preservesExtensions()) addCode(extensionDecode(model))
         properties.forEach { property ->
           addStatement(
             "self.%N = try container.decode%L(%T.self, forKey: .%N)",
@@ -1509,6 +1551,7 @@ class SwiftSundayIrGenerator(
         case.discriminatorValueCode(discriminatorProperty),
         discriminatorProperty.name.swiftIdentifierName,
       ).apply {
+        if (model.preservesExtensions()) addCode(extensionEncode())
         properties.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
@@ -1692,10 +1735,17 @@ class SwiftSundayIrGenerator(
         constraints = SwiftModelConstraints.fields(modelProperties.fields(this), modelProperties, false),
       ),
     )
-    typeBuilder.addFunction(modelEncoderFunction(localProperties, null, null, false, false))
+    typeBuilder.addFunction(modelEncoderFunction(this, localProperties, null, null, false, false))
     localProperties.forEach { property ->
       typeBuilder.addFunction(
-        modelWithFunction(typeName, property, localProperties, patchable = false, validates = constructorThrows()),
+        modelWithFunction(
+          this,
+          typeName,
+          property,
+          localProperties,
+          patchable = false,
+          validates = constructorThrows(),
+        ),
       )
     }
     typeBuilder.addType(codingKeysType(localProperties))
@@ -2290,6 +2340,7 @@ class SwiftSundayIrGenerator(
       )
       typeBuilder.addFunction(
         modelEncoderFunction(
+          this,
           storedProperties,
           inheritedTypeName.takeUnless { flattensInheritedProperties },
           discriminatorProperty,
@@ -2300,6 +2351,7 @@ class SwiftSundayIrGenerator(
       (effectiveInheritedProperties + localProperties).forEach { property ->
         typeBuilder.addFunction(
           modelWithFunction(
+            this,
             typeName,
             property,
             effectiveInheritedProperties + localProperties,
@@ -2994,6 +3046,25 @@ class SwiftSundayIrGenerator(
     }
   }
 
+  private val extensionFieldName by lazy {
+    val names = api.models.flatMap { it.properties }.mapTo(mutableSetOf()) { it.name.swiftIdentifierName }
+    generateSequence("additionalProperties") { "${it}_" }.first { it !in names }
+  }
+
+  private fun GeneratedModel.preservesExtensions(): Boolean =
+    options.preserveUnknownFields &&
+      kind == GeneratedModel.Kind.OBJECT &&
+      !isProtocolHierarchyRootModel &&
+      !isProblemHierarchyProtocolModel &&
+      !isExternalDiscriminatorBaseProtocolModel
+
+  private fun GeneratedModel.inheritsExtensionStorage(): Boolean =
+    isSwiftClassModel &&
+      inherits.mapNotNull { it.modelOrNull(apiIndex) }.any { it.isSwiftClassModel && it.preservesExtensions() }
+
+  private fun extensionValue(model: GeneratedModel): CodeBlock =
+    CodeBlock.of("%N.filter { !%L.contains($0.key) }", extensionFieldName, allowedPropertyNames(model))
+
   private fun modelConstructor(
     model: GeneratedModel,
     inheritedProperties: List<GeneratedModelProperty>,
@@ -3033,6 +3104,17 @@ class SwiftSundayIrGenerator(
               }.build(),
           )
         }
+        if (model.preservesExtensions()) {
+          addParameter(
+            ParameterSpec
+              .builder(
+                extensionFieldName,
+                DICTIONARY.parameterizedBy(STRING, ANY_VALUE),
+              ).defaultValue("[:]")
+              .build(),
+          )
+          if (!model.inheritsExtensionStorage()) addStatement("self.%N = %L", extensionFieldName, extensionValue(model))
+        }
         if (validates) addCode(SwiftModelConstraints.initializer(constraints, modelProperties, patchable))
         localProperties
           .filterNot { property -> isRootProblemModel && property.isSatisfiedByBaseProblemClass() }
@@ -3060,6 +3142,13 @@ class SwiftSundayIrGenerator(
                   property.name.swiftIdentifierName,
                   property.name.swiftIdentifierName,
                 )
+              }.let { parameters ->
+                if (model.inheritsExtensionStorage()) {
+                  parameters +
+                    CodeBlock.of("%N: %L", extensionFieldName, extensionValue(model))
+                } else {
+                  parameters
+                }
               }.joinToCode(",%W")
 
           addStatement(
@@ -3094,9 +3183,17 @@ class SwiftSundayIrGenerator(
     }
   }
 
-  private fun TypeSpec.Builder.addClosedModelSupport(model: GeneratedModel) {
+  private fun TypeSpec.Builder.addClosedModelSupport(
+    model: GeneratedModel,
+    storage: Boolean = true,
+  ) {
     if (model.kind != GeneratedModel.Kind.OBJECT ||
-      (!modelProperties.isClosed(model) && modelProperties.patternProperties(model).isEmpty()) ||
+      (
+        !modelProperties.isClosed(model) &&
+          modelProperties.patternProperties(model).isEmpty() &&
+          !model.preservesExtensions() &&
+          model.additionalProperties?.type == null
+      ) ||
       model.isProtocolHierarchyRootModel ||
       model.isProblemHierarchyProtocolModel ||
       model.isExternalDiscriminatorBaseProtocolModel
@@ -3104,13 +3201,39 @@ class SwiftSundayIrGenerator(
       return
     }
     addType(unknownPropertyCodingKeyType())
-    if (model.isSwiftClassModel && modelProperties.isClosed(model)) {
+    if (model.preservesExtensions() && storage) {
+      addType(extensionValueEncoderType())
+      if (!model.inheritsExtensionStorage()) {
+        addProperty(
+          PropertySpec
+            .builder(extensionFieldName, DICTIONARY.parameterizedBy(STRING, ANY_VALUE), PUBLIC)
+            .addDoc(CodeBlock.of("Schema-permitted dynamic fields, serialized at their original JSON level."))
+            .build(),
+        )
+      }
+      addType(
+        TypeSpec
+          .structBuilder(
+            "AdditionalPropertiesValidator",
+          ).addModifiers(PRIVATE)
+          .addSuperType(DeclaredTypeName.typeName("Swift.Decodable"))
+          .addFunction(
+            FunctionSpec
+              .constructorBuilder()
+              .addParameter("from", "decoder", DECODER)
+              .throws(true)
+              .addCode(closedModelDecodeValidation(model))
+              .build(),
+          ).build(),
+      )
+    }
+    if (model.isSwiftClassModel && (modelProperties.isClosed(model) || model.preservesExtensions())) {
       addProperty(
         PropertySpec
           .builder("_sundayAllowedPropertyNames", SET.parameterizedBy(STRING), CLASS)
           .apply {
             if (model.inherits.mapNotNull { it.modelOrNull(apiIndex) }.any {
-                it.isSwiftClassModel && modelProperties.isClosed(it)
+                it.isSwiftClassModel && (modelProperties.isClosed(it) || it.preservesExtensions())
               }
             ) {
               addModifiers(OVERRIDE)
@@ -3121,6 +3244,44 @@ class SwiftSundayIrGenerator(
     }
   }
 
+  // AnyValue's ordered dictionary uses an unkeyed representation with Foundation's JSONEncoder.
+  // Encode containers recursively so preserved JSON objects remain objects with any supported encoder.
+  private fun extensionValueEncoderType(): TypeSpec =
+    TypeSpec
+      .structBuilder("AdditionalPropertyValue")
+      .addModifiers(PRIVATE)
+      .addSuperType(DeclaredTypeName.typeName("Swift.Encodable"))
+      .addProperty(PropertySpec.builder("value", ANY_VALUE).build())
+      .addFunction(
+        FunctionSpec
+          .builder("encode")
+          .addParameter("to", "encoder", ENCODER)
+          .throws(true)
+          .addCode(
+            CodeBlock.of(
+              """
+              switch value {
+              case .dictionary(let values):
+                var container = encoder.container(keyedBy: UnknownPropertyCodingKey.self)
+                for (key, item) in values {
+                  guard case .string(let name) = key else {
+                    throw %T.invalidValue(key, .init(codingPath: encoder.codingPath, debugDescription: "JSON object keys must be strings"))
+                  }
+                  try container.encode(AdditionalPropertyValue(value: item), forKey: UnknownPropertyCodingKey(stringValue: name))
+                }
+              case .array(let values):
+                var container = encoder.unkeyedContainer()
+                for item in values { try container.encode(AdditionalPropertyValue(value: item)) }
+              default:
+                try value.encode(to: encoder)
+              }
+
+              """.trimIndent(),
+              DeclaredTypeName.typeName("Swift.EncodingError"),
+            ),
+          ).build(),
+      ).build()
+
   private fun closedModelDecodeValidation(
     model: GeneratedModel,
     dynamic: Boolean = false,
@@ -3129,7 +3290,7 @@ class SwiftSundayIrGenerator(
       .builder()
       .apply {
         val patterns = modelProperties.patternProperties(model)
-        if (patterns.isEmpty()) {
+        if (patterns.isEmpty() && model.additionalProperties?.type == null) {
           if (modelProperties.isClosed(model)) {
             addStatement("let allProperties = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
             addStatement(
@@ -3147,14 +3308,12 @@ class SwiftSundayIrGenerator(
           }
           return@apply
         }
-        if (modelProperties.isClosed(model) || patterns.isNotEmpty()) {
+        if (modelProperties.isClosed(model) || patterns.isNotEmpty() || model.additionalProperties?.type != null) {
           addStatement("let allProperties = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
           addStatement(
             "let allowedProperties: %T = %L",
             SET.parameterizedBy(STRING),
-            if (dynamic &&
-              modelProperties.isClosed(model)
-            ) {
+            if (dynamic && (modelProperties.isClosed(model) || model.preservesExtensions())) {
               CodeBlock.of("Self._sundayAllowedPropertyNames")
             } else {
               allowedPropertyNames(model)
@@ -3245,6 +3404,59 @@ class SwiftSundayIrGenerator(
           .build(),
       ).build()
 
+  private fun extensionDecode(
+    model: GeneratedModel,
+    dynamic: Boolean = false,
+  ): CodeBlock =
+    CodeBlock
+      .builder()
+      .addStatement("let extensionContainer = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
+      .addStatement(
+        "let declaredFields: %T = %L",
+        SET.parameterizedBy(STRING),
+        if (dynamic) CodeBlock.of("Self._sundayAllowedPropertyNames") else allowedPropertyNames(model),
+      ).addStatement(
+        "self.%N = try %T(uniqueKeysWithValues: extensionContainer.allKeys.filter { !declaredFields.contains($0.stringValue) }.map { key in",
+        extensionFieldName,
+        DICTIONARY.parameterizedBy(STRING, ANY_VALUE),
+      ).addStatement("  (key.stringValue, try extensionContainer.decode(%T.self, forKey: key))", ANY_VALUE)
+      .addStatement("})")
+      .build()
+
+  private fun extensionEncode(inherited: Boolean = false): CodeBlock =
+    CodeBlock
+      .builder()
+      .apply {
+        addStatement("let extensionDecoder = %T()", ANY_VALUE_DECODER)
+        addStatement("extensionDecoder.userInfo = encoder.userInfo")
+        addStatement(
+          "_ = try extensionDecoder.decode(AdditionalPropertiesValidator.self, from: %T.dictionary(.init(uniqueKeysWithValues: %N.map { (.string($0.key), $0.value) })))",
+          ANY_VALUE,
+          extensionFieldName,
+        )
+        if (!inherited) {
+          addStatement("var extensionContainer = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
+          beginControlFlow("for", "(key, value) in %N", extensionFieldName)
+          addStatement(
+            "try extensionContainer.encode(AdditionalPropertyValue(value: value), forKey: UnknownPropertyCodingKey(stringValue: key))",
+          )
+          endControlFlow("for")
+        }
+      }.build()
+
+  private fun FunctionSpec.Builder.addExtensionParameter(model: GeneratedModel) {
+    if (!model.preservesExtensions()) return
+    addParameter(
+      ParameterSpec
+        .builder(
+          extensionFieldName,
+          DICTIONARY.parameterizedBy(STRING, ANY_VALUE),
+        ).defaultValue("[:]")
+        .build(),
+    )
+    addStatement("self.%N = %L", extensionFieldName, extensionValue(model))
+  }
+
   private fun modelDecoderConstructor(
     model: GeneratedModel,
     localProperties: List<GeneratedModelProperty>,
@@ -3320,6 +3532,11 @@ class SwiftSundayIrGenerator(
         if (addNilProblemParameters) {
           addStatement("self.parameters = nil")
         }
+        if (model.preservesExtensions() &&
+          !model.inheritsExtensionStorage()
+        ) {
+          addCode(extensionDecode(model, model.isSwiftClassModel))
+        }
         if (inheritedTypeName != null || isRootProblemModel) {
           addStatement("try super.init(from: decoder)")
         }
@@ -3327,6 +3544,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun modelEncoderFunction(
+    model: GeneratedModel,
     localProperties: List<GeneratedModelProperty>,
     inheritedTypeName: DeclaredTypeName?,
     discriminatorProperty: GeneratedModelProperty?,
@@ -3344,6 +3562,7 @@ class SwiftSundayIrGenerator(
       ).addParameter("to", "encoder", ENCODER)
       .throws(true)
       .apply {
+        if (model.preservesExtensions()) addCode(extensionEncode(model.inheritsExtensionStorage()))
         if (inheritedTypeName != null || isRootProblemModel) {
           addStatement("try super.encode(to: encoder)")
         }
@@ -3482,6 +3701,7 @@ class SwiftSundayIrGenerator(
   }
 
   private fun modelWithFunction(
+    model: GeneratedModel,
     typeName: DeclaredTypeName,
     property: GeneratedModelProperty,
     properties: List<GeneratedModelProperty>,
@@ -3511,6 +3731,17 @@ class SwiftSundayIrGenerator(
                 CodeBlock.of("%N", current.name.swiftIdentifierName)
               }
             CodeBlock.of("%N: %L", current.name.swiftIdentifierName, valueCode)
+          }.let { parameters ->
+            if (model.preservesExtensions()) {
+              parameters +
+                CodeBlock.of(
+                  "%N: %N",
+                  extensionFieldName,
+                  extensionFieldName,
+                )
+            } else {
+              parameters
+            }
           }.joinToCode(",%W"),
       ).build()
 

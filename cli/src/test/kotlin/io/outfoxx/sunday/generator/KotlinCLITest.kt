@@ -164,6 +164,7 @@ class KotlinCLITest {
           KotlinTypeRegistry.Option.JacksonAnnotations,
           KotlinTypeRegistry.Option.ValidationConstraints,
           KotlinTypeRegistry.Option.ContainerElementValid,
+          KotlinTypeRegistry.Option.PreserveUnknownFields,
         )
     val command = KotlinGenerateCommandTest()
     command.parse(requiredOptions)

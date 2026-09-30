@@ -20,11 +20,13 @@ import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MAP
 import com.squareup.kotlinpoet.MUTABLE_MAP
 import com.squareup.kotlinpoet.NameAllocator
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
@@ -41,6 +43,7 @@ internal fun addOpenModelProperties(
   modelTypes: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
   properties: GeneratedModelProperties,
+  preserveUnknownFields: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
@@ -83,7 +86,7 @@ internal fun addOpenModelProperties(
         model.copy(patternProperties = properties.patternProperties(model)),
         namesByRoot.getValue(root(type)),
         parent,
-        KotlinTypeRegistry.Option.PreserveUnknownFields in options,
+        preserveUnknownFields,
         typeName,
         properties,
       ).also {
@@ -92,6 +95,79 @@ internal fun addOpenModelProperties(
   }
 
   classes.keys.forEach(::decorate)
+  classes.forEach { (type, entry) ->
+    val (model, builder) = entry
+    val storage = completed[type]?.takeIf { it.preserves } ?: return@forEach
+    val guards = CodeBlock.builder()
+    val wireNames = properties.fields(model).map { it.wireName }
+    if (wireNames.isNotEmpty()) {
+      val names =
+        CodeBlock
+          .builder()
+          .apply {
+            wireNames.forEachIndexed { index, name ->
+              if (index > 0) add(", ")
+              add("%S", name)
+            }
+          }.build()
+      guards.addStatement("require(name !in setOf(%L)) { %S + name }", names, "Cannot replace a declared property: ")
+    }
+    if (properties.isClosed(model)) {
+      val patterns = properties.patternProperties(model)
+      val condition =
+        CodeBlock
+          .builder()
+          .apply {
+            if (patterns.isEmpty()) add("false")
+            patterns.forEachIndexed { index, pattern ->
+              if (index > 0) add(" || ")
+              add("%T(%S).containsMatchIn(name)", Regex::class, pattern.pattern)
+            }
+          }.build()
+      guards.addStatement("require(%L) { %S + name }", condition, "Additional properties are not allowed: ")
+    }
+    val guardCode = guards.build()
+    if (guardCode.isEmpty()) return@forEach
+    val setter = builder.funSpecs.firstOrNull { it.name == storage.setterName }
+    if (setter != null) {
+      builder.funSpecs[builder.funSpecs.indexOf(setter)] =
+        setter
+          .toBuilder()
+          .clearBody()
+          .addCode(guardCode)
+          .addCode(setter.body)
+          .build()
+    } else {
+      builder.addFunction(
+        FunSpec
+          .builder(storage.setterName)
+          .addModifiers(KModifier.OVERRIDE)
+          .addKdoc("Preserves permitted fields without replacing declared or inherited model properties.\n")
+          .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
+          .addParameter("name", STRING)
+          .addParameter("value", storage.valueType)
+          .addCode(guardCode)
+          .addStatement("super.%N(name, value)", storage.setterName)
+          .build(),
+      )
+    }
+    if (KModifier.DATA in builder.build().modifiers) {
+      val storageParameter =
+        builder.build().primaryConstructor?.parameters?.firstOrNull { parameter ->
+          parameter.annotations.any { it.typeName == ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter") }
+        }
+      if (storageParameter != null) {
+        builder.addInitializerBlock(
+          CodeBlock
+            .builder()
+            .beginControlFlow("for (name in %N.keys)", storageParameter.name)
+            .add(guardCode)
+            .endControlFlow()
+            .build(),
+        )
+      }
+    }
+  }
 }
 
 /** Storage and setter contract shared by generated descendants. */
@@ -116,7 +192,10 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   if (closed) {
     addAnnotation(AnnotationSpec.builder(JACKSON_JSON_IGNORE_PROPERTIES).addMember("ignoreUnknown = false").build())
   }
-  if (model.patternProperties.isNotEmpty()) {
+  if (model.patternProperties.isNotEmpty() ||
+    (!closed && !preserve) ||
+    (closed && parent?.closed == false && parent.permitsName.isEmpty())
+  ) {
     return addPatternModelStorage(className, model, knownNames, parent, closed, preserve, typeName, properties)
   }
   if (parent != null) {
@@ -180,12 +259,7 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   val decoder =
     if (model.additionalProperties?.type != null) extensionDecoder(className, storageType, valueType) else null
   val mapType = MAP.parameterizedBy(STRING, storageType)
-  addProperty(
-    PropertySpec
-      .builder(storageName, MUTABLE_MAP.parameterizedBy(STRING, storageType), KModifier.PRIVATE)
-      .initializer("linkedMapOf()")
-      .build(),
-  )
+  val constructorStorage = addExtensionStorage(storageName, storageType)
   addProperty(
     PropertySpec
       .builder(accessorName, mapType, KModifier.PUBLIC)
@@ -221,10 +295,45 @@ private fun TypeSpec.Builder.addOpenModelStorage(
           addModifiers(KModifier.OPEN)
           addStatement("require(%N) { %S + name }", permitsName, "Additional properties are not allowed: ")
         }
-      }.addStatement("%N[name] = value", storageName)
-      .build(),
+      }.addStatement(
+        if (constructorStorage) "%N = %N + (name to value)" else "%N[name] = value",
+        *if (constructorStorage) arrayOf(storageName, storageName) else arrayOf(storageName),
+      ).build(),
   )
   return OpenModelExtensionStorage(permitsName, closed = false, setterName, storageType, preserves = true)
+}
+
+/** Includes extension fields in data-class copies without sharing mutable map updates. */
+internal fun TypeSpec.Builder.addExtensionStorage(
+  name: String,
+  valueType: TypeName,
+): Boolean {
+  val constructorStorage = KModifier.DATA in build().modifiers
+  val mapType = (if (constructorStorage) MAP else MUTABLE_MAP).parameterizedBy(STRING, valueType)
+  if (constructorStorage) {
+    val constructor = requireNotNull(build().primaryConstructor).toBuilder()
+    // The decoding-defaults pass consumes the annotation to exclude this implementation name from JSON binding.
+    constructor.addParameter(
+      ParameterSpec
+        .builder(name, mapType)
+        .defaultValue("emptyMap()")
+        .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
+        .build(),
+    )
+    primaryConstructor(constructor.build())
+  }
+  addProperty(
+    PropertySpec
+      .builder(name, mapType, KModifier.PRIVATE)
+      .mutable(constructorStorage)
+      .initializer(
+        if (constructorStorage) "%N" else "linkedMapOf()",
+        *if (constructorStorage) arrayOf(name) else emptyArray(),
+      ).build(),
+  )
+  // KotlinPoet only promotes properties preceding the initializer block into the primary constructor.
+  if (constructorStorage && initializerIndex >= 0) initializerIndex = propertySpecs.size
+  return constructorStorage
 }
 
 /** Keeps one inherited storage map while letting Jackson decode the child's complete extension type. */

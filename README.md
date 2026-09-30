@@ -44,8 +44,10 @@ Gradle Plugin Cache Notes
 - For shared models, generate models once (`generateModel=true`,
   `generateService=false`) and make facade modules depend on that artifact with
   model output disabled. Use distinct service packages when client/server
-  interfaces share names. `preserveUnknownFields=true` enables Jackson extension
-  properties on open Kotlin models without altering their declared fields.
+  interfaces share names. All languages preserve schema-permitted dynamic model
+  fields by default. Use `-no-preserve-unknown-fields` (CLI) or
+  `preserveUnknownFields.set(false)` (Kotlin Gradle plugin) to validate and discard
+  them. See [dynamic model fields](docs/unknown-fields.md).
 - Generated Kotlin broker consumers require `sunday-broker` 2.0.0-beta.6 or newer
   for decode-failure recovery. A sibling `sunday-kt` checkout is substituted by
   default during local development. Run `./gradlew -PuseLocalSundayKt=false check`

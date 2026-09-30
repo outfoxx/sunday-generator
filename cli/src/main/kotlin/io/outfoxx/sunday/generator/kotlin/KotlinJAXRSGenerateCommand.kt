@@ -149,5 +149,6 @@ open class KotlinJAXRSGenerateCommand :
       generateBrokerServices,
       resourceAdapters,
       enforceSecuritySchemes,
+      preserveUnknownFields,
     )
 }

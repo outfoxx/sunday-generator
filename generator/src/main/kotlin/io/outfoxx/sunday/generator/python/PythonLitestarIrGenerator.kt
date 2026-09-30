@@ -39,7 +39,7 @@ class PythonLitestarIrGenerator(
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     if (GeneratedTypeCategory.Model in outputCategories) {
-      modules += PythonModelRenderer(packageName).renderModels(api.models)
+      modules += PythonModelRenderer(packageName, options.preserveUnknownFields).renderModels(api.models)
       modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
     }
 
