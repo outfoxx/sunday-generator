@@ -1919,11 +1919,15 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.declaredWireNames(): CodeBlock =
     modelProperties.fields(this).map { CodeBlock.of("%S", it.wireName) }.joinToCode(", ")
 
+  // A literal __proto__ key sets the object's prototype instead of declaring a data property.
+  private fun objectPropertyKey(name: String): CodeBlock = CodeBlock.of(if (name == "__proto__") "[%S]" else "%S", name)
+
   private fun CodeBlock.Builder.applyUnknownFieldPolicy(
     model: GeneratedModel,
     owner: TypeName.Standard,
     schema: String,
   ): String {
+    val declaresPrototype = modelProperties.fields(model).any { it.wireName == "__proto__" }
     // Zod drops __proto__ while cloning objects. Keep it as an own data property and validate it explicitly.
     // A codec also avoids a one-way transform, which would disable schema.encode().
     add(
@@ -1938,12 +1942,37 @@ class TypeScriptSundayIrGenerator(
     )
     for (encoding in listOf(false, true)) {
       add("    %L: (value, context) => {\n", if (encoding) "encode" else "decode")
-      add("      const result = %L.%L(value);\n", schema, if (encoding) "safeEncode" else "safeParse")
+      if (declaresPrototype) {
+        // Zod reads declared keys directly, so an absent optional __proto__ must not resolve to Object.prototype.
+        add(
+          "      const input = typeof value === 'object' && value !== null && !Array.isArray(value) ? Object.assign(Object.create(null), value) : value;\n",
+        )
+      }
+      add(
+        "      const result = %L.%L(%L);\n",
+        schema,
+        if (encoding) "safeEncode" else "safeParse",
+        if (declaresPrototype) "input" else "value",
+      )
       add(
         "      if (!result.success) { context.issues.push(...result.error.issues.map(issue => ({...issue, input: undefined}))); return %T.NEVER; }\n",
         Z,
       )
       add("      const entries: [string, unknown][] = Object.entries(result.data);\n")
+      if (declaresPrototype) {
+        // Recover the schema's converted value, including defaults and nested codecs, rather than the raw input.
+        add(
+          "      const prototype = wireSchema.shape['__proto__'].%L(input['__proto__']);\n",
+          if (encoding) "safeEncode" else "safeParse",
+        )
+        add(
+          "      if (!prototype.success) { context.issues.push(...prototype.error.issues.map(issue => ({...issue, input: undefined, path: ['__proto__', ...issue.path]}))); return %T.NEVER; }\n",
+          Z,
+        )
+        add(
+          "      if (Object.hasOwn(input, '__proto__') || prototype.data !== undefined) entries.push(['__proto__', prototype.data]);\n",
+        )
+      }
       add("      if (typeof value === 'object' && value !== null && Object.hasOwn(value, '__proto__')) {\n")
       add("        const item = (value as {[key: string]: unknown})['__proto__'];\n")
       val matches = modelProperties.patternProperties(model).filter { Regex(it.pattern).containsMatchIn("__proto__") }
@@ -1958,7 +1987,7 @@ class TypeScriptSundayIrGenerator(
                 patternIntegerCheck(pattern.type, "value")?.let { check -> add(".refine((value) => %L)", check) }
               }.build()
           }.toMutableList()
-      if (matches.isEmpty() && modelProperties.fields(model).none { it.wireName == "__proto__" }) {
+      if (matches.isEmpty() && !declaresPrototype) {
         if (modelProperties.isClosed(model)) {
           add(
             "        context.issues.push({code: 'custom', path: ['__proto__'], input: value, message: 'Additional properties are not allowed'});\n",
@@ -1978,7 +2007,7 @@ class TypeScriptSundayIrGenerator(
           index,
         )
       }
-      if (options.preserveUnknownFields) add("        entries.push(['__proto__', item]);\n")
+      if (options.preserveUnknownFields && !declaresPrototype) add("        entries.push(['__proto__', item]);\n")
       add("      }\n")
       if (!options.preserveUnknownFields) {
         add("      const declared = new Set<string>([%L]);\n", model.declaredWireNames())
@@ -2171,7 +2200,7 @@ class TypeScriptSundayIrGenerator(
         if (wireProperties.isNotEmpty()) {
           add("\n")
           wireProperties.forEachIndexed { idx, (property, propertySchema) ->
-            add("    %S: ", property.serializationName ?: property.name)
+            add("    %L: ", objectPropertyKey(property.serializationName ?: property.name))
             add(propertySchema)
             if (idx < wireProperties.lastIndex) {
               add(",")
@@ -2243,7 +2272,7 @@ class TypeScriptSundayIrGenerator(
         if (wireProperties.isNotEmpty()) {
           add("\n")
           wireProperties.forEachIndexed { idx, (property, propertySchema) ->
-            add("    %S: ", property.serializationName ?: property.name)
+            add("    %L: ", objectPropertyKey(property.serializationName ?: property.name))
             add(propertySchema)
             if (idx < wireProperties.lastIndex) {
               add(",")
@@ -2334,8 +2363,8 @@ class TypeScriptSundayIrGenerator(
 
         encodeProperties.forEachIndexed { idx, (wireName, encodeValue) ->
           add(
-            "      %S: %L,",
-            wireName,
+            "      %L: %L,",
+            objectPropertyKey(wireName),
             encodeValue,
           )
           if (idx < encodeProperties.lastIndex) {
