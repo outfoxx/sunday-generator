@@ -29,25 +29,28 @@ tags:
     description: Project operations.
     x-sunday-service-group: true
     x-sunday-policy:
-      timeout: PT30S
-      retry:
-        maxRetries: "1"
-        maxDuration: PT30S
-      clientRateLimit:
-        value: "10"
-        window: PT10S
-      source: tag
+      all:
+        timeout: PT30S
+        retry:
+          maxRetries: "1"
+          maxDuration: PT30S
+      client:
+        rateLimit:
+          value: "10"
+          window: PT10S
   - name: audit
     x-sunday-policy: {}
 paths:
   /projects:
     x-sunday-policy:
-      retry:
-        jitter: PT50MS
-      circuitBreaker:
-        failureRatio: "0.5"
-      serverRateLimit:
-        minSpacing: PT100MS
+      all:
+        retry:
+          jitter: PT50MS
+        circuitBreaker:
+          failureRatio: "0.5"
+      server:
+        rateLimit:
+          minSpacing: PT100MS
     post:
       tags: [projects, audit]
       operationId: createProject
@@ -59,19 +62,21 @@ paths:
       x-sunday-zanzibar:
         permission: project.write
       x-sunday-policy:
-        timeout: PT5S
-        retry:
-          maxRetries: "3"
-          delay: PT1S
-        circuitBreaker:
-          requestVolumeThreshold: "10"
-        clientRateLimit:
-          value: "20"
-          window: PT1S
-        serverRateLimit:
-          value: "100"
-          window: PT1M
-        source: openapi
+        all:
+          timeout: PT5S
+          retry:
+            maxRetries: "3"
+            delay: PT1S
+          circuitBreaker:
+            requestVolumeThreshold: "10"
+        client:
+          rateLimit:
+            value: "20"
+            window: PT1S
+        server:
+          rateLimit:
+            value: "100"
+            window: PT1M
       responses:
         "201":
           description: Created.

@@ -286,19 +286,9 @@ class TypeScriptSundayIrGeneratorTest {
                     |const documented: %T = {id: 'one', detail: 'detail', payload: null};
                     |const parent: %T = documented;
                     |if (parent.id !== 'one') throw new Error('inherited field changed');
-                    |const schemaCache = new Map<object, unknown>();
-                    |const runtime = {
-                    |  policy: {},
-                    |  resolveSchema(ref: any): any {
-                    |    if (ref && typeof ref.build === 'function') {
-                    |      if (!schemaCache.has(ref)) {
-                    |        schemaCache.set(ref, ref.build(runtime));
-                    |      }
-                    |      return schemaCache.get(ref);
-                    |    }
-                    |    return ref;
-                    |  },
-                    |};
+                    |import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+                    |const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
+                    |  numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
                     |const recordSchema = runtime.resolveSchema(%T);
                     |recordSchema.parse(documented);
                     |for (const payload of [null, 'value']) {
@@ -737,7 +727,15 @@ class TypeScriptSundayIrGeneratorTest {
                   GeneratedModelProperty("type", GeneratedTypeRef.scalar("string", format = "uri")),
                   GeneratedModelProperty("title", GeneratedTypeRef.scalar("string")),
                   GeneratedModelProperty("status", GeneratedTypeRef.scalar("integer")),
-                  GeneratedModelProperty("detail", GeneratedTypeRef.scalar("string"), required = true),
+                  GeneratedModelProperty(
+                    "detail",
+                    GeneratedTypeRef.scalar("string"),
+                    required = true,
+                    validation =
+                      mapOf(
+                        "minLength" to "2",
+                      ),
+                  ),
                   GeneratedModelProperty("instance", GeneratedTypeRef.scalar("string", format = "uri")),
                 ),
             ),
@@ -787,8 +785,13 @@ class TypeScriptSundayIrGeneratorTest {
             """
             import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
             import {BadRequestProblem, BadRequestProblemSchema} from './bad-request-problem';
+            import {z} from 'zod';
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
             const schema = runtime.resolveSchema(BadRequestProblemSchema);
+            let rejected = false;
+            try { new BadRequestProblem({detail: '', validation: {}}); }
+            catch (error) { rejected = error instanceof z.ZodError; }
+            if (!rejected) throw new Error('constructor bypassed native schema constraints');
             const dynamic = {nested: [null, true, {value: 'future'}]};
             const problem = schema.parse({detail: 'before', validation: {name: 'bad'}, future: dynamic, additionalProperties: {wire: true}});
             const copied = problem.copy({detail: 'after'});
@@ -1155,9 +1158,9 @@ class TypeScriptSundayIrGeneratorTest {
                   """
                   |const api = %T({} as any);
                   |const omitted = api.searchUsers('ID', undefined) as any;
-                  |if (omitted.request.queryParameters.filter !== undefined) throw new Error('optional filter changed');
+                  |if (omitted.spec.request.queryParameters.filter !== undefined) throw new Error('optional filter changed');
                   |const supplied = api.searchUsers('ID', 'FILTER') as any;
-                  |if (supplied.request.queryParameters.filter !== 'FILTER') throw new Error('filter changed');
+                  |if (supplied.spec.request.queryParameters.filter !== 'FILTER') throw new Error('filter changed');
                   |for (const [id, filter] of [[undefined, undefined], ['invalid!', undefined], ['ID', 'invalid!']]) {
                   |  let rejected = false;
                   |  try { api.searchUsers(id as string, filter); } catch { rejected = true; }
@@ -1644,19 +1647,9 @@ class TypeScriptSundayIrGeneratorTest {
               .addCode(
                 CodeBlock.of(
                   """
-                  |const schemaCache = new Map<object, unknown>();
-                  |const runtime = {
-                  |  policy: {},
-                  |  resolveSchema(ref: any): any {
-                  |    if (ref && typeof ref.build === 'function') {
-                  |      if (!schemaCache.has(ref)) {
-                  |        schemaCache.set(ref, ref.build(runtime));
-                  |      }
-                  |      return schemaCache.get(ref);
-                  |    }
-                  |    return ref;
-                  |  },
-                  |};
+                  |import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+                  |const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
+                  |  numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
                   |const schema = runtime.resolveSchema(%T);
                   |const TaskStateType = %T;
                   |const firstFromValue = TaskStateType.fromValue('future');
@@ -1668,9 +1661,9 @@ class TypeScriptSundayIrGeneratorTest {
                   |    firstUnknown !== secondUnknown || firstUnknown !== TaskStateType.Unknown('future')) {
                   |  throw new Error('equal unknown values were not interned');
                   |}
-                  |if (TaskStateType.Unknown('pending') !== TaskStateType.Pending ||
+                  |if (TaskStateType.Unknown('pending') === TaskStateType.Pending ||
                   |    TaskStateType.fromValue('pending') !== TaskStateType.Pending) {
-                  |  throw new Error('known values were not canonicalized');
+                  |  throw new Error('explicit fallback identity was lost');
                   |}
                   |if (firstUnknown === otherUnknown || firstUnknown.kind !== 'Unknown' || firstUnknown.rawValue !== 'future') {
                   |  throw new Error('distinct unknown values did not retain their identity and data');
@@ -1704,7 +1697,8 @@ class TypeScriptSundayIrGeneratorTest {
     assertTrue(source.contains("private static instances: Map<string, TaskState>"), source)
     assertTrue(source.contains("static Unknown(rawValue: string): TaskState"), source)
     assertTrue(source.contains("return TaskState.intern('Unknown', rawValue)"), source)
-    assertTrue(source.contains("return TaskState.instances.get(rawValue) ?? TaskState.Unknown(rawValue)"), source)
+    assertTrue(source.contains("case 'pending': return TaskState.Pending"), source)
+    assertTrue(source.contains("const key = kind.length + ':' + kind + rawValue"), source)
     assertTrue(source.contains("encode: (value) => value.rawValue"), source)
     assertTrue(source.contains("readonly kind: 'Pending' | 'Running' | 'Unknown'"), source)
     assertTrue(source.contains("toString(): string"), source)
@@ -1850,34 +1844,26 @@ class TypeScriptSundayIrGeneratorTest {
               .addCode(
                 CodeBlock.of(
                   """
-                  |const schemaCache = new Map<object, unknown>();
-                  |const runtime = {
-                  |  policy: {},
-                  |  resolveSchema(ref: any): any {
-                  |    if (ref && typeof ref.build === 'function') {
-                  |      if (!schemaCache.has(ref)) {
-                  |        schemaCache.set(ref, ref.build(runtime));
-                  |      }
-                  |      return schemaCache.get(ref);
-                  |    }
-                  |    return ref;
-                  |  },
-                  |};
+                  |import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+                  |const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601,
+                  |  numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
                   |const eventEnvelopeSchema = runtime.resolveSchema(%T);
-                  |const canonicalAlias = eventEnvelopeSchema.parse({type: 'event.legacy', data: {id: 'canonical'}});
+                  |const dataEvent = z.object({type: z.object({rawValue: z.string()}), data: z.object({id: z.string()})});
+                  |const canonicalAlias = dataEvent.parse(eventEnvelopeSchema.parse({type: 'event.legacy', data: {id: 'canonical'}}));
                   |if (canonicalAlias.data.id !== 'canonical' || canonicalAlias.type.rawValue !== 'event.legacy') {
                   |  throw new Error('canonical mapping alias did not decode');
                   |}
                   |const notificationSchema = runtime.resolveSchema(%T);
                   |const recognized = notificationSchema.parse({event: {type: 'event.one', data: {id: 'known'}}});
-                  |if (recognized.event.data.id !== 'known' || recognized.event.type.rawValue !== 'event.one') {
+                  |if (dataEvent.parse(recognized.event).data.id !== 'known' || recognized.event.type.rawValue !== 'event.one') {
                   |  throw new Error('recognized canonical event did not decode');
                   |}
                   |const aliased = notificationSchema.parse({event: {type: 'event.legacy', data: {id: 'legacy', future: null}, future: {nested: [null, true]}}});
-                  |if (aliased.event.data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
+                  |if (dataEvent.parse(aliased.event).data.id !== 'legacy' || aliased.event.type.rawValue !== 'event.legacy') {
                   |  throw new Error('aliased canonical event did not decode');
                   |}
-                  |const encodedAlias = %T.encode(notificationSchema, aliased);
+                  |const encodedAlias = %T.object({event: z.object({type: z.string(), data: z.looseObject({id: z.string()})}).passthrough()})
+                  |  .parse(z.encode(notificationSchema, aliased));
                   |if (encodedAlias.event.type !== 'event.legacy' || encodedAlias.event.data.id !== 'legacy') {
                   |  throw new Error('aliased canonical event did not encode');
                   |}
@@ -1885,7 +1871,7 @@ class TypeScriptSundayIrGeneratorTest {
                   |  throw new Error('mapped discriminator lost field-preservation policy');
                   |}
                   |const unknown = notificationSchema.parse({event: {type: 'future.event', detail: 'preserved'}});
-                  |if (unknown.event.type.rawValue !== 'future.event' || unknown.event.rawBody.detail !== 'preserved') {
+                  |if (unknown.event.type.rawValue !== 'future.event' || z.object({rawBody: z.object({detail: z.string()})}).parse(unknown.event).rawBody.detail !== 'preserved') {
                   |  throw new Error('unknown event did not preserve its discriminator and raw body');
                   |}
                   |function assertInvalid(input: unknown): void {
@@ -1923,7 +1909,7 @@ class TypeScriptSundayIrGeneratorTest {
       ),
       envelopeSource,
     )
-    assertTrue(envelopeSource.contains("const knownSchema = z.union(["), envelopeSource)
+    assertTrue(envelopeSource.contains("const branchesSchema = z.union(["), envelopeSource)
   }
 
   @Test

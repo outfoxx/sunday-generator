@@ -27,4 +27,6 @@ data class GeneratedAdditionalProperties(
   val type: GeneratedTypeRef? = null,
   val validation: Map<String, String> = mapOf(),
   val documentation: GeneratedDocumentation? = null,
+  /** Scalar wire values permitted by enum or const; null means unrestricted. */
+  val allowedValues: List<Any?>? = null,
 )

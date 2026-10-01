@@ -24,10 +24,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
+import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
@@ -38,6 +41,8 @@ class PythonClientRenderer(
   private val registerProblems: Boolean = false,
   models: List<GeneratedModel> = emptyList(),
   private val defaultMediaTypes: List<String> = listOf("application/json"),
+  private val profile: String? = null,
+  private val security: (GeneratedService, GeneratedOperation) -> GeneratedClientSecurity? = { _, _ -> null },
 ) {
 
   private val modelIndex = models.associateBy { model -> model.name }
@@ -101,7 +106,7 @@ class PythonClientRenderer(
         problemRegistration,
         PythonCodeBlock.join(
           service.operations.map {
-            it.renderOperationMethod(mediaSelection.contentTypes, mediaSelection.acceptTypes)
+            it.renderOperationMethod(mediaSelection.contentTypes, mediaSelection.acceptTypes, security(service, it))
           },
           separator = "\n\n",
         ),
@@ -113,6 +118,7 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderOperationMethod(
     defaultContentTypes: List<String>,
     defaultAcceptTypes: List<String>,
+    security: GeneratedClientSecurity?,
   ): PythonCodeBlock {
     val signature = renderSignatureParameters()
     val responseType = renderSuccessType()
@@ -144,7 +150,7 @@ class PythonClientRenderer(
             "        return self.transport.event_source(request_spec)",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
         )
       } else if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
         PythonCodeBlock.of(
@@ -154,7 +160,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
           eventDecoderName(),
         )
       } else if (exchange != null) {
@@ -169,7 +175,7 @@ class PythonClientRenderer(
           "        request_spec: %T[%C] = %C\n%L",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
           transportCall,
         )
       } else {
@@ -184,7 +190,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
           PythonSymbol("sunday", "OperationSpec"),
           renderRequestBodyType(),
           responseType,
@@ -260,13 +266,14 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderRequestSpec(
     defaultContentTypes: List<String>,
     defaultAcceptTypes: List<String>,
+    security: GeneratedClientSecurity?,
   ): PythonCodeBlock =
     PythonCodeBlock.of(
       """
       |%T(
       |            method=%S,
       |            path_template=%C,
-      |%C%C%C%C        )
+      |%C%C%C%C%C        )
       """.trimMargin(),
       PythonSymbol("sunday", "RequestSpec"),
       httpMethod(),
@@ -275,7 +282,59 @@ class PythonClientRenderer(
       renderParameterArgument(),
       renderRequestPayloadSpec(defaultContentTypes),
       renderAcceptTypes(defaultAcceptTypes),
+      security?.let { PythonCodeBlock.of("            security=%C,\n", it.renderBindings()) } ?: PythonCodeBlock.of(""),
     )
+
+  private fun GeneratedClientSecurity.renderBindings(): PythonCodeBlock =
+    if (bindings.isEmpty()) {
+      PythonCodeBlock.of("()")
+    } else {
+      PythonCodeBlock.of(
+        "(\n%C\n            )",
+        PythonCodeBlock.join(
+          bindings.map { (name, binding) ->
+            val transport = schemes.getValue(name).credentialTransport()
+            val arguments =
+              mutableListOf(
+                PythonCodeBlock.of("scheme=%S", name),
+                PythonCodeBlock.of("provider=%S", binding.provider),
+                PythonCodeBlock.of("flow=%S", (binding.flow ?: GeneratedSecurityBinding.Flow.EXTERNAL).wireName),
+                PythonCodeBlock.of(
+                  "scopes=%C",
+                  renderTuple(
+                    requirement.permissions[name].orEmpty().map {
+                      PythonCodeBlock.of("%S", it)
+                    },
+                  ),
+                ),
+              )
+            mapOf(
+              "profile" to profile,
+              "discovery_url" to binding.discoveryUrl,
+              "authorization_url" to binding.authorizationUrl,
+              "token_url" to binding.tokenUrl,
+              "refresh_url" to binding.refreshUrl,
+              "audience" to binding.audience,
+              "resource" to binding.resource,
+            ).forEach { (key, value) -> value?.let { arguments += PythonCodeBlock.of("%L=%S", key, it) } }
+            arguments +=
+              PythonCodeBlock.of(
+                "transport=%T(\n                        location=%S,\n                        name=%S,\n%C                    )",
+                PythonSymbol("sunday", "SecurityTransport"),
+                transport.location,
+                transport.name,
+                transport.prefix?.let { PythonCodeBlock.of("                        prefix=%S,\n", it) }
+                  ?: PythonCodeBlock.of(""),
+              )
+            PythonCodeBlock.of(
+              "                %T(\n                    %C,\n                ),",
+              PythonSymbol("sunday", "SecurityBinding"),
+              PythonCodeBlock.join(arguments, ",\n                    "),
+            )
+          },
+        ),
+      )
+    }
 
   private fun GeneratedOperation.renderRequestPayloadSpec(defaultContentTypes: List<String>): PythonCodeBlock =
     when {
@@ -285,11 +344,19 @@ class PythonClientRenderer(
       else ->
         PythonCodeBlock.of(
           "            body=body,\n" +
-            "            content_types=%C,\n",
+            "            content_types=%C,\n" +
+            "%C",
           if (requestBody.mediaTypes == defaultContentTypes) {
             PythonCodeBlock.of("self.default_content_types")
           } else {
             renderMediaTypes(requestBody.mediaTypes)
+          },
+          if (requestBody.isPythonStreamingRequestBody ||
+            requestBody.requestVariants().any { it.runtimeType() != null }
+          ) {
+            PythonCodeBlock.of("")
+          } else {
+            PythonCodeBlock.of("            body_adapter=%L,\n", requestBody.type.adapterName())
           },
         )
     }
@@ -761,13 +828,11 @@ class PythonClientRenderer(
     val attempts = requestBody.requestVariants().map { variant -> variant.renderValidationAttempt() }
     return PythonCodeBlock.of(
       "def %L(body: %C) -> %T[%C]:\n" +
-        "    validated: %C\n" +
         "%C\n" +
         "    raise ValueError(%S)",
       requestPayloadFunctionName(),
       bodyType,
       PythonSymbol("sunday", "RequestPayloadSpec"),
-      bodyType,
       bodyType,
       PythonCodeBlock.join(attempts, separator = "\n"),
       "Request body does not match a declared payload for operation '$id'",
@@ -797,8 +862,7 @@ class PythonClientRenderer(
     return if (runtimeType != null) {
       PythonCodeBlock.of(
         "    if isinstance(body, %T):\n" +
-          "        validated = body\n" +
-          "        return %T(body=validated, content_types=%C)",
+          "        return %T(body=body, content_types=%C)",
         runtimeType,
         PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
@@ -806,15 +870,20 @@ class PythonClientRenderer(
     } else {
       PythonCodeBlock.of(
         "    try:\n" +
-          "        validated = %L.validate_python(body)\n" +
+          "        %L.validate_python(body)\n" +
           "    except %T:\n" +
           "        pass\n" +
           "    else:\n" +
-          "        return %T(body=validated, content_types=%C)",
+          "        return %T(\n" +
+          "            body=body,\n" +
+          "            content_types=%C,\n" +
+          "            body_adapter=%L,\n" +
+          "        )",
         this.type.adapterName(),
         PythonSymbol("pydantic", "ValidationError"),
         PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
+        this.type.adapterName(),
       )
     }
   }

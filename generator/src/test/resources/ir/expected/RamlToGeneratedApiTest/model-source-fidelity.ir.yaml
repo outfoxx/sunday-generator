@@ -81,6 +81,8 @@ models:
   - kind: "SCALAR"
     name: "string"
   collection: "SET"
+  validation:
+    uniqueItems: "true"
 media:
   request:
   - "application/json"

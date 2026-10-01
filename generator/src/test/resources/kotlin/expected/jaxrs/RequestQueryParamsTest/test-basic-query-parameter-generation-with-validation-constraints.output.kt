@@ -1,5 +1,6 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.javax.EntitySchema
 import io.test.Test
 import javax.validation.Valid
 import javax.validation.constraints.NotNull
@@ -18,6 +19,7 @@ import kotlin.String
 public interface API {
   @GET
   @Path(value = "/tests")
+  @EntitySchema
   public fun fetchTest(
     @QueryParam(value = "obj") @NotNull @Valid obj: Test,
     @QueryParam(value = "str-req") @NotNull strReq: String,

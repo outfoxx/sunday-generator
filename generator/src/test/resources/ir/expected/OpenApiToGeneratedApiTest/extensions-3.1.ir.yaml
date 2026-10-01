@@ -45,23 +45,70 @@ services:
           principalFallback: true
     media: {}
     policy:
-      timeout: "PT5S"
-      retry:
-        maxRetries: "3"
-        maxDuration: "PT30S"
-        jitter: "PT50MS"
-        delay: "PT1S"
-      circuitBreaker:
-        failureRatio: "0.5"
-        requestVolumeThreshold: "10"
-      clientRateLimit:
-        value: "20"
-        window: "PT1S"
-      serverRateLimit:
-        minSpacing: "PT100MS"
-        value: "100"
-        window: "PT1M"
-      source: "openapi"
+      all:
+        timeout:
+          enabled: true
+          value:
+            seconds: 5
+        retry:
+          enabled: true
+          value:
+            maxRetries: 3
+            delay:
+              seconds: 1
+        circuitBreaker:
+          enabled: true
+          value:
+            requestVolumeThreshold: 10
+      client:
+        rateLimit:
+          enabled: true
+          value:
+            value: 20
+            window:
+              seconds: 1
+      server:
+        rateLimit:
+          enabled: true
+          value:
+            value: 100
+            window:
+              seconds: 60
+      inherited:
+      - all:
+          timeout:
+            enabled: true
+            value:
+              seconds: 30
+          retry:
+            enabled: true
+            value:
+              maxRetries: 1
+              maxDuration:
+                seconds: 30
+        client:
+          rateLimit:
+            enabled: true
+            value:
+              value: 10
+              window:
+                seconds: 10
+      - all:
+          retry:
+            enabled: true
+            value:
+              jitter:
+                nanos: 50000000
+          circuitBreaker:
+            enabled: true
+            value:
+              failureRatio: 0.5
+        server:
+          rateLimit:
+            enabled: true
+            value:
+              minSpacing:
+                nanos: 100000000
     tags:
     - "projects"
     - "audit"
@@ -143,14 +190,25 @@ tags:
 - name: "projects"
   serviceGroup: true
   policy:
-    timeout: "PT30S"
-    retry:
-      maxRetries: "1"
-      maxDuration: "PT30S"
-    clientRateLimit:
-      value: "10"
-      window: "PT10S"
-    source: "tag"
+    all:
+      timeout:
+        enabled: true
+        value:
+          seconds: 30
+      retry:
+        enabled: true
+        value:
+          maxRetries: 1
+          maxDuration:
+            seconds: 30
+    client:
+      rateLimit:
+        enabled: true
+        value:
+          value: 10
+          window:
+            seconds: 10
   documentation:
     description: "Project operations."
 - name: "audit"
+  policy: {}

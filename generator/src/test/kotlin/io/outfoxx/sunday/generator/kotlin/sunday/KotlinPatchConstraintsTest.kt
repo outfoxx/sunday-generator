@@ -104,6 +104,7 @@ class KotlinPatchConstraintsTest {
     val mapper = jacksonObjectMapper()
     val empty = mapper.convertValue(emptyMap<String, Any>(), model)
     assertEquals(mapper.createObjectNode(), mapper.valueToTree(empty))
+    assertEquals(emptyMap<String, Any?>(), model.getMethod("validationFields").invoke(empty))
     for (name in listOf("Data", "Encoded", "Raw", "LongData")) {
       val method = model.getMethod("get$name")
       assertEquals(ByteArray::class.java, (method.genericReturnType as ParameterizedType).actualTypeArguments.single())
@@ -126,6 +127,7 @@ class KotlinPatchConstraintsTest {
     }
     val deleted = mapper.convertValue(mapOf("encoded-data" to null), model)
     assertTrue(model.getMethod("getEncoded").invoke(deleted) is PatchOp.Delete<*>)
+    assertEquals(mapOf("encoded-data" to null), model.getMethod("validationFields").invoke(deleted))
     assertEquals(mapper.valueToTree(mapOf("encoded-data" to null)), mapper.valueToTree(deleted))
     for ((name, invalid) in listOf(
       "data" to "Tm8=",
@@ -147,7 +149,7 @@ class KotlinPatchConstraintsTest {
       assertTrue(
         assertThrows(InvocationTargetException::class.java) {
           constructor.newInstance(*args)
-        }.cause is IllegalArgumentException,
+        }.cause is javax.validation.ConstraintViolationException,
       )
     }
   }
@@ -194,7 +196,7 @@ class KotlinPatchConstraintsTest {
           GeneratedTypeRef.scalar("string", nullable = true),
           required = true,
           defaultValue = "active",
-          allowedValues = listOf("active"),
+          allowedValues = listOf("active", null),
         ),
       )
     val patch = GeneratedModel("RestrictedPatch", GeneratedModel.Kind.OBJECT, properties = fields, patchable = true)
@@ -245,7 +247,7 @@ class KotlinPatchConstraintsTest {
     assertTrue(
       assertThrows(InvocationTargetException::class.java) {
         constructor.newInstance(*arguments)
-      }.cause is IllegalArgumentException,
+      }.cause is javax.validation.ConstraintViolationException,
     )
 
     val payload =

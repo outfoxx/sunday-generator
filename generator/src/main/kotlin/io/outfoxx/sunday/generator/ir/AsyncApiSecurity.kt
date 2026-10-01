@@ -244,7 +244,7 @@ internal class AsyncApiSecurity(
     val definition =
       value.filterKeys {
         it in
-          setOf("type", "scheme", "bearerFormat", "name", "in", "openIdConnectUrl", "flows")
+          setOf("type", "scheme", "bearerFormat", "name", "in", "openIdConnectUrl", "flows", "x-sunday-security")
       }
     val canonical = ObjectMapper().writeValueAsString(canonical(definition))
     val digest =
@@ -300,6 +300,12 @@ internal class AsyncApiSecurity(
       type = type,
       scheme = value["scheme"] as? String,
       bearerFormat = value["bearerFormat"] as? String,
+      bindings =
+        if (value.containsKey("x-sunday-security")) {
+          GeneratedSecurityReader.binding(value["x-sunday-security"], "$path.x-sunday-security")
+        } else {
+          null
+        },
       headers = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.HEADER }),
       queryParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.QUERY }),
       cookieParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.COOKIE }),

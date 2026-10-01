@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.GenerationContext
 import io.outfoxx.sunday.generator.GenerationMode
 
 /**
@@ -36,4 +37,6 @@ data class GeneratedApiIrOptions
     val generationMode: GenerationMode? = null,
     /** Document retrieval and offline cache options for native OpenAPI conversion. */
     val openApiReferences: OpenApiReferenceOptions = OpenApiReferenceOptions(),
+    /** Optional artifact projection; null retains all environment metadata in the IR. */
+    val projection: GenerationContext? = null,
   )

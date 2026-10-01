@@ -21,6 +21,7 @@ package io.outfoxx.sunday.generator.gradle
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.RequestTolerance
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
@@ -98,6 +99,16 @@ abstract class SundayGenerate
 
     @get:Input
     val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
+
+    /** Explicit environment profile used by policy and security metadata. */
+    @get:Input
+    @get:Optional
+    val profile: Property<String> = objects.property(String::class.java)
+
+    /** Default request behavior for schema-declared tolerant values. */
+    @get:Input
+    val requestTolerance: Property<RequestTolerance> =
+      objects.property(RequestTolerance::class.java).convention(RequestTolerance.Strict)
 
     @get:Input
     @get:Optional
@@ -412,6 +423,8 @@ abstract class SundayGenerate
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
                   preserveUnknownFields = preserveUnknownFields.get(),
+                  profile = profile.orNull,
+                  requestTolerance = requestTolerance.get(),
                   resourceAdapters = resourceAdapters.get(),
                   enforceSecuritySchemes = enforceSecuritySchemes.get(),
                 ),
@@ -431,6 +444,8 @@ abstract class SundayGenerate
                   servicesFromTags = servicesFromTags.get(),
                   generateBrokerServices = generateBrokerServices.get(),
                   preserveUnknownFields = preserveUnknownFields.get(),
+                  profile = profile.orNull,
+                  requestTolerance = requestTolerance.get(),
                 ),
               ).generateServiceTypes()
           }

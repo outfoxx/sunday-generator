@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
+import io.outfoxx.sunday.generator.ir.GeneratedExceptionRef
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrs
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
 import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
@@ -40,6 +41,9 @@ import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedPolicy
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyDuration
+import io.outfoxx.sunday.generator.ir.GeneratedPolicySetting
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedProtocol
 import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -260,7 +264,10 @@ class KotlinJAXRSIrGeneratorTest {
         val nullability = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Nullability.kt")
         assertTrue(nullability.contains("strictText: String"), nullability)
         assertFalse(nullability.contains("strictText: String?"), nullability)
-        assertTrue(nullability.contains("values: List<String>?"), nullability)
+        assertEquals(
+          "java.util.List<java.lang.String>",
+          nullabilityType.getMethod("getValues").genericReturnType.typeName,
+        )
       }
     }
   }
@@ -601,7 +608,7 @@ class KotlinJAXRSIrGeneratorTest {
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertFalse(source.contains("@Path(value = \"\")"), source)
-    assertTrue(source.contains("import javax.validation.constraints.NotNull"), source)
+    assertTrue(source.contains("import jakarta.validation.constraints.NotNull"), source)
     assertTrue(source.contains("@RestQuery @NotNull @Size(min = 2) q: String"), source)
   }
 
@@ -1098,7 +1105,13 @@ class KotlinJAXRSIrGeneratorTest {
     assertTrue(source.contains("public sealed class TaskState"), source)
     assertTrue(source.contains("public data class Unknown("), source)
     assertTrue(source.contains("else -> Unknown(rawValue)"), source)
-    assertTrue(source.contains("public override fun toString(): String = wireValue"), source)
+    assertTrue(source.contains("public final override fun toString(): String = wireValue"), source)
+    val pending =
+      compilation.classLoader
+        .loadClass("io.test.TaskState\$Pending")
+        .getField("INSTANCE")
+        .get(null)
+    assertEquals("pending", pending.toString())
     assertTrue(source.contains("@get:JsonValue"), source)
   }
 
@@ -1495,7 +1508,10 @@ class KotlinJAXRSIrGeneratorTest {
     )
     assertTrue(notificationFallbackSource.contains(") : NotificationProgress {"), notificationFallbackSource)
     assertTrue(notificationFallbackSource.contains("public val rawBody: ObjectNode"), notificationFallbackSource)
-    assertTrue(notificationFallbackSource.contains("generator.writeTree(value.rawBody)"), notificationFallbackSource)
+    assertTrue(
+      notificationFallbackSource.contains("for ((name, node) in value.rawBody.properties())"),
+      notificationFallbackSource,
+    )
     assertTrue(
       strictNotificationHierarchySource.contains("public sealed interface StrictNotificationProgress"),
       strictNotificationHierarchySource,
@@ -1613,8 +1629,8 @@ class KotlinJAXRSIrGeneratorTest {
 
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(requestSource.contains("@get:Email"), requestSource)
-    assertTrue(requestSource.contains("@get:Size(min = 8)"), requestSource)
-    assertTrue(requestSource.contains("@get:Pattern(regexp = \"\"\"^[A-Za-z0-9_]+$\"\"\")"), requestSource)
+    assertTrue(requestSource.contains("minLength = 8"), requestSource)
+    assertTrue(requestSource.contains("patterns = ["), requestSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -1715,18 +1731,29 @@ class KotlinJAXRSIrGeneratorTest {
   fun `rejects unsupported Quarkus fault tolerance policy metadata`() {
     listOf(
       GeneratedPolicy(
-        retry = mapOf("maximumRetries" to "3"),
-      ) to "Unsupported Quarkus retry policy key(s): maximumRetries",
-      GeneratedPolicy(circuitBreaker = mapOf("requestVolume" to "10")) to
-        "Unsupported Quarkus circuitBreaker policy key(s): requestVolume",
-      GeneratedPolicy(serverRateLimit = mapOf("window" to "PT1M")) to
+        server =
+          GeneratedPolicyValues(
+            rateLimit =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.RateLimit(window = GeneratedPolicyDuration(60)),
+              ),
+          ),
+      ) to
         "Quarkus rateLimit policy requires integer key 'value'",
-      GeneratedPolicy(timeout = "100") to
-        "Quarkus timeout policy key 'value' must be an ISO-8601 duration " +
-        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
-      GeneratedPolicy(retry = mapOf("delay" to "100")) to
-        "Quarkus retry policy key 'delay' must be an ISO-8601 duration " +
-        "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
+      GeneratedPolicy(
+        all = GeneratedPolicyValues(timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration())),
+      ) to
+        "Quarkus timeout must be positive",
+      GeneratedPolicy(
+        all =
+          GeneratedPolicyValues(
+            retry =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.Retry(retryOn = listOf(GeneratedExceptionRef(problem = "missing"))),
+              ),
+          ),
+      ) to
+        "missing or ambiguous generated problem 'missing'",
     ).forEach { (policy, expectedMessage) ->
       val typeRegistry =
         KotlinTypeRegistry(
@@ -2068,7 +2095,7 @@ class KotlinJAXRSIrGeneratorTest {
         "io.test",
         null,
         GenerationMode.Client,
-        setOf(),
+        setOf(ValidationConstraints, UseJakartaPackages),
         problemLibrary = KotlinProblemLibrary.ZALANDO,
         problemRfc = KotlinProblemRfc.RFC7807,
       )
@@ -2084,13 +2111,15 @@ class KotlinJAXRSIrGeneratorTest {
     ).generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
+    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     val aggregateSource = kotlinSource("io.test.service", findType("io.test.service.TurnPostAPI", builtTypes))
     val usersSource = kotlinSource("io.test.service", findType("io.test.service.UsersAPI", builtTypes))
 
-    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(aggregateSource.contains("@RegisterRestClient(baseUri = \"http://localhost:9080\")"), aggregateSource)
     assertFalse(aggregateSource.contains("@Path(value = \"http://localhost:9080\")"), aggregateSource)
     assertFalse(usersSource.contains("@RegisterRestClient"), usersSource)
+    assertTrue(aggregateSource.contains("@RegisterProvider(ClientModelValidation::class)"), aggregateSource)
+    assertFalse(usersSource.contains("@RegisterProvider"), usersSource)
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -2101,7 +2130,7 @@ class KotlinJAXRSIrGeneratorTest {
         "io.test",
         null,
         GenerationMode.Client,
-        setOf(),
+        setOf(ValidationConstraints, UseJakartaPackages),
         problemLibrary = KotlinProblemLibrary.ZALANDO,
         problemRfc = KotlinProblemRfc.RFC7807,
       )
@@ -2122,14 +2151,16 @@ class KotlinJAXRSIrGeneratorTest {
     ).generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
+    val compiled = compileTypesResult(builtTypes)
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
     val usersSource = kotlinSource("io.test.service", findType("io.test.service.UsersAPI", builtTypes))
 
-    assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(builtTypes))
     assertTrue(usersSource.contains("@RegisterRestClient("), usersSource)
     assertTrue(usersSource.contains("configKey = \"graphs\""), usersSource)
     assertTrue(usersSource.contains("baseUri = \"http://localhost:9080\""), usersSource)
     assertTrue(usersSource.contains("@OidcClientFilter(\"graphs\")"), usersSource)
     assertTrue(usersSource.contains("@RegisterProvider(GraphsClientFilter::class)"), usersSource)
+    assertTrue(usersSource.contains("@RegisterProvider(ClientModelValidation::class)"), usersSource)
   }
 
   @Test
@@ -2849,28 +2880,41 @@ class KotlinJAXRSIrGeneratorTest {
   private fun policyApi(
     policy: GeneratedPolicy =
       GeneratedPolicy(
-        timeout = "PT5S",
-        retry =
-          mapOf(
-            "maxRetries" to "3",
-            "delay" to "PT1S",
-            "jitter" to "PT100MS",
+        all =
+          GeneratedPolicyValues(
+            timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration(5)),
+            retry =
+              GeneratedPolicySetting(
+                value =
+                  GeneratedPolicyValues.Retry(
+                    maxRetries = 3,
+                    delay = GeneratedPolicyDuration(1),
+                    jitter = GeneratedPolicyDuration(0, 100_000_000),
+                  ),
+              ),
+            circuitBreaker =
+              GeneratedPolicySetting(
+                value =
+                  GeneratedPolicyValues.CircuitBreaker(
+                    requestVolumeThreshold = 10,
+                    failureRatio = 0.75,
+                    delay = GeneratedPolicyDuration(30),
+                  ),
+              ),
           ),
-        circuitBreaker =
-          mapOf(
-            "requestVolumeThreshold" to "10",
-            "failureRatio" to "0.75",
-            "delay" to "PT30S",
+        client =
+          GeneratedPolicyValues(
+            rateLimit =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.RateLimit(value = 20, window = GeneratedPolicyDuration(60)),
+              ),
           ),
-        clientRateLimit =
-          mapOf(
-            "value" to "20",
-            "window" to "PT1M",
-          ),
-        serverRateLimit =
-          mapOf(
-            "value" to "100",
-            "window" to "PT1M",
+        server =
+          GeneratedPolicyValues(
+            rateLimit =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.RateLimit(value = 100, window = GeneratedPolicyDuration(60)),
+              ),
           ),
       ),
   ): GeneratedApi =

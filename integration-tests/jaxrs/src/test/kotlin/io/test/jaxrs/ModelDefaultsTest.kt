@@ -19,21 +19,24 @@ package io.test.jaxrs
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.outfoxx.sunday.validation.javax.Schema
 import io.test.defaults.Probe
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import javax.validation.constraints.Size
+import javax.validation.ConstraintViolationException
 
 /** Verifies the compiled output of the CLI with no model flags supplied. */
 class ModelDefaultsTest {
 
   @Test
   fun `default models use javax validation and preserve unknown fields`() {
+    assertThrows(ConstraintViolationException::class.java) { Probe("") }
     val model = Probe("valid")
     assertEquals("valid", model.name)
-    assertNotNull(Probe::class.java.getDeclaredField("name").getAnnotation(Size::class.java))
+    assertNotNull(Probe::class.java.getDeclaredField("name").getAnnotation(Schema::class.java))
     assertTrue(Probe::class.java.declaredMethods.any { it.isAnnotationPresent(JsonAnyGetter::class.java) })
     assertTrue(Probe::class.java.declaredMethods.any { it.isAnnotationPresent(JsonAnySetter::class.java) })
     model.setAdditionalProperty("future", mapOf("nested" to listOf(null, true)))

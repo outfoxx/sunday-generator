@@ -45,7 +45,14 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 

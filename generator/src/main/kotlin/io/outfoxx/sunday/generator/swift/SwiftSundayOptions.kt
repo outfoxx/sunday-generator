@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationOptions
+import io.outfoxx.sunday.generator.RequestTolerance
 
 /**
  * Options for Swift/Sunday generation.
@@ -30,10 +31,14 @@ class SwiftSundayOptions(
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
   preserveUnknownFields: Boolean = true,
+  profile: String? = null,
+  requestTolerance: RequestTolerance = RequestTolerance.Strict,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
     preserveUnknownFields,
+    profile,
+    requestTolerance,
   )

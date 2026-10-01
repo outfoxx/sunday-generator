@@ -38,6 +38,48 @@ import java.nio.file.Path
 @ExtendWith(ResourceExtension::class)
 class RamlToGeneratedApiTest {
 
+  @Test
+  fun `named collection elements own their scalar constraints`() {
+    val fixture = Files.createTempFile("raml-named-elements-", ".raml")
+    try {
+      Files.writeString(
+        fixture,
+        """
+        #%RAML 1.0
+        title: Named elements
+        types:
+          Code: {type: string, pattern: '^[A-Z]+${'$'}'}
+          Item:
+            properties:
+              codes: Code[]
+        """.trimIndent(),
+      )
+      val api = RamlToGeneratedApi().convert(TestAPIProcessing.process(fixture.toUri()))
+      val code = api.models.single { it.name == "Code" }
+      assertEquals(mapOf("pattern" to "^[A-Z]+${'$'}"), code.validation)
+      val codes =
+        api.models
+          .single { it.name == "Item" }
+          .properties
+          .single()
+      assertEquals(emptyMap<String, String>(), codes.validation)
+      assertEquals(
+        GeneratedTypeRef.Kind.NAMED,
+        codes.type.arguments
+          .single()
+          .kind,
+      )
+      assertEquals(
+        "Code",
+        codes.type.arguments
+          .single()
+          .name,
+      )
+    } finally {
+      Files.deleteIfExists(fixture)
+    }
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["basic", "null", "absent"])
   fun `preserves RAML security alternatives and declaration precedence through YAML`(

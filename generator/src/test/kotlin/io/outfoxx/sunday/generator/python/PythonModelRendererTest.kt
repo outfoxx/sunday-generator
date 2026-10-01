@@ -1043,7 +1043,7 @@ class PythonModelRendererTest : PythonTest() {
     )
 
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "turnpost_api/models.py")
-    assertTrue(source.contains("class JobProgressUnknown(RootModel[dict[str, Any]]):"), source)
+    assertTrue(source.contains("class JobProgressUnknown(UnknownModel):"), source)
     assertTrue(source.contains("def actor(self) -> EventIdentity | None:"), source)
     assertTrue(source.contains("Discriminator(_job_progress_discriminator)"), source)
   }
@@ -1103,15 +1103,34 @@ class PythonModelRendererTest : PythonTest() {
         importModules = listOf("turnpost_api.models"),
         smokeCode =
           """
-          from pydantic import ValidationError
+          from pydantic import ValidationError, field_validator
+          import turnpost_api.models as models
           from turnpost_api.models import CreatedData, EventDataUnknown, EventEnvelope
 
+          calls = []
+          class CountedCreatedData(CreatedData):
+              @field_validator("name")
+              @classmethod
+              def count_validation(cls, value):
+                  calls.append(value)
+                  return value
+          models.CreatedData = CountedCreatedData
           known = EventEnvelope.model_validate({"type": "created", "data": {"version": 1, "name": "ready"}})
           assert isinstance(known.data, CreatedData)
+          assert calls == ["ready"], calls
+          calls.clear()
+          EventEnvelope.model_validate(known, context={"mode": "request"})
+          assert calls == ["ready"], calls
 
           raw_data = {"version": 2, "detail": {"attempt": 2}}
           unknown = EventEnvelope.model_validate({"type": "future", "data": raw_data})
           assert isinstance(unknown.data, EventDataUnknown)
+          try:
+              EventEnvelope.model_validate(unknown, context={"mode": "request"})
+          except ValidationError as error:
+              assert any(item["loc"] == ("data",) and item["type"] == "unknown_union" for item in error.errors())
+          else:
+              raise AssertionError("external unknown variant accepted in request mode")
           assert unknown.type.value == "future"
           assert unknown.data.version == 2
           assert unknown.data.raw_body == raw_data

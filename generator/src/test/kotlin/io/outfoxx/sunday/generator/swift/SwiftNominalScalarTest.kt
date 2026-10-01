@@ -21,6 +21,8 @@ import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.swift.tools.compileGeneratedFiles
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.nominalScalarApi
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -60,10 +62,20 @@ class SwiftNominalScalarTest {
           let decoder = JSONDecoder()
           let fact = try BaseFactSid("sid:f:abc")
           XCTAssertEqual(fact.rawValue, "sid:f:abc")
+          XCTAssertTrue(fact.isValid(.request))
+          XCTAssertNoThrow(try fact.validate(.response))
+          XCTAssertTrue(AnySidValidation.isValid(try AnySid("sid:f:abc"), .request))
+          let ambiguous = AmbiguousSid.baseFactSid(fact)
+          XCTAssertEqual(ambiguous.isValid(.response), ${frontend == "raml"})
           XCTAssertNil(BaseFactSid(rawValue: "invalid"))
           XCTAssertThrowsError(try BaseFactSid("invalid"))
           XCTAssertThrowsError(try PositiveCount(0))
           XCTAssertThrowsError(try Ratio(2))
+          XCTAssertEqual(try decoder.decode(Ratio.self, from: Data("1".utf8)).rawValue, 1)
+          XCTAssertThrowsError(try decoder.decode(Ratio.self, from: Data("1.00000000000000000001".utf8))) { error in
+            guard case DecodingError.dataCorrupted(let context) = error else { return XCTFail("Unexpected failure") }
+            XCTAssertTrue(context.debugDescription.contains("maximum"))
+          }
           XCTAssertEqual(try decoder.decode(Defaults.self, from: Data("{}".utf8)).fact?.rawValue, ${if (frontend == "raml") "nil" else "\"sid:f:default\""})
           for (wire, isFact) in [(#""sid:f:abc""#, true), (#""sid:l:abc""#, false)] {
             let value = try decoder.decode(AnySid.self, from: Data(wire.utf8))
@@ -86,6 +98,19 @@ class SwiftNominalScalarTest {
       """.trimIndent(),
     )
     assertTrue(compileAndTestGeneratedFiles(compiler))
+    val outputDirectory = if (frontend == "asyncapi") "Events" else "Models"
+    val scalar = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "$outputDirectory/BaseFactSid.swift")
+    val union = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "$outputDirectory/AnySid.swift")
+    val validator =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "$outputDirectory/AnySidValidation.swift",
+      )
+    assertTrue(scalar.contains("BaseFactSidValidation.validate(self, .response)"), scalar)
+    assertTrue(!scalar.contains(".regularExpression"), scalar)
+    assertTrue(union.contains("context.selectedAlternative"), union)
+    assertTrue(validator.contains("BaseFactSidValidation.isValid(normalized:"), validator)
+    assertTrue(!validator.contains("try? BaseFactSid("), validator)
     if (frontend == "openapi") {
       registry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
       Files.writeString(

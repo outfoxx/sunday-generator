@@ -49,19 +49,26 @@ public final class API<TransportType : Transport> : Sendable {
   }
 
   public enum FetchTestSelectUriParam : String, CaseIterable, Codable, CustomStringConvertible,
-      Sendable {
+      Sendable, ModelValidatable {
 
     case all = "all"
     case limited = "limited"
 
     public var description: String {
       return rawValue
+    }
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public func isValid(_ mode: ModelMode, context: inout ModelValidationContext) -> Bool {
+      return FetchTestSelectUriParamValidation.isValid(self, mode, context: &context)
     }
 
   }
 
   public enum FetchTestPageQueryParam : String, CaseIterable, Codable, CustomStringConvertible,
-      Sendable {
+      Sendable, ModelValidatable {
 
     case all = "all"
     case limited = "limited"
@@ -70,16 +77,141 @@ public final class API<TransportType : Transport> : Sendable {
       return rawValue
     }
 
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public func isValid(_ mode: ModelMode, context: inout ModelValidationContext) -> Bool {
+      return FetchTestPageQueryParamValidation.isValid(self, mode, context: &context)
+    }
+
   }
 
   public enum FetchTestXTypeHeaderParam : String, CaseIterable, Codable, CustomStringConvertible,
-      Sendable {
+      Sendable, ModelValidatable {
 
     case all = "all"
     case limited = "limited"
 
     public var description: String {
       return rawValue
+    }
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public func isValid(_ mode: ModelMode, context: inout ModelValidationContext) -> Bool {
+      return FetchTestXTypeHeaderParamValidation.isValid(self, mode, context: &context)
+    }
+
+  }
+
+  /**
+   * Validates current values of the associated schema in request or response mode.
+   */
+  public enum FetchTestSelectUriParamValidation : ModelValidator {
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      _ value: FetchTestSelectUriParam,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      return isValid(normalized: view(value), mode, context: &context)
+    }
+
+    /**
+     * Projects storage without constructing or encoding application models.
+     */
+    static func view(_ value: FetchTestSelectUriParam) -> ModelValidationValue {
+      return ModelValidationValue.string(value.rawValue)
+    }
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      normalized value: ModelValidationValue,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      guard let rawValue = value.string else { return context.reject(.invalidValue) }
+      return ["all", "limited"].contains(rawValue) || context.reject(.allowedValue)
+    }
+
+  }
+
+  /**
+   * Validates current values of the associated schema in request or response mode.
+   */
+  public enum FetchTestPageQueryParamValidation : ModelValidator {
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      _ value: FetchTestPageQueryParam,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      return isValid(normalized: view(value), mode, context: &context)
+    }
+
+    /**
+     * Projects storage without constructing or encoding application models.
+     */
+    static func view(_ value: FetchTestPageQueryParam) -> ModelValidationValue {
+      return ModelValidationValue.string(value.rawValue)
+    }
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      normalized value: ModelValidationValue,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      guard let rawValue = value.string else { return context.reject(.invalidValue) }
+      return ["all", "limited"].contains(rawValue) || context.reject(.allowedValue)
+    }
+
+  }
+
+  /**
+   * Validates current values of the associated schema in request or response mode.
+   */
+  public enum FetchTestXTypeHeaderParamValidation : ModelValidator {
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      _ value: FetchTestXTypeHeaderParam,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      return isValid(normalized: view(value), mode, context: &context)
+    }
+
+    /**
+     * Projects storage without constructing or encoding application models.
+     */
+    static func view(_ value: FetchTestXTypeHeaderParam) -> ModelValidationValue {
+      return ModelValidationValue.string(value.rawValue)
+    }
+
+    /**
+     * Checks the schema once using the caller's wire paths and traversal state.
+     */
+    public static func isValid(
+      normalized value: ModelValidationValue,
+      _ mode: ModelMode,
+      context: inout ModelValidationContext
+    ) -> Bool {
+      guard let rawValue = value.string else { return context.reject(.invalidValue) }
+      return ["all", "limited"].contains(rawValue) || context.reject(.allowedValue)
     }
 
   }

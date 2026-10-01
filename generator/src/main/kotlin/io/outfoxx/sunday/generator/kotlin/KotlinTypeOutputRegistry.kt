@@ -40,6 +40,12 @@ interface KotlinTypeOutputRegistry {
     serviceType: TypeSpec.Builder,
   )
 
+  /** Registers a service implementation discovered from generated META-INF/services resources. */
+  fun addServiceProvider(
+    service: ClassName,
+    implementation: ClassName,
+  )
+
   fun addModelType(
     className: ClassName,
     modelType: TypeSpec.Builder,

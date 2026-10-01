@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info: {title: Native payload validation, version: 1.0.0}
+paths:
+  /native/codes:
+    post:
+      operationId: codes
+      requestBody:
+        required: true
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/Codes'}}
+      responses:
+        '200':
+          description: Validated codes
+          content:
+            application/json: {schema: {$ref: '#/components/schemas/Codes'}}
+  /native/states:
+    post:
+      operationId: states
+      requestBody:
+        required: true
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/States'}}
+      responses:
+        '200':
+          description: Tolerant states
+          content:
+            application/json: {schema: {$ref: '#/components/schemas/States'}}
+components:
+  schemas:
+    Code: {type: string, pattern: '^[A-Z]{2}$'}
+    Codes: {type: array, minItems: 2, items: {$ref: '#/components/schemas/Code'}}
+    State:
+      type: string
+      enum: [ready, unknown]
+      x-unknown-value: unknown
+      x-sunday-tolerant: response
+    States: {type: array, minItems: 1, items: {$ref: '#/components/schemas/State'}}

@@ -17,14 +17,11 @@
 package io.outfoxx.sunday.generator.swift.utils
 
 import io.outfoxx.sunday.generator.genError
-import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.swiftpoet.CodeBlock
-import io.outfoxx.swiftpoet.DATA
-import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.joinToCode
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -247,157 +244,6 @@ internal object SwiftModelConstraints {
     } ||
       property.validation["uniqueItems"] == "true" ||
       GeneratedNumericBounds.parse(property.validation, "property '${property.name}'").isNotEmpty()
-
-  /** Validates supplied memberwise initializer values without serializing a partially initialized model. */
-  fun initializer(
-    fields: List<GeneratedModelProperties.Field>,
-    properties: GeneratedModelProperties,
-    patchable: Boolean,
-  ): CodeBlock =
-    CodeBlock
-      .builder()
-      .apply {
-        val constrained = fields.filter { hasValueConstraints(it.effective) }
-        val numeric = setOf("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf")
-        if (constrained.any { field ->
-            field.effective.validation.keys
-              .any { it in numeric }
-          }
-        ) {
-          add(SwiftNumericValidation.helper)
-        }
-        constrained.forEach { field ->
-          val validation = field.effective.validation
-          val optional = !field.storage.required || properties.acceptsNull(field.storage.type)
-          val nominal = properties.declarationModel(field.storage.type)?.nominal == true
-          val binding = if (nominal) "wrappedValue" else "value"
-          if (patchable) {
-            beginControlFlow("if", "case .set(let %L)? = %N", binding, field.storage.name.swiftIdentifierName)
-          } else if (optional) {
-            beginControlFlow("if", "let %L = %N", binding, field.storage.name.swiftIdentifierName)
-          } else {
-            beginControlFlow("do", "")
-            addStatement("let %L = %N", binding, field.storage.name.swiftIdentifierName)
-          }
-          if (nominal) {
-            addStatement("let value = wrappedValue.rawValue")
-          }
-          val checks = mutableListOf<CodeBlock>()
-          val declaration = properties.declarationType(field.storage.type)
-          val format = declaration.format ?: declaration.name
-          if (swiftStringFormatTypeName(format) == DATE &&
-            validation.keys.any { it in setOf("minLength", "maxLength", "pattern") }
-          ) {
-            val options =
-              when (format.lowercase()) {
-                "date", "full-date" -> ".withFullDate, .withDashSeparatorInDate"
-                "time", "partial-time" -> ".withTime, .withColonSeparatorInTime"
-                "datetime-only", "date-time-only" ->
-                  ".withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime"
-                else -> ".withInternetDateTime"
-              }
-            addStatement(
-              "let formatter = %T()",
-              DeclaredTypeName.typeName("Foundation.ISO8601DateFormatter"),
-            )
-            addStatement("formatter.formatOptions = [%L]", options)
-            if (format.lowercase() !in setOf("date", "full-date")) {
-              beginControlFlow("if", "value.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) != 0")
-              addStatement("formatter.formatOptions.insert(.withFractionalSeconds)")
-              endControlFlow("if")
-            }
-            addStatement("let wireValue = formatter.string(from: value)")
-          }
-          val stringValue =
-            if (properties.declarationModel(field.storage.type)?.kind ==
-              GeneratedModel.Kind.ENUM
-            ) {
-              "value.rawValue"
-            } else {
-              when (swiftStringFormatTypeName(format)) {
-                DATA -> "value.base64EncodedString()"
-                UUID -> "value.uuidString"
-                URL -> "value.absoluteString"
-                DATE -> "wireValue"
-                else -> "value"
-              }
-            }
-          validation.forEach { (key, bound) ->
-            when (key) {
-              "minLength" -> checks += CodeBlock.of("%L.unicodeScalars.count >= %L", stringValue, bound)
-              "maxLength" -> checks += CodeBlock.of("%L.unicodeScalars.count <= %L", stringValue, bound)
-              "pattern" ->
-                properties.patterns(field.effective).forEach { pattern ->
-                  checks +=
-                    CodeBlock.of(
-                      "%L.range(of: %L, options: .regularExpression) != nil",
-                      stringValue,
-                      regexLiteral(pattern),
-                    )
-                }
-              "minItems" -> checks += CodeBlock.of("value.count >= %L", bound)
-              "maxItems" -> checks += CodeBlock.of("value.count <= %L", bound)
-              "uniqueItems" -> if (bound == "true") checks += CodeBlock.of("Set(value).count == value.count")
-            }
-          }
-          if (GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").isNotEmpty() ||
-            "multipleOf" in validation
-          ) {
-            val target = properties.numericValidationTarget(field.storage.type, "property '${field.wireName}'")
-            val numericChecks = mutableListOf<CodeBlock>()
-            GeneratedNumericBounds.parse(validation, "property '${field.wireName}'").forEach { bound ->
-              numericChecks +=
-                CodeBlock.of("number %L _SundayValidationNumber(%S)", bound.operator, bound.value.toString())
-            }
-            GeneratedNumericBounds.multipleOf(validation, "property '${field.wireName}'")?.let { divisor ->
-              val normalized = divisor.stripTrailingZeros()
-              numericChecks +=
-                CodeBlock.of(
-                  "number.isMultipleOf(digits: %L, exponent: %L)",
-                  normalized
-                    .unscaledValue()
-                    .toString()
-                    .map { it.digitToInt() }
-                    .joinToString(prefix = "[", postfix = "]"),
-                  -normalized.scale().toLong(),
-                )
-            }
-            val predicate = numericChecks.joinToCode(" && ")
-            if (target.elements) {
-              checks +=
-                CodeBlock.of(
-                  if (target.nullable) {
-                    "value.allSatisfy { element in element.map { value in Double(value).isFinite && " +
-                      "{ let number = _SundayValidationNumber(String(describing: value)); return %L }() } ?? true }"
-                  } else {
-                    "value.allSatisfy { value in Double(value).isFinite && " +
-                      "{ let number = _SundayValidationNumber(String(describing: value)); return %L }() }"
-                  },
-                  predicate,
-                )
-            } else {
-              // Double conversion checks finiteness for both integral and floating point storage.
-              checks += CodeBlock.of("Double(value).isFinite")
-              checks +=
-                CodeBlock.of(
-                  "{ let number = _SundayValidationNumber(String(describing: value)); return %L }()",
-                  predicate,
-                )
-            }
-          }
-          checks.forEach { condition ->
-            beginControlFlow("if", "!(%L)", condition)
-            addStatement(
-              "throw %T.invalidValue(value, .init(codingPath: [CodingKeys.%N], debugDescription: %S))",
-              ENCODING_ERROR,
-              field.storage.name.swiftIdentifierName,
-              "Invalid value for '${field.wireName}'",
-            )
-            endControlFlow("if")
-          }
-          endControlFlow(if (optional || patchable) "if" else "do")
-        }
-      }.build()
 
   // SwiftPoet's quoted-string formatter escapes dollar signs using Kotlin interpolation syntax.
   fun regexLiteral(pattern: String): CodeBlock =

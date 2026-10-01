@@ -24,6 +24,8 @@ class TempDir : AutoCloseable {
   val path: Path = Files.createTempDirectory(null)
 
   override fun close() {
-    path.toFile().deleteRecursively()
+    // Local runtime dependencies can be symlinks to a developer checkout.
+    // Files.walk deliberately does not follow them.
+    Files.walk(path).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
   }
 }

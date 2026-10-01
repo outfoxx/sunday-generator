@@ -28,6 +28,7 @@ data class GeneratedModel(
   val values: List<String> = listOf(),
   val enumValueNames: List<String> = listOf(),
   val unknownValue: String? = null,
+  val tolerance: GeneratedTolerance? = null,
   val aliases: List<GeneratedTypeRef> = listOf(),
   val nominal: Boolean = false,
   val unionMode: UnionMode? = null,

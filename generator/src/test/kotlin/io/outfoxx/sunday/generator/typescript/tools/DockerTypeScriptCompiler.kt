@@ -54,7 +54,7 @@ class DockerTypeScriptCompiler(
   companion object {
 
     private const val IMAGE_REPO = "node"
-    private const val IMAGE_TAG = "15-alpine"
+    private const val IMAGE_TAG = "22-alpine"
   }
 
   private val dockerConfig: DockerClientConfig =
@@ -134,7 +134,8 @@ class DockerTypeScriptCompiler(
       return compileResult to compileOutput
     }
 
-    val (executionResult, executionOutput) = executeCommand(arrayOf("node", "/work/dist/$modulePath.js"))
+    val (executionResult, executionOutput) =
+      executeCommand(arrayOf("node", "--conditions=import", "/work/dist/$modulePath.js"))
     return executionResult to listOf(compileOutput, executionOutput).filter { it.isNotBlank() }.joinToString("\n")
   }
 

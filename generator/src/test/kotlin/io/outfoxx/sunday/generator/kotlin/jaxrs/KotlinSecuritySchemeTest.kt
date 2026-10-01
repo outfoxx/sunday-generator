@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
@@ -31,19 +33,60 @@ import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypes
+import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Path
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
 class KotlinSecuritySchemeTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `server bindings use the selected provider and preserve logical scheme identity`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api = scopedSecurityApi(frontend, directory, profiledServer = true)
+    for (target in listOf("javax", "jakarta", "quarkus")) {
+      val registry = registry(target)
+      KotlinJAXRSIrGenerator(api, registry, options(target, profile = "external")).generateServiceTypes()
+      val check = ClassName("io.test", "ProviderCheck")
+      val checkType =
+        TypeSpec
+          .classBuilder(check)
+          .addFunction(
+            FunSpec
+              .builder("run")
+              .addCode(
+                """
+                check(OpenAPISecurity.providers == mapOf("token" to "externalVerifier"))
+                check(OpenAPISecurity.schemes.keys == setOf("token"))
+                try {
+                  OpenAPISecurity(emptyMap())
+                  error("Missing provider should fail setup")
+                } catch (error: IllegalArgumentException) {
+                  check(error.message!!.contains("externalVerifier"))
+                }
+                """.trimIndent(),
+              ).build(),
+          ).build()
+      val result = compileTypesResult(registry.buildTypes() + (check to checkType))
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      val runner = result.classLoader.loadClass(check.canonicalName)
+      runner.getMethod("run").invoke(runner.getConstructor().newInstance())
+    }
+  }
 
   @ParameterizedTest
   @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])
@@ -256,6 +299,7 @@ class KotlinSecuritySchemeTest {
     adapters: Boolean = true,
     explicitCredentials: Boolean = false,
     enforce: Boolean = true,
+    profile: String? = null,
   ) = KotlinJAXRSOptions(
     coroutineFlowMethods = target == "quarkus",
     coroutineServiceMethods = target == "quarkus",
@@ -272,6 +316,7 @@ class KotlinSecuritySchemeTest {
     aggregateServiceName = "SecureAPI",
     resourceAdapters = adapters,
     enforceSecuritySchemes = enforce,
+    profile = profile,
   )
 
   private fun source(name: String): String =

@@ -19,16 +19,17 @@ package io.outfoxx.sunday.generator.ir.emit
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 
 /**
- * Resolved catch-all contract for a discriminator backed by a tolerant enum.
+ * Resolved catch-all contract for an explicitly tolerant discriminator.
  */
 data class GeneratedDiscriminatorFallback(
   val hierarchy: GeneratedModel,
   val discriminatorProperty: GeneratedModelProperty,
-  val enumModel: GeneratedModel,
-  val fallbackValue: String,
+  val enumModel: GeneratedModel?,
+  val fallbackValue: String?,
   val fallbackName: String,
   val mappedValues: Set<String>,
   val baseProperties: List<GeneratedModelProperty>,
@@ -99,13 +100,17 @@ private fun GeneratedModel.discriminatorFallbackOrNull(
   models: Collection<GeneratedModel>,
   lookup: (io.outfoxx.sunday.generator.ir.GeneratedTypeRef) -> GeneratedModel?,
 ): GeneratedDiscriminatorFallback? {
-  val enumModel = lookup(discriminatorProperty.type) ?: return null
-  if (enumModel.kind != GeneratedModel.Kind.ENUM) {
-    return null
+  val enumModel = lookup(discriminatorProperty.type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM }
+  val fallbackValue = enumModel?.unknownValue
+  if (fallbackValue == null && tolerance == null) return null
+  if (fallbackValue == null && enumModel != null) {
+    genError("Tolerant hierarchy '$name' uses closed enum '${enumModel.name}'; declare its x-unknown-value fallback")
   }
-  val fallbackValue = enumModel.unknownValue ?: return null
-  val fallbackIndex = enumModel.values.indexOf(fallbackValue)
-  if (fallbackIndex < 0) {
+  if (fallbackValue == null && discriminatorProperty.type != GeneratedTypeRef.scalar("string")) {
+    genError("Tolerant hierarchy '$name' requires a string discriminator or a tolerant enum")
+  }
+  val fallbackIndex = enumModel?.values?.indexOf(fallbackValue) ?: -1
+  if (fallbackValue != null && fallbackIndex < 0) {
     genError("Tolerant enum '${enumModel.name}' unknown value '$fallbackValue' does not match any enum value")
   }
   val mappedValues =
@@ -119,27 +124,29 @@ private fun GeneratedModel.discriminatorFallbackOrNull(
           }
         }.mapNotNullTo(this) { candidate -> candidate.discriminatorValue }
     }
-  if (fallbackValue in mappedValues) {
+  if (fallbackValue != null && fallbackValue in mappedValues) {
     genError(
       "Discriminator hierarchy '$name' maps tolerant enum '${enumModel.name}' fallback value " +
         "'$fallbackValue' to a concrete subtype. Remove that mapping because x-unknown-value is reserved " +
         "for the generated catch-all variant.",
     )
   }
-  val invalidMappedValues = mappedValues - enumModel.values.toSet()
+  val invalidMappedValues = enumModel?.let { mappedValues - it.values.toSet() }.orEmpty()
   if (invalidMappedValues.isNotEmpty()) {
     genError(
-      "Discriminator hierarchy '$name' maps values not declared by tolerant enum '${enumModel.name}': " +
+      "Discriminator hierarchy '$name' maps values not declared by tolerant enum '${enumModel?.name}': " +
         invalidMappedValues.sorted().joinToString(", ") { value -> "'$value'" },
     )
   }
 
   val fallbackName =
-    enumModel.enumValueNames
-      .getOrNull(fallbackIndex)
+    enumModel
+      ?.enumValueNames
+      ?.getOrNull(fallbackIndex)
       ?.toUpperCamelCase()
       ?.takeIf(String::isNotBlank)
-      ?: fallbackValue.toUpperCamelCase()
+      ?: fallbackValue?.toUpperCamelCase()
+      ?: "Unknown"
   val fallbackModelName = name + fallbackName
   if (mappedValues.any { mappedValue -> mappedValue.toUpperCamelCase() == fallbackName }) {
     genError(
@@ -156,7 +163,12 @@ private fun GeneratedModel.discriminatorFallbackOrNull(
 
   return GeneratedDiscriminatorFallback(
     hierarchy = this,
-    discriminatorProperty = discriminatorProperty,
+    discriminatorProperty =
+      if (enumModel == null) {
+        discriminatorProperty.copy(allowedValues = null, defaultValue = null, validation = emptyMap())
+      } else {
+        discriminatorProperty
+      },
     enumModel = enumModel,
     fallbackValue = fallbackValue,
     fallbackName = fallbackName,

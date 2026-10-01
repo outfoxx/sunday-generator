@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.GenerationOptions
+import io.outfoxx.sunday.generator.RequestTolerance
 
 /** Options for TypeScript/Sunday generation. */
 class TypeScriptSundayOptions(
@@ -28,10 +29,14 @@ class TypeScriptSundayOptions(
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = false,
   preserveUnknownFields: Boolean = true,
+  profile: String? = null,
+  requestTolerance: RequestTolerance = RequestTolerance.Strict,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
     preserveUnknownFields,
+    profile,
+    requestTolerance,
   )

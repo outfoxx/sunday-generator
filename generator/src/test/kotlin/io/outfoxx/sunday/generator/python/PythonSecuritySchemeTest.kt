@@ -25,17 +25,67 @@ import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonSecuritySchemeTest : PythonTest() {
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `server profiles bind validation providers and preserve wire scheme names`(
+    frontend: String,
+    @TempDir directory: Path,
+    compiler: PythonCompiler,
+  ) {
+    val api = scopedSecurityApi(frontend, directory, profiledServer = true)
+    val modules =
+      PythonLitestarIrGenerator(
+        api,
+        PythonGeneratorOptions(
+          packageName = "security_api",
+          profile = "external",
+          enforceSecuritySchemes = true,
+        ),
+      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          import asyncio
+          from litestar import Request
+          from security_api._sunday_security import ApiSecurity, Identity
+
+          calls = []
+          async def validate(connection, scheme, credential):
+              calls.append((scheme.name, credential))
+              return Identity("alice", frozenset({"items:read"}))
+
+          try:
+              ApiSecurity({"token": validate})
+              raise AssertionError("The provider name must be used")
+          except ValueError as error:
+              assert "externalVerifier" in str(error)
+          security = ApiSecurity({"externalVerifier": validate})
+          request = Request({"type": "http", "scheme": "https", "path": "/items", "headers": [(b"authorization", b"Bearer valid")]})
+          asyncio.run(security.authorize(request, ({"token": frozenset({"items:read"})},)))
+          assert calls == [("token", "valid")], calls
+          assert set(ApiSecurity.schemes) == {"token"}
+          """.trimIndent(),
+      ),
+    )
+  }
 
   @ParameterizedTest
   @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])

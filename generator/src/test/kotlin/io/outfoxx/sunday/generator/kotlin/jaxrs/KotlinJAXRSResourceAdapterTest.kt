@@ -28,6 +28,9 @@ import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPolicy
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyDuration
+import io.outfoxx.sunday.generator.ir.GeneratedPolicySetting
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
@@ -93,7 +96,11 @@ class KotlinJAXRSResourceAdapterTest {
     coroutines: Boolean,
   ) {
     val registry = registry(target)
-    KotlinJAXRSIrGenerator(shapes(), registry, options(target, coroutines = coroutines)).generateServiceTypes()
+    KotlinJAXRSIrGenerator(
+      shapes(policies = target == "quarkus"),
+      registry,
+      options(target, coroutines = coroutines),
+    ).generateServiceTypes()
     assertEquals(KotlinCompilation.ExitCode.OK, compileTypes(registry.buildTypes()))
 
     val handler = source("API")
@@ -242,7 +249,7 @@ class KotlinJAXRSResourceAdapterTest {
   private fun source(name: String): String =
     CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/$name.kt")
 
-  private fun shapes(): GeneratedApi {
+  private fun shapes(policies: Boolean = true): GeneratedApi {
     val operation =
       GeneratedOperation(
         id = "sync",
@@ -304,7 +311,10 @@ class KotlinJAXRSResourceAdapterTest {
                 operation.copy(
                   id = "policy",
                   path = "/policy",
-                  policy = GeneratedPolicy(timeout = "PT1S"),
+                  policy =
+                    GeneratedPolicy(
+                      all = GeneratedPolicyValues(timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration(1))),
+                    ).takeIf { policies },
                   auth =
                     GeneratedAuth(
                       schemes = listOf("bearer"),

@@ -236,6 +236,11 @@ annotationTypes:
     type: boolean
     allowedTargets: [TypeDeclaration]
 
+  tolerant:
+    type: string
+    enum: [response, all]
+    allowedTargets: [TypeDeclaration]
+
   unknownValue:
     type: string
     allowedTargets: [TypeDeclaration]
@@ -288,6 +293,14 @@ annotationTypes:
   nullify:
     type: Nullify
     allowedTargets: [Method, Trait]
+
+  policy:
+    type: object
+    allowedTargets: [Resource, Method, Trait, ResourceType]
+
+  security:
+    type: object
+    allowedTargets: [API, Resource, Method, Trait, SecurityScheme]
 
   zanzibar:
     type: Zanzibar

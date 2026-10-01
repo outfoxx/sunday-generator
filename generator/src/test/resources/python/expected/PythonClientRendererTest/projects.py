@@ -113,19 +113,26 @@ _put_payload_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=20
 
 
 def _request_payload_put_payload(body: ProjectView | bytes) -> RequestPayloadSpec[ProjectView | bytes]:
-    validated: ProjectView | bytes
     try:
-        validated = _named_project_view_adapter.validate_python(body)
+        _named_project_view_adapter.validate_python(body)
     except ValidationError:
         pass
     else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/json"),))
+        return RequestPayloadSpec(
+            body=body,
+            content_types=(MediaType("application/json"),),
+            body_adapter=_named_project_view_adapter,
+        )
     try:
-        validated = _scalar_file_adapter.validate_python(body)
+        _scalar_file_adapter.validate_python(body)
     except ValidationError:
         pass
     else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/octet-stream"),))
+        return RequestPayloadSpec(
+            body=body,
+            content_types=(MediaType("application/octet-stream"),),
+            body_adapter=_scalar_file_adapter,
+        )
     raise ValueError("Request body does not match a declared payload for operation 'putPayload'")
 
 
@@ -227,6 +234,7 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             ),
             body=body,
             content_types=self.default_content_types,
+            body_adapter=_named_update_project_request_adapter,
             accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[UpdateProjectRequest, ProjectView] = OperationSpec(
@@ -251,6 +259,7 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             ),
             body=body,
             content_types=(MediaType("image/png"),),
+            body_adapter=_scalar_file_adapter,
         )
         operation_spec: OperationSpec[bytes, None] = OperationSpec(
             request=request_spec,

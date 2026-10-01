@@ -31,6 +31,25 @@ import java.net.URI
 class AsyncApiToGeneratedApiTest {
 
   @Test
+  fun `retains dynamic property constraints on tolerant unions and objects`(
+    @ResourceUri("asyncapi/ir/tolerant-union-properties.yaml") testUri: URI,
+  ) {
+    val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
+    val event = api.models.single { it.name == "Event" }
+    val pattern = event.patternProperties.single()
+    assertEquals("^x-", pattern.pattern)
+    assertTrue(pattern.type.nullable)
+    assertEquals(listOf("allowed", null), pattern.allowedValues)
+    assertEquals("3", pattern.validation["minLength"])
+    assertEquals(listOf(2, 4), event.additionalProperties?.allowedValues)
+    assertEquals("2", event.additionalProperties?.validation?.get("minimum"))
+    val created = api.models.single { it.name == "Created" }
+    assertEquals(false, created.additionalProperties?.allowed)
+    assertEquals("2", created.patternProperties.single().validation["minLength"])
+    assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
+  }
+
+  @Test
   fun `enum refinements preserve inherited declarations and intersect restrictions`(
     @ResourceUri("asyncapi/ir/inherited-enum.yaml") testUri: URI,
   ) {

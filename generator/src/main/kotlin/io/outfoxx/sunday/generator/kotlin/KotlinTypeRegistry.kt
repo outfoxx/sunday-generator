@@ -33,6 +33,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrarySupport
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -64,6 +65,7 @@ class KotlinTypeRegistry(
 
   val generationTimestamp = generationTimestamp?.ifBlank { null }
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
+  private val serviceProviders = linkedMapOf<ClassName, MutableSet<ClassName>>()
   internal val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   override val beanValidationTypes =
     if (options.contains(UseJakartaPackages)) {
@@ -85,6 +87,20 @@ class KotlinTypeRegistry(
       .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
       .map { kotlinFileSpec(it.key.packageName, it.value) }
       .forEach { it.writeTo(outputDirectory) }
+    if (GeneratedTypeCategory.Service in categories) {
+      serviceProviders.forEach { (service, implementations) ->
+        val resource = outputDirectory.resolve("META-INF/services/${service.canonicalName}")
+        Files.createDirectories(resource.parent)
+        Files.writeString(resource, implementations.joinToString("\n", postfix = "\n") { it.canonicalName })
+      }
+    }
+  }
+
+  override fun addServiceProvider(
+    service: ClassName,
+    implementation: ClassName,
+  ) {
+    serviceProviders.getOrPut(service) { linkedSetOf() }.add(implementation)
   }
 
   fun buildTypes(): Map<ClassName, TypeSpec> {

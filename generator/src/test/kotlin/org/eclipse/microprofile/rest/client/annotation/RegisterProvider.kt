@@ -20,6 +20,7 @@ import kotlin.reflect.KClass
 
 // MicroProfile Rest Client annotations to skip the dependency on the MicroProfile Rest Client API
 
+@Repeatable
 @Target(AnnotationTarget.CLASS)
 annotation class RegisterProvider(
   val value: KClass<*>,

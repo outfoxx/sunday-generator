@@ -4,7 +4,13 @@ plugins {
   alias(libs.plugins.shadow)
 }
 
+val companionRuntime by configurations.creating
+
 dependencies {
+  companionRuntime(libs.sundayKt)
+  if (providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent) {
+    companionRuntime("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
+  }
 
   shadow(gradleApi())
 
@@ -18,6 +24,7 @@ dependencies {
 
   testImplementation(testFixtures(project(":generator")))
 
+  testImplementation(libs.kotlin.gradle.plugin)
   testImplementation(libs.junit)
   testImplementation(libs.junitParams)
   testRuntimeOnly(libs.junitEngine)
@@ -32,6 +39,16 @@ dependencies {
 tasks {
   test {
     systemProperty("sunday.generator.source-root", rootProject.projectDir.absolutePath)
+    systemProperty("sunday.kotlin.version", libs.versions.sundayKt.get())
+    if (providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent) {
+      inputs.files(companionRuntime)
+      dependsOn(companionRuntime)
+      jvmArgumentProviders.add(
+        objects.newInstance<CompanionRuntimeArguments>().apply {
+          classpath.from(companionRuntime)
+        },
+      )
+    }
   }
   shadowJar.configure {
     dependsOn(jar)
@@ -59,4 +76,12 @@ gradlePlugin {
       tags = setOf("sunday", "raml", "kotlin", "swift", "typescript")
     }
   }
+}
+
+/** Defers included-build artifact resolution until the test JVM is launched. */
+abstract class CompanionRuntimeArguments : org.gradle.process.CommandLineArgumentProvider {
+  @get:Classpath
+  abstract val classpath: ConfigurableFileCollection
+
+  override fun asArguments(): Iterable<String> = listOf("-Dsunday.kotlin.classpath=${classpath.asPath}")
 }

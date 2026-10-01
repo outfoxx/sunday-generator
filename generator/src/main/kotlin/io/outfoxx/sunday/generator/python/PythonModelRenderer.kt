@@ -17,10 +17,12 @@
 package io.outfoxx.sunday.generator.python
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.outfoxx.sunday.generator.RequestTolerance
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTolerance
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
@@ -37,6 +39,7 @@ private const val FALLBACK_TAG = "__unknown__"
 class PythonModelRenderer(
   private val packageName: String,
   private val preserveUnknownFields: Boolean = true,
+  private val requestTolerance: RequestTolerance = RequestTolerance.Strict,
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
@@ -169,8 +172,15 @@ class PythonModelRenderer(
 
     val rebuilds =
       models
-        .filter { model -> model.isObjectClass() }
-        .map { model -> PythonCodeBlock.of("%L.model_rebuild()", model.name.pythonTypeName) }
+        .filter {
+          it.hasUnionCommonRules()
+        }.map { PythonCodeBlock.of("_%LFields.model_rebuild()", it.name.pythonTypeName) } +
+        models
+          .filter { model -> model.isObjectClass() }
+          .map { model -> PythonCodeBlock.of("%L.model_rebuild()", model.name.pythonTypeName) } +
+        discriminatorFallbacks.values.map { fallback ->
+          PythonCodeBlock.of("%L.model_rebuild()", fallback.fieldsClassName())
+        }
     if (rebuilds.isNotEmpty()) {
       module.addCode(PythonCodeBlock.join(rebuilds, separator = "\n"))
     }
@@ -230,10 +240,14 @@ class PythonModelRenderer(
 
   private fun GeneratedModel.isObjectClass(): Boolean =
     kind == GeneratedModel.Kind.OBJECT &&
-      !(discriminatorMappings.isNotEmpty() && (properties.isEmpty() || discriminator != null))
+      !isDiscriminatedAlias()
 
-  private fun GeneratedModel.renderObjectModel(): PythonCodeBlock {
-    if (discriminatorMappings.isNotEmpty() && (properties.isEmpty() || discriminator != null)) {
+  private fun GeneratedModel.isDiscriminatedAlias(): Boolean =
+    (discriminatorMappings.isNotEmpty() && (properties.isEmpty() || discriminator != null)) ||
+      (discriminator != null && discriminatorFallbacks.containsKey(name))
+
+  private fun GeneratedModel.renderObjectModel(className: String = name.pythonTypeName): PythonCodeBlock {
+    if (isDiscriminatedAlias()) {
       return renderUnionAliasModel()
     }
 
@@ -257,11 +271,11 @@ class PythonModelRenderer(
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
           renderNonNullableOptionalValidator(),
+          renderExternalDiscriminatorValidator(),
           renderWireValueValidator(),
           renderAllowedValuesValidator(),
           renderEnumStringValidator(),
           renderUniqueListValidator(),
-          renderExternalDiscriminatorValidator(),
         )
     val body =
       bodyBlocks.takeIf { it.isNotEmpty() }?.let { PythonCodeBlock.join(it, separator = "\n\n") }
@@ -278,7 +292,7 @@ class PythonModelRenderer(
       class %L(%C):
       %C
       """.trimIndent(),
-      name.pythonTypeName,
+      className,
       PythonCodeBlock.join(bases, separator = ", "),
       body,
     )
@@ -616,19 +630,17 @@ class PythonModelRenderer(
 
   private fun GeneratedModel.renderWireValueValidator(): PythonCodeBlock? {
     val patterns = modelProperties.patternProperties(this)
-    val validatesAdditionalProperties =
-      patterns.isNotEmpty() || additionalProperties?.type != null
+    val additional = modelProperties.additionalProperties(this)
+    val validatesAdditionalProperties = patterns.isNotEmpty() || additional.isNotEmpty()
     if (!validatesAdditionalProperties) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
-    if (patterns.isNotEmpty()) {
-      statements +=
-        PythonCodeBlock.of(
-          "        adapter: %T[%T]",
-          PythonSymbol("pydantic", "TypeAdapter"),
-          PythonSymbol("typing", "Any"),
-        )
-    }
+    statements +=
+      PythonCodeBlock.of(
+        "        adapter: %T[%T]",
+        PythonSymbol("pydantic", "TypeAdapter"),
+        PythonSymbol("typing", "Any"),
+      )
     statements +=
       PythonCodeBlock.of(
         "        declared_names = set(cls.model_fields)\n" +
@@ -639,7 +651,7 @@ class PythonModelRenderer(
           "            wire_key = wire_names.get(key, key)\n" +
           "            matched = wire_key in declared_names",
       )
-    if (patterns.isNotEmpty()) statements += PythonCodeBlock.of("            original_value = data[key]")
+    statements += PythonCodeBlock.of("            original_value = data[key]")
     patterns.forEach { patternProperty ->
       val validatedType =
         renderValidatedType(
@@ -662,7 +674,7 @@ class PythonModelRenderer(
         PythonCodeBlock.of(
           "            if %T(%S, wire_key) is not None:\n" +
             "                adapter = %T(%C)\n" +
-            "                validated = adapter.validate_python(original_value)\n" +
+            "                validated = adapter.validate_python(original_value, context=info.context)\n" +
             "                if key not in declared_names:\n" +
             "                    data[key] = validated\n" +
             "                matched = True",
@@ -673,39 +685,49 @@ class PythonModelRenderer(
         )
     }
     statements += PythonCodeBlock.of("            if matched:\n                continue")
-    val additionalType = additionalProperties?.type
     if (modelProperties.isClosed(this)) {
       statements +=
         PythonCodeBlock.of(
           "            raise ValueError(f\"Extra property '{key}' is not allowed\")",
         )
-    } else if (additionalType != null) {
-      val validatedType =
-        renderValidatedType(
-          additionalType.renderPatternValueType(),
-          additionalProperties.validation,
-          "additional properties on model '$name'",
-          additionalType,
-        )
-      statements +=
-        PythonCodeBlock.of(
-          "            data[key] = %T(%C).validate_python(data[key])",
-          PythonSymbol("pydantic", "TypeAdapter"),
-          validatedType,
-        )
+    } else {
+      additional.forEach { declaration ->
+        val additionalType = requireNotNull(declaration.type)
+        val validatedType =
+          renderValidatedType(
+            declaration.allowedValues?.let { values ->
+              PythonCodeBlock.of(
+                "%T[%C]",
+                PythonSymbol("typing", "Literal"),
+                PythonCodeBlock.join(values.map { it.renderPythonValue() ?: PythonCodeBlock.of("None") }, ", "),
+              )
+            } ?: additionalType.renderPatternValueType(),
+            declaration.validation,
+            "additional properties on model '$name'",
+            additionalType,
+          )
+        statements +=
+          PythonCodeBlock.of(
+            "            adapter = %T(%C)\n" +
+              "            data[key] = adapter.validate_python(original_value, context=info.context)",
+            PythonSymbol("pydantic", "TypeAdapter"),
+            validatedType,
+          )
+      }
     }
 
     return PythonCodeBlock.of(
       "    @%T(mode=%S)\n" +
         "    @classmethod\n" +
-        "    def _validate_wire_values(cls, data: object) -> object:\n" +
+        "    def _validate_wire_values(cls, data: object, info: %T) -> object:\n" +
         "        if not isinstance(data, dict):\n" +
         "            return data\n" +
-        "        data = dict(data)\n" +
+        "        data = data.copy()\n" +
         "%C\n" +
         "        return data",
       PythonSymbol("pydantic", "model_validator"),
       "before",
+      PythonSymbol("pydantic", "ValidationInfo"),
       PythonCodeBlock.join(statements, separator = "\n"),
     )
   }
@@ -726,9 +748,17 @@ class PythonModelRenderer(
           %L
 
               __unknown_member_name__ = %S
+              __request_tolerant__ = %L
           """.trimIndent(),
           members,
           fallbackEntry.name,
+          if (tolerance == GeneratedTolerance.ALL ||
+            (tolerance == null && requestTolerance == RequestTolerance.Tolerant)
+          ) {
+            "True"
+          } else {
+            "False"
+          },
         )
       } ?: PythonCodeBlock.of("%L", members)
 
@@ -829,20 +859,51 @@ class PythonModelRenderer(
     val fallback = discriminatorFallbacks[name]
     val aliases = unionAliases().ifEmpty { listOf(GeneratedTypeRef.scalar("any")) }
     val unionType = aliases.renderUnionType()
+    val hasCommon = hasUnionCommonRules()
+    val unionName = if (hasCommon) "_${name.pythonTypeName}Payload" else name.pythonTypeName
 
-    return if (fallback == null) {
-      renderStandardUnionAlias(aliases, unionType)
-    } else if (fallback.externallyDiscriminated || isExternallyDiscriminatedUnion()) {
-      val fallbackType = PythonCodeBlock.of("%L", fallback.modelName.pythonTypeName)
-      PythonCodeBlock.of("type %L = %C | %C", name.pythonTypeName, unionType, fallbackType)
-    } else {
-      renderTolerantDiscriminatedUnionAlias(aliases, fallback)
-    }
+    val payload =
+      if (fallback == null) {
+        renderStandardUnionAlias(aliases, unionType, unionName)
+      } else if (fallback.externallyDiscriminated || isExternallyDiscriminatedUnion()) {
+        val fallbackType = PythonCodeBlock.of("%L", fallback.modelName.pythonTypeName)
+        PythonCodeBlock.of("type %L = %C | %C", unionName, unionType, fallbackType)
+      } else {
+        renderTolerantDiscriminatedUnionAlias(aliases, fallback, unionName)
+      }
+    if (!hasCommon) return payload
+    val common =
+      copy(
+        kind = GeneratedModel.Kind.OBJECT,
+        aliases = emptyList(),
+        discriminator = null,
+        discriminatorMappings = emptyMap(),
+        externallyDiscriminated = false,
+      )
+    return PythonCodeBlock.join(
+      listOf(
+        common.renderObjectModel("_${name.pythonTypeName}Fields"),
+        payload,
+        PythonCodeBlock.of(
+          "type %L = %T[%L, %T(_%LFields%L)]",
+          name.pythonTypeName,
+          PythonSymbol("typing", "Annotated"),
+          unionName,
+          PythonSymbol("sunday", "ModelIntersection"),
+          name.pythonTypeName,
+          fallback?.let { ", skip=(${it.modelName.pythonTypeName},)" } ?: "",
+        ),
+      ),
+      separator = "\n\n\n",
+    )
   }
+
+  private fun GeneratedModel.hasUnionCommonRules(): Boolean = modelProperties.hasUnionCommonRules(this)
 
   private fun GeneratedModel.renderStandardUnionAlias(
     aliases: List<GeneratedTypeRef>,
     unionType: PythonCodeBlock,
+    unionName: String,
   ): PythonCodeBlock =
     if (discriminator == null || kind == GeneratedModel.Kind.OBJECT || isExternallyDiscriminatedUnion()) {
       if (aliases.size > 3) {
@@ -852,11 +913,11 @@ class PythonModelRenderer(
           %C
           )
           """.trimIndent(),
-          name.pythonTypeName,
+          unionName,
           aliases.renderMultilineUnionType(),
         )
       } else {
-        PythonCodeBlock.of("type %L = %C", name.pythonTypeName, unionType)
+        PythonCodeBlock.of("type %L = %C", unionName, unionType)
       }
     } else {
       if (aliases.size > 1) {
@@ -867,7 +928,7 @@ class PythonModelRenderer(
               %T(discriminator=%S),
           ]
           """.trimIndent(),
-          name.pythonTypeName,
+          unionName,
           PythonSymbol("typing", "Annotated"),
           unionType,
           PythonSymbol("pydantic", "Field"),
@@ -876,7 +937,7 @@ class PythonModelRenderer(
       } else {
         PythonCodeBlock.of(
           "type %L = %T[%C, %T(discriminator=%S)]",
-          name.pythonTypeName,
+          unionName,
           PythonSymbol("typing", "Annotated"),
           unionType,
           PythonSymbol("pydantic", "Field"),
@@ -888,6 +949,7 @@ class PythonModelRenderer(
   private fun GeneratedModel.renderTolerantDiscriminatedUnionAlias(
     aliases: List<GeneratedTypeRef>,
     fallback: GeneratedDiscriminatorFallback,
+    unionName: String,
   ): PythonCodeBlock {
     val discriminatorFunctionName = "_${name.pythonIdentifierName}_discriminator"
     val taggedTypes =
@@ -938,7 +1000,7 @@ class PythonModelRenderer(
       fallback.discriminatorProperty.name.pythonIdentifierName,
       mappedValues,
       FALLBACK_TAG,
-      name.pythonTypeName,
+      unionName,
       PythonSymbol("typing", "Annotated"),
       PythonCodeBlock.join(taggedTypes, separator = if (taggedTypes.size > 2) "\n    | " else " | "),
       PythonSymbol("pydantic", "Discriminator"),
@@ -954,9 +1016,9 @@ class PythonModelRenderer(
         }
         addAll(baseProperties)
       }
+    val fieldsModel = GeneratedModel(modelName, GeneratedModel.Kind.OBJECT, properties = exposedProperties)
     val propertyBlocks =
       exposedProperties.map { property ->
-        val wireName = property.serializationName ?: property.name
         val basePropertyType = property.type.renderPythonType(nullable = false)
         val propertyType =
           if (property.required && !property.type.nullable) {
@@ -964,33 +1026,16 @@ class PythonModelRenderer(
           } else {
             PythonCodeBlock.of("%C | None", basePropertyType)
           }
-        val validatedType = property.type.renderPythonType(nullable = property.type.nullable)
-        val missingValue =
-          if (property.required) {
-            PythonCodeBlock.of("raise ValueError(%S)", "Property '$wireName' is required")
-          } else {
-            PythonCodeBlock.of("return None")
-          }
         PythonCodeBlock.of(
           "    @property\n" +
             "    def %L(self) -> %C:\n" +
-            "        if %S not in self.root:\n" +
-            "            %C\n" +
-            "        return %T(%C).validate_python(self.root[%S])",
+            "        return %L.model_validate(self.root).%L",
           property.name.pythonIdentifierName,
           propertyType,
-          wireName,
-          missingValue,
-          PythonSymbol("pydantic", "TypeAdapter"),
-          validatedType,
-          wireName,
+          fieldsClassName(),
+          property.name.pythonIdentifierName,
         )
       }
-    val validationReads =
-      exposedProperties
-        .joinToString("\n") { property ->
-          "        _ = self.${property.name.pythonIdentifierName}"
-        }.ifBlank { "        pass" }
     val propertySection =
       propertyBlocks
         .takeIf { blocks -> blocks.isNotEmpty() }
@@ -999,26 +1044,41 @@ class PythonModelRenderer(
 
     return PythonCodeBlock.of(
       """
-      class %L(%T[dict[str, %T]]):
+      %C
+
+
+      class %L(%T):
+          __request_tolerant__ = %L
+
       %C    @%T(mode="after")
-          def _validate_declared_properties(self) -> %T:
-      %L
+          def _validate_declared_properties(self, info: %T) -> %T:
+              %L.model_validate(self.root, context=info.context)
               return self
 
           @property
           def raw_body(self) -> dict[str, %T]:
               return self.root
       """.trimIndent(),
+      fieldsModel.renderObjectModel(fieldsClassName()),
       modelName.pythonTypeName,
-      PythonSymbol("pydantic", "RootModel"),
-      PythonSymbol("typing", "Any"),
+      PythonSymbol("sunday", "UnknownModel"),
+      if ((hierarchy.tolerance ?: enumModel?.tolerance) == GeneratedTolerance.ALL ||
+        (hierarchy.tolerance == null && enumModel?.tolerance == null && requestTolerance == RequestTolerance.Tolerant)
+      ) {
+        "True"
+      } else {
+        "False"
+      },
       propertySection,
       PythonSymbol("pydantic", "model_validator"),
+      PythonSymbol("pydantic", "ValidationInfo"),
       PythonSymbol("typing", "Self"),
-      validationReads,
+      fieldsClassName(),
       PythonSymbol("typing", "Any"),
     )
   }
+
+  private fun GeneratedDiscriminatorFallback.fieldsClassName(): String = "_${modelName.pythonTypeName}Fields"
 
   private fun List<GeneratedTypeRef>.renderUnionType(): PythonCodeBlock =
     PythonCodeBlock.join(
@@ -1044,70 +1104,98 @@ class PythonModelRenderer(
           property.type.kind == GeneratedTypeRef.Kind.NAMED &&
           modelIndex[property.type.name]?.discriminatorMappings?.isNotEmpty() == true
       }
-
-    if (externalProperties.isEmpty()) {
-      return null
-    }
-
-    return PythonCodeBlock.of(
-      """
-          @%T(mode="before")
-          @classmethod
-          def _validate_external_discriminators(cls, data: object) -> object:
-              if not isinstance(data, dict):
-                  return data
-      %C
-              return data
-      """.trimIndent(),
-      PythonSymbol("pydantic", "model_validator"),
-      PythonCodeBlock.join(
-        externalProperties.map { property -> property.renderExternalDiscriminatorMapping() },
-        separator = "\n",
-      ),
+    if (externalProperties.isEmpty()) return null
+    val capture =
+      externalProperties.map { property ->
+        val discriminator =
+          properties.singleOrNull {
+            (it.serializationName ?: it.name) == property.externalDiscriminator ||
+              it.name == property.externalDiscriminator
+          }
+        PythonCodeBlock.of(
+          "        key = %S if %S in data else %S\n" +
+            "        if key in data and data[key] is not None:\n" +
+            "            current = data[key]\n" +
+            "            if isinstance(current, %T):\n" +
+            "                current = current.value\n" +
+            "            data[key] = %T(data.get(%S, data.get(%S)), current)",
+          (property.serializationName ?: property.name),
+          (property.serializationName ?: property.name),
+          property.name.pythonIdentifierName,
+          PythonSymbol("sunday.external_discriminator", "ExternalDiscriminatorValue"),
+          PythonSymbol("sunday.external_discriminator", "ExternalDiscriminatorValue"),
+          discriminator?.let { it.serializationName ?: it.name } ?: property.externalDiscriminator!!,
+          discriminator?.name?.pythonIdentifierName ?: property.externalDiscriminator!!,
+        )
+      }
+    val before =
+      PythonCodeBlock.of(
+        """
+            @%T(mode="before")
+            @classmethod
+            def _capture_external_discriminators(cls, data: object) -> object:
+                if not isinstance(data, dict):
+                    return data
+                data = data.copy()
+        %C
+                return data
+        """.trimIndent(),
+        PythonSymbol("pydantic", "model_validator"),
+        PythonCodeBlock.join(capture, separator = "\n"),
+      )
+    return PythonCodeBlock.join(
+      listOf(before) + externalProperties.map { it.renderExternalDiscriminatorMapping() },
+      "\n\n",
     )
   }
 
   private fun GeneratedModelProperty.renderExternalDiscriminatorMapping(): PythonCodeBlock {
-    val discriminatorName = externalDiscriminator ?: error("External discriminator is required")
     val mappedValues = modelIndex[type.name]?.discriminatorMappings.orEmpty()
-    val mappings =
-      mappedValues
-        .map { (value, mappedType) ->
-          PythonCodeBlock.of(
-            """
-            |        if data.get(%S) == %S:
-            |            data = dict(data)
-            |            data[%S] = %T(%C).validate_python(data.get(%S))
-            """.trimMargin(),
-            discriminatorName,
-            value,
-            serializationName ?: name,
-            PythonSymbol("pydantic", "TypeAdapter"),
-            mappedType.renderPythonType(nullable = false),
-            serializationName ?: name,
-          )
-        }
-
-    val fallbackMapping =
-      discriminatorFallbacks[type.name]?.let { fallback ->
-        val values = mappedValues.keys.sorted().joinToString(", ") { value -> value.pythonStringLiteral() }
+    val branches =
+      mappedValues.map { (tag, mappedType) ->
         PythonCodeBlock.of(
-          """
-          |        if isinstance(data.get(%S), str) and data.get(%S) not in {%L}:
-          |            data = dict(data)
-          |            data[%S] = %T(%L).validate_python(data.get(%S))
-          """.trimMargin(),
-          discriminatorName,
-          discriminatorName,
-          values,
-          serializationName ?: name,
+          "        if value.discriminator == %S:\n" +
+            "            return %T(%C).validate_python(value.value, context=info.context)",
+          tag,
           PythonSymbol("pydantic", "TypeAdapter"),
-          fallback.modelName.pythonTypeName,
-          serializationName ?: name,
+          mappedType.renderPythonType(nullable = false),
         )
       }
-
-    return PythonCodeBlock.join(mappings + listOfNotNull(fallbackMapping), separator = "\n")
+    val fallback =
+      discriminatorFallbacks[type.name]?.let {
+        PythonCodeBlock.of(
+          "        if isinstance(value.discriminator, str):\n" +
+            "            return %T(%L).validate_python(value.value, context=info.context)",
+          PythonSymbol("pydantic", "TypeAdapter"),
+          it.modelName.pythonTypeName,
+        )
+      }
+    return PythonCodeBlock.of(
+      """
+          @%T(%S, mode="wrap")
+          @classmethod
+          def _validate_%L_discriminator(
+              cls,
+              value: object,
+              handler: %T,
+              info: %T,
+          ) -> %T:
+              if not isinstance(value, %T):
+                  return handler(value)
+              if value.value is None:
+                  return handler(None)
+      %C
+              raise ValueError("Missing or unsupported external discriminator")
+      """.trimIndent(),
+      PythonSymbol("pydantic", "field_validator"),
+      name.pythonIdentifierName,
+      name.pythonIdentifierName,
+      PythonSymbol("pydantic", "ValidatorFunctionWrapHandler"),
+      PythonSymbol("pydantic", "ValidationInfo"),
+      PythonSymbol("typing", "Any"),
+      PythonSymbol("sunday.external_discriminator", "ExternalDiscriminatorValue"),
+      PythonCodeBlock.join(branches + listOfNotNull(fallback), "\n"),
+    )
   }
 
   private fun GeneratedModelProperty.requiresUniqueListValidation(): Boolean =
@@ -1609,6 +1697,10 @@ class PythonModelRenderer(
   private fun GeneratedModel.unionAliases(): List<GeneratedTypeRef> =
     if (discriminatorMappings.isNotEmpty()) {
       discriminatorMappings.values.toList()
+    } else if (kind == GeneratedModel.Kind.OBJECT && isDiscriminatedAlias()) {
+      modelIndex.values
+        .filter { child -> child.inherits.any { it.name == name } }
+        .map { child -> GeneratedTypeRef.named(child.name, source = child.source) }
     } else {
       aliases
     }

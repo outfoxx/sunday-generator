@@ -75,6 +75,15 @@ abstract class CommonGenerateCommand(
     help = "Preserve schema-permitted dynamic model fields for serialization",
   ).flag("-no-preserve-unknown-fields", default = true, defaultForHelp = "enabled")
 
+  /** Explicit environment profile used by policy and security metadata. */
+  val profile by option("-profile", help = "Select a named policy and security profile")
+    .validate { require(it.isNotBlank()) { "Generation profile must not be blank" } }
+
+  /** Default request behavior for schema-declared tolerant values. */
+  val requestTolerance by option("-request-tolerance", help = "Default request tolerance: strict or tolerant")
+    .enum<RequestTolerance> { it.name.lowercase() }
+    .default(RequestTolerance.Strict)
+
   val mediaTypes by option(
     "-media-type",
     help = "Specify order of default media types",

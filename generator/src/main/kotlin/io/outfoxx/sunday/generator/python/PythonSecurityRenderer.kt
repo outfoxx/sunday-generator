@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
+import io.outfoxx.sunday.generator.ir.emit.endpointSecurityProviders
 
 private const val COLLECTIONS_ABC = "collections.abc"
 
@@ -106,6 +107,23 @@ internal class PythonSecurityRenderer(
         ),
       ).addCode(
         PythonCodeBlock.of(
+          "_PROVIDERS: %T[str, str] = %T(\n    %C,\n)",
+          PythonSymbol(COLLECTIONS_ABC, "Mapping"),
+          PythonSymbol("types", "MappingProxyType"),
+          dictionary(
+            policies.values.endpointSecurityProviders().map { (name, provider) ->
+              name to
+                if (name.length + provider.length > 104) {
+                  PythonCodeBlock.of("(\n            %S\n        )", provider)
+                } else {
+                  PythonCodeBlock.of("%S", provider)
+                }
+            },
+            4,
+          ),
+        ),
+      ).addCode(
+        PythonCodeBlock.of(
           """
           class ApiSecurity:
               ${"\"\"\"Enforce named schemes and permissions before invoking operation delegates.\"\"\""}
@@ -113,8 +131,8 @@ internal class PythonSecurityRenderer(
               schemes: %T[%T[str, Scheme]] = _SCHEMES
 
               def __init__(self, authenticators: %T[str, Authenticator]) -> None:
-                  ${"\"\"\"Bind validated credential handlers by exact scheme name; missing bindings fail setup.\"\"\""}
-                  missing = self.schemes.keys() - authenticators.keys()
+                  ${"\"\"\"Bind credential validators by selected provider identifier; missing bindings fail setup.\"\"\""}
+                  missing = set(_PROVIDERS.values()) - authenticators.keys()
                   if missing:
                       raise ValueError("Missing security authenticators: " + ", ".join(sorted(missing)))
                   self._authenticators = dict(authenticators)
@@ -142,7 +160,7 @@ internal class PythonSecurityRenderer(
                               if credential is not None or (
                                   scheme.type == "mutualTLS" and connection.scope.get("scheme") == "https"
                               ):
-                                  identities[name] = await self._authenticators[name](connection, scheme, credential)
+                                  identities[name] = await self._authenticators[_PROVIDERS[name]](connection, scheme, credential)
                               else:
                                   identities[name] = None
                       resolved = {name: identities[name] for name in alternative}

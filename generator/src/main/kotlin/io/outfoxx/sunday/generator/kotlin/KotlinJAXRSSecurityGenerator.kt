@@ -45,12 +45,15 @@ internal class KotlinJAXRSSecurityGenerator(
   private val authenticator = typeName.nestedClass("Authenticator")
   private val requirements = LIST.parameterizedBy(MAP.parameterizedBy(STRING, SET.parameterizedBy(STRING)))
 
-  fun generate(schemes: Map<String, GeneratedSecurityScheme>): TypeSpec.Builder =
+  fun generate(
+    schemes: Map<String, GeneratedSecurityScheme>,
+    providers: Map<String, String> = schemes.keys.associateWith { it },
+  ): TypeSpec.Builder =
     TypeSpec
       .classBuilder(typeName)
       .addKdoc(
         "Enforces named security schemes and permissions before operation delegation.\n" +
-          "Register one authenticator per scheme; authenticators must validate credentials and return trusted permissions.\n",
+          "Register authenticators by the selected provider identifiers; authenticators must validate credentials and return trusted permissions.\n",
       ).primaryConstructor(
         FunSpec
           .constructorBuilder()
@@ -63,8 +66,8 @@ internal class KotlinJAXRSSecurityGenerator(
           .build(),
       ).addInitializerBlock(
         CodeBlock.of(
-          "require(authenticators.keys.containsAll(schemes.keys)) {\n" +
-            "  %S + (schemes.keys - authenticators.keys).joinToString()\n" +
+          "require(authenticators.keys.containsAll(providers.values)) {\n" +
+            "  %S + (providers.values.toSet() - authenticators.keys).joinToString()\n" +
             "}\n",
           "Missing security authenticators: ",
         ),
@@ -135,6 +138,17 @@ internal class KotlinJAXRSSecurityGenerator(
         TypeSpec
           .companionObjectBuilder()
           .addProperty(
+            PropertySpec
+              .builder("providers", MAP.parameterizedBy(STRING, STRING))
+              .addKdoc("Selected application provider for each logical wire scheme.\n")
+              .initializer(
+                "mapOf(%L)",
+                providers
+                  .map { (name, provider) ->
+                    CodeBlock.of("%S to %S", name, provider)
+                  }.joinToCode(",\n"),
+              ).build(),
+          ).addProperty(
             PropertySpec
               .builder("schemes", MAP.parameterizedBy(STRING, scheme))
               .addKdoc("Referenced scheme definitions, keyed by the exact contract name.\n")
@@ -245,7 +259,7 @@ internal class KotlinJAXRSSecurityGenerator(
               val credential = credential(request, scheme)
               identities[name] =
                 if (credential != null || (scheme.type == "mutualTLS" && request.securityContext.isSecure)) {
-                  authenticators.getValue(name).authenticate(request, scheme, credential)
+                  authenticators.getValue(providers.getValue(name)).authenticate(request, scheme, credential)
                 } else {
                   null
                 }

@@ -16,14 +16,5 @@
 
 package io.outfoxx.sunday.generator.ir
 
-/**
- * Target-independent operation policy metadata.
- */
-data class GeneratedPolicy(
-  val timeout: String? = null,
-  val retry: Map<String, String> = mapOf(),
-  val circuitBreaker: Map<String, String> = mapOf(),
-  val clientRateLimit: Map<String, String> = mapOf(),
-  val serverRateLimit: Map<String, String> = mapOf(),
-  val source: String? = null,
-)
+/** Target-independent scoped policy declarations, retaining inherited declaration precedence. */
+typealias GeneratedPolicy = GeneratedEnvironment<GeneratedPolicyValues>

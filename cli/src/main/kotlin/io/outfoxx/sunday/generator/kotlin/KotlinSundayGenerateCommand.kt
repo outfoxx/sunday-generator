@@ -84,5 +84,7 @@ open class KotlinSundayGenerateCommand :
       servicesFromTags,
       generateBrokerServices,
       preserveUnknownFields,
+      profile,
+      requestTolerance,
     )
 }

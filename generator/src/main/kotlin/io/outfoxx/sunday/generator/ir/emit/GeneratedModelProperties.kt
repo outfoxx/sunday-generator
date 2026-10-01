@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir.emit
 
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedAdditionalProperties
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedPatternProperty
@@ -53,6 +54,44 @@ internal class GeneratedModelProperties(
   private val completed = IdentityHashMap<GeneratedModel, List<Field>>()
   private val visiting = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
 
+  /** Common object assertions that reusable union payloads do not already inherit. */
+  fun hasUnionCommonRules(model: GeneratedModel): Boolean {
+    val alternatives =
+      if (model.discriminatorMappings.isNotEmpty()) {
+        model.discriminatorMappings.values.toList()
+      } else if (model.kind == GeneratedModel.Kind.UNION) {
+        model.aliases
+      } else {
+        emptyList()
+      }
+    if (alternatives.isEmpty() || alternatives.any { modelFor(it)?.kind != GeneratedModel.Kind.OBJECT }) return false
+
+    fun inherits(
+      candidate: GeneratedModel,
+      seen: MutableSet<GeneratedModel>,
+    ): Boolean =
+      seen.add(candidate) && candidate.inherits.mapNotNull(modelFor).any { it == model || inherits(it, seen) }
+    if (alternatives.all { inherits(requireNotNull(modelFor(it)), mutableSetOf()) }) return false
+    return fields(model).any {
+      (it.effective.name != model.discriminator && it.wireName != model.discriminator) ||
+        it.effective.validation.isNotEmpty() ||
+        it.effective.allowedValues != null
+    } ||
+      patternProperties(model).isNotEmpty() ||
+      additionalProperties(model).isNotEmpty() ||
+      isClosed(model)
+  }
+
+  /** Dispatch owns tag validation; common checks must not convert a reusable payload's discriminator enum. */
+  fun unionCommonProperties(model: GeneratedModel): List<GeneratedModelProperty> =
+    fields(model).map { field ->
+      if (field.effective.name == model.discriminator || field.wireName == model.discriminator) {
+        field.effective.copy(type = GeneratedTypeRef.scalar("string"))
+      } else {
+        field.effective
+      }
+    }
+
   /** Whether this model or an inherited schema forbids undeclared wire properties. */
   fun isClosed(model: GeneratedModel): Boolean {
     val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
@@ -74,6 +113,20 @@ internal class GeneratedModelProperties(
     fun collect(candidate: GeneratedModel): List<GeneratedPatternProperty> =
       if (visited.add(candidate)) {
         candidate.inherits.mapNotNull(modelFor).flatMap(::collect) + candidate.patternProperties
+      } else {
+        emptyList()
+      }
+    return collect(model).distinct()
+  }
+
+  /** All typed additional-property assertions, retaining restrictions inherited from every parent. */
+  fun additionalProperties(model: GeneratedModel): List<GeneratedAdditionalProperties> {
+    val visited = Collections.newSetFromMap(IdentityHashMap<GeneratedModel, Boolean>())
+
+    fun collect(candidate: GeneratedModel): List<GeneratedAdditionalProperties> =
+      if (visited.add(candidate)) {
+        candidate.inherits.mapNotNull(modelFor).flatMap(::collect) +
+          listOfNotNull(candidate.additionalProperties?.takeIf { it.type != null })
       } else {
         emptyList()
       }
@@ -190,6 +243,19 @@ internal class GeneratedModelProperties(
       reference = alias.aliases.singleOrNull() ?: break
     }
     return effective
+  }
+
+  /** Removes assertions already enforced by a referenced scalar's canonical validator. */
+  fun containingConstraints(property: GeneratedModelProperty): GeneratedModelProperty {
+    var validation = property.validation
+    var reference = property.type
+    val visited = mutableSetOf<String>()
+    while (reference.kind == GeneratedTypeRef.Kind.NAMED && visited.add(reference.name)) {
+      val alias = modelFor(reference)?.takeIf { it.kind == GeneratedModel.Kind.SCALAR_ALIAS } ?: break
+      validation = validation.filter { (key, value) -> alias.validation[key] != value }
+      reference = alias.aliases.singleOrNull() ?: break
+    }
+    return property.copy(validation = validation)
   }
 
   /** All regular-expression assertions contributed by a property and its scalar alias chain. */

@@ -50,7 +50,8 @@ internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilation
             val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
             SourceFile.kotlin(fileName, it.toString())
           }
-        kotlincArguments = listOf("-jvm-target", "21", "-Xannotation-default-target=param-property")
+        kotlincArguments =
+          listOf("-jvm-target", "21", "-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
         languageVersion = "2.3"
         inheritClassPath = true
         verbose = false

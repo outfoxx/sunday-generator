@@ -154,7 +154,7 @@ class OpenApiToGeneratedApi(
               responses = responses(operation, operationId, seed.serviceLabel, localModels),
               problems = operation.problemRefs(),
               nullify = operation.nullify(),
-              auth = auth(operation, operation.securityValue()),
+              auth = auth(operation, operation.securityValue(), pathItem),
               media = GeneratedMedia(),
               policy = operationPolicy,
               jaxrs = operationJaxrs,
@@ -207,12 +207,9 @@ class OpenApiToGeneratedApi(
             ?.policy()
         }.distinct()
 
-    require(tagPolicies.size <= 1) {
-      "OpenAPI operation '${operation["operationId"] ?: "<unknown>"}' has multiple tag x-sunday-policy values. " +
-        "Move policy metadata to the operation or align the tag policies."
+    return tagPolicies.reduceOrNull { base, peer ->
+      base.merge(peer) { left, right -> left.merge(right, rejectConflicts = true) }
     }
-
-    return tagPolicies.singleOrNull()
   }
 
   private fun OpenApiSourceDocument.parameter(value: Any?): GeneratedParameter? {
@@ -446,6 +443,23 @@ class OpenApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
     discriminatorValues: Map<String, String>,
     scope: GeneratedModelScope? = null,
+  ): GeneratedModel =
+    generatedModelDeclaration(name, schema, localModels, discriminatorValues, scope).let { model ->
+      model.copy(
+        tolerance =
+          GeneratedTolerance.parse(
+            analysis.analyze(schema).model.schema["x-sunday-tolerant"],
+            "OpenAPI model '$name' x-sunday-tolerant",
+          ) ?: model.tolerance,
+      )
+    }
+
+  private fun OpenApiSourceDocument.generatedModelDeclaration(
+    name: String,
+    schema: Map<*, *>,
+    localModels: MutableMap<String, GeneratedModel>,
+    discriminatorValues: Map<String, String>,
+    scope: GeneratedModelScope? = null,
   ): GeneratedModel {
     val analyzed = analysis.analyze(schema)
     analyzed.collapsedAlias?.let { target ->
@@ -609,6 +623,16 @@ class OpenApiToGeneratedApi(
       kind = GeneratedModel.Kind.UNION,
       unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
       scope = scope,
+      properties =
+        properties(
+          schema,
+          name,
+          schema.listValue("required").filterIsInstance<String>().toSet(),
+          localModels,
+        ),
+      closed = true.takeIf { schema["additionalProperties"] == false },
+      additionalProperties = additionalProperties(name, schema, localModels, scope),
+      patternProperties = patternProperties(name, schema, localModels),
       aliases = branches.map { branch -> schemaTypeRef(branch, null, null, localModels) },
       discriminator = schema.discriminatorProperty(),
       discriminatorMappings =
@@ -723,6 +747,7 @@ class OpenApiToGeneratedApi(
           allowed = true,
           type = schemaTypeRef(additionalProperties, "${owner}Value", scope, localModels),
           validation = validation(effective),
+          allowedValues = effective.allowedValues(),
           documentation = documentation(description = effective["description"] as? String),
         )
       }
@@ -790,6 +815,7 @@ class OpenApiToGeneratedApi(
     security: List<Any?>? = this.security,
     zanzibar: Map<String, String> = mapOf(),
     zanzibarUserSource: GeneratedZanzibarUserSource? = null,
+    selection: GeneratedEnvironment<GeneratedSecuritySelection>? = source.securitySelection(),
   ): GeneratedAuth? {
     val requirements =
       security.orEmpty().map { requirement ->
@@ -804,6 +830,7 @@ class OpenApiToGeneratedApi(
       zanzibar = zanzibar,
       zanzibarUserSource = zanzibarUserSource,
       securityOverride = security != null,
+      selection = selection,
     ).takeUnless { it == GeneratedAuth() }
   }
 
@@ -848,6 +875,12 @@ class OpenApiToGeneratedApi(
       type = if (type == "apiKey") "Api Key" else type,
       scheme = scheme["scheme"] as? String,
       bearerFormat = scheme["bearerFormat"] as? String,
+      bindings =
+        if (scheme.containsKey("x-sunday-security")) {
+          GeneratedSecurityReader.binding(scheme["x-sunday-security"], "security scheme '$name'.x-sunday-security")
+        } else {
+          null
+        },
       headers = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.HEADER }),
       queryParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.QUERY }),
       cookieParameters = listOfNotNull(parameter?.takeIf { it.location == GeneratedParameter.Location.COOKIE }),
@@ -996,33 +1029,19 @@ class OpenApiToGeneratedApi(
     return GeneratedNullify(problems = problems, statuses = statuses).takeUnless { it == GeneratedNullify() }
   }
 
-  private fun Map<*, *>.policy(): GeneratedPolicy? {
-    val policy = mapValue("x-sunday-policy") ?: return null
-    return GeneratedPolicy(
-      timeout = policy["timeout"] as? String,
-      retry = policy.mapValue("retry").stringMap(),
-      circuitBreaker = policy.mapValue("circuitBreaker").stringMap(),
-      clientRateLimit = policy.mapValue("clientRateLimit").stringMap(),
-      serverRateLimit = policy.mapValue("serverRateLimit").stringMap(),
-      source = policy["source"] as? String,
-    ).takeUnless { it == GeneratedPolicy() }
-  }
-
-  private fun GeneratedPolicy?.mergeWith(overrides: GeneratedPolicy?): GeneratedPolicy? {
-    val base = this ?: GeneratedPolicy()
-    if (overrides == null || overrides == GeneratedPolicy()) {
-      return base.takeUnless { it == GeneratedPolicy() }
+  private fun Map<*, *>.policy(): GeneratedPolicy? =
+    if (containsKey("x-sunday-policy")) {
+      GeneratedPolicyReader.read(this["x-sunday-policy"], "x-sunday-policy")
+    } else {
+      null
     }
 
-    return GeneratedPolicy(
-      timeout = overrides.timeout ?: base.timeout,
-      retry = base.retry + overrides.retry,
-      circuitBreaker = base.circuitBreaker + overrides.circuitBreaker,
-      clientRateLimit = base.clientRateLimit + overrides.clientRateLimit,
-      serverRateLimit = base.serverRateLimit + overrides.serverRateLimit,
-      source = overrides.source ?: base.source,
-    ).takeUnless { it == GeneratedPolicy() }
-  }
+  private fun GeneratedPolicy?.mergeWith(overrides: GeneratedPolicy?): GeneratedPolicy? =
+    when {
+      this == null -> overrides
+      overrides == null -> this
+      else -> inherit(overrides)
+    }
 
   private fun Map<*, *>.streaming(): GeneratedStreaming? =
     responses()
@@ -1041,14 +1060,28 @@ class OpenApiToGeneratedApi(
   private fun OpenApiSourceDocument.auth(
     operation: Map<*, *>,
     security: List<Any?>?,
+    pathItem: Map<*, *>,
   ): GeneratedAuth? {
     val zanzibar = operation.mapValue("x-sunday-zanzibar")
     return auth(
       security,
       zanzibar = rootZanzibar() + zanzibar.zanzibarMap(),
       zanzibarUserSource = zanzibar.zanzibarUserSource() ?: rootZanzibarUserSource(),
+      selection =
+        listOfNotNull(pathItem.securitySelection(), operation.securitySelection())
+          .reduceOrNull { inherited, local -> inherited.inherit(local) },
     )
   }
+
+  private fun Map<*, *>.securitySelection(): GeneratedEnvironment<GeneratedSecuritySelection>? =
+    if (containsKey(
+        "x-sunday-security",
+      )
+    ) {
+      GeneratedSecurityReader.selection(this["x-sunday-security"], "x-sunday-security")
+    } else {
+      null
+    }
 
   private fun OpenApiSourceDocument.discriminatorValues(): Map<String, String> =
     schemas.values

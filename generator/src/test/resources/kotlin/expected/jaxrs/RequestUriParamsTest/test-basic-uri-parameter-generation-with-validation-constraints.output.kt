@@ -1,5 +1,6 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.javax.EntitySchema
 import io.test.Test
 import javax.validation.Valid
 import javax.ws.rs.Consumes
@@ -17,6 +18,7 @@ import kotlin.String
 public interface API {
   @GET
   @Path(value = "/tests/{obj}/{str-req}/{int}/{def}")
+  @EntitySchema
   public fun fetchTest(
     @PathParam(value = "def") def: String,
     @PathParam(value = "obj") @Valid obj: Test,

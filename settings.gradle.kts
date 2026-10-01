@@ -39,14 +39,27 @@ includeBuild("build-logic") {
   name = "sunday-generator-build-logic"
 }
 
-val localSundayKt = rootDir.parentFile.resolve("sunday-kt")
-val useLocalSundayKt = providers.gradleProperty("useLocalSundayKt").map { it.toBooleanStrict() }.getOrElse(true)
+val localSundayKt = providers.environmentVariable("SUNDAY_KOTLIN_PATH")
+  .map { file(it) }
+  .getOrElse(rootDir.parentFile.resolve("sunday-kt"))
+val useLocalSundayKt =
+  providers.gradleProperty("useLocalSundayKt").map { it.toBooleanStrict() }
+    .getOrElse(providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent)
 if (useLocalSundayKt && localSundayKt.isDirectory) {
   includeBuild(localSundayKt) {
     dependencySubstitution {
       substitute(module("io.outfoxx.sunday:sunday-core")).using(project(":sunday-core"))
+      substitute(module("io.outfoxx.sunday:sunday-jdk")).using(project(":sunday-jdk"))
       substitute(module("io.outfoxx.sunday:sunday-broker")).using(project(":sunday-broker"))
       substitute(module("io.outfoxx.sunday:sunday-problem")).using(project(":sunday-problem"))
+      substitute(module("io.outfoxx.sunday:sunday-jaxrs-quarkus")).using(project(":sunday-jaxrs-quarkus"))
+      if (localSundayKt.resolve("client-quarkus").isDirectory) {
+        substitute(module("io.outfoxx.sunday:sunday-client-quarkus")).using(project(":sunday-client-quarkus"))
+      }
+      if (localSundayKt.resolve("validation-javax").isDirectory) {
+        substitute(module("io.outfoxx.sunday:sunday-validation-javax")).using(project(":sunday-validation-javax"))
+        substitute(module("io.outfoxx.sunday:sunday-validation-jakarta")).using(project(":sunday-validation-jakarta"))
+      }
     }
   }
 }

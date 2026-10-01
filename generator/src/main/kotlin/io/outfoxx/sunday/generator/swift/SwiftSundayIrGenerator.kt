@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.PayloadUse
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -37,13 +38,16 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.allowsUnknown
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.ancestorModels
+import io.outfoxx.sunday.generator.ir.emit.clientSecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -59,6 +63,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
@@ -77,7 +82,6 @@ import io.outfoxx.sunday.generator.swift.utils.DECODING_ERROR
 import io.outfoxx.sunday.generator.swift.utils.DESCRIPTION_BUILDER
 import io.outfoxx.sunday.generator.swift.utils.EMPTY
 import io.outfoxx.sunday.generator.swift.utils.ENCODER
-import io.outfoxx.sunday.generator.swift.utils.ENCODING_ERROR
 import io.outfoxx.sunday.generator.swift.utils.EQUATABLE
 import io.outfoxx.sunday.generator.swift.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.swift.utils.GENERIC_PROBLEM
@@ -98,13 +102,17 @@ import io.outfoxx.sunday.generator.swift.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.swift.utils.SUNDAY_MODULE
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
+import io.outfoxx.sunday.generator.swift.utils.SwiftModelValidation
 import io.outfoxx.sunday.generator.swift.utils.SwiftNominalTypes
+import io.outfoxx.sunday.generator.swift.utils.SwiftValidationViews
+import io.outfoxx.sunday.generator.swift.utils.SwiftValueConstraints
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT_RESPONSE
 import io.outfoxx.sunday.generator.swift.utils.UNCHECKED_SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.URL
+import io.outfoxx.sunday.generator.swift.utils.swiftBindings
 import io.outfoxx.sunday.generator.swift.utils.swiftEnumCaseName
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftStringFormatTypeName
@@ -163,7 +171,14 @@ class SwiftSundayIrGenerator(
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator =
-    SwiftNominalTypes(nominalTypes, modelProperties, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
+    SwiftNominalTypes(nominalTypes, { validationViews }, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
+  private val validationViews =
+    SwiftValidationViews(modelProperties, apiIndex::modelOrNull, {
+      it.swiftDeclaredTypeName()
+    }, { it.swiftTypeName() }, { it.isFreeformObject }, {
+      if (it.hasSwiftReferenceType) it.swiftReferenceTypeName() else it.swiftDeclaredTypeName()
+    })
+  private val normalizedValidationModels by lazy { api.models.toSet() }
   private val decodingDefaultNames by lazy { inheritedDecodingDefaultNames() }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
     buildList {
@@ -175,12 +190,20 @@ class SwiftSundayIrGenerator(
       }
     }.associateBy { fallback -> fallback.hierarchy }
   }
+  private val scopedModelNames = mutableMapOf<GeneratedModel, DeclaredTypeName>()
   private val swiftEnumEntriesByModel = mutableMapOf<GeneratedModel, List<SwiftEnumEntry>>()
 
   /** Generates Swift/Sunday service types from IR and registers them in the type registry. */
   fun generateServiceTypes() {
     options.requireBrokerServicesSupported("Swift/Sunday")
     val services = api.swiftSundayServices()
+    services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Swift/Sunday")
+    services.forEach { service ->
+      val serviceName = DeclaredTypeName.typeName(".${service.typeSimpleName()}")
+      apiIndex.referencedScopedModels(service).forEach { model ->
+        scopedModelNames[model] = serviceName.nestedType(model.name.toUpperCamelCase())
+      }
+    }
     val serviceOutputGroups = services.swiftOutputGroups()
     generateModelTypes(services, serviceOutputGroups)
     generateProblemTypes(services, serviceOutputGroups)
@@ -287,7 +310,7 @@ class SwiftSundayIrGenerator(
         discriminatorFallbacks[model]?.let { fallback ->
           typeRegistry.addModelType(
             model.swiftFallbackTypeName(fallback),
-            model.swiftFallbackTypeSpec(fallback),
+            model.swiftFallbackTypeSpec(fallback, outputDirectory, outputGroup),
             outputDirectory = outputDirectory,
             outputGroup = outputGroup,
           )
@@ -303,7 +326,11 @@ class SwiftSundayIrGenerator(
     return DeclaredTypeName.typeName("${if (moduleName.isBlank()) "" else moduleName}.${fallback.modelName}")
   }
 
-  private fun GeneratedModel.swiftFallbackTypeSpec(fallback: GeneratedDiscriminatorFallback): TypeSpec.Builder {
+  private fun GeneratedModel.swiftFallbackTypeSpec(
+    fallback: GeneratedDiscriminatorFallback,
+    outputDirectory: OutputDirectory,
+    outputGroup: String?,
+  ): TypeSpec.Builder {
     val typeName = swiftFallbackTypeName(fallback)
     val exposedProperties =
       buildList {
@@ -313,6 +340,15 @@ class SwiftSundayIrGenerator(
         addAll(fallback.baseProperties)
       }
     val rawBodyType = DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+    val normalized = this in normalizedValidationModels
+    val fallbackSchema =
+      GeneratedModel(
+        fallback.modelName,
+        GeneratedModel.Kind.OBJECT,
+        properties = exposedProperties,
+        patternProperties = modelProperties.patternProperties(this),
+        additionalProperties = additionalProperties,
+      )
     return TypeSpec
       .structBuilder(typeName)
       .addModifiers(PUBLIC)
@@ -330,6 +366,66 @@ class SwiftSundayIrGenerator(
           }
         },
       ).apply {
+        addSuperType(SwiftModelValidation.validatable)
+        val validatorName = SwiftModelValidation.name(typeName)
+        addFunction(SwiftModelValidation.instance(validatorName))
+        val body =
+          CodeBlock
+            .builder()
+            .apply {
+              val effectiveTolerance = tolerance ?: fallback.enumModel?.tolerance
+              if (!effectiveTolerance.allowsUnknown(
+                  options.generationContext(GenerationMode.Client, PayloadUse.Request),
+                )
+              ) {
+                beginControlFlow("if", "mode == .request")
+                addStatement("return context.reject(.unknownUnion)")
+                endControlFlow("if")
+              }
+              if (normalized) {
+                add(normalizedObjectValidation(fallbackSchema))
+              } else {
+                add(
+                  SwiftModelValidation.fields(
+                    exposedProperties.map {
+                      GeneratedModelProperties.Field(it, it, false)
+                    },
+                    modelProperties,
+                    false,
+                    swiftClosedPropertyValidation(CodeBlock.of("Set(value.rawBody.keys)")),
+                  ) { property ->
+                    property.type.copy(nullable = false).swiftNestedValidation(CodeBlock.of("fieldValue"))
+                  },
+                )
+              }
+            }.build()
+        if (normalized) {
+          addFunction(
+            FunctionSpec
+              .builder("_sundayValidationValue")
+              .addDoc("Retains fallback identity and current declared fields without invoking a codec.\n")
+              .returns(SwiftValueConstraints.valueType)
+              .addCode(
+                validationViews.objectView(
+                  fallbackSchema,
+                  "rawBody",
+                  false,
+                  unknown = true,
+                  validatorName = validatorName,
+                ),
+              ).build(),
+          )
+        }
+        typeRegistry.addModelType(
+          validatorName,
+          if (normalized) {
+            normalizedValidatorType(validatorName, typeName, CodeBlock.of("value._sundayValidationValue()"), body)
+          } else {
+            SwiftModelValidation.type(validatorName, typeName, body)
+          },
+          outputDirectory = outputDirectory,
+          outputGroup = outputGroup,
+        )
         addType(unknownPropertyCodingKeyType())
         addType(extensionValueEncoderType())
         exposedProperties.forEach { property ->
@@ -345,6 +441,7 @@ class SwiftSundayIrGenerator(
           FunctionSpec
             .constructorBuilder()
             .addModifiers(PUBLIC)
+            .throws(true)
             .apply {
               exposedProperties.forEach { property ->
                 addParameter(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(false))
@@ -354,6 +451,7 @@ class SwiftSundayIrGenerator(
                 addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
               }
               addStatement("self.rawBody = rawBody")
+              addStatement("try %T.validate(self, .response)", validatorName)
             }.build(),
         )
         addFunction(
@@ -362,8 +460,19 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("from", "decoder", DECODER)
             .throws(true)
-            .addCode(closedModelDecodeValidation(this@swiftFallbackTypeSpec))
             .apply {
+              if (normalized) {
+                addStatement("var validationContext = try %T.decodingValue(decoder)", SwiftModelValidation.context)
+                beginControlFlow(
+                  "guard",
+                  "%T.isValid(normalized: validationContext.originalValue!, .response, context: &validationContext) else",
+                  validatorName,
+                )
+                addStatement("throw validationContext.decodingError")
+                endControlFlow("guard")
+              } else {
+                addCode(closedModelDecodeValidation(this@swiftFallbackTypeSpec))
+              }
               if (exposedProperties.isNotEmpty()) {
                 addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
               }
@@ -377,7 +486,19 @@ class SwiftSundayIrGenerator(
                 )
               }
             }.addStatement("self.rawBody = try decoder.singleValueContainer().decode(%T.self)", rawBodyType)
-            .build(),
+            .apply {
+              if (!normalized) {
+                addStatement(
+                  "var validationContext = try %T.decoding(decoder, numericFields: %L, dynamicFields: %L)",
+                  SwiftModelValidation.context,
+                  swiftNumericFieldNames(),
+                  swiftDynamicFieldNames(),
+                )
+                beginControlFlow("if", "!%T.isValid(self, .response, context: &validationContext)", validatorName)
+                addStatement("throw validationContext.decodingError")
+                endControlFlow("if")
+              }
+            }.build(),
         )
         addFunction(
           FunctionSpec
@@ -385,12 +506,39 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("to", "encoder", ENCODER)
             .throws(true)
+            .addStatement("try %T.validate(self, .response)", validatorName)
             .addStatement("var container = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
-            .beginControlFlow("for", "(key, value) in rawBody")
+            .addStatement(
+              "let declared: %T = [%L]",
+              SET.parameterizedBy(STRING),
+              exposedProperties.map { CodeBlock.of("%S", it.serializationName ?: it.name) }.joinToCode(", "),
+            ).beginControlFlow("for", "(key, value) in rawBody where !declared.contains(key)")
             .addStatement(
               "try container.encode(AdditionalPropertyValue(value: value), forKey: UnknownPropertyCodingKey(stringValue: key))",
             ).endControlFlow("for")
-            .build(),
+            .apply {
+              exposedProperties.forEach { property ->
+                val wireName = property.serializationName ?: property.name
+                if (!property.required) {
+                  if (property.type.nullable && property.allowedValues?.contains(null) != false) {
+                    beginControlFlow(
+                      "if",
+                      "self.%N != nil || rawBody[%S] != nil",
+                      property.name.swiftIdentifierName,
+                      wireName,
+                    )
+                  } else {
+                    beginControlFlow("if", "self.%N != nil", property.name.swiftIdentifierName)
+                  }
+                }
+                addStatement(
+                  "try container.encode(self.%N, forKey: UnknownPropertyCodingKey(stringValue: %S))",
+                  property.name.swiftIdentifierName,
+                  wireName,
+                )
+                if (!property.required) endControlFlow("if")
+              }
+            }.build(),
         )
         if (exposedProperties.isNotEmpty()) {
           addType(codingKeysType(exposedProperties))
@@ -1010,37 +1158,755 @@ class SwiftSundayIrGenerator(
   private fun GeneratedModel.swiftTypeSpecBuilderOrNull(
     outputDirectory: OutputDirectory = OutputDirectory.Models,
     outputGroup: String? = null,
-  ): TypeSpec.Builder? =
-    (
-      nominalGenerator.generate(this) ?: when (kind) {
-        GeneratedModel.Kind.ENUM ->
-          if (unknownValue != null) {
-            swiftTolerantEnumTypeSpec()
-          } else {
-            TypeSpec
-              .enumBuilder(swiftDeclaredTypeName())
-              .addModifiers(PUBLIC)
-              .addSwiftDoc(documentation)
-              .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
-              .apply {
-                swiftEnumEntries().forEach { entry ->
-                  addEnumCase(entry.name, entry.value)
-                }
-              }.addProperty(swiftEnumDescriptionProperty())
-          }
-
-        GeneratedModel.Kind.OBJECT ->
-          typedEventEnvelopeOrNull()?.swiftTypeSpec()
-            ?: when {
-              isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
-              isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
-              else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+  ): TypeSpec.Builder? {
+    val builder =
+      (
+        nominalGenerator.generate(this) ?: when (kind) {
+          GeneratedModel.Kind.ENUM ->
+            if (unknownValue != null) {
+              swiftTolerantEnumTypeSpec()
+            } else {
+              TypeSpec
+                .enumBuilder(swiftDeclaredTypeName())
+                .addModifiers(PUBLIC)
+                .addSwiftDoc(documentation)
+                .addSuperTypes(listOf(STRING, CASE_ITERABLE, CODABLE, CUSTOM_STRING_CONVERTIBLE, SENDABLE))
+                .apply {
+                  swiftEnumEntries().forEach { entry ->
+                    addEnumCase(entry.name, entry.value)
+                  }
+                }.addProperty(swiftEnumDescriptionProperty())
             }
 
-        GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
-        else -> null
+          GeneratedModel.Kind.OBJECT ->
+            typedEventEnvelopeOrNull()?.swiftTypeSpec()
+              ?: when {
+                isExternalDiscriminatorBaseProtocolModel -> swiftExternalDiscriminatorBaseProtocolTypeSpec()
+                isExternalDiscriminatorCaseValueModel -> swiftExternalDiscriminatorCaseValueTypeSpec()
+                else -> swiftObjectTypeSpec(outputDirectory, outputGroup)
+              }
+
+          GeneratedModel.Kind.UNION -> swiftUnionTypeSpecOrNull()
+          else -> null
+        }
+      )?.also {
+        it.addClosedModelSupport(this, typedEventEnvelopeOrNull() == null)
+        it.addModelValidation(this, outputDirectory, outputGroup)
       }
-    )?.also { it.addClosedModelSupport(this, typedEventEnvelopeOrNull() == null) }
+    if (builder == null && isAliasLike) addAliasValidation(outputDirectory, outputGroup)
+    return builder
+  }
+
+  private fun GeneratedModel.addAliasValidation(
+    outputDirectory: OutputDirectory,
+    outputGroup: String?,
+  ) {
+    if (this in normalizedValidationModels) {
+      typeRegistry.addModelType(
+        SwiftModelValidation.name(swiftDeclaredTypeName()),
+        normalizedValidator(),
+        outputDirectory = outputDirectory,
+        outputGroup = outputGroup,
+      )
+      return
+    }
+    val valueType = aliasStoredTypeName(true)
+    val name = SwiftModelValidation.name(swiftDeclaredTypeName())
+    val reference =
+      when (kind) {
+        GeneratedModel.Kind.ARRAY -> GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = aliases)
+        GeneratedModel.Kind.MAP -> GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = aliases)
+        else -> aliases.singleOrNull()
+      }
+    val property = GeneratedModelProperty("value", reference ?: GeneratedTypeRef.scalar("any"), validation = validation)
+    val body =
+      SwiftModelValidation.scalar(
+        listOf(property),
+        modelProperties,
+        nested = reference?.swiftNestedValidation(CodeBlock.of("value")),
+      )
+    typeRegistry.addModelType(
+      name,
+      SwiftModelValidation.type(name, valueType, body),
+      outputDirectory = outputDirectory,
+      outputGroup = outputGroup,
+    )
+  }
+
+  private fun TypeSpec.Builder.addModelValidation(
+    model: GeneratedModel,
+    outputDirectory: OutputDirectory,
+    outputGroup: String?,
+  ) {
+    if (model.nominal || nominalTypes.branches(model).isNotEmpty()) {
+      val name = SwiftModelValidation.name(model.swiftDeclaredTypeName())
+      typeRegistry.addModelType(
+        name,
+        nominalGenerator.validator(model),
+        outputDirectory = outputDirectory,
+        outputGroup = outputGroup,
+      )
+      return
+    }
+    val protocolModel =
+      model.isProtocolHierarchyRootModel ||
+        model.isProblemHierarchyProtocolModel ||
+        model.isExternalDiscriminatorBaseProtocolModel
+    val inherited =
+      model.isSwiftClassModel &&
+        model.inherits.any {
+          it.modelOrNull(apiIndex)?.isSwiftClassModel == true
+        }
+    if (!inherited) addSuperType(SwiftModelValidation.validatable)
+    val name = SwiftModelValidation.name(model.swiftDeclaredTypeName())
+    if (protocolModel) {
+      typeRegistry.addModelType(
+        name,
+        if (model in normalizedValidationModels) {
+          model.normalizedProtocolValidator()
+        } else {
+          SwiftModelValidation.type(
+            name,
+            model.swiftDeclaredTypeName().swiftExistentialTypeName(),
+            CodeBlock.of("return value.isValid(mode, context: &context)\n"),
+          )
+        },
+        outputDirectory = outputDirectory,
+        outputGroup = outputGroup,
+      )
+      return
+    }
+    addFunction(SwiftModelValidation.instance(name, inherited))
+    if (model in normalizedValidationModels) {
+      if (model.kind == GeneratedModel.Kind.OBJECT) {
+        addFunction(
+          FunctionSpec
+            .builder("_sundayValidationValue")
+            .addDoc("Supplies current wire fields without serialization or model construction.\n")
+            .apply { if (inherited) addModifiers(OVERRIDE) }
+            .returns(SwiftValueConstraints.valueType)
+            .addCode(
+              validationViews.objectView(
+                model,
+                extensionFieldName.takeIf {
+                  model.preservesExtensions()
+                },
+                model.isSwiftClassModel,
+                patchField = { model.patchable && it.name != model.discriminatorNameOrNull() },
+                storageProperty = { property ->
+                  when {
+                    property.name == model.discriminatorNameOrNull() ->
+                      property.copy(required = true, type = property.type.copy(nullable = false))
+                    model.isProblemModel -> property.normalizedSwiftBaseProblemProperty()
+                    else -> property
+                  }
+                },
+              ),
+            ).build(),
+        )
+      }
+      typeRegistry.addModelType(
+        name,
+        model.normalizedValidator(),
+        outputDirectory = outputDirectory,
+        outputGroup = outputGroup,
+      )
+      return
+    }
+    val body =
+      when (model.kind) {
+        GeneratedModel.Kind.ENUM ->
+          CodeBlock
+            .builder()
+            .apply {
+              if (model.unknownValue != null &&
+                !model.tolerance.allowsUnknown(options.generationContext(GenerationMode.Client, PayloadUse.Request))
+              ) {
+                val entry = model.swiftEnumEntries().single { it.value == model.unknownValue }
+                beginControlFlow("if", "mode == .request, case .%N = value", entry.name)
+                addStatement("return context.reject(.unknownEnum)")
+                endControlFlow("if")
+              }
+              addStatement("return true")
+            }.build()
+        GeneratedModel.Kind.UNION -> model.swiftUnionValidation()
+        GeneratedModel.Kind.OBJECT -> {
+          val fields =
+            SwiftModelValidation.fields(
+              modelProperties.fields(model).map { field ->
+                if (model.isProblemModel) {
+                  GeneratedModelProperties.Field(
+                    field.declaration.normalizedSwiftBaseProblemProperty(),
+                    field.effective,
+                    field.inherited,
+                  )
+                } else {
+                  field
+                }
+              },
+              modelProperties,
+              model.patchable,
+              model.swiftClosedPropertyValidation(),
+            ) { property ->
+              if (model.typedEventEnvelopeOrNull() != null) {
+                // Event enum cases already pair the discriminator and payload in their storage type.
+                property.type.copy(nullable = false).swiftNestedValidation(CodeBlock.of("fieldValue"))
+              } else {
+                property.swiftFieldValidation(modelProperties.fields(model).map { it.storage })
+              }
+            }
+          if (model.isSwiftClassModel) {
+            CodeBlock
+              .builder()
+              .add("return context.withObject(value) { context in\n")
+              .indent()
+              .add(fields)
+              .unindent()
+              .add("}\n")
+              .build()
+          } else {
+            fields
+          }
+        }
+        else -> CodeBlock.of("return true\n")
+      }
+    typeRegistry.addModelType(
+      name,
+      SwiftModelValidation.type(name, model.swiftDeclaredTypeName(), body),
+      outputDirectory = outputDirectory,
+      outputGroup = outputGroup,
+    )
+  }
+
+  private fun normalizedObjectValidation(model: GeneratedModel): CodeBlock =
+    validationViews.objectValidation(model) { property ->
+      property.externalDiscriminator?.let {
+        val discriminator = property.externalDiscriminatorProperty(modelProperties.fields(model).map { it.storage })
+        val fallback = property.type.modelOrNull(apiIndex)?.let { discriminatorFallbacks[it] }
+        CodeBlock
+          .builder()
+          .add("{ () -> Bool in\n")
+          .indent()
+          .addStatement(
+            "guard let tag = objectFields[%S]?.string else { return context.reject(.discriminator) }",
+            discriminator.serializationName ?: discriminator.name,
+          ).beginControlFlow("switch", "tag")
+          .apply {
+            property.externalDiscriminatorModels().forEach { branch ->
+              val validator = SwiftModelValidation.name(branch.swiftDeclaredTypeName())
+              addStatement("case %S:", branch.discriminatorValue ?: branch.name)
+              indent()
+              addStatement(
+                "guard !value.isUnknown && (!value.hasProjectedSchema || value.represents(%T.self)) else { return context.reject(.discriminator) }",
+                validator,
+              )
+              addStatement(
+                "return value.validateNested(mode, schema: %T.self, context: &context) { value, mode, context in %T.isValid(normalized: value, mode, context: &context) }",
+                validator,
+                validator,
+              )
+              unindent()
+            }
+            addStatement("default:")
+            indent()
+            if (fallback == null) {
+              addStatement("return context.reject(.discriminator)")
+            } else {
+              val validator = SwiftModelValidation.name(fallback.hierarchy.swiftFallbackTypeName(fallback))
+              addStatement(
+                "guard !value.hasProjectedSchema || value.represents(%T.self) else { return context.reject(.discriminator) }",
+                validator,
+              )
+              addStatement(
+                "return value.validateNested(mode, schema: %T.self, context: &context) { value, mode, context in %T.isValid(normalized: value, mode, context: &context) }",
+                validator,
+                validator,
+              )
+            }
+            unindent()
+          }.endControlFlow("switch")
+          .unindent()
+          .add("}()")
+          .build()
+      }
+    }
+
+  private fun GeneratedModel.normalizedValidator(): TypeSpec.Builder {
+    val name = SwiftModelValidation.name(swiftDeclaredTypeName())
+    val valueType = if (isAliasLike) aliasStoredTypeName(true) else swiftDeclaredTypeName()
+    val reference =
+      when (kind) {
+        GeneratedModel.Kind.ARRAY -> GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = aliases)
+        GeneratedModel.Kind.MAP -> GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = aliases)
+        else -> aliases.singleOrNull()
+      }
+    val projection =
+      when (kind) {
+        GeneratedModel.Kind.OBJECT -> CodeBlock.of("value._sundayValidationValue()")
+        GeneratedModel.Kind.ENUM -> {
+          val unknown = unknownValue?.let { raw -> swiftEnumEntries().single { it.value == raw }.name }
+          if (unknown == null) {
+            CodeBlock.of("%T.string(value.rawValue)", SwiftValueConstraints.valueType)
+          } else {
+            CodeBlock.of(
+              "%T.string(value.rawValue, isUnknown: { if case .%N = value { return true }; return false }())",
+              SwiftValueConstraints.valueType,
+              unknown,
+            )
+          }
+        }
+        GeneratedModel.Kind.UNION ->
+          if (isAliasLike) {
+            if (valueType == ANY_VALUE) {
+              CodeBlock.of("%T(value)", SwiftValueConstraints.valueType)
+            } else {
+              validationViews.project(aliases.first(), CodeBlock.of("value"))
+            }
+          } else {
+            CodeBlock
+              .builder()
+              .add("{ () -> %T in\n", SwiftValueConstraints.valueType)
+              .indent()
+              .beginControlFlow("switch", "value")
+              .apply {
+                unionCaseModels().forEach { branch ->
+                  addStatement(
+                    "case .%N(let value): return %T.view(value)",
+                    branch.unionCaseName,
+                    SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
+                  )
+                }
+                discriminatorFallbacks[this@normalizedValidator]?.let { fallback ->
+                  addStatement(
+                    "case .%N(let value): return %T.view(value)",
+                    fallback.fallbackName.swiftEnumCaseName,
+                    SwiftModelValidation.name(swiftFallbackTypeName(fallback)),
+                  )
+                }
+              }.endControlFlow("switch")
+              .unindent()
+              .add("}()")
+              .build()
+          }
+        else -> validationViews.project(requireNotNull(reference), CodeBlock.of("value"))
+      }
+    val body =
+      when (kind) {
+        GeneratedModel.Kind.OBJECT -> normalizedObjectValidation(this)
+        GeneratedModel.Kind.UNION ->
+          if (isAliasLike) {
+            CodeBlock.of(
+              "return %L\n",
+              validationViews.unionCheck(aliases, unionMode == GeneratedModel.UnionMode.ONE_OF),
+            )
+          } else {
+            normalizedUnionValidation()
+          }
+        GeneratedModel.Kind.ENUM ->
+          CodeBlock
+            .builder()
+            .apply {
+              addStatement("guard let rawValue = value.string else { return context.reject(.invalidValue) }")
+              val known =
+                swiftEnumEntries()
+                  .filterNot {
+                    it.value == unknownValue
+                  }.map { CodeBlock.of("%S", it.value) }
+                  .joinToCode(", ", "[", "]")
+              if (unknownValue == null) {
+                addStatement("return %L.contains(rawValue) || context.reject(.allowedValue)", known)
+              } else if (!tolerance.allowsUnknown(
+                  options.generationContext(GenerationMode.Client, PayloadUse.Request),
+                )
+              ) {
+                addStatement(
+                  "if mode == .request && (value.isUnknown || !%L.contains(rawValue)) { " +
+                    "return context.reject(.unknownEnum) }",
+                  known,
+                )
+                addStatement("return true")
+              } else {
+                addStatement("_ = rawValue")
+                addStatement("return true")
+              }
+            }.build()
+        else ->
+          validationViews.validation(
+            GeneratedModelProperty("value", requireNotNull(reference), validation = validation),
+          )
+      }
+    return normalizedValidatorType(name, valueType, projection, body)
+  }
+
+  private fun normalizedValidatorType(
+    name: DeclaredTypeName,
+    valueType: TypeName,
+    projection: CodeBlock,
+    body: CodeBlock,
+  ): TypeSpec.Builder =
+    SwiftModelValidation
+      .type(
+        name,
+        valueType,
+        CodeBlock.of("return isValid(normalized: view(value), mode, context: &context)\n"),
+      ).addFunction(
+        FunctionSpec
+          .builder("view")
+          .addModifiers(STATIC)
+          .addDoc("Projects storage without constructing or encoding application models.\n")
+          .addParameter("_", "value", valueType)
+          .returns(SwiftValueConstraints.valueType)
+          .addCode("return %L\n", projection)
+          .build(),
+      ).addFunction(
+        SwiftModelValidation
+          .function(SwiftValueConstraints.valueType, "value", "normalized")
+          .addModifiers(STATIC)
+          .addCode(body)
+          .build(),
+      )
+
+  private fun GeneratedModel.normalizedDiscriminatorValidation(
+    cases: List<GeneratedModel>,
+    discriminator: UnionDiscriminator,
+  ): CodeBlock {
+    val fallback = discriminatorFallbacks[this]
+
+    fun CodeBlock.Builder.validateFallback() {
+      val resolved = requireNotNull(fallback)
+      addStatement(
+        "let valid = %T.isValid(normalized: value, mode, context: &context)",
+        SwiftModelValidation.name(swiftFallbackTypeName(resolved)),
+      )
+      addStatement("if valid { context.selectAlternative(%L) }", cases.size)
+      addStatement("return valid")
+    }
+    return CodeBlock
+      .builder()
+      .apply {
+        if (fallback != null) {
+          beginControlFlow("if", "value.isUnknown")
+          validateFallback()
+          endControlFlow("if")
+        }
+        addStatement(
+          "guard let discriminator = value.fields?[%S]?.string else { " +
+            "return context.at(.property(%S)) { $0.reject(.discriminator) } }",
+          discriminator.wireName,
+          discriminator.wireName,
+        )
+        beginControlFlow("switch", "discriminator")
+        discriminator.cases.forEach { branch ->
+          addStatement("case %S:", branch.value)
+          indent()
+          addStatement(
+            "let valid = %T.isValid(normalized: value, mode, context: &context)",
+            SwiftModelValidation.name(branch.model.swiftDeclaredTypeName()),
+          )
+          addStatement("if valid { context.selectAlternative(%L) }", cases.indexOf(branch.model))
+          addStatement("return valid")
+          unindent()
+        }
+        if (fallback != null) {
+          addStatement("default:")
+          indent()
+          validateFallback()
+          unindent()
+        } else {
+          addStatement(
+            "default: return context.at(.property(%S)) { $0.reject(.discriminator) }",
+            discriminator.wireName,
+          )
+        }
+        endControlFlow("switch")
+      }.build()
+  }
+
+  private fun GeneratedModel.normalizedProtocolValidator(): TypeSpec.Builder {
+    val cases = swiftHierarchyCaseModels()
+    val discriminator = discriminatorPropertyOrNull()
+    val fallback = discriminatorFallbacks[this]
+    val view =
+      CodeBlock
+        .builder()
+        .add("{ () -> %T in\n", SwiftValueConstraints.valueType)
+        .indent()
+        .beginControlFlow("switch", "value")
+        .apply {
+          cases.forEach { branch ->
+            addStatement(
+              "case let value as %T: return %T.view(value)",
+              branch.swiftDeclaredTypeName(),
+              SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
+            )
+          }
+          if (fallback != null) {
+            val name = swiftFallbackTypeName(fallback)
+            addStatement("case let value as %T: return %T.view(value)", name, SwiftModelValidation.name(name))
+          }
+        }.addStatement("default: return .invalid")
+        .endControlFlow("switch")
+        .unindent()
+        .add("}()")
+        .build()
+    val body =
+      if (isExternalDiscriminatorBaseProtocolModel || discriminator == null) {
+        CodeBlock
+          .builder()
+          .apply {
+            cases.forEach { branch ->
+              val validator = SwiftModelValidation.name(branch.swiftDeclaredTypeName())
+              beginControlFlow("if", "value.represents(%T.self)", validator)
+              addStatement("return %T.isValid(normalized: value, mode, context: &context)", validator)
+              endControlFlow("if")
+            }
+            if (fallback != null) {
+              beginControlFlow("if", "value.isUnknown")
+              addStatement(
+                "return %T.isValid(normalized: value, mode, context: &context)",
+                SwiftModelValidation.name(swiftFallbackTypeName(fallback)),
+              )
+              endControlFlow("if")
+            }
+            add(normalizedObjectValidation(this@normalizedProtocolValidator))
+          }.build()
+      } else {
+        normalizedDiscriminatorValidation(
+          cases,
+          UnionDiscriminator(
+            requireNotNull(discriminator).wireName,
+            cases.map { branch ->
+              val wireValue =
+                discriminatorMappings.entries
+                  .firstOrNull {
+                    it.value.modelOrNull(
+                      apiIndex,
+                    ) == branch
+                  }?.key
+              UnionDiscriminatorCase(wireValue ?: branch.discriminatorValue ?: branch.name, branch)
+            },
+          ),
+        )
+      }
+    return normalizedValidatorType(
+      SwiftModelValidation.name(swiftDeclaredTypeName()),
+      if (isDiscriminatorMappingUnionModel && hasSwiftReferenceType) {
+        swiftReferenceTypeName()
+      } else {
+        swiftDeclaredTypeName().swiftExistentialTypeName()
+      },
+      if (isDiscriminatorMappingUnionModel && hasSwiftReferenceType) {
+        CodeBlock.of("%T.view(value)", SwiftModelValidation.name(swiftReferenceTypeName()))
+      } else {
+        view
+      },
+      if (modelProperties.hasUnionCommonRules(this)) normalizedCommonValidation(body) else body,
+    )
+  }
+
+  private fun GeneratedModel.normalizedUnionValidation(): CodeBlock =
+    normalizedCommonValidation(normalizedUnionAlternatives())
+
+  private fun GeneratedModel.normalizedCommonValidation(alternatives: CodeBlock): CodeBlock {
+    if (modelProperties.fields(this).isEmpty() &&
+      modelProperties.patternProperties(this).isEmpty() &&
+      modelProperties.additionalProperties(this).isEmpty() &&
+      !modelProperties.isClosed(this)
+    ) {
+      return alternatives
+    }
+    return CodeBlock
+      .builder()
+      .apply {
+        val fallback = discriminatorFallbacks[this@normalizedCommonValidation]
+        if (fallback != null) {
+          // The fallback owns the same base fields; recognized branches reuse independent payload schemas.
+          addStatement(
+            "let checksCommon = !value.isUnknown && (%L).contains(value.fields?[%S]?.string ?? %S)",
+            fallback.mappedValues
+              .sorted()
+              .map { CodeBlock.of("%S", it) }
+              .joinToCode(", ", "[", "]"),
+            fallback.discriminatorWireName,
+            "",
+          )
+        }
+        add("let commonValid = %L{ () -> Bool in\n", if (fallback == null) "" else "!checksCommon || ")
+        indent().add(normalizedObjectValidation(this@normalizedCommonValidation)).unindent().add("}()\n")
+        addStatement("if !commonValid && !context.collectsDiagnostics { return false }")
+        add("let branchValid = { () -> Bool in\n")
+          .indent()
+          .add(alternatives)
+          .unindent()
+          .add("}()\n")
+        addStatement("return commonValid && branchValid")
+      }.build()
+  }
+
+  private fun GeneratedModel.normalizedUnionAlternatives(): CodeBlock {
+    val cases = unionCaseModels()
+    unionDiscriminator(cases)?.let { return normalizedDiscriminatorValidation(cases, it) }
+    return CodeBlock
+      .builder()
+      .addStatement("var matches: [Int] = []")
+      .apply {
+        unionCaseModels().forEachIndexed { index, branch ->
+          beginControlFlow(
+            "if",
+            "context.matches({ context in %T.isValid(normalized: value, mode, context: &context) })",
+            SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
+          )
+          addStatement("matches.append(%L)", index)
+          endControlFlow("if")
+        }
+      }.beginControlFlow("guard", "!matches.isEmpty else")
+      .addStatement("return context.reject(.allowedValue)")
+      .endControlFlow("guard")
+      .apply {
+        if (unionMode == GeneratedModel.UnionMode.ONE_OF) {
+          beginControlFlow("guard", "matches.count == 1 else")
+          addStatement("return context.reject(.allowedValue)")
+          endControlFlow("guard")
+        }
+      }.addStatement("context.selectAlternative(matches[0])")
+      .addStatement("return true")
+      .build()
+  }
+
+  private fun GeneratedModel.swiftClosedPropertyValidation(storedValue: CodeBlock? = null): CodeBlock? {
+    if (!modelProperties.isClosed(this) || modelProperties.patternProperties(this).isNotEmpty()) return null
+    val stored =
+      storedValue
+        ?: if (preservesExtensions()) CodeBlock.of("Set(value.%N.keys)", extensionFieldName) else CodeBlock.of("[]")
+    return CodeBlock
+      .builder()
+      .addStatement("let allowedProperties: %T = %L", SET.parameterizedBy(STRING), allowedPropertyNames(this))
+      .addStatement("let suppliedProperties = (context.propertyNames ?? []).union(%L)", stored)
+      .beginControlFlow("for", "key in suppliedProperties.sorted() where !allowedProperties.contains(key)")
+      .addStatement("valid = context.at(.property(key)) { $0.reject(.additionalProperty) }")
+      .addStatement("if !context.collectsDiagnostics { return false }")
+      .endControlFlow("for")
+      .build()
+  }
+
+  private fun GeneratedModelProperty.swiftFieldValidation(properties: List<GeneratedModelProperty>): CodeBlock? {
+    val nested = type.copy(nullable = false).swiftNestedValidation(CodeBlock.of("fieldValue"))
+    if (externalDiscriminator == null) return nested
+    val discriminatorProperty = externalDiscriminatorProperty(properties)
+    return CodeBlock
+      .builder()
+      .add("{ () -> Bool in\n")
+      .indent()
+      .beginControlFlow("switch", "value.%N", discriminatorProperty.name.swiftIdentifierName)
+      .apply {
+        externalDiscriminatorModels().forEach { model ->
+          addStatement("case %L:", model.discriminatorWireValueCode(discriminatorProperty))
+          indent()
+          addStatement(
+            "guard fieldValue is %T else { return context.reject(.discriminator) }",
+            model.swiftDeclaredTypeName(),
+          )
+          unindent()
+        }
+        val fallback =
+          type
+            .modelOrNull(
+              apiIndex,
+            )?.let { discriminatorFallbacks[it] }
+            ?.takeIf { it.externallyDiscriminated }
+        addStatement("default:")
+        indent()
+        if (fallback == null) {
+          addStatement("return context.reject(.discriminator)")
+        } else {
+          addStatement(
+            "guard fieldValue is %T else { return context.reject(.discriminator) }",
+            fallback.hierarchy.swiftFallbackTypeName(fallback),
+          )
+        }
+        unindent()
+      }.endControlFlow("switch")
+      .add("return %L\n", nested ?: CodeBlock.of("true"))
+      .unindent()
+      .add("}()")
+      .build()
+  }
+
+  private fun GeneratedModel.swiftUnionValidation(): CodeBlock =
+    CodeBlock
+      .builder()
+      .apply {
+        beginControlFlow("switch", "value")
+        unionCaseModels().forEach { model ->
+          addStatement("case .%N(let value):%Wreturn value.isValid(mode, context: &context)", model.unionCaseName)
+        }
+        discriminatorFallbacks[this@swiftUnionValidation]?.takeUnless { it.externallyDiscriminated }?.let { fallback ->
+          addStatement(
+            "case .%N(let value):%Wreturn value.isValid(mode, context: &context)",
+            fallback.fallbackName.swiftEnumCaseName,
+          )
+        }
+        endControlFlow("switch")
+      }.build()
+
+  private fun GeneratedTypeRef.swiftNestedValidation(value: CodeBlock): CodeBlock? {
+    if (nullable) {
+      val check = copy(nullable = false).swiftNestedValidation(CodeBlock.of("value")) ?: return null
+      return CodeBlock.of("%L.map { value in %L } ?? true", value, check)
+    }
+    if (kind == GeneratedTypeRef.Kind.NAMED) {
+      val model = modelOrNull(apiIndex) ?: return null
+      if (model.isFreeformObject) return null
+      if (model.kind in setOf(GeneratedModel.Kind.ARRAY, GeneratedModel.Kind.MAP)) {
+        return CodeBlock.of(
+          "%T.isValid(%L, mode, context: &context)",
+          SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+          value,
+        )
+      }
+      if (model.isAliasLike) {
+        return CodeBlock.of(
+          "%T.isValid(%L, mode, context: &context)",
+          SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+          value,
+        )
+      }
+      return CodeBlock.of("!context.validatesNestedModels || %L.isValid(mode, context: &context)", value)
+    }
+    if (kind !in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP)) return null
+    val item = arguments.firstOrNull() ?: return null
+    val check = item.swiftNestedValidation(CodeBlock.of("element")) ?: return null
+    return CodeBlock
+      .builder()
+      .apply {
+        add("{ () -> Bool in\n").indent()
+        addStatement("var valid = true")
+        if (kind == GeneratedTypeRef.Kind.ARRAY) {
+          beginControlFlow("for", "(index, element) in %L.enumerated()", value)
+        } else {
+          beginControlFlow("for", "key in %L.keys.sorted()", value)
+          addStatement("let element = %L[key]!", value)
+        }
+        add(
+          "if !context.at(.%L, { context in %L }) {\n",
+          if (kind ==
+            GeneratedTypeRef.Kind.ARRAY
+          ) {
+            "index(index)"
+          } else {
+            "key(key)"
+          },
+          check,
+        )
+        indent()
+        addStatement("valid = false")
+        addStatement("if !context.collectsDiagnostics { return false }")
+        endControlFlow("if")
+        endControlFlow("for")
+        addStatement("return valid")
+        unindent().add("}()")
+      }.build()
+  }
 
   private fun GeneratedModel.swiftTolerantEnumTypeSpec(): TypeSpec.Builder {
     val typeName = swiftDeclaredTypeName()
@@ -1216,6 +2082,42 @@ class SwiftSundayIrGenerator(
       }
   }
 
+  private fun TypeSpec.Builder.addEventCaseValidation(
+    envelope: TypedEventEnvelope,
+    caseType: DeclaredTypeName,
+    caseName: String,
+  ) {
+    val name = caseType.nestedType("Validation")
+    addSuperType(SwiftModelValidation.validatable)
+    addFunction(SwiftModelValidation.instance(name))
+    addType(
+      SwiftModelValidation
+        .type(
+          name,
+          caseType,
+          CodeBlock.of(
+            "return %T.isValid(.%N(value), mode, context: &context)\n",
+            SwiftModelValidation.name(envelope.model.swiftDeclaredTypeName()),
+            caseName,
+          ),
+        ).build(),
+    )
+  }
+
+  private fun TypedEventEnvelope.caseDecodeValidation(): CodeBlock =
+    CodeBlock
+      .builder()
+      .addStatement(
+        "var validationContext = try %T.decoding(decoder, numericFields: %L, dynamicFields: %L, retainValues: %L)",
+        SwiftModelValidation.context,
+        model.swiftNumericFieldNames(),
+        model.swiftDynamicFieldNames(),
+        model in normalizedValidationModels,
+      ).beginControlFlow("if", "!isValid(.response, context: &validationContext)")
+      .addStatement("throw validationContext.decodingError")
+      .endControlFlow("if")
+      .build()
+
   private fun TypedEventEnvelope.swiftEventEnvelopeProperty(property: GeneratedModelProperty): PropertySpec =
     PropertySpec
       .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(false), PUBLIC)
@@ -1332,6 +2234,11 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
       .apply {
+        addEventCaseValidation(
+          this@swiftFallbackEventTypeSpec,
+          typeName,
+          resolvedFallback.fallbackName.swiftEnumCaseName,
+        )
         model.properties.forEach { property ->
           addProperty(
             PropertySpec
@@ -1348,6 +2255,7 @@ class SwiftSundayIrGenerator(
           FunctionSpec
             .constructorBuilder()
             .addModifiers(PUBLIC)
+            .throws(true)
             .apply {
               addExtensionParameter(model)
               model.properties.forEach { property ->
@@ -1357,6 +2265,7 @@ class SwiftSundayIrGenerator(
                 )
                 addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
               }
+              addStatement("try validate(.response)")
             }.build(),
         )
         addFunction(
@@ -1386,6 +2295,7 @@ class SwiftSundayIrGenerator(
                   property.name.swiftIdentifierName,
                 )
               }
+              addCode(caseDecodeValidation())
             }.build(),
         )
         addFunction(
@@ -1394,9 +2304,10 @@ class SwiftSundayIrGenerator(
             .addModifiers(PUBLIC)
             .addParameter("to", "encoder", ENCODER)
             .throws(true)
+            .addStatement("try validate(.response)")
             .addStatement("var container = encoder.container(keyedBy: CodingKeys.self)")
             .apply {
-              if (model.preservesExtensions()) addCode(extensionEncode())
+              if (model.preservesExtensions()) addCode(extensionEncode(model))
               model.properties.forEach { property ->
                 addStatement(
                   "try container.encode%L(self.%N, forKey: .%N)",
@@ -1461,6 +2372,7 @@ class SwiftSundayIrGenerator(
         }
         addProperty(debugDescriptionProperty(caseTypeName, listOf(envelope.discriminatorProperty) + allProperties))
         addClosedModelSupport(envelope.model)
+        addEventCaseValidation(envelope, caseTypeName, caseName)
         addFunction(envelope.caseConstructor(allProperties))
         addFunction(envelope.caseDecoderConstructor(allProperties))
         addFunction(envelope.caseEncoderFunction(this@swiftTypeSpec, allProperties))
@@ -1497,6 +2409,7 @@ class SwiftSundayIrGenerator(
     FunctionSpec
       .constructorBuilder()
       .addModifiers(PUBLIC)
+      .throws(true)
       .apply {
         addExtensionParameter(model)
         properties.forEach { property ->
@@ -1513,6 +2426,7 @@ class SwiftSundayIrGenerator(
         properties.forEach { property ->
           addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
         }
+        addStatement("try validate(.response)")
       }.build()
 
   private fun TypedEventEnvelope.caseDecoderConstructor(properties: List<GeneratedModelProperty>): FunctionSpec =
@@ -1534,6 +2448,7 @@ class SwiftSundayIrGenerator(
             property.name.swiftIdentifierName,
           )
         }
+        addCode(caseDecodeValidation())
       }.build()
 
   private fun TypedEventEnvelope.caseEncoderFunction(
@@ -1545,13 +2460,14 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addParameter("to", "encoder", ENCODER)
       .throws(true)
+      .addStatement("try validate(.response)")
       .addStatement("var container = encoder.container(keyedBy: CodingKeys.self)")
       .addStatement(
         "try container.encode(%L, forKey: .%N)",
         case.discriminatorValueCode(discriminatorProperty),
         discriminatorProperty.name.swiftIdentifierName,
       ).apply {
-        if (model.preservesExtensions()) addCode(extensionEncode())
+        if (model.preservesExtensions()) addCode(extensionEncode(model))
         properties.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
@@ -1732,7 +2648,6 @@ class SwiftSundayIrGenerator(
         false,
         false,
         true,
-        constraints = SwiftModelConstraints.fields(modelProperties.fields(this), modelProperties, false),
       ),
     )
     typeBuilder.addFunction(modelEncoderFunction(this, localProperties, null, null, false, false))
@@ -1798,6 +2713,7 @@ class SwiftSundayIrGenerator(
               }.build(),
           ).build(),
       ).apply {
+        if (this@swiftUnionTypeSpecOrNull in normalizedValidationModels) return@apply
         if (discriminator != null) {
           addType(unionCodingKeysType(listOf(discriminator.wireName)))
         } else {
@@ -1818,7 +2734,35 @@ class SwiftSundayIrGenerator(
       .throws(true)
       .apply {
         val discriminator = unionDiscriminator(cases)
-        if (discriminator != null) {
+        if (this@unionDecoderConstructor in normalizedValidationModels) {
+          addStatement("var context = try %T.decodingValue(decoder)", SwiftModelValidation.context)
+          beginControlFlow(
+            "guard",
+            "%T.isValid(normalized: context.originalValue!, .response, context: &context) else",
+            SwiftModelValidation.name(swiftDeclaredTypeName()),
+          )
+          addStatement("throw context.decodingError")
+          endControlFlow("guard")
+          beginControlFlow("switch", "context.selectedAlternative")
+          cases.forEachIndexed { index, branch ->
+            addStatement(
+              "case %L: self = .%N(try %T(from: decoder))",
+              index,
+              branch.unionCaseName,
+              branch.swiftDeclaredTypeName(),
+            )
+          }
+          discriminatorFallbacks[this@unionDecoderConstructor]?.let { fallback ->
+            addStatement(
+              "case %L: self = .%N(try %T(from: decoder))",
+              cases.size,
+              fallback.fallbackName.swiftEnumCaseName,
+              swiftFallbackTypeName(fallback),
+            )
+          }
+          addStatement("default: preconditionFailure(%S)", "Canonical union validation did not select an alternative")
+          endControlFlow("switch")
+        } else if (discriminator != null) {
           addStatement(
             "let container = try decoder.container(keyedBy: CodingKeys.self)",
           )
@@ -1920,7 +2864,11 @@ class SwiftSundayIrGenerator(
       .addModifiers(PUBLIC)
       .addParameter("to", "encoder", ENCODER)
       .throws(true)
-      .addStatement("var container = encoder.singleValueContainer()")
+      .apply {
+        if (this@unionEncoderFunction in normalizedValidationModels) {
+          addStatement("try validate(.response)")
+        }
+      }.addStatement("var container = encoder.singleValueContainer()")
       .apply {
         beginControlFlow("switch", "self")
         cases.forEach { model ->
@@ -2176,7 +3124,7 @@ class SwiftSundayIrGenerator(
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
         .map { property ->
-          if (isRootProblemModel) {
+          if (isProblemModel) {
             property.normalizedSwiftBaseProblemProperty()
           } else {
             property
@@ -2232,7 +3180,11 @@ class SwiftSundayIrGenerator(
           } else if (isProblemHierarchyValueModel) {
             addSuperType(inheritedTypeName ?: runtimeProblemTypeName)
           } else if (isProtocolHierarchyValueModel) {
-            addSuperType(inheritedTypeName ?: CODABLE)
+            if (inheritedTypeName != null) {
+              addSuperType(inheritedTypeName)
+            } else {
+              addSuperTypes(listOf(CODABLE, CUSTOM_DEBUG_STRING_CONVERTIBLE, SENDABLE))
+            }
           } else {
             addSuperTypes(
               buildList {
@@ -2296,6 +3248,21 @@ class SwiftSundayIrGenerator(
       )
     }
 
+    if (isProblemHierarchyValueModel) {
+      // The runtime Problem protocol includes optional standard fields even when the source omits them.
+      listOf("detail" to STRING, "instance" to URL).forEach { (name, type) ->
+        if (storedProperties.none { it.name == name }) {
+          typeBuilder.addProperty(
+            PropertySpec
+              .builder(name, type.makeOptional(), PUBLIC)
+              .addDoc("The optional standard problem field, absent from this schema.\n")
+              .getter(FunctionSpec.getterBuilder().addStatement("return nil").build())
+              .build(),
+          )
+        }
+      }
+    }
+
     if (!isProtocolModel) {
       if (!isValueModel && !patchable) {
         decodingDefaultProperties().forEach(typeBuilder::addProperty)
@@ -2335,7 +3302,6 @@ class SwiftSundayIrGenerator(
           false,
           isValueModel,
           isProblemHierarchyValueModel && storedProperties.none { property -> property.name == "parameters" },
-          constrainedFields,
         ),
       )
       typeBuilder.addFunction(
@@ -2455,7 +3421,7 @@ class SwiftSundayIrGenerator(
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
         .map { property ->
-          if (isProblemModel && inherits.isEmpty()) {
+          if (isProblemModel) {
             property.normalizedSwiftBaseProblemProperty()
           } else {
             property
@@ -2506,7 +3472,7 @@ class SwiftSundayIrGenerator(
   private val GeneratedModel.isObjectUnionEnum: Boolean
     get() =
       kind == GeneratedModel.Kind.UNION &&
-        aliases.size >= 2 &&
+        (aliases.size >= 2 || (aliases.isNotEmpty() && discriminatorFallbacks.containsKey(this))) &&
         unionCaseModels().size == aliases.size
 
   private val GeneratedModel.hasSwiftReferenceType: Boolean
@@ -2763,6 +3729,71 @@ class SwiftSundayIrGenerator(
             }
           },
         ).apply {
+          addSuperType(SwiftModelValidation.validatable)
+          val validatorName = SwiftModelValidation.name(anyRefTypeName)
+          addFunction(SwiftModelValidation.instance(validatorName))
+          val validation =
+            CodeBlock
+              .builder()
+              .apply {
+                beginControlFlow("switch", "value")
+                inheritingModels.forEach { model ->
+                  addStatement(
+                    "case .%N(let value):%Wreturn value.isValid(mode, context: &context)",
+                    model.discriminatorCaseName,
+                  )
+                }
+                if (fallback != null) {
+                  addStatement(
+                    "case .%N(let value):%Wreturn value.isValid(mode, context: &context)",
+                    fallback.fallbackName.swiftEnumCaseName,
+                  )
+                }
+                endControlFlow("switch")
+              }.build()
+          typeRegistry.addModelType(
+            validatorName,
+            if (this@referenceTypeOrNull in normalizedValidationModels) {
+              val projection =
+                CodeBlock
+                  .builder()
+                  .add("{ () -> %T in\n", SwiftValueConstraints.valueType)
+                  .indent()
+                  .beginControlFlow("switch", "value")
+                  .apply {
+                    inheritingModels.forEach { model ->
+                      addStatement(
+                        "case .%N(let value): return %T.view(value)",
+                        model.discriminatorCaseName,
+                        SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+                      )
+                    }
+                    if (fallback != null && fallbackTypeName != null) {
+                      addStatement(
+                        "case .%N(let value): return %T.view(value)",
+                        fallback.fallbackName.swiftEnumCaseName,
+                        SwiftModelValidation.name(fallbackTypeName),
+                      )
+                    }
+                  }.endControlFlow("switch")
+                  .unindent()
+                  .add("}()")
+                  .build()
+              normalizedValidatorType(
+                validatorName,
+                anyRefTypeName,
+                projection,
+                CodeBlock.of(
+                  "return %T.isValid(normalized: value, mode, context: &context)\n",
+                  SwiftModelValidation.name(typeName),
+                ),
+              )
+            } else {
+              SwiftModelValidation.type(validatorName, anyRefTypeName, validation)
+            },
+            outputDirectory = outputDirectory,
+            outputGroup = outputGroup,
+          )
           inheritingModels.forEach { model ->
             addEnumCase(model.discriminatorCaseName, model.swiftDeclaredTypeName())
           }
@@ -2844,36 +3875,70 @@ class SwiftSundayIrGenerator(
               .addModifiers(PUBLIC)
               .addParameter("from", "decoder", DECODER)
               .throws(true)
-              .addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
-              .addStatement(
-                "let type = try container.decode(%T.self, forKey: CodingKeys.%N)",
-                STRING,
-                discriminatorProperty.name.swiftIdentifierName,
-              ).apply {
-                beginControlFlow("switch", "type")
-                inheritingModels.forEach { model ->
-                  addStatement(
-                    "case %S:%Wself = .%N(try %T(from: decoder))",
-                    model.discriminatorValue ?: model.name,
-                    model.discriminatorCaseName,
-                    model.swiftDeclaredTypeName(),
+              .apply {
+                if (this@referenceTypeOrNull in normalizedValidationModels) {
+                  addStatement("var context = try %T.decodingValue(decoder)", SwiftModelValidation.context)
+                  beginControlFlow(
+                    "guard",
+                    "%T.isValid(normalized: context.originalValue!, .response, context: &context) else",
+                    SwiftModelValidation.name(typeName),
                   )
-                }
-                if (fallback != null && fallbackTypeName != null) {
+                  addStatement("throw context.decodingError")
+                  endControlFlow("guard")
+                  beginControlFlow("switch", "context.selectedAlternative")
+                  inheritingModels.forEachIndexed { index, model ->
+                    addStatement(
+                      "case %L: self = .%N(try %T(from: decoder))",
+                      index,
+                      model.discriminatorCaseName,
+                      model.swiftDeclaredTypeName(),
+                    )
+                  }
+                  if (fallback != null && fallbackTypeName != null) {
+                    addStatement(
+                      "case %L: self = .%N(try %T(from: decoder))",
+                      inheritingModels.size,
+                      fallback.fallbackName.swiftEnumCaseName,
+                      fallbackTypeName,
+                    )
+                  }
                   addStatement(
-                    "default:%Wself = .%N(try %T(from: decoder))",
-                    fallback.fallbackName.swiftEnumCaseName,
-                    fallbackTypeName,
+                    "default: preconditionFailure(%S)",
+                    "Canonical discriminator validation did not select an alternative",
                   )
+                  endControlFlow("switch")
                 } else {
+                  addStatement("let container = try decoder.container(keyedBy: CodingKeys.self)")
                   addStatement(
-                    "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
-                    DECODING_ERROR,
+                    "let type = try container.decode(%T.self, forKey: CodingKeys.%N)",
+                    STRING,
                     discriminatorProperty.name.swiftIdentifierName,
-                    "unsupported value for \"${discriminatorProperty.name}\"",
                   )
+                  beginControlFlow("switch", "type")
+                  inheritingModels.forEach { model ->
+                    addStatement(
+                      "case %S:%Wself = .%N(try %T(from: decoder))",
+                      model.discriminatorValue ?: model.name,
+                      model.discriminatorCaseName,
+                      model.swiftDeclaredTypeName(),
+                    )
+                  }
+                  if (fallback != null && fallbackTypeName != null) {
+                    addStatement(
+                      "default:%Wself = .%N(try %T(from: decoder))",
+                      fallback.fallbackName.swiftEnumCaseName,
+                      fallbackTypeName,
+                    )
+                  } else {
+                    addStatement(
+                      "default:\nthrow %T.dataCorruptedError(%>\nforKey: CodingKeys.%N,\nin: container,\ndebugDescription: %S%<\n)",
+                      DECODING_ERROR,
+                      discriminatorProperty.name.swiftIdentifierName,
+                      "unsupported value for \"${discriminatorProperty.name}\"",
+                    )
+                  }
+                  endControlFlow("switch")
                 }
-                endControlFlow("switch")
               }.build(),
           )
           addFunction(
@@ -3027,11 +4092,36 @@ class SwiftSundayIrGenerator(
 
   // Swift overrides cannot add throws, so a class family shares the initializer and with-method contract.
   private fun GeneratedModel.constructorThrows(): Boolean {
-    fun GeneratedModel.constrained() =
-      modelProperties.fields(this).any {
-        SwiftModelConstraints.hasValueConstraints(it.effective) && it.effective.name != discriminatorNameOrNull()
-      }
-    if (isSwiftValueModel || patchable) return constrained()
+    fun constrained(
+      model: GeneratedModel,
+      visited: Set<GeneratedModel> = emptySet(),
+    ): Boolean {
+      if (model in visited) return false
+      val next = visited + model
+
+      fun referenceConstrained(type: GeneratedTypeRef): Boolean =
+        type.modelOrNull(apiIndex)?.let { constrained(it, next) } == true ||
+          type.arguments.any { referenceConstrained(it) }
+      return model.validation.isNotEmpty() ||
+        modelProperties.fields(model).any { it.effective.externalDiscriminator != null } ||
+        model.preservesExtensions() &&
+        (
+          modelProperties.isClosed(model) ||
+            modelProperties.patternProperties(model).isNotEmpty() ||
+            modelProperties.additionalProperties(model).isNotEmpty()
+        ) ||
+        modelProperties.fields(model).any {
+          it.effective.name != model.discriminatorNameOrNull() &&
+            (
+              SwiftModelConstraints.hasValueConstraints(it.effective) ||
+                it.effective.allowedValues != null ||
+                referenceConstrained(it.effective.type)
+            )
+        } ||
+        model.aliases.any { referenceConstrained(it) } ||
+        model.discriminatorMappings.values.any { referenceConstrained(it) }
+    }
+    if (isSwiftValueModel || patchable) return constrained(this)
     val family = mutableSetOf<GeneratedModel>()
     val pending = ArrayDeque<GeneratedModel>()
     pending.add(this)
@@ -3042,7 +4132,7 @@ class SwiftSundayIrGenerator(
       pending.addAll(api.models.filter { candidate -> candidate.inherits.any { it.modelOrNull(apiIndex) == model } })
     }
     return family.any { model ->
-      !model.patchable && model.constrained()
+      !model.patchable && constrained(model)
     }
   }
 
@@ -3081,11 +4171,6 @@ class SwiftSundayIrGenerator(
         arrayOf(PUBLIC)
       }
 
-    val constraints =
-      modelProperties.fields(model).filter { field ->
-        (inheritedProperties + localProperties).any { it.wireName == field.wireName }
-      }
-    val validates = constraints.any { SwiftModelConstraints.hasValueConstraints(it.effective) }
     return FunctionSpec
       .constructorBuilder()
       .addModifiers(*modifiers)
@@ -3115,7 +4200,6 @@ class SwiftSundayIrGenerator(
           )
           if (!model.inheritsExtensionStorage()) addStatement("self.%N = %L", extensionFieldName, extensionValue(model))
         }
-        if (validates) addCode(SwiftModelConstraints.initializer(constraints, modelProperties, patchable))
         localProperties
           .filterNot { property -> isRootProblemModel && property.isSatisfiedByBaseProblemClass() }
           .forEach { property ->
@@ -3163,8 +4247,54 @@ class SwiftSundayIrGenerator(
             inheritedConstructorParameters,
           )
         }
+        if (model.constructorThrows()) addCode(model.swiftConstructorValidation())
       }.build()
   }
+
+  private fun GeneratedModel.swiftDynamicFieldNames(): CodeBlock =
+    modelProperties
+      .fields(this)
+      .filter { it.effective.allowedValues != null && modelProperties.declarationType(it.effective.type).name == "any" }
+      .map { CodeBlock.of("%S", it.wireName) }
+      .joinToCode(", ", "[", "]")
+
+  private fun GeneratedModel.swiftNumericFieldNames(): CodeBlock =
+    modelProperties
+      .fields(this)
+      .filter { field ->
+        GeneratedNumericBounds.parse(field.effective.validation, field.wireName).isNotEmpty() ||
+          "multipleOf" in field.effective.validation ||
+          field.effective.allowedValues?.any { it is Number } == true &&
+          modelProperties.declarationType(field.effective.type).name != "any"
+      }.map { CodeBlock.of("%S", it.wireName) }
+      .joinToCode(", ", "[", "]")
+
+  private fun GeneratedModel.swiftConstructorValidation(decoding: Boolean = false): CodeBlock =
+    CodeBlock
+      .builder()
+      .apply {
+        // Base initializers finish their storage before the most-derived initializer validates the graph.
+        if (isSwiftClassModel) beginControlFlow("if", "Swift.type(of: self) == %T.self", swiftDeclaredTypeName())
+        if (decoding) {
+          addStatement(
+            "var validationContext = try %T.decoding(decoder, numericFields: %L, dynamicFields: %L, retainValues: %L)",
+            SwiftModelValidation.context,
+            swiftNumericFieldNames(),
+            swiftDynamicFieldNames(),
+            this@swiftConstructorValidation in normalizedValidationModels,
+          )
+          beginControlFlow(
+            "if",
+            "!%T.isValid(self, .response, context: &validationContext)",
+            SwiftModelValidation.name(swiftDeclaredTypeName()),
+          )
+          addStatement("throw validationContext.decodingError")
+          endControlFlow("if")
+        } else {
+          addStatement("try %T.validate(self, .response)", SwiftModelValidation.name(swiftDeclaredTypeName()))
+        }
+        if (isSwiftClassModel) endControlFlow("if")
+      }.build()
 
   private fun problemModelBaseArgument(
     properties: List<GeneratedModelProperty>,
@@ -3211,21 +4341,23 @@ class SwiftSundayIrGenerator(
             .build(),
         )
       }
-      addType(
-        TypeSpec
-          .structBuilder(
-            "AdditionalPropertiesValidator",
-          ).addModifiers(PRIVATE)
-          .addSuperType(DeclaredTypeName.typeName("Swift.Decodable"))
-          .addFunction(
-            FunctionSpec
-              .constructorBuilder()
-              .addParameter("from", "decoder", DECODER)
-              .throws(true)
-              .addCode(closedModelDecodeValidation(model))
-              .build(),
-          ).build(),
-      )
+      if (model !in normalizedValidationModels) {
+        addType(
+          TypeSpec
+            .structBuilder(
+              "AdditionalPropertiesValidator",
+            ).addModifiers(PRIVATE)
+            .addSuperType(DeclaredTypeName.typeName("Swift.Decodable"))
+            .addFunction(
+              FunctionSpec
+                .constructorBuilder()
+                .addParameter("from", "decoder", DECODER)
+                .throws(true)
+                .addCode(closedModelDecodeValidation(model))
+                .build(),
+            ).build(),
+        )
+      }
     }
     if (model.isSwiftClassModel && (modelProperties.isClosed(model) || model.preservesExtensions())) {
       addProperty(
@@ -3289,23 +4421,9 @@ class SwiftSundayIrGenerator(
     CodeBlock
       .builder()
       .apply {
+        if (model in normalizedValidationModels) return@apply
         val patterns = modelProperties.patternProperties(model)
         if (patterns.isEmpty() && model.additionalProperties?.type == null) {
-          if (modelProperties.isClosed(model)) {
-            addStatement("let allProperties = try decoder.container(keyedBy: UnknownPropertyCodingKey.self)")
-            addStatement(
-              "let allowedProperties: %T = %L",
-              SET.parameterizedBy(STRING),
-              if (dynamic) CodeBlock.of("Self._sundayAllowedPropertyNames") else allowedPropertyNames(model),
-            )
-            beginControlFlow("for", "key in allProperties.allKeys where !allowedProperties.contains(key.stringValue)")
-            addStatement(
-              "throw %T.dataCorruptedError(forKey: key, in: allProperties, debugDescription: %S + key.stringValue)",
-              DECODING_ERROR,
-              "Additional properties are not allowed: ",
-            )
-            endControlFlow("for")
-          }
           return@apply
         }
         if (modelProperties.isClosed(model) || patterns.isNotEmpty() || model.additionalProperties?.type != null) {
@@ -3358,8 +4476,14 @@ class SwiftSundayIrGenerator(
             beginControlFlow("if", "!matched")
             val additional = model.additionalProperties
             addStatement("_ = try allProperties.decode(%T.self, forKey: key)", additional.type.swiftStoredTypeName())
-            if (additional.validation.isNotEmpty()) {
-              val property = GeneratedModelProperty("value", additional.type, validation = additional.validation)
+            if (additional.validation.isNotEmpty() || additional.allowedValues != null) {
+              val property =
+                GeneratedModelProperty(
+                  "value",
+                  additional.type,
+                  validation = additional.validation,
+                  allowedValues = additional.allowedValues,
+                )
               addStatement("let container = allProperties")
               add(
                 SwiftModelConstraints.decode(
@@ -3423,17 +4547,22 @@ class SwiftSundayIrGenerator(
       .addStatement("})")
       .build()
 
-  private fun extensionEncode(inherited: Boolean = false): CodeBlock =
+  private fun extensionEncode(
+    model: GeneratedModel,
+    inherited: Boolean = false,
+  ): CodeBlock =
     CodeBlock
       .builder()
       .apply {
-        addStatement("let extensionDecoder = %T()", ANY_VALUE_DECODER)
-        addStatement("extensionDecoder.userInfo = encoder.userInfo")
-        addStatement(
-          "_ = try extensionDecoder.decode(AdditionalPropertiesValidator.self, from: %T.dictionary(.init(uniqueKeysWithValues: %N.map { (.string($0.key), $0.value) })))",
-          ANY_VALUE,
-          extensionFieldName,
-        )
+        if (model !in normalizedValidationModels) {
+          addStatement("let extensionDecoder = %T()", ANY_VALUE_DECODER)
+          addStatement("extensionDecoder.userInfo = encoder.userInfo")
+          addStatement(
+            "_ = try extensionDecoder.decode(AdditionalPropertiesValidator.self, from: %T.dictionary(.init(uniqueKeysWithValues: %N.map { (.string($0.key), $0.value) })))",
+            ANY_VALUE,
+            extensionFieldName,
+          )
+        }
         if (!inherited) {
           addStatement("var extensionContainer = encoder.container(keyedBy: UnknownPropertyCodingKey.self)")
           beginControlFlow("for", "(key, value) in %N", extensionFieldName)
@@ -3465,7 +4594,6 @@ class SwiftSundayIrGenerator(
     isRootProblemModel: Boolean,
     isValueModel: Boolean = false,
     addNilProblemParameters: Boolean = false,
-    constraints: List<GeneratedModelProperties.Field> = emptyList(),
   ): FunctionSpec {
     val modifiers =
       if (isValueModel) {
@@ -3481,10 +4609,9 @@ class SwiftSundayIrGenerator(
       .throws(true)
       .addStatement(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
-        if (localProperties.isEmpty() && constraints.isEmpty()) "_" else "container",
+        if (localProperties.isEmpty()) "_" else "container",
       ).apply {
         addCode(closedModelDecodeValidation(model, model.isSwiftClassModel))
-        addCode(SwiftModelConstraints.decode(constraints, patchable, modelProperties))
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
             when {
@@ -3540,6 +4667,7 @@ class SwiftSundayIrGenerator(
         if (inheritedTypeName != null || isRootProblemModel) {
           addStatement("try super.init(from: decoder)")
         }
+        addCode(model.swiftConstructorValidation(decoding = true))
       }.build()
   }
 
@@ -3562,7 +4690,8 @@ class SwiftSundayIrGenerator(
       ).addParameter("to", "encoder", ENCODER)
       .throws(true)
       .apply {
-        if (model.preservesExtensions()) addCode(extensionEncode(model.inheritsExtensionStorage()))
+        addCode(model.swiftConstructorValidation())
+        if (model.preservesExtensions()) addCode(extensionEncode(model, model.inheritsExtensionStorage()))
         if (inheritedTypeName != null || isRootProblemModel) {
           addStatement("try super.encode(to: encoder)")
         }
@@ -3585,7 +4714,7 @@ class SwiftSundayIrGenerator(
           )
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
-          addExternalDiscriminatorEncoder(property, localProperties)
+          addExternalDiscriminatorEncoder(property)
         }
       }.build()
 
@@ -3597,6 +4726,16 @@ class SwiftSundayIrGenerator(
     val propertyTypeName = property.swiftTypeName()
     val coderSuffix = if (propertyTypeName.optional) "IfPresent" else ""
 
+    if (propertyTypeName.optional) {
+      beginControlFlow(
+        "if",
+        "try !container.contains(.%N) || container.decodeNil(forKey: .%N)",
+        property.name.swiftIdentifierName,
+        property.name.swiftIdentifierName,
+      )
+      addStatement("self.%N = nil", property.name.swiftIdentifierName)
+      nextControlFlow("else", "")
+    }
     beginControlFlow("switch", "self.%N", discriminatorProperty.name.swiftIdentifierName)
     property.externalDiscriminatorModels().forEach { model ->
       addStatement(
@@ -3630,55 +4769,23 @@ class SwiftSundayIrGenerator(
       )
     }
     endControlFlow("switch")
+    if (propertyTypeName.optional) endControlFlow("if")
   }
 
-  private fun FunctionSpec.Builder.addExternalDiscriminatorEncoder(
-    property: GeneratedModelProperty,
-    properties: List<GeneratedModelProperty>,
-  ) {
-    val discriminatorProperty = property.externalDiscriminatorProperty(properties)
-    val propertyTypeName = property.swiftTypeName()
-    val coderSuffix = property.swiftEncodingSuffix()
-    val propertyTypeSuffix = if (propertyTypeName.optional) "?" else ""
-
-    beginControlFlow("switch", "self.%N", discriminatorProperty.name.swiftIdentifierName)
-    property.externalDiscriminatorModels().forEach { model ->
-      addStatement(
-        "case %L:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-        model.discriminatorWireValueCode(discriminatorProperty),
-        coderSuffix,
-        property.name.swiftIdentifierName,
-        model.swiftDeclaredTypeName(),
-        propertyTypeSuffix,
-        property.name.swiftIdentifierName,
-      )
-    }
-    val fallback =
-      property.type
-        .modelOrNull(apiIndex)
-        ?.let { model -> discriminatorFallbacks[model] }
-        ?.takeIf { candidate -> candidate.externallyDiscriminated }
-    if (fallback != null) {
-      addStatement(
-        "default:%Wtry container.encode%L(self.%N as! %T%L, forKey: .%N)",
-        coderSuffix,
-        property.name.swiftIdentifierName,
-        fallback.hierarchy.swiftFallbackTypeName(fallback),
-        propertyTypeSuffix,
-        property.name.swiftIdentifierName,
-      )
+  private fun FunctionSpec.Builder.addExternalDiscriminatorEncoder(property: GeneratedModelProperty) {
+    // Canonical validation already selected the branch; opening the Codable existential preserves its concrete encoder.
+    val identifier = property.name.swiftIdentifierName
+    if (property.swiftTypeName().optional) {
+      beginControlFlow("if", "let payload = self.%N", identifier)
+      addStatement("try container.encode(payload, forKey: .%N)", identifier)
+      if (property.swiftEncodingSuffix().isEmpty()) {
+        nextControlFlow("else", "")
+        addStatement("try container.encodeNil(forKey: .%N)", identifier)
+      }
+      endControlFlow("if")
     } else {
-      addStatement(
-        "default:\n" +
-          "throw %T.invalidValue(%>\nself.%N,\n%T(%>\ncodingPath: encoder.codingPath + [CodingKeys.%N],\ndebugDescription: %S%<\n)%<\n)",
-        ENCODING_ERROR,
-        discriminatorProperty.name.swiftIdentifierName,
-        ENCODING_ERROR.nestedType("Context"),
-        discriminatorProperty.name.swiftIdentifierName,
-        "unsupported value for \"${discriminatorProperty.name}\"",
-      )
+      addStatement("try container.encode(self.%N, forKey: .%N)", identifier, identifier)
     }
-    endControlFlow("switch")
   }
 
   private fun GeneratedModelProperty.externalDiscriminatorProperty(
@@ -3793,6 +4900,10 @@ class SwiftSundayIrGenerator(
     val response = primarySuccessResponse()
     val returnType = returnTypeName(response)
     val parameters = swiftParameterViews(service)
+    val security =
+      api
+        .clientSecurity(service, this, options.generationContext(GenerationMode.Client))
+        ?.swiftBindings(options.profile)
     val functionBuilder =
       FunctionSpec
         .builder(id)
@@ -3814,14 +4925,14 @@ class SwiftSundayIrGenerator(
     }
 
     if (streaming != null) {
-      functionBuilder.addCode(streamingCode(response, parameters))
+      functionBuilder.addCode(streamingCode(response, parameters, security))
       return functionBuilder.build()
     }
 
     if (exchange == null) {
       functionBuilder
         .throws(true)
-        .addCode(operationCode(response, parameters))
+        .addCode(operationCode(response, parameters, security))
     } else {
       functionBuilder
         .async(true)
@@ -3837,7 +4948,7 @@ class SwiftSundayIrGenerator(
         CodeBlock
           .builder()
           .add("return try await self.transport.%L(%>\n", factoryMethod)
-          .add(requestCode(response, parameters))
+          .add(requestCode(response, parameters, security = security, asSpec = true))
           .add("%<\n)\n")
           .build(),
       )
@@ -3849,18 +4960,22 @@ class SwiftSundayIrGenerator(
   private fun GeneratedOperation.operationCode(
     response: GeneratedResponse?,
     parameters: List<GeneratedOperationParameter>,
+    security: CodeBlock?,
   ): CodeBlock =
     CodeBlock
       .builder()
       .add("return %T(%>\n", if (isNilableOperation) NILABLE_OPERATION else OPERATION)
       .add("transport: self.transport,\n")
       .add("spec: %T%L(%>\n", OPERATION_SPEC, if (requestBody.isSwiftStreamingRequestBody) ".streaming" else "")
-      .add(requestCode(response, parameters))
+      .add(requestCode(response, parameters, security = security))
       .add("%<\n)")
       .apply {
         nullify?.takeIf { isNilableOperation }?.let { nullify ->
           add(",\n")
           add(nilifySpecCode(nullify))
+        }
+        response?.type?.swiftPayloadValidation("response")?.let { validation ->
+          add(",\nresponseValidation: %L", validation)
         }
       }.add("%<\n)\n")
       .build()
@@ -3885,16 +5000,17 @@ class SwiftSundayIrGenerator(
   private fun GeneratedOperation.streamingCode(
     response: GeneratedResponse?,
     parameters: List<GeneratedOperationParameter>,
+    security: CodeBlock?,
   ): CodeBlock =
     when (streaming?.kind) {
       GeneratedStreaming.Kind.EVENT_STREAM ->
-        eventStreamCode(response, parameters)
+        eventStreamCode(response, parameters, security)
 
       else ->
         CodeBlock
           .builder()
           .add("return self.transport.eventSource(%>\n")
-          .add(requestCode(response, parameters, eventStream = true))
+          .add(requestCode(response, parameters, eventStream = true, security = security, asSpec = true))
           .add("%<\n)")
           .build()
     }
@@ -3902,13 +5018,14 @@ class SwiftSundayIrGenerator(
   private fun GeneratedOperation.eventStreamCode(
     response: GeneratedResponse?,
     parameters: List<GeneratedOperationParameter>,
+    security: CodeBlock?,
   ): CodeBlock {
     val builder = CodeBlock.builder()
     val responseType = response?.type
     val originalReturnType = responseType?.swiftTypeName() ?: ANY
 
     builder.add("return self.transport.eventStream(%>\n")
-    builder.add(requestCode(response, parameters, eventStream = true))
+    builder.add(requestCode(response, parameters, eventStream = true, security = security, asSpec = true))
 
     when (streaming?.eventMode) {
       GeneratedStreaming.EventMode.DISCRIMINATED -> {
@@ -3972,6 +5089,8 @@ class SwiftSundayIrGenerator(
     response: GeneratedResponse?,
     parameters: List<GeneratedOperationParameter>,
     eventStream: Boolean = false,
+    security: CodeBlock? = null,
+    asSpec: Boolean = false,
   ): CodeBlock {
     val builder = CodeBlock.builder()
     val pathParameters = parameters.withLocation(GeneratedParameter.Location.PATH)
@@ -4000,7 +5119,47 @@ class SwiftSundayIrGenerator(
         .requestParametersCode("headers", throwing = !eventStream),
     )
 
-    return builder.build()
+    security?.let { builder.add(",\nsecurity: %L", it) }
+    if (!eventStream && !requestBody.isSwiftStreamingRequestBody) {
+      requestBody?.type?.swiftPayloadValidation("request")?.let { validation ->
+        builder.add(",\nrequestValidation: %L", validation)
+      }
+    }
+    val arguments = builder.build()
+    return if (asSpec && security != null) {
+      CodeBlock.of(
+        "spec: %T%L(%>\n%L%<\n)",
+        OPERATION_SPEC,
+        if (requestBody.isSwiftStreamingRequestBody) ".streaming" else "",
+        arguments,
+      )
+    } else {
+      arguments
+    }
+  }
+
+  private fun GeneratedTypeRef.swiftPayloadValidation(mode: String): CodeBlock? {
+    val model = modelOrNull(apiIndex)
+    if (model?.isAliasLike == true && !nullable) {
+      return CodeBlock.of(
+        "{ try %T.validate($0, .%L) }",
+        SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+        mode,
+      )
+    }
+    val validation = swiftNestedValidation(CodeBlock.of("value")) ?: return null
+    return CodeBlock
+      .builder()
+      .add("{ value in\n")
+      .indent()
+      .addStatement("let mode = %T.%L", SwiftModelValidation.mode, mode)
+      .addStatement("var context = %T(collectsDiagnostics: true)", SwiftModelValidation.context)
+      .beginControlFlow("if", "!(%L)", validation)
+      .addStatement("throw context.validationError")
+      .endControlFlow("if")
+      .unindent()
+      .add("}")
+      .build()
   }
 
   private fun GeneratedOperation.swiftRequestMethod(): String =
@@ -4020,6 +5179,7 @@ class SwiftSundayIrGenerator(
     val securityParameters =
       api
         .effectiveAuth(service, this)
+        ?.takeIf { api.clientSecurity(service, this, options.generationContext(GenerationMode.Client)) == null }
         ?.securitySchemes
         .orEmpty()
         .flatMap { scheme -> scheme.swiftSecurityParameterViews(names) }
@@ -4209,7 +5369,9 @@ class SwiftSundayIrGenerator(
       } else {
         type.swiftTypeName()
       }
-    } ?: if (publicExistential) {
+    } ?: if (kind == GeneratedTypeRef.Kind.UNION) {
+      ANY
+    } else if (publicExistential) {
       swiftPublicTypeName()
     } else {
       swiftTypeName()
@@ -4259,7 +5421,7 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedModel.swiftDeclaredTypeName(): DeclaredTypeName {
     if (scope != null) {
-      return DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
+      return scopedModelNames[this] ?: DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
     }
 
     val target = target("swift", "swift")
@@ -4300,7 +5462,7 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
-        GeneratedTypeRef.Kind.UNION -> ANY
+        GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
     return if (nullable) {
@@ -4317,7 +5479,7 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftPublicTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftPublicTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
-        GeneratedTypeRef.Kind.UNION -> ANY
+        GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
     return if (nullable) {
@@ -4339,7 +5501,7 @@ class SwiftSundayIrGenerator(
             STRING,
             arguments.firstOrNull()?.swiftStoredTypeName(useReferenceTypes) ?: ANY_VALUE,
           )
-        GeneratedTypeRef.Kind.UNION -> ANY
+        GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
     return if (nullable) {
@@ -4512,8 +5674,10 @@ class SwiftSundayIrGenerator(
     get() =
       kind == GeneratedModel.Kind.OBJECT &&
         !modelProperties.isClosed(this) &&
-        properties.isEmpty() &&
-        patternProperties.isEmpty() &&
+        modelProperties.fields(this).isEmpty() &&
+        modelProperties.patternProperties(this).isEmpty() &&
+        modelProperties.additionalProperties(this).isEmpty() &&
+        discriminator == null &&
         discriminatorMappings.isEmpty()
 
   private val GeneratedModel.isAliasLike: Boolean

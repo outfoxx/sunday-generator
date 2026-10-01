@@ -18,7 +18,7 @@ package io.quarkus.oidc.client.filter
 
 // Quarkus OIDC client filter annotation to skip the dependency on Quarkus OIDC in generator tests
 
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 annotation class OidcClientFilter(
   val value: String = "",
 )

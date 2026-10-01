@@ -45,7 +45,14 @@ public final class API<TransportType : Transport> : Sendable {
           "def1": try ParameterValues.encode(def1),
           "def2": try ParameterValues.encode(def2)
         ].filter { $0.value != nil }
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 

@@ -23,6 +23,8 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.NameAllocator
 import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
@@ -123,8 +125,10 @@ internal fun addModelDecodingDefaults(
           decodedParameters.forEach { parameter ->
             addParameter(
               parameter
-                .toBuilder()
+                .toBuilder(type = parameter.type.withoutValidationAnnotations())
                 .apply {
+                  // Static Jackson factories delegate to the validated constructor; Bean Validation ignores them.
+                  annotations.removeAll { it.isValidationAnnotation() }
                   annotations.replaceAll { it.toBuilder().useSiteTarget(null).build() }
                 }.build(),
             )
@@ -149,4 +153,21 @@ internal fun addModelDecodingDefaults(
       builder.typeSpecs[builder.typeSpecs.indexOf(companion)] = updatedCompanion
     }
   }
+}
+
+private fun AnnotationSpec.isValidationAnnotation(): Boolean =
+  (typeName as? ClassName)?.packageName?.let { packageName ->
+    packageName.startsWith("io.outfoxx.sunday.validation.") ||
+      packageName.startsWith("javax.validation") ||
+      packageName.startsWith("jakarta.validation")
+  } == true
+
+private fun TypeName.withoutValidationAnnotations(): TypeName {
+  val unannotated =
+    if (this is ParameterizedTypeName) {
+      rawType.parameterizedBy(typeArguments.map { it.withoutValidationAnnotations() })
+    } else {
+      this
+    }
+  return unannotated.copy(nullable = isNullable, annotations = annotations.filterNot { it.isValidationAnnotation() })
 }

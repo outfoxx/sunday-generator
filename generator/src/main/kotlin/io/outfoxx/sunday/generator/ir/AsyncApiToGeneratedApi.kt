@@ -218,7 +218,12 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
-          auth = sourceAuth(security + operation.security, "#/channels/$name/$method/security"),
+          auth =
+            sourceAuth(security + operation.security, "#/channels/$name/$method/security")
+              .withSelection(source, operation.source),
+          policy =
+            source.policy()?.let { base -> operation.source.policy()?.let(base::inherit) ?: base }
+              ?: operation.source.policy(),
           protocol = protocol,
           documentation = GeneratedDocumentation(summary = operation.summary, description = operation.description),
         ),
@@ -281,17 +286,37 @@ class AsyncApiToGeneratedApi(
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
           auth =
-            if (currentSourceDocument.security.isVersion3) {
-              currentSourceDocument.security.operationAuth(channel.source, security, "#/operations/$operationId")
-            } else {
-              sourceAuth(channel.security + security)
-            },
+            (
+              if (currentSourceDocument.security.isVersion3) {
+                currentSourceDocument.security.operationAuth(channel.source, security, "#/operations/$operationId")
+              } else {
+                sourceAuth(channel.security + security)
+              }
+            ).withSelection(channel.source, source),
+          policy =
+            channel.source.policy()?.let { base -> source.policy()?.let(base::inherit) ?: base } ?: source.policy(),
           protocol = protocol,
           documentation = GeneratedDocumentation(summary = summary, description = description),
         ),
       identity = compositionOperationIdentity(operationId),
     )
   }
+
+  private fun GeneratedAuth?.withSelection(vararg owners: Map<*, *>): GeneratedAuth? {
+    val selection =
+      owners
+        .mapNotNull { owner ->
+          if (owner.containsKey("x-sunday-security")) {
+            GeneratedSecurityReader.selection(owner["x-sunday-security"], "x-sunday-security")
+          } else {
+            null
+          }
+        }.reduceOrNull { inherited, local -> inherited.inherit(local) } ?: return this
+    return (this ?: GeneratedAuth()).copy(selection = selection)
+  }
+
+  private fun Map<*, *>.policy(): GeneratedPolicy? =
+    if (containsKey("x-sunday-policy")) GeneratedPolicyReader.read(this["x-sunday-policy"], "x-sunday-policy") else null
 
   private fun AsyncApiChannel.pathParameters(
     location: String,
@@ -425,6 +450,16 @@ class AsyncApiToGeneratedApi(
     schema: Map<*, *>,
     location: String,
     localModels: MutableMap<String, GeneratedModel>,
+  ): GeneratedModel =
+    generatedModelDeclaration(name, schema, location, localModels).copy(
+      tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerant"], "AsyncAPI model '$name' x-sunday-tolerant"),
+    )
+
+  private fun generatedModelDeclaration(
+    name: String,
+    schema: Map<*, *>,
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel {
     val source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, location)
     schema.refName()?.let { target ->
@@ -451,6 +486,10 @@ class AsyncApiToGeneratedApi(
         kind = GeneratedModel.Kind.UNION,
         unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
         source = source,
+        properties = mergedProperties(name, listOf(schema), schema.requiredNames.toSet(), location, localModels),
+        closed = true.takeIf { schema["additionalProperties"] == false },
+        additionalProperties = additionalProperties(name, schema, location, localModels),
+        patternProperties = patternProperties(name, schema, location, localModels),
         aliases = aliases,
         discriminator = discriminator,
         discriminatorMappings = schema.discriminatorMappings(name, discriminator, nonNullBranches, aliases),
@@ -471,7 +510,22 @@ class AsyncApiToGeneratedApi(
     }
 
     val scalarTypeName = schema.scalarTypeName()
-    if (scalarTypeName != "object" && scalarTypeName != "array") {
+    if (scalarTypeName == "array") {
+      return GeneratedModel(
+        name = name,
+        kind = GeneratedModel.Kind.ARRAY,
+        source = source,
+        aliases =
+          listOf(
+            schema.mapValue("items")?.let { schemaTypeRef(it, "${name}Item", location, localModels) }
+              ?: GeneratedTypeRef.scalar("any"),
+          ),
+        collection = GeneratedCollectionKind.SET.takeIf { schema["uniqueItems"] == true },
+        validation = validation(schema),
+        documentation = documentation(description = schema["description"] as? String),
+      )
+    }
+    if (scalarTypeName != "object") {
       return GeneratedModel(
         name = name,
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
@@ -520,26 +574,65 @@ class AsyncApiToGeneratedApi(
       properties = properties,
       inherits = inherits,
       closed = true.takeIf { schema["additionalProperties"] == false },
-      additionalProperties =
-        when (val additional = schema["additionalProperties"]) {
-          is Boolean -> GeneratedAdditionalProperties(allowed = additional)
-          is Map<*, *> ->
-            GeneratedAdditionalProperties(
-              allowed = true,
-              type =
-                schemaTypeRef(additional, "${name}AdditionalProperty", location, localModels).let { type ->
-                  type.copy(nullable = type.nullable || (additional["type"] as? List<*>)?.contains("null") == true)
-                },
-              validation = validation(additional),
-            )
-          else -> null
-        },
+      additionalProperties = additionalProperties(name, schema, location, localModels),
+      patternProperties = patternProperties(name, schema, location, localModels),
       discriminator = discriminator,
       discriminatorMappings = schema.objectDiscriminatorMappings(location, localModels),
       discriminatorValue = discriminatorValue,
       documentation = documentation(description = schema["description"] as? String),
     )
   }
+
+  private fun additionalProperties(
+    owner: String,
+    schema: Map<*, *>,
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): GeneratedAdditionalProperties? =
+    when (val additional = schema["additionalProperties"]) {
+      is Boolean -> GeneratedAdditionalProperties(allowed = additional)
+      is Map<*, *> -> {
+        val effective = additional.resolvedSchema()
+        GeneratedAdditionalProperties(
+          allowed = true,
+          type =
+            schemaTypeRef(additional, "${owner}AdditionalProperty", location, localModels).let { type ->
+              type.copy(nullable = type.nullable || (effective["type"] as? List<*>)?.contains("null") == true)
+            },
+          validation = validation(effective),
+          allowedValues = effective.allowedValues(),
+        )
+      }
+      else -> null
+    }
+
+  private fun patternProperties(
+    owner: String,
+    schema: Map<*, *>,
+    location: String,
+    localModels: MutableMap<String, GeneratedModel>,
+  ): List<GeneratedPatternProperty> =
+    schema.mapValue("patternProperties").orEmpty().entries.mapIndexed { index, (pattern, value) ->
+      val property = value as? Map<*, *> ?: error("Pattern property '$pattern' must be a schema")
+      val effective = property.resolvedSchema()
+      GeneratedPatternProperty(
+        pattern = pattern as String,
+        type =
+          schemaTypeRef(property, "${owner}Pattern${index + 1}", location, localModels).let { type ->
+            type.copy(nullable = type.nullable || (effective["type"] as? List<*>)?.contains("null") == true)
+          },
+        validation = validation(effective),
+        allowedValues = effective.allowedValues(),
+        documentation = documentation(description = effective["description"] as? String),
+      )
+    }
+
+  private fun Map<*, *>.allowedValues(): List<Any?>? =
+    when {
+      containsKey("const") -> listOf(this["const"])
+      this["enum"] is List<*> -> this["enum"] as List<*>
+      else -> null
+    }?.takeIf { values -> values.all { it == null || it is String || it is Number || it is Boolean } }
 
   private fun unionBranchTypeRef(
     unionName: String,
@@ -711,7 +804,8 @@ class AsyncApiToGeneratedApi(
     )
 
   private fun AsyncApiSourceDocument.auth(): GeneratedAuth? =
-    if (security.isVersion3) null else sourceAuth(security() + servers().flatMap { server -> server.security })
+    (if (security.isVersion3) null else sourceAuth(security() + servers().flatMap { server -> server.security }))
+      .let { auth -> securitySelection()?.let { (auth ?: GeneratedAuth()).copy(selection = it) } ?: auth }
 
   private fun sourceAuth(
     requirements: List<Map<*, *>>,
@@ -1107,6 +1201,16 @@ class AsyncApiToGeneratedApi(
 
     fun title(): String? = source.mapValue("info")?.get("title") as? String
 
+    fun securitySelection(): GeneratedEnvironment<GeneratedSecuritySelection>? =
+      if (source.containsKey(
+          "x-sunday-security",
+        )
+      ) {
+        GeneratedSecurityReader.selection(source["x-sunday-security"], "x-sunday-security")
+      } else {
+        null
+      }
+
     fun security(): List<Map<*, *>> = security.declarations(source, "#/security")
 
     fun schemas(): Map<String, Map<*, *>> =
@@ -1140,7 +1244,16 @@ class AsyncApiToGeneratedApi(
           val server = value as? Map<*, *> ?: return@mapNotNull null
           AsyncApiServer(
             name = serverName,
-            url = server["url"] as? String,
+            url =
+              if (security.isVersion3) {
+                val host = server["host"] as? String ?: genError("AsyncAPI 3 server '$serverName' requires host")
+                val protocol =
+                  server["protocol"] as? String ?: genError("AsyncAPI 3 server '$serverName' requires protocol")
+                val pathname = (server["pathname"] as? String).orEmpty().trimStart('/')
+                "$protocol://$host" + if (pathname.isEmpty()) "" else "/$pathname"
+              } else {
+                server["url"] as? String
+              },
             protocol = server["protocol"] as? String,
             protocolVersion = server["protocolVersion"] as? String,
             description = server["description"] as? String,

@@ -26,6 +26,8 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [TypeScript/Sunday Runtime Notes](docs/typescript-sunday-runtime.md)
 
+### [Environment-aware Generation and Validation](docs/environment-aware-generation.md)
+
 Gradle Plugin Cache Notes
 -------------------------
 

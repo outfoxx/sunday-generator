@@ -121,6 +121,7 @@ class KotlinOpenModelPropertiesTest {
         .isEqualTo(typedOriginal)
       expectThrows<Exception> { mapper.readValue("""{"id":"one","count":"invalid"}""", typed) }
       expectThrows<Exception> { mapper.readValue("""{"id":"one","count":null}""", typed) }
+      expectThrows<Exception> { mapper.readValue("""{"id":"one","count":3}""", typed) }
       val typedChild = compiled.classLoader.loadClass("io.test.TypedChild")
       expectThat(mapper.readTree(mapper.writeValueAsBytes(mapper.treeToValue(typedOriginal, typedChild))))
         .isEqualTo(typedOriginal)

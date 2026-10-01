@@ -1,10 +1,10 @@
-import {SchemaOutput, SchemaRuntime, defineSchema} from '@outfoxx/sunday';
+import {SchemaOutput, SchemaRuntime, defineModelSchema} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
 export type Child1 = SchemaOutput<typeof Child1Schema>;
 
-export const Child1Schema = defineSchema((runtime: SchemaRuntime) => {
+export const Child1Schema = defineModelSchema((runtime: SchemaRuntime) => {
   const wireSchema = z.looseObject({
     'type': z.literal('Child1'),
     'value': z.string().optional(),

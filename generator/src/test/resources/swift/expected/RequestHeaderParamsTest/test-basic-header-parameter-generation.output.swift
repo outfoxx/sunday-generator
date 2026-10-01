@@ -41,7 +41,14 @@ public final class API<TransportType : Transport> : Sendable {
           "str-req": try ParameterValues.encode(strReq),
           "int": try ParameterValues.encode(int)
         ]
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 

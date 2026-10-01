@@ -31,6 +31,7 @@ internal fun GeneratedModel.tolerantEnumTypeSpec(
   entries: List<KotlinEnumEntry>,
   jacksonAnnotations: Boolean,
   restParameterConversion: Boolean = false,
+  fallbackValidation: AnnotationSpec? = null,
 ): TypeSpec.Builder {
   val fallbackValue = unknownValue ?: genError("Kotlin tolerant enum '$name' is missing its unknown value")
   val fallbackEntry =
@@ -63,7 +64,7 @@ internal fun GeneratedModel.tolerantEnumTypeSpec(
     ).addFunction(
       FunSpec
         .builder("toString")
-        .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
+        .addModifiers(KModifier.PUBLIC, KModifier.FINAL, KModifier.OVERRIDE)
         .returns(STRING)
         .addStatement("return wireValue")
         .build(),
@@ -85,6 +86,7 @@ internal fun GeneratedModel.tolerantEnumTypeSpec(
         TypeSpec
           .classBuilder(fallbackEntry.name)
           .addModifiers(KModifier.PUBLIC, KModifier.DATA)
+          .apply { fallbackValidation?.let(::addAnnotation) }
           .primaryConstructor(
             FunSpec
               .constructorBuilder()

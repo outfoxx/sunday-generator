@@ -46,6 +46,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
   preserve: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
+  nativeTypes: BeanValidationTypes?,
 ): OpenModelExtensionStorage {
   val names = NameAllocator()
   knownNames.forEach { names.newName(it) }
@@ -61,6 +62,7 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
       typeName,
       properties,
       additional = model.additionalProperties,
+      nativeTypes = nativeTypes,
     )
   val constructorStorage = preserve && parent?.preserves != true && KModifier.DATA in build().modifiers
   if (preserve && parent?.preserves != true) {
@@ -132,7 +134,17 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
         val matching = model.patternProperties.filter { Regex(it.pattern).containsMatchIn(field.wireName) }
         if (matching.isEmpty()) return@mapNotNull null
         val name = field.storage.name.kotlinIdentifierName
-        name to patternDecoder(className, matching, false, typeName, properties, field.storage.type, name)
+        name to
+          patternDecoder(
+            className,
+            matching,
+            false,
+            typeName,
+            properties,
+            field.storage.type,
+            name,
+            nativeTypes = nativeTypes,
+          )
       }.toMap()
   val localPropertyNames = propertySpecs.mapTo(mutableSetOf()) { it.name }
   build()
@@ -177,6 +189,7 @@ private fun TypeSpec.Builder.patternDecoder(
   declaredType: GeneratedTypeRef? = null,
   suffix: String = "AdditionalProperty",
   additional: GeneratedAdditionalProperties? = null,
+  nativeTypes: BeanValidationTypes? = null,
 ): ClassName {
   val names = NameAllocator()
   build().typeSpecs.mapNotNull { it.name }.forEach { names.newName(it) }
@@ -184,73 +197,96 @@ private fun TypeSpec.Builder.patternDecoder(
   val any = ANY.copy(nullable = true)
   val body = CodeBlock.builder()
   body.addStatement("val name = parser.currentName()")
-  body.addStatement("val node = context.readTree(parser)")
-  body.addStatement("var matched = false")
-  body.addStatement("var decoded: Any? = null")
-  patterns.forEach { pattern ->
-    body.beginControlFlow("if (%T(%S).containsMatchIn(name))", Regex::class, pattern.pattern)
-    body.addStatement("matched = true")
-    body.add(patternNodeValidation(pattern.type, pattern.validation, "node", properties))
-    pattern.allowedValues?.let { values ->
-      val matches =
-        values.map { value ->
-          when (value) {
-            null -> CodeBlock.of("node.isNull")
-            is Number ->
-              CodeBlock.of(
-                "(node.isNumber && node.decimalValue().compareTo(%S.toBigDecimal()) == 0)",
-                value.toString(),
-              )
-            is Boolean -> CodeBlock.of("(node.isBoolean && node.booleanValue() == %L)", value)
-            else -> CodeBlock.of("(node.isTextual && node.textValue() == %S)", value.toString())
-          }
-        }
-      val condition = CodeBlock.builder()
-      matches.forEachIndexed { index, match ->
-        if (index > 0) condition.add(" || ")
-        condition.add(match)
-      }
-      body.addStatement(
-        "require(%L) { %S + name }",
-        if (matches.isEmpty()) CodeBlock.of("false") else condition.build(),
-        "Invalid pattern property value: ",
+  if (nativeTypes == null) {
+    body.addStatement("val node = context.readTree(parser)")
+  } else {
+    body.addStatement("val node = %T.read(parser, context)", ClassName("io.outfoxx.sunday.validation", "WireTree"))
+  }
+  if (nativeTypes != null) {
+    body.addStatement(
+      "%T.response(mapOf(name to node), %T::class.java)",
+      nativeTypes.modelValidation,
+      owner.nestedClass("DynamicPropertiesValidation"),
+    )
+  }
+  if (nativeTypes != null) {
+    // Native metadata validates every matching rule; decode only the selected storage type.
+    val selected = CodeBlock.builder()
+    if (declaredType != null) {
+      selected.add(
+        "object : %T() {}.type",
+        ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(declaredType)),
       )
+    } else {
+      selected.beginControlFlow("when")
+      patterns.asReversed().forEach { pattern ->
+        selected.addStatement(
+          "%T(%S).containsMatchIn(name) -> object : %T() {}.type",
+          Regex::class,
+          pattern.pattern,
+          ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(pattern.type)),
+        )
+      }
+      selected.addStatement(
+        "else -> object : %T() {}.type",
+        ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(
+          additional?.type?.let(typeName) ?: any,
+        ),
+      )
+      selected.endControlFlow()
     }
-    body.addStatement("node.traverse(parser.codec).use { input ->")
-    body.indent().addStatement("input.nextToken()")
-    body.addStatement(
-      "decoded = context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
-      ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(pattern.type)),
-    )
-    body.unindent().addStatement("}")
-    body.endControlFlow()
-  }
-  additional?.type?.let { type ->
-    body.beginControlFlow("if (!matched)")
-    body.add(patternNodeValidation(type, additional.validation, "node", properties))
-    body.addStatement("node.traverse(parser.codec).use { input ->")
-    body.indent().addStatement("input.nextToken()")
-    body.addStatement(
-      "decoded = context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
-      ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(type)),
-    )
-    body.unindent().addStatement("}")
-    body.endControlFlow()
-  }
-  if (closed) body.addStatement("require(matched) { %S + name }", "Additional properties are not allowed: ")
-  if (declaredType != null) {
+    body.add("val storageType = %L\n", selected.build())
     body.addStatement("return node.traverse(parser.codec).use { input ->")
     body.indent().addStatement("input.nextToken()")
-    body.addStatement(
-      "context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
-      ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(declaredType)),
-    )
+    body.addStatement("context.readValue(input, context.typeFactory.constructType(storageType))")
     body.unindent().addStatement("}")
   } else {
-    if (additional?.type != null) {
-      body.addStatement("return decoded")
+    body.addStatement("var matched = false")
+    body.addStatement("var decoded: Any? = null")
+    patterns.forEach { pattern ->
+      body.beginControlFlow("if (%T(%S).containsMatchIn(name))", Regex::class, pattern.pattern)
+      body.addStatement("matched = true")
+      body.add(patternNodeValidation(pattern.type, pattern.validation, "node", properties))
+      body.addAllowedValues(pattern.allowedValues)
+      body.addStatement("node.traverse(parser.codec).use { input ->")
+      body.indent().addStatement("input.nextToken()")
+      body.addStatement(
+        "decoded = context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
+        ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(pattern.type)),
+      )
+      body.unindent().addStatement("}")
+      body.endControlFlow()
+    }
+    additional?.type?.let { type ->
+      body.beginControlFlow("if (!matched)")
+      body.add(patternNodeValidation(type, additional.validation, "node", properties))
+      body.addAllowedValues(additional.allowedValues)
+      body.addStatement("node.traverse(parser.codec).use { input ->")
+      body.indent().addStatement("input.nextToken()")
+      body.addStatement(
+        "decoded = context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
+        ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(type)),
+      )
+      body.unindent().addStatement("}")
+      body.endControlFlow()
+    }
+    if (closed) {
+      body.addStatement("require(matched) { %S + name }", "Additional properties are not allowed: ")
+    }
+    if (declaredType != null) {
+      body.addStatement("return node.traverse(parser.codec).use { input ->")
+      body.indent().addStatement("input.nextToken()")
+      body.addStatement(
+        "context.readValue(input, context.typeFactory.constructType(object : %T() {}.type))",
+        ClassName("com.fasterxml.jackson.core.type", "TypeReference").parameterizedBy(typeName(declaredType)),
+      )
+      body.unindent().addStatement("}")
     } else {
-      body.addStatement("return if (matched) decoded else context.readTreeAsValue(node, Any::class.java)")
+      if (additional?.type != null) {
+        body.addStatement("return decoded")
+      } else {
+        body.addStatement("return if (matched) decoded else context.readTreeAsValue(node, Any::class.java)")
+      }
     }
   }
   val nullBody = CodeBlock.builder()
@@ -286,6 +322,18 @@ private fun TypeSpec.Builder.patternDecoder(
     )
   }
   nullBody.addStatement("return null")
+  val nativeNullBody =
+    nativeTypes?.let { types ->
+      CodeBlock
+        .builder()
+        .addStatement(
+          "%T.response(mapOf(context.parser.currentName() to null), %T::class.java)",
+          types.modelValidation,
+          owner.nestedClass("DynamicPropertiesValidation"),
+        ).addStatement("return null")
+        .build()
+    }
+
   addType(
     TypeSpec
       .classBuilder(decoderType)
@@ -314,7 +362,7 @@ private fun TypeSpec.Builder.patternDecoder(
           .addModifiers(KModifier.OVERRIDE)
           .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
           .returns(any)
-          .addCode(nullBody.build())
+          .addCode(nativeNullBody ?: nullBody.build())
           .build(),
       ).build(),
   )
@@ -382,3 +430,31 @@ private fun patternNodeValidation(
       }
       if (type.nullable) endControlFlow()
     }.build()
+
+private fun CodeBlock.Builder.addAllowedValues(values: List<Any?>?) {
+  values?.let { values ->
+    val matches =
+      values.map { value ->
+        when (value) {
+          null -> CodeBlock.of("node.isNull")
+          is Number ->
+            CodeBlock.of(
+              "(node.isNumber && node.decimalValue().compareTo(%S.toBigDecimal()) == 0)",
+              value.toString(),
+            )
+          is Boolean -> CodeBlock.of("(node.isBoolean && node.booleanValue() == %L)", value)
+          else -> CodeBlock.of("(node.isTextual && node.textValue() == %S)", value.toString())
+        }
+      }
+    val condition = CodeBlock.builder()
+    matches.forEachIndexed { index, match ->
+      if (index > 0) condition.add(" || ")
+      condition.add(match)
+    }
+    addStatement(
+      "require(%L) { %S + name }",
+      if (matches.isEmpty()) CodeBlock.of("false") else condition.build(),
+      "Invalid pattern property value: ",
+    )
+  }
+}

@@ -28,6 +28,7 @@ import amf.apicontract.client.platform.model.domain.api.WebApi
 import amf.apicontract.client.platform.model.domain.security.ApiKeySettings
 import amf.apicontract.client.platform.model.domain.security.HttpSettings
 import amf.apicontract.client.platform.model.domain.security.OAuth2Settings
+import amf.apicontract.client.platform.model.domain.security.OpenIdConnectSettings
 import amf.apicontract.client.platform.model.domain.security.SecurityRequirement
 import amf.apicontract.client.platform.model.domain.security.SecurityScheme
 import amf.core.client.platform.model.DataTypes
@@ -116,6 +117,7 @@ import io.outfoxx.sunday.generator.utils.objectValue
 import io.outfoxx.sunday.generator.utils.operationName
 import io.outfoxx.sunday.generator.utils.or
 import io.outfoxx.sunday.generator.utils.parameters
+import io.outfoxx.sunday.generator.utils.parent
 import io.outfoxx.sunday.generator.utils.path
 import io.outfoxx.sunday.generator.utils.pattern
 import io.outfoxx.sunday.generator.utils.patternName
@@ -177,6 +179,7 @@ class RamlToGeneratedApi(
         securityRequirements = result.apiSecurity ?: api.security,
         localModels = localModels,
         zanzibar = api.zanzibar(),
+        selection = api.securitySelection(),
         zanzibarUserSource = api.zanzibarUserSource(),
       )
     val server = api.servers.firstOrNull()
@@ -334,6 +337,9 @@ class RamlToGeneratedApi(
         inheritedZanzibar = inheritedAuth?.zanzibar.orEmpty(),
         zanzibarUserSource = operation.zanzibarUserSource(),
         inheritedZanzibarUserSource = inheritedAuth?.zanzibarUserSource,
+        selection =
+          listOfNotNull(endPoint.securitySelection(), operation.securitySelection())
+            .reduceOrNull { inherited, local -> inherited.inherit(local) },
       ) ?: inheritedAuth
 
     val operationId = operation.generatedOperationId(endPoint.path)
@@ -373,7 +379,11 @@ class RamlToGeneratedApi(
       exchange = operation.exchange(),
       auth = operationAuth,
       media = operationMedia,
-      policy = operation.policy(),
+      policy =
+        (
+          generateSequence(endPoint) { it.parent }.toList().asReversed().mapNotNull { it.policy() } +
+            listOfNotNull(operation.policy())
+        ).reduceOrNull { base, local -> base.inherit(local) },
       streaming = operation.streaming(),
       jaxrs = operation.jaxrs(),
       deprecated = operation.deprecated == true,
@@ -931,7 +941,13 @@ class RamlToGeneratedApi(
         ).joinToString("|")
       val model =
         modelsByKey.getOrPut(key) {
-          localShape.localModel(modelName, scope, serializationName, source)
+          localShape.localModel(modelName, scope, serializationName, source).copy(
+            tolerance =
+              GeneratedTolerance.parse(
+                localShape.findStringAnnotation(APIAnnotationName.Tolerant, null),
+                "RAML model '$modelName' (sunday.tolerant)",
+              ),
+          )
         }
       val ref = GeneratedTypeRef.named(model.name, scope = model.scope, source = model.source)
       refsByShapeId[localShape.id] = ref
@@ -1156,6 +1172,23 @@ class RamlToGeneratedApi(
     rootLocation: String,
     localModels: LocalModelRegistry? = null,
   ): GeneratedModel? =
+    modelDeclaration(shape, shapeIndex, sourceShape, declaringUnit, rootLocation, localModels)?.copy(
+      tolerance =
+        GeneratedTolerance.parse(
+          sourceShape.findStringAnnotation(APIAnnotationName.Tolerant, null)
+            ?: shape.findStringAnnotation(APIAnnotationName.Tolerant, null),
+          "RAML model '${shape.name}' (sunday.tolerant)",
+        ),
+    )
+
+  private fun modelDeclaration(
+    shape: Shape,
+    shapeIndex: ShapeIndex,
+    sourceShape: Shape = shape,
+    declaringUnit: BaseUnit,
+    rootLocation: String,
+    localModels: LocalModelRegistry? = null,
+  ): GeneratedModel? =
     when (shape) {
       is NodeShape ->
         shape.name?.let { name ->
@@ -1261,6 +1294,7 @@ class RamlToGeneratedApi(
                 shape.items()?.let { typeRef(it, rootLocation = rootLocation) } ?: GeneratedTypeRef.scalar("any"),
               ),
             collection = shape.collectionKind(),
+            validation = validation(shape),
             targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
             nested = shape.nested(),
             patchable = shape.patchable(shapeIndex),
@@ -1276,36 +1310,39 @@ class RamlToGeneratedApi(
         }
 
       is ScalarShape ->
-        shape.name?.takeIf { shape.values.isNotEmpty() || shape.isNominalScalar() }?.let { name ->
-          GeneratedModel(
-            name = name,
-            kind = if (shape.isNominalScalar()) GeneratedModel.Kind.SCALAR_ALIAS else GeneratedModel.Kind.ENUM,
-            nominal = shape.isNominalScalar(),
-            aliases =
-              if (shape.isNominalScalar()) {
-                listOf(
-                  GeneratedTypeRef.scalar(shape.scalarName(), format = shape.format),
-                )
-              } else {
-                emptyList()
-              },
-            validation = if (shape.isNominalScalar()) validation(shape) else emptyMap(),
-            source = declaringUnit.sourceSpec(rootLocation),
-            values = shape.values.mapNotNull { value -> value.rawScalarValue },
-            unknownValue = shape.unknownEnumValue(name),
-            targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
-            nested = shape.nested(),
-            patchable = shape.patchable(shapeIndex),
-            examples =
-              (sourceShape as? AnyShape)
-                ?.examples
-                .orEmpty()
-                .filterNot { example -> example.isPayloadSchemaExample }
-                .examples(),
-            deprecated = shape.deprecated == true,
-            documentation = documentation(description = shape.description),
-          )
-        }
+        shape.name
+          ?.takeIf {
+            shape.hasDurableModelName() || shape.values.isNotEmpty() || shape.isNominalScalar()
+          }?.let { name ->
+            GeneratedModel(
+              name = name,
+              kind = if (shape.values.isEmpty()) GeneratedModel.Kind.SCALAR_ALIAS else GeneratedModel.Kind.ENUM,
+              nominal = shape.isNominalScalar(),
+              aliases =
+                if (shape.values.isEmpty()) {
+                  listOf(
+                    GeneratedTypeRef.scalar(shape.scalarName(), format = shape.format),
+                  )
+                } else {
+                  emptyList()
+                },
+              validation = if (shape.values.isEmpty()) validation(shape) else emptyMap(),
+              source = declaringUnit.sourceSpec(rootLocation),
+              values = shape.values.mapNotNull { value -> value.rawScalarValue },
+              unknownValue = shape.unknownEnumValue(name),
+              targets = declaringUnit.targetDefaults().mergeWith(shape.targets()),
+              nested = shape.nested(),
+              patchable = shape.patchable(shapeIndex),
+              examples =
+                (sourceShape as? AnyShape)
+                  ?.examples
+                  .orEmpty()
+                  .filterNot { example -> example.isPayloadSchemaExample }
+                  .examples(),
+              deprecated = shape.deprecated == true,
+              documentation = documentation(description = shape.description),
+            )
+          }
 
       is UnionShape ->
         shape.name?.let { name ->
@@ -1708,18 +1745,15 @@ class RamlToGeneratedApi(
       else -> GeneratedTypeRef.named(typeName)
     }
 
-  private fun Operation.policy(): GeneratedPolicy? =
-    (findAnnotation(APIAnnotationName.Policy, null) as? ObjectNode)
-      ?.let { policy ->
-        GeneratedPolicy(
-          timeout = policy.getValue("timeout"),
-          retry = policy.stringMap("retry"),
-          circuitBreaker = policy.stringMap("circuitBreaker"),
-          clientRateLimit = policy.stringMap("clientRateLimit"),
-          serverRateLimit = policy.stringMap("serverRateLimit"),
-          source = policy.getValue("source"),
-        )
-      }?.takeUnless { it == GeneratedPolicy() }
+  private fun CustomizableElement.securitySelection(): GeneratedEnvironment<GeneratedSecuritySelection>? =
+    findAnnotation(APIAnnotationName.Security, null)?.let {
+      GeneratedSecurityReader.selection(it.anyValue, "(sunday.security)")
+    }
+
+  private fun CustomizableElement.policy(): GeneratedPolicy? =
+    findAnnotation(APIAnnotationName.Policy, null)?.let { annotation ->
+      GeneratedPolicyReader.read(annotation.anyValue, "(sunday.policy)")
+    }
 
   private fun CustomizableElement.zanzibar(): Map<String, String> =
     (findAnnotation(APIAnnotationName.Zanzibar, null) as? ObjectNode)?.zanzibarMap().orEmpty()
@@ -1795,7 +1829,12 @@ class RamlToGeneratedApi(
         localModels?.refFor(shape)
           ?: if (shape.name != null &&
             shape.name !in syntheticShapeNames &&
-            (shape.values.isNotEmpty() || shape.isNominalScalar())
+            (
+              shape.values.isNotEmpty() ||
+                shape.isNominalScalar() ||
+                shape.hasDurableModelName() &&
+                !shape.isInlineShapeName(inlineShapeName)
+            )
           ) {
             GeneratedTypeRef.named(shape.name!!, source = shape.sourceSpec(rootLocation))
           } else {
@@ -1885,7 +1924,7 @@ class RamlToGeneratedApi(
     return null
   }
 
-  private fun NodeShape.isInlineShapeName(inlineShapeName: String?): Boolean =
+  private fun Shape.isInlineShapeName(inlineShapeName: String?): Boolean =
     inlineShapeName != null &&
       name != null &&
       name == inlineShapeName
@@ -2218,7 +2257,13 @@ class RamlToGeneratedApi(
     }
 
     val itemShape = (resolved.nonNullableType as? ArrayShape)?.items()?.let(shapeIndex::resolve)
-    if (itemShape?.isNominalScalar() == true || itemShape is UnionShape) return emptyMap()
+    if (itemShape?.isNominalScalar() == true ||
+      itemShape is UnionShape ||
+      itemShape is ScalarShape &&
+      itemShape.hasDurableModelName()
+    ) {
+      return emptyMap()
+    }
     return itemShape?.let(::validation).orEmpty()
   }
 
@@ -2303,6 +2348,7 @@ class RamlToGeneratedApi(
     inheritedZanzibar: Map<String, String> = mapOf(),
     zanzibarUserSource: GeneratedZanzibarUserSource? = null,
     inheritedZanzibarUserSource: GeneratedZanzibarUserSource? = null,
+    selection: GeneratedEnvironment<GeneratedSecuritySelection>? = null,
   ): GeneratedAuth? {
     val requirements =
       securityRequirements
@@ -2325,6 +2371,7 @@ class RamlToGeneratedApi(
       securitySchemes = securitySchemes,
       zanzibar = inheritedZanzibar + zanzibar,
       zanzibarUserSource = zanzibarUserSource ?: inheritedZanzibarUserSource,
+      selection = selection,
     ).takeUnless { it == GeneratedAuth() }
   }
 
@@ -2357,6 +2404,12 @@ class RamlToGeneratedApi(
       type = type().value(),
       scheme = httpSettings?.scheme()?.value(),
       bearerFormat = httpSettings?.bearerFormat()?.value(),
+      openIdConnectUrl = (settings as? OpenIdConnectSettings)?.url()?.value(),
+      oauthFlows = (settings as? OAuth2Settings)?.oauthFlows().orEmpty(),
+      bindings =
+        findAnnotation(APIAnnotationName.Security, null)?.let {
+          GeneratedSecurityReader.binding(it.anyValue, "security scheme '$schemeName'.(sunday.security)")
+        },
       headers =
         headers().orEmpty().map { parameter -> parameter.parameter(GeneratedParameter.Location.HEADER) } +
           listOfNotNull(
@@ -2390,6 +2443,29 @@ class RamlToGeneratedApi(
         scheme.documentation == null
     }
   }
+
+  private fun OAuth2Settings.oauthFlows(): Map<String, GeneratedOAuthFlow> =
+    flows()
+      .flatMap { flow ->
+        val names =
+          listOfNotNull(flow.flow().value()?.takeIf { it.isNotBlank() })
+            .ifEmpty { authorizationGrants().mapNotNull { it.value() } }
+        names.map { name ->
+          val canonicalName =
+            when (name) {
+              "client_credentials", "application" -> "clientCredentials"
+              "authorization_code", "accessCode" -> "authorizationCode"
+              else -> name
+            }
+          canonicalName to
+            GeneratedOAuthFlow(
+              authorizationUrl = flow.authorizationUri().value(),
+              tokenUrl = flow.accessTokenUri().value(),
+              refreshUrl = flow.refreshUri().value(),
+              scopes = flow.scopes().associate { it.name().value() to it.description().value().orEmpty() },
+            )
+        }
+      }.toMap()
 
   private fun ApiKeySettings.apiKeyParameter(): GeneratedParameter? {
     val wireName = name().value() ?: return null

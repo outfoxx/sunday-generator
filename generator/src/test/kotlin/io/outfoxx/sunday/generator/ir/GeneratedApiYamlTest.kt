@@ -92,8 +92,11 @@ class GeneratedApiYamlTest {
               serviceGroup = true,
               policy =
                 GeneratedPolicy(
-                  timeout = "PT5S",
-                  retry = mapOf("maxRetries" to "3"),
+                  all =
+                    GeneratedPolicyValues(
+                      timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration(5)),
+                      retry = GeneratedPolicySetting(value = GeneratedPolicyValues.Retry(maxRetries = 3)),
+                    ),
                 ),
               documentation = GeneratedDocumentation(description = "Project operations."),
             ),
@@ -1221,9 +1224,11 @@ class GeneratedApiYamlTest {
                     ),
                   policy =
                     GeneratedPolicy(
-                      timeout = "PT5S",
-                      retry = mapOf("maxRetries" to "3"),
-                      source = "default",
+                      all =
+                        GeneratedPolicyValues(
+                          timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration(5)),
+                          retry = GeneratedPolicySetting(value = GeneratedPolicyValues.Retry(maxRetries = 3)),
+                        ),
                     ),
                   streaming =
                     GeneratedStreaming(

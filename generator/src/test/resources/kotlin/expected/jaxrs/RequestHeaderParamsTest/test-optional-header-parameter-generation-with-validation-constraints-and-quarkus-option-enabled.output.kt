@@ -1,12 +1,13 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.jakarta.EntitySchema
 import io.test.Test
+import jakarta.validation.Valid
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
-import javax.validation.Valid
 import kotlin.Int
 import kotlin.String
 import org.jboss.resteasy.reactive.RestHeader
@@ -17,6 +18,7 @@ import org.jboss.resteasy.reactive.RestResponse
 public interface API {
   @GET
   @Path(value = "/tests")
+  @EntitySchema
   public fun fetchTest(
     @RestHeader(value = "obj") @Valid obj: Test?,
     @RestHeader(value = "str") str: String?,

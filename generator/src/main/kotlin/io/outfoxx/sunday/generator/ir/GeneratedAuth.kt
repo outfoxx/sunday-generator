@@ -28,4 +28,6 @@ data class GeneratedAuth(
   val zanzibar: Map<String, String> = mapOf(),
   val zanzibarUserSource: GeneratedZanzibarUserSource? = null,
   val securityOverride: Boolean = false,
+  /** Client alternative selection, independent of the accepted server requirements. */
+  val selection: GeneratedEnvironment<GeneratedSecuritySelection>? = null,
 )
