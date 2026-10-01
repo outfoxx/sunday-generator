@@ -21,12 +21,12 @@ interface EnvironmentGenerationOptions {
   /** Explicitly selected deployment profile, or null for unprofiled generation. */
   val profile: String?
 
-  /** Request fallback behavior used when the schema does not declare an override. */
-  val requestTolerance: RequestTolerance
+  /** Permitted fallback directions used when the schema does not declare an override. */
+  val defaultTolerance: Tolerance
 
   /** Creates the context for a target role and payload boundary without changing the source IR. */
   fun generationContext(
     role: GenerationMode,
     payloadUse: PayloadUse = PayloadUse.Standalone,
-  ): GenerationContext = GenerationContext(role, profile, payloadUse, requestTolerance)
+  ): GenerationContext = GenerationContext(role, profile, payloadUse, defaultTolerance)
 }

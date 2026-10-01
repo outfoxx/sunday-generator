@@ -85,6 +85,6 @@ open class KotlinSundayGenerateCommand :
       generateBrokerServices,
       preserveUnknownFields,
       profile,
-      requestTolerance,
+      defaultTolerance,
     )
 }

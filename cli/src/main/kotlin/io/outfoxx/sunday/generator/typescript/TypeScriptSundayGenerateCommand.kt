@@ -70,6 +70,6 @@ open class TypeScriptSundayGenerateCommand :
       generateBrokerServices,
       preserveUnknownFields,
       profile,
-      requestTolerance,
+      defaultTolerance,
     )
 }

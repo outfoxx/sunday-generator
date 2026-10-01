@@ -18,7 +18,7 @@ package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.GenerationContext
 import io.outfoxx.sunday.generator.PayloadUse
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 
 /** Directional override for a schema that declares an unknown enum or discriminator variant. */
 enum class GeneratedTolerance {
@@ -47,5 +47,5 @@ fun GeneratedTolerance?.allowsUnknown(context: GenerationContext): Boolean =
     when (this) {
       GeneratedTolerance.RESPONSE -> false
       GeneratedTolerance.ALL -> true
-      null -> context.requestTolerance == RequestTolerance.Tolerant
+      null -> context.defaultTolerance == Tolerance.All
     }

@@ -133,7 +133,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           genTask.profile.set(gen.profile)
-          genTask.requestTolerance.set(gen.requestTolerance)
+          genTask.defaultTolerance.set(gen.defaultTolerance)
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
           gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
           gen.generateBrokerServices.takeIf { it.isPresent }?.let { genTask.generateBrokerServices.set(it) }

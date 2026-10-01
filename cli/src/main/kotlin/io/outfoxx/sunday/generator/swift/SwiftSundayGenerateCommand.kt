@@ -70,6 +70,6 @@ open class SwiftSundayGenerateCommand :
       generateBrokerServices,
       preserveUnknownFields,
       profile,
-      requestTolerance,
+      defaultTolerance,
     )
 }

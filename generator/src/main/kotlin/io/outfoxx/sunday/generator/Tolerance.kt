@@ -16,8 +16,11 @@
 
 package io.outfoxx.sunday.generator
 
-/** Default request treatment of schema-declared unknown enum and discriminator variants. */
-enum class RequestTolerance {
-  Strict,
-  Tolerant,
+/** Default payload directions that permit schema-declared unknown enum and discriminator variants. */
+enum class Tolerance {
+  /** Permit declared fallbacks in responses; reject them in requests. */
+  Response,
+
+  /** Permit declared fallbacks in both requests and responses. */
+  All,
 }

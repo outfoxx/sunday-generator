@@ -28,8 +28,8 @@ internal fun directionalToleranceApi(
 ): GeneratedApi {
   val schemas =
     """
-    State: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerant: response}
-    OpenState: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerant: all}
+    State: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerance: response}
+    OpenState: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerance: all}
     Item:
       type: object
       required: [state]
@@ -42,7 +42,7 @@ internal fun directionalToleranceApi(
     Event:
       oneOf: [{${'$'}ref: '#/components/schemas/Created'}]
       discriminator: {propertyName: kind, mapping: {created: '#/components/schemas/Created'}}
-      x-sunday-tolerant: response
+      x-sunday-tolerance: response
       properties:
         note: {type: string, minLength: 2}
         state: {${'$'}ref: '#/components/schemas/State'}
@@ -98,10 +98,10 @@ internal fun directionalToleranceApi(
     title: Directional tolerance
     annotationTypes:
       sunday.unknownValue: {type: string, allowedTargets: [TypeDeclaration]}
-      sunday.tolerant: {type: string, enum: [response, all], allowedTargets: [TypeDeclaration]}
+      sunday.tolerance: {type: string, enum: [response, all], allowedTargets: [TypeDeclaration]}
     types:
-      State: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerant): response}
-      OpenState: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerant): all}
+      State: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerance): response}
+      OpenState: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerance): all}
       Item:
         type: object
         properties:
@@ -113,7 +113,7 @@ internal fun directionalToleranceApi(
       Event:
         type: object
         discriminator: kind
-        (sunday.tolerant): response
+        (sunday.tolerance): response
         properties:
           kind: string
           note?: {type: string, minLength: 2}

@@ -19,7 +19,7 @@ package io.outfoxx.sunday.generator.ir
 import io.outfoxx.sunday.generator.GenerationContext
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.PayloadUse
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -76,19 +76,22 @@ class GeneratedEnvironmentTest {
   }
 
   @Test
-  fun `explicit tolerance overrides request default without affecting other payload uses`() {
+  fun `explicit tolerance overrides default scope without affecting other payload uses`() {
     for (role in GenerationMode.entries) {
-      val strict = GenerationContext(role, payloadUse = PayloadUse.Request)
-      val tolerant = strict.copy(requestTolerance = RequestTolerance.Tolerant)
-      assertFalse(null.allowsUnknown(strict))
-      assertTrue(null.allowsUnknown(tolerant))
-      assertFalse(GeneratedTolerance.RESPONSE.allowsUnknown(tolerant))
-      assertTrue(GeneratedTolerance.ALL.allowsUnknown(strict))
+      val responseOnly = GenerationContext(role, payloadUse = PayloadUse.Request)
+      val all = responseOnly.copy(defaultTolerance = Tolerance.All)
+      assertEquals(Tolerance.Response, responseOnly.defaultTolerance)
+      assertFalse(null.allowsUnknown(responseOnly))
+      assertTrue(null.allowsUnknown(all))
+      assertFalse(GeneratedTolerance.RESPONSE.allowsUnknown(all))
+      assertTrue(GeneratedTolerance.ALL.allowsUnknown(responseOnly))
       for (use in listOf(PayloadUse.Response, PayloadUse.Event, PayloadUse.Standalone)) {
-        assertTrue(GeneratedTolerance.RESPONSE.allowsUnknown(strict.copy(payloadUse = use)))
+        assertTrue(GeneratedTolerance.RESPONSE.allowsUnknown(responseOnly.copy(payloadUse = use)))
       }
     }
-    assertThrows(IllegalArgumentException::class.java) { GeneratedTolerance.parse("read", "test") }
+    for (value in listOf("read", "strict", "tolerant")) {
+      assertThrows(IllegalArgumentException::class.java) { GeneratedTolerance.parse(value, "test") }
+    }
     assertThrows(IllegalArgumentException::class.java) { GeneratedTolerance.parse(true, "test") }
     assertThrows(IllegalArgumentException::class.java) { GenerationContext(GenerationMode.Client, " ") }
   }

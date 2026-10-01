@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator
 
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.parse
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSGenerateCommand
 import io.outfoxx.sunday.generator.kotlin.KotlinSundayGenerateCommand
@@ -24,16 +25,17 @@ import io.outfoxx.sunday.generator.python.PythonSundayGenerateCommand
 import io.outfoxx.sunday.generator.swift.SwiftSundayGenerateCommand
 import io.outfoxx.sunday.generator.typescript.TypeScriptSundayGenerateCommand
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 class EnvironmentOptionsCLITest {
   @Test
-  fun `all targets expose strict requests and explicit profiles consistently`() {
+  fun `all targets expose response tolerance defaults and explicit profiles consistently`() {
     val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
     for ((flags, expected) in listOf(
-      emptyList<String>() to RequestTolerance.Strict,
-      listOf("-request-tolerance", "strict", "-profile", "external") to RequestTolerance.Strict,
-      listOf("-request-tolerance", "tolerant", "-profile", "external") to RequestTolerance.Tolerant,
+      emptyList<String>() to Tolerance.Response,
+      listOf("-default-tolerance", "response", "-profile", "external") to Tolerance.Response,
+      listOf("-default-tolerance", "all", "-profile", "external") to Tolerance.All,
     )) {
       val commands =
         listOf(
@@ -58,8 +60,26 @@ class EnvironmentOptionsCLITest {
         )
       commands.forEach { command ->
         command.parse((flags + listOf("-out", source.resolve("..").path, source.path)).toTypedArray())
-        assertEquals(expected, command.requestTolerance, command.commandName)
+        assertEquals(expected, command.defaultTolerance, command.commandName)
         assertEquals(if (flags.isEmpty()) null else "external", command.profile, command.commandName)
+      }
+    }
+  }
+
+  @Test
+  fun `tolerance option rejects replaced names and values`() {
+    val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
+    for (flags in listOf(
+      listOf("-request-tolerance", "strict"),
+      listOf("-default-tolerance", "strict"),
+      listOf("-default-tolerance", "tolerant"),
+    )) {
+      val command =
+        object : KotlinSundayGenerateCommand() {
+          override fun run() = Unit
+        }
+      assertThrows(UsageError::class.java) {
+        command.parse((flags + listOf("-out", source.resolve("..").path, source.path)).toTypedArray())
       }
     }
   }

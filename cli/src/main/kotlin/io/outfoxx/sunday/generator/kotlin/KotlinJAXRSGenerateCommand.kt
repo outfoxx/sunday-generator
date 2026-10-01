@@ -151,6 +151,6 @@ open class KotlinJAXRSGenerateCommand :
       enforceSecuritySchemes,
       preserveUnknownFields,
       profile,
-      requestTolerance,
+      defaultTolerance,
     )
 }

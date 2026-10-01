@@ -25,6 +25,6 @@ open class GenerationOptions(
   /** Retain schema-permitted dynamic model fields for serialization. */
   val preserveUnknownFields: Boolean = true,
   override val profile: String? = null,
-  override val requestTolerance: RequestTolerance = RequestTolerance.Strict,
+  override val defaultTolerance: Tolerance = Tolerance.Response,
 ) : BrokerGenerationOptions,
   EnvironmentGenerationOptions

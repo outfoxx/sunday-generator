@@ -45,7 +45,7 @@ class PythonLitestarIrGenerator(
         PythonModelRenderer(
           packageName,
           options.preserveUnknownFields,
-          options.requestTolerance,
+          options.defaultTolerance,
         ).renderModels(api.models)
       modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
     }

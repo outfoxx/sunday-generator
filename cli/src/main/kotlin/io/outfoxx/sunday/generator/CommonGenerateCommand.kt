@@ -79,10 +79,10 @@ abstract class CommonGenerateCommand(
   val profile by option("-profile", help = "Select a named policy and security profile")
     .validate { require(it.isNotBlank()) { "Generation profile must not be blank" } }
 
-  /** Default request behavior for schema-declared tolerant values. */
-  val requestTolerance by option("-request-tolerance", help = "Default request tolerance: strict or tolerant")
-    .enum<RequestTolerance> { it.name.lowercase() }
-    .default(RequestTolerance.Strict)
+  /** Default permitted directions for schema-declared tolerant values. */
+  val defaultTolerance by option("-default-tolerance", help = "Default tolerance scope: response or all")
+    .enum<Tolerance> { it.name.lowercase() }
+    .default(Tolerance.Response)
 
   val mediaTypes by option(
     "-media-type",

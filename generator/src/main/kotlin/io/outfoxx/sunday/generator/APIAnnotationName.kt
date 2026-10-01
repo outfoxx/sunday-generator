@@ -55,7 +55,7 @@ enum class APIAnnotationName(
   Patchable("patchable", false),
   WrapperType("wrapperType", false),
   UnknownValue("unknownValue", false),
-  Tolerant("tolerant", false),
+  Tolerance("tolerance", false),
 
   ProblemBaseUri("problemBaseUri", false),
   ProblemBaseUriParams("problemUriParams", false),

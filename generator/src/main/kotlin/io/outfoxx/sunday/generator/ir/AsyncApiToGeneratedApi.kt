@@ -452,7 +452,7 @@ class AsyncApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, location, localModels).copy(
-      tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerant"], "AsyncAPI model '$name' x-sunday-tolerant"),
+      tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerance"], "AsyncAPI model '$name' x-sunday-tolerance"),
     )
 
   private fun generatedModelDeclaration(

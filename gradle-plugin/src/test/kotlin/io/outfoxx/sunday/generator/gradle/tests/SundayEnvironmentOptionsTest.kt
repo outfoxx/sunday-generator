@@ -16,7 +16,7 @@
 
 package io.outfoxx.sunday.generator.gradle.tests
 
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.gradle.SundayGenerate
 import io.outfoxx.sunday.generator.gradle.SundayGenerations
 import org.gradle.testfixtures.ProjectBuilder
@@ -46,21 +46,21 @@ class SundayEnvironmentOptionsTest {
   }
 
   @Test
-  fun `task and DSL share strict request defaults and environment options`() {
+  fun `task and DSL share response tolerance defaults and environment options`() {
     val project = ProjectBuilder.builder().build()
     project.pluginManager.apply("java")
     project.pluginManager.apply("io.outfoxx.sunday-generator")
     @Suppress("UNCHECKED_CAST")
     val generations = project.extensions.getByName("sundayGenerations") as SundayGenerations
     val generation = generations.create("client")
-    assertEquals(RequestTolerance.Strict, generation.requestTolerance.get())
+    assertEquals(Tolerance.Response, generation.defaultTolerance.get())
     assertFalse(generation.profile.isPresent)
     val task = project.tasks.named("sundayGenerate_client", SundayGenerate::class.java).get()
-    assertEquals(RequestTolerance.Strict, task.requestTolerance.get())
+    assertEquals(Tolerance.Response, task.defaultTolerance.get())
     assertFalse(task.profile.isPresent)
     generation.profile.set("external")
-    generation.requestTolerance.set(RequestTolerance.Tolerant)
+    generation.defaultTolerance.set(Tolerance.All)
     assertEquals("external", task.profile.get())
-    assertEquals(RequestTolerance.Tolerant, task.requestTolerance.get())
+    assertEquals(Tolerance.All, task.defaultTolerance.get())
   }
 }

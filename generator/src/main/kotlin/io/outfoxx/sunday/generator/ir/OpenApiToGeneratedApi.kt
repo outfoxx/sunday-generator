@@ -448,8 +448,8 @@ class OpenApiToGeneratedApi(
       model.copy(
         tolerance =
           GeneratedTolerance.parse(
-            analysis.analyze(schema).model.schema["x-sunday-tolerant"],
-            "OpenAPI model '$name' x-sunday-tolerant",
+            analysis.analyze(schema).model.schema["x-sunday-tolerance"],
+            "OpenAPI model '$name' x-sunday-tolerance",
           ) ?: model.tolerance,
       )
     }

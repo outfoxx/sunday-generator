@@ -6,18 +6,20 @@ converting it to a second model type.
 
 ## Selecting an environment
 
-All generation entry points expose `profile` and `requestTolerance`. Requests default to `strict`.
+All generation entry points expose `profile` and `defaultTolerance`. Tolerance defaults to `response`,
+permitting declared fallbacks in responses while keeping requests strict. `all` also permits them in
+requests. Explicit schema settings override this default; it does not add fallbacks to closed schemas.
 
 ```shell
-sunday kotlin/jaxrs -mode client -quarkus -profile internal -request-tolerance strict -out generated api.yaml
-sunday swift/sunday -profile external -request-tolerance strict -out generated api.yaml
+sunday kotlin/jaxrs -mode client -quarkus -profile internal -default-tolerance response -out generated api.yaml
+sunday swift/sunday -profile external -default-tolerance response -out generated api.yaml
 ```
 
 ```kotlin
 sundayGenerations {
   create("client") {
     profile.set("internal")
-    requestTolerance.set(io.outfoxx.sunday.generator.RequestTolerance.Strict)
+    defaultTolerance.set(io.outfoxx.sunday.generator.Tolerance.Response)
   }
 }
 ```
@@ -39,8 +41,8 @@ Operation tags continue to control service grouping and exclusion independently 
 
 Both modes check schema constraints. A declared enum fallback or tolerant union is permitted in
 responses. Requests reject fallback instances by default, including manually constructed fallbacks
-whose raw value looks recognized. `x-sunday-tolerant: response` explicitly retains strict requests;
-`x-sunday-tolerant: all` allows fallback values in requests. RAML uses `(sunday.tolerant)` with the same
+whose raw value looks recognized. `x-sunday-tolerance: response` explicitly retains strict requests;
+`x-sunday-tolerance: all` allows fallback values in requests. RAML uses `(sunday.tolerance)` with the same
 values. A schema setting overrides the build default. Neither setting adds a fallback to a closed enum
 or an ordinary union. Enum fallbacks still require `x-unknown-value`.
 

@@ -17,7 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 
 /** Options for Kotlin/JAX-RS generation. */
 class KotlinJAXRSOptions(
@@ -42,7 +42,7 @@ class KotlinJAXRSOptions(
   val enforceSecuritySchemes: Boolean = false,
   preserveUnknownFields: Boolean = true,
   profile: String? = null,
-  requestTolerance: RequestTolerance = RequestTolerance.Strict,
+  defaultTolerance: Tolerance = Tolerance.Response,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
@@ -50,7 +50,7 @@ class KotlinJAXRSOptions(
     generateBrokerServices,
     preserveUnknownFields,
     profile,
-    requestTolerance,
+    defaultTolerance,
   ) {
 
   /** Base URI emission mode for service-level JAX-RS path annotations. */

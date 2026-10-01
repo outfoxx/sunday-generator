@@ -21,7 +21,7 @@ data class GenerationContext(
   val role: GenerationMode,
   val profile: String? = null,
   val payloadUse: PayloadUse = PayloadUse.Standalone,
-  val requestTolerance: RequestTolerance = RequestTolerance.Strict,
+  val defaultTolerance: Tolerance = Tolerance.Response,
 ) {
   init {
     require(profile == null || profile.isNotBlank()) { "Generation profile must not be blank" }

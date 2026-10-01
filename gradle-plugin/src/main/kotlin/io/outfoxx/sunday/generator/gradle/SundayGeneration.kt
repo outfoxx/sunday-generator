@@ -19,7 +19,7 @@
 package io.outfoxx.sunday.generator.gradle
 
 import io.outfoxx.sunday.generator.GenerationMode
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
@@ -63,9 +63,9 @@ class SundayGeneration(
   /** Explicit environment profile used by policy and security metadata. */
   val profile: Property<String> = objects.property(String::class.java)
 
-  /** Default request behavior for schema-declared tolerant values. */
-  val requestTolerance: Property<RequestTolerance> =
-    objects.property(RequestTolerance::class.java).convention(RequestTolerance.Strict)
+  /** Default permitted directions for schema-declared tolerant values. */
+  val defaultTolerance: Property<Tolerance> =
+    objects.property(Tolerance::class.java).convention(Tolerance.Response)
 
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
   val generateService: Property<Boolean> = objects.property(Boolean::class.java)

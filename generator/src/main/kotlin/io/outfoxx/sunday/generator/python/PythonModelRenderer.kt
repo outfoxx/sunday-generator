@@ -17,7 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.outfoxx.sunday.generator.RequestTolerance
+import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
@@ -39,7 +39,7 @@ private const val FALLBACK_TAG = "__unknown__"
 class PythonModelRenderer(
   private val packageName: String,
   private val preserveUnknownFields: Boolean = true,
-  private val requestTolerance: RequestTolerance = RequestTolerance.Strict,
+  private val defaultTolerance: Tolerance = Tolerance.Response,
 ) {
 
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
@@ -753,7 +753,7 @@ class PythonModelRenderer(
           members,
           fallbackEntry.name,
           if (tolerance == GeneratedTolerance.ALL ||
-            (tolerance == null && requestTolerance == RequestTolerance.Tolerant)
+            (tolerance == null && defaultTolerance == Tolerance.All)
           ) {
             "True"
           } else {
@@ -1063,7 +1063,7 @@ class PythonModelRenderer(
       modelName.pythonTypeName,
       PythonSymbol("sunday", "UnknownModel"),
       if ((hierarchy.tolerance ?: enumModel?.tolerance) == GeneratedTolerance.ALL ||
-        (hierarchy.tolerance == null && enumModel?.tolerance == null && requestTolerance == RequestTolerance.Tolerant)
+        (hierarchy.tolerance == null && enumModel?.tolerance == null && defaultTolerance == Tolerance.All)
       ) {
         "True"
       } else {

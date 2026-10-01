@@ -72,6 +72,6 @@ abstract class PythonGenerateCommand(
       generateBrokerServices = generateBrokerServices,
       preserveUnknownFields = preserveUnknownFields,
       profile = profile,
-      requestTolerance = requestTolerance,
+      defaultTolerance = defaultTolerance,
     )
 }

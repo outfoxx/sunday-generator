@@ -11,7 +11,7 @@ channels:
 components:
   schemas:
     Event:
-      x-sunday-tolerant: response
+      x-sunday-tolerance: response
       type: object
       required: [kind]
       properties:

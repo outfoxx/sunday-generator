@@ -67,7 +67,7 @@ class KotlinNativePayloadTest {
       """
       Code: {type: string, minLength: 3}
       Codes: {type: array, items: {${'$'}ref: '#/components/schemas/Code'}, minItems: 1, maxItems: 2}
-      State: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerant: response}
+      State: {type: string, enum: [active, unknown], x-unknown-value: unknown, x-sunday-tolerance: response}
       States: {type: array, items: {${'$'}ref: '#/components/schemas/State'}, minItems: 1}
       """.trimIndent()
     val source = directory.resolve(if (frontend == "raml") "api.raml" else "api.yaml")
@@ -78,11 +78,11 @@ class KotlinNativePayloadTest {
         title: Native payloads
         annotationTypes:
           sunday.unknownValue: {type: string, allowedTargets: [TypeDeclaration]}
-          sunday.tolerant: {type: string, allowedTargets: [TypeDeclaration]}
+          sunday.tolerance: {type: string, allowedTargets: [TypeDeclaration]}
         types:
           Code: {type: string, minLength: 3}
           Codes: {type: array, items: Code, minItems: 1, maxItems: 2}
-          State: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerant): response}
+          State: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown, (sunday.tolerance): response}
           States: {type: array, items: State, minItems: 1}
         /codes:
           post:

@@ -944,8 +944,8 @@ class RamlToGeneratedApi(
           localShape.localModel(modelName, scope, serializationName, source).copy(
             tolerance =
               GeneratedTolerance.parse(
-                localShape.findStringAnnotation(APIAnnotationName.Tolerant, null),
-                "RAML model '$modelName' (sunday.tolerant)",
+                localShape.findStringAnnotation(APIAnnotationName.Tolerance, null),
+                "RAML model '$modelName' (sunday.tolerance)",
               ),
           )
         }
@@ -1175,9 +1175,9 @@ class RamlToGeneratedApi(
     modelDeclaration(shape, shapeIndex, sourceShape, declaringUnit, rootLocation, localModels)?.copy(
       tolerance =
         GeneratedTolerance.parse(
-          sourceShape.findStringAnnotation(APIAnnotationName.Tolerant, null)
-            ?: shape.findStringAnnotation(APIAnnotationName.Tolerant, null),
-          "RAML model '${shape.name}' (sunday.tolerant)",
+          sourceShape.findStringAnnotation(APIAnnotationName.Tolerance, null)
+            ?: shape.findStringAnnotation(APIAnnotationName.Tolerance, null),
+          "RAML model '${shape.name}' (sunday.tolerance)",
         ),
     )
 
