@@ -22,12 +22,7 @@ import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.SwiftCompilerExtension
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
-import org.junit.jupiter.api.parallel.ResourceLock
 
-@Execution(ExecutionMode.CONCURRENT)
-@ResourceLock("Swift")
 @Tag("swift")
 @ExtendWith(
   ResourceExtension::class,

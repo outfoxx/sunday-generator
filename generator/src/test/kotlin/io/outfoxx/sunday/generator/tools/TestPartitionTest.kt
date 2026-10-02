@@ -36,6 +36,7 @@ class TestPartitionTest {
 
   @Test
   fun `tag expressions partition every discovered method exactly once`() {
+    assertEquals("false", System.getProperty("junit.jupiter.execution.parallel.enabled"))
     val all = discover(null)
     val expressions = listOf("!swift", "swift & validation", "swift & !validation")
     val partitions = expressions.associateWith(::discover)

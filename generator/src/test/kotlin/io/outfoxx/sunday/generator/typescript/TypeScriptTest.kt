@@ -22,12 +22,7 @@ import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.TypeScriptCompilerExtension
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
-import org.junit.jupiter.api.parallel.ResourceLock
 
-@Execution(CONCURRENT)
-@ResourceLock("TypeScript")
 @Tag("typescript")
 @ExtendWith(
   ResourceExtension::class,
