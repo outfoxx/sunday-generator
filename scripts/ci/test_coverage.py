@@ -18,13 +18,12 @@ class CoverageArtifactsTest(unittest.TestCase):
             source = self.root / partition
             modules = coverage.TEST_MODULES if partition == "ubuntu" else ("generator",)
             for module in modules:
-                for name, value in (("kover/bin-reports/test.ic", "binary"),
-                                    ("test-results/test/TEST-example.xml", '<testsuite tests="1" failures="0" errors="0"/>')):
-                    path = source / module / "build" / name
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text(value)
-                if module == "integration-tests/quarkus":
-                    (source / module / "build/kover/bin-reports/configurationTest.ic").write_text("binary")
+                for task in coverage.TEST_TASKS[module]:
+                    for name, value in ((f"kover/bin-reports/{task}.ic", "binary"),
+                                        (f"test-results/{task}/TEST-example.xml", '<testsuite tests="1" failures="0" errors="0"/>')):
+                        path = source / module / "build" / name
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text(value)
             inventory = source / "generator/build/diagnostics/inventory/worker-1.json"
             inventory.parent.mkdir(parents=True)
             inventory.write_text(json.dumps([partition]))
@@ -34,6 +33,16 @@ class CoverageArtifactsTest(unittest.TestCase):
 
     def test_complete_partitions_are_accepted_without_executing_tests(self):
         self.assertEqual(7, len(coverage.verify(self.artifacts, "commit-a")))
+
+    def test_missing_secondary_test_task_is_rejected(self):
+        directory = self.artifacts / "ubuntu"
+        name = "integration-tests/jaxrs/build/kover/bin-reports/defaultModelTest.ic"
+        (directory / name).unlink()
+        manifest = json.loads((directory / "manifest.json").read_text())
+        del manifest["files"][name]
+        (directory / "manifest.json").write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "Missing coverage or JUnit results"):
+            coverage.verify(self.artifacts, "commit-a")
 
     def test_other_commit_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Mismatched manifest"):

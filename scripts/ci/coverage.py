@@ -10,7 +10,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PARTITIONS = json.loads((Path(__file__).parent / "partitions.json").read_text())
 MODULES = ("generator", "cli", "gradle-plugin", "integration-tests/quarkus")
-TEST_MODULES = (*MODULES, "integration-tests/jaxrs")
+TEST_TASKS = {
+    "generator": ("test",),
+    "cli": ("test",),
+    "gradle-plugin": ("test",),
+    "integration-tests/quarkus": ("test", "configurationTest"),
+    "integration-tests/jaxrs": ("test", "defaultModelTest"),
+}
+TEST_MODULES = tuple(TEST_TASKS)
 
 
 def digest(path):
@@ -76,8 +83,9 @@ def verify(artifacts, commit):
         for module in expected_modules:
             binaries = list((directory / module / "build/kover/bin-reports").glob("*.ic"))
             results = list((directory / module / "build/test-results").glob("**/*.xml"))
-            expected_binaries = {"test.ic", "configurationTest.ic"} if module == "integration-tests/quarkus" else {"test.ic"}
-            if {path.name for path in binaries} != expected_binaries or not results:
+            expected_binaries = {f"{task}.ic" for task in TEST_TASKS[module]}
+            result_tasks = {path.parent.name for path in results}
+            if {path.name for path in binaries} != expected_binaries or result_tasks != set(TEST_TASKS[module]):
                 raise ValueError(f"Missing coverage or JUnit results: {partition}/{module}")
             for result in results:
                 suite = ET.parse(result).getroot()
