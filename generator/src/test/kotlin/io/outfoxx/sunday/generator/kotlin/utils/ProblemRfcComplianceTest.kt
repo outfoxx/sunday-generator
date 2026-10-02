@@ -19,18 +19,23 @@ package io.outfoxx.sunday.generator.kotlin.utils
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @DisplayName("[Kotlin] Problem RFC Compliance Test")
+@Tag("kotlin")
+@Tag("validation")
 class ProblemRfcComplianceTest {
 
   @Test
+  @Tag("models")
   fun `validation passes for quarkus rfc9457 defaults`() {
     val support = KotlinProblemLibrary.QUARKUS.support(KotlinProblemRfc.RFC9457)
     assertDoesNotThrow { ProblemRfcCompliance.validate(support.rfc, support.builderFieldMapping) }
   }
 
   @Test
+  @Tag("models")
   fun `validation passes for sunday rfc9457 defaults`() {
     val support = KotlinProblemLibrary.SUNDAY.support(KotlinProblemRfc.RFC9457)
     assertDoesNotThrow { ProblemRfcCompliance.validate(support.rfc, support.builderFieldMapping) }

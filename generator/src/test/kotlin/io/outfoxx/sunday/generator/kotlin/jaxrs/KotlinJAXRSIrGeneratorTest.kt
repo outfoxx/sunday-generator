@@ -86,6 +86,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.net.URI
@@ -274,6 +275,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates typed Quarkus signatures and recursive models from external OpenAPI references`(
     @ResourceUri("openapi/ir/external-refs/api.yaml") testUri: URI,
   ) {
@@ -313,6 +315,7 @@ class KotlinJAXRSIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
   fun `Kotlin JAX-RS IR renderer does not read AMF service model types`() {
     val source =
       Path
@@ -330,6 +333,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("requests")
   fun `generates Quarkus streaming request bodies as Mutiny buffer streams by target mode`() {
     listOf(
       GenerationMode.Client to
@@ -380,6 +385,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("requests")
   fun `keeps streaming request bodies as normal body parameters for non Quarkus JAX-RS`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       val typeRegistry =
@@ -407,6 +414,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates AsyncAPI subscribe event streams as JAX-RS GET methods`() {
     val typeRegistry = clientTypeRegistry()
     val api = eventStreamApi()
@@ -430,6 +438,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates Quarkus event streams as Mutiny Multi in client and server modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       val typeRegistry =
@@ -488,6 +497,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `flattens direct AsyncAPI discriminated event object unions in implement-model mode`(
     @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
   ) {
@@ -520,6 +531,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("responses")
   fun `generates Quarkus throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -562,6 +575,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("responses")
   fun `generates JAX-RS throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -589,6 +604,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("validation")
   fun `generates Quarkus required query validation without empty class path`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -879,6 +896,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates request methods from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
@@ -900,6 +918,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates client request methods from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
@@ -921,6 +940,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates URI parameters from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
@@ -935,6 +955,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates optional query parameters from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI,
   ) {
@@ -949,6 +970,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates constant client headers from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
   ) {
@@ -977,6 +999,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates concrete client models from IR with and without Quarkus`() {
     listOf(false, true).forEach { quarkus ->
       val typeRegistry =
@@ -1007,6 +1030,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates dynamic client content type parameters from IR with and without Quarkus`() {
     listOf(false, true).forEach { quarkus ->
       val typeRegistry =
@@ -1037,6 +1061,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `retains server content type header parameters and wires enum JSON values`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1070,6 +1096,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates tolerant enums as raw-value sealed classes`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1117,6 +1145,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `decodes reusable discriminator mappings through sealed interfaces`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1165,6 +1194,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates concrete fallback when discriminator is not the first property`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1219,6 +1250,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates tolerant discriminator hierarchy fallbacks`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1543,6 +1576,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `generates object unions and polymorphic event bases from IR across JAX-RS modes`() {
     listOf(GenerationMode.Client, GenerationMode.Server).forEach { mode ->
       listOf(false, true).forEach { quarkus ->
@@ -1610,6 +1645,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates bean validation annotations on IR model properties`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1635,6 +1672,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `lowers supported IR scalar formats to Kotlin JAX-RS types`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1681,6 +1719,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("validation")
   fun `generates Quarkus fault tolerance annotations from IR policy metadata`() {
     listOf(
       GenerationMode.Client to "value = 20",
@@ -1728,6 +1767,7 @@ class KotlinJAXRSIrGeneratorTest {
   }
 
   @Test
+  @Tag("validation")
   fun `rejects unsupported Quarkus fault tolerance policy metadata`() {
     listOf(
       GeneratedPolicy(
@@ -1780,6 +1820,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("security")
   fun `generates Quarkus Zanzibar annotations from IR auth metadata in server mode`() {
     val serverRegistry =
       KotlinTypeRegistry(
@@ -1843,6 +1884,8 @@ class KotlinJAXRSIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
+  @Tag("security")
   fun `rejects Zanzibar object type without object id source`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1878,6 +1921,7 @@ class KotlinJAXRSIrGeneratorTest {
   }
 
   @Test
+  @Tag("security")
   fun `reports conflicting Zanzibar user source metadata`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1925,6 +1969,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("security")
+  @Tag("validation")
   fun `generates strict opt-in principal fallback for Quarkus Zanzibar JWT user extractors`() {
     val serverRegistry =
       KotlinTypeRegistry(
@@ -1955,6 +2001,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("security")
+  @Tag("validation")
   fun `generates principal fallback directly for empty Quarkus Zanzibar JWT claim lists`() {
     val serverRegistry =
       KotlinTypeRegistry(
@@ -2003,6 +2051,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("security")
   fun `does not generate Quarkus Zanzibar annotations in client mode`() {
     val clientRegistry =
       KotlinTypeRegistry(
@@ -2089,6 +2138,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates Quarkus aggregate REST client registration without URL path`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -2164,6 +2214,7 @@ class KotlinJAXRSIrGeneratorTest {
   }
 
   @Test
+  @Tag("validation")
   fun `reports invalid Quarkus REST client provider class names`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -2264,6 +2315,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `uses OpenAPI enum varnames and wire values in Kotlin JAX-RS`(
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
   ) {
@@ -2313,6 +2365,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates aggregate Quarkus client locators for AsyncAPI channel path parameters`(
     @ResourceUri("asyncapi/ir/channel-parameters.yaml") testUri: URI,
   ) {
@@ -2372,6 +2425,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("security")
   fun `generates explicit security parameters from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
   ) {
@@ -2399,6 +2454,9 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
+  @Tag("security")
   fun `omits inherited security parameters for public OpenAPI operations`(
     @ResourceUri("openapi/ir/security-overrides-3.1.yaml") testUri: URI,
   ) {
@@ -2431,6 +2489,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates explicit request body media from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
@@ -2445,6 +2504,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates explicit response media from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI,
   ) {
@@ -2474,6 +2534,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("validation")
   fun `generates request body validation from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
@@ -2488,6 +2550,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("responses")
   fun `generates response wrapper in client mode when IR response headers are declared`(
     @ResourceUri("raml/resource-gen/res-headers.raml") testUri: URI,
   ) {
@@ -2502,6 +2566,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("responses")
   fun `generates rest response wrapper in quarkus client mode when IR response headers are declared`(
     @ResourceUri("raml/resource-gen/res-headers.raml") testUri: URI,
   ) {
@@ -2530,6 +2596,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates problem registration from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
@@ -2552,6 +2619,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates referenced problem types from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
@@ -2637,6 +2705,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates server sent event methods from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/res-sse.raml") testUri: URI,
   ) {
@@ -2651,6 +2720,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates coroutine event stream methods from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -2669,6 +2739,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates client base URI path from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
@@ -2683,6 +2754,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates server base URI path from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
@@ -2697,6 +2769,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates JAX-RS context parameters from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-jaxrs-context.raml") testUri: URI,
   ) {
@@ -2711,6 +2784,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates OpenAPI server-only Quarkus context parameters without excluded body parameter`(
     @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
   ) {
@@ -2746,6 +2820,7 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates OpenAPI client-only JAX-RS context parameters with client request body`(
     @ResourceUri("openapi/ir/jaxrs-exclusions-3.1.yaml") testUri: URI,
   ) {
@@ -2794,6 +2869,8 @@ class KotlinJAXRSIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("security")
   fun `generates Quarkus explicit security parameters from IR with existing Kotlin JAX-RS output shape`(
     @ResourceUri("raml/resource-gen/req-explicit-security-param.raml") testUri: URI,
   ) {

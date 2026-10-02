@@ -27,11 +27,13 @@ import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Query Params Test")
+@Tag("requests")
 class RequestQueryParamsTest {
 
   @Test
@@ -57,6 +59,7 @@ class RequestQueryParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test basic query parameter generation with validation constraints`(
     @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
@@ -101,6 +104,7 @@ class RequestQueryParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test generation of multiple query parameters with inline type definitions`(
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
   ) {
@@ -161,6 +165,7 @@ class RequestQueryParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test basic query parameter generation with validation constraints and quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
@@ -237,6 +242,7 @@ class RequestQueryParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test generation of multiple query parameters with inline type definitions and quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
   ) {

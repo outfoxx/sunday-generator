@@ -25,11 +25,13 @@ import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Builder Methods Test")
+@Tag("requests")
 class BuilderMethodsTest {
 
   @Test
@@ -56,6 +58,7 @@ class BuilderMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test response builder method generation `(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,

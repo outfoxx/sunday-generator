@@ -39,12 +39,14 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
+@Tag("models")
 class PythonModelRendererTest : PythonTest() {
 
   @Test
@@ -105,6 +107,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `unique inherited lists validate raw values aliases and defaults`(compiler: PythonCompiler) {
     val array =
       GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(GeneratedTypeRef.scalar("any")))
@@ -318,6 +321,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `rejects executable OpenAPI numeric defaults and constraints`(
     @ResourceUri("openapi/ir/python-unsafe-numeric-default-3.1.yaml") defaultUri: URI,
     @ResourceUri("openapi/ir/python-unsafe-numeric-constraint-3.1.yaml") constraintUri: URI,
@@ -341,6 +345,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `rejects executable numeric constraints supplied directly as IR`() {
     val expression = "(unsafe_numeric_value() or 0)"
     val model =
@@ -359,6 +364,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `escapes multiline schema descriptions as valid Python literals`(compiler: PythonCompiler) {
     val description = "First.\nSecond C:\\docs.\r\nTab:\tNul:\u0000 Emoji:\uD83D\uDC0D"
     val modelsModule =
@@ -650,6 +656,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("events")
   fun `generates direct AsyncAPI discriminated event object unions in Python models`(
     compiler: PythonCompiler,
     @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") sourceUri: URI,
@@ -787,6 +794,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `generates tolerant string enums that retain and reserialize unknown values`(
     compiler: PythonCompiler,
     @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
@@ -896,6 +904,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `generates tolerant discriminator hierarchy fallbacks`(compiler: PythonCompiler) {
     val models =
       listOf(
@@ -1049,6 +1058,7 @@ class PythonModelRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `generates tolerant external discriminator fallbacks`(compiler: PythonCompiler) {
     val models =
       listOf(

@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.NativeBeanValidationExtension
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSourcesExtension
 import io.outfoxx.sunday.test.extensions.DiffingExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @Execution(ExecutionMode.CONCURRENT)
 @ResourceLock("Kotlin")
+@Tag("kotlin")
 @ExtendWith(
   ResourceExtension::class,
   DiffingExtension::class,

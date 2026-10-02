@@ -37,6 +37,7 @@ import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -46,6 +47,7 @@ class PythonContentTypeTest : PythonTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @Tag("requests")
   fun `generated binary routes preserve headers and bytes across frontends`(
     frontend: String,
     compiler: PythonCompiler,
@@ -136,6 +138,7 @@ class PythonContentTypeTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `binary aliases use raw bodies while JSON base64 remains decoded`(compiler: PythonCompiler) {
     val uri = javaClass.getResource("/openapi/ir/content-type.yaml")!!.toURI()
     val api = GeneratedApiIrExporter().export(uri)

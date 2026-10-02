@@ -33,12 +33,14 @@ import io.outfoxx.sunday.generator.kotlin.utils.UNI
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 import java.util.concurrent.CompletionStage
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Reactive Methods Test")
+@Tag("requests")
 class RequestReactiveMethodsTest {
 
   private fun typeRegistry(mode: GenerationMode): KotlinTypeRegistry =
@@ -204,6 +206,7 @@ class RequestReactiveMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test basic reactive method generation in client mode (Quarkus + Response)`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
@@ -318,6 +321,7 @@ class RequestReactiveMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test basic reactive method generation with nullify in client mode (Quarkus + Response)`(
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {

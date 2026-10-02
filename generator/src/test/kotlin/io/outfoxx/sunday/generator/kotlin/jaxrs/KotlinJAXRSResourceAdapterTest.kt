@@ -50,6 +50,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -130,6 +131,8 @@ class KotlinJAXRSResourceAdapterTest {
 
   @ParameterizedTest
   @CsvSource("javax,false", "jakarta,true", "quarkus,false", "quarkus,true")
+  @Tag("requests")
+  @Tag("security")
   fun `source security is enforced on concrete endpoints including aggregate subresources`(
     target: String,
     aggregate: Boolean,
@@ -176,6 +179,7 @@ class KotlinJAXRSResourceAdapterTest {
   }
 
   @Test
+  @Tag("models")
   fun `interface output remains the default and client adapters are rejected`() {
     val registry = registry("quarkus")
     KotlinJAXRSIrGenerator(shapes(), registry, options("quarkus", adapters = false)).generateServiceTypes()
@@ -200,6 +204,8 @@ class KotlinJAXRSResourceAdapterTest {
       "req-jaxrs-context.raml",
     ],
   )
+  @Tag("models")
+  @Tag("validation")
   fun `body validation media types and scoped models compile through delegates`(fixture: String) {
     val api = export("raml/resource-gen/$fixture")
     listOf("javax", "jakarta", "quarkus").forEach { target ->

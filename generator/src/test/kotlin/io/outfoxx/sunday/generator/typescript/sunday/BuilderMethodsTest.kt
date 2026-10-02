@@ -25,11 +25,13 @@ import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [RAML] Builder Methods Test")
+@Tag("requests")
 class BuilderMethodsTest {
 
   @Test
@@ -55,6 +57,7 @@ class BuilderMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test response builder method generation `(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,

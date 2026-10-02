@@ -42,10 +42,7 @@ tasks {
   test {
     useJUnitPlatform()
     failFast = !System.getenv("CI").isNullOrBlank()
-    systemProperty("junit.jupiter.execution.parallel.enabled", "true")
-    systemProperty("junit.jupiter.execution.parallel.default", "concurrent")
-    systemProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
-    systemProperty("junit.jupiter.execution.parallel.config.dynamic.factor", "3")
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 
     testLogging {
       events("passed", "skipped", "failed")

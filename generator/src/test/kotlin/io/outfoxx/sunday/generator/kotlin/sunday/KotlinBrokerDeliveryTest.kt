@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.api.expectThrows
@@ -47,6 +48,7 @@ import strikt.assertions.isSameInstanceAs
 import java.net.URI
 
 @KotlinTest
+@Tag("events")
 class KotlinBrokerDeliveryTest {
 
   @OptIn(ExperimentalCompilerApi::class)

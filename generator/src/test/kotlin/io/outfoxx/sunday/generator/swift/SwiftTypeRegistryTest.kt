@@ -25,10 +25,12 @@ import io.outfoxx.swiftpoet.TypeSpec
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import kotlin.io.path.exists
 
+@Tag("swift")
 class SwiftTypeRegistryTest {
 
   @Test

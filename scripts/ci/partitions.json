@@ -1,0 +1,5 @@
+{
+  "ubuntu": "!swift",
+  "swift-validation": "swift & validation",
+  "swift-remainder": "swift & !validation"
+}

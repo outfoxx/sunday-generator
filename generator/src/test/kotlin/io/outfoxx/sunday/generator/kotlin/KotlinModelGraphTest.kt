@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -42,6 +43,8 @@ import kotlin.io.path.writeText
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("models")
+@Tag("validation")
 class KotlinModelGraphTest {
   @ParameterizedTest
   @CsvSource("raml,javax", "openapi,jakarta", "asyncapi,javax", "composed,jakarta")

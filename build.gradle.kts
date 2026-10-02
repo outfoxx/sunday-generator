@@ -110,7 +110,10 @@ sonar {
 }
 
 tasks.named("sonar") {
-  dependsOn(":code-coverage:koverXmlReport")
+  dependsOn(
+    if (providers.gradleProperty("ciArtifacts").isPresent) ":code-coverage:aggregateCiCoverage"
+    else ":code-coverage:koverXmlReport",
+  )
 }
 
 
@@ -148,4 +151,22 @@ githubRelease {
   )
   overwrite = true
   authorization = "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+}
+
+// The artifact protocol is tested independently of compiler fixtures.
+val verifyCiArtifacts by tasks.registering(Exec::class) {
+  commandLine("python3", "-m", "unittest", "discover", "-s", "scripts/ci", "-p", "test_*.py")
+}
+tasks.named("check") { dependsOn(verifyCiArtifacts) }
+
+// The Gradle daemon can predate the measurement process, so expose its PID explicitly.
+val recordBuildProcess by tasks.registering {
+  val output = layout.buildDirectory.file("diagnostics/gradle.pid").get().asFile
+  doLast {
+    output.parentFile.mkdirs()
+    output.writeText(ProcessHandle.current().pid().toString())
+  }
+}
+allprojects {
+  tasks.withType<Test>().configureEach { dependsOn(rootProject.tasks.named("recordBuildProcess")) }
 }

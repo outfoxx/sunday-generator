@@ -36,6 +36,7 @@ import io.outfoxx.sunday.security.TokenRequest
 import io.outfoxx.sunday.security.TokenSet
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -45,6 +46,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("events")
+@Tag("security")
 class KotlinScopedSecurityTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])

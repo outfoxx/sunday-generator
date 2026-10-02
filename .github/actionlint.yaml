@@ -1,0 +1,3 @@
+self-hosted-runner:
+  labels:
+    - sunday-generator-ubuntu-8-cores

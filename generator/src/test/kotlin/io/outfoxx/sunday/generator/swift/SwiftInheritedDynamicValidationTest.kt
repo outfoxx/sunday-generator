@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.tools.fieldConstraintsApi
 import io.outfoxx.sunday.generator.tools.inheritedAdditionalPropertiesModels
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -37,6 +38,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
+@Tag("models")
+@Tag("validation")
 class SwiftInheritedDynamicValidationTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])

@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.fieldConstraintsApi
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -36,6 +37,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
+@Tag("validation")
+@Tag("models")
 class SwiftFieldConstraintsTest {
   @ParameterizedTest
   @ValueSource(strings = ["openapi", "raml", "asyncapi", "composed"])

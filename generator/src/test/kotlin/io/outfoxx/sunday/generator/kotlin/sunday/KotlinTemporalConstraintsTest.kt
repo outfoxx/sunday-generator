@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.lang.reflect.InvocationTargetException
@@ -51,6 +52,7 @@ import java.time.OffsetDateTime
 import javax.validation.ConstraintViolationException
 
 @KotlinTest
+@Tag("validation")
 class KotlinTemporalConstraintsTest {
 
   @OptIn(ExperimentalCompilerApi::class)

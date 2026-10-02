@@ -25,11 +25,13 @@ import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Request Query Params Test")
+@Tag("requests")
 class RequestQueryParamsTest {
 
   @Test
@@ -79,6 +81,7 @@ class RequestQueryParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test generation of multiple query parameters with inline type definitions`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,

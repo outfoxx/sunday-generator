@@ -28,11 +28,13 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Methods Test")
+@Tag("requests")
 class RequestMethodsTest {
 
   private fun typeRegistry(): KotlinTypeRegistry =
@@ -107,6 +109,7 @@ class RequestMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test request method generation in client mode with nullify and response`(
     @ResourceUri("raml/resource-gen/req-methods-nullify.raml") testUri: URI,
   ) {

@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -43,6 +44,7 @@ import kotlin.io.path.writeText
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("validation")
 class KotlinCascadedValidationTest {
   @Test
   fun `container element validation retains the legacy snapshot`() {
@@ -68,6 +70,7 @@ class KotlinCascadedValidationTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["openapi", "raml", "asyncapi", "composed"])
+  @Tag("models")
   fun `properties cascade across namespaces model forms and source formats`(
     frontend: String,
     @TempDir directory: Path,

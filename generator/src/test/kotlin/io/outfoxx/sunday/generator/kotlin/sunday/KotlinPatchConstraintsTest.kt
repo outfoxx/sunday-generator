@@ -40,12 +40,16 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
 import java.net.URI
 
 @KotlinTest
+@Tag("requests")
+@Tag("models")
+@Tag("validation")
 class KotlinPatchConstraintsTest {
 
   @OptIn(ExperimentalCompilerApi::class)

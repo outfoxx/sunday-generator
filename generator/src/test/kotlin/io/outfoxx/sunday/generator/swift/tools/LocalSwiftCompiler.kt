@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.generator.utils.CompilerProcess
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -77,10 +78,9 @@ class LocalSwiftCompiler(
   }
 
   private fun resolveDependencies() {
-    val resolvePkg =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(
+    val (result, output) =
+      CompilerProcess.execute(
+        listOf(
           command,
           "package",
           "--package-path",
@@ -91,13 +91,11 @@ class LocalSwiftCompiler(
           "$swiftCacheDir",
           "--only-use-versions-from-resolved-file",
           "resolve",
-        ).redirectErrorStream(true)
-        .start()
-
-    val result = resolvePkg.waitFor()
-    if (result != 0) {
-      error("Swift package resolution failed:\n${resolvePkg.inputStream.readAllBytes().decodeToString()}")
-    }
+        ),
+        workDir,
+        timeout = CompilerProcess.dependencyTimeout,
+      )
+    check(result == 0) { "Swift package resolution failed:\n$output" }
   }
 
   override fun compile(): Pair<Int, String> = execute("build")
@@ -109,6 +107,8 @@ class LocalSwiftCompiler(
       buildList {
         add(command)
         add(action)
+        add("--jobs")
+        add(System.getProperty("sunday.validation.swift.jobs", "1"))
         add("--package-path")
         add("$workDir")
         add("--manifest-cache")
@@ -123,16 +123,7 @@ class LocalSwiftCompiler(
         add("$swiftCacheDir")
       }
 
-    val process =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(buildCommand)
-        .redirectErrorStream(true)
-        .start()
-
-    val result = process.waitFor()
-
-    return result to process.inputStream.readAllBytes().decodeToString()
+    return CompilerProcess.execute(buildCommand, workDir)
   }
 
   override fun close() {

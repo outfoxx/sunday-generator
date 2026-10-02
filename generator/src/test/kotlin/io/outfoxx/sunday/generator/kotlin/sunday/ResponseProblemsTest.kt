@@ -31,11 +31,13 @@ import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/Sunday] [RAML] Response Problems Test")
+@Tag("responses")
 class ResponseProblemsTest {
 
   private fun typeRegistry(options: Set<KotlinTypeRegistry.Option> = setOf()): KotlinTypeRegistry =
@@ -124,6 +126,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using base uri`(
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
@@ -143,6 +146,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using absolute problem base uri`(
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
@@ -162,6 +166,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using relative problem base uri`(
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
