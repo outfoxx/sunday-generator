@@ -20,14 +20,42 @@ import io.outfoxx.sunday.generator.gradle.SundayMergeServiceProviders
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.io.IOException
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 class SundayServiceProvidersTest {
+  @Test
+  fun `failed stale registration deletion fails the merge`(
+    @TempDir directory: Path,
+  ) {
+    assumeTrue(directory.fileSystem.supportedFileAttributeViews().contains("posix"))
+    val services = directory.resolve("merged/META-INF/services").createDirectories()
+    val obsolete = services.resolve("removed.Service").apply { writeText("removed.Provider\n") }
+    val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+    val task = project.tasks.register("merge", SundayMergeServiceProviders::class.java).get()
+    task.outputDirectory.set(directory.resolve("merged").toFile())
+    val permissions = Files.getPosixFilePermissions(services)
+    try {
+      Files.setPosixFilePermissions(services, PosixFilePermissions.fromString("r-xr-xr-x"))
+      assumeFalse(Files.isWritable(services), "The test requires enforced directory permissions")
+      assertThrows(IOException::class.java) { task.merge() }
+      assertTrue(Files.exists(obsolete))
+    } finally {
+      Files.setPosixFilePermissions(services, permissions)
+    }
+  }
+
   @Test
   fun `multiple generators retain all native providers and remove stale registrations`(
     @TempDir directory: Path,

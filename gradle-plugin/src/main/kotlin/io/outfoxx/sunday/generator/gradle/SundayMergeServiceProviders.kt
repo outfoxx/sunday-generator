@@ -25,6 +25,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.nio.file.Files
 
 /** Combines SPI registration from independently generated clients in one source set. */
 @CacheableTask
@@ -56,7 +57,7 @@ abstract class SundayMergeServiceProviders : DefaultTask() {
       .listFiles()
       .orEmpty()
       .filter { it.isFile && it.name !in services }
-      .forEach { it.delete() }
+      .forEach { Files.delete(it.toPath()) }
     services.forEach { (service, providers) ->
       output.resolve(service).writeText(providers.joinToString("\n", postfix = "\n"))
     }
