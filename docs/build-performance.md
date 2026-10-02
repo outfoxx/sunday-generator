@@ -77,3 +77,15 @@ Only dependency products are retained. Preparation and post-test cleanup remove 
 CI supplies `SUNDAY_SWIFT_PREPARED_WORKSPACE` and requires one Gradle test JVM for that workspace. The compiler takes a file lock to prevent concurrent reuse. Every prepared Swift build/test invocation runs under a macOS sandbox that denies network access, including child processes; SwiftPM's nested sandbox is disabled because nested sandbox application is not supported. Missing dependencies fail instead of silently fetching during test execution. Local runtime overrides continue using the normal temporary-workspace path.
 
 For a local comparison, run `python3 scripts/ci/swift_cache.py prepare --workspace /absolute/cache/workspace --jobs 3`, then set `SUNDAY_SWIFT_PREPARED_WORKSPACE` for the existing Gradle test command with `-PcompilerTestForks=1 -PswiftCompilerJobs=3`. Include preparation and cache transfer in end-to-end measurements. Compare identical tag expressions and toolchains, and distinguish first population from restored-cache runs.
+
+For a forced warm-dependency measurement of the validation partition:
+
+```sh
+python3 scripts/ci/swift_cache.py prepare --workspace /tmp/sunday-swift-validation --jobs 3
+SUNDAY_SWIFT_PREPARED_WORKSPACE=/tmp/sunday-swift-validation \
+  ./gradlew :generator:test -PtestTags='swift & validation' \
+  -PcompilerTestForks=1 -PswiftCompilerJobs=3 \
+  -I scripts/ci/force-tests.gradle.kts --profile
+```
+
+Measure the combined duration of both commands. Alternate this with the same Gradle command on the baseline revision without the prepared-workspace environment variable. Keep dependency download caches warm for both. Hosted comparisons need a second run after the first has saved the dependency build cache; include restoration, preparation, test execution, and cache upload in the job comparison. Timing reports and cache-hit diagnostics are retained with each partition's artifacts/logs.
