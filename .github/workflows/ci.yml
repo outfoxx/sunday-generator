@@ -15,9 +15,7 @@ concurrency:
 jobs:
   prepare:
     name: Build shared JVM harness
-    runs-on:
-      group: Sunday Generator CI
-      labels: sunday-generator-ubuntu-8-cores
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
@@ -49,9 +47,7 @@ jobs:
   linux:
     name: Linux (${{ matrix.partition }})
     needs: prepare
-    runs-on:
-      group: Sunday Generator CI
-      labels: sunday-generator-ubuntu-8-cores
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -87,7 +83,7 @@ jobs:
         if [ "$PARTITION" = infrastructure ]; then TASK=check; fi
         python3 scripts/ci/measure.py ./gradlew "$TASK" --profile \
           -I scripts/ci/precompiled.gradle --dependency-verification strict \
-          -PuseLocalSundayKt=false -PcompilerTestForks=4 -PtestTags="$TEST_TAGS"
+          -PuseLocalSundayKt=false -PcompilerTestForks=2 -PtestTags="$TEST_TAGS"
     - name: Package results
       if: always()
       env:

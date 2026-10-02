@@ -21,7 +21,7 @@ Tag compiler-backed tests whenever they require a language, including tests that
 
 Generator tests run sequentially inside isolated JVMs. Concurrent first use of AMF's Scala model initialization can deadlock; JUnit thread parallelism is deliberately disabled.
 
-`compilerTestForks` defaults to the minimum of eight, half the available processors, and one worker per four GiB after reserving four GiB for the build. Explicit values must fit that host limit. Each test JVM retains a 2 GiB heap; the remaining allowance covers metaspace, native compiler processes, Gradle, and integration tests. This gives eight workers on the 20-core/64-GiB development Mac, four on the dedicated 8-core/32-GiB Ubuntu runner, and one on CI Macs.
+`compilerTestForks` defaults to the minimum of eight, half the available processors, and one worker per four GiB after reserving four GiB for the build. Explicit values must fit that host limit. Each test JVM retains a 2 GiB heap; the remaining allowance covers metaspace, native compiler processes, Gradle, and integration tests. This gives eight workers on the 20-core/64-GiB development Mac, two on the standard 4-core/16-GiB public Ubuntu runner, and one on CI Macs.
 
 `swiftCompilerJobs` defaults to at most two jobs per compiler invocation. CI Macs explicitly use three with one test JVM. These are separate limits: increasing both can oversubscribe the machine.
 
@@ -31,20 +31,20 @@ Kotlin compilation uses an explicit dependency configuration plus compiled fixtu
 
 ## CI partitions and coverage
 
-The dedicated `sunday-generator-ubuntu-8-cores` runner belongs to the repository-restricted `Sunday Generator CI` group and permits at most four concurrent instances. Existing runner groups are unchanged.
+All CI jobs use standard GitHub-hosted `ubuntu-latest` or `macos-26` runners. Public pull requests do not select organization-specific runner groups or larger runners.
 
 The preparation job builds the generator and JVM test harness once, then publishes portable classes, resources, JARs, and compiler fixture stubs as a commit-specific artifact. All six test jobs restore that artifact and verify its checksums before skipping the corresponding generator compilation/resource/JAR tasks. Dependency resolution and build-logic setup remain local to each runner. Native compiler installations, dependency environments, test results, and coverage data are never transferred in this artifact.
 
 | Partition | JUnit expression | Work |
 |---|---|---|
-| Infrastructure | `!swift & !kotlin & !typescript & !python` | Four JVMs, untagged tests, lint, CLI/plugin and baseline integration checks |
-| Kotlin | `!swift & kotlin` | Four JVMs, Kotlin compiler tests |
-| TypeScript | `!swift & !kotlin & typescript` | Four JVMs, TypeScript compiler tests |
-| Python | `!swift & !kotlin & !typescript & python` | Four JVMs, Python compiler tests |
+| Infrastructure | `!swift & !kotlin & !typescript & !python` | Two JVMs, untagged tests, lint, CLI/plugin and baseline integration checks |
+| Kotlin | `!swift & kotlin` | Two JVMs, Kotlin compiler tests |
+| TypeScript | `!swift & !kotlin & typescript` | Two JVMs, TypeScript compiler tests |
+| Python | `!swift & !kotlin & !typescript & python` | Two JVMs, Python compiler tests |
 | Swift validation | `swift & validation` | Native macOS, one JVM, three Swift compiler jobs |
 | Swift remainder | `swift & !validation` | Native macOS, one JVM, three Swift compiler jobs |
 
-The priority order Swift → Kotlin → TypeScript → Python gives mixed-language tests exactly one owner. The Linux partitions run concurrently on four dedicated runner instances. Each test still compiles its generated output before any assertion or snapshot; sharing the harness does not bypass generated-code compilation. `scripts/ci/partitions.json` defines the selection expressions and the discovery test verifies their union and disjointness.
+The priority order Swift → Kotlin → TypeScript → Python gives mixed-language tests exactly one owner. The Linux partitions run concurrently on four standard GitHub-hosted Ubuntu instances. Each test still compiles its generated output before any assertion or snapshot; sharing the harness does not bypass generated-code compilation. `scripts/ci/partitions.json` defines the selection expressions and the discovery test verifies their union and disjointness.
 
 Untagged tests run in the infrastructure partition. The existing Quarkus compatibility matrix remains separate. Superseded PR runs are canceled.
 
