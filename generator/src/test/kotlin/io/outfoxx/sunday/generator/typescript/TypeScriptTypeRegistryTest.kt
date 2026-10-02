@@ -38,9 +38,11 @@ import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 
+@Tag("typescript")
 class TypeScriptTypeRegistryTest {
 
   @Test
@@ -64,6 +66,7 @@ class TypeScriptTypeRegistryTest {
   }
 
   @Test
+  @Tag("requests")
   fun `generateFiles uses normalized module paths and writes generation headers`() {
     val fs = Jimfs.newFileSystem(Configuration.unix())
     val outputDir = fs.getPath("/out")
@@ -93,6 +96,7 @@ class TypeScriptTypeRegistryTest {
   }
 
   @Test
+  @Tag("validation")
   fun `schema initializer supports nullable and optional set types`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
     val setType = TypeName.parameterizedType(SET, STRING).nullable.undefinable
@@ -105,6 +109,8 @@ class TypeScriptTypeRegistryTest {
   }
 
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `schema initializer falls back to unknown schema for unknown types and unions`() {
     val typeRegistry = TypeScriptTypeRegistry(setOf())
 

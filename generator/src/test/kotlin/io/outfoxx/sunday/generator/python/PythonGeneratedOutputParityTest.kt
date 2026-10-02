@@ -36,6 +36,7 @@ import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -45,6 +46,7 @@ import java.nio.file.Path
 class PythonGeneratedOutputParityTest : PythonTest() {
 
   @Test
+  @Tag("validation")
   fun `every compatible parent constraint remains effective`(compiler: PythonCompiler) {
     val modules = inheritedConstraintsFixture().sundayModules()
     assertTrue(
@@ -360,6 +362,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `OpenAPI empty schemas emit object typed Python models and clients`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/any-json-3.1.yaml") sourceUri: URI,
@@ -389,6 +392,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `OpenAPI inline object properties beside conditional allOf compile in Python`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") sourceUri: URI,
@@ -422,6 +426,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @Tag("events")
+  @Tag("requests")
   fun `OpenAPI streaming request bodies emit Python streaming operations`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/streaming-request-3.1.yaml") sourceUri: URI,
@@ -496,6 +502,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @Tag("events")
+  @Tag("requests")
   fun `composed event stream preserves HTTP query and header parameters`(
     compiler: PythonCompiler,
     @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
@@ -523,6 +531,7 @@ class PythonGeneratedOutputParityTest : PythonTest() {
   }
 
   @Test
+  @Tag("events")
   fun `Python targets omit broker-only AsyncAPI channels`(
     compiler: PythonCompiler,
     @ResourceUri("asyncapi/ir/http-and-broker-events.yaml") sourceUri: URI,

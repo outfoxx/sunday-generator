@@ -27,12 +27,15 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Quarkus Request Methods Test")
+@Tag("responses")
+@Tag("requests")
 class QuarkusRequestMethodsTest {
 
   @ParameterizedTest

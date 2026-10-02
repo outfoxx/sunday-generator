@@ -73,6 +73,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.net.URI
@@ -85,6 +86,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `compiles renamed implicit discriminator values`(
     @TempDir directory: Path,
   ) {
@@ -217,6 +219,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates shared object models directly from IR`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
@@ -235,6 +238,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `lowers shared alias-like models directly from IR`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -305,6 +309,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates object union sealed interfaces directly from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -422,6 +427,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `generates concrete request body models when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -490,6 +497,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `generates empty request body objects as plain classes when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -550,6 +559,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `generates discriminated request body roots as inheritable classes when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -634,6 +645,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `generates OpenAPI discriminated request body roots as inheritable classes when implementations are enabled`(
     @ResourceUri("openapi/ir/discriminated-update-3.1.yaml") testUri: URI,
   ) {
@@ -674,6 +687,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `clears inherited JsonDeserialize from direct union member implementations`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -752,6 +766,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates discriminator mapped object union decoders from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -827,6 +842,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `does not redeclare inherited object model properties from IR`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -896,6 +912,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("responses")
   fun `generates Sunday throwable source problem models from IR`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -970,6 +988,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates concrete shared object models when implementations are enabled`() {
     val typeRegistry =
       KotlinTypeRegistry(
@@ -1050,6 +1069,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `uses content type header parameter as request media selection in Kotlin Sunday`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -1151,6 +1171,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates composed OpenAPI and AsyncAPI HTTP event service from IR`(
     @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/event-stream-payload.yaml") asyncApiUri: URI,
@@ -1180,6 +1201,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `omits broker-only AsyncAPI channels from Kotlin Sunday output`(
     @ResourceUri("openapi/ir/event-stream-framing-3.1.yaml") openApiUri: URI,
     @ResourceUri("asyncapi/ir/http-and-broker-events.yaml") asyncApiUri: URI,
@@ -1210,6 +1232,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `generates typed AsyncAPI event payload models from IR`(
     @ResourceUri("asyncapi/ir/typed-event-envelope.yaml") asyncApiUri: URI,
   ) {
@@ -1257,6 +1281,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `generates direct AsyncAPI discriminated event object unions from IR`(
     @ResourceUri("asyncapi/ir/direct-discriminated-event-union.yaml") asyncApiUri: URI,
   ) {
@@ -1338,6 +1364,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `preserves OpenAPI inline object properties beside conditional allOf in Kotlin Sunday`(
     @ResourceUri("openapi/ir/inline-object-conditional-3.1.yaml") testUri: URI,
   ) {
@@ -1375,6 +1402,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `uses OpenAPI enum varnames and wire values in Kotlin Sunday`(
     @ResourceUri("openapi/ir/enum-varnames-3.1.yaml") testUri: URI,
   ) {
@@ -1435,6 +1463,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `omits Jackson annotations for custom wire enum values when Jackson annotations are disabled`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -1472,6 +1501,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates tolerant enums as exhaustive raw-value sealed classes`(
     @ResourceUri("raml/ir/tolerant-enum.raml") ramlUri: URI,
     @ResourceUri("openapi/ir/tolerant-enum-3.1.yaml") openApiUri: URI,
@@ -1521,6 +1552,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `decodes reusable discriminator mappings through sealed interfaces`() {
     val typeRegistry =
       typeRegistry(
@@ -1561,6 +1593,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates concrete fallback when discriminator is not the first property`() {
     val typeRegistry =
       typeRegistry(
@@ -1610,6 +1644,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `generates tolerant discriminator hierarchy fallbacks`() {
     val typeRegistry = typeRegistry(setOf(KotlinTypeRegistry.Option.JacksonAnnotations))
     val api =
@@ -1913,6 +1949,7 @@ class KotlinSundayIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
   fun `rejects duplicate explicit Kotlin enum constant names`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -1941,6 +1978,8 @@ class KotlinSundayIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
+  @Tag("validation")
   fun `rejects invalid explicit Kotlin enum constant names`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -1970,6 +2009,7 @@ class KotlinSundayIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
   fun `rejects unmappable Kotlin enum values without explicit names`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -1997,6 +2037,8 @@ class KotlinSundayIrGeneratorTest {
   }
 
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `rejects enum base URI defaults that do not match enum entries`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -2049,6 +2091,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("requests")
   fun `uses streaming operations for streaming request bodies`(
     @ResourceUri("openapi/ir/streaming-request-3.1.yaml") testUri: URI,
   ) {
@@ -2079,6 +2123,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `lowers supported IR scalar formats to Kotlin temporal and identity types`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -2270,6 +2315,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `registers operation scoped models through the IR model path`() {
     val typeRegistry = typeRegistry()
     val parameterScope =
@@ -2376,6 +2422,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("responses")
   fun `uses response status when naming operation scoped response models`() {
     val typeRegistry = typeRegistry()
     val notReadyScope =
@@ -2467,6 +2515,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `generates shared models with Kotlin target metadata from IR`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -2571,6 +2620,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
   fun `resolves duplicate shared model names by source identity from IR`() {
     val typeRegistry = typeRegistry()
     val librarySource = GeneratedSourceSpec(GeneratedSourceSpec.Kind.RAML, "library.raml")
@@ -2612,6 +2662,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates referenced problem types directly from IR`() {
     val typeRegistry = typeRegistry()
     val api =
@@ -2679,6 +2730,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates request methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-methods.raml") testUri: URI,
   ) {
@@ -2692,6 +2744,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates uri parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-uri-params.raml") testUri: URI,
   ) {
@@ -2709,6 +2762,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates base URL companion from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
@@ -2726,6 +2780,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates basic query parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-query-params.raml") testUri: URI,
   ) {
@@ -2743,6 +2798,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates optional query parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-query-params-optional.raml") testUri: URI,
   ) {
@@ -2760,6 +2816,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates inline query parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-query-params-inline-types.raml") testUri: URI,
   ) {
@@ -2777,6 +2834,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates basic header parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-header-params.raml") testUri: URI,
   ) {
@@ -2794,6 +2852,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates constant header parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-header-params-constant.raml") testUri: URI,
   ) {
@@ -2811,6 +2870,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates optional header parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
@@ -2828,6 +2888,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates inline header parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
   ) {
@@ -2845,6 +2906,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("models")
+  @Tag("requests")
   fun `generates inherited uri parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-uri-params-inherited.raml") testUri: URI,
   ) {
@@ -2862,6 +2925,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates optional uri parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-uri-params-optional.raml") testUri: URI,
   ) {
@@ -2879,6 +2943,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates inline uri parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-uri-params-inline-types.raml") testUri: URI,
   ) {
@@ -2896,6 +2961,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates mixed inline parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types.raml") testUri: URI,
   ) {
@@ -2913,6 +2979,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates same-name mixed inline parameters from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-mixed-params-inline-types-same-name.raml") testUri: URI,
   ) {
@@ -2930,6 +2997,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates request body from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
@@ -2947,6 +3015,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates optional request body from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-body-param-optional.raml") testUri: URI,
   ) {
@@ -2964,6 +3033,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates explicit request content type from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-body-param-explicit-content-type.raml") testUri: URI,
   ) {
@@ -2981,6 +3051,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates basic response body media from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
   ) {
@@ -2998,6 +3069,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates response body media from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI,
   ) {
@@ -3015,6 +3087,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates inline response body media from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI,
   ) {
@@ -3032,6 +3105,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates no content response from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-no-content.raml") testUri: URI,
   ) {
@@ -3049,6 +3123,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates no response from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
   ) {
@@ -3066,6 +3141,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
   fun `generates request builder methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/req-builder.raml") testUri: URI,
   ) {
@@ -3079,6 +3155,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates response builder methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,
   ) {
@@ -3092,6 +3169,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates problem registration from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-problems.raml") testUri: URI,
   ) {
@@ -3109,6 +3187,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates no-problem registration from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-no-problems.raml") testUri: URI,
   ) {
@@ -3126,6 +3205,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("responses")
   fun `generates base URI problem registration from IR`(
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
   ) {
@@ -3145,6 +3226,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("responses")
   fun `generates absolute problem-base URI registration from IR`(
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
   ) {
@@ -3164,6 +3247,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("requests")
+  @Tag("responses")
   fun `generates relative problem-base URI registration from IR`(
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,
   ) {
@@ -3183,6 +3268,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("responses")
   fun `generates library problem registration from IR`(
     @ResourceUri("raml/resource-gen/res-problems-lib.raml") testUri: URI,
   ) {
@@ -3214,6 +3300,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates event source methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-event-source.raml") testUri: URI,
   ) {
@@ -3231,6 +3318,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates event stream methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-event-stream.raml") testUri: URI,
   ) {
@@ -3248,6 +3336,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates common base event stream methods from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
@@ -3265,6 +3354,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates AMQP broker facades from AsyncAPI`(
     @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
   ) {
@@ -3296,6 +3386,8 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `omits AMQP broker facades while retaining message models`(
     @ResourceUri("asyncapi/ir/amqp-broker.yaml") testUri: URI,
   ) {
@@ -3323,6 +3415,7 @@ class KotlinSundayIrGeneratorTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
   fun `generates AMQP broker facades for mixed and unidirectional services`() {
     val typeRegistry = typeRegistry()
     val api = brokerEdgeCaseApi()

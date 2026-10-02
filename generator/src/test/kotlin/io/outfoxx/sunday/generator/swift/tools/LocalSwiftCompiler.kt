@@ -16,9 +16,12 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.generator.utils.CompilerProcess
+import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 
 class LocalSwiftCompiler(
   private val command: String,
@@ -28,6 +31,14 @@ class LocalSwiftCompiler(
   private val swiftBuildRoot: Path
   private val swiftCacheDir: Path
   private val resolvedDependencyBuild: Boolean
+  private val prepared = System.getProperty("sunday.validation.swift.workspace") != null
+  private val workspaceChannel =
+    if (prepared) {
+      FileChannel.open(workDir.resolve("workspace.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+    } else {
+      null
+    }
+  private val workspaceLock = workspaceChannel?.tryLock()
 
   init {
 
@@ -53,13 +64,28 @@ class LocalSwiftCompiler(
     Files.createDirectories(swiftCacheDir)
 
     val packageFile = workDir.resolve("Package.swift")
-    Files.copy(localPkgFile, packageFile)
+    if (prepared) {
+      require(workspaceLock != null) { "Prepared Swift workspace is already in use: $workDir" }
+      require(
+        Files.isRegularFile(workDir.resolve("prepared.json")),
+      ) { "Swift workspace must be prepared before testing" }
+      listOf("Package.swift", "Package.resolved").forEach { name ->
+        require(Files.readString(localPkgDir.resolve(name)) == Files.readString(workDir.resolve(name))) {
+          "Prepared Swift workspace has incompatible $name"
+        }
+      }
+    } else {
+      Files.copy(localPkgFile, packageFile)
+    }
 
     val localSundaySwift = System.getenv("SUNDAY_SWIFT_PATH")?.let(Path::of)
+    require(!prepared || localSundaySwift == null) { "Prepared Swift workspaces cannot use SUNDAY_SWIFT_PATH" }
     resolvedDependencyBuild = localSundaySwift == null
     if (localSundaySwift == null) {
-      Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
-      resolveDependencies()
+      if (!prepared) {
+        Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
+        resolveDependencies()
+      }
     } else {
       require(Files.isRegularFile(localSundaySwift.resolve("Package.swift"))) {
         "SUNDAY_SWIFT_PATH must reference a sunday-swift checkout: $localSundaySwift"
@@ -77,27 +103,26 @@ class LocalSwiftCompiler(
   }
 
   private fun resolveDependencies() {
-    val resolvePkg =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(
+    val (result, output) =
+      CompilerProcess.execute(
+        listOf(
           command,
           "package",
           "--package-path",
           "$workDir",
+          "--scratch-path",
+          "$swiftBuildRoot",
           "--manifest-cache",
           "local",
           "--cache-path",
           "$swiftCacheDir",
           "--only-use-versions-from-resolved-file",
           "resolve",
-        ).redirectErrorStream(true)
-        .start()
-
-    val result = resolvePkg.waitFor()
-    if (result != 0) {
-      error("Swift package resolution failed:\n${resolvePkg.inputStream.readAllBytes().decodeToString()}")
-    }
+        ),
+        workDir,
+        timeout = CompilerProcess.dependencyTimeout,
+      )
+    check(result == 0) { "Swift package resolution failed:\n$output" }
   }
 
   override fun compile(): Pair<Int, String> = execute("build")
@@ -107,13 +132,23 @@ class LocalSwiftCompiler(
   private fun execute(action: String): Pair<Int, String> {
     val buildCommand =
       buildList {
+        if (prepared) {
+          // SwiftPM has no strict offline flag; deny networking to the compiler and its children.
+          addAll(listOf("/usr/bin/sandbox-exec", "-p", "(version 1)(allow default)(deny network*)"))
+        }
         add(command)
         add(action)
+        add("--jobs")
+        add(System.getProperty("sunday.validation.swift.jobs", "1"))
         add("--package-path")
         add("$workDir")
         add("--manifest-cache")
         add("local")
         add("--disable-index-store")
+        if (prepared) {
+          // The enclosing network-denying sandbox replaces SwiftPM's incompatible nested sandbox.
+          add("--disable-sandbox")
+        }
         if (resolvedDependencyBuild) {
           add("--only-use-versions-from-resolved-file")
         }
@@ -123,18 +158,11 @@ class LocalSwiftCompiler(
         add("$swiftCacheDir")
       }
 
-    val process =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(buildCommand)
-        .redirectErrorStream(true)
-        .start()
-
-    val result = process.waitFor()
-
-    return result to process.inputStream.readAllBytes().decodeToString()
+    return CompilerProcess.execute(buildCommand, workDir)
   }
 
   override fun close() {
+    workspaceLock?.release()
+    workspaceChannel?.close()
   }
 }

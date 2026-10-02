@@ -27,11 +27,14 @@ import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [RAML] Response Body Content Test")
+@Tag("requests")
+@Tag("responses")
 class ResponseBodyContentTest {
 
   @Test

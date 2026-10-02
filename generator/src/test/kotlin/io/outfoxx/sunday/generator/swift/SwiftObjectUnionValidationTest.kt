@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.objectUnionValidationApi
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -36,9 +37,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
+@Tag("models")
+@Tag("validation")
 class SwiftObjectUnionValidationTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @Tag("responses")
   fun `problem hierarchies validate dynamic fields through their canonical schema`(
     frontend: String,
     compiler: SwiftCompiler,

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -100,6 +101,7 @@ class KotlinScopedPolicyTest {
   }
 
   @Test
+  @Tag("responses")
   fun `typed generated problem exceptions and explicit disables compile`(
     @TempDir directory: Path,
   ) {

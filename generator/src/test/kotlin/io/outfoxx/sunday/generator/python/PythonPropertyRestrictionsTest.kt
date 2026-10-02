@@ -26,14 +26,17 @@ import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
+@Tag("validation")
 class PythonPropertyRestrictionsTest : PythonTest() {
 
   @Test
+  @Tag("models")
   fun `integer defaults normalize exactly through aliases and inherited restrictions`(compiler: PythonCompiler) {
     val integer = GeneratedTypeRef.scalar("integer")
     val aliases =
@@ -135,6 +138,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `enum string refinements preserve typed values for every input path`(
     compiler: PythonCompiler,
     @TempDir directory: Path,
@@ -291,6 +295,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `OpenAPI scalar refinements validate constructor names and defaults`(
     compiler: PythonCompiler,
     @TempDir directory: Path,
@@ -345,6 +350,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `scalar field validation preserves inheritance enums nulls and omitted values`(compiler: PythonCompiler) {
     val state = GeneratedTypeRef.named("StateAlias")
     val fields =
@@ -478,6 +484,7 @@ class PythonPropertyRestrictionsTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `restricted discriminator literals coexist with inherited scalar validators`(compiler: PythonCompiler) {
     val kind =
       GeneratedModelProperty(

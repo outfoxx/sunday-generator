@@ -25,14 +25,17 @@ import io.outfoxx.sunday.generator.tools.optionalSerializationApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("models")
 class PythonOptionalSerializationTest : PythonTest() {
   @Test
+  @Tag("requests")
   fun `schema defaults remain unset when encoding requests`(
     compiler: PythonCompiler,
     @TempDir directory: Path,
@@ -66,6 +69,7 @@ class PythonOptionalSerializationTest : PythonTest() {
   }
 
   @Test
+  @Tag("validation")
   fun `optional scalar null validation follows pydantic input selection`(
     compiler: PythonCompiler,
     @TempDir directory: Path,

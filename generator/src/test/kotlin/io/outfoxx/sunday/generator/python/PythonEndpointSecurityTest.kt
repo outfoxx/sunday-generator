@@ -29,11 +29,14 @@ import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("requests")
+@Tag("security")
 class PythonEndpointSecurityTest : PythonTest() {
 
   @ParameterizedTest

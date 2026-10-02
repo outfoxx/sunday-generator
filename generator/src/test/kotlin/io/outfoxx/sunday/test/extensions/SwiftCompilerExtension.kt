@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import java.nio.file.Files
+import java.nio.file.Path
 
 class SwiftCompilerExtension : ParameterResolver {
 
@@ -36,7 +37,9 @@ class SwiftCompilerExtension : ParameterResolver {
 
     val store = extensionContext.root.getStore(ExtensionContext.Namespace.GLOBAL)
 
-    val workDir = store.getOrComputeIfAbsent(TempDir::class.java).path.resolve("swift")
+    val workDir =
+      System.getProperty("sunday.validation.swift.workspace")?.let(Path::of)
+        ?: store.getOrComputeIfAbsent(TempDir::class.java).path.resolve("swift")
     Files.createDirectories(workDir)
 
     return store.getOrComputeIfAbsent(SwiftCompiler::class.java) {

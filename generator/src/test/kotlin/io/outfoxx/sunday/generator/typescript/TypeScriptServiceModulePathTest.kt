@@ -17,11 +17,14 @@
 package io.outfoxx.sunday.generator.typescript
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+@Tag("typescript")
 class TypeScriptServiceModulePathTest {
 
   @Test
+  @Tag("models")
   fun `resolveServiceModulePath defaults to kebab-case service name when document has no module annotation`() {
     assertEquals("facade-api", resolveServiceModulePath("FacadeAPI", null))
   }

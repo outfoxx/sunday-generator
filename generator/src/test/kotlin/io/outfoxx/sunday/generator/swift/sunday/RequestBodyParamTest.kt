@@ -25,11 +25,13 @@ import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Request Body Param Test")
+@Tag("requests")
 class RequestBodyParamTest {
 
   @Test

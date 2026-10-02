@@ -157,3 +157,8 @@ gradle-app.setting
 # End of https://www.toptal.com/developers/gitignore/api/gradle,macos,linux,intellij+all
 .mise.toml
 .kotlin
+
+# Python build-verification helpers
+__pycache__/
+
+/harness-manifest.json

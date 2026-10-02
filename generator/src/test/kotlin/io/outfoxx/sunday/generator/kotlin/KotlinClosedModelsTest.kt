@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.tools.closedModelsApi
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -34,6 +35,8 @@ import java.nio.file.Path
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("models")
+@Tag("validation")
 class KotlinClosedModelsTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])

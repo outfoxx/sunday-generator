@@ -31,6 +31,7 @@ import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -38,10 +39,12 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("security")
 class PythonSecuritySchemeTest : PythonTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  @Tag("validation")
   fun `server profiles bind validation providers and preserve wire scheme names`(
     frontend: String,
     @TempDir directory: Path,
@@ -89,6 +92,7 @@ class PythonSecuritySchemeTest : PythonTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])
+  @Tag("requests")
   fun `AsyncAPI security compiles with and without enforcement`(
     fixture: String,
     compiler: PythonCompiler,
@@ -222,6 +226,7 @@ class PythonSecuritySchemeTest : PythonTest() {
   }
 
   @Test
+  @Tag("requests")
   fun `real requests enforce credential transports permissions and alternatives before delegation`(
     compiler: PythonCompiler,
   ) {

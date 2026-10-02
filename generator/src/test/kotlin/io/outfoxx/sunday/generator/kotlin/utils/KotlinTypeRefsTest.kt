@@ -23,11 +23,14 @@ import com.squareup.kotlinpoet.SHORT
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+@Tag("kotlin")
 class KotlinTypeRefsTest {
 
   @Test
+  @Tag("models")
   fun `maps integer scalar formats to Kotlin width types`() {
     assertEquals(BYTE, GeneratedTypeRef.scalar("integer", format = "int8").kotlinIntegerScalarTypeName())
     assertEquals(SHORT, GeneratedTypeRef.scalar("integer", format = "int16").kotlinIntegerScalarTypeName())
@@ -38,6 +41,7 @@ class KotlinTypeRefsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `returns null for non width integer formats`() {
     assertNull(GeneratedTypeRef.scalar("integer").kotlinIntegerScalarTypeName())
     assertNull(GeneratedTypeRef.scalar("integer", format = "").kotlinIntegerScalarTypeName())
@@ -45,6 +49,8 @@ class KotlinTypeRefsTest {
   }
 
   @Test
+  @Tag("models")
+  @Tag("responses")
   fun `returns null for non integer scalars`() {
     assertNull(GeneratedTypeRef.scalar("string", format = "int64").kotlinIntegerScalarTypeName())
     assertNull(GeneratedTypeRef.scalar("long").kotlinIntegerScalarTypeName())

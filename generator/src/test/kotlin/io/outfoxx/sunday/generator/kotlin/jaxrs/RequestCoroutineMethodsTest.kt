@@ -28,11 +28,13 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Coroutine Methods Test")
+@Tag("requests")
 class RequestCoroutineMethodsTest {
 
   private fun typeRegistry(mode: GenerationMode): KotlinTypeRegistry =
@@ -157,6 +159,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation in server mode`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -179,6 +182,9 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
+  @Tag("models")
+  @Tag("validation")
   fun `test event coroutines method generation in server mode with multiple default types`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
   ) {
@@ -201,6 +207,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation in client mode`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -223,6 +230,9 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
+  @Tag("models")
+  @Tag("validation")
   fun `test event coroutines method generation in client mode with multiple default types`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
   ) {
@@ -245,6 +255,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation with common type in server mode`(
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
@@ -267,6 +278,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation with common type in client mode`(
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
@@ -355,6 +367,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation in server mode with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -377,6 +390,9 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
+  @Tag("models")
+  @Tag("validation")
   fun `test event coroutines method generation in server mode with quarkus option enabled and multiple defaults types`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
   ) {
@@ -399,6 +415,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation in client mode with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs.raml") testUri: URI,
   ) {
@@ -421,6 +438,9 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
+  @Tag("models")
+  @Tag("validation")
   fun `test event coroutines method generation in client mode with quarkus option enabled and multiple defaults types`(
     @ResourceUri("raml/resource-gen/res-event-stream-jaxrs-multi-default.raml") testUri: URI,
   ) {
@@ -443,6 +463,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation with common type in server mode with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
@@ -465,6 +486,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("events")
   fun `test event coroutines method generation with common type in client mode with quarkus option enabled`(
     @ResourceUri("raml/resource-gen/res-event-stream-common.raml") testUri: URI,
   ) {
@@ -487,6 +509,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test generation of coroutine with no response in client mode`(
     @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
   ) {
@@ -509,6 +532,7 @@ class RequestCoroutineMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test generation of coroutine with no response in server mode`(
     @ResourceUri("raml/resource-gen/res-none.raml") testUri: URI,
   ) {

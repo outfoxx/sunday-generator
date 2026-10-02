@@ -25,26 +25,14 @@ object ShellProcess {
     vararg args: String,
     useEnvShell: Boolean = false,
   ): Pair<Boolean, String> {
-    val process =
-      ProcessBuilder()
-        .command(getShell(useEnvShell), command, *args)
-        .apply {
-          environment().putAll(loadExtraEnvironment())
-        }.start()
-
-    val result = process.waitFor()
-    val out =
-      if (result == 0) {
-        process.inputStream.readAllBytes().decodeToString()
-      } else {
-        process.errorStream.readAllBytes().decodeToString()
-      }
-    return (result == 0) to out
+    val invocation = listOf(getShell(useEnvShell), "-c", "\"$@\"", "sunday-shell", command, *args)
+    val (result, output) = CompilerProcess.execute(invocation, environment = loadExtraEnvironment())
+    return (result == 0) to output
   }
 
   fun getShell(fromEnv: Boolean = false) =
     if (fromEnv) {
-      System.getenv("SHELL").ifBlank { null } ?: DEFAULT_SHELL
+      System.getenv("SHELL")?.ifBlank { null } ?: DEFAULT_SHELL
     } else {
       DEFAULT_SHELL
     }
@@ -66,15 +54,9 @@ object ShellProcess {
    */
   fun loadMiseEnvironment(): Map<String, String> {
     try {
-      val loadEnv =
-        ProcessBuilder()
-          .command("mise", "env")
-          .start()
-
-      return if (loadEnv.waitFor() == 0) {
-        loadEnv.inputStream
-          .readAllBytes()
-          .decodeToString()
+      val (result, output) = CompilerProcess.execute(listOf("mise", "env"))
+      return if (result == 0) {
+        output
           .split("\n")
           .map { it.removePrefix("export ") }
           .filter { it.isNotBlank() }
@@ -83,6 +65,8 @@ object ShellProcess {
       } else {
         mapOf()
       }
+    } catch (interrupted: InterruptedException) {
+      throw interrupted
     } catch (ignored: Exception) {
       return mapOf()
     }

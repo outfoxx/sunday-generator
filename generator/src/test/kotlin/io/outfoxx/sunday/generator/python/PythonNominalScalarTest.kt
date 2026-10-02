@@ -23,12 +23,15 @@ import io.outfoxx.sunday.generator.tools.nominalScalarApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("models")
+@Tag("validation")
 class PythonNominalScalarTest : PythonTest() {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
@@ -93,6 +96,7 @@ class PythonNominalScalarTest : PythonTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @Tag("requests")
   fun `nominal parameters work in generated clients and servers`(
     frontend: String,
     compiler: PythonCompiler,

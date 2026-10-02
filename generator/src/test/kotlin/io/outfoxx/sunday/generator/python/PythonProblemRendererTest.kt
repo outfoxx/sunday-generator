@@ -25,8 +25,11 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertPythonSnapshot
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+@Tag("responses")
+@Tag("models")
 class PythonProblemRendererTest : PythonTest() {
 
   @Test

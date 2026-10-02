@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -33,6 +34,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("requests")
+@Tag("validation")
 class PythonParameterToleranceTest : PythonTest() {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
@@ -178,6 +181,7 @@ class PythonParameterToleranceTest : PythonTest() {
   }
 
   @Test
+  @Tag("models")
   fun `whole-query models validate before client transmission and server invocation`(
     compiler: PythonCompiler,
     @TempDir directory: Path,

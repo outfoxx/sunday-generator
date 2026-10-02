@@ -39,6 +39,7 @@ import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
@@ -670,6 +671,8 @@ class PythonClientRendererTest : PythonTest() {
   }
 
   @Test
+  @Tag("events")
+  @Tag("models")
   fun `generates exchange streaming discrimination and RFC6570 operations`(compiler: PythonCompiler) {
     val models =
       listOf(

@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -55,6 +56,7 @@ import java.util.concurrent.CancellationException
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("security")
 class KotlinQuarkusClientSecurityTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])

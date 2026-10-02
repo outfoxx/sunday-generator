@@ -25,6 +25,7 @@ import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -33,6 +34,8 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 @TypeScriptTest
+@Tag("models")
+@Tag("validation")
 class TypeScriptClosedModelsTest {
   @Test
   fun `closed external discriminator envelopes reject unknown siblings`(

@@ -20,6 +20,7 @@ import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
 import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
+import io.outfoxx.sunday.generator.utils.CompilerProcess
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -119,29 +120,30 @@ class OpenApiDocumentLoaderTest {
   ) {
     val store = directory.resolve("server.p12")
     val keytool = Path.of(System.getProperty("java.home"), "bin", "keytool").toString()
-    val process =
-      ProcessBuilder(
-        keytool,
-        "-genkeypair",
-        "-keystore",
-        store.toString(),
-        "-storepass",
-        "test-password",
-        "-alias",
-        "localhost",
-        "-keyalg",
-        "RSA",
-        "-dname",
-        "CN=localhost",
-        "-validity",
-        "1",
-        "-ext",
-        "SAN=ip:127.0.0.1",
-        "-storetype",
-        "PKCS12",
-      ).redirectErrorStream(true).start()
-    val output = String(process.inputStream.readAllBytes())
-    assertEquals(0, process.waitFor(), output)
+    val (exitCode, output) =
+      CompilerProcess.execute(
+        listOf(
+          keytool,
+          "-genkeypair",
+          "-keystore",
+          store.toString(),
+          "-storepass",
+          "test-password",
+          "-alias",
+          "localhost",
+          "-keyalg",
+          "RSA",
+          "-dname",
+          "CN=localhost",
+          "-validity",
+          "1",
+          "-ext",
+          "SAN=ip:127.0.0.1",
+          "-storetype",
+          "PKCS12",
+        ),
+      )
+    assertEquals(0, exitCode, output)
     val keyStore = KeyStore.getInstance("PKCS12")
     Files.newInputStream(store).use { keyStore.load(it, "test-password".toCharArray()) }
     val keys =

@@ -25,11 +25,13 @@ import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [RAML] Request Body Parameter Test")
+@Tag("requests")
 class RequestBodyParamTest {
 
   @Test
@@ -55,6 +57,7 @@ class RequestBodyParamTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test generation of inline set body and return types`(
     compiler: TypeScriptCompiler,
     @ResourceUri("raml/resource-gen/req-body-param-set-inline.raml") testUri: URI,

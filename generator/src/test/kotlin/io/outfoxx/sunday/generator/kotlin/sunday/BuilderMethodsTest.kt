@@ -27,11 +27,13 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertKotlinSundaySnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/Sunday] [RAML] Builder Methods Test")
+@Tag("requests")
 class BuilderMethodsTest {
 
   @Test
@@ -58,6 +60,7 @@ class BuilderMethodsTest {
   }
 
   @Test
+  @Tag("responses")
   fun `test response builder method generation `(
     @ResourceUri("raml/resource-gen/res-builder.raml") testUri: URI,
   ) {

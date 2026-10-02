@@ -26,9 +26,11 @@ import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
+import io.outfoxx.sunday.generator.utils.CompilerProcess
 import io.outfoxx.sunday.test.utils.Compilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode = compileTypesResult(types).exitCode
 
@@ -42,6 +44,7 @@ internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilation
   val out = ByteArrayOutputStream()
   CompiledGeneratedSources.beginCompile()
 
+  val started = System.nanoTime()
   val result =
     KotlinCompilation()
       .apply {
@@ -53,12 +56,17 @@ internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilation
         kotlincArguments =
           listOf("-jvm-target", "21", "-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
         languageVersion = "2.3"
-        inheritClassPath = true
+        inheritClassPath = false
+        classpaths =
+          requireNotNull(System.getProperty("sunday.validation.kotlin.classpath")) {
+            "Run compiler-backed tests through Gradle to supply the generated-code classpath"
+          }.split(File.pathSeparator).map(::File).filter(File::exists)
         verbose = false
         allWarningsAsErrors = true
         reportOutputFiles = true
         messageOutputStream = out
       }.compile()
+  CompilerProcess.record("kotlinc", started, result.exitCode.ordinal)
 
   if (result.exitCode == KotlinCompilation.ExitCode.OK) {
     fileSpecs.forEach { fileSpec ->

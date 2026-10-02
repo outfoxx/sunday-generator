@@ -25,12 +25,15 @@ import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @TypeScriptTest
+@Tag("requests")
+@Tag("validation")
 class TypeScriptParameterToleranceTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])

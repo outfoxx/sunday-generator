@@ -25,11 +25,14 @@ import io.outfoxx.sunday.generator.typescript.tools.generateSunday
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.typescriptpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @TypeScriptTest
 @DisplayName("[TypeScript/Sunday] [RAML] Response Events Test")
+@Tag("events")
+@Tag("responses")
 class ResponseEventsTest {
 
   @Test

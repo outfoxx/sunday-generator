@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import io.outfoxx.sunday.generator.utils.CompilerProcess
 import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -73,18 +74,13 @@ class LocalTypeScriptCompiler(
   }
 
   private fun executeCommand(command: List<String>): Pair<Int, String> {
-    val process =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(command)
-        .apply {
-          environment().putAll(env)
-        }.redirectErrorStream(true)
-        .start()
-    // Drain diagnostics before waiting so a full pipe cannot deadlock the compiler.
-    val output = process.inputStream.readAllBytes().decodeToString()
-    val result = process.waitFor()
-    return result to output
+    val setup = command.first() == this.command
+    return CompilerProcess.execute(
+      command,
+      workDir,
+      env,
+      if (setup) CompilerProcess.dependencyTimeout else CompilerProcess.compilerTimeout,
+    )
   }
 
   private fun tscCommand(outputDir: String? = null): List<String> =

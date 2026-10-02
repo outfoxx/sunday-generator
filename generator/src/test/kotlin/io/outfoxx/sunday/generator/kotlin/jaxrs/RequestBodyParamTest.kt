@@ -27,11 +27,13 @@ import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Body Param Test")
+@Tag("requests")
 class RequestBodyParamTest {
 
   @Test
@@ -101,6 +103,7 @@ class RequestBodyParamTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test basic body parameter generation with validation constraints`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {
@@ -123,6 +126,7 @@ class RequestBodyParamTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test container element validation for body parameter`(
     @ResourceUri("raml/resource-gen/req-body-param-container-valid.raml") testUri: URI,
   ) {
@@ -309,6 +313,7 @@ class RequestBodyParamTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test basic body parameter generation with validation constraints and quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-body-param.raml") testUri: URI,
   ) {

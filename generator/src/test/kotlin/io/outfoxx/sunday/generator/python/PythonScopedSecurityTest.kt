@@ -25,12 +25,14 @@ import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
+@Tag("security")
 class PythonScopedSecurityTest : PythonTest() {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])

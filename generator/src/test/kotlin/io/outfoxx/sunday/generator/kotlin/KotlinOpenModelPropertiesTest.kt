@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSourcesExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -41,6 +42,8 @@ import java.net.URI
 
 @ExtendWith(ResourceExtension::class, CompiledGeneratedSourcesExtension::class)
 @ResourceLock("Kotlin")
+@Tag("kotlin")
+@Tag("models")
 class KotlinOpenModelPropertiesTest {
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -165,6 +168,8 @@ class KotlinOpenModelPropertiesTest {
 
   @OptIn(ExperimentalCompilerApi::class)
   @Test
+  @Tag("events")
+  @Tag("validation")
   fun `compiled known and fallback events retain envelope and subtype fields`(
     @ResourceUri("asyncapi/ir/tolerant-discriminator.yaml") uri: URI,
   ) {

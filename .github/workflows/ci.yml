@@ -6,63 +6,232 @@ on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-
-  build-test:
-    runs-on: macos-26
-
+  prepare:
+    name: Build shared JVM harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
     - uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: temurin
+    - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+    - name: Compile portable JVM outputs
+      run: >-
+        python3 scripts/ci/measure.py ./gradlew recordBuildProcess
+        :generator:jar :generator:testFixturesJar :generator:compilerFixtures --profile
+        --dependency-verification strict -PuseLocalSundayKt=false
+    - name: Package shared harness
+      run: python3 scripts/ci/harness.py package --commit "$GITHUB_SHA"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: harness-${{ github.sha }}
+        path: build/ci-harness
+        if-no-files-found: error
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preparation-timings-${{ github.sha }}
+        path: |
+          build/diagnostics
+          build/reports/profile
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-
-    - name: Show Xcode and Swift versions
-      run: |
-        xcodebuild -version
-        swift --version
-
-    - name: Setup Node
-      uses: actions/setup-node@v4
+  linux:
+    name: Linux (${{ matrix.partition }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: [infrastructure, kotlin, typescript, python]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: temurin
+    - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+    - uses: actions/download-artifact@v4
+      with:
+        name: harness-${{ github.sha }}
+        path: build/ci-harness
+    - name: Restore shared JVM harness
+      run: python3 scripts/ci/harness.py restore --commit "$GITHUB_SHA"
+    - uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: npm
         cache-dependency-path: generator/src/test/resources/typescript/compile/package-lock.json
+    - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+    - name: Run partition
+      env:
+        PARTITION: ${{ matrix.partition }}
+      run: |
+        TEST_TAGS=$(python3 -c 'import json,os; print(json.load(open("scripts/ci/partitions.json"))[os.environ["PARTITION"]])')
+        TASK=:generator:test
+        if [ "$PARTITION" = infrastructure ]; then TASK=check; fi
+        python3 scripts/ci/measure.py ./gradlew "$TASK" --profile \
+          -I scripts/ci/precompiled.gradle --dependency-verification strict \
+          -PuseLocalSundayKt=false -PcompilerTestForks=2 -PtestTags="$TEST_TAGS"
+    - name: Package results
+      if: always()
+      env:
+        PARTITION: ${{ matrix.partition }}
+      run: python3 scripts/ci/coverage.py package --partition "$PARTITION" --commit "$GITHUB_SHA"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: verification-${{ matrix.partition }}-${{ github.sha }}
+        path: build/ci-artifacts/${{ matrix.partition }}
+        if-no-files-found: error
 
-    - name: Cache SwiftPM validation dependencies
-      uses: actions/cache@v4
+  swift:
+    env:
+      SUNDAY_SWIFT_PREPARED_WORKSPACE: ${{ github.workspace }}/generator/build/validation/swift/prepared/${{ matrix.partition }}
+    name: Swift (${{ matrix.partition }})
+    needs: prepare
+    runs-on: macos-26
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - partition: swift-validation
+          tags: swift & validation
+        - partition: swift-remainder
+          tags: swift & !validation
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: temurin
+    - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+    - uses: actions/download-artifact@v4
+      with:
+        name: harness-${{ github.sha }}
+        path: build/ci-harness
+    - name: Restore shared JVM harness
+      run: python3 scripts/ci/harness.py restore --commit "$GITHUB_SHA"
+    - name: Select native Swift compiler
+      id: swift-toolchain
+      run: |
+        sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+        xcodebuild -version
+        swift --version
+        TOOLCHAIN=$( { xcodebuild -version; swift --version; xcrun --show-sdk-version; } | shasum -a 256 | cut -d ' ' -f 1)
+        echo "fingerprint=$TOOLCHAIN" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
       with:
         path: generator/build/validation/swift/package-cache
         key: ${{ runner.os }}-swiftpm-validation-${{ hashFiles('generator/src/test/resources/swift/compile/local/Package.resolved') }}
         restore-keys: |
           ${{ runner.os }}-swiftpm-validation-
+    - uses: actions/cache/restore@v4
+      id: swift-build-cache
+      with:
+        path: ${{ env.SUNDAY_SWIFT_PREPARED_WORKSPACE }}
+        key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ matrix.partition }}-${{ steps.swift-toolchain.outputs.fingerprint }}-${{ hashFiles('generator/src/test/resources/swift/compile/local/Package.*', 'scripts/ci/swift_cache.py', 'generator/src/test/kotlin/io/outfoxx/sunday/generator/swift/tools/LocalSwiftCompiler.kt') }}
+    - name: Prepare Swift dependencies
+      run: python3 scripts/ci/swift_cache.py prepare --workspace "$SUNDAY_SWIFT_PREPARED_WORKSPACE" --jobs 3
+    - name: Test Swift partition
+      env:
+        TEST_TAGS: ${{ matrix.tags }}
+      run: >-
+        python3 scripts/ci/measure.py ./gradlew :generator:test --profile -I scripts/ci/precompiled.gradle
+        --dependency-verification strict -PuseLocalSundayKt=false
+        -PcompilerTestForks=1 -PswiftCompilerJobs=3 -PtestTags="$TEST_TAGS"
+    - name: Remove generated Swift cache products
+      if: always()
+      run: python3 scripts/ci/swift_cache.py clean --workspace "$SUNDAY_SWIFT_PREPARED_WORKSPACE"
+    - uses: actions/cache/save@v4
+      if: success() && steps.swift-build-cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ env.SUNDAY_SWIFT_PREPARED_WORKSPACE }}
+        key: ${{ steps.swift-build-cache.outputs.cache-primary-key }}
+    - name: Package results
+      if: always()
+      env:
+        PARTITION: ${{ matrix.partition }}
+      run: python3 scripts/ci/coverage.py package --partition "$PARTITION" --commit "$GITHUB_SHA"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: verification-${{ matrix.partition }}-${{ github.sha }}
+        path: build/ci-artifacts/${{ matrix.partition }}
+        if-no-files-found: error
 
-    - name: Setup uv
-      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-
-    - name: Build & Test
-      run: ./gradlew check sonar
+  build-test:
+    runs-on: ubuntu-latest
+    needs: [prepare, linux, swift, quarkus-compatibility]
+    if: always()
+    timeout-minutes: 15
+    steps:
+    - name: Require every verification job
+      env:
+        RESULTS: ${{ join(needs.*.result, ',') }}
+      run: test "$RESULTS" = 'success,success,success,success'
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: temurin
+    - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-infrastructure-${{ github.sha }}
+        path: build/ci-artifacts/infrastructure
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-kotlin-${{ github.sha }}
+        path: build/ci-artifacts/kotlin
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-typescript-${{ github.sha }}
+        path: build/ci-artifacts/typescript
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-python-${{ github.sha }}
+        path: build/ci-artifacts/python
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-swift-validation-${{ github.sha }}
+        path: build/ci-artifacts/swift-validation
+    - uses: actions/download-artifact@v4
+      with:
+        name: verification-swift-remainder-${{ github.sha }}
+        path: build/ci-artifacts/swift-remainder
+    - name: Combine verified coverage and analyze
+      run: >-
+        ./gradlew sonar --dependency-verification strict -PuseLocalSundayKt=false
+        -PciArtifacts=build/ci-artifacts -PciCommit="$GITHUB_SHA"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: combined-coverage-${{ github.sha }}
+        path: code-coverage/build/reports/kover
     - name: Report Tests
       uses: dorny/test-reporter@v1
       if: success() || failure()
       with:
         name: Tests Results
-        path: "**/build/test-results/*/*.xml"
+        path: "build/ci-artifacts/**/build/test-results/*/*.xml"
         reporter: java-junit
 
   quarkus-compatibility:

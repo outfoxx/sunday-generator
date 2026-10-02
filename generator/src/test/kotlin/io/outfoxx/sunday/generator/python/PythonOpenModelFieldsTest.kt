@@ -28,6 +28,7 @@ import io.outfoxx.sunday.generator.tools.openModelWire
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -35,9 +36,11 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@Tag("models")
 class PythonOpenModelFieldsTest : PythonTest() {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @Tag("validation")
   fun `inherited additional constraints survive native revalidation`(
     frontend: String,
     compiler: PythonCompiler,
@@ -81,6 +84,7 @@ class PythonOpenModelFieldsTest : PythonTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  @Tag("validation")
   fun `dynamic validation preserves native alias selection for existing models`(
     frontend: String,
     compiler: PythonCompiler,

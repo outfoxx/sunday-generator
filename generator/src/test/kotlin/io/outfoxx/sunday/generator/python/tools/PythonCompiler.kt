@@ -18,6 +18,7 @@
 
 package io.outfoxx.sunday.generator.python.tools
 
+import io.outfoxx.sunday.generator.utils.CompilerProcess
 import io.outfoxx.sunday.generator.utils.ShellProcess
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.Closeable
@@ -154,19 +155,13 @@ class PythonCompiler(
       }
     }
 
-  private fun execute(vararg args: String): Pair<Int, String> {
-    val process =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(command, *args)
-        .apply {
-          environment().putAll(env)
-        }.redirectErrorStream(true)
-        .start()
-
-    val result = process.waitFor()
-    return result to process.inputStream.readAllBytes().decodeToString()
-  }
+  private fun execute(vararg args: String): Pair<Int, String> =
+    CompilerProcess.execute(
+      listOf(command, *args),
+      workDir,
+      env,
+      if (args.firstOrNull() == "sync") CompilerProcess.dependencyTimeout else CompilerProcess.compilerTimeout,
+    )
 
   override fun close() {
     workDir.toFile().deleteRecursively()

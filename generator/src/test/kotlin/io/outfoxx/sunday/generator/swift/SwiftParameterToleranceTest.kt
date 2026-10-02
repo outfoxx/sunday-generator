@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -30,6 +31,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
+@Tag("requests")
+@Tag("validation")
 class SwiftParameterToleranceTest {
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])

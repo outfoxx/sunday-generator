@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -49,6 +50,7 @@ import java.nio.file.Path
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
+@Tag("security")
 class KotlinSecuritySchemeTest {
 
   @ParameterizedTest
@@ -90,6 +92,7 @@ class KotlinSecuritySchemeTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["security-enforcement-3", "security-api-keys-2", "composed-security"])
+  @Tag("requests")
   fun `AsyncAPI security compiles with and without enforcement`(fixture: String) {
     val paths =
       if (fixture == "composed-security") {

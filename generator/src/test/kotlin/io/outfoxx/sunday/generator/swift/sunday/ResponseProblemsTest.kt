@@ -28,11 +28,13 @@ import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Response Problems Test")
+@Tag("responses")
 class ResponseProblemsTest {
 
   @Test
@@ -108,6 +110,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using base uri`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-base-uri.raml") testUri: URI,
@@ -134,6 +137,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using absolute problem base uri`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-abs-problem-base-uri.raml") testUri: URI,
@@ -160,6 +164,7 @@ class ResponseProblemsTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test problem type generation using relative problem base uri`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-problems-rel-problem-base-uri.raml") testUri: URI,

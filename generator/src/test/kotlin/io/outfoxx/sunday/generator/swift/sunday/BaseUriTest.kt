@@ -27,11 +27,13 @@ import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Base URI Test")
+@Tag("requests")
 class BaseUriTest {
 
   @Test

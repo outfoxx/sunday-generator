@@ -27,11 +27,13 @@ import io.outfoxx.sunday.generator.kotlin.tools.generateJaxrs
 import io.outfoxx.sunday.generator.tools.assertKotlinJaxrsSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @KotlinTest
 @DisplayName("[Kotlin/JAXRS] [RAML] Request Header Params Test")
+@Tag("requests")
 class RequestHeaderParamsTest {
 
   @Test
@@ -79,6 +81,7 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test optional header parameter generation with validation constraints`(
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
@@ -101,6 +104,7 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test generation of multiple header parameters with inline type definitions`(
     @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
   ) {
@@ -275,6 +279,7 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test optional header parameter generation with validation constraints and quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-header-params-optional.raml") testUri: URI,
   ) {
@@ -313,6 +318,7 @@ class RequestHeaderParamsTest {
   }
 
   @Test
+  @Tag("validation")
   fun `test generation of multiple header parameters with inline type definitions and quarkus option enabled`(
     @ResourceUri("raml/resource-gen/req-header-params-inline-types.raml") testUri: URI,
   ) {

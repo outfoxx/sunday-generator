@@ -21,8 +21,10 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSourcesExtension
 import io.outfoxx.sunday.test.extensions.DiffingExtension
 import io.outfoxx.sunday.test.extensions.PythonCompilerExtension
 import io.outfoxx.sunday.test.extensions.ResourceExtension
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtendWith
 
+@Tag("python")
 @ExtendWith(
   ResourceExtension::class,
   DiffingExtension::class,

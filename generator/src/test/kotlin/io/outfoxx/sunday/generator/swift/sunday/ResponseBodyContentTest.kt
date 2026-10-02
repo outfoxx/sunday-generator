@@ -25,14 +25,17 @@ import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [RAML] Response Body Content Test")
+@Tag("responses")
 class ResponseBodyContentTest {
 
   @Test
+  @Tag("requests")
   fun `test basic body parameter generation in client mode`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param.raml") testUri: URI,
@@ -56,6 +59,7 @@ class ResponseBodyContentTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test generation of body parameter with explicit content type in client mode`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param-explicit-content-type.raml") testUri: URI,
@@ -79,6 +83,7 @@ class ResponseBodyContentTest {
   }
 
   @Test
+  @Tag("requests")
   fun `test generation of body parameter with inline type in client mode`(
     compiler: SwiftCompiler,
     @ResourceUri("raml/resource-gen/res-body-param-inline-type.raml") testUri: URI,
