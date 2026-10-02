@@ -38,7 +38,13 @@ class TestPartitionTest {
   fun `tag expressions partition every discovered method exactly once`() {
     assertEquals("false", System.getProperty("junit.jupiter.execution.parallel.enabled"))
     val all = discover(null)
-    val expressions = listOf("!swift", "swift & validation", "swift & !validation")
+    val expressions =
+      jacksonObjectMapper()
+        .readTree(Path.of("../scripts/ci/partitions.json").toFile())
+        .elements()
+        .asSequence()
+        .map { it.asText() }
+        .toList()
     val partitions = expressions.associateWith(::discover)
     assertTrue(all.isNotEmpty())
     partitions.forEach { (expression, methods) -> assertTrue(methods.isNotEmpty(), expression) }

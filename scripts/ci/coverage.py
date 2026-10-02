@@ -30,7 +30,7 @@ def package(root, destination, partition, commit):
     if target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True)
-    modules = TEST_MODULES if partition == "ubuntu" else ("generator",)
+    modules = TEST_MODULES if partition == "infrastructure" else ("generator",)
     for module in modules:
         source = root / module
         for pattern in ("build/kover/bin-reports/*.ic", "build/kover/bin-reports/*.log", "build/test-results/**/*.xml",
@@ -40,7 +40,7 @@ def package(root, destination, partition, commit):
                     output = target / path.relative_to(root)
                     output.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(path, output)
-        if partition == "ubuntu":
+        if partition == "infrastructure":
             for language in ("kotlin", "java"):
                 for source_set in ("main", "testFixtures"):
                     classes = source / "build/classes" / language / source_set
@@ -68,7 +68,7 @@ def verify(artifacts, commit):
     for partition, expression in PARTITIONS.items():
         directory = artifacts / partition
         manifest = json.loads((directory / "manifest.json").read_text())
-        expected_modules = list(TEST_MODULES if partition == "ubuntu" else ("generator",))
+        expected_modules = list(TEST_MODULES if partition == "infrastructure" else ("generator",))
         if (manifest["commit"], manifest["partition"], manifest["testTags"], manifest["modules"]) != (
                 commit, partition, expression, expected_modules):
             raise ValueError(f"Mismatched manifest: {partition}")
@@ -93,7 +93,7 @@ def verify(artifacts, commit):
                     raise ValueError(f"Failed test results: {partition}/{module}")
             if module in MODULES:
                 reports.extend(binaries)
-    expected = json.loads((artifacts / "ubuntu/generator/build/diagnostics/test-partitions.json").read_text())
+    expected = json.loads((artifacts / "infrastructure/generator/build/diagnostics/test-partitions.json").read_text())
     seen = set()
     for partition, expression in PARTITIONS.items():
         inventory_files = list((artifacts / partition / "generator/build/diagnostics/inventory").glob("*.json"))
@@ -107,11 +107,11 @@ def verify(artifacts, commit):
 
 
 def aggregate(artifacts, commit, cli, destination):
-    """Use Kover's pinned CLI with original production classes from the Ubuntu build."""
+    """Use Kover's pinned CLI with original production classes from the infrastructure build."""
     reports = verify(artifacts, commit)
     classes = []
     for module in TEST_MODULES:
-        roots = [p for p in (artifacts / "ubuntu" / module / "build/classes").glob("*/*") if p.is_dir() and p.name in ("main", "testFixtures")]
+        roots = [p for p in (artifacts / "infrastructure" / module / "build/classes").glob("*/*") if p.is_dir() and p.name in ("main", "testFixtures")]
         if not roots:
             raise ValueError(f"Missing production classes: {module}")
         if module in MODULES:

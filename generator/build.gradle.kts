@@ -154,6 +154,7 @@ kover {
 
 tasks.withType<Test>().configureEach {
   dependsOn(compilerFixtures)
+  inputs.file(rootProject.layout.projectDirectory.file("scripts/ci/partitions.json"))
   val diagnosticsDirectory =
     layout.buildDirectory
       .dir("diagnostics")

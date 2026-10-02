@@ -1,5 +1,8 @@
 {
-  "ubuntu": "!swift",
+  "infrastructure": "!swift & !kotlin & !typescript & !python",
+  "kotlin": "!swift & kotlin",
+  "typescript": "!swift & !kotlin & typescript",
+  "python": "!swift & !kotlin & !typescript & python",
   "swift-validation": "swift & validation",
   "swift-remainder": "swift & !validation"
 }

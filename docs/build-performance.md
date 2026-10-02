@@ -31,15 +31,22 @@ Kotlin compilation uses an explicit dependency configuration plus compiled fixtu
 
 ## CI partitions and coverage
 
-The dedicated `sunday-generator-ubuntu-8-cores` runner belongs to the repository-restricted `Sunday Generator CI` group and permits at most two concurrent instances. Existing runner groups are unchanged.
+The dedicated `sunday-generator-ubuntu-8-cores` runner belongs to the repository-restricted `Sunday Generator CI` group and permits at most four concurrent instances. Existing runner groups are unchanged.
+
+The preparation job builds the generator and JVM test harness once, then publishes portable classes, resources, JARs, and compiler fixture stubs as a commit-specific artifact. All six test jobs restore that artifact and verify its checksums before skipping the corresponding generator compilation/resource/JAR tasks. Dependency resolution and build-logic setup remain local to each runner. Native compiler installations, dependency environments, test results, and coverage data are never transferred in this artifact.
 
 | Partition | JUnit expression | Work |
 |---|---|---|
-| Ubuntu | `!swift` | Four generator JVMs, lint, CLI/plugin tests, baseline integration checks |
+| Infrastructure | `!swift & !kotlin & !typescript & !python` | Four JVMs, untagged tests, lint, CLI/plugin and baseline integration checks |
+| Kotlin | `!swift & kotlin` | Four JVMs, Kotlin compiler tests |
+| TypeScript | `!swift & !kotlin & typescript` | Four JVMs, TypeScript compiler tests |
+| Python | `!swift & !kotlin & !typescript & python` | Four JVMs, Python compiler tests |
 | Swift validation | `swift & validation` | Native macOS, one JVM, three Swift compiler jobs |
 | Swift remainder | `swift & !validation` | Native macOS, one JVM, three Swift compiler jobs |
 
-Untagged tests run on Ubuntu. The existing Quarkus compatibility matrix remains separate. Superseded PR runs are canceled.
+The priority order Swift → Kotlin → TypeScript → Python gives mixed-language tests exactly one owner. The Linux partitions run concurrently on four dedicated runner instances. Each test still compiles its generated output before any assertion or snapshot; sharing the harness does not bypass generated-code compilation. `scripts/ci/partitions.json` defines the selection expressions and the discovery test verifies their union and disjointness.
+
+Untagged tests run in the infrastructure partition. The existing Quarkus compatibility matrix remains separate. Superseded PR runs are canceled.
 
 Each partition uploads coverage binaries, original production classes where applicable, JUnit XML, compiler timings, process samples, and effective JUnit inventories. A manifest records the commit, module list, tag expression, and checksums. `scripts/ci/coverage.py` rejects missing or mismatched artifacts, failed test results, incomplete inventories, and overlapping selections.
 
@@ -49,7 +56,7 @@ The dedicated `:code-coverage:aggregateCiCoverage` task uses the pinned Kover CL
 ./gradlew sonar -PciArtifacts=build/ci-artifacts -PciCommit="$COMMIT"
 ```
 
-The final `build-test` gate requires all partitions and the Quarkus matrix before aggregation and analysis. Normal local `check` and Sonar retain their normal complete-test coverage behavior.
+The final `build-test` gate requires preparation, all partitions, and the Quarkus matrix before aggregation and analysis. Normal local `check` and Sonar retain their normal complete-test coverage behavior.
 
 ## Measuring changes
 

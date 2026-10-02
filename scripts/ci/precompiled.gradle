@@ -1,0 +1,15 @@
+// Only CI consumers opt in. Verify the portable outputs before disabling their producer tasks.
+gradle.projectsEvaluated {
+  def root = gradle.rootProject
+  if (root.name != 'sunday-generator') return
+  def commit = root.providers.environmentVariable('GITHUB_SHA').getOrNull()
+  if (!commit) throw new GradleException('GITHUB_SHA is required for the precompiled harness')
+  root.providers.exec {
+    workingDir(root.projectDir)
+    commandLine('python3', 'scripts/ci/harness.py', 'verify', '--commit', commit)
+  }.result.get().assertNormalExitValue()
+  def manifest = new groovy.json.JsonSlurper().parse(new File(root.projectDir, 'harness-manifest.json'))
+  manifest.tasks.each { name ->
+    root.project(':generator').tasks.named(name).configure { enabled = false }
+  }
+}

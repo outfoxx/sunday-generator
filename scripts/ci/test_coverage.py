@@ -16,7 +16,7 @@ class CoverageArtifactsTest(unittest.TestCase):
         self.expected = {expression: [partition] for partition, expression in coverage.PARTITIONS.items()}
         for partition in coverage.PARTITIONS:
             source = self.root / partition
-            modules = coverage.TEST_MODULES if partition == "ubuntu" else ("generator",)
+            modules = coverage.TEST_MODULES if partition == "infrastructure" else ("generator",)
             for module in modules:
                 for task in coverage.TEST_TASKS[module]:
                     for name, value in ((f"kover/bin-reports/{task}.ic", "binary"),
@@ -27,15 +27,15 @@ class CoverageArtifactsTest(unittest.TestCase):
             inventory = source / "generator/build/diagnostics/inventory/worker-1.json"
             inventory.parent.mkdir(parents=True)
             inventory.write_text(json.dumps([partition]))
-            if partition == "ubuntu":
+            if partition == "infrastructure":
                 (inventory.parent.parent / "test-partitions.json").write_text(json.dumps(self.expected))
             coverage.package(source, self.artifacts, partition, "commit-a")
 
     def test_complete_partitions_are_accepted_without_executing_tests(self):
-        self.assertEqual(7, len(coverage.verify(self.artifacts, "commit-a")))
+        self.assertEqual(10, len(coverage.verify(self.artifacts, "commit-a")))
 
     def test_missing_secondary_test_task_is_rejected(self):
-        directory = self.artifacts / "ubuntu"
+        directory = self.artifacts / "infrastructure"
         name = "integration-tests/jaxrs/build/kover/bin-reports/defaultModelTest.ic"
         (directory / name).unlink()
         manifest = json.loads((directory / "manifest.json").read_text())
@@ -54,7 +54,7 @@ class CoverageArtifactsTest(unittest.TestCase):
             coverage.verify(self.artifacts, "commit-a")
 
     def test_corrupt_binary_is_rejected(self):
-        (self.artifacts / "ubuntu/generator/build/kover/bin-reports/test.ic").write_text("corrupt")
+        (self.artifacts / "infrastructure/generator/build/kover/bin-reports/test.ic").write_text("corrupt")
         with self.assertRaisesRegex(ValueError, "Invalid artifact"):
             coverage.verify(self.artifacts, "commit-a")
 

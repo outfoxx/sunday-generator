@@ -160,3 +160,5 @@ gradle-app.setting
 
 # Python build-verification helpers
 __pycache__/
+
+/harness-manifest.json
