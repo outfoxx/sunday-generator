@@ -82,4 +82,5 @@ jobs:
     - name: Verify generated Quarkus endpoints
       run: >-
         ./gradlew --dependency-verification strict --no-configuration-cache
-        -PquarkusVersion=${{ matrix.quarkus }} :integration-tests:quarkus:check
+        -PquarkusVersion=${{ matrix.quarkus }} -PquarkiverseProblemVersion=3.32.1
+        :integration-tests:quarkus:check

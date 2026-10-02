@@ -28,6 +28,7 @@ dependencyResolutionManagement {
   versionCatalogs {
     create("libs") {
       providers.gradleProperty("quarkusVersion").orNull?.let { version("quarkus-rest", it) }
+      providers.gradleProperty("quarkiverseProblemVersion").orNull?.let { version("quarkiverseProblem", it) }
     }
   }
   
