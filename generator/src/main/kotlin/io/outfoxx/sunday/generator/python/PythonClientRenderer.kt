@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedExchange
@@ -121,6 +122,13 @@ class PythonClientRenderer(
     security: GeneratedClientSecurity?,
   ): PythonCodeBlock {
     val signature = renderSignatureParameters()
+    val checkedParameters = validationParameters()
+    val parameterValidationName =
+      checkedParameters.takeIf { it.isNotEmpty() }?.let {
+        val names = NameAllocator(preallocateKeywords = false)
+        httpParameters().filter { it.constantValue == null }.forEach { names.newName(it.name.pythonIdentifierName) }
+        names.newName("validate_parameters")
+      }
     val responseType = renderSuccessType()
     val operationType =
       when {
@@ -150,7 +158,7 @@ class PythonClientRenderer(
             "        return self.transport.event_source(request_spec)",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
         )
       } else if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
         PythonCodeBlock.of(
@@ -160,7 +168,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           eventDecoderName(),
         )
       } else if (exchange != null) {
@@ -175,7 +183,7 @@ class PythonClientRenderer(
           "        request_spec: %T[%C] = %C\n%L",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           transportCall,
         )
       } else {
@@ -190,7 +198,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           PythonSymbol("sunday", "OperationSpec"),
           renderRequestBodyType(),
           responseType,
@@ -200,13 +208,13 @@ class PythonClientRenderer(
         )
       }
 
-    val checkedParameters = validationParameters()
     val validatedBody =
       if (checkedParameters.isEmpty()) {
         body
       } else {
         PythonCodeBlock.of(
-          "\n        def validate_parameters() -> None:\n%C\n\n%C",
+          "\n        def %L() -> None:\n%C\n\n%C",
+          requireNotNull(parameterValidationName),
           PythonCodeBlock.join(
             checkedParameters.map { (name, type) ->
               PythonCodeBlock.of(
@@ -289,6 +297,7 @@ class PythonClientRenderer(
     defaultContentTypes: List<String>,
     defaultAcceptTypes: List<String>,
     security: GeneratedClientSecurity?,
+    parameterValidationName: String?,
   ): PythonCodeBlock =
     PythonCodeBlock.of(
       """
@@ -304,8 +313,8 @@ class PythonClientRenderer(
       PythonCodeBlock.of(
         "%C%C",
         renderParameterArgument(),
-        if (validationParameters().isNotEmpty()) {
-          PythonCodeBlock.of("            parameter_validation=validate_parameters,\n")
+        if (parameterValidationName != null) {
+          PythonCodeBlock.of("            parameter_validation=%L,\n", parameterValidationName)
         } else {
           PythonCodeBlock.of("")
         },
@@ -419,7 +428,11 @@ class PythonClientRenderer(
       return PythonCodeBlock.of("()")
     }
     if (parameters.size == 1 && queryString == null && parameters.single().usesDefaultEncoding()) {
-      return PythonCodeBlock.of("(%C,)", parameters.single().renderInlineParameterSpec())
+      val inline = PythonCodeBlock.of("(%C,)", parameters.single().renderInlineParameterSpec())
+      val context = PythonRenderContext(PythonImportSet())
+      if ("            parameters=,".length + inline.render(context).length <= 120) {
+        return inline
+      }
     }
     val specs =
       parameters.map { it.renderParameterSpec() } +

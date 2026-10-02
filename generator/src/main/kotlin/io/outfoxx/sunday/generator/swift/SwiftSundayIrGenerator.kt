@@ -5120,15 +5120,22 @@ class SwiftSundayIrGenerator(
     )
 
     security?.let { builder.add(",\nsecurity: %L", it) }
+    val names = NameAllocator()
+    parameters.forEach { names.newName(it.name, it) }
     val parameterChecks =
       parameters.filterNot { it.isConstant }.mapNotNull { parameter ->
-        parameter.type.copy(nullable = parameter.isNullable).swiftNestedValidation(CodeBlock.of("%N", parameter.name))
+        val capture = names.newName("parameter")
+        parameter.type
+          .copy(nullable = parameter.isNullable)
+          .swiftNestedValidation(CodeBlock.of("%N", capture))
+          ?.let { check -> CodeBlock.of("%N = %N", capture, parameter.name) to check }
       }
     if (parameterChecks.isNotEmpty()) {
-      builder.add(",\nparameterValidation: {\n%>")
+      // Capture arguments outside the callback scope shared by the canonical validation helpers.
+      builder.add(",\nparameterValidation: { [%L] in\n%>", parameterChecks.map { it.first }.joinToCode(", "))
       builder.add("let mode = %T.request\n", SwiftModelValidation.mode)
       builder.add("var context = %T(collectsDiagnostics: true)\n", SwiftModelValidation.context)
-      parameterChecks.forEach { check -> builder.add("_ = %L\n", check) }
+      parameterChecks.forEach { (_, check) -> builder.add("_ = %L\n", check) }
       builder.add("if !context.diagnostics.isEmpty { throw context.validationError }\n%<}")
     }
     if (!eventStream && !requestBody.isSwiftStreamingRequestBody) {
@@ -5250,7 +5257,8 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedTypeRef.swiftParameterTypeName(): TypeName =
     when {
-      kind == GeneratedTypeRef.Kind.MAP -> DICTIONARY.parameterizedBy(STRING, ANY)
+      kind == GeneratedTypeRef.Kind.MAP ->
+        DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY)
       kind == GeneratedTypeRef.Kind.NAMED && modelOrNull(apiIndex)?.isFreeformObject == true ->
         DICTIONARY.parameterizedBy(STRING, ANY)
 
@@ -5472,7 +5480,8 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.SCALAR -> scalarTypeName()
         GeneratedTypeRef.Kind.NAMED -> namedSwiftTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftTypeName() ?: STRING)
-        GeneratedTypeRef.Kind.MAP -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+        GeneratedTypeRef.Kind.MAP ->
+          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY_VALUE)
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
@@ -5489,7 +5498,8 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.SCALAR -> scalarTypeName()
         GeneratedTypeRef.Kind.NAMED -> namedSwiftPublicTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftPublicTypeName() ?: STRING)
-        GeneratedTypeRef.Kind.MAP -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
+        GeneratedTypeRef.Kind.MAP ->
+          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftPublicTypeName() ?: ANY_VALUE)
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 

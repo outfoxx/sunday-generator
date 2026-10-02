@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
@@ -30,6 +31,56 @@ import java.nio.file.Path
 
 @SwiftTest
 class SwiftParameterToleranceTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `validation helper names do not shadow operation parameters`(
+    frontend: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      parameterNameCollisionApi(frontend, directory, listOf("mode", "context", "valid", "key", "parameter")),
+      registry,
+      SwiftSundayOptions("http://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    registry.generateFiles(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("CollisionTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class CollisionTests: XCTestCase {
+        func testRequestParameters() async throws {
+          let transport = URLSessionTransport(baseURL: URI.Template(format: "https://example.com"))
+          defer { transport.close() }
+          let api = ParametersAPI(transport: transport)
+          _ = try await api.parameters().transportRequest()
+          _ = try await api.parameters(mode: .active, context: .active, valid: [.active], key: ["state": .active], parameter: .active).transportRequest()
+          for operation in [
+            try api.parameters(mode: .unknown("future")),
+            try api.parameters(context: .unknown("future")),
+            try api.parameters(valid: [.unknown("future")]),
+            try api.parameters(key: ["state": .unknown("future")]),
+            try api.parameters(parameter: .unknown("future")),
+          ] {
+            do {
+              _ = try await operation.transportRequest()
+              XCTFail("Shadowed request parameter accepted")
+            } catch SundayError.requestEncodingFailed(reason: .parameterValidationFailed(let error)) {
+              XCTAssertTrue(error is ModelValidationError)
+            }
+          }
+        }
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed", "openapi-all"])
   fun `typed parameters validate on bodyless requests`(

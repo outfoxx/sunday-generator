@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
+import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import io.outfoxx.sunday.jdk.JdkTransport
 import io.outfoxx.sunday.problems.SundayHttpProblem
@@ -37,12 +38,68 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.lang.reflect.Proxy
 import java.nio.file.Path
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
 class KotlinParameterToleranceTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `validation helper names do not shadow operation parameters`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val registry =
+      KotlinTypeRegistry(
+        "io.test",
+        null,
+        GenerationMode.Client,
+        setOf(
+          KotlinTypeRegistry.Option.JacksonAnnotations,
+          KotlinTypeRegistry.Option.ValidationConstraints,
+          KotlinTypeRegistry.Option.UseJakartaPackages,
+        ),
+        problemLibrary = KotlinProblemLibrary.SUNDAY,
+      )
+    KotlinSundayIrGenerator(
+      parameterNameCollisionApi(frontend, directory, listOf("it", "mode", "context")),
+      registry,
+      KotlinSundayOptions("io.test.service", "http://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    val result = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    withNativeBeanValidation("jakarta", result.classLoader) {
+      val mapper =
+        com.fasterxml.jackson.module.kotlin
+          .jacksonObjectMapper()
+      val state = result.classLoader.loadClass("io.test.State")
+      val known = mapper.readValue("\"active\"", state)
+      val unknown = mapper.readValue("\"future\"", state)
+      val service = result.classLoader.loadClass("io.test.service.ParametersAPI")
+      val method = service.methods.single { it.name == "parameters" }
+      JdkTransport(URITemplate("https://example.com"), problemFactory = SundayHttpProblem.Factory).use { transport ->
+        val client =
+          service.constructors
+            .single { it.parameterCount == 3 }
+            .newInstance(transport, listOf(MediaType.JSON), listOf(MediaType.JSON))
+
+        fun request(values: Array<Any?>) {
+          val operation = method.invoke(client, *values) as Operation<*, *, *>
+          runBlocking { operation.transportRequest() }
+        }
+        request(arrayOf(null, null, null))
+        request(arrayOf(known, known, known))
+        for (index in 0..2) {
+          val values = arrayOf<Any?>(known, known, known)
+          values[index] = unknown
+          assertThrows(RuntimeException::class.java) { request(values) }
+        }
+      }
+    }
+  }
+
   @ParameterizedTest
   @CsvSource(
     "raml,javax,sunday",

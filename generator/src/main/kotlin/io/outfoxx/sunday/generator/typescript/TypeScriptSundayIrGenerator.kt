@@ -2956,29 +2956,31 @@ class TypeScriptSundayIrGenerator(
     validation: Map<String, String> = mapOf(),
     lazyRefType: TypeName.Standard? = null,
     allowedValues: List<Any?>? = null,
+    runtimeName: String = "runtime",
   ): CodeBlock {
     val schema =
       when (kind) {
         GeneratedTypeRef.Kind.SCALAR ->
-          formattedScalarTypeName()?.let { typeName -> runtimeResolvedSchema(typeName) } ?: when (name) {
-            "boolean" -> CodeBlock.of("%T.boolean()", Z)
-            "integer", "number" -> CodeBlock.of("%T.number()", Z)
-            "nil" -> CodeBlock.of("%T.null()", Z)
-            "string" -> CodeBlock.of("%T.string()", Z)
-            else -> typeRegistry.schemaInitializer(typeName(serviceTypeName))
-          }
+          formattedScalarTypeName()?.let { typeName -> runtimeResolvedSchema(typeName, runtimeName = runtimeName) }
+            ?: when (name) {
+              "boolean" -> CodeBlock.of("%T.boolean()", Z)
+              "integer", "number" -> CodeBlock.of("%T.number()", Z)
+              "nil" -> CodeBlock.of("%T.null()", Z)
+              "string" -> CodeBlock.of("%T.string()", Z)
+              else -> typeRegistry.schemaInitializer(typeName(serviceTypeName))
+            }
 
         GeneratedTypeRef.Kind.ARRAY ->
-          zodArraySchema(serviceTypeName)
+          zodArraySchema(serviceTypeName, runtimeName)
 
         GeneratedTypeRef.Kind.MAP, GeneratedTypeRef.Kind.UNION ->
-          runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType)
+          runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
 
         GeneratedTypeRef.Kind.NAMED ->
           modelOrNull(index)
             ?.aliasedTypeRef()
-            ?.zodSchema(serviceTypeName, true)
-            ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType)
+            ?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+            ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
       }
 
     val declaration = modelProperties.declarationType(this)
@@ -3013,7 +3015,7 @@ class TypeScriptSundayIrGenerator(
         else -> constrainedSchema
       }
     return if (wireValidation) {
-      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues)
+      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues, runtimeName)
     } else {
       nullableSchema
     }
@@ -3026,6 +3028,7 @@ class TypeScriptSundayIrGenerator(
     required: Boolean,
     validation: Map<String, String>,
     allowedValues: List<Any?>?,
+    runtimeName: String,
   ): CodeBlock {
     val formattedType = declaration.takeIf { it.kind == GeneratedTypeRef.Kind.SCALAR }?.formattedScalarTypeName()
     val primitive =
@@ -3063,9 +3066,10 @@ class TypeScriptSundayIrGenerator(
         if (formattedType != null) {
           // Convert non-JSON transport values with the selected codec, then compare the JSON scalar contract.
           add(
-            "const jsonSchema = %Q({ ...runtime.policy, format: 'json', dateEncoding: %T.ISO8601, " +
+            "const jsonSchema = %Q({ ...%N.policy, format: 'json', dateEncoding: %T.ISO8601, " +
               "arrayBufferEncoding: %T.BASE64 }).resolveSchema(",
             SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+            runtimeName,
             TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
             TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
           )
@@ -3204,21 +3208,25 @@ class TypeScriptSundayIrGenerator(
   private fun runtimeResolvedSchema(
     typeName: TypeName,
     lazyRefType: TypeName.Standard? = null,
+    runtimeName: String = "runtime",
   ): CodeBlock =
     if (lazyRefType == null) {
       CodeBlock
         .builder()
-        .add("runtime.resolveSchema(")
+        .add("%N.resolveSchema(", runtimeName)
         .add(typeRegistry.schemaInitializer(typeName))
         .add(")")
         .build()
     } else {
-      typeRegistry.runtimeSchemaForType(typeName, "runtime", lazyRefType)
+      typeRegistry.runtimeSchemaForType(typeName, runtimeName, lazyRefType)
     }
 
-  private fun GeneratedTypeRef.zodArraySchema(serviceTypeName: TypeName.Standard): CodeBlock {
+  private fun GeneratedTypeRef.zodArraySchema(
+    serviceTypeName: TypeName.Standard,
+    runtimeName: String,
+  ): CodeBlock {
     val elementSchema =
-      arguments.firstOrNull()?.zodSchema(serviceTypeName, true)
+      arguments.firstOrNull()?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
         ?: CodeBlock.of("%T.unknown()", Z)
 
     return CodeBlock
@@ -3347,16 +3355,10 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun GeneratedOperation.typeScriptParameterViews() =
-    mutableSetOf<String>().let { allocatedNames ->
+    NameAllocator().let { names ->
       operationParameterViews(
         identifierName = { parameter -> parameter.name.typeScriptIdentifierName },
-        allocateName = { _, proposedName ->
-          var name = proposedName
-          while (!allocatedNames.add(name)) {
-            name += "_"
-          }
-          name
-        },
+        allocateName = { parameter, proposedName -> names.newName(proposedName, parameter) },
       )
     }
 
@@ -3678,11 +3680,15 @@ class TypeScriptSundayIrGenerator(
 
     val checkedParameters = parameters.filter { !it.isConstant && it.type.kind != GeneratedTypeRef.Kind.SCALAR }
     if (checkedParameters.isNotEmpty()) {
+      val names = NameAllocator()
+      parameters.forEach { names.newName(it.name, it) }
+      val runtimeName = names.newName("runtime", "validation runtime")
       builder.add("\nparameterValidation: () => {%>\n")
       builder.add(
-        "const runtime = %Q({format: 'json', dateEncoding: %T.ISO8601, " +
+        "const %N = %Q({format: 'json', dateEncoding: %T.ISO8601, " +
           "numericDateDecoding: %T.MILLISECONDS_SINCE_EPOCH, " +
           "arrayBufferEncoding: %T.BASE64}, 'request');\n",
+        runtimeName,
         SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
         TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
         TypeName.namedImport("NumericDateDecoding", "@outfoxx/sunday"),
@@ -3690,7 +3696,7 @@ class TypeScriptSundayIrGenerator(
       )
       checkedParameters.forEach { parameter ->
         builder.add("%T.encode(", Z)
-        builder.add(parameter.type.zodSchema(serviceTypeName, parameter.required))
+        builder.add(parameter.type.zodSchema(serviceTypeName, parameter.required, runtimeName = runtimeName))
         builder.add(", %N);\n", parameter.name)
       }
       builder.add("%<},")

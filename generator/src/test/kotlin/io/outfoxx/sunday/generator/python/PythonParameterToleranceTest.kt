@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -33,6 +34,47 @@ import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 class PythonParameterToleranceTest : PythonTest() {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `validation helper names do not shadow operation parameters`(
+    frontend: String,
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val modules =
+      PythonSundayIrGenerator(
+        parameterNameCollisionApi(frontend, directory, listOf("validateParameters")),
+        PythonGeneratorOptions(packageName = "client_api"),
+      ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          import asyncio
+          from sunday import RequestEncodingError
+          from sunday.httpx import HttpxTransport
+          from client_api.parameters import ParametersClient
+          from client_api.models import State
+
+          async def verify():
+              async with HttpxTransport(base_url="https://example.com") as transport:
+                  api = ParametersClient(transport)
+                  await api.parameters().transport_request()
+                  await api.parameters(validate_parameters=State("active")).transport_request()
+                  try:
+                      await api.parameters(validate_parameters=State("future")).transport_request()
+                  except RequestEncodingError:
+                      pass
+                  else:
+                      raise AssertionError("shadowed parameter bypassed validation")
+          asyncio.run(verify())
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed", "openapi-all"])
   fun `typed parameters validate before client transmission and server invocation`(

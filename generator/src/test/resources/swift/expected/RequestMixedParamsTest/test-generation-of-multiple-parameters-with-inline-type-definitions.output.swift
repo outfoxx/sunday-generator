@@ -44,12 +44,12 @@ public final class API<TransportType : Transport> : Sendable {
         headers: [
           "x-type": try ParameterValues.encode(xType)
         ],
-        parameterValidation: {
+        parameterValidation: { [parameter = select, parameter_ = page, parameter__ = xType] in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
-          _ = !context.validatesNestedModels || select.isValid(mode, context: &context)
-          _ = !context.validatesNestedModels || page.isValid(mode, context: &context)
-          _ = !context.validatesNestedModels || xType.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter_.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter__.isValid(mode, context: &context)
           if !context.diagnostics.isEmpty { throw context.validationError }
         }
       )

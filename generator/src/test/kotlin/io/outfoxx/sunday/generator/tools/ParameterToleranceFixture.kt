@@ -21,6 +21,44 @@ import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import java.nio.file.Path
 
+/** Gives validation helpers adversarial parameter names while retaining frontend-produced schemas. */
+internal fun parameterNameCollisionApi(
+  frontend: String,
+  directory: Path,
+  names: List<String>,
+): GeneratedApi {
+  val api = parameterToleranceApi(frontend, directory)
+  val state = GeneratedTypeRef.named("State")
+  return api.copy(
+    services =
+      api.services.map { service ->
+        service.copy(
+          operations =
+            service.operations.map { operation ->
+              operation.copy(
+                path = "/parameters",
+                parameters =
+                  names.map { name ->
+                    val type =
+                      when (name) {
+                        "valid", "values" ->
+                          GeneratedTypeRef(
+                            GeneratedTypeRef.Kind.ARRAY,
+                            "array",
+                            arguments = listOf(state),
+                          )
+                        "key" -> GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = listOf(state))
+                        else -> state
+                      }
+                    GeneratedParameter(name, GeneratedParameter.Location.QUERY, type, required = false)
+                  },
+              )
+            },
+        )
+      },
+  )
+}
+
 /** Exercises each parameter boundary with the same frontend-produced tolerant schemas. */
 internal fun parameterToleranceApi(
   frontend: String,

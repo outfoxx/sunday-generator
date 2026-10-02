@@ -44,12 +44,12 @@ public final class API<TransportType : Transport> : Sendable {
         headers: [
           "type": try ParameterValues.encode(type__)
         ],
-        parameterValidation: {
+        parameterValidation: { [parameter = type, parameter_ = type_, parameter__ = type__] in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
-          _ = !context.validatesNestedModels || type.isValid(mode, context: &context)
-          _ = !context.validatesNestedModels || type_.isValid(mode, context: &context)
-          _ = !context.validatesNestedModels || type__.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter_.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter__.isValid(mode, context: &context)
           if !context.diagnostics.isEmpty { throw context.validationError }
         }
       )

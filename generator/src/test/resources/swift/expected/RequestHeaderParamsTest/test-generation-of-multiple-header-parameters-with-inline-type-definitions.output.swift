@@ -37,11 +37,11 @@ public final class API<TransportType : Transport> : Sendable {
           "category": try ParameterValues.encode(category),
           "type": try ParameterValues.encode(type)
         ],
-        parameterValidation: {
+        parameterValidation: { [parameter = category, parameter_ = type] in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
-          _ = !context.validatesNestedModels || category.isValid(mode, context: &context)
-          _ = !context.validatesNestedModels || type.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter_.isValid(mode, context: &context)
           if !context.diagnostics.isEmpty { throw context.validationError }
         }
       )

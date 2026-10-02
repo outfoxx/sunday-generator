@@ -41,10 +41,10 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
-        parameterValidation: {
+        parameterValidation: { [parameter = obj] in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
-          _ = !context.validatesNestedModels || obj.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || parameter.isValid(mode, context: &context)
           if !context.diagnostics.isEmpty { throw context.validationError }
         }
       ),

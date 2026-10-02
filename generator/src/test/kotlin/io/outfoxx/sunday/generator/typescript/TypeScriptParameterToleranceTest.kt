@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.Tolerance
+import io.outfoxx.sunday.generator.tools.parameterNameCollisionApi
 import io.outfoxx.sunday.generator.tools.parameterToleranceApi
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
@@ -31,6 +32,53 @@ import java.nio.file.Path
 
 @TypeScriptTest
 class TypeScriptParameterToleranceTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `validation helper names do not shadow operation parameters`(
+    frontend: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    TypeScriptSundayIrGenerator(
+      parameterNameCollisionApi(frontend, directory, listOf("runtime", "runtime_", "values")),
+      registry,
+      TypeScriptSundayOptions("http://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("CollisionCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {FetchTransport} from '@outfoxx/sunday';
+            import {createParametersAPI} from './parameters-api.js';
+            import {State} from './state.js';
+            const api = createParametersAPI(new FetchTransport('https://example.com'));
+            await api.parameters(undefined, undefined, undefined).transportRequest();
+            await api.parameters(State.Active, State.Active, [State.Active]).transportRequest();
+            const unknown = State.fromValue('future');
+            for (const operation of [
+              api.parameters(unknown, State.Active, [State.Active]),
+              api.parameters(State.Active, unknown, [State.Active]),
+              api.parameters(State.Active, State.Active, [unknown]),
+            ]) {
+              try { await operation.transportRequest(); } catch { continue; }
+              throw new Error('shadowed parameter bypassed validation');
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("CollisionCheck", "!collision-check") to check),
+        "collision-check",
+        esm = true,
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed", "openapi-all"])
   fun `typed parameters revalidate at each request boundary`(
