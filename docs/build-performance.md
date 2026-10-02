@@ -67,3 +67,13 @@ Use `python3 scripts/ci/measure.py ./gradlew check --profile` to record elapsed 
 Compare three forced test executions with warm dependencies and consistent toolchain versions. Add `-I scripts/ci/force-tests.gradle.kts` to the measurement command to force test tasks while leaving compilation incremental. Measure cold dependency caches separately; do not erase developers' shared caches. Keep test counts, skips, production coverage class inventory, and line/branch denominators alongside timings. Changes in class names from splitting tests must not remove cases or assertions.
 
 The initial goals are six minutes locally and twenty minutes in CI, subject to measurement. Python environment pooling, persistent/incremental compiler services, cross-test output caches, and 16-core runners remain deferred.
+
+## Swift dependency build reuse
+
+Swift CI partitions prepare a stable workspace before starting JUnit. The cache key includes the partition, OS/architecture, exact Xcode/Swift/SDK fingerprint, package manifests, and preparation/compiler recipe. Preparation additionally rejects incompatible or relocated workspaces. A cache miss may resolve dependencies online; an exact prepared hit skips resolution and builds its dependency target with networking denied.
+
+Only dependency products are retained. Preparation and post-test cleanup remove generated source files, test sources, generated modules, object directories, and XCTest products. Generated fixtures still pass through the Swift compiler on every test. `SwiftCompilerCacheTest` proves that deleting a previously compiled declaration makes a later reference fail.
+
+CI supplies `SUNDAY_SWIFT_PREPARED_WORKSPACE` and requires one Gradle test JVM for that workspace. The compiler takes a file lock to prevent concurrent reuse. Every prepared Swift build/test invocation runs under a macOS sandbox that denies network access, including child processes; SwiftPM's nested sandbox is disabled because nested sandbox application is not supported. Missing dependencies fail instead of silently fetching during test execution. Local runtime overrides continue using the normal temporary-workspace path.
+
+For a local comparison, run `python3 scripts/ci/swift_cache.py prepare --workspace /absolute/cache/workspace --jobs 3`, then set `SUNDAY_SWIFT_PREPARED_WORKSPACE` for the existing Gradle test command with `-PcompilerTestForks=1 -PswiftCompilerJobs=3`. Include preparation and cache transfer in end-to-end measurements. Compare identical tag expressions and toolchains, and distinguish first population from restored-cache runs.

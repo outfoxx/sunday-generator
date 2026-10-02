@@ -97,6 +97,8 @@ jobs:
         if-no-files-found: error
 
   swift:
+    env:
+      SUNDAY_SWIFT_PREPARED_WORKSPACE: ${{ github.workspace }}/generator/build/validation/swift/prepared/${{ matrix.partition }}
     name: Swift (${{ matrix.partition }})
     needs: prepare
     runs-on: macos-26
@@ -123,16 +125,26 @@ jobs:
     - name: Restore shared JVM harness
       run: python3 scripts/ci/harness.py restore --commit "$GITHUB_SHA"
     - name: Select native Swift compiler
+      id: swift-toolchain
       run: |
         sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
         xcodebuild -version
         swift --version
+        TOOLCHAIN=$( { xcodebuild -version; swift --version; xcrun --show-sdk-version; } | shasum -a 256 | cut -d ' ' -f 1)
+        echo "fingerprint=$TOOLCHAIN" >> "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
       with:
         path: generator/build/validation/swift/package-cache
         key: ${{ runner.os }}-swiftpm-validation-${{ hashFiles('generator/src/test/resources/swift/compile/local/Package.resolved') }}
         restore-keys: |
           ${{ runner.os }}-swiftpm-validation-
+    - uses: actions/cache/restore@v4
+      id: swift-build-cache
+      with:
+        path: ${{ env.SUNDAY_SWIFT_PREPARED_WORKSPACE }}
+        key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ matrix.partition }}-${{ steps.swift-toolchain.outputs.fingerprint }}-${{ hashFiles('generator/src/test/resources/swift/compile/local/Package.*', 'scripts/ci/swift_cache.py', 'generator/src/test/kotlin/io/outfoxx/sunday/generator/swift/tools/LocalSwiftCompiler.kt') }}
+    - name: Prepare Swift dependencies
+      run: python3 scripts/ci/swift_cache.py prepare --workspace "$SUNDAY_SWIFT_PREPARED_WORKSPACE" --jobs 3
     - name: Test Swift partition
       env:
         TEST_TAGS: ${{ matrix.tags }}
@@ -140,6 +152,14 @@ jobs:
         python3 scripts/ci/measure.py ./gradlew :generator:test --profile -I scripts/ci/precompiled.gradle
         --dependency-verification strict -PuseLocalSundayKt=false
         -PcompilerTestForks=1 -PswiftCompilerJobs=3 -PtestTags="$TEST_TAGS"
+    - name: Remove generated Swift cache products
+      if: always()
+      run: python3 scripts/ci/swift_cache.py clean --workspace "$SUNDAY_SWIFT_PREPARED_WORKSPACE"
+    - uses: actions/cache/save@v4
+      if: success() && steps.swift-build-cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ env.SUNDAY_SWIFT_PREPARED_WORKSPACE }}
+        key: ${{ steps.swift-build-cache.outputs.cache-primary-key }}
     - name: Package results
       if: always()
       env:

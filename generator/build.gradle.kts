@@ -168,6 +168,10 @@ tasks.withType<Test>().configureEach {
   // AMF's Scala static initialization can deadlock when first used by concurrent test threads.
   systemProperty("junit.jupiter.execution.parallel.enabled", "false")
   systemProperty("sunday.validation.swift.jobs", swiftCompilerJobs)
+  providers.environmentVariable("SUNDAY_SWIFT_PREPARED_WORKSPACE").orNull?.let { workspace ->
+    require(compilerTestForks == 1) { "A prepared Swift workspace requires compilerTestForks=1" }
+    systemProperty("sunday.validation.swift.workspace", workspace)
+  }
   systemProperty(
     "sunday.validation.kotlin.classpath",
     (files(layout.buildDirectory.dir("compiler-fixtures")) + generatedCodeClasspath).asPath,
