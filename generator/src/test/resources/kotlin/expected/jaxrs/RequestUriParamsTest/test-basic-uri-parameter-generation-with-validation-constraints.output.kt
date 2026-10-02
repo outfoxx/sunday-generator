@@ -1,8 +1,9 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.javax.CascadedValues
 import io.outfoxx.sunday.validation.javax.EntitySchema
+import io.outfoxx.sunday.validation.javax.ModelMode
 import io.test.Test
-import javax.validation.Valid
 import javax.ws.rs.Consumes
 import javax.ws.rs.DefaultValue
 import javax.ws.rs.GET
@@ -21,7 +22,7 @@ public interface API {
   @EntitySchema
   public fun fetchTest(
     @PathParam(value = "def") def: String,
-    @PathParam(value = "obj") @Valid obj: Test,
+    @PathParam(value = "obj") @CascadedValues(mode = ModelMode.Request::class) obj: Test,
     @PathParam(value = "str-req") strReq: String,
     @PathParam(value = "int") @DefaultValue(value = "5") int: Int,
   ): Response

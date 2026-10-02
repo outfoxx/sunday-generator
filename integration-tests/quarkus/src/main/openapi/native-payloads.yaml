@@ -25,6 +25,20 @@ paths:
           description: Tolerant states
           content:
             application/json: {schema: {$ref: '#/components/schemas/States'}}
+  /native/parameters/{pathState}:
+    get:
+      operationId: parameters
+      parameters:
+        - {name: pathState, in: path, required: true, schema: {$ref: '#/components/schemas/State'}}
+        - {name: queryStates, in: query, schema: {type: array, items: {$ref: '#/components/schemas/State'}}}
+        - {name: headerState, in: header, schema: {$ref: '#/components/schemas/State'}}
+        - {name: cookieState, in: cookie, schema: {$ref: '#/components/schemas/State'}}
+        - {name: openState, in: query, schema: {$ref: '#/components/schemas/OpenState'}}
+      responses:
+        '200':
+          description: Parameters accepted
+          content:
+            application/json: {schema: {$ref: '#/components/schemas/States'}}
 components:
   schemas:
     Code: {type: string, pattern: '^[A-Z]{2}$'}
@@ -35,3 +49,8 @@ components:
       x-unknown-value: unknown
       x-sunday-tolerance: response
     States: {type: array, minItems: 1, items: {$ref: '#/components/schemas/State'}}
+    OpenState:
+      type: string
+      enum: [ready, unknown]
+      x-unknown-value: unknown
+      x-sunday-tolerance: all

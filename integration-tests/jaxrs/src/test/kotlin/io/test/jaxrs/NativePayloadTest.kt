@@ -22,6 +22,7 @@ import io.outfoxx.sunday.validation.jakarta.ServerModelValidation
 import io.test.jaxrs.payloads.API
 import io.test.jaxrs.payloads.APIResource
 import io.test.jaxrs.payloads.CodesValidation
+import io.test.jaxrs.payloads.OpenState
 import io.test.jaxrs.payloads.State
 import jakarta.validation.ConstraintViolationException
 import jakarta.ws.rs.client.Entity
@@ -63,6 +64,17 @@ class NativePayloadTest : JerseyTest() {
             bind(
               APIResource(
                 object : API {
+                  override fun parameters(
+                    pathState: State,
+                    queryStates: List<State>?,
+                    openState: OpenState?,
+                    cookieState: State?,
+                    headerState: State?,
+                  ): Response {
+                    calls.incrementAndGet()
+                    return Response.ok(listOf(pathState)).build()
+                  }
+
                   override fun codes(body: List<String>): Response {
                     calls.incrementAndGet()
                     return Response.ok(if (body == listOf("ZZ", "ZZ")) emptyList<String>() else body).build()
@@ -88,6 +100,33 @@ class NativePayloadTest : JerseyTest() {
 
   @AfterEach
   fun stop() = tearDown()
+
+  @Test
+  fun `plain JAX-RS parameters validate after conversion before delegates`() {
+    target("native/parameters/future").request().get().use { assertEquals(400, it.status) }
+    target("native/parameters/ready")
+      .queryParam("queryStates", "ready", "future")
+      .request()
+      .get()
+      .use { assertEquals(400, it.status) }
+    target("native/parameters/ready")
+      .request()
+      .header("headerState", "future")
+      .get()
+      .use { assertEquals(400, it.status) }
+    target("native/parameters/ready")
+      .request()
+      .cookie("cookieState", "future")
+      .get()
+      .use { assertEquals(400, it.status) }
+    assertEquals(0, calls.get())
+    target("native/parameters/ready")
+      .queryParam("openState", "future")
+      .request()
+      .get()
+      .use { assertEquals(200, it.status) }
+    assertEquals(1, calls.get())
+  }
 
   @Test
   fun `plain JAX-RS validates request collections and tolerant elements before delegates`() {

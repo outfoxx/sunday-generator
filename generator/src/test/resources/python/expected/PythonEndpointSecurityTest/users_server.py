@@ -2,14 +2,28 @@ from __future__ import annotations
 
 from litestar import Router, get, post
 from litestar.connection import ASGIConnection
-from litestar.exceptions import NotAuthorizedException
+from litestar.exceptions import NotAuthorizedException, ValidationException
 from litestar.handlers import BaseRouteHandler
 from litestar.params import FromPath
 from litestar.response import Response
+from pydantic import TypeAdapter, ValidationError
 from sunday.litestar import ServerResponse as _SundayServerResponse
 from typing import Any, Protocol, cast
 
 __all__ = ["UsersService", "create_users_router"]
+
+
+def _decode_request_parameter[T](adapter: TypeAdapter[T], value: object) -> T:
+    try:
+        return adapter.validate_python(value, context={"mode": "request"})
+    except ValidationError as error:
+        raise ValidationException(
+            detail="Request parameter is invalid",
+            extra=error.errors(include_input=False, include_context=False),
+        ) from error
+
+
+_get_user_user_id_adapter: TypeAdapter[str] = TypeAdapter(str)
 
 
 class UsersService(Protocol):
@@ -42,7 +56,9 @@ def create_users_router(service: UsersService) -> Router:
     async def get_user(
         user_id: FromPath[str],
     ) -> str | Response[str]:
-        result = await service.get_user(user_id)
+        result = await service.get_user(
+            _decode_request_parameter(_get_user_user_id_adapter, user_id),
+        )
         if isinstance(result, _SundayServerResponse):
             return cast(
                 str | Response[str],

@@ -136,6 +136,74 @@ class NativePayloadTest {
     }
   }
 
+  @Test
+  fun `typed request parameters fail before the server delegate`() {
+    val before = endpoint.calls.get()
+    HttpClient.newHttpClient().use { client ->
+      for ((path, header) in listOf(
+        "future" to ("headerState" to "ready"),
+        "ready?queryStates=ready&queryStates=future" to ("headerState" to "ready"),
+        "ready" to ("headerState" to "future"),
+        "ready" to ("Cookie" to "cookieState=future"),
+      )) {
+        val request =
+          HttpRequest
+            .newBuilder(baseUri.resolve("/native/parameters/$path"))
+            .header(header.first, header.second)
+            .GET()
+            .build()
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        assertEquals(400, response.statusCode(), response.body())
+        assertEquals(before, endpoint.calls.get())
+      }
+      val request = HttpRequest.newBuilder(baseUri.resolve("/native/parameters/ready?openState=future")).GET().build()
+      assertEquals(200, client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
+      assertEquals(before + 1, endpoint.calls.get())
+    }
+  }
+
+  @Test
+  fun `typed client parameters fail before transmission`() {
+    val sends =
+      java.util.concurrent.atomic
+        .AtomicInteger()
+    val upstream = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+    upstream.createContext("/") { exchange ->
+      sends.incrementAndGet()
+      exchange.responseHeaders.set("Content-Type", "application/json")
+      val body = "[\"ready\"]".toByteArray()
+      exchange.sendResponseHeaders(200, body.size.toLong())
+      exchange.responseBody.use { it.write(body) }
+      exchange.close()
+    }
+    upstream.start()
+    val client =
+      QuarkusRestClientBuilder
+        .newBuilder()
+        .baseUri(URI.create("http://127.0.0.1:${upstream.address.port}"))
+        .build(NativePayloadsAPI::class.java)
+    try {
+      val future = State.Unknown("future")
+      assertNativeFailure { client.parameters(future, null, null, null, null) }
+      assertNativeFailure { client.parameters(State.Ready, listOf(future), null, null, null) }
+      assertNativeFailure { client.parameters(State.Ready, null, null, null, future) }
+      assertNativeFailure { client.parameters(State.Ready, null, null, future, null) }
+      assertEquals(0, sends.get())
+      client.parameters(
+        State.Ready,
+        null,
+        io.test.quarkus.payloads.client.OpenState
+          .Unknown("future"),
+        null,
+        null,
+      )
+      assertEquals(1, sends.get())
+    } finally {
+      (client as AutoCloseable).close()
+      upstream.stop(0)
+    }
+  }
+
   private fun assertNativeFailure(call: () -> Unit) {
     val failure = assertThrows(RuntimeException::class.java, call)
     assertTrue(

@@ -3676,6 +3676,26 @@ class TypeScriptSundayIrGenerator(
         builder.add(",")
       }
 
+    val checkedParameters = parameters.filter { !it.isConstant && it.type.kind != GeneratedTypeRef.Kind.SCALAR }
+    if (checkedParameters.isNotEmpty()) {
+      builder.add("\nparameterValidation: () => {%>\n")
+      builder.add(
+        "const runtime = %Q({format: 'json', dateEncoding: %T.ISO8601, " +
+          "numericDateDecoding: %T.MILLISECONDS_SINCE_EPOCH, " +
+          "arrayBufferEncoding: %T.BASE64}, 'request');\n",
+        SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+        TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+        TypeName.namedImport("NumericDateDecoding", "@outfoxx/sunday"),
+        TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+      )
+      checkedParameters.forEach { parameter ->
+        builder.add("%T.encode(", Z)
+        builder.add(parameter.type.zodSchema(serviceTypeName, parameter.required))
+        builder.add(", %N);\n", parameter.name)
+      }
+      builder.add("%<},")
+    }
+
     if (includeSignal) {
       builder.add("\nsignal: signal,")
     }

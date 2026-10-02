@@ -37,4 +37,15 @@ class NativePayloadEndpoint : NativePayloadsAPI {
     calls.incrementAndGet()
     return RestResponse.ok(listOf(State.Unknown("future")))
   }
+
+  override fun parameters(
+    pathState: State,
+    queryStates: List<State>?,
+    openState: io.test.quarkus.payloads.server.OpenState?,
+    cookieState: State?,
+    headerState: State?,
+  ): RestResponse<List<State>> {
+    calls.incrementAndGet()
+    return RestResponse.ok(listOf(pathState))
+  }
 }

@@ -43,7 +43,15 @@ public final class API<TransportType : Transport> : Sendable {
         acceptTypes: self.defaultAcceptTypes,
         headers: [
           "type": try ParameterValues.encode(type__)
-        ]
+        ],
+        parameterValidation: {
+          let mode = ModelMode.request
+          var context = ModelValidationContext(collectsDiagnostics: true)
+          _ = !context.validatesNestedModels || type.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || type_.isValid(mode, context: &context)
+          _ = !context.validatesNestedModels || type__.isValid(mode, context: &context)
+          if !context.diagnostics.isEmpty { throw context.validationError }
+        }
       )
     )
   }

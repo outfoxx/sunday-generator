@@ -200,6 +200,28 @@ class PythonClientRenderer(
         )
       }
 
+    val checkedParameters = validationParameters()
+    val validatedBody =
+      if (checkedParameters.isEmpty()) {
+        body
+      } else {
+        PythonCodeBlock.of(
+          "\n        def validate_parameters() -> None:\n%C\n\n%C",
+          PythonCodeBlock.join(
+            checkedParameters.map { (name, type) ->
+              PythonCodeBlock.of(
+                "            if %L is not None:\n" +
+                  "                %L.validate_python(%L, strict=True, context={\"mode\": \"request\"})",
+                name,
+                type.adapterName(),
+                name,
+              )
+            },
+            separator = "\n",
+          ),
+          body,
+        )
+      }
     val functionPrefix = if (exchange != null && streaming == null) "async def" else "def"
 
     return if (!hasSignatureParameters()) {
@@ -213,7 +235,7 @@ class PythonClientRenderer(
         id.pythonIdentifierName,
         operationReturnType,
         id,
-        body,
+        validatedBody,
       )
     } else {
       PythonCodeBlock.of(
@@ -230,7 +252,7 @@ class PythonClientRenderer(
         signature,
         operationReturnType,
         id,
-        body,
+        validatedBody,
       )
     }
   }
@@ -279,7 +301,15 @@ class PythonClientRenderer(
       httpMethod(),
       renderPathTemplate(),
       renderTemplateParameterArgument(),
-      renderParameterArgument(),
+      PythonCodeBlock.of(
+        "%C%C",
+        renderParameterArgument(),
+        if (validationParameters().isNotEmpty()) {
+          PythonCodeBlock.of("            parameter_validation=validate_parameters,\n")
+        } else {
+          PythonCodeBlock.of("")
+        },
+      ),
       renderRequestPayloadSpec(defaultContentTypes),
       renderAcceptTypes(defaultAcceptTypes),
       security?.let { PythonCodeBlock.of("            security=%C,\n", it.renderBindings()) } ?: PythonCodeBlock.of(""),
@@ -631,7 +661,7 @@ class PythonClientRenderer(
             .orEmpty()
             .filter { variant -> variant.runtimeType() == null }
             .map { variant -> variant.type }
-        responseTypes + eventTypes + headerTypes + requestTypes
+        responseTypes + eventTypes + headerTypes + requestTypes + operation.validationParameters().map { it.second }
       }.distinct()
 
   private fun GeneratedTypeRef.renderAdapterConstant(): PythonCodeBlock {
@@ -960,6 +990,11 @@ class PythonClientRenderer(
           GeneratedParameter.Location.COOKIE,
         )
     }
+
+  private fun GeneratedOperation.validationParameters(): List<Pair<String, GeneratedTypeRef>> =
+    httpParameters()
+      .filter { it.constantValue == null && it.type.kind != GeneratedTypeRef.Kind.SCALAR }
+      .map { it.name.pythonIdentifierName to it.type } + listOfNotNull(queryString?.let { "query_string" to it })
 
   private fun GeneratedOperation.requestParameters(): List<GeneratedParameter> {
     val templateVariables = rfc6570Variables()

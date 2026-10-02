@@ -5120,13 +5120,24 @@ class SwiftSundayIrGenerator(
     )
 
     security?.let { builder.add(",\nsecurity: %L", it) }
+    val parameterChecks =
+      parameters.filterNot { it.isConstant }.mapNotNull { parameter ->
+        parameter.type.copy(nullable = parameter.isNullable).swiftNestedValidation(CodeBlock.of("%N", parameter.name))
+      }
+    if (parameterChecks.isNotEmpty()) {
+      builder.add(",\nparameterValidation: {\n%>")
+      builder.add("let mode = %T.request\n", SwiftModelValidation.mode)
+      builder.add("var context = %T(collectsDiagnostics: true)\n", SwiftModelValidation.context)
+      parameterChecks.forEach { check -> builder.add("_ = %L\n", check) }
+      builder.add("if !context.diagnostics.isEmpty { throw context.validationError }\n%<}")
+    }
     if (!eventStream && !requestBody.isSwiftStreamingRequestBody) {
       requestBody?.type?.swiftPayloadValidation("request")?.let { validation ->
         builder.add(",\nrequestValidation: %L", validation)
       }
     }
     val arguments = builder.build()
-    return if (asSpec && security != null) {
+    return if (asSpec && (security != null || parameterChecks.isNotEmpty())) {
       CodeBlock.of(
         "spec: %T%L(%>\n%L%<\n)",
         OPERATION_SPEC,

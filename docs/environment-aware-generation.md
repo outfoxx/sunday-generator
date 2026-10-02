@@ -110,7 +110,16 @@ wire presence, and unknown keys for common constraints. Existing timestamp seria
 Swift also validates event envelopes, external discriminators, and unions stored as `AnyValue` through
 normalized field views; these checks do not construct or reparse application models.
 
-Raw binary streams and parameter conversion retain their transport-specific contracts.
+Typed path, query, header, and cookie parameters participate in request validation wherever the target
+supports that parameter location. Conversion can retain an unknown value; request-mode validation then
+rejects it before transmission or server delegate invocation unless the schema permits request tolerance.
+Collection elements follow the same rule. Sunday transports invoke the generated `parameterValidation`
+(`parameter_validation` in Python) callback on every request build, including bodyless and deferred
+requests, so mutating a captured collection cannot bypass a previous check. The callback delegates to
+the same native model validators (or Swift canonical validators) as body validation. Optional parameters
+remain omitted when absent. Invalid event requests close without reconnecting; event APIs preserve
+native validation failures within their transport error contract. Raw binary streams retain their
+transport-specific contracts.
 
 ## Scoped policies
 

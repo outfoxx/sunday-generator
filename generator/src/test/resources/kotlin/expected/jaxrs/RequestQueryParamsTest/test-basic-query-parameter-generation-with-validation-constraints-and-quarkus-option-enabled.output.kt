@@ -1,8 +1,9 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.jakarta.CascadedValues
 import io.outfoxx.sunday.validation.jakarta.EntitySchema
+import io.outfoxx.sunday.validation.jakarta.ModelMode
 import io.test.Test
-import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DefaultValue
@@ -21,7 +22,7 @@ public interface API {
   @Path(value = "/tests")
   @EntitySchema
   public fun fetchTest(
-    @RestQuery @NotNull @Valid obj: Test,
+    @RestQuery @NotNull @CascadedValues(mode = ModelMode.Request::class) obj: Test,
     @RestQuery @NotNull strReq: String,
     @RestQuery @DefaultValue(value = "5") int: Int,
   ): RestResponse<Test>

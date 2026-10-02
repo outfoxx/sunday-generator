@@ -386,7 +386,8 @@ class KotlinSundayIrGenerator(
       services
         .flatMap { it.operations }
         .flatMap { operation ->
-          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type)
+          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type) +
+            operation.parameters.map { it.type }
         }.filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
         .distinct()
         .forEachIndexed { index, reference ->
@@ -2276,6 +2277,7 @@ class KotlinSundayIrGenerator(
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\n")
     builder.add("pathTemplate = %S", path)
+    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2349,6 +2351,7 @@ class KotlinSundayIrGenerator(
     builder.add("%T(⇥\n", SUNDAY_OPERATION_SPEC)
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\npathTemplate = %S", path)
+    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2454,6 +2457,36 @@ class KotlinSundayIrGenerator(
           parameter.typeName().isNullable -> defaultValue("null")
         }
       }.build()
+
+  private fun parameterValidation(parameters: List<GeneratedOperationParameter>): CodeBlock? {
+    if (KotlinTypeRegistry.Option.ValidationConstraints !in typeRegistry.options) return null
+    val checked =
+      parameters.filter {
+        !it.isConstant &&
+          (it.type.requiresCascadedValidation() || nativePayloads.name(it.type) != null)
+      }
+    if (checked.isEmpty()) return null
+    return CodeBlock
+      .builder()
+      .add("{\n")
+      .indent()
+      .apply {
+        checked.forEach { parameter ->
+          val schema = nativePayloads.name(parameter.type)
+          if (parameter.isNullable) beginControlFlow("%N?.let", parameter.name)
+          add(
+            "%T.request(%L",
+            typeRegistry.beanValidationTypes.modelValidation,
+            if (parameter.isNullable) "it" else parameter.name,
+          )
+          schema?.let { add(", %T::class.java", it) }
+          add(")\n")
+          if (parameter.isNullable) endControlFlow()
+        }
+      }.unindent()
+      .add("}")
+      .build()
+  }
 
   private fun parametersCode(
     fieldName: String,

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from .models import Configuration, ProjectQuery, ProjectView, UpdateProjectRequest
 from litestar import Request, Router, delete, get, head, post, put, route
+from litestar.exceptions import ValidationException
 from litestar.params import Body, CookieParameter, FromPath, HeaderParameter, QueryParameter
 from litestar.response import Response
+from pydantic import TypeAdapter, ValidationError
 from sunday.litestar import (
     ServerResponse as _SundayServerResponse,
     query_model as _sunday_query_model,
@@ -15,6 +17,40 @@ __all__ = ["GetProjectResponseHeaders", "ProjectsService", "create_projects_rout
 
 
 GetProjectResponseHeaders = TypedDict("GetProjectResponseHeaders", {"X-Revision": Required[int]}, total=False)
+
+
+def _decode_request_parameter[T](adapter: TypeAdapter[T], value: object) -> T:
+    try:
+        return adapter.validate_python(value, context={"mode": "request"})
+    except ValidationError as error:
+        raise ValidationException(
+            detail="Request parameter is invalid",
+            extra=error.errors(include_input=False, include_context=False),
+        ) from error
+
+
+_get_project_project_id_adapter: TypeAdapter[str] = TypeAdapter(str)
+
+
+_get_project_session_id_adapter: TypeAdapter[str] = TypeAdapter(str)
+
+
+_update_project_project_id_adapter: TypeAdapter[str] = TypeAdapter(str)
+
+
+_update_project_include_archived_adapter: TypeAdapter[bool | None] = TypeAdapter(bool | None)
+
+
+_update_project_include_archived_default = _update_project_include_archived_adapter.validate_python(False)
+
+
+_update_project_x_trace_id_adapter: TypeAdapter[str] = TypeAdapter(str)
+
+
+_head_project_project_id_adapter: TypeAdapter[str] = TypeAdapter(str)
+
+
+_delete_project_avatar_project_id_adapter: TypeAdapter[str] = TypeAdapter(str)
 
 
 class ProjectsService(Protocol):
@@ -73,7 +109,10 @@ def create_projects_router(service: ProjectsService) -> Router:
         project_id: FromPath[str],
         session_id: Annotated[str, CookieParameter(name="session-id")],
     ) -> ProjectView | Response[ProjectView]:
-        result = await service.get_project(project_id, session_id)
+        result = await service.get_project(
+            _decode_request_parameter(_get_project_project_id_adapter, project_id),
+            _decode_request_parameter(_get_project_session_id_adapter, session_id),
+        )
         if isinstance(result, _SundayServerResponse):
             return cast(
                 ProjectView | Response[ProjectView],
@@ -88,7 +127,12 @@ def create_projects_router(service: ProjectsService) -> Router:
         x_trace_id: Annotated[str, HeaderParameter(name="X-Trace-Id")],
         include_archived: Annotated[bool | None, QueryParameter(name="includeArchived")] = False,
     ) -> ProjectView | Response[ProjectView]:
-        result = await service.update_project(project_id, data, x_trace_id, include_archived)
+        result = await service.update_project(
+            _decode_request_parameter(_update_project_project_id_adapter, project_id),
+            data,
+            _decode_request_parameter(_update_project_x_trace_id_adapter, x_trace_id),
+            _decode_request_parameter(_update_project_include_archived_adapter, include_archived),
+        )
         if isinstance(result, _SundayServerResponse):
             return cast(
                 ProjectView | Response[ProjectView],
@@ -139,7 +183,9 @@ def create_projects_router(service: ProjectsService) -> Router:
     async def head_project(
         project_id: FromPath[str],
     ) -> None:
-        result = await service.head_project(project_id)
+        result = await service.head_project(
+            _decode_request_parameter(_head_project_project_id_adapter, project_id),
+        )
         if isinstance(result, _SundayServerResponse):
             return cast(
                 None,
@@ -161,7 +207,9 @@ def create_projects_router(service: ProjectsService) -> Router:
     async def delete_project_avatar(
         project_id: FromPath[str],
     ) -> None:
-        result = await service.delete_project_avatar(project_id)
+        result = await service.delete_project_avatar(
+            _decode_request_parameter(_delete_project_avatar_project_id_adapter, project_id),
+        )
         if isinstance(result, _SundayServerResponse):
             return cast(
                 None,

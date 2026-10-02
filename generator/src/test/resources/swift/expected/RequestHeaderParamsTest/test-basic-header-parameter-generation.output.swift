@@ -40,7 +40,13 @@ public final class API<TransportType : Transport> : Sendable {
           "obj": try ParameterValues.encode(obj),
           "str-req": try ParameterValues.encode(strReq),
           "int": try ParameterValues.encode(int)
-        ]
+        ],
+        parameterValidation: {
+          let mode = ModelMode.request
+          var context = ModelValidationContext(collectsDiagnostics: true)
+          _ = !context.validatesNestedModels || obj.isValid(mode, context: &context)
+          if !context.diagnostics.isEmpty { throw context.validationError }
+        }
       ),
       responseValidation: { value in
         let mode = ModelMode.response

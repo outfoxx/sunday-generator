@@ -1010,6 +1010,11 @@ class KotlinJAXRSIrGenerator(
       }
 
     operationParameters
+      .withLocation(GeneratedParameter.Location.COOKIE)
+      .map { parameter -> parameter.source.parameterSpec(parameter.name, GeneratedParameter.Location.COOKIE) }
+      .forEach(functionBuilder::addParameter)
+
+    operationParameters
       .withLocation(GeneratedParameter.Location.HEADER)
       .forEach { parameter ->
         parameter.source.headerParameterSpecOrNull(parameter.name, functionBuilder)?.let(functionBuilder::addParameter)
@@ -1734,11 +1739,22 @@ class KotlinJAXRSIrGenerator(
       addAnnotation(beanValidationTypes.notNull)
     }
 
-    if (parameter.type.requiresCascadedValidation() && typeName.copy(nullable = false) != ANY) {
+    if (parameter.location != GeneratedParameter.Location.BODY &&
+      (
+        parameter.type.requiresCascadedValidation() ||
+          modelProperties.declarationType(parameter.type).kind in
+          setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP)
+      )
+    ) {
+      addAnnotation(
+        AnnotationSpec
+          .builder(beanValidationTypes.cascadedValues)
+          .addMember("mode = %T::class", beanValidationTypes.requestMode)
+          .build(),
+      )
+    } else if (parameter.type.requiresCascadedValidation() && typeName.copy(nullable = false) != ANY) {
       addAnnotation(beanValidationTypes.valid)
-      if (parameter.location == GeneratedParameter.Location.BODY) {
-        addAnnotation(beanValidationTypes.requestGroupConversion())
-      }
+      addAnnotation(beanValidationTypes.requestGroupConversion())
     }
 
     parameter.validation.validationAnnotations(parameter.type).forEach(::addAnnotation)

@@ -1,8 +1,9 @@
 package io.test.service
 
+import io.outfoxx.sunday.validation.jakarta.CascadedValues
 import io.outfoxx.sunday.validation.jakarta.EntitySchema
+import io.outfoxx.sunday.validation.jakarta.ModelMode
 import io.test.Test
-import jakarta.validation.Valid
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
@@ -20,7 +21,7 @@ public interface API {
   @Path(value = "/tests")
   @EntitySchema
   public fun fetchTest(
-    @RestHeader(value = "obj") @Valid obj: Test?,
+    @RestHeader(value = "obj") @CascadedValues(mode = ModelMode.Request::class) obj: Test?,
     @RestHeader(value = "str") str: String?,
     @RestHeader(value = "int") int: Int?,
     @RestHeader(value = "def1") @DefaultValue(value = "test") def1: String,

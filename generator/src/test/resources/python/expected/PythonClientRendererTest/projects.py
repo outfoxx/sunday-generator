@@ -36,6 +36,9 @@ _scalar_integer_adapter: TypeAdapter[int] = TypeAdapter(int)
 _array_project_view_adapter: TypeAdapter[list[ProjectView]] = TypeAdapter(list[ProjectView])
 
 
+_named_project_query_adapter: TypeAdapter[ProjectQuery] = TypeAdapter(ProjectQuery)
+
+
 _named_update_project_request_adapter: TypeAdapter[UpdateProjectRequest] = TypeAdapter(UpdateProjectRequest)
 
 
@@ -200,12 +203,18 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         query_string: ProjectQuery,
     ) -> Operation[list[ProjectView], TransportRequestT, TransportResponseT]:
         """Create the listProjects operation."""
+
+        def validate_parameters() -> None:
+            if query_string is not None:
+                _named_project_query_adapter.validate_python(query_string, strict=True, context={"mode": "request"})
+
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
             path_template="/projects",
             parameters=(
                 ParameterSpec(name="", value=parameter_object(query_string), location=ParameterLocation.QUERY),
             ),
+            parameter_validation=validate_parameters,
             accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, list[ProjectView]] = OperationSpec(
