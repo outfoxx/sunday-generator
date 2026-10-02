@@ -220,6 +220,8 @@ class KotlinDirectionalToleranceTest {
       assertEquals(emptySet<String>(), nativeConstraintPaths(namespace, retained, "Response"))
       mapper.readValue("""{"kind":"created","count":1}""", type)
       for (invalid in listOf(
+        """{"kind":"x"}""",
+        """{"kind":"FUTURE"}""",
         """{"kind":"future","note":"x"}""",
         """{"kind":"future","note":null}""",
         """{"kind":"created","count":0}""",

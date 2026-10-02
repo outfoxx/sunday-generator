@@ -174,7 +174,7 @@ class PythonDirectionalToleranceTest : PythonTest() {
               raise AssertionError("fallback escaped through known branch")
           assert adapter.dump_python(unknown, mode="json") == raw
           adapter.validate_python({"kind": "created", "count": 1})
-          for invalid in [{"kind": "created"}, {"kind": None}, {}]:
+          for invalid in [{"kind": "x"}, {"kind": "FUTURE"}, {"kind": "created"}, {"kind": None}, {}]:
               try:
                   adapter.validate_python(invalid)
               except ValidationError:

@@ -266,7 +266,7 @@ remains public. An operation's wire-security override does not discard inherited
 metadata. Composition captures each fragment's effective authentication before merging defaults and
 rejects conflicting definitions for the same logical scheme.
 
-`GeneratedApi.projectEnvironment(context)` validates client selection and projects policy/security
+`GeneratedApi.projectEnvironment(context)` validates client acquisition or server validation-provider selection before projecting policy/security
 metadata to the chosen role and profile, including auth on protocol servers. It removes other profiles
 and role bindings while retaining logical schemes, wire requirements, scopes, and standard OAuth/OIDC
 metadata. Consequently, public wire metadata itself must contain public URLs; projection does not rewrite

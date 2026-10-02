@@ -1164,7 +1164,12 @@ class TypeScriptSundayIrGenerator(
         exposedProperties.forEach { property ->
           add("    %S: ", property.serializationName ?: property.name)
           if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
-            add("%T.string().refine((value) => ![%L].includes(value)),\n", Z, mappedValues)
+            if (fallback.enumModel == null) {
+              add(property.copy(required = true).zodSchema(typeName))
+            } else {
+              add("%T.string()", Z)
+            }
+            add(".refine((value) => ![%L].includes(value)),\n", mappedValues)
           } else {
             add(property.zodSchema(typeName))
             add(",\n")

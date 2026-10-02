@@ -183,7 +183,7 @@ class SwiftDirectionalToleranceTest {
           XCTAssertEqual(retainedWire["note"] as? String, "valid")
           XCTAssertEqual(retainedWire["extra"] as? Bool, true)
           _ = try JSONDecoder().decode($eventType.self, from: Data(#"{"kind":"created","count":1}"#.utf8))
-          for raw in [#"{"kind":"future","note":"x"}"#, #"{"kind":"future","note":null}"#, #"{"kind":"created"}"#, #"{"kind":null}"#, "{}"] {
+          for raw in [#"{"kind":"x"}"#, #"{"kind":"FUTURE"}"#, #"{"kind":"future","note":"x"}"#, #"{"kind":"future","note":null}"#, #"{"kind":"created"}"#, #"{"kind":null}"#, "{}"] {
             XCTAssertThrowsError(try JSONDecoder().decode($eventType.self, from: Data(raw.utf8)))
           }
         }

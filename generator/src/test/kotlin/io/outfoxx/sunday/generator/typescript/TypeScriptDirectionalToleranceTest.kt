@@ -134,7 +134,7 @@ class TypeScriptDirectionalToleranceTest {
             if (request.resolveSchema(EventSchema).safeEncode(disguised).success) throw new Error('fallback escaped through known branch');
             if (JSON.stringify(schema.encode(unknown)) !== JSON.stringify(raw)) throw new Error('lost payload');
             schema.parse({kind:'created',count:1});
-            for (const invalid of [{kind:'created'},{kind:null},{}]) {
+            for (const invalid of [{kind:'x'},{kind:'FUTURE'},{kind:'created'},{kind:null},{}]) {
               if (schema.safeParse(invalid).success) throw new Error('invalid branch accepted');
             }
             """.trimIndent(),

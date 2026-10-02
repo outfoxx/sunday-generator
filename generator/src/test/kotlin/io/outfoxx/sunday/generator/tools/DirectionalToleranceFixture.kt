@@ -44,6 +44,7 @@ internal fun directionalToleranceApi(
       discriminator: {propertyName: kind, mapping: {created: '#/components/schemas/Created'}}
       x-sunday-tolerance: response
       properties:
+        kind: {type: string, minLength: 2, pattern: "^[a-z]+$"}
         note: {type: string, minLength: 2}
         state: {${'$'}ref: '#/components/schemas/State'}
     Created:
@@ -115,7 +116,7 @@ internal fun directionalToleranceApi(
         discriminator: kind
         (sunday.tolerance): response
         properties:
-          kind: string
+          kind: {type: string, minLength: 2, pattern: "^[a-z]+$"}
           note?: {type: string, minLength: 2}
           state?: State
       Created:

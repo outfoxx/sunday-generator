@@ -28,8 +28,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedProtocol
  * A selected profile remains explicit so downstream generators cannot silently select another environment.
  */
 fun GeneratedApi.projectEnvironment(context: GenerationContext): GeneratedApi {
-  if (context.role == GenerationMode.Client) {
-    services.forEach { service -> service.operations.forEach { clientSecurity(service, it, context) } }
+  services.forEach { service ->
+    service.operations.forEach { operation ->
+      when (context.role) {
+        GenerationMode.Client -> clientSecurity(service, operation, context)
+        GenerationMode.Server -> endpointSecurityPolicy(service, operation, context)
+      }
+    }
   }
 
   fun auth(value: GeneratedAuth?): GeneratedAuth? =

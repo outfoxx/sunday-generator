@@ -165,7 +165,7 @@ private fun GeneratedModel.discriminatorFallbackOrNull(
     hierarchy = this,
     discriminatorProperty =
       if (enumModel == null) {
-        discriminatorProperty.copy(allowedValues = null, defaultValue = null, validation = emptyMap())
+        discriminatorProperty.copy(allowedValues = null, defaultValue = null)
       } else {
         discriminatorProperty
       },

@@ -122,6 +122,28 @@ class ScopedSecurityIrTest {
     @TempDir directory: Path,
   ) {
     val api = scopedSecurityApi(frontend, directory, profiledServer = true)
+    for (profile in listOf(null, "missing")) {
+      assertThrows(GenerationException::class.java) {
+        api.projectEnvironment(GenerationContext(GenerationMode.Server, profile))
+      }
+    }
+    for (profile in listOf("internal", "external")) {
+      val context = GenerationContext(GenerationMode.Server, profile)
+      val projected = api.projectEnvironment(context)
+      val roundTripped = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(projected))
+      api.services.zip(roundTripped.services).forEach { (before, after) ->
+        before.operations.zip(after.operations).forEach { (operation, projectedOperation) ->
+          assertEquals(
+            api.endpointSecurityPolicy(before, operation, context)!!.providers,
+            roundTripped.endpointSecurityPolicy(after, projectedOperation, context)!!.providers,
+          )
+          assertEquals(
+            api.endpointSecurityPolicy(before, operation, context)!!.requirements,
+            roundTripped.endpointSecurityPolicy(after, projectedOperation, context)!!.requirements,
+          )
+        }
+      }
+    }
     api.services.forEach { service ->
       service.operations.forEach { operation ->
         for (profile in listOf("internal", "external")) {
