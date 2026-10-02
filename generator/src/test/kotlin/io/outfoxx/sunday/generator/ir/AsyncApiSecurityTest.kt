@@ -271,7 +271,14 @@ class AsyncApiSecurityTest {
       document(listOf(oauth + ("scopes" to listOf("write")))) +
         (
           "servers" to
-            mapOf("main" to mapOf("protocol" to "http", "security" to listOf(oauth + ("scopes" to listOf("read")))))
+            mapOf(
+              "main" to
+                mapOf(
+                  "host" to "example.com",
+                  "protocol" to "http",
+                  "security" to listOf(oauth + ("scopes" to listOf("read"))),
+                ),
+            )
         )
     val auth = operationAuth(convert(repeated))
     assertEquals(
@@ -285,8 +292,8 @@ class AsyncApiSecurityTest {
 
   @Test
   fun `channel server selection excludes unrelated policies and public servers remain alternatives`() {
-    val secured = mapOf("protocol" to "http", "security" to listOf(bearer))
-    val public = mapOf("protocol" to "http")
+    val secured = mapOf("host" to "example.com", "protocol" to "http", "security" to listOf(bearer))
+    val public = mapOf("host" to "example.com", "protocol" to "http")
     val doc = document(emptyList()) + ("servers" to mapOf("secured" to secured, "public" to public))
     val all = operationAuth(convert(doc))
     assertEquals(listOf(1, 0), all.requirements.map { it.schemes.size })
@@ -304,7 +311,12 @@ class AsyncApiSecurityTest {
 
   @Test
   fun `empty and omitted channel server lists both inherit all server requirements`() {
-    val secured = mapOf("protocol" to "http", "security" to listOf(ref("#/components/securitySchemes/token")))
+    val secured =
+      mapOf(
+        "host" to "example.com",
+        "protocol" to "http",
+        "security" to listOf(ref("#/components/securitySchemes/token")),
+      )
     val doc = document(emptyList(), mapOf("token" to bearer)) + ("servers" to mapOf("main" to secured))
     val implicit = operationAuth(convert(doc))
     val explicit =
@@ -409,7 +421,11 @@ class AsyncApiSecurityTest {
       val operations = doc.getValue("operations") as Map<*, *>
       val operation = operations["publish"] as Map<*, *>
       failure(doc + ("operations" to mapOf("publish" to (operation + ("security" to invalid)))), "Security")
-      failure(doc + ("servers" to mapOf("main" to mapOf("protocol" to "http", "security" to invalid))), "Security")
+      failure(
+        doc +
+          ("servers" to mapOf("main" to mapOf("host" to "example.com", "protocol" to "http", "security" to invalid))),
+        "Security",
+      )
     }
   }
 

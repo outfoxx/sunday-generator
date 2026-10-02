@@ -18,6 +18,8 @@ package io.outfoxx.sunday.generator.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.SourceSetContainer
 import java.io.File
 import java.util.concurrent.Callable
@@ -25,6 +27,27 @@ import java.util.concurrent.Callable
 class SundayGeneratorPlugin : Plugin<Project> {
 
   override fun apply(project: Project) {
+
+    project.plugins.withId("org.jetbrains.kotlin.jvm") { plugin ->
+      // Kotlin can be loaded by a sibling plugin classloader in composite builds.
+      // Resolve its public compiler-options API through that loader instead of linking against its implementation.
+      val compilerType =
+        plugin.javaClass.classLoader
+          .loadClass(
+            "org.jetbrains.kotlin.gradle.tasks.KotlinCompile",
+          ).asSubclass(Task::class.java)
+      project.tasks.withType(compilerType).configureEach { task ->
+        val compilerOptions = compilerType.getMethod("getCompilerOptions").invoke(task)
+
+        @Suppress("UNCHECKED_CAST")
+        val arguments =
+          compilerOptions.javaClass
+            .getMethod(
+              "getFreeCompilerArgs",
+            ).invoke(compilerOptions) as ListProperty<String>
+        arguments.add("-Xemit-jvm-type-annotations")
+      }
+    }
 
     val allTask =
       project.tasks.register("sundayGenerateAll") {
@@ -109,6 +132,8 @@ class SundayGeneratorPlugin : Plugin<Project> {
           )
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
+          genTask.profile.set(gen.profile)
+          genTask.defaultTolerance.set(gen.defaultTolerance)
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
           gen.generateService.takeIf { it.isPresent }?.let { genTask.generateService.set(it) }
           gen.generateBrokerServices.takeIf { it.isPresent }?.let { genTask.generateBrokerServices.set(it) }
@@ -148,6 +173,23 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       val sourceSetName = gen.targetSourceSet.get()
       sourceSets.getByName(sourceSetName).java.srcDir(genTask)
+      val mergeName = "sundayMergeServiceProviders_$sourceSetName"
+      val merge =
+        if (mergeName in project.tasks.names) {
+          project.tasks.named(mergeName, SundayMergeServiceProviders::class.java)
+        } else {
+          project.tasks
+            .register(mergeName, SundayMergeServiceProviders::class.java) {
+              it.outputDirectory.set(project.layout.buildDirectory.dir("generated/resources/sunday/$sourceSetName"))
+            }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
+        }
+      merge.configure { task ->
+        task.descriptors.from(
+          genTask.flatMap { it.outputDir }.map { directory ->
+            directory.asFileTree.matching { it.include("META-INF/services/**") }
+          },
+        )
+      }
     }
   }
 }

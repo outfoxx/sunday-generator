@@ -26,6 +26,8 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.validate
+import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
@@ -78,12 +80,26 @@ class IrCommand : CliktCommand(name = "ir") {
     help = "Use the first operation tag as the generated service when no x-sunday-service is present",
   ).flag(default = false)
 
+  /** Selects metadata for a client or server artifact; omitted to retain all environments. */
+  val mode by option("-mode", help = "Project IR metadata for client or server consumption")
+    .enum<GenerationMode> { it.name.lowercase() }
+
+  /** Explicit profile retained on projected bindings for downstream generation. */
+  val profile by option("-profile", help = "Named profile for environment projection; requires -mode")
+    .validate { require(it.isNotBlank()) { "Generation profile must not be blank" } }
+
   val sourceFiles by argument(
     help = "Source files",
   ).file(mustExist = true, canBeFile = true, canBeDir = false)
     .multiple()
 
   override fun run() {
+    if (profile != null && mode == null) throw UsageError("-profile requires -mode for IR projection")
+    if (validateFile != null &&
+      mode != null
+    ) {
+      throw UsageError("-mode projects exports and cannot be used with --validate")
+    }
     validateFile?.let { file ->
       val api = GeneratedApiYaml.readPath(file.toPath())
       echo("Valid Sunday IR: ${api.name}")
@@ -95,7 +111,11 @@ class IrCommand : CliktCommand(name = "ir") {
     }
     val output = outputFile ?: throw UsageError("Missing required option '-out'")
     GeneratedApiIrExporter(
-      GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags, openApiReferences = openApiReferenceOptions()),
+      GeneratedApiIrOptions(
+        deriveServicesFromTags = servicesFromTags,
+        openApiReferences = openApiReferenceOptions(),
+        projection = mode?.let { GenerationContext(it, profile) },
+      ),
     ).writeYaml(
       sourceFiles.map { sourceFile ->
         sourceFile.toURI()

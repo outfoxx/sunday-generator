@@ -41,9 +41,9 @@ private fun compileTypesUnsafe(
   try {
     CompiledGeneratedSources.beginCompile()
     val fileSpecs =
-      types.map { (typeName, typeSpec) ->
-        FileSpec.get(typeName.moduleName, typeSpec)
-      }
+      types.entries
+        .filter { it.key.topLevelTypeName() == it.key }
+        .map { (typeName, typeSpec) -> FileSpec.get(typeName.moduleName, typeSpec) }
 
     fileSpecs.forEach { it.writeTo(compiler.srcDir) }
     Files.createDirectories(compiler.testsDir)
@@ -180,15 +180,8 @@ private fun String.containsGeneratedWarnings(srcDir: Path): Boolean {
   val localSrcDir = Regex.escape(srcDir.toAbsolutePath().normalize().toString())
   val dockerSrcDir = Regex.escape("/work/${srcDir.fileName}")
   return lineSequence()
-    .filter { line ->
+    .any { line ->
       Regex("""^(?:$localSrcDir|$dockerSrcDir|.*[/\\]src[/\\]).*:\d+:\d+: warning:""")
         .containsMatchIn(line)
-    }.any { line -> !line.isAllowedGeneratedWarning() }
+    }
 }
-
-private fun String.isAllowedGeneratedWarning(): Boolean =
-  // Published Sunday versions used by the compile fixture do not yet declare Problem's unchecked
-  // Sendable boundary. Generated problem hierarchies restate the conformance over immutable
-  // stored fields; remove this allowlist after the fixture consumes the updated Sunday release.
-  contains("warning: non-final class '") &&
-    contains("cannot conform to the 'Sendable' protocol")

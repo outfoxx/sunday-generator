@@ -44,6 +44,7 @@ internal fun addOpenModelProperties(
   options: Set<KotlinTypeRegistry.Option>,
   properties: GeneratedModelProperties,
   preserveUnknownFields: Boolean,
+  nativeTypes: BeanValidationTypes?,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
@@ -89,6 +90,7 @@ internal fun addOpenModelProperties(
         preserveUnknownFields,
         typeName,
         properties,
+        nativeTypes,
       ).also {
         completed[type] = it
       }
@@ -112,7 +114,7 @@ internal fun addOpenModelProperties(
           }.build()
       guards.addStatement("require(name !in setOf(%L)) { %S + name }", names, "Cannot replace a declared property: ")
     }
-    if (properties.isClosed(model)) {
+    if (properties.isClosed(model) && nativeTypes == null) {
       val patterns = properties.patternProperties(model)
       val condition =
         CodeBlock
@@ -127,14 +129,27 @@ internal fun addOpenModelProperties(
       guards.addStatement("require(%L) { %S + name }", condition, "Additional properties are not allowed: ")
     }
     val guardCode = guards.build()
-    if (guardCode.isEmpty()) return@forEach
+    val setterGuards =
+      CodeBlock
+        .builder()
+        .add(guardCode)
+        .apply {
+          if (properties.isClosed(model) && nativeTypes != null) {
+            addStatement(
+              "%T.response(mapOf(name to value), %T::class.java)",
+              nativeTypes.modelValidation,
+              type.nestedClass("DynamicPropertiesValidation"),
+            )
+          }
+        }.build()
+    if (setterGuards.isEmpty()) return@forEach
     val setter = builder.funSpecs.firstOrNull { it.name == storage.setterName }
     if (setter != null) {
       builder.funSpecs[builder.funSpecs.indexOf(setter)] =
         setter
           .toBuilder()
           .clearBody()
-          .addCode(guardCode)
+          .addCode(setterGuards)
           .addCode(setter.body)
           .build()
     } else {
@@ -146,12 +161,12 @@ internal fun addOpenModelProperties(
           .addAnnotation(ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter"))
           .addParameter("name", STRING)
           .addParameter("value", storage.valueType)
-          .addCode(guardCode)
+          .addCode(setterGuards)
           .addStatement("super.%N(name, value)", storage.setterName)
           .build(),
       )
     }
-    if (KModifier.DATA in builder.build().modifiers) {
+    if (guardCode.isNotEmpty() && KModifier.DATA in builder.build().modifiers) {
       val storageParameter =
         builder.build().primaryConstructor?.parameters?.firstOrNull { parameter ->
           parameter.annotations.any { it.typeName == ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter") }
@@ -187,16 +202,31 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   preserve: Boolean,
   typeName: (GeneratedTypeRef) -> TypeName,
   properties: GeneratedModelProperties,
+  nativeTypes: BeanValidationTypes?,
 ): OpenModelExtensionStorage? {
   val closed = model.closed == true || model.additionalProperties?.allowed == false || parent?.closed == true
   if (closed) {
     addAnnotation(AnnotationSpec.builder(JACKSON_JSON_IGNORE_PROPERTIES).addMember("ignoreUnknown = false").build())
   }
   if (model.patternProperties.isNotEmpty() ||
+    model.additionalProperties?.validation?.isNotEmpty() == true ||
+    model.additionalProperties?.allowedValues != null ||
     (!closed && !preserve) ||
     (closed && parent?.closed == false && parent.permitsName.isEmpty())
   ) {
-    return addPatternModelStorage(className, model, knownNames, parent, closed, preserve, typeName, properties)
+    return addPatternModelStorage(
+      className,
+      model,
+      knownNames,
+      parent,
+      closed,
+      preserve,
+      typeName,
+      properties,
+      nativeTypes?.takeIf {
+        model.patternProperties.isNotEmpty() || model.additionalProperties?.type != null || closed
+      },
+    )
   }
   if (parent != null) {
     if (closed && !parent.closed) {
@@ -234,8 +264,21 @@ private fun TypeSpec.Builder.addOpenModelStorage(
         .addAnnotation(AnnotationSpec.builder(Suppress::class).addMember("%S", "UNUSED_PARAMETER").build())
         .addParameter("name", STRING)
         .addParameter("value", ANY.copy(nullable = true))
-        .addStatement("throw %T(%S + name)", IllegalArgumentException::class, "Additional properties are not allowed: ")
-        .build(),
+        .apply {
+          if (nativeTypes == null) {
+            addStatement(
+              "throw %T(%S + name)",
+              IllegalArgumentException::class,
+              "Additional properties are not allowed: ",
+            )
+          } else {
+            addStatement(
+              "%T.response(mapOf(name to value), %T::class.java)",
+              nativeTypes.modelValidation,
+              className.nestedClass("DynamicPropertiesValidation"),
+            )
+          }
+        }.build(),
     )
     return OpenModelExtensionStorage("", closed = true, setterName, ANY.copy(nullable = true), preserves = false)
   }

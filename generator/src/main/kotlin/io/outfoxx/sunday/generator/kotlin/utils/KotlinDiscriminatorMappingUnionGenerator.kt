@@ -37,6 +37,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback>,
   private val jacksonAnnotations: Boolean,
   private val typeName: (GeneratedModel) -> ClassName,
+  private val commonValidation: (GeneratedModel) -> BeanValidationTypes? = { null },
 ) {
 
   fun isUnion(model: GeneratedModel): Boolean =
@@ -107,6 +108,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
         val mappedModel = mappedType.modelOrNull(apiIndex) ?: return@mapNotNull null
         value to typeName(mappedModel)
       }
+    val types = commonValidation(model)
     val deserialize =
       FunSpec
         .builder("deserialize")
@@ -114,12 +116,17 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = context.readTree(parser)")
-        .addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminatorWireName)
+        .apply {
+          if (types == null) {
+            addStatement("val tree = context.readTree(parser)")
+          } else {
+            addStatement("val tree = %T.read(parser, context)", ClassName("io.outfoxx.sunday.validation", "WireTree"))
+          }
+        }.addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminatorWireName)
         .apply {
           mappedTypes.forEach { (value, mappedTypeName) ->
             beginControlFlow("if (discriminatorValue == %S)", value)
-            addStatement("return parser.codec.treeToValue(tree, %T::class.java)", mappedTypeName)
+            addDecodedReturn(mappedTypeName, types != null)
             endControlFlow()
           }
           val fallback = discriminatorFallbacks[model]
@@ -142,7 +149,7 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
             )
             endControlFlow()
             val fallbackTypeName = ClassName(unionTypeName.packageName, fallback.modelName.toUpperCamelCase())
-            addStatement("return parser.codec.treeToValue(tree, %T::class.java)", fallbackTypeName)
+            addDecodedReturn(fallbackTypeName, types != null)
           }
         }.build()
 
@@ -151,7 +158,41 @@ internal class KotlinDiscriminatorMappingUnionGenerator(
       .addModifiers(KModifier.PUBLIC)
       .superclass(JACKSON_JSON_DESERIALIZER.parameterizedBy(unionTypeName))
       .addFunction(deserialize)
-      .build()
+      .apply {
+        if (types != null) {
+          addFunction(
+            FunSpec
+              .builder("validateDecoded")
+              .addModifiers(KModifier.PRIVATE)
+              .addParameter("value", unionTypeName)
+              .addParameter("tree", JSON_NODE)
+              .addParameter("parser", JACKSON_JSON_PARSER)
+              .returns(unionTypeName)
+              .beginControlFlow("try")
+              .addStatement(
+                "%T.response(%T.decodedFields(tree, value), %T::class.java)",
+                types.modelValidation,
+                ClassName("io.outfoxx.sunday.validation", "WireTree"),
+                unionTypeName.nestedClass("CommonPropertiesValidation"),
+              ).nextControlFlow("catch (failure: %T)", types.constraintViolationException)
+              .addStatement("throw %T.from(parser, failure.message, failure)", JACKSON_JSON_MAPPING_EXCEPTION)
+              .endControlFlow()
+              .addStatement("return value")
+              .build(),
+          )
+        }
+      }.build()
+  }
+
+  private fun FunSpec.Builder.addDecodedReturn(
+    type: ClassName,
+    validate: Boolean,
+  ) {
+    if (validate) {
+      addStatement("return validateDecoded(parser.codec.treeToValue(tree, %T::class.java), tree, parser)", type)
+    } else {
+      addStatement("return parser.codec.treeToValue(tree, %T::class.java)", type)
+    }
   }
 
   private fun canSeal(model: GeneratedModel): Boolean {

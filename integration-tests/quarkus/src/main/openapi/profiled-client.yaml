@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info: {title: Profiled client, version: 1.0.0}
+x-sunday-jaxrs:
+  rest-client:
+    config-key: profiled-client
+security: [{token: [items:read]}]
+paths:
+  /public:
+    get:
+      operationId: publicOperation
+      x-sunday-service: Profiled
+      security: []
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /read:
+    get:
+      operationId: read
+      x-sunday-service: Profiled
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /write:
+    get:
+      operationId: write
+      x-sunday-service: Profiled
+      security: [{token: [items:write]}]
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /renew:
+    get:
+      operationId: renew
+      x-sunday-service: Profiled
+      security: [{token: [items:renew]}]
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/once:
+    get:
+      operationId: recover
+      x-sunday-service: Profiled
+      security: [{token: [items:recover]}]
+      x-sunday-policy:
+        client:
+          retry: {maxRetries: 4, delay: PT0S, jitter: PT0S}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/always:
+    get:
+      operationId: reject
+      x-sunday-service: Profiled
+      security: [{token: [items:reject]}]
+      x-sunday-policy:
+        client:
+          retry: {maxRetries: 4, delay: PT0S, jitter: PT0S}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/forbidden:
+    get:
+      operationId: forbidden
+      x-sunday-service: Profiled
+      security: [{token: [items:forbid]}]
+      x-sunday-policy:
+        client:
+          retry: {maxRetries: 4, delay: PT0S, jitter: PT0S}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/unsafe:
+    post:
+      operationId: unsafe
+      x-sunday-service: Profiled
+      security: [{token: [items:unsafe]}]
+      x-sunday-policy:
+        client:
+          retry: {maxRetries: 4, delay: PT0S, jitter: PT0S}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/unchallenged:
+    get:
+      operationId: unchallenged
+      x-sunday-service: Profiled
+      security: [{token: [items:unchallenged]}]
+      x-sunday-policy:
+        client:
+          retry: {maxRetries: 4, delay: PT0S, jitter: PT0S}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /recover/default:
+    get:
+      operationId: defaultRecover
+      x-sunday-service: Profiled
+      security: [{token: [items:default]}]
+      responses: {'200': {$ref: '#/components/responses/result'}}
+components:
+  securitySchemes:
+    token:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://public.example/token
+          scopes: {items:read: Read, items:write: Write, items:renew: Renew, items:recover: Recover, items:reject: Reject, items:forbid: Forbid, items:unsafe: Unsafe, items:unchallenged: Unchallenged, items:default: Default}
+      x-sunday-security:
+        profiles:
+          internal:
+            client:
+              provider: service
+              flow: clientCredentials
+              tokenUrl: https://identity.internal/token
+          external:
+            client:
+              provider: application
+              flow: external
+  responses:
+    result:
+      description: Received authorization
+      content:
+        text/plain: {schema: {type: string}}

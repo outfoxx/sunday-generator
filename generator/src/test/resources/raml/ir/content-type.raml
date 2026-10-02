@@ -4,6 +4,7 @@ mediaType: application/json
 annotationTypes:
   sunday.apiId: string
   sunday.unknownValue: string
+  sunday.tolerance: string
 (sunday.apiId): uploads
 types:
   AvatarContentType:
@@ -13,6 +14,7 @@ types:
     type: string
     enum: [image/png, image/jpeg, unknown]
     (sunday.unknownValue): unknown
+    (sunday.tolerance): all
 /uploads/raw:
   put:
     displayName: putRaw

@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.BrokerGenerationOptions
+import io.outfoxx.sunday.generator.EnvironmentGenerationOptions
+import io.outfoxx.sunday.generator.Tolerance
 
 /** Options shared by Python IR-backed generators. */
 data class PythonGeneratorOptions(
@@ -30,4 +32,7 @@ data class PythonGeneratorOptions(
   val enforceSecuritySchemes: Boolean = false,
   /** Retain schema-permitted dynamic model fields for serialization. */
   val preserveUnknownFields: Boolean = true,
-) : BrokerGenerationOptions
+  override val profile: String? = null,
+  override val defaultTolerance: Tolerance = Tolerance.Response,
+) : BrokerGenerationOptions,
+  EnvironmentGenerationOptions

@@ -16,10 +16,11 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 
 class BeanValidationTypes(
-  basePackage: String,
+  private val basePackage: String,
 ) {
 
   val valid = ClassName.bestGuess("$basePackage.validation.Valid")
@@ -31,6 +32,32 @@ class BeanValidationTypes(
   val notNull = ClassName.bestGuess("$basePackage.validation.constraints.NotNull")
   val pattern = ClassName.bestGuess("$basePackage.validation.constraints.Pattern")
   val size = ClassName.bestGuess("$basePackage.validation.constraints.Size")
+  val requestMode = ClassName("io.outfoxx.sunday.validation.$basePackage", "ModelMode", "Request")
+  val responseMode = ClassName("io.outfoxx.sunday.validation.$basePackage", "ModelMode", "Response")
+  val acyclic = ClassName("io.outfoxx.sunday.validation.$basePackage", "Acyclic")
+  val serializableModel = ClassName("io.outfoxx.sunday.validation.$basePackage", "SerializableModel")
+  val entitySchema = ClassName("io.outfoxx.sunday.validation.$basePackage", "EntitySchema")
+  val schema = ClassName("io.outfoxx.sunday.validation.$basePackage", "Schema")
+  val cascadedValues = ClassName("io.outfoxx.sunday.validation.$basePackage", "CascadedValues")
+  val dynamicProperties = ClassName("io.outfoxx.sunday.validation.$basePackage", "DynamicProperties")
+  val dynamicModel = ClassName("io.outfoxx.sunday.validation.$basePackage", "DynamicModel")
+  val clientModelValidation = ClassName("io.outfoxx.sunday.validation.$basePackage", "ClientModelValidation")
+  val modelValidation = ClassName("io.outfoxx.sunday.validation.$basePackage", "ModelValidation")
+  val constraintViolationException = ClassName("$basePackage.validation", "ConstraintViolationException")
+
+  /** Converts the framework's default validation group at a request entity boundary. */
+  fun requestGroupConversion(): AnnotationSpec =
+    AnnotationSpec
+      .builder(ClassName("$basePackage.validation.groups", "ConvertGroup"))
+      .addMember("to = %T::class", requestMode)
+      .build()
+
+  /** Native class constraint attached to fallback implementations for request validation. */
+  fun knownVariant(): AnnotationSpec =
+    AnnotationSpec
+      .builder(ClassName("io.outfoxx.sunday.validation.$basePackage", "KnownVariant"))
+      .addMember("groups = [%T::class]", requestMode)
+      .build()
 
   companion object {
 

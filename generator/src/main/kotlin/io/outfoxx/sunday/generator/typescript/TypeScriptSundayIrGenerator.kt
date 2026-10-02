@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.PayloadUse
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -29,15 +30,20 @@ import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
+import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.allowsUnknown
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.sunday.generator.ir.emit.clientSecurity
+import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -52,17 +58,19 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 import io.outfoxx.sunday.generator.typescript.utils.ABORT_SIGNAL
 import io.outfoxx.sunday.generator.typescript.utils.ASYNC_ITERABLE
+import io.outfoxx.sunday.generator.typescript.utils.CONSTRUCT_VALIDATED_MODEL
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_NULLABLE_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_PROBLEM_CODEC
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_STREAMING_OPERATION
-import io.outfoxx.sunday.generator.typescript.utils.DEFINE_SCHEMA
+import io.outfoxx.sunday.generator.typescript.utils.DEFINE_MODEL_SCHEMA
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
 import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
@@ -84,6 +92,7 @@ import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT_REQUEST
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
+import io.outfoxx.sunday.generator.typescript.utils.VALIDATE_MODEL_CONSTRUCTION
 import io.outfoxx.sunday.generator.typescript.utils.Z
 import io.outfoxx.sunday.generator.typescript.utils.isNullable
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
@@ -150,6 +159,7 @@ class TypeScriptSundayIrGenerator(
       }
     }.associateBy { fallback -> fallback.hierarchy }
   }
+  private val securityByService = mutableMapOf<TypeName.Standard, Map<GeneratedOperation, GeneratedClientSecurity?>>()
   private val generatedDiscriminatorFallbacks = mutableSetOf<GeneratedModel>()
   private val typeScriptEnumEntriesByModel = mutableMapOf<GeneratedModel, List<TypeScriptEnumEntry>>()
 
@@ -157,6 +167,7 @@ class TypeScriptSundayIrGenerator(
   fun generateServiceTypes() {
     options.requireBrokerServicesSupported("TypeScript/Sunday")
     val services = api.typeScriptSundayServices()
+    services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "TypeScript/Sunday")
 
     registerCompanionSchemaTypes()
     generateModelTypes()
@@ -168,6 +179,10 @@ class TypeScriptSundayIrGenerator(
         val modulePath = resolveServiceModulePath(serviceSimpleName, api.targets["typescript"]?.moduleName)
         val serviceTypeName = typeRegistry.generatedTypeName(serviceSimpleName, modulePath)
 
+        securityByService[serviceTypeName] =
+          service.operations.associateWith {
+            api.clientSecurity(service, it, options.generationContext(GenerationMode.Client))
+          }
         val serviceType = generateServiceType(serviceTypeName, service)
         typeRegistry.addServiceType(serviceTypeName, serviceType.interfaceBuilder, serviceType.extras)
         GeneratedTypeScriptService(service, serviceTypeName)
@@ -698,6 +713,13 @@ class TypeScriptSundayIrGenerator(
       val fieldName = field.name.typeScriptIdentifierName
       constructorBuilder.addStatement("this.%N = spec.%N", fieldName, fieldName)
     }
+    constructorBuilder.addStatement(
+      "if (new.target === %T) %Q(this, %N, %T)",
+      typeName,
+      VALIDATE_MODEL_CONSTRUCTION,
+      typeName.simpleName() + "Schema",
+      typeName,
+    )
     classBuilder.constructor(constructorBuilder.build())
 
     typeRegistry.addModelType(
@@ -731,7 +753,7 @@ class TypeScriptSundayIrGenerator(
       .add(
         "export const %L = %Q((runtime: %T) => {\n",
         typeName.sibling("SpecSchema").simpleName(),
-        DEFINE_SCHEMA,
+        DEFINE_MODEL_SCHEMA,
         SCHEMA_RUNTIME,
       ).add("  return %T.looseObject({\n", Z)
       .apply {
@@ -796,7 +818,7 @@ class TypeScriptSundayIrGenerator(
       .add(
         "export const %L = %Q((runtime: %T) => {\n",
         typeName.sibling("WireSchema").simpleName(),
-        DEFINE_SCHEMA,
+        DEFINE_MODEL_SCHEMA,
         SCHEMA_RUNTIME,
       ).add("  return %T.extend({", PROBLEM_WIRE_SCHEMA)
       .apply {
@@ -818,7 +840,7 @@ class TypeScriptSundayIrGenerator(
         "export const %L: %T = %Q((runtime: %T) => {\n",
         typeName.sibling("Schema").simpleName(),
         SCHEMA_LIKE.parameterized(typeName),
-        DEFINE_SCHEMA,
+        DEFINE_MODEL_SCHEMA,
         SCHEMA_RUNTIME,
       ).add(
         "  return %Q(%T, runtime.resolveSchema(%T));\n",
@@ -946,12 +968,14 @@ class TypeScriptSundayIrGenerator(
               .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
               .addParameter("rawValue", STRING)
               .returns(typeName)
-              .addStatement(
-                "return %T.instances.get(rawValue) ?? %T.%L(rawValue)",
-                typeName,
-                typeName,
-                fallbackEntry.name,
-              ).build(),
+              .apply {
+                beginControlFlow("switch (rawValue)")
+                knownEntries.forEach { entry ->
+                  addStatement("case %S: return %T.%L", entry.value, typeName, entry.name)
+                }
+                addStatement("default: return %T.%L(rawValue)", typeName, fallbackEntry.name)
+                endControlFlow()
+              }.build(),
           )
           addFunction(
             FunctionSpec
@@ -960,23 +984,39 @@ class TypeScriptSundayIrGenerator(
               .addParameter("kind", kindTypeName)
               .addParameter("rawValue", STRING)
               .returns(typeName)
-              .addStatement("const existing = %T.instances.get(rawValue)", typeName)
+              .addStatement("const key = kind.length + ':' + kind + rawValue")
+              .addStatement("const existing = %T.instances.get(key)", typeName)
               .beginControlFlow("if (existing !== undefined)")
               .addStatement("return existing")
               .endControlFlow()
               .addStatement("const value = new %T(kind, rawValue)", typeName)
-              .addStatement("%T.instances.set(rawValue, value)", typeName)
+              .addStatement("%T.instances.set(key, value)", typeName)
               .addStatement("return value")
               .build(),
           )
         }
+    val allowRequests =
+      model.tolerance.allowsUnknown(
+        options.generationContext(GenerationMode.Client, PayloadUse.Request),
+      )
     val schemaCode =
       CodeBlock
         .builder()
-        .add("export const %LSchema = ", typeName.simpleName())
-        .add("%T.codec(%T.string(), %T.custom<%T>((value) => value instanceof %T), {\n", Z, Z, Z, typeName, typeName)
-        .add("  decode: (value) => %T.fromValue(value),\n", typeName)
-        .add("  encode: (value) => value.rawValue,\n")
+        .add(
+          "export const %LSchema = %Q((runtime: %T) => {\n",
+          typeName.simpleName(),
+          DEFINE_MODEL_SCHEMA,
+          SCHEMA_RUNTIME,
+        ).add("  const output = %T.custom<%T>((value) => value instanceof %T)\n", Z, typeName, typeName)
+        .add(
+          "    .refine((value) => %L || runtime.mode === 'response' || value.kind !== %S, ",
+          allowRequests,
+          fallbackEntry.name,
+        ).add("{ message: 'Unknown enum value is not permitted in requests', params: { reason: 'unknown_enum' } });\n")
+        .add("  return %T.codec(%T.string(), output, {\n", Z, Z)
+        .add("    decode: (value) => %T.fromValue(value),\n", typeName)
+        .add("    encode: (value) => value.rawValue,\n")
+        .add("  });\n")
         .add("});\n")
         .build()
 
@@ -1070,6 +1110,7 @@ class TypeScriptSundayIrGenerator(
       InterfaceSpec
         .builder(typeName.simpleName())
         .addModifiers(Modifier.EXPORT)
+        .addSuperInterface(TypeName.namedImport("UnknownVariant", "@outfoxx/sunday"))
         .apply {
           if (fallback.hierarchy.kind == GeneratedModel.Kind.OBJECT && fallback.hierarchy.isProblemModel()) {
             addSuperInterface(fallback.hierarchy.typeName(fallback.hierarchy.name.toUpperCamelCase()))
@@ -1104,13 +1145,16 @@ class TypeScriptSundayIrGenerator(
     exposedProperties: List<GeneratedModelProperty>,
   ): CodeBlock {
     val mappedValues = fallback.mappedValuesCode()
+    val allowRequests =
+      (fallback.hierarchy.tolerance ?: fallback.enumModel?.tolerance)
+        .allowsUnknown(options.generationContext(GenerationMode.Client, PayloadUse.Request))
     return CodeBlock
       .builder()
       .add(
         "export const %LSchema: %T = %Q((runtime: %T) => {\n",
         typeName.simpleName(),
         SCHEMA_LIKE.parameterized(typeName),
-        DEFINE_SCHEMA,
+        DEFINE_MODEL_SCHEMA,
         SCHEMA_RUNTIME,
       ).add(
         "  const wireSchema = %T.%L({\n",
@@ -1120,7 +1164,12 @@ class TypeScriptSundayIrGenerator(
         exposedProperties.forEach { property ->
           add("    %S: ", property.serializationName ?: property.name)
           if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
-            add("%T.string().refine((value) => ![%L].includes(value)),\n", Z, mappedValues)
+            if (fallback.enumModel == null) {
+              add(property.copy(required = true).zodSchema(typeName))
+            } else {
+              add("%T.string()", Z)
+            }
+            add(".refine((value) => ![%L].includes(value)),\n", mappedValues)
           } else {
             add(property.zodSchema(typeName))
             add(",\n")
@@ -1129,18 +1178,31 @@ class TypeScriptSundayIrGenerator(
       }.add("  });\n")
       .add(
         "  return %T.codec(%T.unknown(), %T.custom<%T>((value) => " +
-          "typeof value === 'object' && value !== null && 'rawBody' in value), {\n",
+          "%Q(value))" +
+          ".refine(() => %L || runtime.mode === 'response', " +
+          "{ message: 'Unknown union variant is not permitted in requests', params: { reason: 'unknown_union' } }), {\n",
         Z,
         Z,
         Z,
         typeName,
-      ).add("    decode: (rawValue) => {\n")
-      .add("      const value = wireSchema.parse(rawValue);\n")
+        SymbolSpec.importsName("isUnknownVariant", "@outfoxx/sunday"),
+        allowRequests,
+      ).add("    decode: (rawValue, context) => {\n")
+      .add("      const result = wireSchema.safeParse(rawValue);\n")
+      .add("      if (!result.success) {\n")
+      .add("        context.issues.push(...result.error.issues.map((issue) => ({ ...issue, input: undefined })));\n")
+      .add("        return %T.NEVER;\n", Z)
+      .add("      }\n")
+      .add("      const value = result.data;\n")
       .add("      return {\n")
+      .add("        [%Q]: true as const,\n", SymbolSpec.importsName("UnknownVariantTag", "@outfoxx/sunday"))
       .apply {
         exposedProperties.forEach { property ->
           add("        %N: ", property.name.typeScriptIdentifierName)
-          if (property == fallback.discriminatorProperty && !fallback.externallyDiscriminated) {
+          if (property == fallback.discriminatorProperty &&
+            !fallback.externallyDiscriminated &&
+            fallback.enumModel != null
+          ) {
             add(
               "%T.fromValue(value[%S]),\n",
               property.type.typeName(typeName),
@@ -1153,7 +1215,14 @@ class TypeScriptSundayIrGenerator(
       }.add("        rawBody: rawValue as Readonly<Record<string, unknown>>,\n")
       .add("      };\n")
       .add("    },\n")
-      .add("    encode: (value) => value.rawBody,\n")
+      .add("    encode: (value, context) => {\n")
+      .add("      const result = wireSchema.safeParse(value.rawBody);\n")
+      .add("      if (!result.success) {\n")
+      .add("        context.issues.push(...result.error.issues.map((issue) => ({ ...issue, input: undefined })));\n")
+      .add("        return %T.NEVER;\n", Z)
+      .add("      }\n")
+      .add("      return value.rawBody;\n")
+      .add("    },\n")
       .add("  });\n")
       .add("});\n")
       .build()
@@ -1319,6 +1388,15 @@ class TypeScriptSundayIrGenerator(
           )
         }
       }
+      if (!isDiscriminatorBase) {
+        constructorBuilder.addStatement(
+          "if (new.target === %T) %Q(this, %L, %T)",
+          typeName,
+          VALIDATE_MODEL_CONSTRUCTION,
+          typeRegistry.schemaInitializer(typeName),
+          typeName,
+        )
+      }
       classBuilder.constructor(constructorBuilder.build())
 
       if (!isDiscriminatorBase) {
@@ -1357,6 +1435,7 @@ class TypeScriptSundayIrGenerator(
         } else {
           discriminatedObjectSchemaCode(
             typeName,
+            model,
             childModels,
             discriminatorFallbacks[model],
           )
@@ -1448,6 +1527,7 @@ class TypeScriptSundayIrGenerator(
         } else {
           plainDiscriminatedObjectSchemaCode(
             typeName,
+            model,
             requireNotNull(rootDiscriminatorName),
             discriminatorCases,
             discriminatorFallbacks[model],
@@ -1691,6 +1771,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun plainDiscriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
+    model: GeneratedModel,
     discriminatorName: String,
     discriminatorCases: List<Pair<String?, GeneratedModel>>,
     fallback: GeneratedDiscriminatorFallback? = null,
@@ -1724,29 +1805,26 @@ class TypeScriptSundayIrGenerator(
       .add("export const %LSchema", typeName.simpleName())
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
-      }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
+      }.add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
+      .add("  const branchesSchema = %T.union([\n", Z)
+      .add(variants.joinToCode(",\n"))
+      .add("\n  ]);\n")
       .apply {
+        val checked = applyUnionCommonConstraints(model, typeName, "branchesSchema")
         if (fallbackSchema != null) {
-          add("  const knownSchema = %T.union([\n", Z)
-        } else if (schemaTypeName != null) {
-          add("  const wireSchema = %T.union([\n", Z)
-        } else {
-          add("  return %T.union([\n", Z)
-        }
-      }.add(
-        variants.joinToCode(",\n"),
-      ).add("\n  ]);\n")
-      .apply {
-        if (fallbackSchema != null) {
-          add("  const wireSchema = %T.union([knownSchema, ", Z)
+          add(
+            "  const wireSchema = %Q(%L, ",
+            SymbolSpec.importsName("unionWithUnknown", "@outfoxx/sunday"),
+            checked,
+          )
           add(fallbackSchema)
-          add("]);\n")
-          if (schemaTypeName == null) {
-            add("  return wireSchema;\n")
-          } else {
-            add("  return wireSchema as %T.ZodType<%T>;\n", Z, schemaTypeName)
-          }
-        } else if (schemaTypeName != null) {
+          add(");\n")
+        } else {
+          add("  const wireSchema = %L;\n", checked)
+        }
+        if (schemaTypeName == null) {
+          add("  return wireSchema;\n")
+        } else {
           add("  return wireSchema as %T.ZodType<%T>;\n", Z, schemaTypeName)
         }
       }.add("});\n")
@@ -1791,7 +1869,7 @@ class TypeScriptSundayIrGenerator(
       .add("export const %LSchema", typeName.simpleName())
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
-      }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
+      }.add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
       .apply {
         if (variants.isEmpty()) {
           add("  return %T.looseObject({});\n", Z)
@@ -1810,6 +1888,7 @@ class TypeScriptSundayIrGenerator(
 
   private fun discriminatedObjectSchemaCode(
     typeName: TypeName.Standard,
+    model: GeneratedModel,
     childModels: List<GeneratedModel>,
     fallback: GeneratedDiscriminatorFallback? = null,
   ): CodeBlock {
@@ -1820,18 +1899,23 @@ class TypeScriptSundayIrGenerator(
       }
     return CodeBlock
       .builder()
-      .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.union([\n", Z)
+      .add(
+        "export const %LSchema = %Q((runtime: %T) => {\n",
+        typeName.simpleName(),
+        DEFINE_MODEL_SCHEMA,
+        SCHEMA_RUNTIME,
+      ).add("  const wireSchema = %T.union([\n", Z)
       .add(
         variants
           .map { childSchemaTypeName -> CodeBlock.of("runtime.resolveSchema(%T)", childSchemaTypeName) }
           .joinToCode(",\n"),
       ).add("\n  ]);\n")
       .apply {
+        val checked = applyUnionCommonConstraints(model, typeName, "wireSchema")
         if (fallback == null) {
-          add("  return %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
+          add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, checked, Z, typeName)
         } else {
-          add("  const knownSchema = %T.codec(wireSchema, %T.instanceof(%T), {\n", Z, Z, typeName)
+          add("  const knownSchema = %T.codec(%L, %T.instanceof(%T), {\n", Z, checked, Z, typeName)
         }
       }.add("    decode: (value) => value as %T,\n", typeName)
       .add("    encode: (value) => value as z.infer<typeof wireSchema>,\n")
@@ -1839,7 +1923,11 @@ class TypeScriptSundayIrGenerator(
       .apply {
         if (fallback != null) {
           val fallbackTypeName = fallback.hierarchy.typeName(fallback.modelName.toUpperCamelCase())
-          add("  return %T.union([knownSchema, runtime.resolveSchema(%T)]);\n", Z, fallbackTypeName.sibling("Schema"))
+          add(
+            "  return %Q(knownSchema, runtime.resolveSchema(%T));\n",
+            SymbolSpec.importsName("unionWithUnknown", "@outfoxx/sunday"),
+            fallbackTypeName.sibling("Schema"),
+          )
         } else {
           add("\n")
         }
@@ -1889,25 +1977,63 @@ class TypeScriptSundayIrGenerator(
         val fallbackTypeName = model.typeName(fallback.modelName.toUpperCamelCase())
         CodeBlock.of("runtime.resolveSchema(%T)", fallbackTypeName.sibling("Schema"))
       }
-    val schemas = aliasSchemas + listOfNotNull(fallbackSchema)
+    val schemas = aliasSchemas
 
     return CodeBlock
       .builder()
       .add("export const %LSchema", typeName.simpleName())
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
-      }.add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const wireSchema = %T.union([\n", Z)
+      }.add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
+      .add("  const branchesSchema = %T.union([\n", Z)
       .add(schemas.joinToCode(",\n"))
       .add("\n  ]);\n")
       .apply {
-        if (schemaTypeName != null) {
+        val checked = applyUnionCommonConstraints(model, typeName, "branchesSchema")
+        add("  const wireSchema = %L;\n", checked)
+        if (fallbackSchema != null) {
+          add(
+            "  return %Q(wireSchema, ",
+            SymbolSpec.importsName("unionWithUnknown", "@outfoxx/sunday"),
+          )
+          add(fallbackSchema)
+          add(");\n")
+        } else if (schemaTypeName != null) {
           add("  return wireSchema as %T.ZodType<%T>;\n", Z, schemaTypeName)
         } else {
           add("  return wireSchema;\n")
         }
       }.add("});\n")
       .build()
+  }
+
+  private fun CodeBlock.Builder.applyUnionCommonConstraints(
+    model: GeneratedModel,
+    owner: TypeName.Standard,
+    schema: String,
+  ): String {
+    if (!modelProperties.hasUnionCommonRules(model)) return schema
+    add("  const commonSchema = ")
+    add(
+      plainObjectSchemaCode(
+        owner,
+        owner,
+        modelProperties.unionCommonProperties(model),
+        model,
+        inlineSchema = true,
+      ),
+    )
+    add(";\n")
+    add(
+      "  const commonCheckedSchema = %Q(%L, commonSchema%L);\n",
+      SymbolSpec.importsName("withModelConstraints", "@outfoxx/sunday"),
+      schema,
+      model.discriminator?.let { name ->
+        val field = modelProperties.fields(model).firstOrNull { it.effective.name == name || it.wireName == name }
+        CodeBlock.of(", %S", field?.wireName ?: name)
+      } ?: CodeBlock.of(""),
+    )
+    return "commonCheckedSchema"
   }
 
   // One name across a generated hierarchy prevents an inherited accessor from hiding a schema field.
@@ -1993,9 +2119,14 @@ class TypeScriptSundayIrGenerator(
             "        context.issues.push({code: 'custom', path: ['__proto__'], input: value, message: 'Additional properties are not allowed'});\n",
           )
         } else {
-          model.additionalProperties?.type?.let {
+          modelProperties.additionalProperties(model).forEach { declaration ->
             checks +=
-              it.zodSchema(owner, true, model.additionalProperties.validation)
+              requireNotNull(declaration.type).zodSchema(
+                owner,
+                true,
+                declaration.validation,
+                allowedValues = declaration.allowedValues,
+              )
           }
         }
       }
@@ -2037,7 +2168,8 @@ class TypeScriptSundayIrGenerator(
     schema: String,
   ): String {
     val patterns = modelProperties.patternProperties(model)
-    if (patterns.isEmpty() && model.additionalProperties?.type == null) return schema
+    val additional = modelProperties.additionalProperties(model)
+    if (patterns.isEmpty() && additional.isEmpty()) return schema
     val checked = "patternCheckedSchema"
     add("  const %L = %L.superRefine((value, context) => {\n", checked, schema)
     add(
@@ -2067,9 +2199,16 @@ class TypeScriptSundayIrGenerator(
         "      if (!matched) context.addIssue({code: 'custom', path: [key], message: 'Additional properties are not allowed'});\n",
       )
     }
-    model.additionalProperties?.type?.let { additional ->
+    additional.forEach { declaration ->
       add("      if (!matched) {\n        const result = ")
-      add(additional.zodSchema(owner, true, model.additionalProperties.validation))
+      add(
+        requireNotNull(declaration.type).zodSchema(
+          owner,
+          true,
+          declaration.validation,
+          allowedValues = declaration.allowedValues,
+        ),
+      )
       add(".safeParse(item);\n")
       add(
         "        if (!result.success) for (const issue of result.error.issues) context.addIssue({...issue, path: [key, ...issue.path]});\n      }\n",
@@ -2110,8 +2249,12 @@ class TypeScriptSundayIrGenerator(
   ): CodeBlock =
     CodeBlock
       .builder()
-      .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
       .add(
+        "export const %LSchema = %Q((runtime: %T) => {\n",
+        typeName.simpleName(),
+        DEFINE_MODEL_SCHEMA,
+        SCHEMA_RUNTIME,
+      ).add(
         "  const wireSchema = %T.%L({",
         Z,
         if (modelProperties.isClosed(model) &&
@@ -2166,7 +2309,7 @@ class TypeScriptSundayIrGenerator(
         } else {
           add("export const %LSchema", typeName.simpleName())
           schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
-          add(" = %Q((runtime: %T) => {\n", DEFINE_SCHEMA, SCHEMA_RUNTIME)
+          add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
         }
       }.add(
         "  const wireSchema = %T.%L({",
@@ -2239,8 +2382,12 @@ class TypeScriptSundayIrGenerator(
 
     return CodeBlock
       .builder()
-      .add("export const %LSchema = %Q((runtime: %T) => {\n", typeName.simpleName(), DEFINE_SCHEMA, SCHEMA_RUNTIME)
       .add(
+        "export const %LSchema = %Q((runtime: %T) => {\n",
+        typeName.simpleName(),
+        DEFINE_MODEL_SCHEMA,
+        SCHEMA_RUNTIME,
+      ).add(
         "  const wireSchema = %T.%L({",
         Z,
         if (modelProperties.isClosed(model) &&
@@ -2296,9 +2443,9 @@ class TypeScriptSundayIrGenerator(
         add("  return %T.codec(%L, %T.instanceof(%T), {\n", Z, resolvedWireSchemaName, Z, typeName)
       }.apply {
         if (properties.isEmpty() && !options.preserveUnknownFields) {
-          add("    decode: () => new %T(),\n", typeName)
+          add("    decode: () => %Q(%T),\n", CONSTRUCT_VALIDATED_MODEL, typeName)
         } else {
-          add("    decode: (value) => new %T({\n", typeName)
+          add("    decode: (value) => %Q(%T, {\n", CONSTRUCT_VALIDATED_MODEL, typeName)
           if (options.preserveUnknownFields) {
             add(
               "      %N: Object.fromEntries(Object.entries(value).filter(([key]) => !new Set<string>([%L]).has(key))),\n",
@@ -2809,29 +2956,31 @@ class TypeScriptSundayIrGenerator(
     validation: Map<String, String> = mapOf(),
     lazyRefType: TypeName.Standard? = null,
     allowedValues: List<Any?>? = null,
+    runtimeName: String = "runtime",
   ): CodeBlock {
     val schema =
       when (kind) {
         GeneratedTypeRef.Kind.SCALAR ->
-          formattedScalarTypeName()?.let { typeName -> runtimeResolvedSchema(typeName) } ?: when (name) {
-            "boolean" -> CodeBlock.of("%T.boolean()", Z)
-            "integer", "number" -> CodeBlock.of("%T.number()", Z)
-            "nil" -> CodeBlock.of("%T.null()", Z)
-            "string" -> CodeBlock.of("%T.string()", Z)
-            else -> typeRegistry.schemaInitializer(typeName(serviceTypeName))
-          }
+          formattedScalarTypeName()?.let { typeName -> runtimeResolvedSchema(typeName, runtimeName = runtimeName) }
+            ?: when (name) {
+              "boolean" -> CodeBlock.of("%T.boolean()", Z)
+              "integer", "number" -> CodeBlock.of("%T.number()", Z)
+              "nil" -> CodeBlock.of("%T.null()", Z)
+              "string" -> CodeBlock.of("%T.string()", Z)
+              else -> typeRegistry.schemaInitializer(typeName(serviceTypeName))
+            }
 
         GeneratedTypeRef.Kind.ARRAY ->
-          zodArraySchema(serviceTypeName)
+          zodArraySchema(serviceTypeName, runtimeName)
 
         GeneratedTypeRef.Kind.MAP, GeneratedTypeRef.Kind.UNION ->
-          runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType)
+          runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
 
         GeneratedTypeRef.Kind.NAMED ->
           modelOrNull(index)
             ?.aliasedTypeRef()
-            ?.zodSchema(serviceTypeName, true)
-            ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType)
+            ?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+            ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
       }
 
     val declaration = modelProperties.declarationType(this)
@@ -2866,7 +3015,7 @@ class TypeScriptSundayIrGenerator(
         else -> constrainedSchema
       }
     return if (wireValidation) {
-      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues)
+      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues, runtimeName)
     } else {
       nullableSchema
     }
@@ -2879,6 +3028,7 @@ class TypeScriptSundayIrGenerator(
     required: Boolean,
     validation: Map<String, String>,
     allowedValues: List<Any?>?,
+    runtimeName: String,
   ): CodeBlock {
     val formattedType = declaration.takeIf { it.kind == GeneratedTypeRef.Kind.SCALAR }?.formattedScalarTypeName()
     val primitive =
@@ -2916,9 +3066,10 @@ class TypeScriptSundayIrGenerator(
         if (formattedType != null) {
           // Convert non-JSON transport values with the selected codec, then compare the JSON scalar contract.
           add(
-            "const jsonSchema = %Q({ ...runtime.policy, format: 'json', dateEncoding: %T.ISO8601, " +
+            "const jsonSchema = %Q({ ...%N.policy, format: 'json', dateEncoding: %T.ISO8601, " +
               "arrayBufferEncoding: %T.BASE64 }).resolveSchema(",
             SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+            runtimeName,
             TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
             TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
           )
@@ -3057,21 +3208,25 @@ class TypeScriptSundayIrGenerator(
   private fun runtimeResolvedSchema(
     typeName: TypeName,
     lazyRefType: TypeName.Standard? = null,
+    runtimeName: String = "runtime",
   ): CodeBlock =
     if (lazyRefType == null) {
       CodeBlock
         .builder()
-        .add("runtime.resolveSchema(")
+        .add("%N.resolveSchema(", runtimeName)
         .add(typeRegistry.schemaInitializer(typeName))
         .add(")")
         .build()
     } else {
-      typeRegistry.runtimeSchemaForType(typeName, "runtime", lazyRefType)
+      typeRegistry.runtimeSchemaForType(typeName, runtimeName, lazyRefType)
     }
 
-  private fun GeneratedTypeRef.zodArraySchema(serviceTypeName: TypeName.Standard): CodeBlock {
+  private fun GeneratedTypeRef.zodArraySchema(
+    serviceTypeName: TypeName.Standard,
+    runtimeName: String,
+  ): CodeBlock {
     val elementSchema =
-      arguments.firstOrNull()?.zodSchema(serviceTypeName, true)
+      arguments.firstOrNull()?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
         ?: CodeBlock.of("%T.unknown()", Z)
 
     return CodeBlock
@@ -3200,16 +3355,10 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun GeneratedOperation.typeScriptParameterViews() =
-    mutableSetOf<String>().let { allocatedNames ->
+    NameAllocator().let { names ->
       operationParameterViews(
         identifierName = { parameter -> parameter.name.typeScriptIdentifierName },
-        allocateName = { _, proposedName ->
-          var name = proposedName
-          while (!allocatedNames.add(name)) {
-            name += "_"
-          }
-          name
-        },
+        allocateName = { parameter, proposedName -> names.newName(proposedName, parameter) },
       )
     }
 
@@ -3258,7 +3407,7 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add("%[return this.transport.%L(\n", factoryMethod)
-      .add(spec(returnType, requestBodyTypeProperty, response, parameters, parameterSchemaProperties))
+      .add(spec(serviceTypeName, returnType, requestBodyTypeProperty, response, parameters, parameterSchemaProperties))
       .add("%]\n)")
       .apply {
         if (exchange == GeneratedExchange.REQUEST) {
@@ -3313,6 +3462,7 @@ class TypeScriptSundayIrGenerator(
     builder.add("request: ")
     builder.add(
       spec(
+        serviceTypeName,
         returnType,
         requestBodyTypeProperty,
         response,
@@ -3375,7 +3525,7 @@ class TypeScriptSundayIrGenerator(
         CodeBlock
           .builder()
           .add("%[return this.transport.eventSource(\n")
-          .add(spec(returnType, null, response, parameters, parameterSchemaProperties))
+          .add(spec(serviceTypeName, returnType, null, response, parameters, parameterSchemaProperties))
           .add("%]\n);\n")
           .build()
     }
@@ -3412,7 +3562,7 @@ class TypeScriptSundayIrGenerator(
         CodeBlock
           .builder()
           .add("%[return this.transport.eventStream<%T>(\n", returnType)
-          .add(spec(returnType, null, response, parameters, parameterSchemaProperties))
+          .add(spec(serviceTypeName, returnType, null, response, parameters, parameterSchemaProperties))
           .add(",\n")
           .add("(decoder, event, id, data) => decoder.decodeText(data, %L)%]\n);\n", eventTypeProperty)
           .build()
@@ -3445,7 +3595,7 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock
       .builder()
       .add("%[return this.transport.eventStream<%T>(\n", returnType)
-      .add(spec(returnType, null, response, parameters, parameterSchemaProperties))
+      .add(spec(serviceTypeName, returnType, null, response, parameters, parameterSchemaProperties))
       .add(",\n")
       .add(discriminatedEventDecoder(eventTypeProperties))
       .add("%]\n);\n")
@@ -3477,6 +3627,7 @@ class TypeScriptSundayIrGenerator(
       ?: typeName.toString()
 
   private fun GeneratedOperation.spec(
+    serviceTypeName: TypeName.Standard,
     returnType: TypeName,
     requestBodyTypeProperty: String?,
     response: GeneratedResponse?,
@@ -3491,6 +3642,9 @@ class TypeScriptSundayIrGenerator(
     builder.add("{%>")
     builder.add("\nmethod: %S,", requestMethod())
     builder.add("\npathTemplate: %S,", path)
+    securityByService[serviceTypeName]?.get(this)?.let { security ->
+      builder.add("\nsecurity: %L,", security.typeScriptBindings())
+    }
 
     parameters.withLocation(GeneratedParameter.Location.PATH).takeIf { it.isNotEmpty() }?.let { pathParameters ->
       builder.add("\n")
@@ -3524,6 +3678,30 @@ class TypeScriptSundayIrGenerator(
         builder.add(",")
       }
 
+    val checkedParameters = parameters.filter { !it.isConstant && it.type.kind != GeneratedTypeRef.Kind.SCALAR }
+    if (checkedParameters.isNotEmpty()) {
+      val names = NameAllocator()
+      parameters.forEach { names.newName(it.name, it) }
+      val runtimeName = names.newName("runtime", "validation runtime")
+      builder.add("\nparameterValidation: () => {%>\n")
+      builder.add(
+        "const %N = %Q({format: 'json', dateEncoding: %T.ISO8601, " +
+          "numericDateDecoding: %T.MILLISECONDS_SINCE_EPOCH, " +
+          "arrayBufferEncoding: %T.BASE64}, 'request');\n",
+        runtimeName,
+        SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+        TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+        TypeName.namedImport("NumericDateDecoding", "@outfoxx/sunday"),
+        TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+      )
+      checkedParameters.forEach { parameter ->
+        builder.add("%T.encode(", Z)
+        builder.add(parameter.type.zodSchema(serviceTypeName, parameter.required, runtimeName = runtimeName))
+        builder.add(", %N);\n", parameter.name)
+      }
+      builder.add("%<},")
+    }
+
     if (includeSignal) {
       builder.add("\nsignal: signal,")
     }
@@ -3531,6 +3709,38 @@ class TypeScriptSundayIrGenerator(
 
     return builder.build()
   }
+
+  private fun GeneratedClientSecurity.typeScriptBindings(): CodeBlock =
+    bindings.entries
+      .map { (name, binding) ->
+        val scheme = schemes.getValue(name)
+        val transport = scheme.credentialTransport()
+        val flow = (binding.flow ?: GeneratedSecurityBinding.Flow.EXTERNAL).wireName
+        CodeBlock
+          .builder()
+          .apply {
+            add("{ scheme: %S, provider: %S, flow: %S,", name, binding.provider, flow)
+            options.profile?.let { add(" profile: %S,", it) }
+            add(
+              " scopes: [%L],",
+              requirement.permissions[name]
+                .orEmpty()
+                .map { CodeBlock.of("%S", it) }
+                .joinToCode(", "),
+            )
+            mapOf(
+              "discoveryUrl" to binding.discoveryUrl,
+              "authorizationUrl" to binding.authorizationUrl,
+              "tokenUrl" to binding.tokenUrl,
+              "refreshUrl" to binding.refreshUrl,
+              "audience" to binding.audience,
+              "resource" to binding.resource,
+            ).forEach { (key, value) -> value?.let { add(" %L: %S,", key, it) } }
+            add(" transport: { location: %S, name: %S", transport.location, transport.name)
+            transport.prefix?.let { add(", prefix: %S", it) }
+            add(" } }")
+          }.build()
+      }.joinToCode(", ", "[", "]")
 
   private fun GeneratedOperation.requestMethod(): String =
     when (method.uppercase()) {
@@ -3793,8 +4003,10 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.isFreeformMapModel(): Boolean =
     kind == GeneratedModel.Kind.OBJECT &&
       !modelProperties.isClosed(this) &&
-      properties.isEmpty() &&
-      patternProperties.isEmpty() &&
+      modelProperties.fields(this).isEmpty() &&
+      modelProperties.patternProperties(this).isEmpty() &&
+      modelProperties.additionalProperties(this).isEmpty() &&
+      discriminator == null &&
       !externallyDiscriminated &&
       discriminatorMappings.isEmpty() &&
       childModels().isEmpty()

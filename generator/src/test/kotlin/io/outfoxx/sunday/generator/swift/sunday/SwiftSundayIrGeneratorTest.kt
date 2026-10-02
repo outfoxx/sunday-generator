@@ -655,6 +655,13 @@ class SwiftSundayIrGeneratorTest {
               properties = listOf(defaults.properties.first().copy(required = true)),
             ),
             patch,
+            patch.copy(
+              name = "NullablePatch",
+              properties =
+                patch.properties.map { property ->
+                  if (property.name == "nullable") property.copy(allowedValues = listOf("valid", null)) else property
+                },
+            ),
             patch.copy(name = "OrdinaryRequired", patchable = false),
             GeneratedModel(
               name = "UuidAlias",
@@ -698,13 +705,15 @@ class SwiftSundayIrGeneratorTest {
         }
         func testPatches() throws {
           let decoder = JSONDecoder()
-          for json in ["{}", #"{"value":null}"#] {
+          for json in ["{}"] {
             let patch = try decoder.decode(ConstrainedPatch.self, from: Data(json.utf8))
             XCTAssertNil(patch.value)
             XCTAssertNil(patch.nullable)
             XCTAssertEqual(String(data: try JSONEncoder().encode(patch), encoding: .utf8), "{}")
           }
-          let deleted = try decoder.decode(ConstrainedPatch.self, from: Data(#"{"nullable":null}"#.utf8))
+          XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(#"{"value":null}"#.utf8)))
+          XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(#"{"nullable":null}"#.utf8)))
+          let deleted = try decoder.decode(NullablePatch.self, from: Data(#"{"nullable":null}"#.utf8))
           guard case .delete? = deleted.nullable else { return XCTFail("null must remain a delete") }
           let supplied = try decoder.decode(ConstrainedPatch.self, from: Data(#"{"value":"valid","nullable":"valid"}"#.utf8))
           guard case .set("valid")? = supplied.value, case .set("valid")? = supplied.nullable else { return XCTFail("set lost") }
@@ -962,7 +971,7 @@ class SwiftSundayIrGeneratorTest {
             for json in [#"{}"#, #"{"value":null}"#, #"{"value":""}"#, #"{"value":"present","zero":1}"#,
                          #"{"value":"present","flag":true}"#, #"{"value":"present","choice":"0"}"#,
                          #"{"value":"present","choice":true}"#, #"{"value":"present","mode":"future"}"#] {
-              XCTAssertThrowsError(try decoder.decode(ScalarRestrictions.self, from: Data(json.utf8)))
+              XCTAssertThrowsError(try decoder.decode(ScalarRestrictions.self, from: Data(json.utf8)), json)
             }
           }
 
@@ -1308,7 +1317,7 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(fallbackTypeSource.contains("case mixedKebabCase = \"mixed-kebab.case\""), fallbackTypeSource)
     assertTrue(notificationSource.contains("public let type: NotificationType"), notificationSource)
     assertTrue(
-      notificationActivitySource.contains("if discriminatorValue == \"notification.pull_request.review_requested\""),
+      notificationActivitySource.contains("switch context.selectedAlternative"),
       notificationActivitySource,
     )
     assertTrue(
@@ -1654,7 +1663,7 @@ class SwiftSundayIrGeneratorTest {
 
       final class InheritedEnumTests: XCTestCase {
         func testInheritedStorageAndRequiredness() throws {
-          let types: [EventType] = [AlphaEvent(type: .alpha).type, BetaEvent(type: .beta).type,
+          let types: [EventType] = try [AlphaEvent(type: .alpha).type, BetaEvent(type: .beta).type,
                                    AlphaLeafEvent(type: .alpha).type, ReferencedAlphaEvent(type: .alpha).type]
           XCTAssertEqual(types, [.alpha, .beta, .alpha, .alpha])
           func check<T: Codable>(_ type: T.Type, value: String, invalidValue: String) throws -> T {
@@ -1782,10 +1791,12 @@ class SwiftSundayIrGeneratorTest {
       eventEnvelopeSource,
     )
     assertTrue(
-      eventEnvelopeSource.contains("let discriminatorValue = try container.decode(String.self, forKey: .type)"),
+      eventEnvelopeSource.contains(
+        "EventEnvelopeValidation.isValid(normalized: context.originalValue!, .response, context: &context)",
+      ),
       eventEnvelopeSource,
     )
-    assertTrue(eventEnvelopeSource.contains("if discriminatorValue == \"accounts.team.created\""), eventEnvelopeSource)
+    assertTrue(eventEnvelopeSource.contains("switch context.selectedAlternative"), eventEnvelopeSource)
     assertTrue(
       eventEnvelopeSource.contains("self = .accountsTeamCreatedEvent(try AccountsTeamCreatedEvent(from: decoder))"),
       eventEnvelopeSource,
@@ -2638,10 +2649,12 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(locationSource.contains("public let parent: LocationSummary?"), locationSource)
     assertTrue(locationSource.contains("parent: LocationSummary? = nil"), locationSource)
     assertTrue(
-      entityRefSource.contains("let type = try container.decode(String.self, forKey: CodingKeys.type)"),
+      entityRefSource.contains(
+        "EntitySummaryValidation.isValid(normalized: context.originalValue!, .response, context: &context)",
+      ),
       entityRefSource,
     )
-    assertTrue(entityRefSource.contains("case \"location\":"), entityRefSource)
+    assertTrue(entityRefSource.contains("self = .location(try LocationSummary(from: decoder))"), entityRefSource)
     assertTrue(listSource.contains("public let items: [EntitySummaryRef]"), listSource)
     assertTrue(mapHolderSource.contains("public let entries: [String : EntitySummaryRef]"), mapHolderSource)
   }
@@ -2884,7 +2897,7 @@ class SwiftSundayIrGeneratorTest {
       source.contains("public enum TaskState : CaseIterable, Codable, CustomStringConvertible, Equatable, Hashable,"),
       source,
     )
-    assertTrue(source.contains("Sendable {"), source)
+    assertTrue(source.contains("Sendable, ModelValidatable {"), source)
     assertTrue(source.contains("return [.pending, .running]"), source)
     assertTrue(source.contains("case unknown(String)"), source)
     assertTrue(source.contains("default: self = .unknown(rawValue)"), source)
@@ -2968,7 +2981,7 @@ class SwiftSundayIrGeneratorTest {
     assertTrue(fallbackSource.contains("AdditionalPropertyValue(value: value)"), fallbackSource)
     assertTrue(referenceSource.contains("case unknown(JobProgressUnknown)"), referenceSource)
     assertTrue(
-      referenceSource.contains("default: self = .unknown(try JobProgressUnknown(from: decoder))"),
+      referenceSource.contains("self = .unknown(try JobProgressUnknown(from: decoder))"),
       referenceSource,
     )
     assertTrue(unionSource.contains("case unknown(JobEventUnknown)"), unionSource)
@@ -3116,7 +3129,14 @@ class SwiftSundayIrGeneratorTest {
                     required = true,
                   ),
                   GeneratedModelProperty("optionalNullable", GeneratedTypeRef.scalar("string", nullable = true)),
-                  GeneratedModelProperty("optionalText", GeneratedTypeRef.scalar("string")),
+                  GeneratedModelProperty(
+                    "optionalText",
+                    GeneratedTypeRef.scalar("string"),
+                    validation =
+                      mapOf(
+                        "minLength" to "2",
+                      ),
+                  ),
                   GeneratedModelProperty(
                     "data",
                     GeneratedTypeRef.named("EventData"),
@@ -3138,6 +3158,7 @@ class SwiftSundayIrGeneratorTest {
       """
       import Foundation
       import XCTest
+      import Sunday
       @testable import SundayGenTest
       final class EventNullabilityTests: XCTestCase {
         func testKnownAndFallbackEvents() throws {
@@ -3148,14 +3169,34 @@ class SwiftSundayIrGeneratorTest {
               "future": ["nested": ["value": NSNull()]]
             ]
             var populated = base
-            populated["optionalText"] = ""
+            populated["optionalText"] = "ok"
             for wire in [base, populated] {
               let data = try JSONSerialization.data(withJSONObject: wire)
               let event = try JSONDecoder().decode(EventEnvelope.self, from: data)
+              XCTAssertTrue(event.isValid(.response))
+              XCTAssertEqual(event.isValid(.request), kind == "created")
+              XCTAssertTrue(EventEnvelopeValidation.isValid(event, .response))
+              switch event {
+              case .created(let value):
+                XCTAssertTrue(value.isValid(.request))
+                try EventEnvelope.CreatedEvent.Validation.validate(value, .request)
+              case .unknown(let value):
+                XCTAssertFalse(value.isValid(.request))
+                XCTAssertTrue(EventEnvelope.UnknownEvent.Validation.isValid(value, .response))
+              }
               let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(event)) as! NSDictionary
               XCTAssertEqual(encoded, wire as NSDictionary)
             }
+            for invalid in [NSNull(), "x"] as [Any] {
+              var malformed = base
+              malformed["optionalText"] = invalid
+              XCTAssertThrowsError(try JSONDecoder().decode(EventEnvelope.self,
+                from: JSONSerialization.data(withJSONObject: malformed)))
+            }
           }
+          let payload = CreatedData(version: 1, name: "test")
+          XCTAssertThrowsError(try EventEnvelope.CreatedEvent(requiredNullable: nil,
+            optionalNullable: nil, optionalText: "x", data: payload))
         }
       }
       """.trimIndent(),
@@ -3164,6 +3205,13 @@ class SwiftSundayIrGeneratorTest {
 
     val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Events/EventEnvelope.swift")
     val fallbackSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Events/EventDataUnknown.swift")
+    val validatorSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Events/EventEnvelopeValidation.swift",
+      )
+    assertTrue(validatorSource.contains("ModelObjectValidation(fields:"), validatorSource)
+    assertFalse(envelopeSource.contains("AdditionalPropertiesValidator"), envelopeSource)
     assertTrue(envelopeSource.contains("case unknown(UnknownEvent)"), envelopeSource)
     assertTrue(envelopeSource.contains("public let data: EventDataUnknown"), envelopeSource)
     assertTrue(envelopeSource.contains("self = .unknown(try UnknownEvent(from: decoder))"), envelopeSource)
@@ -3355,20 +3403,10 @@ class SwiftSundayIrGeneratorTest {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val serviceSource =
-      buildString {
-        FileSpec
-          .get("", findType("UsersAPI", builtTypes))
-          .writeTo(this)
-      }
-    val unionSource =
-      buildString {
-        FileSpec
-          .get("", findType("UserProfile", builtTypes))
-          .writeTo(this)
-      }
-
     assertTrue(compileTypes(compiler, builtTypes))
+    val serviceSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "UsersAPI.swift")
+    val unionSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "UserProfile.swift")
+    val validationSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "UserProfileValidation.swift")
     assertTrue(
       serviceSource.contains("public func getUser() throws -> Sunday.Operation<Empty, UserProfile, TransportType>"),
       serviceSource,
@@ -3379,16 +3417,14 @@ class SwiftSundayIrGeneratorTest {
     )
     assertTrue(unionSource.contains("case userSelfResponse(UserSelfResponse)"), unionSource)
     assertTrue(unionSource.contains("case userSummaryResponse(UserSummaryResponse)"), unionSource)
-    assertTrue(unionSource.contains("let container = try decoder.container(keyedBy: CodingKeys.self)"), unionSource)
-    assertTrue(unionSource.contains("let keys = container.allKeys"), unionSource)
-    assertTrue(unionSource.contains("if keys.contains(.createdAt) || keys.contains(.teams)"), unionSource)
+    assertTrue(unionSource.contains("ModelValidationContext.decodingValue(decoder)"), unionSource)
+    assertTrue(unionSource.contains("UserProfileValidation.isValid(normalized:"), unionSource)
+    assertTrue(unionSource.contains("switch context.selectedAlternative"), unionSource)
     assertTrue(unionSource.contains("self = .userSelfResponse(try UserSelfResponse(from: decoder))"), unionSource)
-    assertTrue(
-      unionSource.contains("if keys.contains(.userId) && keys.contains(.email) && keys.contains(.displayName)"),
-      unionSource,
-    )
     assertTrue(unionSource.contains("self = .userSummaryResponse(try UserSummaryResponse(from: decoder))"), unionSource)
-    assertTrue(unionSource.contains("DecodingError.typeMismatch(Self.self"), unionSource)
+    assertTrue(validationSource.contains("UserSelfResponseValidation.isValid(normalized:"), validationSource)
+    assertTrue(validationSource.contains("UserSummaryResponseValidation.isValid(normalized:"), validationSource)
+    assertFalse(validationSource.contains(".decode("), validationSource)
     assertTrue(unionSource.contains("case .userSelfResponse(let value):"), unionSource)
   }
 
@@ -3625,15 +3661,20 @@ class SwiftSundayIrGeneratorTest {
       unionSource,
     )
     assertTrue(
-      unionSource.contains("let discriminatorValue = try container.decode(String.self, forKey: .code)"),
+      unionSource.contains(
+        "CheckoutTargetUnknownProblemValidation.isValid(normalized: context.originalValue!, .response, context: &context)",
+      ),
       unionSource,
     )
-    assertTrue(unionSource.contains("if discriminatorValue == \"TPG-REPO-404\""), unionSource)
+    assertTrue(unionSource.contains("switch context.selectedAlternative"), unionSource)
     assertTrue(
       unionSource.contains("self = .repoNotFoundProblem(try RepoNotFoundProblem(from: decoder))"),
       unionSource,
     )
-    assertTrue(unionSource.contains("if discriminatorValue == \"TPG-WG-404\""), unionSource)
+    assertTrue(
+      unionSource.contains("self = .workingGraphNotFoundProblem(try WorkingGraphNotFoundProblem(from: decoder))"),
+      unionSource,
+    )
     assertFalse(unionSource.contains("object[\"type\"] != nil"), unionSource)
   }
 
@@ -3695,24 +3736,103 @@ class SwiftSundayIrGeneratorTest {
           ),
       )
 
-    SwiftSundayIrGenerator(api, typeRegistry, swiftSundayTestOptions)
-      .generateServiceTypes()
+    val envelope = api.models.last()
+    val optionalEnvelope =
+      envelope.copy(
+        name = "OptionalEnvelope",
+        properties =
+          envelope.properties.map {
+            if (it.externalDiscriminator !=
+              null
+            ) {
+              it.copy(required = false)
+            } else {
+              it
+            }
+          },
+      )
+    val nullableEnvelope =
+      envelope.copy(
+        name = "NullableEnvelope",
+        properties =
+          envelope.properties.map {
+            if (it.externalDiscriminator !=
+              null
+            ) {
+              it.copy(type = it.type.copy(nullable = true))
+            } else {
+              it
+            }
+          },
+      )
+    SwiftSundayIrGenerator(
+      api.copy(models = api.models + listOf(optionalEnvelope, nullableEnvelope)),
+      typeRegistry,
+      swiftSundayTestOptions,
+    ).generateServiceTypes()
 
-    val builtTypes = typeRegistry.buildTypes()
-    val parentSource =
-      buildString {
-        FileSpec
-          .get("", findType("Parent", builtTypes))
-          .writeTo(this)
+    typeRegistry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("ExternalDiscriminatorValidationTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class ExternalDiscriminatorValidationTests: XCTestCase {
+        func testMatchingPayloadUsesConcreteEncoder() throws {
+          let envelope = try Envelope(kind: "cat", payload: Cat(name: "Kit"))
+          XCTAssertTrue(envelope.isValid(.request))
+          XCTAssertTrue(envelope.isValid(.response))
+          try envelope.validate(.request)
+          let wire = try JSONEncoder().encode(envelope)
+          let decoded = try JSONDecoder().decode(Envelope.self, from: wire)
+          XCTAssertEqual((decoded.payload as? Cat)?.name, "Kit")
+          XCTAssertEqual(decoded.kind, "cat")
+        }
+        func testOptionalAndNullablePayloadsParticipateOnlyWhenPresent() throws {
+          let optional = try OptionalEnvelope(kind: "cat", payload: Cat(name: "Kit"))
+          XCTAssertNoThrow(try JSONDecoder().decode(OptionalEnvelope.self, from: JSONEncoder().encode(optional)))
+          for kind in ["cat", "future"] {
+            let omitted = try OptionalEnvelope(kind: kind, payload: nil)
+            XCTAssertTrue(omitted.isValid(.request))
+            XCTAssertNoThrow(try JSONDecoder().decode(OptionalEnvelope.self, from: JSONEncoder().encode(omitted)))
+            let nullable = try NullableEnvelope(kind: kind, payload: nil)
+            XCTAssertTrue(nullable.isValid(.request))
+            XCTAssertNoThrow(try JSONDecoder().decode(NullableEnvelope.self, from: JSONEncoder().encode(nullable)))
+          }
+          XCTAssertThrowsError(try OptionalEnvelope(kind: "cat", payload: Dog(name: "Rex")))
+          XCTAssertThrowsError(try NullableEnvelope(kind: "dog", payload: Cat(name: "Kit")))
+          XCTAssertThrowsError(try JSONDecoder().decode(OptionalEnvelope.self, from:
+            Data(#"{"kind":"cat","payload":null}"#.utf8)))
+          XCTAssertThrowsError(try JSONDecoder().decode(NullableEnvelope.self, from:
+            Data(#"{"kind":"cat"}"#.utf8)))
+        }
+        func testMismatchedAndUnsupportedDiscriminatorsRejectBeforeEncoding() throws {
+          for discriminator in ["cat", "future"] {
+            XCTAssertThrowsError(try Envelope(kind: discriminator, payload: Dog(name: "Rex"))) { error in
+              guard let failure = error as? ModelValidationError else { return XCTFail("Unexpected error: \(error)") }
+              XCTAssertEqual(failure.diagnostics.map(\.reason), [.discriminator])
+              XCTAssertEqual(failure.diagnostics.map(\.jsonPointer), ["/payload"])
+            }
+          }
+          XCTAssertThrowsError(try JSONDecoder().decode(Envelope.self, from:
+            Data(#"{"kind":"cat","payload":{}}"#.utf8)))
+        }
       }
-    val envelopeSource =
-      buildString {
-        FileSpec
-          .get("", findType("Envelope", builtTypes))
-          .writeTo(this)
-      }
-
-    assertTrue(compileTypes(compiler, builtTypes))
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+    val parentSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Parent.swift")
+    val envelopeSource = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "Models/Envelope.swift")
+    val validatorSource =
+      CompiledGeneratedSources.source(
+        GeneratedCodeLanguage.Swift,
+        "Models/EnvelopeValidation.swift",
+      )
+    assertTrue(validatorSource.contains("ModelObjectValidation(fields:"), validatorSource)
+    assertFalse(envelopeSource.contains("AdditionalPropertiesValidator"), envelopeSource)
     assertTrue(parentSource.contains("public protocol Parent"), parentSource)
     assertFalse(parentSource.contains("enum AnyRef"), parentSource)
     assertTrue(envelopeSource.contains("public struct Envelope"), envelopeSource)
@@ -3724,7 +3844,8 @@ class SwiftSundayIrGeneratorTest {
       envelopeSource,
     )
     assertTrue(envelopeSource.contains("case \"dog\":"), envelopeSource)
-    assertTrue(envelopeSource.contains("try container.encode(self.payload as! Cat, forKey: .payload)"), envelopeSource)
+    assertTrue(envelopeSource.contains("try container.encode(self.payload, forKey: .payload)"), envelopeSource)
+    assertFalse(envelopeSource.contains("as!"), envelopeSource)
   }
 
   @Test

@@ -17,11 +17,14 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
+import io.outfoxx.sunday.generator.ir.emit.clientSecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
+import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates transport-neutral Python Sunday client modules from generated IR. */
@@ -40,17 +43,30 @@ class PythonSundayIrGenerator(
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     if (GeneratedTypeCategory.Model in outputCategories) {
-      modules += PythonModelRenderer(packageName, options.preserveUnknownFields).renderModels(api.models)
+      modules +=
+        PythonModelRenderer(
+          packageName,
+          options.preserveUnknownFields,
+          options.defaultTolerance,
+        ).renderModels(api.models)
       modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
     }
 
     if (GeneratedTypeCategory.Service in outputCategories) {
+      services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Python/Sunday")
       val clientRenderer =
         PythonClientRenderer(
           packageName,
           registerProblems = api.problems.isNotEmpty(),
           models = api.models,
           defaultMediaTypes = defaultMediaTypes,
+          profile = options.profile,
+          security = {
+            service,
+            operation,
+            ->
+            api.clientSecurity(service, operation, options.generationContext(GenerationMode.Client))
+          },
         )
       modules += services.map(clientRenderer::renderService)
       if (options.aggregateServices && services.size > 1) {

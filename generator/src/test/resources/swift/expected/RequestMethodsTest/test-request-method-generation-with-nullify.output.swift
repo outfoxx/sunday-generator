@@ -42,7 +42,14 @@ public final class API<TransportType : Transport> : Sendable {
       nilify: Sunday.NilifySpec(
         statuses: [404, 405],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 
@@ -64,7 +71,14 @@ public final class API<TransportType : Transport> : Sendable {
       nilify: Sunday.NilifySpec(
         statuses: [404],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 
@@ -86,7 +100,14 @@ public final class API<TransportType : Transport> : Sendable {
       nilify: Sunday.NilifySpec(
         statuses: [],
         problemTypes: [TestNotFoundProblem.self, AnotherNotFoundProblem.self]
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 
@@ -108,7 +129,14 @@ public final class API<TransportType : Transport> : Sendable {
       nilify: Sunday.NilifySpec(
         statuses: [404, 405],
         problemTypes: []
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 
@@ -130,7 +158,14 @@ public final class API<TransportType : Transport> : Sendable {
       nilify: Sunday.NilifySpec(
         statuses: [404],
         problemTypes: []
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 

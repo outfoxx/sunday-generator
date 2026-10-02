@@ -33,7 +33,7 @@ An explicitly declared `Content-Type` header is included in server signatures, i
 
 The request body's media declarations continue to determine `@Consumes`. A string header does not broaden a body declared as `application/octet-stream`. To accept several image formats, declare `image/*` on the body; to accept arbitrary media, declare `*/*`. Media matching is case-insensitive and accepts parameters such as `image/png; profile=example`, while the injected string preserves the actual header. Existing class-level media defaults still apply when there is no method-level override, including operations without a body.
 
-Server enum models expose a static `fromString` converter using their declared wire values, with or without Jackson annotations. Strict enums accept exact values such as `image/png` and reject undeclared spellings, casing and parameters. Use a string header when those variations should reach application code, or a tolerant enum to retain unknown values. Enum conversion does not change JSON decoding or the allowed-value restrictions on inherited model properties.
+Server enum models expose a static `fromString` converter using their declared wire values, with or without Jackson annotations. Strict enums accept exact values such as `image/png` and reject undeclared spellings, casing and parameters. Use a string header when those variations should reach application code, or a tolerant enum with `x-sunday-tolerance: all` when unknown values should pass request validation. Tolerant enum conversion preserves unknown values, but the default response-only tolerance rejects them at the request boundary. Enum conversion does not change JSON decoding or the allowed-value restrictions on inherited model properties.
 
 Regenerate and update application overrides/delegates to accept the new argument. Client parameter and media behavior is unchanged. Python service protocols already included explicit headers.
 
@@ -62,10 +62,10 @@ JSON `format: byte` values and binary fields inside structured models continue t
 This output requires Sunday Python `2.0.0-beta.2` or later, which provides `request_bytes`. Until PyPI publication, install the Litestar extra from the released Git tag:
 
 ```sh
-python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.2'
+python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.5'
 ```
 
-Compiler-backed tests use this tag by default. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
+Compiler-backed tests use `2.0.0-beta.5` by default, including directional model validation support. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
 
 ```sh
 SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*PythonContentTypeTest'

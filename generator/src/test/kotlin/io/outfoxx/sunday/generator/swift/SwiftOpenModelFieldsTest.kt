@@ -88,6 +88,10 @@ class SwiftOpenModelFieldsTest {
           let inheritedResult = try JSONSerialization.jsonObject(with: JSONEncoder().encode(inherited)) as! NSDictionary
           XCTAssertEqual(inheritedResult["future"] != nil, $preserve)
           XCTAssertThrowsError(try JSONDecoder().decode(ClosedChild.self, from: Data(#"{"id":"one","name":"name","future":1}"#.utf8)))
+          XCTAssertNoThrow(try JSONDecoder().decode(TypedRecord.self, from: Data(#"{"id":"one","future":2}"#.utf8)))
+          if ${frontend != "raml"} {
+            XCTAssertThrowsError(try JSONDecoder().decode(TypedRecord.self, from: Data(#"{"id":"one","future":3}"#.utf8)))
+          }
           XCTAssertThrowsError(try JSONDecoder().decode(TypedRecord.self, from: Data(#"{"id":"one","future":"wrong"}"#.utf8)))
           ${if (preserve) {
         """

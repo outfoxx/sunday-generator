@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.tools.inheritedAdditionalPropertiesModels
 import io.outfoxx.sunday.generator.tools.openModelFieldsApi
 import io.outfoxx.sunday.generator.tools.openModelWire
 import io.outfoxx.sunday.generator.typescript.sunday.typeScriptSundayTestOptions
@@ -28,10 +29,61 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @TypeScriptTest
 class TypeScriptOpenModelFieldsTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `inherited additional constraints survive encoding and mutation`(
+    frontend: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = openModelFieldsApi(frontend, directory)
+    val registry = TypeScriptTypeRegistry(emptySet(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    TypeScriptSundayIrGenerator(
+      source.copy(models = source.models + inheritedAdditionalPropertiesModels()),
+      registry,
+      typeScriptSundayTestOptions,
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("InheritedCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+                  import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+                  import {DynamicChildSchema} from './dynamic-child.js';
+            import {DynamicLeafSchema} from './dynamic-leaf.js';
+            import {DynamicHolderSchema} from './dynamic-holder.js';
+                  const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+                  for (const schema of [runtime.resolveSchema(DynamicChildSchema), runtime.resolveSchema(DynamicLeafSchema)]) {
+                    const value = schema.parse({id: 'one', extra: [1,2]});
+                    schema.encode(value);
+                    for (const invalid of [[1], [1,2,3,4]]) {
+                if (schema.safeParse({id: 'one', extra: invalid}).success) throw new Error('Inherited constraint ignored');
+                if (runtime.resolveSchema(DynamicHolderSchema).safeParse({payload: {id: 'one', extra: invalid}}).success) throw new Error('Inherited nested model treated as free-form');
+                      const prototype = Object.fromEntries([['id', 'one'], ['__proto__', invalid]]);
+                      if (schema.safeParse(prototype).success) throw new Error('Inherited prototype property constraint ignored');
+                (value as any).extra = invalid;
+                      if (schema.safeEncode(value).success) throw new Error('Mutated inherited extension accepted');
+                    }
+                  }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() +
+          (TypeName.namedImport("InheritedCheck", "!inherited-check") to check),
+        "inherited-check",
+      ),
+    )
+  }
+
   @ParameterizedTest
   @CsvSource(
     "raml,true",
@@ -49,7 +101,7 @@ class TypeScriptOpenModelFieldsTest {
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
-    val registry = TypeScriptTypeRegistry(emptySet())
+    val registry = TypeScriptTypeRegistry(emptySet(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
     val options =
       if (preserve) {
         typeScriptSundayTestOptions
@@ -69,10 +121,10 @@ class TypeScriptOpenModelFieldsTest {
           CodeBlock.of(
             """
             import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
-            import {NoticeSchema} from './notice';
-            import {ExtendedRecordSchema} from './extended-record';
-            import {ClosedChildSchema} from './closed-child';
-            import {TypedRecordSchema} from './typed-record';
+            import {NoticeSchema} from './notice.js';
+            import {ExtendedRecordSchema} from './extended-record.js';
+            import {ClosedChildSchema} from './closed-child.js';
+            import {TypedRecordSchema} from './typed-record.js';
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
             const input = $openModelWire;
             const schema = runtime.resolveSchema(NoticeSchema);
@@ -86,6 +138,8 @@ class TypeScriptOpenModelFieldsTest {
             if (('future' in inherited) !== $preserve) throw new Error('inherited preservation');
             if (runtime.resolveSchema(ClosedChildSchema).safeParse({id: 'one', name: 'name', future: 1}).success) throw new Error('closed child accepted extra');
             if (runtime.resolveSchema(TypedRecordSchema).safeParse({id: 'one', future: 'wrong'}).success) throw new Error('typed extra was not validated');
+            runtime.resolveSchema(TypedRecordSchema).parse({id: 'one', future: 2});
+            if (${frontend != "raml"} && runtime.resolveSchema(TypedRecordSchema).safeParse({id: 'one', future: 3}).success) throw new Error('additional-property const was ignored');
             // Prototype-like keys are data, and must survive without becoming object prototypes.
             const prototype = JSON.parse('{"id":"one","data":{"name":"name","additionalProperties":"declared"},"__proto__":{"polluted":true}}');
             const prototypeOutput = schema.encode(schema.parse(prototype));

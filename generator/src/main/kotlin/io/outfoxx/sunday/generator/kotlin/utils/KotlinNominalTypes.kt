@@ -21,6 +21,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
@@ -39,6 +40,7 @@ internal class KotlinNominalTypes(
   private val jackson: Boolean,
   private val modelName: (GeneratedModel) -> ClassName,
   private val typeName: (GeneratedTypeRef) -> TypeName,
+  private val validation: BeanValidationTypes? = null,
 ) {
   fun generate(model: GeneratedModel): TypeSpec.Builder? =
     when {
@@ -60,8 +62,22 @@ internal class KotlinNominalTypes(
       .primaryConstructor(
         FunSpec
           .constructorBuilder()
-          .addParameter("value", raw)
-          .apply {
+          .addParameter(
+            ParameterSpec
+              .builder("value", raw)
+              .apply {
+                validation?.let { types ->
+                  KotlinNativeSchema
+                    .annotation(
+                      scalar.property,
+                      properties,
+                      types,
+                      AnnotationSpec.UseSiteTarget.PARAM,
+                      scalar.patterns,
+                    )?.let(::addAnnotation)
+                }
+              }.build(),
+          ).apply {
             if (jackson) {
               addAnnotation(
                 AnnotationSpec
@@ -76,7 +92,17 @@ internal class KotlinNominalTypes(
           .builder("value", raw)
           .initializer("value")
           .apply {
-            if (parents.isNotEmpty()) addModifiers(KModifier.OVERRIDE)
+            validation?.let { types ->
+              KotlinNativeSchema
+                .annotation(
+                  scalar.property,
+                  properties,
+                  types,
+                  AnnotationSpec.UseSiteTarget.GET,
+                  scalar.patterns,
+                )?.let(::addAnnotation)
+            }
+            if (parents.isNotEmpty() || validation != null) addModifiers(KModifier.OVERRIDE)
             if (jackson) {
               addAnnotation(
                 AnnotationSpec
@@ -88,6 +114,9 @@ internal class KotlinNominalTypes(
           }.build(),
       ).apply {
         parents.forEach { addSuperinterface(modelName(it)) }
+        if (validation != null) {
+          addSuperinterface(ClassName("io.outfoxx.sunday.validation", "NominalValue").parameterizedBy(raw))
+        }
         if (jackson && parents.isNotEmpty()) {
           addAnnotation(
             AnnotationSpec
@@ -97,19 +126,23 @@ internal class KotlinNominalTypes(
           )
         }
       }.addInitializerBlock(
-        CodeBlock
-          .builder()
-          .add(KotlinModelConstraints.initializer(listOf(field), properties, typeName = typeName))
-          .apply {
-            scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
-              addStatement(
-                "require(%T(%S).containsMatchIn(value)) { %S }",
-                Regex::class,
-                it,
-                "Invalid value for '${model.name}'",
-              )
-            }
-          }.build(),
+        if (validation != null) {
+          KotlinNativeSchema.constructor(name, listOf(ParameterSpec.builder("value", raw).build()), validation)
+        } else {
+          CodeBlock
+            .builder()
+            .add(KotlinModelConstraints.initializer(listOf(field), properties, typeName = typeName))
+            .apply {
+              scalar.patterns.filterNot { it == scalar.property.validation["pattern"] }.forEach {
+                addStatement(
+                  "require(%T(%S).containsMatchIn(value)) { %S }",
+                  Regex::class,
+                  it,
+                  "Invalid value for '${model.name}'",
+                )
+              }
+            }.build()
+        },
       ).addFunction(
         FunSpec
           .builder("toString")

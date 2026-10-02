@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir.emit
 
+import io.outfoxx.sunday.generator.GenerationContext
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
@@ -24,6 +25,9 @@ import io.outfoxx.sunday.generator.ir.GeneratedModeFlag
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPolicy
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyDuration
+import io.outfoxx.sunday.generator.ir.GeneratedPolicySetting
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedService
@@ -114,32 +118,44 @@ class GeneratedOperationMetadataTest {
   }
 
   @Test
-  fun `overlays policy metadata without losing base maps`() {
+  fun `overlays policy metadata without losing inherited members`() {
     val base =
       GeneratedPolicy(
-        timeout = "PT1S",
-        retry = mapOf("maxRetries" to "2", "delay" to "PT100MS"),
-        serverRateLimit = mapOf("value" to "20"),
-        source = "api",
+        all =
+          GeneratedPolicyValues(
+            timeout = GeneratedPolicySetting(value = GeneratedPolicyDuration(1)),
+            retry =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.Retry(maxRetries = 2, delay = GeneratedPolicyDuration(0, 100_000_000)),
+              ),
+          ),
+        server =
+          GeneratedPolicyValues(
+            rateLimit = GeneratedPolicySetting(value = GeneratedPolicyValues.RateLimit(value = 20)),
+          ),
       )
     val override =
       GeneratedPolicy(
-        retry = mapOf("maxRetries" to "3"),
-        circuitBreaker = mapOf("requestVolumeThreshold" to "10"),
-        source = "operation",
+        all =
+          GeneratedPolicyValues(
+            retry = GeneratedPolicySetting(value = GeneratedPolicyValues.Retry(maxRetries = 3)),
+            circuitBreaker =
+              GeneratedPolicySetting(
+                value = GeneratedPolicyValues.CircuitBreaker(requestVolumeThreshold = 10),
+              ),
+          ),
       )
-
     assertTrue(GeneratedPolicy().isEmpty)
-    assertEquals(
-      GeneratedPolicy(
-        timeout = "PT1S",
-        retry = mapOf("maxRetries" to "3", "delay" to "PT100MS"),
-        circuitBreaker = mapOf("requestVolumeThreshold" to "10"),
-        serverRateLimit = mapOf("value" to "20"),
-        source = "operation",
-      ),
-      base.withOverrides(override),
-    )
+    val resolved =
+      base
+        .withOverrides(
+          override,
+        ).resolve(GenerationContext(GenerationMode.Server)) { first, second -> first.merge(second) }!!
+    assertEquals(GeneratedPolicyDuration(1), resolved.timeout?.value)
+    assertEquals(3, resolved.retry?.value?.maxRetries)
+    assertEquals(GeneratedPolicyDuration(0, 100_000_000), resolved.retry?.value?.delay)
+    assertEquals(20, resolved.rateLimit?.value?.value)
+    assertEquals(10, resolved.circuitBreaker?.value?.requestVolumeThreshold)
   }
 
   @Test

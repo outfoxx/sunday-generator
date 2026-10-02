@@ -14,7 +14,14 @@ afterEvaluate {
   javaComponent.withVariantsFromConfiguration(configurations["testFixturesSourcesElements"]) { skip() }
 }
 
+// Provider versions use the same JVM packages, so exercise them in separate class loaders.
+val javaxValidationRuntime by configurations.creating
+val jakartaValidationRuntime by configurations.creating
+
 dependencies {
+
+  javaxValidationRuntime("org.hibernate.validator:hibernate-validator:6.2.5.Final")
+  jakartaValidationRuntime("org.hibernate.validator:hibernate-validator:8.0.5.Final")
 
   api(libs.amfClient)
 
@@ -30,11 +37,23 @@ dependencies {
   //
 
   // START: generated code dependencies
+  constraints {
+    // AMF binaries require Scala 2.12; a native framework's test BOM must not replace that ABI.
+    listOf("scala-library", "scala-reflect", "scala-compiler").forEach { artifact ->
+      testImplementation("org.scala-lang:$artifact") {
+        version { strictly("2.12.15") }
+      }
+    }
+  }
   testImplementation(libs.jackson)
   testImplementation(libs.jacksonJavaTime)
   testImplementation(libs.sundayKt)
+  testImplementation("io.outfoxx.sunday:sunday-jdk:${libs.versions.sundayKt.get()}")
   testImplementation(libs.sundayBroker)
   testImplementation(libs.sundayProblem)
+  testImplementation("io.outfoxx.sunday:sunday-client-quarkus:${libs.versions.sundayKt.get()}")
+  testImplementation("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
+  testImplementation("io.outfoxx.sunday:sunday-validation-jakarta:${libs.versions.sundayKt.get()}")
   testImplementation(libs.javaxJaxrs)
   testImplementation(libs.jakartaJaxrs)
   testImplementation(libs.validation)
@@ -73,6 +92,15 @@ dependencies {
 
   testImplementation(libs.jcolor)
   testImplementation(libs.jimfs)
+}
+
+tasks.withType<Test>().configureEach {
+  // Compiler-backed fixtures retain compiler state; bound concurrency independently of host CPU count.
+  maxHeapSize = "2g"
+  systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+  systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", "4")
+  systemProperty("sunday.validation.javax.classpath", javaxValidationRuntime.asPath)
+  systemProperty("sunday.validation.jakarta.classpath", jakartaValidationRuntime.asPath)
 }
 
 tasks.javadoc {

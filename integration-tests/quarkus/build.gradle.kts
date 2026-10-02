@@ -12,6 +12,12 @@ dependencies {
   implementation("io.quarkus:quarkus-kotlin")
   implementation("io.quarkus:quarkus-rest")
   implementation("io.quarkus:quarkus-rest-jackson")
+  implementation("io.quarkus:quarkus-rest-client-jackson")
+  implementation("io.quarkus:quarkus-rest-client-oidc-filter")
+  implementation("io.quarkus:quarkus-smallrye-fault-tolerance")
+  implementation(libs.quarkiverseProblem)
+  implementation("io.outfoxx.sunday:sunday-jaxrs-quarkus:${libs.versions.sundayKt.get()}")
+  implementation("io.outfoxx.sunday:sunday-client-quarkus:${libs.versions.sundayKt.get()}")
   implementation(libs.jacksonKotlin)
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-smallrye-jwt")
@@ -25,6 +31,10 @@ dependencies {
   testImplementation(libs.junit)
   testRuntimeOnly(libs.junitEngine)
   testRuntimeOnly(libs.junitPlatform)
+  if (providers.systemProperty("os.name").get().startsWith("Mac")) {
+    val architecture = if (providers.systemProperty("os.arch").get() == "aarch64") "aarch_64" else "x86_64"
+    testRuntimeOnly("io.netty:netty-resolver-dns-native-macos::osx-$architecture")
+  }
 }
 
 val generatedSources = layout.buildDirectory.dir("generated/sunday")
@@ -220,12 +230,91 @@ val generateClosedModelApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val policyContract = layout.projectDirectory.file("src/main/openapi/scoped-policies.yaml")
+val policyGenerators =
+  listOf("server", "client").map { role ->
+    tasks.register<JavaExec>("generate${role.replaceFirstChar { it.uppercase() }}Policies") {
+      val output = layout.buildDirectory.dir("generated/policies-$role")
+      inputs.file(policyContract)
+      outputs.dir(output)
+      classpath = generator
+      mainClass.set("io.outfoxx.sunday.generator.MainKt")
+      args(
+        "kotlin/jaxrs",
+        "-mode",
+        role,
+        "-quarkus",
+        "-profile",
+        "internal",
+        "-pkg",
+        "io.test.quarkus.policies.$role",
+        "-out",
+        output.get().asFile.absolutePath,
+      )
+      if (role == "server") args("-resource-adapters")
+      args(policyContract.asFile.absolutePath)
+    }
+  }
+
+val nativePayloadContract = layout.projectDirectory.file("src/main/openapi/native-payloads.yaml")
+val nativePayloadGenerators =
+  listOf("server", "client").map { role ->
+    tasks.register<JavaExec>("generate${role.replaceFirstChar { it.uppercase() }}NativePayloads") {
+      val output = layout.buildDirectory.dir("generated/native-payloads-$role")
+      inputs.file(nativePayloadContract)
+      outputs.dir(output)
+      classpath = generator
+      mainClass.set("io.outfoxx.sunday.generator.MainKt")
+      args(
+        "kotlin/jaxrs",
+        "-mode",
+        role,
+        "-quarkus",
+        "-pkg",
+        "io.test.quarkus.payloads.$role",
+        "-out",
+        output.get().asFile.absolutePath,
+      )
+      if (role == "server") args("-resource-adapters")
+      args(nativePayloadContract.asFile.absolutePath)
+    }
+  }
+
+val profiledClientSources = layout.buildDirectory.dir("generated/profiled-client")
+val profiledClientContract = layout.projectDirectory.file("src/main/openapi/profiled-client.yaml")
+val generateProfiledClient by tasks.registering(JavaExec::class) {
+  inputs.file(profiledClientContract)
+  outputs.dir(profiledClientSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "client",
+    "-quarkus",
+    "-profile",
+    "internal",
+    "-pkg",
+    "io.test.quarkus.profiled",
+    "-out",
+    profiledClientSources.get().asFile.absolutePath,
+    profiledClientContract.asFile.absolutePath,
+  )
+}
+tasks.processResources {
+  dependsOn(generateProfiledClient)
+  from(profiledClientSources) { include("META-INF/services/**") }
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
   freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  nativePayloadGenerators.forEach { kotlin.srcDir(it) }
+  kotlin.srcDir(generateProfiledClient)
+  policyGenerators.forEach { kotlin.srcDir(it) }
   kotlin.srcDir(generateClosedModelApi)
   kotlin.srcDir(generateValidationApi)
   kotlin.srcDir(generateUploadApi)
@@ -237,6 +326,9 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(nativePayloadGenerators)
+  dependsOn(generateProfiledClient)
+  dependsOn(policyGenerators)
   dependsOn(generateClosedModelApi)
   dependsOn(generateValidationApi)
   dependsOn(generateUploadApi)

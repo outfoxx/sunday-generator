@@ -34,7 +34,7 @@ object GeneratedApiYaml {
     YAMLMapper
       .builder()
       .addModule(KotlinModule.Builder().build())
-      .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+      .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
       .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
       .defaultPropertyInclusion(
         JsonInclude.Value.construct(JsonInclude.Include.NON_DEFAULT, JsonInclude.Include.NON_DEFAULT),

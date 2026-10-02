@@ -34,6 +34,7 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
+import io.outfoxx.sunday.generator.ir.emit.endpointSecurityProviders
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 
@@ -49,6 +50,7 @@ internal class KotlinQuarkusSecurityGenerator(
 ) {
   private val plan = KotlinQuarkusSecurityPlan(policies)
   private val schemes = policies.endpointSecuritySchemes()
+  private val providers = policies.endpointSecurityProviders()
   private val scheme = typeName.nestedClass("Scheme")
   private val request = typeName.nestedClass("Request")
   private val binding = typeName.nestedClass("SchemeBinding")
@@ -244,7 +246,7 @@ internal class KotlinQuarkusSecurityGenerator(
 
   private fun runtime(): TypeSpec.Builder {
     // The public scheme metadata and HTTP challenges are identical across the two Kotlin runtimes.
-    val portable = KotlinJAXRSSecurityGenerator(typeName, JaxRsTypes.JAKARTA).generate(schemes).build()
+    val portable = KotlinJAXRSSecurityGenerator(typeName, JaxRsTypes.JAKARTA).generate(schemes, providers).build()
     val permissionReader =
       LambdaTypeName.get(
         parameters = listOf(ParameterSpec.builder("identity", identity).build()),
@@ -283,8 +285,8 @@ internal class KotlinQuarkusSecurityGenerator(
       ).addInitializerBlock(
         CodeBlock.of(
           """
-          require(bindings.keys.containsAll(schemes.keys)) { "Missing security authenticators: " + (schemes.keys - bindings.keys) }
-          require(permissionSchemes.all { bindings.getValue(it).permissions != null }) { "Missing security permission readers: " + permissionSchemes.filter { bindings.getValue(it).permissions == null } }
+          require(bindings.keys.containsAll(providers.values)) { "Missing security authenticators: " + (providers.values.toSet() - bindings.keys) }
+          require(permissionSchemes.all { bindings.getValue(providers.getValue(it)).permissions != null }) { "Missing security permission readers: " + permissionSchemes.filter { bindings.getValue(providers.getValue(it)).permissions == null } }
           require(subjectSchemes.keys == subjectRequirements) { "Subject bindings must match the multi-scheme requirement groups: " + subjectRequirements }
           require(subjectSchemes.all { (names, subject) -> subject in names }) { "Subject scheme must belong to its requirement group" }
           """.trimIndent().replace(' ', '·'),
@@ -349,6 +351,11 @@ internal class KotlinQuarkusSecurityGenerator(
         TypeSpec
           .companionObjectBuilder()
           .addProperty(
+            portable.typeSpecs
+              .single { it.isCompanion }
+              .propertySpecs
+              .single { it.name == "providers" },
+          ).addProperty(
             portable.typeSpecs
               .single { it.isCompanion }
               .propertySpecs
@@ -447,7 +454,7 @@ internal class KotlinQuarkusSecurityGenerator(
         val credential = credential(request, scheme)
         if (credential == null && !(scheme.type == "mutualTLS" && request.context.request().isSSL)) return %T.createFrom().nullItem()
         return %T.createFrom().deferred {
-          bindings.getValue(name).authenticator.authenticate(request, scheme, credential)
+          bindings.getValue(providers.getValue(name)).authenticator.authenticate(request, scheme, credential)
         }.onFailure(%T::class.java).recoverWithNull().map { it?.takeUnless { identity -> identity.isAnonymous } }
         """.trimIndent().replace(' ', '·'),
         uni,
@@ -479,7 +486,7 @@ internal class KotlinQuarkusSecurityGenerator(
           alternative.keys.forEach { name -> failures[name]?.let { throw it } }
           if (alternative.keys.any { identities[it] == null }) continue
           if (alternative.all { (name, required) ->
-            required.isEmpty() || permissions.getOrPut(name) { bindings.getValue(name).permissions!!.invoke(identities.getValue(name)!!) }.containsAll(required)
+            required.isEmpty() || permissions.getOrPut(name) { bindings.getValue(providers.getValue(name)).permissions!!.invoke(identities.getValue(name)!!) }.containsAll(required)
           }) {
             val subject = if (alternative.size == 1) alternative.keys.single() else subjectSchemes.getValue(alternative.keys)
             // A distinct native identity makes Quarkus publish it to both the HTTP user and CDI before Zanzibar executes.

@@ -1,4 +1,4 @@
-import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
+import {ArrayBufferEncoding, DateEncoding, MediaType, NumericDateDecoding, Operation, SchemaLike, Transport, createOperation, createSchemaRuntime} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
@@ -38,6 +38,12 @@ class APIClient<Factory extends SundayTransport> {
           acceptTypes: this.defaultAcceptTypes,
           headers: {
             type: type__
+          },
+          parameterValidation: () => {
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: NumericDateDecoding.MILLISECONDS_SINCE_EPOCH, arrayBufferEncoding: ArrayBufferEncoding.BASE64}, 'request');
+            z.encode(runtime.resolveSchema(API.FetchTestTypeUriParamSchema), type);
+            z.encode(runtime.resolveSchema(API.FetchTestTypeQueryParamSchema), type_);
+            z.encode(runtime.resolveSchema(API.FetchTestTypeHeaderParamSchema), type__);
           },
         },
         responseType: fetchTestReturnType

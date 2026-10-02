@@ -30,6 +30,44 @@ import java.net.URI
 @ExtendWith(ResourceExtension::class)
 class GeneratedApiComposerTest {
   @Test
+  fun `composition merges informational security hints without requiring generated enforcement`() {
+    val bearer = GeneratedSecurityScheme("bearer", type = "http", scheme = "bearer", bearerFormat = "JWT")
+    val passthrough = GeneratedSecurityScheme("custom", type = "Pass Through")
+    val original = fragment()
+    val withHints =
+      original.copy(
+        api = original.api.copy(auth = GeneratedAuth(securitySchemes = listOf(bearer, passthrough))),
+      )
+    val withoutHints =
+      fragment(kind = GeneratedSourceSpec.Kind.ASYNCAPI).let {
+        it.copy(
+          api =
+            it.api.copy(
+              auth = GeneratedAuth(securitySchemes = listOf(bearer.copy(bearerFormat = null), passthrough)),
+            ),
+        )
+      }
+    for (fragments in listOf(listOf(withHints, withoutHints), listOf(withoutHints, withHints))) {
+      val composed = GeneratedApiComposer().compose(fragments)
+      assertThat(composed.auth!!.securitySchemes, equalTo(listOf(bearer, passthrough)))
+      assertThat(GeneratedApiYaml.readString(GeneratedApiYaml.writeString(composed)), equalTo(composed))
+    }
+    assertThrows(GeneratedApiCompositionException::class.java) {
+      GeneratedApiComposer().compose(
+        listOf(
+          withHints,
+          withoutHints.copy(
+            api =
+              withoutHints.api.copy(
+                auth = GeneratedAuth(securitySchemes = listOf(bearer.copy(bearerFormat = "opaque"))),
+              ),
+          ),
+        ),
+      )
+    }
+  }
+
+  @Test
   fun `composition retains scalar restrictions and rejects incompatible restrictions`() {
     val property =
       GeneratedModelProperty("restricted", GeneratedTypeRef.scalar("any"), allowedValues = listOf(null, 0, false))
@@ -88,7 +126,7 @@ class GeneratedApiComposerTest {
       assertThat(service.operations.size, equalTo(openApiService.operations.size + 1))
       openApiService.operations.forEach { original ->
         val operation = service.operations.single { operation -> operation.id == original.id }
-        assertThat(operation.auth, equalTo(original.auth))
+        assertThat(operation.auth, equalTo(openApi.api.effectiveAuth(openApiService, original)))
         assertThat(
           decoded.effectiveAuth(service, operation),
           equalTo(openApi.api.effectiveAuth(openApiService, original)),

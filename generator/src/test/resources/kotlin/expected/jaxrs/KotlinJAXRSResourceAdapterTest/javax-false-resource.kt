@@ -1,5 +1,6 @@
 package io.test
 
+import io.outfoxx.sunday.validation.javax.EntitySchema
 import io.reactivex.rxjava3.core.Single
 import javax.ws.rs.GET
 import javax.ws.rs.NotAuthorizedException
@@ -29,6 +30,7 @@ public class APIResource(
    */
   @GET
   @Path(value = "/sync")
+  @EntitySchema
   public fun sync(@Context securityContext: SecurityContext): Response {
     if (securityContext.userPrincipal == null) {
       throw NotAuthorizedException(Response.status(401).build())
@@ -54,6 +56,7 @@ public class APIResource(
    */
   @GET
   @Path(value = "/async")
+  @EntitySchema
   public fun asynchronous(@Suspended asyncResponse: AsyncResponse, @Context
       securityContext: SecurityContext) {
     if (securityContext.userPrincipal == null) {
@@ -67,6 +70,7 @@ public class APIResource(
    */
   @GET
   @Path(value = "/reactive")
+  @EntitySchema
   public fun reactive(@Context securityContext: SecurityContext): Single<Response> {
     if (securityContext.userPrincipal == null) {
       throw NotAuthorizedException(Response.status(401).build())
@@ -113,6 +117,7 @@ public class APIResource(
    */
   @GET
   @Path(value = "/keywords")
+  @EntitySchema
   public fun `when`(
     @QueryParam(value = "delegate") delegate_: String?,
     @QueryParam(value = "securityContext") securityContext: String?,
@@ -129,6 +134,7 @@ public class APIResource(
    */
   @GET
   @Path(value = "/policy")
+  @EntitySchema
   public fun policy(@Context securityContext: SecurityContext): Response {
     if (securityContext.userPrincipal == null) {
       throw NotAuthorizedException(Response.status(401).build())

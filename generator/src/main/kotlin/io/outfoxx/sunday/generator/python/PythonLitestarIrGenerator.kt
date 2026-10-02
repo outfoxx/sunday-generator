@@ -17,12 +17,14 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
+import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
 /** Generates Python Litestar server modules from generated IR. */
@@ -39,11 +41,17 @@ class PythonLitestarIrGenerator(
     val modules = mutableListOf(PythonModuleBuilder("$packageName/__init__.py").build())
 
     if (GeneratedTypeCategory.Model in outputCategories) {
-      modules += PythonModelRenderer(packageName, options.preserveUnknownFields).renderModels(api.models)
+      modules +=
+        PythonModelRenderer(
+          packageName,
+          options.preserveUnknownFields,
+          options.defaultTolerance,
+        ).renderModels(api.models)
       modules += PythonProblemRenderer(packageName).renderProblems(api.problems)
     }
 
     if (GeneratedTypeCategory.Service in outputCategories) {
+      services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Server), "Python/Litestar")
       val litestarRenderer = PythonLitestarRenderer(packageName, api)
       if (options.enforceSecuritySchemes) {
         modules += renderSecurity(packageName, services)
@@ -62,7 +70,10 @@ class PythonLitestarIrGenerator(
             service,
             authentication,
             if (options.enforceSecuritySchemes) {
-              service.operations.associate { it.id to api.endpointSecurityPolicy(service, it) }
+              service.operations.associate {
+                it.id to
+                  api.endpointSecurityPolicy(service, it, options.generationContext(GenerationMode.Server))
+              }
             } else {
               null
             },
@@ -84,7 +95,14 @@ class PythonLitestarIrGenerator(
       services
         .flatMap { service ->
           service.operations.mapNotNull { operation ->
-            api.endpointSecurityPolicy(service, operation)?.let { (service.name + "." + operation.id) to it }
+            api.endpointSecurityPolicy(service, operation, options.generationContext(GenerationMode.Server))?.let {
+              (
+                service.name +
+                  "." +
+                  operation.id
+              ) to
+                it
+            }
           }
         }.groupBy({ it.first }, { it.second })
         .mapValues { (name, policies) ->

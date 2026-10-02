@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.python
 
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedExchange
@@ -24,10 +25,13 @@ import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
+import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
@@ -38,6 +42,8 @@ class PythonClientRenderer(
   private val registerProblems: Boolean = false,
   models: List<GeneratedModel> = emptyList(),
   private val defaultMediaTypes: List<String> = listOf("application/json"),
+  private val profile: String? = null,
+  private val security: (GeneratedService, GeneratedOperation) -> GeneratedClientSecurity? = { _, _ -> null },
 ) {
 
   private val modelIndex = models.associateBy { model -> model.name }
@@ -101,7 +107,7 @@ class PythonClientRenderer(
         problemRegistration,
         PythonCodeBlock.join(
           service.operations.map {
-            it.renderOperationMethod(mediaSelection.contentTypes, mediaSelection.acceptTypes)
+            it.renderOperationMethod(mediaSelection.contentTypes, mediaSelection.acceptTypes, security(service, it))
           },
           separator = "\n\n",
         ),
@@ -113,8 +119,16 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderOperationMethod(
     defaultContentTypes: List<String>,
     defaultAcceptTypes: List<String>,
+    security: GeneratedClientSecurity?,
   ): PythonCodeBlock {
     val signature = renderSignatureParameters()
+    val checkedParameters = validationParameters()
+    val parameterValidationName =
+      checkedParameters.takeIf { it.isNotEmpty() }?.let {
+        val names = NameAllocator(preallocateKeywords = false)
+        httpParameters().filter { it.constantValue == null }.forEach { names.newName(it.name.pythonIdentifierName) }
+        names.newName("validate_parameters")
+      }
     val responseType = renderSuccessType()
     val operationType =
       when {
@@ -144,7 +158,7 @@ class PythonClientRenderer(
             "        return self.transport.event_source(request_spec)",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
         )
       } else if (streaming?.kind == GeneratedStreaming.Kind.EVENT_STREAM) {
         PythonCodeBlock.of(
@@ -154,7 +168,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           eventDecoderName(),
         )
       } else if (exchange != null) {
@@ -169,7 +183,7 @@ class PythonClientRenderer(
           "        request_spec: %T[%C] = %C\n%L",
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           transportCall,
         )
       } else {
@@ -184,7 +198,7 @@ class PythonClientRenderer(
           """.trimMargin(),
           PythonSymbol("sunday", "RequestSpec"),
           renderRequestBodyType(),
-          renderRequestSpec(defaultContentTypes, defaultAcceptTypes),
+          renderRequestSpec(defaultContentTypes, defaultAcceptTypes, security, parameterValidationName),
           PythonSymbol("sunday", "OperationSpec"),
           renderRequestBodyType(),
           responseType,
@@ -194,6 +208,28 @@ class PythonClientRenderer(
         )
       }
 
+    val validatedBody =
+      if (checkedParameters.isEmpty()) {
+        body
+      } else {
+        PythonCodeBlock.of(
+          "\n        def %L() -> None:\n%C\n\n%C",
+          requireNotNull(parameterValidationName),
+          PythonCodeBlock.join(
+            checkedParameters.map { (name, type) ->
+              PythonCodeBlock.of(
+                "            if %L is not None:\n" +
+                  "                %L.validate_python(%L, strict=True, context={\"mode\": \"request\"})",
+                name,
+                type.adapterName(),
+                name,
+              )
+            },
+            separator = "\n",
+          ),
+          body,
+        )
+      }
     val functionPrefix = if (exchange != null && streaming == null) "async def" else "def"
 
     return if (!hasSignatureParameters()) {
@@ -207,7 +243,7 @@ class PythonClientRenderer(
         id.pythonIdentifierName,
         operationReturnType,
         id,
-        body,
+        validatedBody,
       )
     } else {
       PythonCodeBlock.of(
@@ -224,7 +260,7 @@ class PythonClientRenderer(
         signature,
         operationReturnType,
         id,
-        body,
+        validatedBody,
       )
     }
   }
@@ -260,22 +296,84 @@ class PythonClientRenderer(
   private fun GeneratedOperation.renderRequestSpec(
     defaultContentTypes: List<String>,
     defaultAcceptTypes: List<String>,
+    security: GeneratedClientSecurity?,
+    parameterValidationName: String?,
   ): PythonCodeBlock =
     PythonCodeBlock.of(
       """
       |%T(
       |            method=%S,
       |            path_template=%C,
-      |%C%C%C%C        )
+      |%C%C%C%C%C        )
       """.trimMargin(),
       PythonSymbol("sunday", "RequestSpec"),
       httpMethod(),
       renderPathTemplate(),
       renderTemplateParameterArgument(),
-      renderParameterArgument(),
+      PythonCodeBlock.of(
+        "%C%C",
+        renderParameterArgument(),
+        if (parameterValidationName != null) {
+          PythonCodeBlock.of("            parameter_validation=%L,\n", parameterValidationName)
+        } else {
+          PythonCodeBlock.of("")
+        },
+      ),
       renderRequestPayloadSpec(defaultContentTypes),
       renderAcceptTypes(defaultAcceptTypes),
+      security?.let { PythonCodeBlock.of("            security=%C,\n", it.renderBindings()) } ?: PythonCodeBlock.of(""),
     )
+
+  private fun GeneratedClientSecurity.renderBindings(): PythonCodeBlock =
+    if (bindings.isEmpty()) {
+      PythonCodeBlock.of("()")
+    } else {
+      PythonCodeBlock.of(
+        "(\n%C\n            )",
+        PythonCodeBlock.join(
+          bindings.map { (name, binding) ->
+            val transport = schemes.getValue(name).credentialTransport()
+            val arguments =
+              mutableListOf(
+                PythonCodeBlock.of("scheme=%S", name),
+                PythonCodeBlock.of("provider=%S", binding.provider),
+                PythonCodeBlock.of("flow=%S", (binding.flow ?: GeneratedSecurityBinding.Flow.EXTERNAL).wireName),
+                PythonCodeBlock.of(
+                  "scopes=%C",
+                  renderTuple(
+                    requirement.permissions[name].orEmpty().map {
+                      PythonCodeBlock.of("%S", it)
+                    },
+                  ),
+                ),
+              )
+            mapOf(
+              "profile" to profile,
+              "discovery_url" to binding.discoveryUrl,
+              "authorization_url" to binding.authorizationUrl,
+              "token_url" to binding.tokenUrl,
+              "refresh_url" to binding.refreshUrl,
+              "audience" to binding.audience,
+              "resource" to binding.resource,
+            ).forEach { (key, value) -> value?.let { arguments += PythonCodeBlock.of("%L=%S", key, it) } }
+            arguments +=
+              PythonCodeBlock.of(
+                "transport=%T(\n                        location=%S,\n                        name=%S,\n%C                    )",
+                PythonSymbol("sunday", "SecurityTransport"),
+                transport.location,
+                transport.name,
+                transport.prefix?.let { PythonCodeBlock.of("                        prefix=%S,\n", it) }
+                  ?: PythonCodeBlock.of(""),
+              )
+            PythonCodeBlock.of(
+              "                %T(\n                    %C,\n                ),",
+              PythonSymbol("sunday", "SecurityBinding"),
+              PythonCodeBlock.join(arguments, ",\n                    "),
+            )
+          },
+        ),
+      )
+    }
 
   private fun GeneratedOperation.renderRequestPayloadSpec(defaultContentTypes: List<String>): PythonCodeBlock =
     when {
@@ -285,11 +383,19 @@ class PythonClientRenderer(
       else ->
         PythonCodeBlock.of(
           "            body=body,\n" +
-            "            content_types=%C,\n",
+            "            content_types=%C,\n" +
+            "%C",
           if (requestBody.mediaTypes == defaultContentTypes) {
             PythonCodeBlock.of("self.default_content_types")
           } else {
             renderMediaTypes(requestBody.mediaTypes)
+          },
+          if (requestBody.isPythonStreamingRequestBody ||
+            requestBody.requestVariants().any { it.runtimeType() != null }
+          ) {
+            PythonCodeBlock.of("")
+          } else {
+            PythonCodeBlock.of("            body_adapter=%L,\n", requestBody.type.adapterName())
           },
         )
     }
@@ -322,7 +428,11 @@ class PythonClientRenderer(
       return PythonCodeBlock.of("()")
     }
     if (parameters.size == 1 && queryString == null && parameters.single().usesDefaultEncoding()) {
-      return PythonCodeBlock.of("(%C,)", parameters.single().renderInlineParameterSpec())
+      val inline = PythonCodeBlock.of("(%C,)", parameters.single().renderInlineParameterSpec())
+      val context = PythonRenderContext(PythonImportSet())
+      if ("            parameters=,".length + inline.render(context).length <= 120) {
+        return inline
+      }
     }
     val specs =
       parameters.map { it.renderParameterSpec() } +
@@ -564,7 +674,7 @@ class PythonClientRenderer(
             .orEmpty()
             .filter { variant -> variant.runtimeType() == null }
             .map { variant -> variant.type }
-        responseTypes + eventTypes + headerTypes + requestTypes
+        responseTypes + eventTypes + headerTypes + requestTypes + operation.validationParameters().map { it.second }
       }.distinct()
 
   private fun GeneratedTypeRef.renderAdapterConstant(): PythonCodeBlock {
@@ -761,13 +871,11 @@ class PythonClientRenderer(
     val attempts = requestBody.requestVariants().map { variant -> variant.renderValidationAttempt() }
     return PythonCodeBlock.of(
       "def %L(body: %C) -> %T[%C]:\n" +
-        "    validated: %C\n" +
         "%C\n" +
         "    raise ValueError(%S)",
       requestPayloadFunctionName(),
       bodyType,
       PythonSymbol("sunday", "RequestPayloadSpec"),
-      bodyType,
       bodyType,
       PythonCodeBlock.join(attempts, separator = "\n"),
       "Request body does not match a declared payload for operation '$id'",
@@ -797,8 +905,7 @@ class PythonClientRenderer(
     return if (runtimeType != null) {
       PythonCodeBlock.of(
         "    if isinstance(body, %T):\n" +
-          "        validated = body\n" +
-          "        return %T(body=validated, content_types=%C)",
+          "        return %T(body=body, content_types=%C)",
         runtimeType,
         PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
@@ -806,15 +913,20 @@ class PythonClientRenderer(
     } else {
       PythonCodeBlock.of(
         "    try:\n" +
-          "        validated = %L.validate_python(body)\n" +
+          "        %L.validate_python(body)\n" +
           "    except %T:\n" +
           "        pass\n" +
           "    else:\n" +
-          "        return %T(body=validated, content_types=%C)",
+          "        return %T(\n" +
+          "            body=body,\n" +
+          "            content_types=%C,\n" +
+          "            body_adapter=%L,\n" +
+          "        )",
         this.type.adapterName(),
         PythonSymbol("pydantic", "ValidationError"),
         PythonSymbol("sunday", "RequestPayloadSpec"),
         renderMediaTypes(mediaTypes),
+        this.type.adapterName(),
       )
     }
   }
@@ -891,6 +1003,11 @@ class PythonClientRenderer(
           GeneratedParameter.Location.COOKIE,
         )
     }
+
+  private fun GeneratedOperation.validationParameters(): List<Pair<String, GeneratedTypeRef>> =
+    httpParameters()
+      .filter { it.constantValue == null && it.type.kind != GeneratedTypeRef.Kind.SCALAR }
+      .map { it.name.pythonIdentifierName to it.type } + listOfNotNull(queryString?.let { "query_string" to it })
 
   private fun GeneratedOperation.requestParameters(): List<GeneratedParameter> {
     val templateVariables = rfc6570Variables()

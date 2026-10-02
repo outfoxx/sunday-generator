@@ -10,6 +10,7 @@ components:
       type: string
       enum: [image/png, image/jpeg, unknown]
       x-unknown-value: unknown
+      x-sunday-tolerance: all
 paths:
   /uploads/raw:
     put:

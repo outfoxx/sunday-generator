@@ -55,18 +55,21 @@ class LocalSwiftCompiler(
     val packageFile = workDir.resolve("Package.swift")
     Files.copy(localPkgFile, packageFile)
 
-    val localSundaySwift = localPkgDir.resolve("../../../../../../../../sunday-swift").normalize()
-    resolvedDependencyBuild = !Files.isDirectory(localSundaySwift)
-    if (resolvedDependencyBuild) {
+    val localSundaySwift = System.getenv("SUNDAY_SWIFT_PATH")?.let(Path::of)
+    resolvedDependencyBuild = localSundaySwift == null
+    if (localSundaySwift == null) {
       Files.copy(localPkgDir.resolve("Package.resolved"), workDir.resolve("Package.resolved"))
       resolveDependencies()
     } else {
+      require(Files.isRegularFile(localSundaySwift.resolve("Package.swift"))) {
+        "SUNDAY_SWIFT_PATH must reference a sunday-swift checkout: $localSundaySwift"
+      }
       Files.writeString(
         packageFile,
         Files
           .readString(packageFile)
           .replace(
-            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", exact: \"2.0.0-beta.4\")",
+            ".package(url: \"https://github.com/outfoxx/sunday-swift.git\", exact: \"2.0.0-beta.8\")",
             ".package(path: \"${localSundaySwift.toAbsolutePath()}\")",
           ),
       )

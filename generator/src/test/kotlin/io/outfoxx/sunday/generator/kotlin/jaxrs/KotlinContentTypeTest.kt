@@ -137,8 +137,9 @@ class KotlinContentTypeTest {
             assertEquals(value, tolerant.getMethod("getWireValue").invoke(parsed))
           }
           if (adapters) {
-            assertTrue(generated.contains("this.delegate.putEnum(contentType, body)"), generated)
-            assertTrue(generated.contains("this.delegate.putConstant(contentType, body)"), generated)
+            val normalized = generated.replace(Regex("\\s+"), " ")
+            assertTrue(normalized.contains("this.delegate.putEnum(contentType, body)"), generated)
+            assertTrue(normalized.contains("this.delegate.putConstant(contentType, body)"), generated)
           }
         }
         if (frontend == "asyncapi" || frontend == "composed") {

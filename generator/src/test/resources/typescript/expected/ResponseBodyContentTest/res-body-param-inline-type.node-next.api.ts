@@ -1,4 +1,4 @@
-import {MediaType, Operation, SchemaLike, SchemaOutput, SchemaRuntime, Transport, createOperation, defineSchema} from '@outfoxx/sunday';
+import {MediaType, Operation, SchemaLike, SchemaOutput, SchemaRuntime, Transport, createOperation, defineModelSchema} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
@@ -44,7 +44,7 @@ export namespace API {
 
   export type FetchTestResponseBody = SchemaOutput<typeof FetchTestResponseBodySchema>;
 
-  export const FetchTestResponseBodySchema = defineSchema((runtime: SchemaRuntime) => {
+  export const FetchTestResponseBodySchema = defineModelSchema((runtime: SchemaRuntime) => {
     const wireSchema = z.looseObject({
       'value': z.string()
     });

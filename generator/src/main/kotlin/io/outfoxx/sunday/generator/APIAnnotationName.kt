@@ -55,6 +55,7 @@ enum class APIAnnotationName(
   Patchable("patchable", false),
   WrapperType("wrapperType", false),
   UnknownValue("unknownValue", false),
+  Tolerance("tolerance", false),
 
   ProblemBaseUri("problemBaseUri", false),
   ProblemBaseUriParams("problemUriParams", false),
@@ -63,6 +64,7 @@ enum class APIAnnotationName(
 
   Nullify("nullify", false),
   Policy("policy", false),
+  Security("security", false),
   Zanzibar("zanzibar", false),
 
   Exclude("exclude", true),

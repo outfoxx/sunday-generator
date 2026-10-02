@@ -1,4 +1,4 @@
-import {Problem, ProblemWireSchema, SchemaLike, SchemaOutput, SchemaRuntime, createProblemCodec, defineSchema} from '@outfoxx/sunday';
+import {Problem, ProblemWireSchema, SchemaLike, SchemaOutput, SchemaRuntime, createProblemCodec, defineModelSchema, validateModelConstruction} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
@@ -19,25 +19,26 @@ export class InvalidIdProblem extends Problem {
     });
 
     this.offendingId = spec.offendingId;
+    if (new.target === InvalidIdProblem) validateModelConstruction(this, InvalidIdProblemSchema, InvalidIdProblem);
   }
 
 }
 
 export type InvalidIdProblemSpec = SchemaOutput<typeof InvalidIdProblemSpecSchema>;
 
-export const InvalidIdProblemSpecSchema = defineSchema((runtime: SchemaRuntime) => {
+export const InvalidIdProblemSpecSchema = defineModelSchema((runtime: SchemaRuntime) => {
   return z.looseObject({
     'offendingId': z.string(),
     'instance': z.union([z.string(), z.instanceof(URL)]).optional()
   });
 });
 
-export const InvalidIdProblemWireSchema = defineSchema((runtime: SchemaRuntime) => {
+export const InvalidIdProblemWireSchema = defineModelSchema((runtime: SchemaRuntime) => {
   return ProblemWireSchema.extend({
     'offendingId': z.string()
   });
 });
 
-export const InvalidIdProblemSchema: SchemaLike<InvalidIdProblem> = defineSchema((runtime: SchemaRuntime) => {
+export const InvalidIdProblemSchema: SchemaLike<InvalidIdProblem> = defineModelSchema((runtime: SchemaRuntime) => {
   return createProblemCodec(InvalidIdProblem, runtime.resolveSchema(InvalidIdProblemWireSchema));
 });

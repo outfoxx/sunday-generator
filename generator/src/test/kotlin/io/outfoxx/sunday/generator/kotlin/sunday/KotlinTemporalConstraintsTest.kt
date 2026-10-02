@@ -34,6 +34,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinSundayOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
+import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.json.patch.PatchOp
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -47,6 +48,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import javax.validation.ConstraintViolationException
 
 @KotlinTest
 class KotlinTemporalConstraintsTest {
@@ -215,15 +217,14 @@ class KotlinTemporalConstraintsTest {
             assertEquals(mapper.valueToTree(payload), mapper.readTree(mapper.writeValueAsBytes(value)))
           }
         }
-        // Ordinary validation annotations retain their existing boundary; child and patch checks run in constructors.
-        val checked = if (name == "TemporalOrdinary") listOf(index * 2) else listOf(index * 2, index * 2 + 1)
+        val checked = listOf(index * 2, index * 2 + 1)
         for (fieldIndex in checked) {
           val payload = initial + (fields[fieldIndex].name to temporal.invalid)
           assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, model) }
           assertTrue(
             assertThrows(InvocationTargetException::class.java) {
               constructor.newInstance(*arguments(payload))
-            }.cause is IllegalArgumentException,
+            }.cause is ConstraintViolationException,
           )
           mapper.convertValue(payload, parent)
         }
@@ -246,6 +247,14 @@ class KotlinTemporalConstraintsTest {
         assertTrue(model.getMethod("getTimestampText").invoke(deleted) is PatchOp.Delete<*>)
         assertEquals(mapper.valueToTree(mapOf("timestampText" to null)), mapper.valueToTree(deleted))
         assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(mapOf("timestamp" to null), model) }
+        assertTrue(nativeConstraintPaths("javax", empty, "Request").isEmpty())
+        model.methods
+          .single {
+            it.name == "setTimestamp"
+          }.invoke(empty, PatchOp.set(cases.first().parse(cases.first().invalid)))
+        assertEquals(setOf("timestamp"), nativeConstraintPaths("javax", empty, "Request"))
+        model.methods.single { it.name == "setTimestamp" }.invoke(empty, PatchOp.none<Any>())
+        assertTrue(nativeConstraintPaths("javax", empty, "Request").isEmpty())
       }
     }
   }

@@ -34,7 +34,8 @@ val GeneratedAuth.isEmpty: Boolean
   get() =
     !hasSecurity &&
       zanzibar.isEmpty() &&
-      zanzibarUserSource == null
+      zanzibarUserSource == null &&
+      selection == null
 
 private val GeneratedAuth.hasSecurity: Boolean
   get() = securityOverride || schemes.isNotEmpty() || requirements.isNotEmpty() || securitySchemes.isNotEmpty()
@@ -49,16 +50,20 @@ fun GeneratedApi.effectiveAuth(
 ): GeneratedAuth? {
   val levels = listOfNotNull(operation.auth, service.auth, auth)
   val effective = levels.firstOrNull { current -> !current.isEmpty } ?: return null
-  val security = levels.firstOrNull { current -> current.hasSecurity } ?: return effective
-  if (effective === security) {
-    return effective
-  }
-
+  val security = levels.firstOrNull { current -> current.hasSecurity }
+  val selection =
+    levels
+      .asReversed()
+      .mapNotNull { it.selection }
+      .distinct()
+      .reduceOrNull { inherited, local -> inherited.inherit(local) }
+  if ((security == null || security === effective) && selection == effective.selection) return effective
   return effective.copy(
-    schemes = security.schemes,
-    requirements = security.requirements,
-    securitySchemes = security.securitySchemes,
-    securityOverride = security.securityOverride,
+    schemes = security?.schemes ?: effective.schemes,
+    requirements = security?.requirements ?: effective.requirements,
+    securitySchemes = security?.securitySchemes ?: effective.securitySchemes,
+    securityOverride = security?.securityOverride ?: effective.securityOverride,
+    selection = selection,
   )
 }
 
@@ -95,31 +100,15 @@ fun GeneratedAuth.securityParameters(location: GeneratedParameter.Location): Lis
  * True when policy metadata carries no configured policy values.
  */
 val GeneratedPolicy.isEmpty: Boolean
-  get() =
-    timeout == null &&
-      retry.isEmpty() &&
-      circuitBreaker.isEmpty() &&
-      clientRateLimit.isEmpty() &&
-      serverRateLimit.isEmpty() &&
-      source == null
+  get() = all == null && client == null && server == null && profiles.isEmpty() && inherited.all { it.isEmpty }
 
-/**
- * Overlays policy metadata, preserving base values unless overrides provide a replacement.
- */
-fun GeneratedPolicy.withOverrides(overrides: GeneratedPolicy?): GeneratedPolicy {
-  if (overrides == null || overrides.isEmpty) {
-    return this
+/** Overlays a more-local declaration without discarding inherited scopes or profile names. */
+fun GeneratedPolicy.withOverrides(overrides: GeneratedPolicy?): GeneratedPolicy =
+  when {
+    overrides == null || overrides.isEmpty -> this
+    isEmpty -> overrides
+    else -> inherit(overrides)
   }
-
-  return GeneratedPolicy(
-    timeout = overrides.timeout ?: timeout,
-    retry = retry + overrides.retry,
-    circuitBreaker = circuitBreaker + overrides.circuitBreaker,
-    clientRateLimit = clientRateLimit + overrides.clientRateLimit,
-    serverRateLimit = serverRateLimit + overrides.serverRateLimit,
-    source = overrides.source ?: source,
-  )
-}
 
 /**
  * Reads a mode-aware generated flag.

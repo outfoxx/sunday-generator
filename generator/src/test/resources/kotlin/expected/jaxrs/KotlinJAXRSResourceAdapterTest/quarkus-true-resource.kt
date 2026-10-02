@@ -1,5 +1,6 @@
 package io.test
 
+import io.outfoxx.sunday.validation.jakarta.EntitySchema
 import io.quarkiverse.zanzibar.annotations.FGAObject
 import io.quarkiverse.zanzibar.annotations.FGARelation
 import io.quarkus.security.Authenticated
@@ -35,6 +36,7 @@ public class APIResource @Inject constructor(
    */
   @GET
   @Path(value = "/sync")
+  @EntitySchema
   @Authenticated
   public suspend fun sync(): RestResponse<String> = this.delegate.sync()
 
@@ -52,6 +54,7 @@ public class APIResource @Inject constructor(
    */
   @GET
   @Path(value = "/async")
+  @EntitySchema
   @Authenticated
   public suspend fun asynchronous(@Suspended asyncResponse: AsyncResponse) {
     this.delegate.asynchronous(asyncResponse)
@@ -62,6 +65,7 @@ public class APIResource @Inject constructor(
    */
   @GET
   @Path(value = "/reactive")
+  @EntitySchema
   @Authenticated
   public suspend fun reactive(): Uni<RestResponse<String>> = this.delegate.reactive()
 
@@ -90,6 +94,7 @@ public class APIResource @Inject constructor(
    */
   @GET
   @Path(value = "/keywords")
+  @EntitySchema
   @Authenticated
   public suspend fun `when`(@RestQuery delegate_: String?, @RestQuery securityContext: String?):
       RestResponse<String> = this.delegate.`when`(delegate_, securityContext)
@@ -108,6 +113,7 @@ public class APIResource @Inject constructor(
     type = "document",
   )
   @FGARelation("reader")
+  @EntitySchema
   @Authenticated
   public suspend fun policy(): RestResponse<String> = this.delegate.policy()
 }

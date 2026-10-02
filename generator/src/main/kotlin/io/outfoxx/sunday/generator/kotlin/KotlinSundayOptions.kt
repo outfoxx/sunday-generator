@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
+import io.outfoxx.sunday.generator.Tolerance
 
 /** Options for Kotlin/Sunday generation. */
 class KotlinSundayOptions(
@@ -29,10 +30,14 @@ class KotlinSundayOptions(
   val servicesFromTags: Boolean = false,
   generateBrokerServices: Boolean = true,
   preserveUnknownFields: Boolean = true,
+  profile: String? = null,
+  defaultTolerance: Tolerance = Tolerance.Response,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
     preserveUnknownFields,
+    profile,
+    defaultTolerance,
   )

@@ -18,12 +18,14 @@ package io.outfoxx.sunday.generator.swift.utils
 
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
-import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
+import io.outfoxx.swiftpoet.CodeBlock
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.FunctionSpec
+import io.outfoxx.swiftpoet.Modifier.INTERNAL
 import io.outfoxx.swiftpoet.Modifier.PRIVATE
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
+import io.outfoxx.swiftpoet.Modifier.STATIC
 import io.outfoxx.swiftpoet.PropertySpec
 import io.outfoxx.swiftpoet.STRING
 import io.outfoxx.swiftpoet.TypeName
@@ -32,7 +34,7 @@ import io.outfoxx.swiftpoet.TypeSpec
 /** Validating raw-value structs and scalar enums with one shared construction/decoding path. */
 internal class SwiftNominalTypes(
   private val nominal: GeneratedNominalTypes,
-  private val properties: GeneratedModelProperties,
+  private val views: () -> SwiftValidationViews,
   private val modelName: (GeneratedModel) -> DeclaredTypeName,
   private val typeName: (GeneratedTypeRef) -> TypeName,
 ) {
@@ -43,15 +45,96 @@ internal class SwiftNominalTypes(
       else -> null
     }
 
+  fun validator(model: GeneratedModel): TypeSpec.Builder {
+    val name = SwiftModelValidation.name(modelName(model))
+    val reference = if (model.nominal) nominal.scalar(model).type else nominal.unionType(model)
+    val raw = typeName(reference)
+    val body =
+      if (model.nominal) {
+        val scalar = nominal.scalar(model)
+        val field = scalar.property.copy(name = "rawValue")
+        val assertions =
+          listOf(field) +
+            scalar.patterns.filterNot { it == field.validation["pattern"] }.map {
+              field.copy(validation = mapOf("pattern" to it))
+            }
+        CodeBlock
+          .builder()
+          .add("%L valid = { () -> Bool in\n", if (assertions.size > 1) "var" else "let")
+          .indent()
+          .add(views().validation(assertions.first()))
+          .unindent()
+          .add("}()\n")
+          .addStatement("if !valid && !context.collectsDiagnostics { return false }")
+          .apply {
+            assertions.drop(1).forEach { assertion ->
+              beginControlFlow("if", "!(%L)", SwiftValueConstraints.check(assertion, CodeBlock.of("value")))
+              addStatement("valid = false")
+              addStatement("if !context.collectsDiagnostics { return false }")
+              endControlFlow("if")
+            }
+          }.addStatement("return valid")
+          .build()
+      } else {
+        CodeBlock
+          .builder()
+          .apply {
+            addStatement("var matches: [Int] = []")
+            nominal.branches(model).forEachIndexed { index, branch ->
+              beginControlFlow(
+                "if",
+                "context.matches({ context in %T.isValid(normalized: value, mode, context: &context) })",
+                SwiftModelValidation.name(modelName(branch)),
+              )
+              addStatement("matches.append(%L)", index)
+              endControlFlow("if")
+            }
+            beginControlFlow("guard", "!matches.isEmpty else")
+            addStatement("return context.reject(.allowedValue)")
+            endControlFlow("guard")
+            if (model.unionMode == GeneratedModel.UnionMode.ONE_OF) {
+              beginControlFlow("guard", "matches.count == 1 else")
+              addStatement("return context.reject(.allowedValue)")
+              endControlFlow("guard")
+            }
+            addStatement("context.selectAlternative(matches[0])")
+            addStatement("return true")
+          }.build()
+      }
+    return SwiftModelValidation
+      .type(
+        name,
+        modelName(model),
+        CodeBlock.of("return isValid(normalized: view(value), mode, context: &context)\n"),
+      ).addFunction(
+        FunctionSpec
+          .builder("view")
+          .addModifiers(STATIC)
+          .addDoc("Projects the raw scalar without constructing or encoding an application model.\n")
+          .addParameter("_", "value", modelName(model))
+          .returns(SwiftValueConstraints.valueType)
+          .addStatement("return %L", views().project(reference, CodeBlock.of("value.rawValue")))
+          .build(),
+      ).addFunction(
+        SwiftModelValidation
+          .function(raw, "rawValue", "rawValue")
+          .addModifiers(STATIC)
+          .addStatement(
+            "return isValid(normalized: %L, mode, context: &context)",
+            views().project(reference, CodeBlock.of("rawValue")),
+          ).build(),
+      ).addFunction(
+        SwiftModelValidation
+          .function(SwiftValueConstraints.valueType, "value", "normalized")
+          .addModifiers(STATIC)
+          .addCode(body)
+          .build(),
+      )
+  }
+
   private fun scalar(model: GeneratedModel): TypeSpec.Builder {
     val scalar = nominal.scalar(model)
     val raw = typeName(scalar.type)
-    val field = scalar.property.copy(name = "rawValue")
-    val fields =
-      listOf(field) +
-        scalar.patterns.filterNot { it == field.validation["pattern"] }.map {
-          field.copy(validation = mapOf("pattern" to it))
-        }
     return TypeSpec
       .structBuilder(modelName(model))
       .addModifiers(PUBLIC)
@@ -63,9 +146,19 @@ internal class SwiftNominalTypes(
           HASHABLE,
           SENDABLE,
           CUSTOM_STRING_CONVERTIBLE,
+          SwiftModelValidation.validatable,
         ),
       ).addProperty(PropertySpec.builder("rawValue", raw, PUBLIC).build())
-      .addProperty(description())
+      .addFunction(
+        FunctionSpec
+          .constructorBuilder()
+          .addModifiers(INTERNAL)
+          .addDoc("Stores a branch value after the containing union has validated and selected it.\n")
+          .addParameter("validatedRawValue", raw)
+          .addStatement("self.rawValue = validatedRawValue")
+          .build(),
+      ).addProperty(description())
+      .addFunction(SwiftModelValidation.instance(SwiftModelValidation.name(modelName(model))))
       .addFunction(
         FunctionSpec
           .constructorBuilder()
@@ -73,15 +166,8 @@ internal class SwiftNominalTypes(
           .addDoc("Validates and stores the raw wire value.\n")
           .addParameter("_", "rawValue", raw)
           .throws(true)
-          .addCode(
-            SwiftModelConstraints.initializer(
-              fields.map {
-                GeneratedModelProperties.Field(it, it, false)
-              },
-              properties,
-              false,
-            ),
-          ).addStatement("self.rawValue = rawValue")
+          .addStatement("self.rawValue = rawValue")
+          .addStatement("try %T.validate(self, .response)", SwiftModelValidation.name(modelName(model)))
           .build(),
       ).addFunction(
         FunctionSpec
@@ -92,7 +178,7 @@ internal class SwiftNominalTypes(
           .addParameter("rawValue", raw)
           .addStatement("try? self.init(rawValue)")
           .build(),
-      ).addFunction(decoder(raw))
+      ).addFunction(decoder(model, raw))
       .addFunction(encoder())
       .addType(
         TypeSpec
@@ -115,35 +201,20 @@ internal class SwiftNominalTypes(
         .throws(true)
         .addDoc("Selects a validated branch using the source union's matching rule.\n")
         .addParameter("_", "rawValue", raw)
-        .addStatement("var matches: [%T] = []", name)
-    cases.forEach { branch ->
-      constructor
-        .beginControlFlow("if", "let value = try? %T(rawValue)", modelName(branch))
-        .addStatement("matches.append(.%N(value))", branch.name.swiftEnumCaseName)
-        .endControlFlow("if")
-    }
-    constructor
-      .beginControlFlow("guard", "!matches.isEmpty else")
-      .addStatement(
-        "throw %T.invalidValue(rawValue, .init(codingPath: [], debugDescription: %S))",
-        ENCODING_ERROR,
-        "No branch matched ${model.name}",
-      ).endControlFlow("guard")
-    if (model.unionMode == GeneratedModel.UnionMode.ONE_OF) {
-      constructor
-        .beginControlFlow("guard", "matches.count == 1 else")
-        .addStatement(
-          "throw %T.invalidValue(rawValue, .init(codingPath: [], debugDescription: %S))",
-          ENCODING_ERROR,
-          "Ambiguous value for ${model.name}: multiple branches matched",
-        ).endControlFlow("guard")
-    }
-    constructor.addStatement("self = matches[0]")
+        .addStatement("var context = %T(collectsDiagnostics: true)", SwiftModelValidation.context)
+        .beginControlFlow(
+          "guard",
+          "%T.isValid(rawValue: rawValue, .response, context: &context) else",
+          SwiftModelValidation.name(name),
+        ).addStatement("throw context.validationError")
+        .endControlFlow("guard")
+        .addCode(alternativeSelection(model))
     return TypeSpec
       .enumBuilder(name)
       .addModifiers(PUBLIC)
       .addDoc("Validated scalar union %L.\n", model.name)
-      .addSuperTypes(listOf(CODABLE, HASHABLE, SENDABLE, CUSTOM_STRING_CONVERTIBLE))
+      .addSuperTypes(listOf(CODABLE, HASHABLE, SENDABLE, CUSTOM_STRING_CONVERTIBLE, SwiftModelValidation.validatable))
+      .addFunction(SwiftModelValidation.instance(SwiftModelValidation.name(name)))
       .apply { cases.distinct().forEach { addEnumCase(it.name.swiftEnumCaseName, modelName(it)) } }
       .addProperty(
         PropertySpec
@@ -164,7 +235,7 @@ internal class SwiftNominalTypes(
           ).build(),
       ).addProperty(description())
       .addFunction(constructor.build())
-      .addFunction(decoder(raw))
+      .addFunction(decoder(model, raw))
       .addFunction(encoder())
   }
 
@@ -174,7 +245,29 @@ internal class SwiftNominalTypes(
       .getter(FunctionSpec.getterBuilder().addStatement("return String(describing: rawValue)").build())
       .build()
 
-  private fun decoder(raw: TypeName): FunctionSpec =
+  private fun alternativeSelection(model: GeneratedModel): CodeBlock =
+    CodeBlock
+      .builder()
+      .beginControlFlow("switch", "context.selectedAlternative")
+      .apply {
+        nominal.branches(model).forEachIndexed { index, branch ->
+          addStatement(
+            "case %L:%Wself = .%N(%T(validatedRawValue: rawValue))",
+            index,
+            branch.name.swiftEnumCaseName,
+            modelName(branch),
+          )
+        }
+      }.addStatement(
+        "default:%WpreconditionFailure(%S)",
+        "Canonical union validation did not select an alternative",
+      ).endControlFlow("switch")
+      .build()
+
+  private fun decoder(
+    model: GeneratedModel,
+    raw: TypeName,
+  ): FunctionSpec =
     FunctionSpec
       .constructorBuilder()
       .addModifiers(PUBLIC)
@@ -182,14 +275,22 @@ internal class SwiftNominalTypes(
       .throws(true)
       .addStatement("let container = try decoder.singleValueContainer()")
       .addStatement("let rawValue = try container.decode(%T.self)", raw)
-      .beginControlFlow("do", "")
-      .addStatement("try self.init(rawValue)")
-      .nextControlFlow("catch", "")
-      .addStatement(
-        "throw %T.dataCorruptedError(in: container, debugDescription: String(describing: error))",
-        DECODING_ERROR,
-      ).endControlFlow("do")
-      .build()
+      .addStatement("var context = try %T.decodingValue(decoder)", SwiftModelValidation.context)
+      .beginControlFlow(
+        "guard",
+        "%T.isValid(rawValue: rawValue, .response, context: &context) else",
+        SwiftModelValidation.name(modelName(model)),
+      ).addStatement("throw context.decodingError")
+      .endControlFlow("guard")
+      .apply {
+        if (model.nominal) {
+          addStatement(
+            "self.init(validatedRawValue: rawValue)",
+          )
+        } else {
+          addCode(alternativeSelection(model))
+        }
+      }.build()
 
   private fun encoder(): FunctionSpec =
     FunctionSpec
@@ -197,6 +298,7 @@ internal class SwiftNominalTypes(
       .addModifiers(PUBLIC)
       .addParameter("to", "encoder", ENCODER)
       .throws(true)
+      .addStatement("try validate(.response)")
       .addStatement("var container = encoder.singleValueContainer()")
       .addStatement("try container.encode(rawValue)")
       .build()

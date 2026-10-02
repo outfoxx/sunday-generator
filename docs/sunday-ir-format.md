@@ -173,9 +173,104 @@ AsyncAPI 2.x requirement maps and 3.x inline/reference security objects normaliz
 
 Auth metadata preserves source scheme names in `schemes`, resolved security requirement alternatives in `requirements`, and explicit security scheme transport parameters in `securitySchemes`. Security schemes preserve their source `type`, HTTP `scheme`, and `bearerFormat` when present. Security scheme header, query, and cookie parameters use the same generated parameter shape as operation parameters, so requiredness, wire names, validation, constant values, and documentation survive into IR. Security schemes may also carry a structured `queryString` type reference; anonymous security query-string models use `scope.usage: "SECURITY_QUERY_STRING"` with the owning `securityScheme`. OpenAPI `x-sunday-zanzibar` and RAML `sunday.zanzibar` map into `auth.zanzibar`; operation values overlay inherited API values. Zanzibar user extraction metadata is carried in `auth.zanzibarUserSource`, currently with a JWT source that lists ordered claim names and an explicit `principalFallback` flag. Principal fallback is strict opt-in; absent user-source metadata leaves platform defaults in place.
 
-Operations, OpenAPI path items, and OpenAPI tags may carry `policy` metadata for target-independent policy inputs. The OpenAPI reader maps `x-sunday-policy` into `timeout`, `retry`, `circuitBreaker`, `clientRateLimit`, `serverRateLimit`, and `source` fields. Tag-level policy is preserved on the tag and overlaid into tagged operations before emission; path-item policy applies to all operations under that path; operation metadata overrides both. These fields remain source metadata until target emitters decide whether to generate runtime policy data, Quarkus Fault Tolerance annotations, or no output. Kotlin/JAX-RS Quarkus output lowers supported policy fields to SmallRye Fault Tolerance annotations.
+Operations, OpenAPI path items, and OpenAPI tags may declare `x-sunday-policy`; RAML resources and methods use `(sunday.policy)`. Each declaration contains `all`, `client`, `server`, and optional `profiles.<name>` scopes. Each scope contains `timeout`, `retry`, `circuitBreaker`, and `rateLimit`. Flat policy fields, `clientRateLimit`, `serverRateLimit`, and `source` are rejected.
+
+```yaml
+x-sunday-policy:
+  all:
+    timeout: PT5S
+  client:
+    rateLimit: {value: 3, window: PT1S}
+  server:
+    rateLimit: {value: 7, window: PT1S}
+  profiles:
+    internal:
+      client:
+        retry:
+          maxRetries: 1
+          retryOn: [java.io.IOException, {problem: unauthorized}]
+          abortOn: {problem: forbidden}
+```
+
+Within each declaration, values resolve in this order: `all`, selected role, selected profile `all`, selected profile role. More-local declarations override inherited ones in tag → path → operation order, including a local shared value overriding an inherited role value. Missing members inherit; `false` disables an inherited policy. Exception lists replace inherited lists and `[]` clears them. Peer tag declarations merge independent members and reject conflicting values. Profiles are selected explicitly using `profile`; an unselected profile contributes no values.
+
+IR version 1 retains these scopes and an ordered `inherited` list of prior declarations. Each policy setting contains `enabled` and a typed `value`; disabled settings have no value. Durations store exact `seconds` and `nanos`. Exception references store either a native `className` or a generated `problem` name. Source durations accept ISO-8601 and `PT{n}MS` literals; numeric members accept numbers or numeric strings. Unknown members and malformed values are rejected, including those in unselected scopes.
+
+Kotlin/JAX-RS Quarkus resolves the selected environment into native SmallRye/MicroProfile annotations. Server resource adapters place enforcement on concrete resource methods, leaving delegates free of duplicate enforcement. `retryOn`/`abortOn` and `failOn`/`skipOn` accept one exception or a list. Native `skipOn` classifies matching failures as successful circuit-breaker outcomes; it does not remove them from the rolling window. Generated problem references must resolve to exception types.
 
 APIs, services, tags, and operations may carry `jaxrs` metadata for Quarkus/JAX-RS parity. Operation metadata includes `asynchronous`, `reactive`, mode-specific `sse` and `jsonBody` flags, and requested JAX-RS `context` parameters. RAML supports `sunday.jaxrsContext`, `sunday.jaxrsContext.client`, and `sunday.jaxrsContext.server`. OpenAPI supports `x-sunday-jaxrs.context` entries as strings for both targets or objects such as `{type: routingContext, target: server}`. API, service, and tag metadata may include `restClient` metadata for Quarkus REST Client output: `configKey`, `oidcClient`, and `providers`. In aggregated JAX-RS client output, only API-level `restClient` metadata is lowered onto the registered aggregate client; tag/service metadata remains available for non-aggregated service client generation. This metadata is target-specific source metadata, not a recommendation that non-JAX-RS clients expose these concepts.
+
+## Scoped Security Bindings
+
+Wire requirements and environment bindings are independent. `GeneratedSecurityScheme.bindings` stores
+`x-sunday-security` on a security scheme. RAML uses `(sunday.security)` on its security scheme.
+`GeneratedAuth.selection` stores the same extension on an API, path/resource/channel, or operation.
+Both use the typed `GeneratedEnvironment` scopes and declaration lineage described for policies. IR remains version 1.
+
+```yaml
+components:
+  securitySchemes:
+    identity:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://identity.example/authorize
+          tokenUrl: https://identity.example/token
+          scopes: {items:read: Read items}
+      x-sunday-security:
+        server:
+          provider: trusted-issuer
+        profiles:
+          internal:
+            client:
+              provider: service-identity
+              flow: clientCredentials
+              tokenUrl: https://identity.internal/token
+          external:
+            client:
+              provider: application
+              flow: authorizationCode
+security:
+  - identity: [items:read]
+```
+
+Client bindings select an application `provider`, a `flow` (`clientCredentials`, `authorizationCode`,
+`external`, or `static`), and optional `discoveryUrl`, `authorizationUrl`, `tokenUrl`, `refreshUrl`,
+`audience`, and `resource`. Server bindings accept a validation `provider` only. Missing flow means
+`external`; a plain bearer declaration never implies token acquisition. OAuth flows can inherit
+endpoints from standard OAuth/OIDC scheme metadata. Unsupported flows require an application provider.
+Client secrets, authorization codes, refresh tokens, and token caches do not belong in the specification.
+Unknown or malformed binding members are errors, including members in unselected profiles.
+
+Use an explicit generation `profile` whenever bindings declare profiles applicable to the selected role.
+Endpoint overrides in application provider configuration affect acquisition only; they cannot select
+another profile or replace separately configured issuer/audience trust. More-local declarations override
+inherited declarations. Within each declaration, resolution follows shared, role, profile-shared,
+profile-role order.
+
+The client resolver requires every scheme in a chosen AND requirement to have a usable provider and
+compatible wire transport. It chooses the sole usable alternative. If more than one alternative is usable,
+including an anonymous alternative, select one explicitly with a complete requirement map:
+
+```yaml
+x-sunday-security:
+  profiles:
+    external:
+      client:
+        alternative: {identity: [items:read], apiKey: []}
+```
+
+Scopes participate in selection, so alternatives using the same scheme with different scopes remain
+separate. An empty map selects the anonymous alternative when one is declared. Standard `security: []`
+remains public. An operation's wire-security override does not discard inherited provider-selection
+metadata. Composition captures each fragment's effective authentication before merging defaults and
+rejects conflicting definitions for the same logical scheme.
+
+`GeneratedApi.projectEnvironment(context)` validates client acquisition or server validation-provider selection before projecting policy/security
+metadata to the chosen role and profile, including auth on protocol servers. It removes other profiles
+and role bindings while retaining logical schemes, wire requirements, scopes, and standard OAuth/OIDC
+metadata. Consequently, public wire metadata itself must contain public URLs; projection does not rewrite
+issuer URLs or standard scheme endpoints. The selected named profile stays explicit in projected IR.
 
 ## Examples
 

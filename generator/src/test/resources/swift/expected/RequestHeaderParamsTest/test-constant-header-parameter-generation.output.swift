@@ -36,7 +36,14 @@ public final class API<TransportType : Transport> : Sendable {
           "Expect": try ParameterValues.encode("100-continue"),
           "x-custom": try ParameterValues.encode(xCustom)
         ]
-      )
+      ),
+      responseValidation: { value in
+        let mode = ModelMode.response
+        var context = ModelValidationContext(collectsDiagnostics: true)
+        if !(!context.validatesNestedModels || value.isValid(mode, context: &context)) {
+          throw context.validationError
+        }
+      }
     )
   }
 

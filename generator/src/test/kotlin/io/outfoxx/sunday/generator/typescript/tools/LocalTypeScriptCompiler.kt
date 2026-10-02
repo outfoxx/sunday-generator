@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.typescript.tools
 
 import io.outfoxx.sunday.generator.utils.ShellProcess
 import java.nio.file.Path
+import kotlin.io.path.exists
 
 class LocalTypeScriptCompiler(
   private val command: String,
@@ -28,20 +29,32 @@ class LocalTypeScriptCompiler(
 
   init {
 
-    val buildPkg =
-      ProcessBuilder()
-        .directory(workDir.toFile())
-        .command(command, "ci", "--ignore-scripts", "--no-audit", "--no-fund")
-        .apply {
-          environment().putAll(env)
-        }.redirectErrorStream(true)
-        .start()
-
     println("### Installing NPM packages")
-
-    val output = buildPkg.inputStream.readAllBytes().decodeToString()
-    buildPkg.waitFor()
+    val (result, output) = executeCommand(listOf(command, "ci", "--ignore-scripts", "--no-audit", "--no-fund"))
     println(output)
+    check(result == 0) { "TypeScript compiler dependencies could not be installed: $output" }
+
+    System.getenv("SUNDAY_TYPESCRIPT_PATH")?.let { source ->
+      val runtime = Path.of(source).toAbsolutePath().normalize()
+      require(runtime.resolve("build/index.d.ts").exists()) {
+        "SUNDAY_TYPESCRIPT_PATH must reference a built sunday-js checkout: $runtime"
+      }
+      val (runtimeResult, runtimeOutput) =
+        executeCommand(
+          listOf(
+            command,
+            "install",
+            "--install-links",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund",
+            "--no-save",
+            "--package-lock=false",
+            runtime.toString(),
+          ),
+        )
+      check(runtimeResult == 0) { "Sunday TypeScript runtime could not be installed: $runtimeOutput" }
+    }
   }
 
   override fun compile(): Pair<Int, String> = executeCommand(tscCommand())
@@ -54,7 +67,8 @@ class LocalTypeScriptCompiler(
     }
 
     val (executionResult, executionOutput) =
-      executeCommand(listOf("node", outputDir.resolve("$modulePath.js").toString()))
+      // Bundler-style fixtures emit CommonJS; select Sunday's ESM export under Node's require(ESM) support.
+      executeCommand(listOf("node", "--conditions=import", outputDir.resolve("$modulePath.js").toString()))
     return executionResult to listOf(compileOutput, executionOutput).filter { it.isNotBlank() }.joinToString("\n")
   }
 

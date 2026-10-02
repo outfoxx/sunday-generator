@@ -36,6 +36,9 @@ _scalar_integer_adapter: TypeAdapter[int] = TypeAdapter(int)
 _array_project_view_adapter: TypeAdapter[list[ProjectView]] = TypeAdapter(list[ProjectView])
 
 
+_named_project_query_adapter: TypeAdapter[ProjectQuery] = TypeAdapter(ProjectQuery)
+
+
 _named_update_project_request_adapter: TypeAdapter[UpdateProjectRequest] = TypeAdapter(UpdateProjectRequest)
 
 
@@ -113,19 +116,26 @@ _put_payload_responses: tuple[ResponseSpec[None], ...] = (ResponseSpec(status=20
 
 
 def _request_payload_put_payload(body: ProjectView | bytes) -> RequestPayloadSpec[ProjectView | bytes]:
-    validated: ProjectView | bytes
     try:
-        validated = _named_project_view_adapter.validate_python(body)
+        _named_project_view_adapter.validate_python(body)
     except ValidationError:
         pass
     else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/json"),))
+        return RequestPayloadSpec(
+            body=body,
+            content_types=(MediaType("application/json"),),
+            body_adapter=_named_project_view_adapter,
+        )
     try:
-        validated = _scalar_file_adapter.validate_python(body)
+        _scalar_file_adapter.validate_python(body)
     except ValidationError:
         pass
     else:
-        return RequestPayloadSpec(body=validated, content_types=(MediaType("application/octet-stream"),))
+        return RequestPayloadSpec(
+            body=body,
+            content_types=(MediaType("application/octet-stream"),),
+            body_adapter=_scalar_file_adapter,
+        )
     raise ValueError("Request body does not match a declared payload for operation 'putPayload'")
 
 
@@ -193,12 +203,18 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         query_string: ProjectQuery,
     ) -> Operation[list[ProjectView], TransportRequestT, TransportResponseT]:
         """Create the listProjects operation."""
+
+        def validate_parameters() -> None:
+            if query_string is not None:
+                _named_project_query_adapter.validate_python(query_string, strict=True, context={"mode": "request"})
+
         request_spec: RequestSpec[None] = RequestSpec(
             method="GET",
             path_template="/projects",
             parameters=(
                 ParameterSpec(name="", value=parameter_object(query_string), location=ParameterLocation.QUERY),
             ),
+            parameter_validation=validate_parameters,
             accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[None, list[ProjectView]] = OperationSpec(
@@ -227,6 +243,7 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             ),
             body=body,
             content_types=self.default_content_types,
+            body_adapter=_named_update_project_request_adapter,
             accept_types=self.default_accept_types,
         )
         operation_spec: OperationSpec[UpdateProjectRequest, ProjectView] = OperationSpec(
@@ -251,6 +268,7 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             ),
             body=body,
             content_types=(MediaType("image/png"),),
+            body_adapter=_scalar_file_adapter,
         )
         operation_spec: OperationSpec[bytes, None] = OperationSpec(
             request=request_spec,

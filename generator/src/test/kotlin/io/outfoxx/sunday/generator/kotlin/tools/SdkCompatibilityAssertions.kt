@@ -143,10 +143,15 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
     assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, byteChild) }
     val args = arrayOf<ByteArray?>("Hi".toByteArray(), null, null)
     args[listOf("data", "choices", "encoded").indexOf(field)] = invalid?.let(Base64.getDecoder()::decode)
-    assertTrue(
+    val constructorFailure =
       assertThrows(InvocationTargetException::class.java) {
         byteConstructor.newInstance(*args)
-      }.cause is IllegalArgumentException,
+      }.cause
+    assertTrue(
+      constructorFailure is IllegalArgumentException ||
+        constructorFailure is javax.validation.ConstraintViolationException ||
+        constructorFailure is jakarta.validation.ConstraintViolationException,
+      constructorFailure.toString(),
     )
     if (invalid == null) {
       assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, byteParent) }

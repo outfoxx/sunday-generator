@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.ir
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.common.APIProcessor
+import io.outfoxx.sunday.generator.ir.emit.projectEnvironment
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -65,7 +66,9 @@ class GeneratedApiIrExporter
       }
       val loader = openApiDocumentLoader ?: OpenApiDocumentLoader.create(options.openApiReferences)
       val fragments = sources.map { exportFragment(it, loader) }
-      return GeneratedApiIrExport(composer.compose(fragments), fragments.first().apiId)
+      val composed = composer.compose(fragments)
+      val projected = options.projection?.let(composed::projectEnvironment) ?: composed
+      return GeneratedApiIrExport(projected, fragments.first().apiId)
     }
 
     /** Processes source URIs and returns generated API IR as YAML. */

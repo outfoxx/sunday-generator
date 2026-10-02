@@ -44,6 +44,7 @@ import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.PayloadUse
 import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
@@ -64,13 +65,14 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTargetImplementationParameter
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.allowsUnknown
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
-import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
+import io.outfoxx.sunday.generator.ir.emit.clientSecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
@@ -85,6 +87,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
@@ -115,6 +118,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionG
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativePayloads
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativeSchema
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MEDIA_TYPE
@@ -147,10 +152,12 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinTransport
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
@@ -196,6 +203,9 @@ class KotlinSundayIrGenerator(
       typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
       { it.kotlinClassName() },
       { it.kotlinTypeName() },
+      typeRegistry.beanValidationTypes.takeIf {
+        typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+      },
     )
   }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
@@ -215,6 +225,12 @@ class KotlinSundayIrGenerator(
       discriminatorFallbacks = discriminatorFallbacks,
       jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
       typeName = { model -> model.kotlinClassName() },
+      commonValidation = { model ->
+        typeRegistry.beanValidationTypes.takeIf {
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+            modelProperties.hasUnionCommonRules(model)
+        }
+      },
     )
   }
   private val requestBodyModels by lazy {
@@ -237,7 +253,14 @@ class KotlinSundayIrGenerator(
    */
   fun generateServiceTypes() {
     val services = api.kotlinSundayServices()
+    services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Kotlin/Sunday")
     val brokerServices = api.kotlinSundayBrokerServices()
+    if (options.generateBrokerServices) {
+      brokerServices.requireNoUnsupportedPolicies(
+        options.generationContext(GenerationMode.Client),
+        "Kotlin/Sunday broker",
+      )
+    }
 
     generateModelTypes(services + brokerServices)
     generateProblemTypes(services)
@@ -339,17 +362,69 @@ class KotlinSundayIrGenerator(
     protocol?.isHttpProtocol() == true ||
       url.hasHttpScheme()
 
+  private val nativePayloads by lazy {
+    KotlinNativePayloads(
+      modelProperties,
+      typeRegistry.beanValidationTypes,
+      { it.modelOrNull(apiIndex) },
+      { it.kotlinTypeName().withCascadedValidation(it) },
+      { it.validationAnnotations(AnnotationSpec.UseSiteTarget.FIELD) },
+      typeRegistry::addModelType,
+    )
+  }
+
   private fun generateModelTypes(services: List<GeneratedService>) {
     val models = modelsForGeneration(services)
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+      models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
+        val name = model.kotlinClassName()
+        nativePayloads.register(
+          GeneratedTypeRef.named(model.name, scope = model.scope),
+          name.peerClass("${name.simpleName}Validation"),
+        )
+      }
+      services
+        .flatMap { it.operations }
+        .flatMap { operation ->
+          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type) +
+            operation.parameters.map { it.type }
+        }.filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
+        .distinct()
+        .forEachIndexed { index, reference ->
+          nativePayloads.register(reference, ClassName(servicePackageName(), "Payload${index + 1}Validation"))
+        }
+    }
     val modelTypes =
       models
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties, options.preserveUnknownFields) {
+    addOpenModelProperties(
+      modelTypes,
+      typeRegistry.options,
+      modelProperties,
+      options.preserveUnknownFields,
+      typeRegistry.beanValidationTypes.takeIf {
+        KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
+      },
+    ) {
       it.kotlinTypeName()
     }
     addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+      addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.kotlinTypeName() }
+    }
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+      modelTypes.forEach { (name, entry) ->
+        val (model, builder) = entry
+        val constructor = builder.build().primaryConstructor
+        if (model.kind == GeneratedModel.Kind.OBJECT && constructor != null) {
+          builder.addInitializerBlock(
+            KotlinNativeSchema.constructor(name, constructor.parameters, typeRegistry.beanValidationTypes),
+          )
+        }
+      }
+    }
     models
       .flatMap { model ->
         buildList {
@@ -376,7 +451,18 @@ class KotlinSundayIrGenerator(
         hierarchyTypeName,
         hierarchyIsClass,
         kind == GeneratedModel.Kind.OBJECT && !isDiscriminatorMappingUnionInterface,
+        validation =
+          typeRegistry.beanValidationTypes.takeIf {
+            typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+          },
+        annotations = { property, target -> property.validationAnnotations(target) },
       ) { property -> property.modelPropertyTypeName() }
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+      !(fallback.hierarchy.tolerance ?: fallback.enumModel?.tolerance)
+        .allowsUnknown(options.generationContext(GenerationMode.Client, PayloadUse.Request))
+    ) {
+      type.addAnnotation(typeRegistry.beanValidationTypes.knownVariant())
+    }
     return fallbackTypeName to type
   }
 
@@ -617,7 +703,15 @@ class KotlinSundayIrGenerator(
     service.operations
       .forEach { operation ->
         val operationParameters = operation.operationParameters()
-        serviceTypeBuilder.addFunction(generateOperation(operation, operationParameters))
+        serviceTypeBuilder.addFunction(
+          generateOperation(
+            operation,
+            operationParameters,
+            api
+              .clientSecurity(service, operation, options.generationContext(GenerationMode.Client))
+              .kotlinTransport(options.profile),
+          ),
+        )
       }
 
     return serviceTypeBuilder
@@ -880,7 +974,16 @@ class KotlinSundayIrGenerator(
     val jacksonAnnotations = typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
 
     if (unknownValue != null) {
-      return tolerantEnumTypeSpec(kotlinClassName(), entries, jacksonAnnotations)
+      return tolerantEnumTypeSpec(
+        kotlinClassName(),
+        entries,
+        jacksonAnnotations,
+        fallbackValidation =
+          typeRegistry.beanValidationTypes.knownVariant().takeIf {
+            typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+              !tolerance.allowsUnknown(options.generationContext(GenerationMode.Client, PayloadUse.Request))
+          },
+      )
     }
 
     return TypeSpec
@@ -1078,6 +1181,7 @@ class KotlinSundayIrGenerator(
             addParameter(
               property.constructorParameterSpec(
                 patchable,
+                declaresProperty = !(isProblemRootModel() && property.isBaseProblemProperty()),
                 effective =
                   modelProperties
                     .fields(this@classTypeSpec)
@@ -1089,14 +1193,8 @@ class KotlinSundayIrGenerator(
             )
           }
         }.build()
-    val isProblemRootModel = isProblemRootModel()
-
-    return TypeSpec
-      .classBuilder(kotlinClassName())
-      .addModifiers(KModifier.PUBLIC)
-      .primaryConstructor(constructor)
-      .apply {
-        addJacksonPolymorphism(this@classTypeSpec)
+    val validationInitializer =
+      if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
         KotlinModelConstraints
           .initializer(
             modelProperties.fields(this@classTypeSpec),
@@ -1108,7 +1206,19 @@ class KotlinSundayIrGenerator(
           ) { it.kotlinTypeName() }
           .takeUnless {
             it.isEmpty()
-          }?.let(::addInitializerBlock)
+          }
+      } else {
+        null
+      }
+    val isProblemRootModel = isProblemRootModel()
+
+    return TypeSpec
+      .classBuilder(kotlinClassName())
+      .addModifiers(KModifier.PUBLIC)
+      .primaryConstructor(constructor)
+      .apply {
+        addJacksonPolymorphism(this@classTypeSpec)
+        if (patchable) validationInitializer?.let(::addInitializerBlock)
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
@@ -1161,13 +1271,13 @@ class KotlinSundayIrGenerator(
                   addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
                   if (!patchable) {
                     addAnnotations(property.jacksonInclusionAnnotations())
-                    addAnnotations(
-                      property.validation.validationAnnotations(
-                        property.type,
-                        AnnotationSpec.UseSiteTarget.FIELD,
-                      ),
-                    )
                   }
+                  addAnnotations(
+                    property.validationAnnotations(
+                      AnnotationSpec.UseSiteTarget.FIELD,
+                      patchable = patchable,
+                    ),
+                  )
                   if (patchable) {
                     mutable(true)
                   }
@@ -1175,6 +1285,8 @@ class KotlinSundayIrGenerator(
                 }.build(),
             )
           }
+
+        if (!patchable) validationInitializer?.let(::addInitializerBlock)
       }
   }
 
@@ -1315,22 +1427,23 @@ class KotlinSundayIrGenerator(
               .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
               .addAnnotations(property.jacksonInclusionAnnotations())
               .addAnnotations(
-                property.validation.validationAnnotations(
-                  property.type,
+                property.validationAnnotations(
                   AnnotationSpec.UseSiteTarget.FIELD,
                 ),
               ).initializer(property.name.kotlinIdentifierName)
               .build(),
           )
         }
-        KotlinModelConstraints
-          .initializer(
-            modelProperties.fields(this@dataClassTypeSpec),
-            modelProperties,
-          ) { it.kotlinTypeName() }
-          .takeUnless {
-            it.isEmpty()
-          }?.let(::addInitializerBlock)
+        if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          KotlinModelConstraints
+            .initializer(
+              modelProperties.fields(this@dataClassTypeSpec),
+              modelProperties,
+            ) { it.kotlinTypeName() }
+            .takeUnless {
+              it.isEmpty()
+            }?.let(::addInitializerBlock)
+        }
       }
   }
 
@@ -1342,6 +1455,25 @@ class KotlinSundayIrGenerator(
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
       .apply {
+        if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          KotlinNativeSchema
+            .annotation(
+              if (patchable) effective.copy(required = true) else effective,
+              modelProperties,
+              typeRegistry.beanValidationTypes,
+              AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
+              objectSchema = KotlinNativeSchema.commonSchema(effective.type, modelProperties) { it.kotlinTypeName() },
+            )?.let(::addAnnotation)
+          if (type.requiresCascadedValidation()) {
+            addAnnotation(
+              AnnotationSpec
+                .builder(
+                  typeRegistry.beanValidationTypes.valid,
+                ).apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+                .build(),
+            )
+          }
+        }
         addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.PARAM))
         if (serializationName != null ||
           name.kotlinIdentifierName != name ||
@@ -1441,7 +1573,31 @@ class KotlinSundayIrGenerator(
           .initializer("value")
           .build(),
       ).addSuperinterface(unionTypeName)
-      .build()
+      .apply {
+        if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          addSuperinterface(typeRegistry.beanValidationTypes.serializableModel)
+          addFunction(
+            FunSpec
+              .builder("validationFields")
+              .addModifiers(KModifier.OVERRIDE)
+              .addKdoc("Delegates the union case's participating wire fields to its payload.\n")
+              .returns(MAP.parameterizedBy(STRING, ANY.copy(nullable = true)))
+              .addStatement("return value.validationFields()")
+              .build(),
+          )
+          propertySpecs.replaceAll { property ->
+            property
+              .toBuilder()
+              .addAnnotation(
+                AnnotationSpec
+                  .builder(
+                    typeRegistry.beanValidationTypes.valid,
+                  ).useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+                  .build(),
+              ).build()
+          }
+        }
+      }.build()
   }
 
   private fun GeneratedModel.deserializerType(
@@ -1457,8 +1613,27 @@ class KotlinSundayIrGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = context.readTree(parser)")
         .apply {
+          if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+            addStatement("val tree = %T.read(parser, context)", ClassName("io.outfoxx.sunday.validation", "WireTree"))
+          } else {
+            addStatement("val tree = context.readTree(parser)")
+          }
+        }.apply {
+          if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+            modelProperties.hasUnionCommonRules(this@deserializerType)
+          ) {
+            beginControlFlow("try")
+            addStatement(
+              "%T.response(tree.properties().associate { it.key to it.value }, %T::class.java)",
+              typeRegistry.beanValidationTypes.modelValidation,
+              unionTypeName.nestedClass("CommonPropertiesValidation"),
+            )
+            nextControlFlow("catch (failure: %T)", typeRegistry.beanValidationTypes.constraintViolationException)
+            addStatement("throw %T.from(parser, failure.message, failure)", JACKSON_JSON_MAPPING_EXCEPTION)
+            endControlFlow()
+          }
+        }.apply {
           val discriminator = unionDiscriminator(cases)
           if (discriminator != null) {
             addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminator.wireName)
@@ -1556,8 +1731,7 @@ class KotlinSundayIrGenerator(
         addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
         if (!patchable) addAnnotations(property.jacksonInclusionAnnotations())
         addAnnotations(
-          property.validation.validationAnnotations(
-            property.type,
+          property.validationAnnotations(
             AnnotationSpec.UseSiteTarget.GET,
           ),
         )
@@ -1648,9 +1822,6 @@ class KotlinSundayIrGenerator(
     if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)) {
       return
     }
-    if (model.discriminatorMappings.isEmpty()) {
-      return
-    }
 
     val discriminator = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
     val include =
@@ -1660,10 +1831,15 @@ class KotlinSundayIrGenerator(
         JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY
       }
     val mappedTypes =
-      model.discriminatorMappings.mapNotNull { (value, typeRef) ->
-        val mappedModel = typeRef.modelOrNull(apiIndex) ?: return@mapNotNull null
-        value to mappedModel.kotlinClassName()
-      }
+      model.discriminatorMappings
+        .mapNotNull { (value, typeRef) ->
+          val mappedModel = typeRef.modelOrNull(apiIndex) ?: return@mapNotNull null
+          value to mappedModel.kotlinClassName()
+        }.ifEmpty {
+          model.directInheritors.map { inheritor ->
+            (inheritor.discriminatorValue ?: inheritor.name) to inheritor.kotlinClassName()
+          }
+        }
     if (mappedTypes.isEmpty()) {
       return
     }
@@ -1729,75 +1905,84 @@ class KotlinSundayIrGenerator(
   private fun GeneratedModelProperty.modelPropertyTypeName(patchable: Boolean = false): TypeName =
     if (patchable) {
       val base = if (type.nullable) PATCH_OP else UPDATE_OP
-      base.parameterizedBy(type.kotlinTypeName().copy(nullable = false))
+      base.parameterizedBy(type.kotlinTypeName().copy(nullable = false).withCascadedValidation(type))
     } else {
-      type.kotlinTypeName().copy(nullable = type.nullable || !required)
+      type.kotlinTypeName().copy(nullable = type.nullable || !required).withCascadedValidation(type)
     }
 
-  private fun Map<String, String>.validationAnnotations(
-    type: GeneratedTypeRef,
-    useSiteTarget: AnnotationSpec.UseSiteTarget? = null,
-  ): List<AnnotationSpec> {
+  private fun GeneratedTypeRef.requiresCascadedValidation(): Boolean =
+    modelProperties.declarationModel(this)?.let { model ->
+      model.kind in setOf(GeneratedModel.Kind.OBJECT, GeneratedModel.Kind.UNION) ||
+        model.nominal ||
+        model.kind == GeneratedModel.Kind.ENUM &&
+        model.unknownValue != null
+    } == true
+
+  private fun TypeName.withCascadedValidation(type: GeneratedTypeRef): TypeName {
     if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) ||
-      modelProperties.declarationModel(type)?.nominal == true
+      this !is ParameterizedTypeName
     ) {
-      return emptyList()
+      return this
     }
-
-    return buildList {
-      sizeAnnotationBuilder()?.let { sizeBuilder ->
-        add(sizeBuilder.withUseSiteTarget(useSiteTarget).build())
+    val resolved = modelProperties.declarationType(type)
+    val model = modelProperties.declarationModel(type)
+    val arguments =
+      when {
+        resolved.kind == GeneratedTypeRef.Kind.MAP -> listOf(GeneratedTypeRef.scalar("string")) + resolved.arguments
+        model?.kind == GeneratedModel.Kind.MAP -> listOf(GeneratedTypeRef.scalar("string")) + model.aliases
+        resolved.arguments.isNotEmpty() -> resolved.arguments
+        model?.kind == GeneratedModel.Kind.ARRAY -> model.aliases
+        else -> emptyList()
       }
+    if (arguments.size != typeArguments.size) return this
+    val annotated =
+      typeArguments.zip(arguments).map { (name, reference) ->
+        val elementSchema =
+          KotlinNativeSchema.annotation(
+            nativePayloads.property(reference),
+            modelProperties,
+            typeRegistry.beanValidationTypes,
+            objectSchema = KotlinNativeSchema.commonSchema(reference, modelProperties) { it.kotlinTypeName() },
+          )
+        val nested =
+          name.withCascadedValidation(reference).let {
+            it.copy(annotations = it.annotations + listOfNotNull(elementSchema))
+          }
+        if (reference.requiresCascadedValidation() && name !is ParameterizedTypeName) {
+          nested.copy(
+            annotations =
+              nested.annotations + AnnotationSpec.builder(typeRegistry.beanValidationTypes.valid).build(),
+          )
+        } else {
+          nested
+        }
+      }
+    // Preserve type-use constraint locations on executable constructor parameters as well as getters.
+    return rawType.parameterizedBy(annotated).copy(
+      nullable = isNullable,
+      annotations = annotations + AnnotationSpec.builder(JvmSuppressWildcards::class).build(),
+    )
+  }
 
+  private fun GeneratedModelProperty.validationAnnotations(
+    useSiteTarget: AnnotationSpec.UseSiteTarget? = null,
+    patchable: Boolean = false,
+  ): List<AnnotationSpec> {
+    if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) return emptyList()
+    return buildList {
+      KotlinNativeSchema
+        .annotation(
+          if (patchable) copy(required = true) else this@validationAnnotations,
+          modelProperties,
+          typeRegistry.beanValidationTypes,
+          useSiteTarget,
+          objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+        )?.let(::add)
+      if (type.requiresCascadedValidation()) {
+        add(AnnotationSpec.builder(typeRegistry.beanValidationTypes.valid).withUseSiteTarget(useSiteTarget).build())
+      }
       if (type.format.equals("email", ignoreCase = true)) {
         add(AnnotationSpec.builder(typeRegistry.beanValidationTypes.email).withUseSiteTarget(useSiteTarget).build())
-      }
-
-      val declaration = modelProperties.declarationType(type)
-      if (declaration.kind == GeneratedTypeRef.Kind.SCALAR && declaration.name in setOf("integer", "number")) {
-        GeneratedNumericBounds
-          .parse(
-            this@validationAnnotations,
-            "property",
-          ).forEach { bound ->
-            val integral =
-              declaration.name == "integer" &&
-                !bound.exclusive &&
-                runCatching { bound.value.longValueExact() }.isSuccess
-            val annotation =
-              if (integral) {
-                if (bound.lower) typeRegistry.beanValidationTypes.min else typeRegistry.beanValidationTypes.max
-              } else {
-                if (bound.lower) {
-                  typeRegistry.beanValidationTypes.decimalMin
-                } else {
-                  typeRegistry.beanValidationTypes.decimalMax
-                }
-              }
-            add(
-              AnnotationSpec
-                .builder(annotation)
-                .withUseSiteTarget(useSiteTarget)
-                .apply {
-                  if (integral) {
-                    addMember("value = %L", bound.value.longValueExact())
-                  } else {
-                    addMember("value = %S", bound.value.toPlainString())
-                    addMember("inclusive = %L", !bound.exclusive)
-                  }
-                }.build(),
-            )
-          }
-      }
-
-      this@validationAnnotations["pattern"]?.let { pattern ->
-        add(
-          AnnotationSpec
-            .builder(typeRegistry.beanValidationTypes.pattern)
-            .withUseSiteTarget(useSiteTarget)
-            .addMember("regexp = %P", pattern)
-            .build(),
-        )
       }
     }
   }
@@ -1810,25 +1995,6 @@ class KotlinSundayIrGenerator(
         useSiteTarget(useSiteTarget)
       }
     }
-
-  private fun Map<String, String>.sizeAnnotationBuilder(): AnnotationSpec.Builder? {
-    var sizeBuilder: AnnotationSpec.Builder? = null
-    this["maxLength"]?.let { maxLength ->
-      sizeBuilder = AnnotationSpec.builder(typeRegistry.beanValidationTypes.size).addMember("max = %L", maxLength)
-    }
-    this["minLength"]?.let { minLength ->
-      sizeBuilder =
-        (sizeBuilder ?: AnnotationSpec.builder(typeRegistry.beanValidationTypes.size)).addMember("min = %L", minLength)
-    }
-    this["maxItems"]?.let { maxItems ->
-      sizeBuilder = AnnotationSpec.builder(typeRegistry.beanValidationTypes.size).addMember("max = %L", maxItems)
-    }
-    this["minItems"]?.let { minItems ->
-      sizeBuilder =
-        (sizeBuilder ?: AnnotationSpec.builder(typeRegistry.beanValidationTypes.size)).addMember("min = %L", minItems)
-    }
-    return sizeBuilder
-  }
 
   private fun GeneratedProblem.problemType(): TypeSpec.Builder {
     val problemTypeName = typeName()
@@ -2053,6 +2219,7 @@ class KotlinSundayIrGenerator(
   private fun generateOperation(
     operation: GeneratedOperation,
     operationParameters: List<GeneratedOperationParameter>,
+    transport: CodeBlock,
   ): FunSpec {
     val isDirectTransportCall = operation.streaming != null || operation.exchange != null
     val functionBuilder =
@@ -2081,7 +2248,7 @@ class KotlinSundayIrGenerator(
     val responseTypeName = operation.returnTypeName(response)
     functionBuilder.returns(responseTypeName)
 
-    functionBuilder.addCode(operation.transportCall(response, operationParameters))
+    functionBuilder.addCode(operation.transportCall(response, operationParameters, transport))
 
     return functionBuilder.build()
   }
@@ -2089,9 +2256,10 @@ class KotlinSundayIrGenerator(
   private fun GeneratedOperation.transportCall(
     response: GeneratedResponse?,
     operationParameters: List<GeneratedOperationParameter>,
+    transport: CodeBlock,
   ): CodeBlock {
     if (streaming == null && exchange == null) {
-      return operationCall(response, operationParameters)
+      return operationCall(response, operationParameters, transport)
     }
 
     val factoryMethod =
@@ -2105,10 +2273,11 @@ class KotlinSundayIrGenerator(
 
     val builder = CodeBlock.builder()
     val contentTypeParameter = operationParameters.contentTypeParameterOrNull()
-    builder.add("return this.transport\n⇥.%L(⇥\n", factoryMethod)
+    builder.add("return %L\n⇥.%L(⇥\n", transport, factoryMethod)
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\n")
     builder.add("pathTemplate = %S", path)
+    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2131,6 +2300,12 @@ class KotlinSundayIrGenerator(
       builder.add("body = body")
       builder.add(",\n")
       builder.add("contentTypes = %L", contentTypesCode(requestBody, contentTypeParameter))
+      if (streaming == null &&
+        !requestBody.isKotlinStreamingRequestBody &&
+        typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+      ) {
+        builder.add(",\nrequestValidation = %L", nativePayloads.callback(requestBody.type, request = true))
+      }
     }
 
     if (response?.takeUnless { it.isNoContent }?.type != null || streaming != null) {
@@ -2164,6 +2339,7 @@ class KotlinSundayIrGenerator(
   private fun GeneratedOperation.operationCall(
     response: GeneratedResponse?,
     operationParameters: List<GeneratedOperationParameter>,
+    transport: CodeBlock,
   ): CodeBlock {
     val requestType = requestBody?.kotlinTypeName()?.copy(nullable = false) ?: UNIT
     val responseType = responseBodyTypeName(response)
@@ -2171,10 +2347,11 @@ class KotlinSundayIrGenerator(
     val builder = CodeBlock.builder()
     val operationFunction = if (isNullifyingOperation) SUNDAY_NULLABLE_OPERATION_FUNCTION else SUNDAY_OPERATION_FUNCTION
 
-    builder.add("return this.transport.%M<%T,·%T,·Req>(⇥\n", operationFunction, requestType, responseType)
+    builder.add("return %L.%M<%T,·%T,·Req>(⇥\n", transport, operationFunction, requestType, responseType)
     builder.add("%T(⇥\n", SUNDAY_OPERATION_SPEC)
     builder.add("method = %T.%L", SUNDAY_METHOD, sundayRequestMethod())
     builder.add(",\npathTemplate = %S", path)
+    parameterValidation(operationParameters)?.let { builder.add(",\nparameterValidation = %L", it) }
 
     operationParameters
       .withLocation(GeneratedParameter.Location.PATH)
@@ -2195,10 +2372,18 @@ class KotlinSundayIrGenerator(
     requestBody?.let { requestBody ->
       builder.add(",\nbody = body")
       builder.add(",\ncontentTypes = %L", contentTypesCode(requestBody, contentTypeParameter))
+      if (!requestBody.isKotlinStreamingRequestBody &&
+        typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+      ) {
+        builder.add(",\nrequestValidation = %L", nativePayloads.callback(requestBody.type, request = true))
+      }
     }
 
     if (response?.takeUnless { it.isNoContent }?.type != null) {
       builder.add(",\nacceptTypes = %L", acceptTypesCode(response))
+      if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+        builder.add(",\nresponseValidation = %L", nativePayloads.callback(response.type!!, request = false))
+      }
     }
 
     operationParameters
@@ -2272,6 +2457,36 @@ class KotlinSundayIrGenerator(
           parameter.typeName().isNullable -> defaultValue("null")
         }
       }.build()
+
+  private fun parameterValidation(parameters: List<GeneratedOperationParameter>): CodeBlock? {
+    if (KotlinTypeRegistry.Option.ValidationConstraints !in typeRegistry.options) return null
+    val checked =
+      parameters.filter {
+        !it.isConstant &&
+          (it.type.requiresCascadedValidation() || nativePayloads.name(it.type) != null)
+      }
+    if (checked.isEmpty()) return null
+    return CodeBlock
+      .builder()
+      .add("{\n")
+      .indent()
+      .apply {
+        checked.forEach { parameter ->
+          val schema = nativePayloads.name(parameter.type)
+          if (parameter.isNullable) beginControlFlow("%N?.let", parameter.name)
+          add(
+            "%T.request(%L",
+            typeRegistry.beanValidationTypes.modelValidation,
+            if (parameter.isNullable) "it" else parameter.name,
+          )
+          schema?.let { add(", %T::class.java", it) }
+          add(")\n")
+          if (parameter.isNullable) endControlFlow()
+        }
+      }.unindent()
+      .add("}")
+      .build()
+  }
 
   private fun parametersCode(
     fieldName: String,
@@ -2712,7 +2927,7 @@ class KotlinSundayIrGenerator(
   private val GeneratedModel.isObjectUnionSealedInterface: Boolean
     get() =
       kind == GeneratedModel.Kind.UNION &&
-        aliases.size >= 2 &&
+        (aliases.size >= 2 || (aliases.isNotEmpty() && discriminatorFallbacks.containsKey(this))) &&
         unionCaseModels().size == aliases.size
 
   private fun GeneratedModel.unionCaseModels(): List<GeneratedModel> =

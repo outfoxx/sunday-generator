@@ -1,0 +1,38 @@
+asyncapi: 2.6.0
+info:
+  title: Tolerant Union Properties
+  version: 1.0.0
+channels:
+  event.changed:
+    subscribe:
+      message:
+        payload:
+          $ref: '#/components/schemas/Event'
+components:
+  schemas:
+    Event:
+      x-sunday-tolerance: response
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string}
+      discriminator: kind
+      oneOf:
+        - $ref: '#/components/schemas/Created'
+      patternProperties:
+        '^x-':
+          type: [string, 'null']
+          enum: [allowed, null]
+          minLength: 3
+      additionalProperties:
+        type: integer
+        minimum: 2
+        enum: [2, 4]
+    Created:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, const: created}
+      additionalProperties: false
+      patternProperties:
+        '^x-': {type: string, minLength: 2}

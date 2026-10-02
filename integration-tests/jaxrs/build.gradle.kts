@@ -3,15 +3,21 @@ plugins {
 }
 
 val generator by configurations.creating
+val javaxModelRuntime by configurations.creating
 
 dependencies {
   generator(project(":cli"))
+  javaxModelRuntime("org.hibernate.validator:hibernate-validator:6.2.5.Final")
+  javaxModelRuntime("org.glassfish:jakarta.el:3.0.3")
   implementation(libs.jakartaJaxrs31)
   implementation(libs.jakartaAnnotations)
   implementation(libs.jakartaValidation)
   implementation(libs.validation)
   implementation(libs.jackson)
+  implementation("io.outfoxx.sunday:sunday-validation-jakarta:${libs.versions.sundayKt.get()}")
+  implementation("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
   testImplementation(libs.jerseyValidation)
+  testImplementation(libs.jerseyJackson)
   testImplementation(libs.jerseyInMemory)
   testImplementation(libs.jerseyHk2)
   testImplementation(libs.jerseySse)
@@ -159,11 +165,37 @@ val generateNominalApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val nativePayloadContract =
+  rootProject.layout.projectDirectory.file(
+    "integration-tests/quarkus/src/main/openapi/native-payloads.yaml",
+  )
+val generateNativePayloads by tasks.registering(JavaExec::class) {
+  val output = layout.buildDirectory.dir("generated/native-payloads")
+  inputs.file(nativePayloadContract)
+  outputs.dir(output)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-use-jakarta-packages",
+    "-pkg",
+    "io.test.jaxrs.payloads",
+    "-out",
+    output.get().asFile.absolutePath,
+    nativePayloadContract.asFile.absolutePath,
+  )
+}
+
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
+  freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateNativePayloads)
   kotlin.srcDir(generateNominalApi)
   kotlin.srcDir(generateDefaultModels)
   kotlin.srcDir(generateUploadApi)
@@ -179,8 +211,28 @@ tasks.compileKotlin {
 }
 
 tasks.test {
+  exclude("**/ModelDefaultsTest*")
   systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 }
+
+// Hibernate's javax and Jakarta providers share implementation class names and require separate JVMs.
+val defaultModelTest by tasks.registering(Test::class) {
+  useJUnitPlatform()
+  testClassesDirs =
+    sourceSets.test
+      .get()
+      .output.classesDirs
+  classpath =
+    javaxModelRuntime +
+    sourceSets.test
+      .get()
+      .runtimeClasspath
+      .filter { !it.name.startsWith("hibernate-validator-") }
+  include("**/ModelDefaultsTest*")
+  shouldRunAfter(tasks.test)
+}
+
+tasks.check { dependsOn(defaultModelTest) }
 
 // Generated sources are compiled before the runtime tests, and retain the generator's formatting.
 ktlint {

@@ -9,11 +9,13 @@ from pydantic import (
     Field,
     TypeAdapter,
     ValidationInfo,
+    ValidatorFunctionWrapHandler,
     field_validator,
     model_validator,
 )
 from sunday import SundayModel
-from typing import Annotated, Literal
+from sunday.external_discriminator import ExternalDiscriminatorValue
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 __all__ = [
@@ -132,16 +134,35 @@ class EventEnvelope(SundayModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _validate_external_discriminators(cls, data: object) -> object:
+    def _capture_external_discriminators(cls, data: object) -> object:
         if not isinstance(data, dict):
             return data
-        if data.get("type") == "project.created":
-            data = dict(data)
-            data["data"] = TypeAdapter(ProjectCreatedData).validate_python(data.get("data"))
-        if data.get("type") == "project.deleted":
-            data = dict(data)
-            data["data"] = TypeAdapter(ProjectDeletedData).validate_python(data.get("data"))
+        data = data.copy()
+        key = "data" if "data" in data else "data"
+        if key in data and data[key] is not None:
+            current = data[key]
+            if isinstance(current, ExternalDiscriminatorValue):
+                current = current.value
+            data[key] = ExternalDiscriminatorValue(data.get("type", data.get("type")), current)
         return data
+
+    @field_validator("data", mode="wrap")
+    @classmethod
+    def _validate_data_discriminator(
+        cls,
+        value: object,
+        handler: ValidatorFunctionWrapHandler,
+        info: ValidationInfo,
+    ) -> Any:
+        if not isinstance(value, ExternalDiscriminatorValue):
+            return handler(value)
+        if value.value is None:
+            return handler(None)
+        if value.discriminator == "project.created":
+            return TypeAdapter(ProjectCreatedData).validate_python(value.value, context=info.context)
+        if value.discriminator == "project.deleted":
+            return TypeAdapter(ProjectDeletedData).validate_python(value.value, context=info.context)
+        raise ValueError("Missing or unsupported external discriminator")
 
 
 type EventData = ProjectCreatedData | ProjectDeletedData

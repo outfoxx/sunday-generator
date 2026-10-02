@@ -1,0 +1,85 @@
+openapi: 3.1.0
+info: {title: Fault policies, version: 1.0.0}
+x-sunday-jaxrs:
+  rest-client:
+    config-key: fault-client
+    providers: [io.test.quarkus.PolicyProblemMapper]
+x-sunday-problemBaseUri: https://example.test/problems/
+x-sunday-problemTypes:
+  unauthorized: {status: 401, title: Unauthorized, detail: Authentication required}
+  forbidden: {status: 403, title: Forbidden, detail: Access denied}
+paths:
+  /fault/server-retry/{status}:
+    get:
+      operationId: serverRetry
+      x-sunday-service: Guarded
+      parameters: [{$ref: '#/components/parameters/status'}]
+      x-sunday-problems: [unauthorized, forbidden]
+      x-sunday-policy:
+        profiles:
+          internal:
+            server:
+              retry:
+                maxRetries: 2
+                jitter: PT0S
+                retryOn: {problem: unauthorized}
+                abortOn: {problem: forbidden}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /fault/server-breaker/{status}:
+    get:
+      operationId: serverBreaker
+      x-sunday-service: Guarded
+      parameters: [{$ref: '#/components/parameters/status'}]
+      x-sunday-problems: [unauthorized, forbidden]
+      x-sunday-policy:
+        profiles:
+          internal:
+            server:
+              circuitBreaker:
+                requestVolumeThreshold: 4
+                failureRatio: 0.75
+                delay: PT1H
+                failOn: java.lang.RuntimeException
+                skipOn: [{problem: unauthorized}, {problem: forbidden}]
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /fault/client-retry/{status}:
+    get:
+      operationId: clientRetry
+      x-sunday-service: Guarded
+      parameters: [{$ref: '#/components/parameters/status'}]
+      x-sunday-problems: [unauthorized, forbidden]
+      x-sunday-policy:
+        profiles:
+          internal:
+            client:
+              retry:
+                maxRetries: 1
+                jitter: PT0S
+                retryOn: {problem: unauthorized}
+                abortOn: {problem: forbidden}
+      responses: {'200': {$ref: '#/components/responses/result'}}
+  /fault/client-breaker/{status}:
+    get:
+      operationId: clientBreaker
+      x-sunday-service: Guarded
+      parameters: [{$ref: '#/components/parameters/status'}]
+      x-sunday-problems: [unauthorized, forbidden]
+      x-sunday-policy:
+        profiles:
+          internal:
+            client:
+              circuitBreaker:
+                requestVolumeThreshold: 4
+                failureRatio: 0.75
+                delay: PT1H
+                failOn: java.lang.RuntimeException
+                skipOn: [{problem: unauthorized}, {problem: forbidden}]
+      responses: {'200': {$ref: '#/components/responses/result'}}
+components:
+  parameters:
+    status: {name: status, in: path, required: true, schema: {type: integer}}
+  responses:
+    result:
+      description: Outcome
+      content:
+        text/plain: {schema: {type: string}}

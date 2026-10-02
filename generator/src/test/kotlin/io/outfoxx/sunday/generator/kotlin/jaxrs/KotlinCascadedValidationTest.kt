@@ -36,6 +36,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.lang.reflect.AnnotatedParameterizedType
+import java.lang.reflect.AnnotatedType
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
@@ -181,17 +183,51 @@ class KotlinCascadedValidationTest {
           val wrapper = event.getMethod("getWrapper")
           assertEquals(model, wrapper.returnType)
           assertTrue(wrapper.annotations.any { it.annotationClass.java.name == annotation })
-          val compiledEvent =
-            CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/ValidationEvent.kt")
-          assertTrue(compiledEvent.contains("List<@Valid Child>"), compiledEvent)
+          assertTrue(
+            event
+              .getMethod("getChildren")
+              .annotatedReturnType
+              .argument(0)
+              .hasAnnotation(annotation),
+          )
         }
-        val compiled = CompiledGeneratedSources.source(GeneratedCodeLanguage.Kotlin, "io/test/Wrapper.kt")
-        assertTrue(compiled.contains("List<@Valid Child>"), compiled)
-        assertTrue(compiled.contains("List<@Valid Choice>"), compiled)
-        assertTrue(compiled.contains("Map<String, @Valid Child>"), compiled)
-        assertTrue(compiled.contains("Map<String, @Valid Choice>"), compiled)
-        assertTrue(compiled.contains("Map<String, Status>"), compiled)
-        assertTrue(compiled.contains("Map<String, List<@Valid Child>>"), compiled)
+        for (field in listOf("Children", "Choices")) {
+          assertTrue(
+            model
+              .getMethod("get$field")
+              .annotatedReturnType
+              .argument(0)
+              .hasAnnotation(annotation),
+            field,
+          )
+        }
+        for (field in listOf("ChildMap", "ChoiceMap")) {
+          val type = model.getMethod("get$field").annotatedReturnType
+          assertFalse(type.argument(0).hasAnnotation(annotation), field)
+          assertTrue(type.argument(1).hasAnnotation(annotation), field)
+        }
+        assertFalse(
+          model
+            .getMethod("getStatuses")
+            .annotatedReturnType
+            .argument(1)
+            .hasAnnotation(annotation),
+        )
+        assertFalse(
+          model
+            .getMethod("getNames")
+            .annotatedReturnType
+            .argument(0)
+            .hasAnnotation(annotation),
+        )
+        assertTrue(
+          model
+            .getMethod("getGroups")
+            .annotatedReturnType
+            .argument(1)
+            .argument(0)
+            .hasAnnotation(annotation),
+        )
       }
     }
     val disabled = compileTypesResult(registry(api, jakarta = false, implement = true, enabled = false).buildTypes())
@@ -202,6 +238,15 @@ class KotlinCascadedValidationTest {
       assertFalse(compiledEvent.contains("@Valid"))
     }
   }
+
+  private fun AnnotatedType.argument(index: Int): AnnotatedType =
+    (this as AnnotatedParameterizedType).annotatedActualTypeArguments[index]
+
+  private fun AnnotatedType.hasAnnotation(name: String): Boolean =
+    annotations.any {
+      it.annotationClass.java.name ==
+        name
+    }
 
   private fun registry(
     api: GeneratedApi,

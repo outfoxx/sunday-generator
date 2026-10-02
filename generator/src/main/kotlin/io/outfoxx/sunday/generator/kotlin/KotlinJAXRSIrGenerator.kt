@@ -44,16 +44,19 @@ import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.GenerationMode.Client
 import io.outfoxx.sunday.generator.GenerationMode.Server
+import io.outfoxx.sunday.generator.PayloadUse
 import io.outfoxx.sunday.generator.common.HttpStatus
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
+import io.outfoxx.sunday.generator.ir.GeneratedExceptionRef
 import io.outfoxx.sunday.generator.ir.GeneratedJaxrsRestClient
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
+import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
@@ -62,21 +65,25 @@ import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarJwtUserSource
 import io.outfoxx.sunday.generator.ir.GeneratedZanzibarUserSource
+import io.outfoxx.sunday.generator.ir.allowsUnknown
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
+import io.outfoxx.sunday.generator.ir.emit.clientSecurity
 import io.outfoxx.sunday.generator.ir.emit.contextParameters
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.endpointAuthentication
 import io.outfoxx.sunday.generator.ir.emit.endpointSecurityPolicy
+import io.outfoxx.sunday.generator.ir.emit.endpointSecurityProviders
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
+import io.outfoxx.sunday.generator.ir.emit.hasEnabledPolicies
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
 import io.outfoxx.sunday.generator.ir.emit.isReactive
@@ -123,7 +130,10 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinDiscriminatorMappingUnionG
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinEnumEntriesResolver
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelConstraints
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinModelDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativePayloads
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinNativeSchema
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinNominalTypes
+import io.outfoxx.sunday.generator.kotlin.utils.KotlinPolicyAnnotations
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
@@ -142,6 +152,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
+import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
 import io.outfoxx.sunday.generator.kotlin.utils.addQuarkusHttpProblemAlias
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
@@ -156,12 +167,10 @@ import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
 import java.security.Principal
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletionStage
@@ -187,6 +196,9 @@ class KotlinJAXRSIrGenerator(
       typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations),
       { it.kotlinClassName() },
       { it.kotlinTypeName() },
+      beanValidationTypes.takeIf {
+        typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+      },
     )
   }
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
@@ -206,6 +218,12 @@ class KotlinJAXRSIrGenerator(
       discriminatorFallbacks = discriminatorFallbacks,
       jacksonAnnotations = typeRegistry.options.contains(JacksonAnnotations),
       typeName = { model -> model.kotlinClassName() },
+      commonValidation = { model ->
+        beanValidationTypes.takeIf {
+          typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+            modelProperties.hasUnionCommonRules(model)
+        }
+      },
     )
   }
   private val kotlinEnumEntries = KotlinEnumEntriesResolver()
@@ -219,7 +237,7 @@ class KotlinJAXRSIrGenerator(
     }
   private val beanValidationTypes =
     if (
-      (options.resourceAdapters && options.quarkus) ||
+      options.quarkus ||
       typeRegistry.options.contains(KotlinTypeRegistry.Option.UseJakartaPackages)
     ) {
       BeanValidationTypes.JAKARTA
@@ -233,6 +251,15 @@ class KotlinJAXRSIrGenerator(
       JaxRsTypes.JAKARTA
     } else {
       JaxRsTypes.JAVAX
+    }
+
+  private val clientSecurityGenerators = linkedMapOf<String, KotlinQuarkusClientSecurity>()
+
+  private fun GeneratedService.hasClientSecurityBindings(): Boolean =
+    operations.any { operation ->
+      api.effectiveAuth(this, operation)?.let { auth ->
+        auth.selection != null || auth.securitySchemes.any { it.bindings != null }
+      } == true
     }
 
   /**
@@ -274,7 +301,10 @@ class KotlinJAXRSIrGenerator(
       if (!options.quarkus) {
         securityPolicies.mapValues { (packageName, policies) ->
           KotlinJAXRSSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), jaxRsTypes).also { generator ->
-            typeRegistry.addServiceType(generator.typeName, generator.generate(policies.endpointSecuritySchemes()))
+            typeRegistry.addServiceType(
+              generator.typeName,
+              generator.generate(policies.endpointSecuritySchemes(), policies.endpointSecurityProviders()),
+            )
           }
         }
       } else {
@@ -300,6 +330,7 @@ class KotlinJAXRSIrGenerator(
     }
 
     generateAggregateService(serviceTypes)
+    clientSecurityGenerators.values.forEach { it.register(typeRegistry) }
   }
 
   private fun securityPolicies(serviceTypes: List<GeneratedJaxRsService>): Map<String, List<GeneratedEndpointPolicy>> =
@@ -307,7 +338,7 @@ class KotlinJAXRSIrGenerator(
       serviceTypes.groupBy { it.typeName.packageName }.mapValues { (_, group) ->
         group.flatMap { service ->
           service.service.operations.mapNotNull { operation ->
-            api.endpointSecurityPolicy(service.service, operation)
+            api.endpointSecurityPolicy(service.service, operation, options.generationContext(Server))
           }
         }
       }
@@ -364,7 +395,8 @@ class KotlinJAXRSIrGenerator(
           service.subresourcePath == null,
           if (options.enforceSecuritySchemes) {
             service.service.operations.associate { operation ->
-              operation.id.kotlinIdentifierName to api.endpointSecurityPolicy(service.service, operation)
+              operation.id.kotlinIdentifierName to
+                api.endpointSecurityPolicy(service.service, operation, options.generationContext(Server))
             }
           } else {
             emptyMap()
@@ -376,17 +408,70 @@ class KotlinJAXRSIrGenerator(
     }
   }
 
+  private val nativePayloads by lazy {
+    KotlinNativePayloads(
+      modelProperties,
+      beanValidationTypes,
+      { it.modelOrNull(apiIndex) },
+      { it.kotlinTypeName().withUseSiteValidationAnnotations(it) },
+      { it.modelValidationAnnotations(AnnotationSpec.UseSiteTarget.FIELD) },
+      typeRegistry::addModelType,
+    )
+  }
+
   private fun generateModelTypes() {
     val models = api.models.filter { model -> model.scope == null }
+    if (typeRegistry.options.contains(ValidationConstraints)) {
+      models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
+        val name = model.kotlinClassName()
+        nativePayloads.register(GeneratedTypeRef.named(model.name), name.peerClass("${name.simpleName}Validation"))
+      }
+      api.services
+        .flatMap { it.operations }
+        .flatMap { operation ->
+          listOfNotNull(operation.requestBody?.type, operation.primarySuccessResponse()?.type)
+        }.filter { it.kind in setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP) }
+        .distinct()
+        .forEachIndexed { index, reference ->
+          nativePayloads.register(
+            reference,
+            ClassName(
+              typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
+                ?: genError("No payload validation package specified"),
+              "Payload${index + 1}Validation",
+            ),
+          )
+        }
+    }
     val modelTypes =
       models
         .mapNotNull { model ->
           model.modelType()?.let { type -> model.kotlinClassName() to (model to type) }
         }.toMap()
-    addOpenModelProperties(modelTypes, typeRegistry.options, modelProperties, options.preserveUnknownFields) {
+    addOpenModelProperties(
+      modelTypes,
+      typeRegistry.options,
+      modelProperties,
+      options.preserveUnknownFields,
+      beanValidationTypes.takeIf { KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options },
+    ) {
       it.kotlinTypeName()
     }
     addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+      addNativeModelGraphs(modelTypes, modelProperties, beanValidationTypes) { it.kotlinTypeName() }
+    }
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+      modelTypes.forEach { (name, entry) ->
+        val (model, builder) = entry
+        val constructor = builder.build().primaryConstructor
+        if (model.kind == GeneratedModel.Kind.OBJECT && constructor != null) {
+          builder.addInitializerBlock(
+            KotlinNativeSchema.constructor(name, constructor.parameters, beanValidationTypes),
+          )
+        }
+      }
+    }
     models
       .flatMap { model ->
         buildList {
@@ -413,7 +498,18 @@ class KotlinJAXRSIrGenerator(
         hierarchyTypeName,
         hierarchyIsClass,
         kind == GeneratedModel.Kind.OBJECT && !isDiscriminatorMappingUnionInterface,
+        validation =
+          beanValidationTypes.takeIf {
+            typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)
+          },
+        annotations = { property, target -> property.modelValidationAnnotations(target) },
       ) { property -> property.modelPropertyTypeName() }
+    if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+      !(fallback.hierarchy.tolerance ?: fallback.enumModel?.tolerance)
+        .allowsUnknown(options.generationContext(generationMode, PayloadUse.Request))
+    ) {
+      type.addAnnotation(beanValidationTypes.knownVariant())
+    }
     return fallbackTypeName to type
   }
 
@@ -440,8 +536,21 @@ class KotlinJAXRSIrGenerator(
   private fun generateProblemTypes(services: List<GeneratedService>) {
     val referencedProblems =
       services
-        .flatMap { service -> service.referencedProblems(apiIndex) }
-        .distinctBy { problem -> problem.typeUri }
+        .flatMap { service ->
+          service.referencedProblems(apiIndex) +
+            service.operations.flatMap { operation ->
+              val policy = operation.resolvedPolicy()
+              listOf(
+                policy?.retry?.value?.retryOn,
+                policy?.retry?.value?.abortOn,
+                policy?.circuitBreaker?.value?.failOn,
+                policy?.circuitBreaker?.value?.skipOn,
+              ).filterNotNull()
+                .flatten()
+                .filter { it.problem != null }
+                .map { it.generatedProblem() }
+            }
+        }.distinctBy { problem -> problem.typeUri }
 
     referencedProblems.forEach { problem ->
       typeRegistry.addModelType(problem.typeName(), problem.problemType())
@@ -581,6 +690,7 @@ class KotlinJAXRSIrGenerator(
       typeBuilder.addQuarkusRestClientAnnotations(
         expandedBaseUri(),
         api.jaxrs?.restClient.mergeWith(jaxrs?.restClient),
+        hasClientSecurityBindings(),
       )
     }
 
@@ -594,6 +704,7 @@ class KotlinJAXRSIrGenerator(
 
     problemRegistrationType()?.let(typeBuilder::addType)
 
+    val operationNames = NameAllocator().apply { operations.forEach { newName(it.id.kotlinIdentifierName) } }
     operations.forEach { operation ->
       val renderedOperation =
         if (options.resourceAdapters && subresourcePath != null) {
@@ -603,7 +714,11 @@ class KotlinJAXRSIrGenerator(
         }
       val operationParameters = renderedOperation.operationParameters()
       renderedOperation.nullifyFunction(operationParameters)?.let(typeBuilder::addFunction)
-      typeBuilder.addFunction(renderedOperation.operationFunction(this, operationParameters))
+      KotlinQuarkusClientOperations.add(
+        renderedOperation.operationFunction(this, operationParameters),
+        typeBuilder,
+        operationNames,
+      )
     }
 
     apiIndex
@@ -640,6 +755,7 @@ class KotlinJAXRSIrGenerator(
         service.service.expandedBaseUri()
       },
       api.jaxrs?.restClient,
+      services.any { it.service.hasClientSecurityBindings() },
     )
 
     if (defaultMediaTypes.isNotEmpty()) {
@@ -852,6 +968,20 @@ class KotlinJAXRSIrGenerator(
     if (path.isNotEmpty()) {
       functionBuilder.addAnnotation(jaxRsTypes.path, path)
     }
+    if (generationMode == Client) {
+      api.clientSecurity(service, this, options.generationContext(Client))?.let { security ->
+        if (!options.quarkus) {
+          genError(
+            "Scoped JAX-RS client security requires Quarkus; use a Sunday client for portable token acquisition",
+          )
+        }
+        val packageName = serviceTypeName(service).packageName
+        clientSecurityGenerators
+          .getOrPut(packageName) { KotlinQuarkusClientSecurity(packageName, options.profile) }
+          .annotation(security)
+          ?.let(functionBuilder::addAnnotation)
+      }
+    }
     addQuarkusFaultToleranceAnnotations(functionBuilder)
     addQuarkusZanzibarAnnotations(service, functionBuilder)
 
@@ -880,6 +1010,11 @@ class KotlinJAXRSIrGenerator(
       }
 
     operationParameters
+      .withLocation(GeneratedParameter.Location.COOKIE)
+      .map { parameter -> parameter.source.parameterSpec(parameter.name, GeneratedParameter.Location.COOKIE) }
+      .forEach(functionBuilder::addParameter)
+
+    operationParameters
       .withLocation(GeneratedParameter.Location.HEADER)
       .forEach { parameter ->
         parameter.source.headerParameterSpecOrNull(parameter.name, functionBuilder)?.let(functionBuilder::addParameter)
@@ -894,6 +1029,26 @@ class KotlinJAXRSIrGenerator(
 
     val response = primarySuccessResponse()
     val responseTypeName = operationReturnTypeName(response, functionBuilder)
+    if (typeRegistry.options.contains(ValidationConstraints) &&
+      streaming == null &&
+      jaxrs?.sseEnabled(generationMode) != true
+    ) {
+      response
+        ?.takeUnless { it.isNoContent }
+        ?.type
+        ?.takeUnless {
+          val declaration = modelProperties.declarationType(it)
+          declaration.name == "file" || declaration.format == "binary"
+        }?.let { type ->
+          functionBuilder.addAnnotation(
+            AnnotationSpec
+              .builder(beanValidationTypes.entitySchema)
+              .apply {
+                nativePayloads.name(type)?.let { addMember("%T::class", it) }
+              }.build(),
+          )
+        }
+    }
     if (responseTypeName != UNIT) {
       functionBuilder.returns(responseTypeName)
     }
@@ -971,25 +1126,27 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedOperation.addQuarkusFaultToleranceAnnotations(functionBuilder: FunSpec.Builder) {
-    if (!options.quarkus) {
-      return
+    val effectivePolicy = resolvedPolicy()?.takeIf { it.hasEnabledPolicies } ?: return
+    if (!options.quarkus) genError("Operation '$id' uses fault-tolerance policies; enable Quarkus generation")
+    KotlinPolicyAnnotations { reference ->
+      reference.className?.let(ClassName::bestGuess) ?: reference.generatedProblem().typeName()
+    }.annotations(
+      effectivePolicy,
+      KotlinQuarkusClientOperations.requiredAbortTypes(functionBuilder),
+    ).forEach(functionBuilder::addAnnotation)
+  }
+
+  private fun GeneratedOperation.resolvedPolicy(): GeneratedPolicyValues? =
+    policy?.resolve(options.generationContext(generationMode)) { base, override -> base.merge(override) }
+
+  private fun GeneratedExceptionRef.generatedProblem(): GeneratedProblem {
+    val resolved =
+      api.problems.singleOrNull { it.name == problem || it.sourceName == problem }
+        ?: genError("Policy exception references missing or ambiguous generated problem '$problem'")
+    if (resolved.strategy == GeneratedProblem.Strategy.PAYLOAD) {
+      genError("Policy exception '$problem' must use an error-subtype problem strategy")
     }
-
-    val effectivePolicy = policy ?: return
-
-    effectivePolicy.timeout
-      ?.durationAnnotation(timeoutAnnotation, "value", "unit")
-      ?.let(functionBuilder::addAnnotation)
-
-    effectivePolicy.retry.retryAnnotation()?.let(functionBuilder::addAnnotation)
-    effectivePolicy.circuitBreaker.circuitBreakerAnnotation()?.let(functionBuilder::addAnnotation)
-
-    val rateLimit =
-      when (generationMode) {
-        Client -> effectivePolicy.clientRateLimit
-        Server -> effectivePolicy.serverRateLimit
-      }
-    rateLimit.rateLimitAnnotation()?.let(functionBuilder::addAnnotation)
+    return resolved
   }
 
   private fun GeneratedOperation.addQuarkusZanzibarAnnotations(
@@ -1089,167 +1246,6 @@ class KotlinJAXRSIrGenerator(
   private fun Map<String, String>.booleanValue(vararg names: String): Boolean =
     value(*names)?.toBooleanStrictOrNull() == true
 
-  private fun String.durationAnnotation(
-    annotation: ClassName,
-    valueMember: String,
-    unitMember: String,
-  ): AnnotationSpec =
-    runCatching { toPolicyDuration() }
-      .getOrElse {
-        genError(
-          "Quarkus timeout policy key '$valueMember' must be an ISO-8601 duration " +
-            "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
-        )
-      }.let { duration ->
-        AnnotationSpec
-          .builder(annotation)
-          .addMember("$valueMember = %L", duration.value)
-          .addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
-          .build()
-      }
-
-  private fun Map<String, String>.retryAnnotation(): AnnotationSpec? {
-    if (isEmpty()) {
-      return null
-    }
-    validatePolicyKeys("retry", retryPolicyKeys)
-
-    return AnnotationSpec
-      .builder(retryAnnotation)
-      .apply {
-        intValue("retry", "maxRetries")?.let { addMember("maxRetries = %L", it) }
-        durationValue("retry", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
-        durationValue("retry", "maxDuration")?.let { addDurationMembers("maxDuration", "durationUnit", it) }
-        durationValue("retry", "jitter")?.let { addDurationMembers("jitter", "jitterDelayUnit", it) }
-      }.build()
-  }
-
-  private fun Map<String, String>.circuitBreakerAnnotation(): AnnotationSpec? {
-    if (isEmpty()) {
-      return null
-    }
-    validatePolicyKeys("circuitBreaker", circuitBreakerPolicyKeys)
-
-    return AnnotationSpec
-      .builder(circuitBreakerAnnotation)
-      .apply {
-        intValue("circuitBreaker", "requestVolumeThreshold")?.let { addMember("requestVolumeThreshold = %L", it) }
-        intValue("circuitBreaker", "successThreshold")?.let { addMember("successThreshold = %L", it) }
-        doubleValue("circuitBreaker", "failureRatio")?.let { addMember("failureRatio = %L", it) }
-        durationValue("circuitBreaker", "delay")?.let { addDurationMembers("delay", "delayUnit", it) }
-      }.build()
-  }
-
-  private fun Map<String, String>.rateLimitAnnotation(): AnnotationSpec? {
-    if (isEmpty()) {
-      return null
-    }
-    validatePolicyKeys("rateLimit", rateLimitPolicyKeys)
-    val value = intValue("rateLimit", "value") ?: genError("Quarkus rateLimit policy requires integer key 'value'")
-
-    return AnnotationSpec
-      .builder(rateLimitAnnotation)
-      .apply {
-        addMember("value = %L", value)
-        durationValue("rateLimit", "window")?.let { addDurationMembers("window", "windowUnit", it) }
-        durationValue("rateLimit", "minSpacing")?.let { addDurationMembers("minSpacing", "minSpacingUnit", it) }
-        this@rateLimitAnnotation["type"]?.let { type ->
-          if (type.enumMemberName() !in rateLimitTypes) {
-            genError("Quarkus rateLimit policy key 'type' must be one of ${rateLimitTypes.joinToString()}")
-          }
-          addMember("type = %T.%L", rateLimitType, type.enumMemberName())
-        }
-      }.build()
-  }
-
-  private fun AnnotationSpec.Builder.addDurationMembers(
-    valueMember: String,
-    unitMember: String,
-    duration: PolicyDuration,
-  ) {
-    addMember("$valueMember = %L", duration.value)
-    addMember("$unitMember = %T.%L", CHRONO_UNIT, duration.unit.name)
-  }
-
-  private fun Map<String, String>.validatePolicyKeys(
-    policyName: String,
-    supportedKeys: Set<String>,
-  ) {
-    val unsupportedKeys = keys - supportedKeys
-    if (unsupportedKeys.isNotEmpty()) {
-      genError("Unsupported Quarkus $policyName policy key(s): ${unsupportedKeys.sorted().joinToString(", ")}")
-    }
-  }
-
-  private fun Map<String, String>.intValue(
-    policyName: String,
-    name: String,
-  ): Int? =
-    this[name]?.let { value ->
-      value.toIntOrNull()
-        ?: genError("Quarkus $policyName policy key '$name' must be an integer")
-    }
-
-  private fun Map<String, String>.doubleValue(
-    policyName: String,
-    name: String,
-  ): Double? =
-    this[name]?.let { value ->
-      value.toDoubleOrNull()
-        ?: genError("Quarkus $policyName policy key '$name' must be a number")
-    }
-
-  private fun Map<String, String>.durationValue(
-    policyName: String,
-    name: String,
-  ): PolicyDuration? =
-    this[name]?.let { value ->
-      runCatching { value.toPolicyDuration() }
-        .getOrElse {
-          genError(
-            "Quarkus $policyName policy key '$name' must be an ISO-8601 duration " +
-              "(e.g. \"PT5S\") or a PT{n}MS milliseconds literal (e.g. \"PT100MS\")",
-          )
-        }
-    }
-
-  private fun String.toPolicyDuration(): PolicyDuration {
-    val duration = parsePolicyDuration()
-    val millis = duration.toMillis()
-    return when {
-      millis % ChronoUnit.HOURS.duration.toMillis() == 0L ->
-        PolicyDuration(
-          millis / ChronoUnit.HOURS.duration.toMillis(),
-          ChronoUnit.HOURS,
-        )
-      millis % ChronoUnit.MINUTES.duration.toMillis() == 0L ->
-        PolicyDuration(
-          millis / ChronoUnit.MINUTES.duration.toMillis(),
-          ChronoUnit.MINUTES,
-        )
-      millis % ChronoUnit.SECONDS.duration.toMillis() == 0L ->
-        PolicyDuration(
-          millis / ChronoUnit.SECONDS.duration.toMillis(),
-          ChronoUnit.SECONDS,
-        )
-      else -> PolicyDuration(millis, ChronoUnit.MILLIS)
-    }
-  }
-
-  private fun String.parsePolicyDuration(): Duration =
-    runCatching { Duration.parse(this) }
-      .getOrElse {
-        policyMillisRegex
-          .matchEntire(this)
-          ?.groupValues
-          ?.get(1)
-          ?.toLongOrNull()
-          ?.let(Duration::ofMillis)
-          ?: throw it
-      }
-
-  private fun String.enumMemberName(): String = replace(enumMemberSplitRegex, "_").uppercase()
-
   private fun GeneratedService.expandedBaseUri(): String? {
     val baseUri = baseUri ?: return null
     val parameterValues =
@@ -1264,6 +1260,7 @@ class KotlinJAXRSIrGenerator(
   private fun TypeSpec.Builder.addQuarkusRestClientAnnotations(
     baseUri: String?,
     restClient: GeneratedJaxrsRestClient?,
+    hasSecurityBindings: Boolean = false,
   ) {
     if (generationMode != Client || !options.quarkus) {
       return
@@ -1278,6 +1275,11 @@ class KotlinJAXRSIrGenerator(
           baseUri?.let { value -> addMember("baseUri = %S", value) }
         }.build(),
     )
+    if (hasSecurityBindings && restClient?.oidcClient != null) {
+      genError(
+        "Scoped client security cannot be combined with rest-client.oidc-client; select the named application provider in x-sunday-security",
+      )
+    }
     restClient?.oidcClient?.let { clientName ->
       jaxRsTypes.oidcClientFilter?.let { oidcClientFilter ->
         addAnnotation(
@@ -1288,20 +1290,24 @@ class KotlinJAXRSIrGenerator(
         )
       }
     }
-    restClient
-      ?.providers
-      .orEmpty()
-      .map { provider -> provider.providerClassName() }
-      .forEach { provider ->
-        jaxRsTypes.registerProvider?.let { registerProvider ->
-          addAnnotation(
-            AnnotationSpec
-              .builder(registerProvider)
-              .addMember("%T::class", provider)
-              .build(),
-          )
-        }
+    buildList {
+      if (typeRegistry.options.contains(
+          ValidationConstraints,
+        )
+      ) {
+        add(beanValidationTypes.clientModelValidation)
       }
+      addAll(restClient?.providers.orEmpty().map { it.providerClassName() })
+    }.distinct().forEach { provider ->
+      jaxRsTypes.registerProvider?.let { registerProvider ->
+        addAnnotation(
+          AnnotationSpec
+            .builder(registerProvider)
+            .addMember("%T::class", provider)
+            .build(),
+        )
+      }
+    }
   }
 
   private fun String.providerClassName(): ClassName =
@@ -1325,10 +1331,30 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
-    val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = true)
+    val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = generationMode == Server)
     val builder = ParameterSpec.builder("body", typeName)
+    if (typeRegistry.options.contains(ValidationConstraints) &&
+      typeName != JSON_NODE &&
+      !isQuarkusStreamingRequestBody
+    ) {
+      if (generationMode == Server) {
+        KotlinNativeSchema
+          .annotation(
+            nativePayloads.property(type),
+            modelProperties,
+            beanValidationTypes,
+            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+          )?.let(builder::addAnnotation)
+      } else {
+        nativePayloads.name(type)?.let { schema ->
+          builder.addAnnotation(
+            AnnotationSpec.builder(beanValidationTypes.entitySchema).addMember("%T::class", schema).build(),
+          )
+        }
+      }
+    }
 
-    if (typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
+    if (generationMode == Server && typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
       builder.addValidationAnnotations(
         GeneratedParameter(
           name = "body",
@@ -1350,7 +1376,7 @@ class KotlinJAXRSIrGenerator(
       // Streaming request bodies are raw transport streams; they intentionally bypass JSON body overrides.
       isQuarkusStreamingRequestBody -> MULTI.parameterizedBy(VERTX_MUTINY_BUFFER)
       jsonBodyEnabled -> JSON_NODE
-      includeValidationAnnotations -> type.kotlinTypeName().withUseSiteValidationAnnotations(type)
+      includeValidationAnnotations -> type.kotlinTypeName().withUseSiteValidationAnnotations(type, request = true)
       else -> type.kotlinTypeName()
     }
 
@@ -1713,8 +1739,22 @@ class KotlinJAXRSIrGenerator(
       addAnnotation(beanValidationTypes.notNull)
     }
 
-    if (parameter.type.requiresCascadedValidation() && typeName.copy(nullable = false) != ANY) {
+    if (parameter.location != GeneratedParameter.Location.BODY &&
+      (
+        parameter.type.requiresCascadedValidation() ||
+          modelProperties.declarationType(parameter.type).kind in
+          setOf(GeneratedTypeRef.Kind.ARRAY, GeneratedTypeRef.Kind.MAP)
+      )
+    ) {
+      addAnnotation(
+        AnnotationSpec
+          .builder(beanValidationTypes.cascadedValues)
+          .addMember("mode = %T::class", beanValidationTypes.requestMode)
+          .build(),
+      )
+    } else if (parameter.type.requiresCascadedValidation() && typeName.copy(nullable = false) != ANY) {
       addAnnotation(beanValidationTypes.valid)
+      addAnnotation(beanValidationTypes.requestGroupConversion())
     }
 
     parameter.validation.validationAnnotations(parameter.type).forEach(::addAnnotation)
@@ -1741,7 +1781,10 @@ class KotlinJAXRSIrGenerator(
       !type.nullable &&
       location != GeneratedParameter.Location.PATH
 
-  private fun TypeName.withUseSiteValidationAnnotations(type: GeneratedTypeRef): TypeName {
+  private fun TypeName.withUseSiteValidationAnnotations(
+    type: GeneratedTypeRef,
+    request: Boolean = false,
+  ): TypeName {
     if (!typeRegistry.options.contains(ValidationConstraints) || this !is ParameterizedTypeName) {
       return this
     }
@@ -1762,40 +1805,68 @@ class KotlinJAXRSIrGenerator(
 
     val argumentTypes =
       typeArguments.zip(typeRefArguments).map { (argumentTypeName, argumentType) ->
-        val annotatedType = argumentTypeName.withUseSiteValidationAnnotations(argumentType)
+        val elementSchema =
+          KotlinNativeSchema.annotation(
+            nativePayloads.property(argumentType),
+            modelProperties,
+            beanValidationTypes,
+            objectSchema = KotlinNativeSchema.commonSchema(argumentType, modelProperties) { it.kotlinTypeName() },
+          )
+        val annotatedType =
+          argumentTypeName.withUseSiteValidationAnnotations(argumentType, request).let {
+            it.copy(annotations = it.annotations + listOfNotNull(elementSchema))
+          }
         if (argumentType.requiresCascadedValidation() && argumentTypeName !is ParameterizedTypeName) {
           annotatedType.copy(
             annotations =
               annotatedType.annotations +
                 AnnotationSpec
                   .builder(beanValidationTypes.valid)
-                  .build(),
+                  .build() + listOfNotNull(beanValidationTypes.requestGroupConversion().takeIf { request }),
           )
         } else {
           annotatedType
         }
       }
 
-    return rawType.parameterizedBy(argumentTypes).copy(nullable = isNullable, annotations = annotations)
+    // Kotlin's parameter wildcards place element constraints on bounds Hibernate cannot traverse.
+    return rawType.parameterizedBy(argumentTypes).copy(
+      nullable = isNullable,
+      annotations = annotations + AnnotationSpec.builder(JvmSuppressWildcards::class).build(),
+    )
   }
 
   private fun GeneratedTypeRef.requiresCascadedValidation(): Boolean {
     val model = modelProperties.declarationModel(this)
     return when {
+      model?.kind == GeneratedModel.Kind.ENUM -> model.unknownValue != null
+      model?.nominal == true -> true
       model?.kind == GeneratedModel.Kind.OBJECT -> !model.isFreeformObject
       model?.kind == GeneratedModel.Kind.UNION -> model.isObjectUnionSealedInterface
       else -> false
     }
   }
 
-  private fun GeneratedModelProperty.modelValidationAnnotations(): List<AnnotationSpec> =
+  private fun GeneratedModelProperty.modelValidationAnnotations(
+    useSite: AnnotationSpec.UseSiteTarget? = AnnotationSpec.UseSiteTarget.GET,
+  ): List<AnnotationSpec> =
     if (!typeRegistry.options.contains(ValidationConstraints)) {
       emptyList()
     } else {
       buildList {
-        addAll(validation.validationAnnotations(type, AnnotationSpec.UseSiteTarget.GET))
+        KotlinNativeSchema
+          .annotation(
+            this@modelValidationAnnotations,
+            modelProperties,
+            beanValidationTypes,
+            useSite,
+            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+          )?.let(::add)
+        if (type.format.equals("email", ignoreCase = true)) {
+          add(AnnotationSpec.builder(beanValidationTypes.email).apply { useSite?.let(::useSiteTarget) }.build())
+        }
         if (type.requiresCascadedValidation()) {
-          add(AnnotationSpec.builder(beanValidationTypes.valid).useSiteTarget(AnnotationSpec.UseSiteTarget.GET).build())
+          add(AnnotationSpec.builder(beanValidationTypes.valid).apply { useSite?.let(::useSiteTarget) }.build())
         }
       }
     }
@@ -2042,6 +2113,11 @@ class KotlinJAXRSIrGenerator(
             entries,
             typeRegistry.options.contains(JacksonAnnotations),
             generationMode == Server,
+            fallbackValidation =
+              beanValidationTypes.knownVariant().takeIf {
+                typeRegistry.options.contains(ValidationConstraints) &&
+                  !tolerance.allowsUnknown(options.generationContext(generationMode, PayloadUse.Request))
+              },
           )
         } else {
           TypeSpec
@@ -2207,14 +2283,16 @@ class KotlinJAXRSIrGenerator(
               .build(),
           )
         }
-        KotlinModelConstraints
-          .initializer(
-            modelProperties.fields(this@dataClassTypeSpec),
-            modelProperties,
-          ) { it.kotlinTypeName() }
-          .takeUnless {
-            it.isEmpty()
-          }?.let(::addInitializerBlock)
+        if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          KotlinModelConstraints
+            .initializer(
+              modelProperties.fields(this@dataClassTypeSpec),
+              modelProperties,
+            ) { it.kotlinTypeName() }
+            .takeUnless {
+              it.isEmpty()
+            }?.let(::addInitializerBlock)
+        }
       }
   }
 
@@ -2243,6 +2321,9 @@ class KotlinJAXRSIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                declaresProperty =
+                  typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+                    !(isProblemRoot && property.isBaseProblemProperty()),
                 effective =
                   modelProperties
                     .fields(this@classTypeSpec)
@@ -2261,14 +2342,16 @@ class KotlinJAXRSIrGenerator(
       .primaryConstructor(constructor)
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
-        KotlinModelConstraints
-          .initializer(
-            modelProperties.fields(this@classTypeSpec),
-            modelProperties,
-          ) { it.kotlinTypeName() }
-          .takeUnless {
-            it.isEmpty()
-          }?.let(::addInitializerBlock)
+        if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          KotlinModelConstraints
+            .initializer(
+              modelProperties.fields(this@classTypeSpec),
+              modelProperties,
+            ) { it.kotlinTypeName() }
+            .takeUnless {
+              it.isEmpty()
+            }?.let(::addInitializerBlock)
+        }
         addJacksonUnionMemberDeserializerOverride(this@classTypeSpec)
         if (hasInheritors || hasDiscriminatorFallbackSubclass) {
           addModifiers(
@@ -2470,6 +2553,25 @@ class KotlinJAXRSIrGenerator(
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName())
       .apply {
+        if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          KotlinNativeSchema
+            .annotation(
+              effective,
+              modelProperties,
+              beanValidationTypes,
+              AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
+              objectSchema = KotlinNativeSchema.commonSchema(effective.type, modelProperties) { it.kotlinTypeName() },
+            )?.let(::addAnnotation)
+          if (type.requiresCascadedValidation()) {
+            addAnnotation(
+              AnnotationSpec
+                .builder(
+                  beanValidationTypes.valid,
+                ).apply { if (declaresProperty) useSiteTarget(AnnotationSpec.UseSiteTarget.PARAM) }
+                .build(),
+            )
+          }
+        }
         addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.PARAM))
         if (serializationName != null ||
           name.kotlinIdentifierName != name ||
@@ -2598,7 +2700,31 @@ class KotlinJAXRSIrGenerator(
           .initializer("value")
           .build(),
       ).addSuperinterface(unionTypeName)
-      .build()
+      .apply {
+        if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+          addSuperinterface(beanValidationTypes.serializableModel)
+          addFunction(
+            FunSpec
+              .builder("validationFields")
+              .addModifiers(KModifier.OVERRIDE)
+              .addKdoc("Delegates the union case's participating wire fields to its payload.\n")
+              .returns(MAP.parameterizedBy(STRING, ANY.copy(nullable = true)))
+              .addStatement("return value.validationFields()")
+              .build(),
+          )
+          propertySpecs.replaceAll { property ->
+            property
+              .toBuilder()
+              .addAnnotation(
+                AnnotationSpec
+                  .builder(
+                    beanValidationTypes.valid,
+                  ).useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+                  .build(),
+              ).build()
+          }
+        }
+      }.build()
   }
 
   private fun GeneratedModel.deserializerType(
@@ -2614,8 +2740,30 @@ class KotlinJAXRSIrGenerator(
         .addParameter("parser", JACKSON_JSON_PARSER)
         .addParameter("context", JACKSON_DESERIALIZATION_CONTEXT)
         .returns(unionTypeName)
-        .addStatement("val tree = context.readTree(parser)")
         .apply {
+          if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
+            addStatement(
+              "val tree = %T.read(parser, context)",
+              ClassName("io.outfoxx.sunday.validation", "WireTree"),
+            )
+          } else {
+            addStatement("val tree = context.readTree(parser)")
+          }
+        }.apply {
+          if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
+            modelProperties.hasUnionCommonRules(this@deserializerType)
+          ) {
+            beginControlFlow("try")
+            addStatement(
+              "%T.response(tree.properties().associate { it.key to it.value }, %T::class.java)",
+              beanValidationTypes.modelValidation,
+              unionTypeName.nestedClass("CommonPropertiesValidation"),
+            )
+            nextControlFlow("catch (failure: %T)", beanValidationTypes.constraintViolationException)
+            addStatement("throw %T.from(parser, failure.message, failure)", JACKSON_JSON_MAPPING_EXCEPTION)
+            endControlFlow()
+          }
+        }.apply {
           val discriminator = unionDiscriminator(cases)
           if (discriminator != null) {
             addStatement("val discriminatorValue = tree.get(%S)?.asText()", discriminator.wireName)
@@ -2698,9 +2846,6 @@ class KotlinJAXRSIrGenerator(
     if (!typeRegistry.options.contains(JacksonAnnotations)) {
       return
     }
-    if (model.discriminatorMappings.isEmpty()) {
-      return
-    }
 
     val discriminator = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
     val include =
@@ -2710,10 +2855,15 @@ class KotlinJAXRSIrGenerator(
         JACKSON_JSON_TYPEINFO_AS_EXISTING_PROPERTY
       }
     val mappedTypes =
-      model.discriminatorMappings.mapNotNull { (value, typeRef) ->
-        val mappedModel = typeRef.modelOrNull(apiIndex) ?: return@mapNotNull null
-        value to mappedModel.kotlinClassName()
-      }
+      model.discriminatorMappings
+        .mapNotNull { (value, typeRef) ->
+          val mappedModel = typeRef.modelOrNull(apiIndex) ?: return@mapNotNull null
+          value to mappedModel.kotlinClassName()
+        }.ifEmpty {
+          model.directInheritors.map { inheritor ->
+            (inheritor.discriminatorValue ?: inheritor.name) to inheritor.kotlinClassName()
+          }
+        }
     if (mappedTypes.isEmpty()) {
       return
     }
@@ -3285,7 +3435,7 @@ class KotlinJAXRSIrGenerator(
   private val GeneratedModel.isObjectUnionSealedInterface: Boolean
     get() =
       kind == GeneratedModel.Kind.UNION &&
-        aliases.size >= 2 &&
+        (aliases.size >= 2 || (aliases.isNotEmpty() && discriminatorFallbacks.containsKey(this))) &&
         unionCaseModels().size == aliases.size
 
   private fun GeneratedModel.unionCaseModels(): List<GeneratedModel> =
@@ -3431,12 +3581,6 @@ class KotlinJAXRSIrGenerator(
   private companion object {
     const val SSE_CONTENT_TYPE = "text/event-stream"
 
-    val CHRONO_UNIT = ChronoUnit::class.asTypeName()
-    val timeoutAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Timeout")
-    val retryAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "Retry")
-    val circuitBreakerAnnotation = ClassName("org.eclipse.microprofile.faulttolerance", "CircuitBreaker")
-    val rateLimitAnnotation = ClassName("io.smallrye.faulttolerance.api", "RateLimit")
-    val rateLimitType = ClassName("io.smallrye.faulttolerance.api", "RateLimitType")
     val fgaHeaderObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAHeaderObject")
     val fgaIgnoreAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAIgnore")
     val fgaObjectAnnotation = ClassName("io.quarkiverse.zanzibar.annotations", "FGAObject")
@@ -3451,19 +3595,7 @@ class KotlinJAXRSIrGenerator(
     val fgaUser = userExtractor.nestedClass("User")
     val OPTIONAL = ClassName("java.util", "Optional")
 
-    val retryPolicyKeys = setOf("maxRetries", "delay", "maxDuration", "jitter")
-    val circuitBreakerPolicyKeys = setOf("requestVolumeThreshold", "successThreshold", "failureRatio", "delay")
-    val rateLimitPolicyKeys = setOf("value", "window", "minSpacing", "type")
-    val rateLimitTypes = setOf("FIXED", "ROLLING", "SMOOTH")
-
     val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
     val baseProblemProperties = setOf("type", "title", "status", "detail", "instance")
-    val enumMemberSplitRegex = """\W+""".toRegex()
-    val policyMillisRegex = """PT(\d+)MS""".toRegex(RegexOption.IGNORE_CASE)
   }
-
-  private data class PolicyDuration(
-    val value: Long,
-    val unit: ChronoUnit,
-  )
 }

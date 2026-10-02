@@ -18,7 +18,6 @@
          <ignored-key id="33400B6692739665" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="39B48E1BADDB933F" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="3A387D43964143E3" reason="Key couldn't be downloaded from any key server"/>
-         <ignored-key id="47DCFC2A59F59B5B" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="4A03AE60CAAD2E88" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="50BDCE2258812457" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="50FFD7487D34B5B9" reason="Key couldn't be downloaded from any key server"/>
@@ -55,6 +54,7 @@
          <trusted-key id="0785B3EFF60B1B1BEA94E0BB7C25280EAE63EBE5" group="^org[.]apache[.]httpcomponents($|([.].*))" regex="true"/>
          <trusted-key id="09939C73246B4BA7444CAA453D002DBC5EA9615F" group="dev.drewhamilton.poko"/>
          <trusted-key id="0A123C1ED3F13A6A0140E166C71FB765CD9DE313" group="org.apache.ant"/>
+         <trusted-key id="0B743A794876D3C78AB542A118D239B1CBCD2236" group="^org[.]glassfish[.]jersey($|([.].*))" regex="true"/>
          <trusted-key id="0CC641C3A62453AB390066C4A41F13C999945293">
             <trusting group="commons-collections"/>
             <trusting group="commons-logging"/>
@@ -62,6 +62,7 @@
          <trusted-key id="0D35D3F60078655126908E8AF3D1600878E85A3D" group="io.netty"/>
          <trusted-key id="13AC2213964ABE1D1C147C0E1939A2520BAB1D90" group="org.freemarker" name="freemarker" version="2.3.32"/>
          <trusted-key id="13ADFAC458AAF268E60BA9345885F46330E07D79" group="com.github.erosb" name="everit-json-schema" version="1.12.2"/>
+         <trusted-key id="1452F35849B50750F6A3BBB4B54011358B352F85" group="org.hibernate.validator" name="hibernate-validator"/>
          <trusted-key id="147B691A19097624902F4EA9689CBE64F4BC997F" group="org.mockito" name="mockito-bom"/>
          <trusted-key id="184454FAD8697760F3E00D2E4A51A45B944FFD51" group="org.apache.tika"/>
          <trusted-key id="19BEAB2D799C020F17C69126B16698A4ADF4D638" group="org.checkerframework" name="checker-qual" version="3.33.0"/>
@@ -102,12 +103,14 @@
          <trusted-key id="33FD4BFD33554634053D73C0C2148900BCD3C2AF" group="^org[.]jetbrains($|([.].*))" regex="true"/>
          <trusted-key id="34441E504A937F43EB0DAEF96A65176A0FB1CD0B" group="org.apache.groovy" name="groovy-bom" version="4.0.27"/>
          <trusted-key id="35774B17C9836878845270F4119DF80E6BF8DBC3" group="org.zeroturnaround" name="zt-exec" version="1.12"/>
+         <trusted-key id="3AC8633E97ACA1E8F2A7ED239052174975143979" group="org.glassfish.grizzly"/>
          <trusted-key id="4021EEEAFF5DE8404DCD0A270AA3E5C3D232E79B">
             <trusting group="jakarta.enterprise"/>
             <trusting group="jakarta.inject"/>
          </trusted-key>
          <trusted-key id="47504B76CF89C15C0512D9AFE16AB52D79FD224F" group="^com[.]google($|([.].*))" regex="true"/>
          <trusted-key id="475F3B8E59E6E63AA78067482C7B12F2A511E325" group="org.slf4j"/>
+         <trusted-key id="477E62A656AD5475A1882855C809CA3C41BA6E96" group="jakarta.validation" name="jakarta.validation-api"/>
          <trusted-key id="47EB6836245D2D40E89DFB4136D4E9618F3ADAB5" group="io.github.oshai"/>
          <trusted-key id="47EF0EC60C210BC6DFAA5819B7AE15C15C321C44" group="jakarta.transaction" name="jakarta.transaction-api" version="2.0.1"/>
          <trusted-key id="4857D1CE04E78FAB2A172E8F39B48E1BADDB933F">
@@ -134,6 +137,8 @@
             <trusting group="org.jboss.logging" name="jboss-logging" version="3.6.2.Final"/>
             <trusting group="^org[.]jboss($|([.].*))" regex="true"/>
          </trusted-key>
+         <trusted-key id="6DD3B8C64EF75253BEB2C53AD908A43FB7EC07AC" group="jakarta.activation" name="jakarta.activation-api"/>
+         <trusted-key id="6E7F910017655622A899639EE7D88DB8427DE651" group="com.github.docker-java"/>
          <trusted-key id="6F538074CCEBF35F28AF9B066A0975F8B1127B83" group="org.jetbrains.kotlin"/>
          <trusted-key id="70AC2DCF410F446BD81C82D603AEFF59C2E5C034" group="com.diogonunes" name="JColor" version="5.5.1"/>
          <trusted-key id="7119B89FEB81209430E65C62C2AD9C8A7D4E988A" group="^io[.]quarkus($|([.].*))" regex="true"/>
@@ -174,6 +179,7 @@
             <trusting group="com.squareup.okhttp3" name="okhttp" version="4.10.0"/>
          </trusted-key>
          <trusted-key id="AA70C7C433D501636392EC02153E7A3C2B4E5118" group="org.eclipse.ee4j" name="project"/>
+         <trusted-key id="AD55805DF40AFF486F04112A6D526876B9913351" group="org.glassfish.expressly" name="expressly"/>
          <trusted-key id="ADBC987D1A7B91DB6B0AAA81995EFBF4A3D20BEB" group="com.pinterest.ktlint"/>
          <trusted-key id="AE45A395EBE91C8A5E77502390F02A85133A7738" group="^org[.]eclipse[.]microprofile($|([.].*))" regex="true"/>
          <trusted-key id="AF7104B493974EA5DDF5044355101494C452D7A2" group="org.crac" name="crac" version="1.5.0"/>
@@ -184,7 +190,10 @@
          <trusted-key id="B801E2F8EF035068EC1139CC29579F18FA8FD93B" group="com.google.j2objc" name="j2objc-annotations"/>
          <trusted-key id="BB785E0400E71390977E4D1ADF3CC7C64D56297B" group="jakarta.interceptor" name="jakarta.interceptor-api" version="2.2.0"/>
          <trusted-key id="BDB5FA4FE719D787FB3D3197F6D4A1D411E9D1AE" group="^com[.]google($|([.].*))" regex="true"/>
-         <trusted-key id="C73B7FB12A0B8D0DFF2F0FBADA70365F88DD141C" group="jakarta.el" name="jakarta.el-api" version="6.0.0"/>
+         <trusted-key id="C73B7FB12A0B8D0DFF2F0FBADA70365F88DD141C">
+            <trusting group="jakarta.el"/>
+            <trusting group="jakarta.el" name="jakarta.el-api" version="6.0.0"/>
+         </trusted-key>
          <trusted-key id="C7BE5BCC9FEC15518CFDA882B0F3710FA64900E7" group="^com[.]google($|([.].*))" regex="true"/>
          <trusted-key id="C8D37E9675158FF5B29B6D6452FC3551DA8DC57E">
             <trusting group="org.graalvm.sdk"/>
@@ -194,10 +203,14 @@
          <trusted-key id="CFBE6E7934FB211224EE1C2B0C0A9468268C79AE" group="org.jetbrains"/>
          <trusted-key id="D1436C0DBACEA48702AF97C363F1DD7753B8B315" group="^org[.]sonarsource($|([.].*))" regex="true"/>
          <trusted-key id="D477D51812E692011DB11E66A6EA2E2BF22E0543" group="io.github.java-diff-utils"/>
+         <trusted-key id="D4A77129F00F736293BE5A51AFC18A2271EDDFE1" group="^org[.]glassfish[.]hk2($|([.].*))" regex="true"/>
          <trusted-key id="D58E923567C131E9B09234FB777F22FA50B1D130" group="com.github.hal4j" name="uritemplate" version="1.3.0"/>
          <trusted-key id="D6F1BC78607808EC8E9F69437A8860944FAD5F62" group="commons-validator"/>
          <trusted-key id="DBD744ACE7ADE6AA50DD591F66B50994442D2D40" group="^com[.]squareup($|([.].*))" regex="true"/>
-         <trusted-key id="E226D7D229050E7A56FAACDF4A03AE60CAAD2E88" group="io.quarkus" name="quarkus-fs-util" version="1.1.0"/>
+         <trusted-key id="E226D7D229050E7A56FAACDF4A03AE60CAAD2E88">
+            <trusting group="io.quarkus" name="quarkus-fs-util" version="1.1.0"/>
+            <trusting group="^io[.]quarkus($|([.].*))" regex="true"/>
+         </trusted-key>
          <trusted-key id="E3A9F95079E84CE201F7CF60BEDE11EAF1164480" group="org.hamcrest"/>
          <trusted-key id="E5138A8E9F2E7E42D38B14D99AEE152CDCCEBFCB" group="io.github.hakky54"/>
          <trusted-key id="E77417AC194160A3FABD04969A259C7EE636C5ED" group="com.google.errorprone"/>
@@ -213,6 +226,7 @@
          <trusted-key id="FA77DCFEF2EE6EB2DEBEDD2C012579464D01C06A" group="^org[.]apache($|([.].*))" regex="true"/>
          <trusted-key id="FA7929F83AD44C4590F6CC6815C71C0A4E0B8EDD" group="net.java.dev.jna" name="jna"/>
          <trusted-key id="FB35C8D02B4724DADA23DE0AFD116C1969FCCFF3" group="org.json" name="json" version="20240303"/>
+         <trusted-key id="FC411CD3CB7DCB0ABC9801058118B3BCDB1A5000" group="jakarta.xml.bind" name="jakarta.xml.bind-api"/>
          <trusted-key id="FCD3779E399C53D995FC82A35171BA3E54493550" group="org.apache.avro" name="avro" version="1.11.4"/>
          <trusted-key id="FF6E2C001948C5F2F38B0CC385911F425EC61B51">
             <trusting group="org.apiguardian"/>
@@ -749,12 +763,13 @@
          </artifact>
       </component>
       <component group="com.google.inject" name="guice" version="5.1.0">
+         <artifact name="guice-5.1.0-classes.jar">
+            <pgp value="D5F46BC0B86AF5DC56DF58F05E975CB00C643DBF"/>
+            <sha256 value="142ad4475e19524d2fe3ac995b3f7cbc962fc726f2edb9dbdccc61feab9b2bf9" origin="Verified against Maven Central"/>
+         </artifact>
          <artifact name="guice-5.1.0.jar">
             <pgp value="D5F46BC0B86AF5DC56DF58F05E975CB00C643DBF"/>
             <sha256 value="4130e50bfac48099c860f0d903b91860c81a249c90f38245f8fed58fc817bc26" origin="Generated by Gradle"/>
-         </artifact>
-         <artifact name="guice-5.1.0-classes.jar">
-            <sha256 value="142ad4475e19524d2fe3ac995b3f7cbc962fc726f2edb9dbdccc61feab9b2bf9" origin="Verified against Maven Central"/>
          </artifact>
       </component>
       <component group="com.google.j2objc" name="j2objc-annotations" version="1.1">
@@ -1570,6 +1585,46 @@
             <sha256 value="898d63ca62ed68ff46543c5344f969424b417f1e8d082fe2bb0181ba10144194" origin="Verified against Maven Central"/>
          </artifact>
       </component>
+      <component group="io.netty" name="netty-resolver-dns-classes-macos" version="4.1.130.Final">
+         <artifact name="netty-resolver-dns-classes-macos-4.1.130.Final.jar">
+            <sha256 value="946e81879b128d6e59d398c218a830b6127e0a539eb63ee5ac0028b0178ca2f0" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-classes-macos" version="4.1.132.Final">
+         <artifact name="netty-resolver-dns-classes-macos-4.1.132.Final.jar">
+            <sha256 value="f3cb28cb95d85f8ebde5b7b09b1c6ec10859f6fbc7efb20471fa9c9e3621e4e7" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-classes-macos" version="4.1.135.Final">
+         <artifact name="netty-resolver-dns-classes-macos-4.1.135.Final.jar">
+            <sha256 value="4aab49a507dbbe446ad2c6a7587fe69c511defa6c273ce1a559e3458a3378a5b" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-classes-macos" version="4.1.137.Final">
+         <artifact name="netty-resolver-dns-classes-macos-4.1.137.Final.jar">
+            <sha256 value="92d0a542954475f563ea58221d864884ba6753c50c1f17985b1045e990bf094c" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-native-macos" version="4.1.130.Final">
+         <artifact name="netty-resolver-dns-native-macos-4.1.130.Final-osx-aarch_64.jar">
+            <sha256 value="5ffadb42c5bb105ad413a38e7a8f14cf7268610f45cc363405075e3506cf4ba9" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-native-macos" version="4.1.132.Final">
+         <artifact name="netty-resolver-dns-native-macos-4.1.132.Final-osx-aarch_64.jar">
+            <sha256 value="7ef705f5eb2e628645f159419af508a3dad87eed9c040c32934c459a206b0869" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-native-macos" version="4.1.135.Final">
+         <artifact name="netty-resolver-dns-native-macos-4.1.135.Final-osx-aarch_64.jar">
+            <sha256 value="1c4c54ac07cb15a77616d4657fe4307e6b2ee070e5172761fb915104c75720d4" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.netty" name="netty-resolver-dns-native-macos" version="4.1.137.Final">
+         <artifact name="netty-resolver-dns-native-macos-4.1.137.Final-osx-aarch_64.jar">
+            <sha256 value="777e1e9f0337e04388e9f9bd9ff5270e607423be72306b381fd380418b06b9ac" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="io.netty" name="netty-tcnative-classes" version="2.0.77.Final">
          <artifact name="netty-tcnative-classes-2.0.77.Final.jar">
             <ignored-keys>
@@ -1738,6 +1793,16 @@
       <component group="io.quarkiverse.resteasy-problem" name="quarkus-resteasy-problem" version="3.21.0">
          <artifact name="quarkus-resteasy-problem-3.21.0.jar">
             <sha256 value="1bffd29db2164811b58099145605a23c473ca203dba5afbc7391bcad663f3267" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
+      <component group="io.quarkiverse.resteasy-problem" name="quarkus-resteasy-problem" version="3.32.1">
+         <artifact name="quarkus-resteasy-problem-3.32.1.jar">
+            <sha256 value="322668173bda8c66db3298a0c0f755c2c6573bcefe1488507d0c6755bd73fdd8" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.quarkiverse.resteasy-problem" name="quarkus-resteasy-problem-deployment" version="3.32.1">
+         <artifact name="quarkus-resteasy-problem-deployment-3.32.1.jar">
+            <sha256 value="f2b82144a1816e6e2ff817dc43421e27c74cb841d1a1f8a008a6a465793f0836" origin="Verified against Maven Central"/>
          </artifact>
       </component>
       <component group="io.quarkiverse.zanzibar" name="quarkus-zanzibar" version="2.10.0">
@@ -2771,6 +2836,34 @@
             <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
          </artifact>
       </component>
+      <component group="io.vertx" name="vertx-http-proxy" version="4.5.24">
+         <artifact name="vertx-http-proxy-4.5.24.jar">
+            <sha256 value="4bfb877cfc9e1243e188f9bed5b459725d0854215d01da11e1162638a7ac6b98" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-http-proxy" version="4.5.26">
+         <artifact name="vertx-http-proxy-4.5.26.jar">
+            <sha256 value="cf4b1c7cd1b2e7fd86d031542cebac9c93f4b8582bb238c731a8e5b1cc76d09b" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-http-proxy" version="4.5.28">
+         <artifact name="vertx-http-proxy-4.5.28.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="ab942c6ee39945bc2b3a7ff35ef30f183f49a621805e9332843a7808903a9477" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-http-proxy" version="4.5.32">
+         <artifact name="vertx-http-proxy-4.5.32.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="552a8e2b942840c911ba073af9b1a0a4fe3f07a851a8e81cc32378a8dbfc493f" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-http-proxy" version="4.5.33">
+         <artifact name="vertx-http-proxy-4.5.33.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="3a4e8587d94170a2fbae01987d6d292a35503d6029339cd85c191d9ab0f977f1" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="io.vertx" name="vertx-uri-template" version="4.5.16">
          <artifact name="vertx-uri-template-4.5.16.jar">
             <sha256 value="4459d9fc13399b843ffab3d5a30b345b9b68848afd675ae0cc677666d089c35e" origin="Generated by Gradle" reason="A key couldn't be downloaded"/>
@@ -2845,6 +2938,39 @@
             <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
          </artifact>
       </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.16">
+         <artifact name="vertx-web-client-4.5.16.jar">
+            <sha256 value="5b25f1c86315818f99f24922014e3e7c8d84ea2cfbf9b746a454e0d10321072b" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.24">
+         <artifact name="vertx-web-client-4.5.24.jar">
+            <sha256 value="a666884d633beb4a294abd15866b5664b65e1def18c2feddd2571664ef0967c5" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.26">
+         <artifact name="vertx-web-client-4.5.26.jar">
+            <sha256 value="17ab04c1a702b11814949e0393b3051b4b8dce81c66b8c79e6333333bc340688" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.28">
+         <artifact name="vertx-web-client-4.5.28.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="ef2346011d0aabaaee511e1345c32418e5c0b21de201910c89843d2818b37f19" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.32">
+         <artifact name="vertx-web-client-4.5.32.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="e01e1286731ebc80b07fdc19459a16a9263093d28970317f2a7d9a36029bff68" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="io.vertx" name="vertx-web-client" version="4.5.33">
+         <artifact name="vertx-web-client-4.5.33.jar">
+            <pgp value="300A0F1D016C0CAD2621B72446D0C893FBBC0BEC"/>
+            <sha256 value="0a0063e7eea36593760006fe07ef9711493fd889be919bcf41a9fdfdcb78919d" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="io.vertx" name="vertx-web-common" version="4.5.16">
          <artifact name="vertx-web-common-4.5.16.jar">
             <sha256 value="aafadbefdd4390ab896baf5edba36e382b11db5194784d5fcf0bd0eb3de84afe" origin="Generated by Gradle" reason="A key couldn't be downloaded"/>
@@ -2913,6 +3039,7 @@
       </component>
       <component group="jakarta.authorization" name="jakarta.authorization-api" version="3.0.0">
          <artifact name="jakarta.authorization-api-3.0.0.jar">
+            <pgp value="72152A32DFFAC5E16D52609F686823BE17A98D9D"/>
             <ignored-keys>
                <ignored-key id="686823BE17A98D9D" reason="Public key unavailable; SHA-256 verified against Maven Central"/>
             </ignored-keys>
@@ -3185,6 +3312,11 @@
          <artifact name="avro-1.11.4.jar">
             <pgp value="FCD3779E399C53D995FC82A35171BA3E54493550"/>
             <sha256 value="eeba11b77070b9aa6337d886fdf778f6695f6c4c3dcfd2a02389925c885079fa" origin="Generated by Gradle"/>
+         </artifact>
+      </component>
+      <component group="org.apache.avro" name="avro" version="1.12.0">
+         <artifact name="avro-1.12.0.jar">
+            <pgp value="FCD3779E399C53D995FC82A35171BA3E54493550"/>
          </artifact>
       </component>
       <component group="org.apache.commons" name="commons-collections4" version="4.4">
@@ -3566,6 +3698,7 @@
       </component>
       <component group="org.bitbucket.b_c" name="jose4j" version="0.9.6">
          <artifact name="jose4j-0.9.6.jar">
+            <pgp value="3051D45031E13516A6E8FAFF280D66A55F5316C5"/>
             <ignored-keys>
                <ignored-key id="280D66A55F5316C5" reason="Public key unavailable; SHA-256 verified against Maven Central"/>
             </ignored-keys>
@@ -3851,6 +3984,11 @@
             <sha256 value="6cd91991323dd7b2fb28ca93d7ac12af5a86a2f53279e2b35827b30313fd0b9f" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.glassfish" name="jakarta.el" version="3.0.3">
+         <artifact name="jakarta.el-3.0.3.jar">
+            <pgp value="C73B7FB12A0B8D0DFF2F0FBADA70365F88DD141C"/>
+         </artifact>
+      </component>
       <component group="org.glassfish.expressly" name="expressly" version="5.0.0">
          <artifact name="expressly-5.0.0.jar">
             <pgp value="AD55805DF40AFF486F04112A6D526876B9913351"/>
@@ -4067,6 +4205,11 @@
             <sha256 value="9d084005ad1dfbb3b020039c89f496e66d3fc0431e8eab6b5a497406013d09bb" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.hibernate.validator" name="hibernate-validator" version="6.2.5.Final">
+         <artifact name="hibernate-validator-6.2.5.Final.jar">
+            <pgp value="894F14D98D7F20D5E82645E3DFE102108BF9381F"/>
+         </artifact>
+      </component>
       <component group="org.hibernate.validator" name="hibernate-validator" version="8.0.2.Final">
          <artifact name="hibernate-validator-8.0.2.Final.jar">
             <pgp value="1452F35849B50750F6A3BBB4B54011358B352F85"/>
@@ -4098,6 +4241,16 @@
       <component group="org.jboss.logging" name="commons-logging-jboss-logging" version="1.0.0.Final">
          <artifact name="commons-logging-jboss-logging-1.0.0.Final.jar">
             <sha256 value="f12176263ea25f4e78bb4fa4b36d335a29738dde6a8123e1b6da89a655d150ff" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
+      <component group="org.jboss.logging" name="jboss-logging" version="3.4.1.Final">
+         <artifact name="jboss-logging-3.4.1.Final.jar">
+            <sha256 value="8efe877d93e5e1057a1388b2950503b88b0c28447364fde08adbec61e524eeb8" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
+      <component group="org.jboss.logging" name="jboss-logging" version="3.4.3.Final">
+         <artifact name="jboss-logging-3.4.3.Final.jar">
+            <sha256 value="0b324cca4d550060e51e70cc0045a6cce62f264278ec1f5082aafeb670fcac49" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
       <component group="org.jboss.logging" name="jboss-logging" version="3.6.1.Final">
@@ -5033,6 +5186,23 @@
             <sha256 value="5b8385f2b5e7eb60100fb5ebeccb87cfe46a7ad9b748a189a56add9b1236ea80" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.keycloak" name="keycloak-client-common-synced" version="26.0.12">
+         <artifact name="keycloak-client-common-synced-26.0.12.jar">
+            <pgp value="861AB50E8CC6611FB6BC01A6B8F12EA26FD6EEBA"/>
+            <sha256 value="2d6e28bdeabbd0f5c26f6fd80cb87cd31fc0a50a711d23e7bdf851021e49d73c" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.keycloak" name="keycloak-client-common-synced" version="26.0.8">
+         <artifact name="keycloak-client-common-synced-26.0.8.jar">
+            <pgp value="861AB50E8CC6611FB6BC01A6B8F12EA26FD6EEBA"/>
+         </artifact>
+      </component>
+      <component group="org.keycloak" name="keycloak-client-common-synced" version="26.0.9">
+         <artifact name="keycloak-client-common-synced-26.0.9.jar">
+            <pgp value="861AB50E8CC6611FB6BC01A6B8F12EA26FD6EEBA"/>
+            <sha256 value="52c4ddca79d755b278481bfc07e40fe353d170b1b393decdbd223f4a1cae10af" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
       <component group="org.mule.common" name="scala-common_2.12" version="2.0.98">
          <artifact name="scala-common_2.12-2.0.98.jar">
             <sha256 value="05dcb8aa9fd2b5df70e2b01c5e4c8ff6941bb57d43388cc0f2a073d397386aff" origin="Generated by Gradle" reason="Artifact is not signed"/>
@@ -5421,6 +5591,11 @@
             <sha256 value="f75ca597789b3dac58f61857b9ac2e1034a68fa672db35055a8fb4509e325f28" origin="Generated by Gradle"/>
          </artifact>
       </component>
+      <component group="org.rnorth.duct-tape" name="duct-tape" version="1.0.8">
+         <artifact name="duct-tape-1.0.8.jar">
+            <pgp value="8756C4F765C9AC3CB6B85D62379CE192D401AB61"/>
+         </artifact>
+      </component>
       <component group="org.scala-lang" name="scala-library" version="2.12.15">
          <artifact name="scala-library-2.12.15.jar">
             <sha256 value="e518bb640e2175de5cb1f8e326679b8d975376221f1b547757de429bbf4563f0" origin="Generated by Gradle"/>
@@ -5469,6 +5644,23 @@
       <component group="org.sonarsource.scanner.lib" name="sonar-scanner-java-library-batch-interface" version="4.0.1.1587">
          <artifact name="sonar-scanner-java-library-batch-interface-4.0.1.1587.jar">
             <sha256 value="096426e2198cdad65014390ba4ec7b9c802e7d2747108da6905bc857637dd3a4" origin="Generated by Gradle" reason="A key couldn't be downloaded"/>
+         </artifact>
+      </component>
+      <component group="org.testcontainers" name="testcontainers" version="2.0.3">
+         <artifact name="testcontainers-2.0.3.jar">
+            <pgp value="6E7F910017655622A899639EE7D88DB8427DE651"/>
+         </artifact>
+      </component>
+      <component group="org.testcontainers" name="testcontainers" version="2.0.4">
+         <artifact name="testcontainers-2.0.4.jar">
+            <pgp value="6E7F910017655622A899639EE7D88DB8427DE651"/>
+            <sha256 value="d2bfd75024921bf6e0fb4ca2997a8119a3425a0b7017485150b4f5f94e59aec5" origin="Verified against Maven Central"/>
+         </artifact>
+      </component>
+      <component group="org.testcontainers" name="testcontainers" version="2.0.5">
+         <artifact name="testcontainers-2.0.5.jar">
+            <pgp value="6E7F910017655622A899639EE7D88DB8427DE651"/>
+            <sha256 value="0466f481343d5f350a91274cd7bf984308cbaf90d706247fd1cf4b1a8010c2e1" origin="Verified against Maven Central"/>
          </artifact>
       </component>
       <component group="org.vafer" name="jdependency" version="2.14">

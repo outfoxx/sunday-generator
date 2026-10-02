@@ -23,10 +23,15 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
+import io.outfoxx.sunday.generator.kotlin.tools.nativeConstraintPaths
+import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
 import io.outfoxx.sunday.generator.tools.modelDefaultsApi
@@ -38,11 +43,95 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.lang.reflect.AnnotatedParameterizedType
+import java.lang.reflect.AnnotatedType
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
 @KotlinTest
 class KotlinModelDefaultsTest {
+  @OptIn(ExperimentalCompilerApi::class)
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `decoding factories delegate nested container constraints to constructors`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val source = modelDefaultsApi(frontend, directory)
+    val strings =
+      GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(GeneratedTypeRef.scalar("string")))
+    val maps = GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = listOf(strings))
+    val model =
+      GeneratedModel(
+        "FactoryModel",
+        GeneratedModel.Kind.OBJECT,
+        properties =
+          listOf(
+            GeneratedModelProperty(
+              "values",
+              GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = listOf(maps)),
+            ),
+            GeneratedModelProperty(
+              "label",
+              GeneratedTypeRef.scalar("string"),
+              required = false,
+              defaultValue = "default",
+            ),
+          ),
+      )
+    val api = source.copy(models = source.models + model)
+    for (jaxrs in listOf(false, true)) {
+      val registry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          GenerationMode.Client,
+          setOf(
+            KotlinTypeRegistry.Option.ImplementModel,
+            KotlinTypeRegistry.Option.JacksonAnnotations,
+            KotlinTypeRegistry.Option.ValidationConstraints,
+            KotlinTypeRegistry.Option.UseJakartaPackages,
+          ),
+          problemLibrary = KotlinProblemLibrary.SUNDAY,
+        )
+      if (jaxrs) {
+        KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+      } else {
+        KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+      }
+      val result = compileTypesResult(registry.buildTypes())
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      withNativeBeanValidation("jakarta", result.classLoader) {
+        val type = result.classLoader.loadClass("io.test.FactoryModel")
+        val factory = type.getDeclaredMethod("fromJson", List::class.java, String::class.java)
+
+        fun assertNoValidationAnnotations(type: AnnotatedType) {
+          assertTrue(
+            type.annotations.none {
+              it.annotationClass.java.name
+                .contains("validation.")
+            },
+          )
+          (type as? AnnotatedParameterizedType)?.annotatedActualTypeArguments?.forEach(::assertNoValidationAnnotations)
+        }
+        factory.annotatedParameterTypes.forEach(::assertNoValidationAnnotations)
+        val mapper = jacksonObjectMapper()
+        val value = mapper.readValue("""{"values":[{"first":["valid"]}]}""", type)
+        assertEquals("default", type.getMethod("getLabel").invoke(value))
+        assertEquals(emptySet<String>(), nativeConstraintPaths("jakarta", value, "Response"))
+        val failure =
+          assertThrows(Exception::class.java) {
+            mapper.readValue("""{"values":[{"first":[null]}]}""", type)
+          }
+        assertTrue(
+          generateSequence(failure as Throwable) { it.cause }.any {
+            it.javaClass.name == "jakarta.validation.ConstraintViolationException"
+          },
+        )
+      }
+    }
+  }
+
   @OptIn(ExperimentalCompilerApi::class)
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])

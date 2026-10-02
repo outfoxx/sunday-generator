@@ -1,4 +1,6 @@
-public protocol Parent : Codable, CustomDebugStringConvertible, Sendable {
+import Sunday
+
+public protocol Parent : Codable, CustomDebugStringConvertible, Sendable, ModelValidatable {
 
   var type: String { get }
 

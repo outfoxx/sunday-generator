@@ -69,5 +69,7 @@ open class SwiftSundayGenerateCommand :
       servicesFromTags,
       generateBrokerServices,
       preserveUnknownFields,
+      profile,
+      defaultTolerance,
     )
 }

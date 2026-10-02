@@ -38,6 +38,59 @@ import kotlin.io.path.writeText
 
 class IrCLITest {
   @Test
+  fun `exports only the selected environment while preserving wire security`(
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("security.yaml")
+    source.writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Projected API, version: 1.0.0}
+      security: [{token: []}]
+      paths:
+        /items:
+          get:
+            operationId: items
+            responses: {'204': {description: Empty}}
+      components:
+        securitySchemes:
+          token:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              server: {provider: internal-validator}
+              profiles:
+                internal:
+                  client: {provider: internal-client, flow: clientCredentials, tokenUrl: 'https://identity.internal/token'}
+                external:
+                  client: {provider: application, flow: external}
+      """.trimIndent(),
+    )
+    val output = directory.resolve("public.ir.yaml")
+    val result =
+      IrCommand().test(
+        arrayOf("-out", output.toString(), "-mode", "client", "-profile", "external", source.toString()),
+      )
+    assertEquals(0, result.statusCode, result.output)
+    val api = GeneratedApiYaml.readPath(output)
+    assertEquals(
+      listOf("token"),
+      api.auth!!
+        .requirements
+        .single()
+        .schemes,
+    )
+    val publicText = Files.readString(output)
+    assertFalse(publicText.contains("internal"))
+    assertTrue(publicText.contains("application"))
+    assertTrue(publicText.contains("external"))
+    assertEquals("1", api.irVersion)
+    val noRole = IrCommand().test(arrayOf("-out", output.toString(), "-profile", "external", source.toString()))
+    assertEquals(1, noRole.statusCode)
+    assertTrue(noRole.output.contains("requires -mode"))
+  }
+
+  @Test
   fun `exports reference siblings and canonical inline anchors through the CLI`(
     @TempDir directory: Path,
   ) {

@@ -121,7 +121,7 @@ internal fun openModelFieldsApi(
             name: {type: string}
         TypedRecord:
           type: object
-          additionalProperties: {type: integer}
+          additionalProperties: {type: integer, const: 2}
           required: [id]
           properties:
             id: {type: string}

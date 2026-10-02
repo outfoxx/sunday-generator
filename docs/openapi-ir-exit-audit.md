@@ -39,7 +39,7 @@ Current supported extensions:
 - `x-sunday-zanzibar`
 - `x-sunday-policy`
 
-`x-sunday-zanzibar` maps to `GeneratedAuth.zanzibar`; operation values overlay inherited API values. `x-sunday-policy` maps to operation `GeneratedPolicy` fields: `timeout`, `retry`, `circuitBreaker`, `clientRateLimit`, `serverRateLimit`, and `source`.
+`x-sunday-zanzibar` maps to `GeneratedAuth.zanzibar`; operation values overlay inherited API values. `x-sunday-policy` maps to typed, environment-scoped `GeneratedPolicy` metadata: `all`, `client`, `server`, and `profiles.<name>` scopes containing `timeout`, `retry`, `circuitBreaker`, and `rateLimit`. Removed flat fields are rejected.
 
 ## Deferred OpenAPI Features
 

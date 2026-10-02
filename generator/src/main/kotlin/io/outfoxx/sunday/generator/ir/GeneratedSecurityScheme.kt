@@ -33,4 +33,6 @@ data class GeneratedSecurityScheme(
   val openIdConnectUrl: String? = null,
   /** OAuth flow configuration supplied by the contract, keyed by flow name. */
   val oauthFlows: Map<String, GeneratedOAuthFlow> = mapOf(),
+  /** Provider bindings selected independently of the wire-security requirements. */
+  val bindings: GeneratedEnvironment<GeneratedSecurityBinding>? = null,
 )

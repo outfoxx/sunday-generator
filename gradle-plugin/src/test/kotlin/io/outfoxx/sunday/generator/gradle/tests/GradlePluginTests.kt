@@ -40,6 +40,16 @@ import kotlin.io.path.appendText
 
 class GradlePluginTests {
 
+  private val sundayVersion = System.getProperty("sunday.kotlin.version")
+  private val sundayDependencies =
+    System.getProperty("sunday.kotlin.classpath")?.let { classpath ->
+      val files = classpath.split(File.pathSeparator).joinToString(", ") { "'" + it.replace("'", "\\'") + "'" }
+      "implementation files($files)"
+    } ?: listOf(
+      "implementation \"io.outfoxx.sunday:sunday-core:$sundayVersion\"",
+      "implementation \"io.outfoxx.sunday:sunday-validation-javax:$sundayVersion\"",
+    ).joinToString("\n")
+
   val dualTestBuildFile =
     """
     import static io.outfoxx.sunday.generator.gradle.TargetFramework.*
@@ -96,7 +106,7 @@ class GradlePluginTests {
     }
 
     dependencies {
-      implementation "io.outfoxx.sunday:sunday-core:2.0.0-beta.1"
+      $sundayDependencies
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
       implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
@@ -178,7 +188,7 @@ class GradlePluginTests {
     }
 
     dependencies {
-      implementation "io.outfoxx.sunday:sunday-core:2.0.0-beta.1"
+      $sundayDependencies
       implementation "org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_2.0_spec:1.0.0.Final"
       implementation "javax.validation:validation-api:2.0.1.Final"
       implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
@@ -862,9 +872,10 @@ class GradlePluginTests {
       }
 
     val source = modelPath.toFile().readText()
-    assertThat(source, containsString("@field:Size("))
-    assertThat(source, containsString("@field:Pattern("))
-    assertThat(source, containsString("public val codes: List<String>"))
+    assertThat(source, containsString("@field:Schema("))
+    assertThat(source, containsString("patterns = ["))
+    assertThat(source, containsString("List<@Schema(requiredValue = true) String>"))
+    assertThat(source, not(containsString("List<@Valid")))
     assertThat(source, not(containsString("List<@Size")))
   }
 

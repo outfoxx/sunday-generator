@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.typescript.tools
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.utils.Compilation
@@ -32,7 +34,7 @@ fun compileTypes(
   compiler: TypeScriptCompiler,
   types: Map<TypeName.Standard, ModuleSpec>,
   generateIndex: Boolean = false,
-): Boolean = compileTypes(compiler, types, generateIndex, null)
+): Boolean = compileTypes(compiler, types, generateIndex, null, false)
 
 /** Compiles generated TypeScript and executes the selected emitted module. */
 fun compileAndRunTypes(
@@ -40,15 +42,25 @@ fun compileAndRunTypes(
   types: Map<TypeName.Standard, ModuleSpec>,
   modulePath: String,
   generateIndex: Boolean = false,
-): Boolean = compileTypes(compiler, types, generateIndex, modulePath)
+  esm: Boolean = false,
+): Boolean = compileTypes(compiler, types, generateIndex, modulePath, esm)
 
 private fun compileTypes(
   compiler: TypeScriptCompiler,
   types: Map<TypeName.Standard, ModuleSpec>,
   generateIndex: Boolean,
   modulePath: String?,
+  esm: Boolean,
 ): Boolean {
+  val packageFile = compiler.workDir.resolve("package.json")
+  val packageSource = Files.readString(packageFile)
   try {
+    if (esm) {
+      val mapper = jacksonObjectMapper()
+      val config = mapper.readTree(packageSource) as ObjectNode
+      config.put("type", "module")
+      mapper.writeValue(packageFile.toFile(), config)
+    }
     CompiledGeneratedSources.beginCompile()
     val indexBuilder = FileSpec.builder("index")
 
@@ -125,6 +137,7 @@ private fun compileTypes(
     }
     return executionResult == 0
   } finally {
+    Files.writeString(packageFile, packageSource)
     compiler.srcDir.toFile().deleteRecursively()
   }
 }

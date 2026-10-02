@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import io.outfoxx.sunday.generator.GenerationOptions
+import io.outfoxx.sunday.generator.Tolerance
 
 /** Options for Kotlin/JAX-RS generation. */
 class KotlinJAXRSOptions(
@@ -40,12 +41,16 @@ class KotlinJAXRSOptions(
   /** Enforce complete scheme and permission requirements through generated resources and application authenticators. */
   val enforceSecuritySchemes: Boolean = false,
   preserveUnknownFields: Boolean = true,
+  profile: String? = null,
+  defaultTolerance: Tolerance = Tolerance.Response,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,
     serviceSuffix,
     generateBrokerServices,
     preserveUnknownFields,
+    profile,
+    defaultTolerance,
   ) {
 
   /** Base URI emission mode for service-level JAX-RS path annotations. */

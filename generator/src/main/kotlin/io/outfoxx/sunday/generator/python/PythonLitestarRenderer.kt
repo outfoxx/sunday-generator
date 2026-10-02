@@ -64,22 +64,26 @@ class PythonLitestarRenderer(
         module.addCode(headersType)
       }
     }
-    if (service.operations.any { operation -> operation.parameters.any { it.nominalWireType() != null } }) {
+    if (service.operations.any { operation -> operation.parameters.isNotEmpty() }) {
       module.addCode(
         PythonCodeBlock.of(
           """
-          def _decode_nominal_parameter[T](adapter: %T[T], value: object) -> T:
+          def _decode_request_parameter[T](adapter: %T[T], value: object) -> T:
               try:
-                  return adapter.validate_python(value)
-              except ValueError as error:
-                  raise %T(detail=str(error)) from error
+                  return adapter.validate_python(value, context={"mode": "request"})
+              except %T as error:
+                  raise %T(
+                      detail="Request parameter is invalid",
+                      extra=error.errors(include_input=False, include_context=False),
+                  ) from error
           """.trimIndent(),
           PythonSymbol("pydantic", "TypeAdapter"),
+          PythonSymbol("pydantic", "ValidationError"),
           PythonSymbol("litestar.exceptions", "ValidationException"),
         ),
       )
       service.operations.forEach { operation ->
-        operation.parameters.filter { it.nominalWireType() != null }.forEach { parameter ->
+        operation.parameters.forEach { parameter ->
           val type = parameter.renderParameterType(optional = !parameter.required)
           module.addCode(
             PythonCodeBlock.of(
@@ -469,7 +473,7 @@ class PythonLitestarRenderer(
           .filterNot { parameter -> parameter.required }
           .map { parameter -> renderParameterArgument(parameter) }
 
-    return if (parameters.any { it.nominalWireType() != null }) {
+    return if (parameters.isNotEmpty()) {
       PythonCodeBlock.of(
         "\n%C,\n        ",
         PythonCodeBlock.join(
@@ -600,11 +604,7 @@ class PythonLitestarRenderer(
 
   private fun GeneratedOperation.renderParameterArgument(parameter: GeneratedParameter): PythonCodeBlock {
     val value = PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
-    return if (parameter.nominalWireType() != null) {
-      PythonCodeBlock.of("_decode_nominal_parameter(%L, %C)", nominalAdapterName(parameter), value)
-    } else {
-      value
-    }
+    return PythonCodeBlock.of("_decode_request_parameter(%L, %C)", nominalAdapterName(parameter), value)
   }
 
   private fun GeneratedParameter.renderPathHandlerParameter(): PythonCodeBlock =
