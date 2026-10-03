@@ -35,12 +35,17 @@ import java.nio.file.Path
 @Tag("requests")
 class SwiftPatchableTypesTest {
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "raml-auto", "openapi", "asyncapi", "composed", "reference", "collisions"])
+  @ValueSource(
+    strings = [
+      "raml", "raml-auto", "openapi", "asyncapi", "composed", "composed-collisions", "reference", "collisions",
+    ],
+  )
   fun `PATCH models preserve presence and enforce deletion permissions`(
     frontend: String,
     compiler: SwiftCompiler,
     @TempDir directory: Path,
   ) {
+    val patchName = if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch"
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(
       patchableApi(frontend, directory),
@@ -141,7 +146,7 @@ class SwiftPatchableTypesTest {
           XCTAssertFalse(unknown.isValid(.request))
         }
       }
-      """.trimIndent(),
+      """.trimIndent().replace("SomeRequestPatch", patchName),
     )
     assertTrue(compileAndTestGeneratedFiles(compiler))
   }

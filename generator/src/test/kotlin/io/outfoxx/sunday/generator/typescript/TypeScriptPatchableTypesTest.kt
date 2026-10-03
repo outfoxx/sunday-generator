@@ -36,12 +36,18 @@ import java.nio.file.Path
 @Tag("requests")
 class TypeScriptPatchableTypesTest {
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "raml-auto", "openapi", "asyncapi", "composed", "reference", "collisions"])
+  @ValueSource(
+    strings = [
+      "raml", "raml-auto", "openapi", "asyncapi", "composed", "composed-collisions", "reference", "collisions",
+    ],
+  )
   fun `PATCH schemas preserve presence without applying defaults`(
     frontend: String,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
+    val patchName = if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch"
+    val patchModule = if (frontend == "composed-collisions") "some-request-patch2" else "some-request-patch"
     val registry = TypeScriptTypeRegistry(setOf())
     TypeScriptSundayIrGenerator(patchableApi(frontend, directory), registry, typeScriptSundayTestOptions)
       .generateServiceTypes()
@@ -135,7 +141,7 @@ class TypeScriptPatchableTypesTest {
             if (JSON.stringify(request.encode(mutable)) !== '{}') throw new Error('cancelled update encoded');
             mutable.title = 'x';
             if (request.safeEncode(mutable).success) throw new Error('mutation missed');
-            """.trimIndent(),
+            """.trimIndent().replace("SomeRequestPatch", patchName).replace("some-request-patch", patchModule),
           ),
         ).build()
     assertTrue(

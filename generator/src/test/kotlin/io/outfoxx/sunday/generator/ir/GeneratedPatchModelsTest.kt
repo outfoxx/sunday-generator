@@ -28,6 +28,57 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 class GeneratedPatchModelsTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["composed-collisions", "composed-collisions-reversed"])
+  fun `composition reserves source names before assigning shared companion names`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api = patchableApi(frontend, directory)
+    assertEquals(
+      api.models.size,
+      api.models
+        .map { it.name }
+        .distinct()
+        .size,
+    )
+    val models = api.models.associateBy { it.name }
+    listOf("SomeRequestPatch", "BasePatch", "DetailsPatch", "DetailsPatch2").forEach { name ->
+      assertFalse(models.getValue(name).patchable)
+      assertEquals(
+        "reserved",
+        models
+          .getValue(name)
+          .properties
+          .single()
+          .name,
+      )
+    }
+    val request = models.getValue("SomeRequestPatch2")
+    assertEquals("SomeRequest", request.patchOf?.name)
+    assertEquals("BasePatch2", request.inherits.single().name)
+    assertEquals(
+      "DetailsPatch3",
+      request.properties
+        .single { it.name == "details" }
+        .type.name,
+    )
+    val details = models.getValue("DetailsPatch3")
+    assertEquals("Details", details.patchOf?.name)
+    assertEquals(
+      "DetailsPatch3",
+      details.properties
+        .single { it.name == "child" }
+        .type.name,
+    )
+    api.services.flatMap { it.operations }.filter { it.id == "updateRequest" }.forEach {
+      assertEquals("SomeRequestPatch2", it.requestBody!!.type.name)
+      assertTrue(it.requestBody.payloads.all { option -> option.type.name == "SomeRequestPatch2" })
+    }
+    val fragment = GeneratedApiFragment(api, GeneratedIdentity.native("patch"))
+    assertEquals(api, GeneratedApiComposer().compose(listOf(fragment, fragment)))
+  }
+
   @Test
   fun `inherited requiredness and allowed values survive patch projection`() {
     val required = GeneratedModelProperty("id", GeneratedTypeRef.scalar("string"), required = true)

@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.patchableApi
@@ -29,11 +30,146 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
+import kotlin.io.path.writeText
 
 @Tag("models")
 @Tag("validation")
 @Tag("requests")
 class PythonPatchableTypesTest : PythonTest() {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `dynamic patch members retain deletions and validate supplied values`(
+    frontend: String,
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val schemas =
+      """
+      Base:
+        type: object
+        required: [id]
+        properties:
+          id: {type: string}
+        additionalProperties: {type: string, minLength: 2}
+        patternProperties:
+          '^x-': {type: string, minLength: 2}
+          '^enum-': {type: string, enum: [first, second]}
+      Item:
+        x-sunday-patchable: true
+        allOf:
+          - {${'$'}ref: '#/components/schemas/Base'}
+          - type: object
+            properties:
+              label: {type: string}
+      """.trimIndent().prependIndent("    ")
+    val openapi =
+      """
+      openapi: 3.1.0
+      info: {title: Dynamic patch, version: 1.0.0}
+      paths: {}
+      components:
+        schemas:
+      """.trimIndent() + "\n" + schemas
+    val asyncapi =
+      """
+      asyncapi: 3.0.0
+      info: {title: Dynamic patch, version: 1.0.0}
+      channels:
+        item:
+          address: /item
+          messages:
+            item: {payload: {${'$'}ref: '#/components/schemas/Item'}}
+      operations:
+        receiveItem:
+          action: receive
+          channel: {${'$'}ref: '#/channels/item'}
+          messages: [{${'$'}ref: '#/channels/item/messages/item'}]
+      components:
+        schemas:
+      """.trimIndent() + "\n" + schemas
+    val raml =
+      """
+      #%RAML 1.0
+      title: Dynamic patch
+      annotationTypes:
+        sunday.patchable: {type: boolean, allowedTargets: [TypeDeclaration]}
+      types:
+        EnumValue: {type: string, enum: [first, second]}
+        Base:
+          type: object
+          properties:
+            id: string
+            /.+/: {type: string, minLength: 2}
+            /^x-/: {type: string, minLength: 2}
+            /^enum-/: EnumValue
+        Item:
+          type: Base
+          (sunday.patchable): true
+          properties:
+            label?: string
+      """.trimIndent()
+    val source = directory.resolve(if (frontend == "raml") "patch.raml" else "patch.yaml")
+    source.writeText(
+      when (frontend) {
+        "raml" -> raml
+        "asyncapi" -> asyncapi
+        else -> openapi
+      },
+    )
+    val sources = mutableListOf(source.toUri())
+    if (frontend == "composed") {
+      val events = directory.resolve("events.yaml")
+      events.writeText(asyncapi.replace("/schemas/Item", "/schemas/Base"))
+      sources += events.toUri()
+    }
+    val modules =
+      PythonSundayIrGenerator(
+        GeneratedApiIrExporter().export(sources),
+        PythonGeneratorOptions(packageName = "test_api"),
+      ).generateModules(setOf(GeneratedTypeCategory.Model))
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        importModules = listOf("test_api.models"),
+        smokeCode =
+          """
+          import json
+          from pydantic import ValidationError
+          from sunday import JsonCodec
+          from test_api.models import Item, ItemPatch
+          original = Item.model_validate({"id": "base", "extra": "value", "x-known": "value", "enum-known": "first"})
+          for key in ["extra", "x-known", "enum-known"]:
+              fields = {key: None}
+              patch = ItemPatch.model_validate(fields, context={"mode": "request"})
+              assert patch.model_dump(mode="json", by_alias=True) == fields
+              assert json.loads(JsonCodec().encode(patch)) == fields
+              assert ItemPatch.model_validate_json(JsonCodec().encode(patch)) == patch
+              merged = original.merge(patch)
+              assert key not in merged.model_dump(mode="json", by_alias=True)
+              assert key in original.model_dump(mode="json", by_alias=True)
+              for invalid in [None, 1, "x"]:
+                  try:
+                      Item.model_validate({"id": "base", key: invalid})
+                  except ValidationError:
+                      pass
+                  else:
+                      raise AssertionError("ordinary dynamic constraint lost")
+          for fields in [{"extra": "valid"}, {"x-known": "valid"}, {"enum-known": "second"}]:
+              patch = ItemPatch.model_validate(fields)
+              assert patch.model_dump(mode="json", by_alias=True) == fields
+          for fields in [{"extra": 1}, {"extra": "x"}, {"x-known": 1}, {"x-known": "x"}, {"enum-known": "other"}, {"id": None}]:
+              try:
+                  ItemPatch.model_validate(fields, context={"mode": "request"})
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError("invalid patch accepted: " + repr(fields))
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
   fun `Litestar validates participating PATCH fields before invoking the delegate`(
@@ -114,12 +250,17 @@ class PythonPatchableTypesTest : PythonTest() {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "raml-auto", "openapi", "asyncapi", "composed", "reference", "collisions"])
+  @ValueSource(
+    strings = [
+      "raml", "raml-auto", "openapi", "asyncapi", "composed", "composed-collisions", "reference", "collisions",
+    ],
+  )
   fun `PATCH fields expose typed UNSET value and deletion states`(
     frontend: String,
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
+    val patchName = if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch"
     val modules =
       PythonSundayIrGenerator(patchableApi(frontend, directory), PythonGeneratorOptions(packageName = "test_api"))
         .generateModules(GeneratedTypeCategory.entries.toSet())
@@ -222,7 +363,7 @@ class PythonPatchableTypesTest : PythonTest() {
               pass
           unknown.state = UNSET
           SomeRequestPatch.model_validate(unknown, context={"mode": "request"})
-          """.trimIndent(),
+          """.trimIndent().replace("SomeRequestPatch", patchName),
       ),
     )
   }

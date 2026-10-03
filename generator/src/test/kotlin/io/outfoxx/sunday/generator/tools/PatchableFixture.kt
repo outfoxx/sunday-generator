@@ -155,11 +155,51 @@ internal fun patchableApi(
     },
   )
   val sources = mutableListOf(source.toUri())
-  if (frontend == "composed") {
+  if (frontend.startsWith("composed")) {
     val events = directory.resolve("events.yaml")
-    events.writeText(asyncapi)
+    events.writeText(
+      if (frontend.startsWith("composed-collisions")) {
+        asyncapi
+          .replace(
+            "channels:\n",
+            """
+            channels:
+              reserved:
+                address: /reserved
+                messages:
+                  names: {payload: {${'$'}ref: '#/components/schemas/ReservedNames'}}
+            """.trimIndent() + "\n",
+          ).replace(
+            "operations:\n",
+            """
+            operations:
+              receiveReserved:
+                action: receive
+                channel: {${'$'}ref: '#/channels/reserved'}
+                messages: [{${'$'}ref: '#/channels/reserved/messages/names'}]
+            """.trimIndent() + "\n",
+          ) +
+          """
+
+          ReservedNames:
+            type: object
+            properties:
+              request: {${'$'}ref: '#/components/schemas/SomeRequestPatch'}
+              base: {${'$'}ref: '#/components/schemas/BasePatch'}
+              details: {${'$'}ref: '#/components/schemas/DetailsPatch'}
+              details2: {${'$'}ref: '#/components/schemas/DetailsPatch2'}
+          SomeRequestPatch: {type: object, properties: {reserved: {type: string}}}
+          BasePatch: {type: object, properties: {reserved: {type: string}}}
+          DetailsPatch: {type: object, properties: {reserved: {type: string}}}
+          DetailsPatch2: {type: object, properties: {reserved: {type: string}}}
+          """.trimIndent().prependIndent("    ") + "\n"
+      } else {
+        asyncapi
+      },
+    )
     sources += events.toUri()
   }
+  if (frontend.endsWith("-reversed")) sources.reverse()
   val api = GeneratedApiIrExporter(GeneratedApiIrOptions(autoPatchable = autoPatchable)).export(sources)
   return GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api))
 }

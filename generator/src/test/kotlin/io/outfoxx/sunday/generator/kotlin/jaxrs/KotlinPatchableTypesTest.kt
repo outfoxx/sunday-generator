@@ -68,6 +68,10 @@ class KotlinPatchableTypesTest {
     "server,composed",
     "resource,composed",
     "sunday,composed",
+    "client,composed-collisions",
+    "server,composed-collisions",
+    "resource,composed-collisions",
+    "sunday,composed-collisions",
     "sunday,asyncapi",
     "client,reference",
     "server,reference",
@@ -148,7 +152,10 @@ class KotlinPatchableTypesTest {
       }
     val compiled = compileTypesResult(types)
     assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
-    val patch = compiled.classLoader.loadClass("io.test.SomeRequestPatch")
+    val patch =
+      compiled.classLoader.loadClass(
+        "io.test." + if (frontend == "composed-collisions") "SomeRequestPatch2" else "SomeRequestPatch",
+      )
     val ordinary = compiled.classLoader.loadClass("io.test.SomeRequest")
     val methods =
       types.keys
