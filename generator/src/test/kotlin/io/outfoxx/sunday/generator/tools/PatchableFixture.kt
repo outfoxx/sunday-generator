@@ -28,26 +28,38 @@ internal fun patchableApi(
   frontend: String,
   directory: Path,
   autoPatchable: Boolean = true,
+  recursive: Boolean = false,
 ): GeneratedApi {
   val openapi =
-    requireNotNull(GeneratedApi::class.java.getResource("/openapi/patchable.yaml")).readText().let {
-      if (frontend == "collisions") {
-        it.replace(
-          "            labels:",
-          "            __proto__: {type: string}\n            constructor: {type: string}\n            labels:",
-        ) +
-          """
+    requireNotNull(GeneratedApi::class.java.getResource("/openapi/patchable.yaml"))
+      .readText()
+      .let { source ->
+        if (recursive) {
+          source.replace(
+            "            details:",
+            "            next: {${'$'}ref: '#/components/schemas/SomeRequest'}\n            details:",
+          )
+        } else {
+          source
+        }
+      }.let {
+        if (frontend == "collisions") {
+          it.replace(
+            "            labels:",
+            "            __proto__: {type: string}\n            constructor: {type: string}\n            labels:",
+          ) +
+            """
 
-          MergePatchSupport:
-            type: object
-            properties:
-              patch: {type: string}
-              merge: {type: string}
-          """.trimIndent().prependIndent("    ") + "\n"
-      } else {
-        it
+            MergePatchSupport:
+              type: object
+              properties:
+                patch: {type: string}
+                merge: {type: string}
+            """.trimIndent().prependIndent("    ") + "\n"
+        } else {
+          it
+        }
       }
-    }
   val schemas =
     openapi
       .substringAfter("  schemas:\n")
@@ -133,7 +145,10 @@ internal fun patchableApi(
           200:
             body:
               application/json: SomeRequest
-    """.trimIndent().replace("FIELDS", fields.prependIndent("      "))
+    """.trimIndent().replace(
+      "FIELDS",
+      (fields + if (recursive) "\nnext: {type: SomeRequest, required: false}" else "").prependIndent("      "),
+    )
   val referenced =
     if (frontend == "reference") {
       directory.resolve("models.yaml").writeText(openapi)

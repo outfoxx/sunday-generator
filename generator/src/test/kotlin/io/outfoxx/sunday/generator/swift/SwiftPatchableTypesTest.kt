@@ -20,7 +20,10 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.patchableApi
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
@@ -34,6 +37,89 @@ import java.nio.file.Path
 @Tag("validation")
 @Tag("requests")
 class SwiftPatchableTypesTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `recursive ordinary and patch children flatten value parents`(
+    frontend: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      patchableApi(frontend, directory, recursive = true),
+      registry,
+      swiftSundayTestOptions,
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("RecursivePatchTests.swift"),
+      """
+      import Foundation
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class RecursivePatchTests: XCTestCase {
+        func testInheritedFields() throws {
+          let decoder = JSONDecoder()
+          let encoder = JSONEncoder()
+          let original = try decoder.decode(SomeRequest.self, from: Data(#"{"count":2,"required-nullable":"valid","required-alias":"valid","title":"Original","next":{"count":3,"required-nullable":"nested","required-alias":"nested","title":"Child"}}"#.utf8))
+          XCTAssertEqual(original.count, 2)
+          XCTAssertEqual(original.next?.count, 3)
+          XCTAssertTrue(original.isValid(.request))
+          let roundTrip = try decoder.decode(SomeRequest.self, from: encoder.encode(original))
+          XCTAssertEqual(roundTrip.next?.count, 3)
+          let changed = try original.withCount(count: 4)
+          XCTAssertEqual(changed.count, 4)
+          XCTAssertEqual(original.count, 2)
+          XCTAssertThrowsError(try original.withCount(count: 0))
+          let difference = try changed.patch(from: original)
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(difference)) as! NSDictionary, ["count": 4])
+          let snapshot = try SomeRequestPatch.fromModel(original)
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(snapshot)) as! NSDictionary,
+                         try JSONSerialization.jsonObject(with: encoder.encode(original)) as! NSDictionary)
+          let patch = try decoder.decode(SomeRequestPatch.self, from: Data(#"{"count":5,"next":{"count":6},"title":null}"#.utf8))
+          XCTAssertTrue(patch.isValid(.request))
+          XCTAssertEqual(try JSONSerialization.jsonObject(with: encoder.encode(patch)) as! NSDictionary,
+                         ["count":5, "next":["count":6], "title":NSNull()] as NSDictionary)
+          let merged = try original.merge(patch)
+          XCTAssertEqual(merged.count, 5)
+          XCTAssertEqual(merged.next?.count, 6)
+          XCTAssertNil(merged.title)
+          XCTAssertEqual(original.count, 2)
+          XCTAssertEqual(original.next?.count, 3)
+          XCTAssertEqual(original.title, "Original")
+          XCTAssertEqual(try original.merge(difference).count, 4)
+          XCTAssertThrowsError(try patch.withCount(count: .set(0)))
+          for json in [#"{"count":0}"#, #"{"count":null}"#, #"{"next":{"count":0}}"#] {
+            XCTAssertThrowsError(try decoder.decode(SomeRequestPatch.self, from: Data(json.utf8)), json)
+          }
+          XCTAssertThrowsError(try decoder.decode(SomeRequest.self, from: Data(#"{"count":0,"required-nullable":"valid","required-alias":"valid"}"#.utf8)))
+        }
+      }
+      """.trimIndent(),
+    )
+    val sourcePaths =
+      Files.walk(compiler.srcDir).use { paths ->
+        paths.filter(Files::isRegularFile).toList().associate { path ->
+          path.fileName.toString() to compiler.srcDir.relativize(path).toString()
+        }
+      }
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+    val parent = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, sourcePaths.getValue("Base.swift"))
+    val parentPatch =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, sourcePaths.getValue("BasePatch.swift"))
+    val child = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, sourcePaths.getValue("SomeRequest.swift"))
+    val childPatch =
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, sourcePaths.getValue("SomeRequestPatch.swift"))
+    assertTrue(parent.contains("public struct Base"), parent)
+    assertTrue(parentPatch.contains("public struct BasePatch"), parentPatch)
+    assertTrue(child.contains("public final class SomeRequest : Codable"), child)
+    assertTrue(childPatch.contains("public final class SomeRequestPatch : Codable"), childPatch)
+    assertFalse(child.contains("super."), child)
+    assertFalse(childPatch.contains("super."), childPatch)
+  }
+
   @ParameterizedTest
   @ValueSource(
     strings = [

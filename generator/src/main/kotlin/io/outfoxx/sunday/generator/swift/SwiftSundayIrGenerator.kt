@@ -3126,7 +3126,9 @@ class SwiftSundayIrGenerator(
       isProtocolHierarchyValueModel ||
         isProblemHierarchyValueModel ||
         isInheritedObjectValueModel ||
-        isPatchableObjectValueModel
+        isPatchableObjectValueModel ||
+        // Recursive children need reference storage, but a value parent cannot be a Swift superclass.
+        (isRecursiveReferenceModel && inheritedModel?.isSwiftValueModel == true)
     val allowsInheritedPropertyOverrides = flattensInheritedProperties && !isProblemHierarchyValueModel
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
