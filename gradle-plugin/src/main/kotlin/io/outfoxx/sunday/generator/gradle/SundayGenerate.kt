@@ -110,6 +110,10 @@ abstract class SundayGenerate
     val defaultTolerance: Property<Tolerance> =
       objects.property(Tolerance::class.java).convention(Tolerance.Response)
 
+    /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
+    @get:Input
+    val autoPatchable: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
     @get:Input
     @get:Optional
     val generateModel: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
@@ -375,7 +379,11 @@ abstract class SundayGenerate
           }
       val exporter =
         GeneratedApiIrExporter(
-          GeneratedApiIrOptions(deriveServicesFromTags = servicesFromTags.get(), generationMode = mode.get()),
+          GeneratedApiIrOptions(
+            deriveServicesFromTags = servicesFromTags.get(),
+            generationMode = mode.get(),
+            autoPatchable = autoPatchable.get(),
+          ),
           openApiDocumentLoader =
             capturedDocumentsDirectory.orNull?.let {
               OpenApiDocumentSnapshot.loader(it.asFile.toPath(), sourceBaseDirectory.get().asFile.toPath())

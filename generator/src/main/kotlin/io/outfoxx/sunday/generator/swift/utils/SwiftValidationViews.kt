@@ -117,9 +117,11 @@ internal class SwiftValidationViews(
             val projected =
               if (patchField(property)) {
                 CodeBlock.of(
-                  "%L.map { operation in if case .set(let value) = operation { return %L }; return .null } ?? .omitted",
+                  "{ () -> %T in if case .set(let value) = %L { return %L }; return %L.isUnchanged ? .omitted : .null }()",
+                  valueType,
                   value,
                   project(property.type.copy(nullable = false), CodeBlock.of("value")),
+                  value,
                 )
               } else if (!property.required && !property.type.nullable) {
                 CodeBlock.of("%L.map { value in %L } ?? .omitted", value, project(property.type, CodeBlock.of("value")))
@@ -245,7 +247,9 @@ internal class SwiftValidationViews(
       .builder()
       .apply {
         beginControlFlow("if", "value.kind == .null")
-        if (properties.acceptsNull(property.type) && property.allowedValues?.contains(null) != false) {
+        if (property.patchDeletionAllowed
+          ?: (properties.acceptsNull(property.type) && property.allowedValues?.contains(null) != false)
+        ) {
           addStatement("return true")
         } else {
           addStatement("return context.reject(.nullValue)")

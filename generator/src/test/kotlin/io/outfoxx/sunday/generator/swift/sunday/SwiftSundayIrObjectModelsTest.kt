@@ -276,12 +276,12 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(source.contains("public struct PatchModel"), source)
     assertTrue(source.contains("Sendable"), source)
-    assertTrue(source.contains("public let value: UpdateOp<String>?"), source)
-    assertTrue(source.contains("public let nullable: PatchOp<String>?"), source)
-    assertTrue(source.contains("value: UpdateOp<String>? = .none"), source)
-    assertTrue(source.contains("nullable: PatchOp<String>? = .none"), source)
-    assertTrue(source.contains("self.value = try container.decodeIfExists(String.self, forKey: .value)"), source)
-    assertTrue(source.contains("try container.encodeIfExists(self.value, forKey: .value)"), source)
+    assertTrue(source.contains("public var value: UpdateOp<String>"), source)
+    assertTrue(source.contains("public var nullable: UpdateOp<String>"), source)
+    assertTrue(source.contains("value: UpdateOp<String> = .unchanged"), source)
+    assertTrue(source.contains("nullable: UpdateOp<String> = .unchanged"), source)
+    assertTrue(source.contains("self.value = try container.decode(UpdateOp<String>.self, forKey: .value)"), source)
+    assertTrue(source.contains("try container.encode(self.value, forKey: .value)"), source)
     assertTrue(source.contains("extension AnyPatchOp where Value == PatchModel"), source)
   }
 

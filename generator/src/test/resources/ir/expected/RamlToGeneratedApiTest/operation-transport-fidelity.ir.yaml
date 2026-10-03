@@ -43,7 +43,7 @@ services:
         - "application/json"
       - type:
           kind: "NAMED"
-          name: "ProjectCreatePatch"
+          name: "ProjectCreatePatchPatch"
         mediaTypes:
         - "application/merge-patch+json"
     responses:
@@ -111,6 +111,19 @@ models:
       kind: "SCALAR"
       name: "string"
     required: true
+- name: "ProjectCreatePatchPatch"
+  kind: "OBJECT"
+  properties:
+  - name: "name"
+    type:
+      kind: "SCALAR"
+      name: "string"
+      nullable: true
+    patchDeletionAllowed: true
+  patchable: true
+  patchOf:
+    kind: "NAMED"
+    name: "ProjectCreatePatch"
 media:
   request:
   - "application/json"

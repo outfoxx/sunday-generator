@@ -283,7 +283,13 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
               name = "NullablePatch",
               properties =
                 patch.properties.map { property ->
-                  if (property.name == "nullable") property.copy(allowedValues = listOf("valid", null)) else property
+                  if (property.name ==
+                    "nullable"
+                  ) {
+                    property.copy(required = false, allowedValues = listOf("valid", null))
+                  } else {
+                    property
+                  }
                 },
             ),
             patch.copy(name = "OrdinaryRequired", patchable = false),
@@ -331,16 +337,16 @@ class SwiftSundayIrDefaultsTest : SwiftSundayIrTestSupport() {
           let decoder = JSONDecoder()
           for json in ["{}"] {
             let patch = try decoder.decode(ConstrainedPatch.self, from: Data(json.utf8))
-            XCTAssertNil(patch.value)
-            XCTAssertNil(patch.nullable)
+            XCTAssertEqual(patch.value, .unchanged)
+            XCTAssertEqual(patch.nullable, .unchanged)
             XCTAssertEqual(String(data: try JSONEncoder().encode(patch), encoding: .utf8), "{}")
           }
           XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(#"{"value":null}"#.utf8)))
           XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(#"{"nullable":null}"#.utf8)))
           let deleted = try decoder.decode(NullablePatch.self, from: Data(#"{"nullable":null}"#.utf8))
-          guard case .delete? = deleted.nullable else { return XCTFail("null must remain a delete") }
+          guard case .delete = deleted.nullable else { return XCTFail("null must remain a delete") }
           let supplied = try decoder.decode(ConstrainedPatch.self, from: Data(#"{"value":"valid","nullable":"valid"}"#.utf8))
-          guard case .set("valid")? = supplied.value, case .set("valid")? = supplied.nullable else { return XCTFail("set lost") }
+          guard case .set("valid") = supplied.value, case .set("valid") = supplied.nullable else { return XCTFail("set lost") }
           for json in [#"{"value":"invalid"}"#, #"{"nullable":"invalid"}"#] {
             XCTAssertThrowsError(try decoder.decode(ConstrainedPatch.self, from: Data(json.utf8)))
           }

@@ -26,4 +26,23 @@ data class GeneratedApiFragment(
   val operationIdentities: Map<GeneratedOperationIdentityKey, GeneratedIdentity> = mapOf(),
   val modelIdentities: Map<String, GeneratedIdentity> = mapOf(),
   val problemIdentities: Map<String, GeneratedIdentity> = mapOf(),
-)
+) {
+
+  /** Resolves the composition identity, including operation-local ownership. */
+  internal fun modelIdentity(model: GeneratedModel): GeneratedIdentity =
+    model.scope
+      ?.let { scope -> GeneratedIdentity.native(model.scopedModelIdentity(scope)) }
+      ?: modelIdentities[model.name]
+      ?: GeneratedIdentity.native(model.name)
+
+  private fun GeneratedModel.scopedModelIdentity(scope: GeneratedModelScope): String =
+    listOf(
+      scope.service.orEmpty(),
+      scope.operation.orEmpty(),
+      scope.securityScheme.orEmpty(),
+      scope.usage.name,
+      scope.name.orEmpty(),
+      scope.status?.toString().orEmpty(),
+      name,
+    ).joinToString(":")
+}

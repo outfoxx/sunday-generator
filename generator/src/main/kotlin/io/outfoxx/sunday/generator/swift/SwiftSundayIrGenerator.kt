@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelScope
 import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -104,6 +105,7 @@ import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelValidation
 import io.outfoxx.sunday.generator.swift.utils.SwiftNominalTypes
+import io.outfoxx.sunday.generator.swift.utils.SwiftPatchHelpers
 import io.outfoxx.sunday.generator.swift.utils.SwiftValidationViews
 import io.outfoxx.sunday.generator.swift.utils.SwiftValueConstraints
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
@@ -159,16 +161,20 @@ import io.outfoxx.swiftpoet.tag
  * Swift/Sunday service generator that renders service declarations from Sunday IR.
  */
 class SwiftSundayIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: SwiftTypeOutputRegistry,
   private val options: SwiftSundayOptions,
 ) {
 
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
   private val transportTypeVariable = typeVariable("TransportType", bound(TRANSPORT))
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val apiIndex = GeneratedApiIndex(api)
+  private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val patchHelpers by lazy { SwiftPatchHelpers(api.models) { it.swiftDeclaredTypeName() } }
+
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator =
     SwiftNominalTypes(nominalTypes, { validationViews }, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
@@ -301,6 +307,7 @@ class SwiftSundayIrGenerator(
       }.forEach { generatedModel ->
         val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
         val typeName = model.swiftDeclaredTypeName()
+        patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
         typeRegistry.addModelType(
           typeName,
           typeBuilder,
@@ -316,6 +323,7 @@ class SwiftSundayIrGenerator(
           )
         }
       }
+    if (patchHelpers.enabled) typeRegistry.addModelType(patchHelpers.supportName, patchHelpers.support())
   }
 
   private fun GeneratedModel.swiftFallbackTypeName(fallback: GeneratedDiscriminatorFallback): DeclaredTypeName {
@@ -2518,13 +2526,11 @@ class SwiftSundayIrGenerator(
       kind == GeneratedModel.Kind.OBJECT &&
         !isRecursiveSwiftObjectModel &&
         patchable &&
-        inherits.isEmpty() &&
         discriminator == null &&
         discriminatorMappings.isEmpty() &&
         !externallyDiscriminated &&
         properties.none { property -> property.externalDiscriminator != null } &&
-        !isProblemModel &&
-        !hasInheritingModels
+        !isProblemModel
 
   private val GeneratedModel.isInheritedObjectValueModel: Boolean
     get() =
@@ -3119,7 +3125,10 @@ class SwiftSundayIrGenerator(
     val flattensInheritedProperties =
       isProtocolHierarchyValueModel ||
         isProblemHierarchyValueModel ||
-        isInheritedObjectValueModel
+        isInheritedObjectValueModel ||
+        isPatchableObjectValueModel ||
+        // Recursive children need reference storage, but a value parent cannot be a Swift superclass.
+        (isRecursiveReferenceModel && inheritedModel?.isSwiftValueModel == true)
     val allowsInheritedPropertyOverrides = flattensInheritedProperties && !isProblemHierarchyValueModel
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
@@ -3144,7 +3153,7 @@ class SwiftSundayIrGenerator(
     val identifiableProperty = identifiablePropertyOrNull()
     val discriminatorProperty = discriminatorPropertyOrNull()
     val isValueModel = isSwiftValueModel
-    val isImmutableModel = isValueModel || isRecursiveReferenceModel
+    val isImmutableModel = isValueModel && !patchable || isRecursiveReferenceModel
     val storedProperties =
       if (flattensInheritedProperties) {
         effectiveInheritedProperties + localProperties
@@ -4011,8 +4020,8 @@ class SwiftSundayIrGenerator(
             properties.forEach { property ->
               addParameter(
                 ParameterSpec
-                  .builder(property.name.swiftIdentifierName, property.swiftPatchOpTypeName().makeOptional())
-                  .defaultValue(".none")
+                  .builder(property.name.swiftIdentifierName, property.swiftPatchOpTypeName())
+                  .defaultValue(".unchanged")
                   .build(),
               )
             }
@@ -4182,7 +4191,7 @@ class SwiftSundayIrGenerator(
               .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(patchable))
               .apply {
                 if (patchable) {
-                  defaultValue(".none")
+                  defaultValue(".unchanged")
                 } else if (property.swiftTypeName().optional) {
                   defaultValue("nil")
                 }
@@ -4615,13 +4624,13 @@ class SwiftSundayIrGenerator(
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
             when {
-              patchable -> "IfExists"
+              patchable -> ""
               property.swiftTypeName().optional -> "IfPresent"
               else -> ""
             }
           val codingTypeName =
             if (patchable) {
-              property.type.swiftTypeName().makeNonOptional()
+              property.swiftPatchOpTypeName()
             } else {
               property.swiftTypeName().makeNonOptional()
             }
@@ -4647,7 +4656,7 @@ class SwiftSundayIrGenerator(
                 "container.contains(.%N) ? %L : %L",
                 property.name.swiftIdentifierName,
                 decode,
-                it,
+                patchHelpers.decodingDefault(it),
               )
             }
               ?: decode,
@@ -4708,7 +4717,7 @@ class SwiftSundayIrGenerator(
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
-            if (patchable) "IfExists" else property.swiftEncodingSuffix(),
+            if (patchable) "" else property.swiftEncodingSuffix(),
             property.name.swiftIdentifierName,
             property.name.swiftIdentifierName,
           )
@@ -4886,13 +4895,13 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedModelProperty.swiftModelPropertyTypeName(patchable: Boolean): TypeName =
     if (patchable) {
-      swiftPatchOpTypeName().makeOptional()
+      swiftPatchOpTypeName()
     } else {
       swiftTypeName()
     }
 
   private fun GeneratedModelProperty.swiftPatchOpTypeName(): TypeName {
-    val base = if (type.nullable) PATCH_OP else UPDATE_OP
+    val base = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
     return base.parameterizedBy(type.swiftTypeName().makeNonOptional())
   }
 

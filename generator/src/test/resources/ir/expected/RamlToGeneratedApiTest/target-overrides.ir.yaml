@@ -113,7 +113,6 @@ models:
     type:
       kind: "SCALAR"
       name: "string"
-  patchable: true
 - name: "UserPreference"
   kind: "OBJECT"
   properties:
@@ -141,6 +140,19 @@ models:
       kind: "NAMED"
       name: "UserPreference"
     name: "Option"
+- name: "UserPatchPatch"
+  kind: "OBJECT"
+  properties:
+  - name: "displayName"
+    type:
+      kind: "SCALAR"
+      name: "string"
+      nullable: true
+    patchDeletionAllowed: true
+  patchable: true
+  patchOf:
+    kind: "NAMED"
+    name: "UserPatch"
 media:
   request:
   - "application/json"

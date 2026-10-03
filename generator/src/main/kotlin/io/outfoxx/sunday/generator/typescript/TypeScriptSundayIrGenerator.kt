@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -90,6 +91,7 @@ import io.outfoxx.sunday.generator.typescript.utils.STREAMING_BODY
 import io.outfoxx.sunday.generator.typescript.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT_REQUEST
+import io.outfoxx.sunday.generator.typescript.utils.TypeScriptPatchHelpers
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.VALIDATE_MODEL_CONSTRUCTION
@@ -138,15 +140,27 @@ import io.outfoxx.typescriptpoet.tag
  * TypeScript/Sunday service generator that renders service declarations from Sunday IR.
  */
 class TypeScriptSundayIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: TypeScriptTypeOutputRegistry,
   private val options: TypeScriptSundayOptions,
 ) {
 
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
+  private val patchSupportName by lazy {
+    val allocator = NameAllocator()
+    api.models
+      .map { it.name.toUpperCamelCase() }
+      .distinct()
+      .forEach { allocator.newName(it) }
+    val name = allocator.newName("MergePatchSupport")
+    typeRegistry.generatedTypeName(name, "!${name.camelCaseToKebabCase()}")
+  }
+
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val index = GeneratedApiIndex(api)
+  private val index = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(index::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(index::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
@@ -270,6 +284,10 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.isInDiscriminatedHierarchy(): Boolean = rootModel()?.discriminator != null
 
   private fun generateModelTypes() {
+    if (api.models.any { it.patchOf != null }) {
+      val (type, code) = TypeScriptPatchHelpers.support(patchSupportName)
+      typeRegistry.addModelType(patchSupportName, type, listOf(code))
+    }
     api.models
       .filter { model ->
         model.scope == null
@@ -1548,7 +1566,25 @@ class TypeScriptSundayIrGenerator(
         )
       }
 
-    typeRegistry.addModelType(typeName, typeSpec, listOf(schemaCode))
+    val patch = api.models.singleOrNull { it.patchOf?.name == model.name }
+    val original = api.models.singleOrNull { it.name == model.patchOf?.name }
+    val helpers =
+      when {
+        patch != null ->
+          TypeScriptPatchHelpers.adapters(
+            typeName,
+            patch.typeName(patch.name.toUpperCamelCase()),
+            patchSupportName,
+          )
+        original != null ->
+          TypeScriptPatchHelpers.factory(
+            typeName,
+            original.typeName(original.name.toUpperCamelCase()),
+            patchSupportName,
+          )
+        else -> null
+      }
+    typeRegistry.addModelType(typeName, typeSpec, listOfNotNull(schemaCode, helpers))
   }
 
   private fun schemaOutputType(typeName: TypeName.Standard): TypeName = schemaOutputTypeOf(typeName.sibling("Schema"))
@@ -2926,7 +2962,13 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     lazyRefType: TypeName.Standard? = null,
   ): CodeBlock {
-    val base = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
+    val schema = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
+    val base =
+      if (patchDeletionAllowed == false && modelProperties.acceptsNull(type)) {
+        CodeBlock.of("%L.refine(value => value !== null, %S)", schema, "Required members cannot be deleted")
+      } else {
+        schema
+      }
     val default = modelProperties.scalarDefault(this)?.takeUnless { required } ?: return base
     val enumModel =
       modelProperties.declarationModel(type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM && it.unknownValue == null }
@@ -2973,13 +3015,28 @@ class TypeScriptSundayIrGenerator(
         GeneratedTypeRef.Kind.ARRAY ->
           zodArraySchema(serviceTypeName, runtimeName)
 
-        GeneratedTypeRef.Kind.MAP, GeneratedTypeRef.Kind.UNION ->
+        GeneratedTypeRef.Kind.MAP ->
+          CodeBlock
+            .builder()
+            .add("%T.record(%T.string(), ", Z, Z)
+            .add(
+              arguments.lastOrNull()?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+                ?: CodeBlock.of("%T.unknown()", Z),
+            ).add(")")
+            .build()
+
+        GeneratedTypeRef.Kind.UNION ->
           runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
 
         GeneratedTypeRef.Kind.NAMED ->
-          modelOrNull(index)
-            ?.aliasedTypeRef()
-            ?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+          modelOrNull(index)?.let { model ->
+            model.aliasedTypeRef()?.zodSchema(
+              serviceTypeName,
+              true,
+              model.validation.filter { (key, value) -> validation[key] != value },
+              runtimeName = runtimeName,
+            )
+          }
             ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
       }
 
@@ -2990,6 +3047,7 @@ class TypeScriptSundayIrGenerator(
         validation.isNotEmpty() &&
         (
           enumModel != null ||
+            modelOrNull(index)?.aliasedTypeRef()?.nullable == true ||
             modelProperties.declarationModel(this)?.nominal == true ||
             declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
             declaration.formattedScalarTypeName() != null

@@ -30,7 +30,7 @@ class GeneratedApiComposer {
       throw GeneratedApiCompositionException("At least one GeneratedApiFragment is required")
     }
 
-    val sources = captureAuthentication(canonicalizeSecuritySchemes(fragments))
+    val sources = captureAuthentication(canonicalizeSecuritySchemes(GeneratedPatchModelNames.canonicalize(fragments)))
     val first = sources.first()
     sources.drop(1).forEach { fragment ->
       if (fragment.apiId.id != first.apiId.id) {
@@ -350,12 +350,6 @@ class GeneratedApiComposer {
     operationIdentities[GeneratedOperationIdentityKey(service.name, operation.id)]
       ?: GeneratedIdentity.native(operation.id)
 
-  private fun GeneratedApiFragment.modelIdentity(model: GeneratedModel): GeneratedIdentity =
-    model.scope
-      ?.let { scope -> GeneratedIdentity.native(model.scopedModelIdentity(scope)) }
-      ?: modelIdentities[model.name]
-      ?: GeneratedIdentity.native(model.name)
-
   private fun GeneratedApiFragment.modelSource(model: GeneratedModel): GeneratedSourceSpec = model.source ?: api.source
 
   private fun GeneratedSourceSpec.description(): String = "${kind.name.lowercase()} '$location'"
@@ -365,6 +359,7 @@ class GeneratedApiComposer {
       source = null,
       properties = properties.map { property -> property.compositionSignature() },
       aliases = aliases.map { alias -> alias.compositionSignature() },
+      patchOf = patchOf?.compositionSignature(),
       additionalProperties = additionalProperties?.compositionSignature(),
       patternProperties = patternProperties.map { patternProperty -> patternProperty.compositionSignature() },
       targets = targets.mapValues { (_, target) -> target.compositionSignature() },
@@ -402,20 +397,11 @@ class GeneratedApiComposer {
 
   private fun GeneratedTypeRef.compositionSignature(): GeneratedTypeRef =
     copy(
+      // Collection kind and arguments define maps; readers use different descriptive names.
+      name = if (kind == GeneratedTypeRef.Kind.MAP) "map" else name,
       arguments = arguments.map { argument -> argument.compositionSignature() },
       source = null,
     )
-
-  private fun GeneratedModel.scopedModelIdentity(scope: GeneratedModelScope): String =
-    listOf(
-      scope.service.orEmpty(),
-      scope.operation.orEmpty(),
-      scope.securityScheme.orEmpty(),
-      scope.usage.name,
-      scope.name.orEmpty(),
-      scope.status?.toString().orEmpty(),
-      name,
-    ).joinToString(":")
 
   private fun GeneratedApiFragment.problemIdentity(problem: GeneratedProblem): GeneratedIdentity =
     problemIdentities[problem.name] ?: GeneratedIdentity.native(

@@ -28,6 +28,8 @@ Code generator for Sunday client libraries and standard server libraries.
 
 ### [Environment-aware Generation and Validation](docs/environment-aware-generation.md)
 
+### [Patchable Models and JSON Merge Patch](docs/patchable-models.md)
+
 ### [Build Performance and Test Selection](docs/build-performance.md)
 
 Gradle Plugin Cache Notes

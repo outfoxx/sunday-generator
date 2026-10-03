@@ -203,23 +203,25 @@ class RamlToGeneratedApi(
           )
         }
 
-    return GeneratedApi(
-      name = api.name ?: "API",
-      source =
-        GeneratedSourceSpec(
-          kind = sourceKind,
-          location = document.location,
-        ),
-      services = services,
-      models = models(document, api, shapeIndex, rootLocation, localModels),
-      problems = problems(document, api),
-      auth = apiAuth,
-      jaxrs = api.jaxrs(),
-      media = apiMedia,
-      targets = api.targets(),
-      tags = api.tags.mapNotNull { tag -> tag.generatedTag() },
-      documentation = documentation(description = api.description),
-    )
+    val generatedApi =
+      GeneratedApi(
+        name = api.name ?: "API",
+        source =
+          GeneratedSourceSpec(
+            kind = sourceKind,
+            location = document.location,
+          ),
+        services = services,
+        models = models(document, api, shapeIndex, rootLocation, localModels),
+        problems = problems(document, api),
+        auth = apiAuth,
+        jaxrs = api.jaxrs(),
+        media = apiMedia,
+        targets = api.targets(),
+        tags = api.tags.mapNotNull { tag -> tag.generatedTag() },
+        documentation = documentation(description = api.description),
+      )
+    return GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
   }
 
   /** Converts a processed RAML document into a generated API IR composition fragment. */

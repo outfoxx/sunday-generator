@@ -172,9 +172,10 @@ tasks.withType<Test>().configureEach {
     require(compilerTestForks == 1) { "A prepared Swift workspace requires compilerTestForks=1" }
     systemProperty("sunday.validation.swift.workspace", workspace)
   }
-  systemProperty(
-    "sunday.validation.kotlin.classpath",
-    (files(layout.buildDirectory.dir("compiler-fixtures")) + generatedCodeClasspath).asPath,
+  jvmArgumentProviders.add(
+    objects.newInstance<GeneratedCodeClasspathArguments>().apply {
+      compilerClasspath.from(layout.buildDirectory.dir("compiler-fixtures"), generatedCodeClasspath)
+    },
   )
   systemProperty(
     "sunday.validation.metrics-dir",
@@ -200,4 +201,13 @@ tasks.withType<Test>().configureEach {
 
 tasks.javadoc {
   include("io/outfoxx/**")
+}
+
+/** Resolves local companion builds after configuration while tracking compiler inputs for caching. */
+abstract class GeneratedCodeClasspathArguments : org.gradle.process.CommandLineArgumentProvider {
+  @get:Classpath
+  abstract val compilerClasspath: ConfigurableFileCollection
+
+  override fun asArguments(): Iterable<String> =
+    listOf("-Dsunday.validation.kotlin.classpath=${compilerClasspath.asPath}")
 }

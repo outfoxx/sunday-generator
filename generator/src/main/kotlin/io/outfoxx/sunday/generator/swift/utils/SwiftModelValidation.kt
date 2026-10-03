@@ -132,20 +132,22 @@ internal object SwiftModelValidation {
           val presenceName = "field${index}Presence"
           val asserts = property.allowedValues != null || SwiftModelConstraints.hasValueConstraints(property)
           val checksValue = asserts || nestedValidation != null
-          val acceptsNull = properties.acceptsNull(property.type) && property.allowedValues?.contains(null) != false
+          val acceptsNull =
+            property.patchDeletionAllowed
+              ?: (properties.acceptsNull(property.type) && property.allowedValues?.contains(null) != false)
           if ((!patchable && property.required) || !acceptsNull) {
             addStatement(
               "let %N = context.presence(of: .property(%S), inferred: %L)",
               presenceName,
               field.wireName,
-              if (patchable && field.storage.type.nullable) {
+              if (patchable && field.storage.patchDeletionAllowed == true) {
                 CodeBlock.of(
-                  "value.%N.map { operation -> %T.Presence in if case .delete = operation { return .null }; return .value } ?? .omitted",
-                  identifier,
+                  "{ () -> %T.Presence in switch value.%N { case .unchanged: return .omitted; case .delete: return .null; case .set: return .value } }()",
                   context,
+                  identifier,
                 )
               } else if (patchable) {
-                CodeBlock.of("value.%N == nil ? .omitted : .value", identifier)
+                CodeBlock.of("value.%N.isUnchanged ? .omitted : .value", identifier)
               } else if (optional) {
                 CodeBlock.of("value.%N == nil ? .%L : .value", identifier, if (property.required) "null" else "omitted")
               } else {
@@ -164,7 +166,7 @@ internal object SwiftModelValidation {
           }
           if (checksValue) {
             if (patchable) {
-              beginControlFlow("if", "case .set(let fieldValue)? = value.%N", identifier)
+              beginControlFlow("if", "case .set(let fieldValue) = value.%N", identifier)
             } else if (optional) {
               beginControlFlow("if", "let fieldValue = value.%N", identifier)
             } else {

@@ -39,4 +39,6 @@ data class GeneratedApiIrOptions
     val openApiReferences: OpenApiReferenceOptions = OpenApiReferenceOptions(),
     /** Optional artifact projection; null retains all environment metadata in the IR. */
     val projection: GenerationContext? = null,
+    /** Derive patch companions from merge-patch request media types without requiring a schema annotation. */
+    val autoPatchable: Boolean = true,
   )
