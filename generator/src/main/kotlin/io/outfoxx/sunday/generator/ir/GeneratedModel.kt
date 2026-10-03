@@ -39,6 +39,8 @@ data class GeneratedModel(
   val targets: Map<String, GeneratedTarget> = mapOf(),
   val nested: GeneratedNestedType? = null,
   val patchable: Boolean = false,
+  /** The ordinary schema represented by this merge-patch companion. */
+  val patchOf: GeneratedTypeRef? = null,
   val inherits: List<GeneratedTypeRef> = listOf(),
   val discriminator: String? = null,
   val discriminatorValue: String? = null,

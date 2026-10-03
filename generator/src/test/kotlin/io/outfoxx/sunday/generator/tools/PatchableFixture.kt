@@ -23,13 +23,31 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
-/** Merge-patch presence contracts across native, RAML patch-only, and composed source inputs. */
+/** Merge-patch presence contracts across native, RAML, and composed source inputs. */
 internal fun patchableApi(
   frontend: String,
   directory: Path,
   autoPatchable: Boolean = true,
 ): GeneratedApi {
-  val openapi = requireNotNull(GeneratedApi::class.java.getResource("/openapi/patchable.yaml")).readText()
+  val openapi =
+    requireNotNull(GeneratedApi::class.java.getResource("/openapi/patchable.yaml")).readText().let {
+      if (frontend == "collisions") {
+        it.replace(
+          "            labels:",
+          "            __proto__: {type: string}\n            constructor: {type: string}\n            labels:",
+        ) +
+          """
+
+          MergePatchSupport:
+            type: object
+            properties:
+              patch: {type: string}
+              merge: {type: string}
+          """.trimIndent().prependIndent("    ") + "\n"
+      } else {
+        it
+      }
+    }
   val schemas =
     openapi
       .substringAfter("  schemas:\n")
@@ -60,6 +78,9 @@ internal fun patchableApi(
     description: {type: 'string?', required: false}
     state: {type: State, required: false}
     display-name: {type: string, minLength: 2, required: false}
+    details: {type: Details, required: false}
+    numbers: {type: array, items: 'integer?', required: false}
+    labels: {type: Labels, required: false}
     """.trimIndent()
   val raml =
     """
@@ -71,28 +92,31 @@ internal fun patchableApi(
     types:
       NullableString: {type: 'string?'}
       State: {type: string, enum: [active, unknown], (sunday.unknownValue): unknown}
+      Details:
+        type: object
+        properties:
+          name: {type: string, minLength: 2}
+          note: {type: string, minLength: 2, default: default-note, required: false}
+          child: {type: Details, required: false}
+      LabelValue: {type: string, minLength: 2}
+      Labels:
+        type: object
+        properties:
+          /.+/: LabelValue
       Base:
         type: object
+        (sunday.patchable): true
         properties:
           count: {type: integer, minimum: 1, default: 5}
       SomeRequest:
         type: Base
         properties:
     FIELDS
-      BasePatch:
-        type: object
-        (sunday.patchable): true
-        properties:
-          count: {type: integer, minimum: 1, default: 5}
-      SomeRequestPatch:
-        type: BasePatch
-        properties:
-    FIELDS
     /request:
       put:
         displayName: updateRequest
         body:
-          application/merge-patch+json: SomeRequestPatch
+          application/merge-patch+json: SomeRequest
         responses:
           204:
       patch:
@@ -125,8 +149,7 @@ internal fun patchableApi(
       "raml" -> raml
       "raml-auto" ->
         raml
-          .replace(Regex("  BasePatch:[\\s\\S]*?(?=/request:)"), "")
-          .replace("application/merge-patch+json: SomeRequestPatch", "application/merge-patch+json: SomeRequest")
+          .replace("    (sunday.patchable): true\n", "")
       "asyncapi" -> asyncapi
       else -> referenced
     },

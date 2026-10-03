@@ -114,7 +114,7 @@ class PythonPatchableTypesTest : PythonTest() {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "raml-auto", "openapi", "asyncapi", "composed", "reference"])
+  @ValueSource(strings = ["raml", "raml-auto", "openapi", "asyncapi", "composed", "reference", "collisions"])
   fun `PATCH fields expose typed UNSET value and deletion states`(
     frontend: String,
     compiler: PythonCompiler,
@@ -144,7 +144,7 @@ class PythonPatchableTypesTest : PythonTest() {
               assert SomeRequestPatch.model_validate(patch, context={"mode": "request"}).model_dump(mode="json") == fields
           assert SomeRequestPatch().title is UNSET
           assert SomeRequestPatch(title=UNSET).model_dump(mode="json") == {}
-          for fields in ({"required-nullable": None}, {"required-alias": None}, {"title": "x"}, {"count": 0}, {"count": None}):
+          for fields in ({"required-nullable": None}, {"required-alias": None}, {"title": "x"}, {"count": 0}, {"count": None}, {"labels": {"bad": "x"}}):
               try:
                   SomeRequestPatch.model_validate(fields)
                   raise AssertionError(f"invalid patch accepted: {fields}")
@@ -164,6 +164,43 @@ class PythonPatchableTypesTest : PythonTest() {
           } else {
             "\"initial\""
           }}
+          base = SomeRequest.model_validate({"count": 2, "required-nullable": None, "required-alias": None})
+          try:
+              base.patch${if (frontend == "collisions") "_" else ""}()
+              raise AssertionError("required null snapshot accepted")
+          except ValidationError as error:
+              assert any(issue["loc"][0] == "required-nullable" for issue in error.errors())
+          assert base.patch${if (frontend == "collisions") "_" else ""}(from_model=base).model_dump(mode="json", by_alias=True) == {}
+          changed = SomeRequest.model_validate({"count": 3, "required-nullable": "valid", "required-alias": None, "title": "Changed"})
+          changes = changed.patch${if (frontend == "collisions") "_" else ""}(from_model=base)
+          assert changes.model_dump(mode="json", by_alias=True) == {"count": 3, "required-nullable": "valid", "title": "Changed"}
+          restored = base.merge${if (frontend == "collisions") "_" else ""}(changes)
+          assert restored.count == 3 and restored.required_nullable == "valid" and restored.required_alias is None
+          assert base.count == 2
+          assert restored.merge${if (frontend == "collisions") "_" else ""}(SomeRequestPatch(title=None)).title is None
+          non_null = SomeRequest.model_validate({"count": 3, "required-nullable": "valid", "required-alias": "valid"})
+          assert non_null.patch${if (frontend == "collisions") "_" else ""}() == SomeRequestPatch.from_model(non_null)
+          try:
+              base.patch${if (frontend == "collisions") "_" else ""}(from_model=non_null)
+              raise AssertionError("required null assignment accepted")
+          except ValidationError:
+              pass
+
+          nested_base = SomeRequest.model_validate(json.loads('{"count":2,"required-nullable":null,"required-alias":null,"details":{"name":"Original","note":"Remove","child":{"name":"Child","note":"Keep"}},"numbers":[1,null,2],"labels":{"keep":"yes","remove":"old"}}'))
+          nested_updated = SomeRequest.model_validate(json.loads('{"count":2,"required-nullable":null,"required-alias":null,"details":{"name":"Changed","note":"Remove","child":{"name":"Updated child","note":"Keep"}},"numbers":[3,null],"labels":{"keep":"yes","remove":"old"}}'))
+          nested_diff = nested_updated.patch${if (frontend == "collisions") "_" else ""}(from_model=nested_base)
+          assert nested_diff.model_dump(mode="json", by_alias=True) == json.loads('{"details":{"name":"Changed","child":{"name":"Updated child"}},"numbers":[3,null]}')
+          nested_merged = nested_base.merge${if (frontend == "collisions") "_" else ""}(nested_diff)
+          assert nested_merged.details.child.name == "Updated child" and nested_base.details.child.name == "Child"
+          assert nested_merged.details.name == "Changed" and nested_merged.numbers == [3, None]
+          nested_deleted = nested_base.merge${if (frontend == "collisions") "_" else ""}(SomeRequestPatch.model_validate(json.loads('{"details":{"note":null},"labels":{"remove":null}}')))
+          assert nested_deleted.details.note is None and "remove" not in nested_deleted.labels
+          assert nested_base.details.note == "Remove"
+          try:
+              base.merge${if (frontend == "collisions") "_" else ""}(SomeRequestPatch.model_validate({"details": {"note": "new"}}))
+              raise AssertionError("invalid merged child accepted")
+          except ValidationError:
+              pass
           patch = SomeRequestPatch(title="valid")
           patch.title = None
           SomeRequestPatch.model_validate(patch, context={"mode": "request"})

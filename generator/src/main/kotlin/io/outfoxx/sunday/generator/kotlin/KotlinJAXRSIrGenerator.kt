@@ -155,6 +155,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_STATUS
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.addAnnotation
+import io.outfoxx.sunday.generator.kotlin.utils.addKotlinPatchHelpers
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
@@ -478,6 +479,13 @@ class KotlinJAXRSIrGenerator(
         }
       }
     }
+    addKotlinPatchHelpers(
+      modelTypes,
+      typeRegistry.beanValidationTypes.takeIf {
+        KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options
+      },
+      typeRegistry::addModelType,
+    )
     models
       .flatMap { model ->
         buildList {

@@ -43,6 +43,7 @@ class PythonModelRenderer(
   private val defaultTolerance: Tolerance = Tolerance.Response,
 ) {
 
+  private var patchHelpers = PythonPatchHelpers(emptyList())
   private var modelIndex: Map<String, GeneratedModel> = mapOf()
   private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
   private var modelProperties = GeneratedModelProperties { modelIndex[it.name] }
@@ -57,6 +58,8 @@ class PythonModelRenderer(
   private fun renderNormalizedModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
     modelIndex = models.associateBy { model -> model.name }
+    patchHelpers = PythonPatchHelpers(models)
+    if (patchHelpers.enabled) module.addCode(patchHelpers.support())
     modelProperties = GeneratedModelProperties { modelIndex[it.name] }
     discriminatorFallbacks =
       buildList {
@@ -271,6 +274,7 @@ class PythonModelRenderer(
       ) +
         listOfNotNull(
           renderObjectConfiguration(),
+          patchHelpers.adapters(this),
           renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
@@ -1369,7 +1373,14 @@ class PythonModelRenderer(
         ?: externalDiscriminatorType
         ?: type.renderPythonType(nullable = false)
     val valueType =
-      if (!type.nullable && (model.patchable || required || defaultValue != null)) {
+      if (!type.nullable &&
+        (
+          model.patchable ||
+            required ||
+            defaultValue != null &&
+            !patchHelpers.canMerge(model)
+        )
+      ) {
         basePropertyType
       } else {
         PythonCodeBlock.of("%C | None", basePropertyType)

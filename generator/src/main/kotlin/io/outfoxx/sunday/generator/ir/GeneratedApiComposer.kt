@@ -365,6 +365,7 @@ class GeneratedApiComposer {
       source = null,
       properties = properties.map { property -> property.compositionSignature() },
       aliases = aliases.map { alias -> alias.compositionSignature() },
+      patchOf = patchOf?.compositionSignature(),
       additionalProperties = additionalProperties?.compositionSignature(),
       patternProperties = patternProperties.map { patternProperty -> patternProperty.compositionSignature() },
       targets = targets.mapValues { (_, target) -> target.compositionSignature() },
@@ -402,6 +403,8 @@ class GeneratedApiComposer {
 
   private fun GeneratedTypeRef.compositionSignature(): GeneratedTypeRef =
     copy(
+      // Collection kind and arguments define maps; readers use different descriptive names.
+      name = if (kind == GeneratedTypeRef.Kind.MAP) "map" else name,
       arguments = arguments.map { argument -> argument.compositionSignature() },
       source = null,
     )

@@ -121,6 +121,9 @@ models:
       nullable: true
     patchDeletionAllowed: true
   patchable: true
+  patchOf:
+    kind: "NAMED"
+    name: "ProjectCreatePatch"
 media:
   request:
   - "application/json"

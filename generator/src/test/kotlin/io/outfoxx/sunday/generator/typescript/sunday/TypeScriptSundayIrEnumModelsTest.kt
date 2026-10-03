@@ -316,7 +316,7 @@ class TypeScriptSundayIrEnumModelsTest : TypeScriptSundayIrTestSupport() {
     assertTrue(containerSource.contains("'list': z.array(z.string())"), containerSource)
     assertTrue(containerSource.contains("'set': z.array(z.string())"), containerSource)
     assertTrue(
-      containerSource.contains("'map': runtime.resolveSchema(z.record(z.string(), z.string()))"),
+      containerSource.contains("'map': z.record(z.string(), z.string())"),
       containerSource,
     )
     assertTrue(

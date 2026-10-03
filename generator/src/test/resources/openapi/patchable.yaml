@@ -51,6 +51,17 @@ components:
             description: {type: [string, 'null']}
             state: {$ref: '#/components/schemas/State'}
             display-name: {type: string, minLength: 2}
+            details: {$ref: '#/components/schemas/Details'}
+            numbers: {type: array, items: {type: [integer, 'null']}}
+            labels: {type: object, additionalProperties: {$ref: '#/components/schemas/LabelValue'}}
+    LabelValue: {type: string, minLength: 2}
+    Details:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 2}
+        note: {type: string, minLength: 2, default: default-note}
+        child: {$ref: '#/components/schemas/Details'}
     State:
       type: string
       enum: [active, unknown]

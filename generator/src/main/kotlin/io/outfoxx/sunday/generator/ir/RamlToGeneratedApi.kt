@@ -221,7 +221,7 @@ class RamlToGeneratedApi(
         tags = api.tags.mapNotNull { tag -> tag.generatedTag() },
         documentation = documentation(description = api.description),
       )
-    return GeneratedPatchModels.materialize(generatedApi, reusePatchTypes = true, autoPatchable = options.autoPatchable)
+    return GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
   }
 
   /** Converts a processed RAML document into a generated API IR composition fragment. */

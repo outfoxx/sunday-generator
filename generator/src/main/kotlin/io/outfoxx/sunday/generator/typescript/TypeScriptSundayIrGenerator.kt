@@ -91,6 +91,7 @@ import io.outfoxx.sunday.generator.typescript.utils.STREAMING_BODY
 import io.outfoxx.sunday.generator.typescript.utils.STREAMING_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT
 import io.outfoxx.sunday.generator.typescript.utils.TRANSPORT_REQUEST
+import io.outfoxx.sunday.generator.typescript.utils.TypeScriptPatchHelpers
 import io.outfoxx.sunday.generator.typescript.utils.URL_TEMPLATE
 import io.outfoxx.sunday.generator.typescript.utils.URL_TYPE
 import io.outfoxx.sunday.generator.typescript.utils.VALIDATE_MODEL_CONSTRUCTION
@@ -145,6 +146,16 @@ class TypeScriptSundayIrGenerator(
 ) {
 
   private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
+  private val patchSupportName by lazy {
+    val allocator = NameAllocator()
+    api.models
+      .map { it.name.toUpperCamelCase() }
+      .distinct()
+      .forEach { allocator.newName(it) }
+    val name = allocator.newName("MergePatchSupport")
+    typeRegistry.generatedTypeName(name, "!${name.camelCaseToKebabCase()}")
+  }
 
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
 
@@ -273,6 +284,10 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.isInDiscriminatedHierarchy(): Boolean = rootModel()?.discriminator != null
 
   private fun generateModelTypes() {
+    if (api.models.any { it.patchOf != null }) {
+      val (type, code) = TypeScriptPatchHelpers.support(patchSupportName)
+      typeRegistry.addModelType(patchSupportName, type, listOf(code))
+    }
     api.models
       .filter { model ->
         model.scope == null
@@ -1551,7 +1566,25 @@ class TypeScriptSundayIrGenerator(
         )
       }
 
-    typeRegistry.addModelType(typeName, typeSpec, listOf(schemaCode))
+    val patch = api.models.singleOrNull { it.patchOf?.name == model.name }
+    val original = api.models.singleOrNull { it.name == model.patchOf?.name }
+    val helpers =
+      when {
+        patch != null ->
+          TypeScriptPatchHelpers.adapters(
+            typeName,
+            patch.typeName(patch.name.toUpperCamelCase()),
+            patchSupportName,
+          )
+        original != null ->
+          TypeScriptPatchHelpers.factory(
+            typeName,
+            original.typeName(original.name.toUpperCamelCase()),
+            patchSupportName,
+          )
+        else -> null
+      }
+    typeRegistry.addModelType(typeName, typeSpec, listOfNotNull(schemaCode, helpers))
   }
 
   private fun schemaOutputType(typeName: TypeName.Standard): TypeName = schemaOutputTypeOf(typeName.sibling("Schema"))
@@ -2982,13 +3015,28 @@ class TypeScriptSundayIrGenerator(
         GeneratedTypeRef.Kind.ARRAY ->
           zodArraySchema(serviceTypeName, runtimeName)
 
-        GeneratedTypeRef.Kind.MAP, GeneratedTypeRef.Kind.UNION ->
+        GeneratedTypeRef.Kind.MAP ->
+          CodeBlock
+            .builder()
+            .add("%T.record(%T.string(), ", Z, Z)
+            .add(
+              arguments.lastOrNull()?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+                ?: CodeBlock.of("%T.unknown()", Z),
+            ).add(")")
+            .build()
+
+        GeneratedTypeRef.Kind.UNION ->
           runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
 
         GeneratedTypeRef.Kind.NAMED ->
-          modelOrNull(index)
-            ?.aliasedTypeRef()
-            ?.zodSchema(serviceTypeName, true, runtimeName = runtimeName)
+          modelOrNull(index)?.let { model ->
+            model.aliasedTypeRef()?.zodSchema(
+              serviceTypeName,
+              true,
+              model.validation.filter { (key, value) -> validation[key] != value },
+              runtimeName = runtimeName,
+            )
+          }
             ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
       }
 

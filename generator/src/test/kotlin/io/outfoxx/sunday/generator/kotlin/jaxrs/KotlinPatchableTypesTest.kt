@@ -33,6 +33,7 @@ import io.outfoxx.sunday.generator.tools.patchableApi
 import io.outfoxx.sunday.json.patch.PatchOp
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
@@ -54,6 +55,7 @@ class KotlinPatchableTypesTest {
     "server,openapi",
     "resource,openapi",
     "sunday,openapi",
+    "sunday,collisions",
     "client,raml",
     "server,raml",
     "resource,raml",
@@ -194,6 +196,7 @@ class KotlinPatchableTypesTest {
     for (json in listOf(
       """{"required-nullable":null}""",
       """{"required-alias":null}""",
+      """{"labels":{"bad":"x"}}""",
       "{\"title\":\"x\"}",
       "{\"count\":0}",
       "{\"count\":null}",
@@ -203,5 +206,71 @@ class KotlinPatchableTypesTest {
     assertThrows(Exception::class.java) { mapper.readValue("{}", ordinary) }
     val value = mapper.readValue("""{"count":2,"required-nullable":null,"required-alias":null}""", ordinary)
     assertEquals(if (frontend.startsWith("raml")) null else "initial", ordinary.getMethod("getTitle").invoke(value))
+    val mapperType = com.fasterxml.jackson.databind.ObjectMapper::class.java
+    val snapshot = ordinary.getMethod(if (frontend == "collisions") "patch_" else "patch", mapperType)
+    val difference = ordinary.getMethod(if (frontend == "collisions") "patch_" else "patch", ordinary, mapperType)
+    val merge = ordinary.getMethod(if (frontend == "collisions") "merge_" else "merge", patch, mapperType)
+    val snapshotError =
+      assertThrows(java.lang.reflect.InvocationTargetException::class.java) {
+        snapshot.invoke(value, mapper)
+      }.cause as com.fasterxml.jackson.databind.JsonMappingException
+    assertTrue(snapshotError.path.any { it.fieldName in setOf("required-nullable", "required-alias") })
+    assertEquals(mapper.readTree("{}"), mapper.valueToTree(difference.invoke(value, value, mapper)))
+    val changed =
+      mapper.readValue(
+        """{"count":3,"required-nullable":"valid","required-alias":null,"title":"Changed"}""",
+        ordinary,
+      )
+    val changes = difference.invoke(changed, value, mapper)
+    assertEquals(
+      mapper.readTree("""{"count":3,"required-nullable":"valid","title":"Changed"}"""),
+      mapper.valueToTree(changes),
+    )
+    val restored = merge.invoke(value, changes, mapper)
+    assertEquals(mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(changed), mapper.valueToTree(restored))
+    assertEquals(2, ordinary.getMethod("getCount").invoke(value))
+    val deleted = merge.invoke(changed, mapper.readValue("""{"title":null}""", patch), mapper)
+    assertEquals(null, ordinary.getMethod("getTitle").invoke(deleted))
+    val nonNull = mapper.readValue("""{"count":3,"required-nullable":"valid","required-alias":"valid"}""", ordinary)
+    assertEquals(
+      mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(nonNull),
+      mapper.valueToTree(snapshot.invoke(nonNull, mapper)),
+    )
+    assertThrows(java.lang.reflect.InvocationTargetException::class.java) { difference.invoke(value, nonNull, mapper) }
+    assertEquals(emptySet<String>(), nativeConstraintPaths("jakarta", restored, "Response"))
+    val nestedBase =
+      mapper.readValue(
+        """{"count":2,"required-nullable":null,"required-alias":null,"details":{"name":"Original","note":"Remove","child":{"name":"Child","note":"Keep"}},"numbers":[1,null,2],"labels":{"keep":"yes","remove":"old"}}""",
+        ordinary,
+      )
+    val nestedUpdated =
+      mapper.readValue(
+        """{"count":2,"required-nullable":null,"required-alias":null,"details":{"name":"Changed","note":"Remove","child":{"name":"Updated child","note":"Keep"}},"numbers":[3,null],"labels":{"keep":"yes","remove":"old"}}""",
+        ordinary,
+      )
+    val nestedDiff = difference.invoke(nestedUpdated, nestedBase, mapper)
+    assertEquals(
+      mapper.readTree("""{"details":{"name":"Changed","child":{"name":"Updated child"}},"numbers":[3,null]}"""),
+      mapper.valueToTree(nestedDiff),
+    )
+    val nestedMerged = merge.invoke(nestedBase, nestedDiff, mapper)
+    assertEquals(
+      mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(nestedUpdated),
+      mapper.valueToTree(nestedMerged),
+    )
+    val nestedDeleted =
+      merge.invoke(
+        nestedBase,
+        mapper.readValue("""{"details":{"note":null},"labels":{"remove":null}}""", patch),
+        mapper,
+      )
+    val nestedTree = mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(nestedDeleted)
+    assertEquals("Original", nestedTree.path("details").path("name").textValue())
+    assertFalse(nestedTree.path("details").has("note"))
+    assertFalse(nestedTree.path("labels").has("remove"))
+    assertTrue(mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(nestedBase).path("details").has("note"))
+    assertThrows(java.lang.reflect.InvocationTargetException::class.java) {
+      merge.invoke(value, mapper.readValue("""{"details":{"note":"new"}}""", patch), mapper)
+    }
   }
 }

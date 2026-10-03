@@ -22,7 +22,7 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 /** Expands schema patch capabilities into ordinary and presence-preserving model declarations. */
 internal object GeneratedPatchModels {
 
-  /** Projects patch-only IR declarations, including RAML models, into optional fields without defaults. */
+  /** Projects patch-only IR declarations into optional fields without defaults. */
   fun normalizeFields(models: List<GeneratedModel>): List<GeneratedModel> {
     val declarations = models.associateBy { it.name }
     val properties = GeneratedModelProperties { declarations[it.name] }
@@ -48,11 +48,9 @@ internal object GeneratedPatchModels {
 
   /**
    * Adds companions for annotated schemas and merge-patch request bodies, independently of the HTTP method.
-   * RAML's explicitly declared patch types are reused rather than expanded into another companion.
    */
   fun materialize(
     api: GeneratedApi,
-    reusePatchTypes: Boolean = false,
     autoPatchable: Boolean = true,
   ): GeneratedApi {
     val mergePatchTypes =
@@ -64,7 +62,7 @@ internal object GeneratedPatchModels {
         .map { it.type }
         .takeIf { autoPatchable }
         .orEmpty()
-    if (mergePatchTypes.isEmpty() && (reusePatchTypes || api.models.none { it.patchable })) return api
+    if (mergePatchTypes.isEmpty() && api.models.none { it.patchable && it.patchOf == null }) return api
     val models = api.models.associateBy { it.name }
     val properties = GeneratedModelProperties { models[it.name] }
     val allocator = OpenApiNameAllocator(models.keys + api.problems.map { it.name })
@@ -81,9 +79,44 @@ internal object GeneratedPatchModels {
       model.name !in visited &&
         (model.patchable || parents(model).any { patchable(it, visited + model.name) })
 
-    fun reserve(model: GeneratedModel) {
-      if (model.name in patchNames) return
-      if (reusePatchTypes && model.patchable) return
+    lateinit var reserve: (GeneratedModel) -> Unit
+
+    fun patchType(
+      reference: GeneratedTypeRef,
+      maps: Set<String> = emptySet(),
+    ): GeneratedTypeRef {
+      val declaration = properties.declarationType(reference)
+      val map = models[declaration.name]?.takeIf { it.kind == GeneratedModel.Kind.MAP }
+      if (map != null) {
+        if (map.name in maps) {
+          genError("Recursive map schema '${map.name}' cannot be projected into merge-patch values")
+        }
+        return GeneratedTypeRef(
+          GeneratedTypeRef.Kind.MAP,
+          "object",
+          nullable = reference.nullable,
+          arguments = map.aliases.map { patchType(it, maps + map.name).copy(nullable = true) },
+        )
+      }
+      if (declaration.kind == GeneratedTypeRef.Kind.MAP) {
+        return declaration.copy(arguments = declaration.arguments.map { patchType(it, maps).copy(nullable = true) })
+      }
+      val model = models[reference.name]
+      if (model != null &&
+        properties.declarationModel(reference)?.kind == GeneratedModel.Kind.OBJECT &&
+        model.discriminator == null &&
+        model.discriminatorMappings.isEmpty() &&
+        !model.externallyDiscriminated
+      ) {
+        reserve(model)
+        return reference.copy(name = patchNames.getValue(model.name))
+      }
+      return reference
+    }
+
+    reserve = reserve@{ model ->
+      if (model.patchOf != null) return@reserve
+      if (model.name in patchNames) return@reserve
       val objectAlias =
         model.kind == GeneratedModel.Kind.SCALAR_ALIAS &&
           !model.nominal &&
@@ -97,11 +130,14 @@ internal object GeneratedPatchModels {
         )
       }
       patchNames[model.name] = allocator.allocate("${model.name}Patch")
-      parents(model).forEach(::reserve)
+      parents(model).forEach { reserve(it) }
+      model.properties.forEach { patchType(it.type) }
+      model.additionalProperties?.type?.let(::patchType)
+      model.patternProperties.forEach { patchType(it.type) }
     }
 
-    val marked = if (reusePatchTypes) emptyList() else api.models.filter { patchable(it) }
-    marked.forEach(::reserve)
+    val marked = api.models.filter { it.patchOf == null && patchable(it) }
+    marked.forEach { reserve(it) }
     mergePatchTypes.forEach { reference ->
       val model = models[reference.name]
       if (reference.kind != GeneratedTypeRef.Kind.NAMED || model == null) {
@@ -115,7 +151,25 @@ internal object GeneratedPatchModels {
         model.copy(
           name = patchName,
           patchable = true,
-          properties = patchFields(model, properties),
+          patchOf = GeneratedTypeRef.named(model.name, scope = model.scope),
+          properties = patchFields(model, properties).map { it.copy(type = patchType(it.type)) },
+          additionalProperties =
+            model.additionalProperties?.let {
+              it.copy(
+                allowedValues = it.allowedValues?.filterNotNull()?.plus(null),
+                type =
+                  it.type?.let { type ->
+                    patchType(type).copy(nullable = true)
+                  },
+              )
+            },
+          patternProperties =
+            model.patternProperties.map {
+              it.copy(
+                allowedValues = it.allowedValues?.filterNotNull()?.plus(null),
+                type = patchType(it.type).copy(nullable = true),
+              )
+            },
           inherits = model.inherits.map { it.copy(name = patchNames[it.name] ?: it.name) },
           aliases = model.aliases.map { it.copy(name = patchNames[it.name] ?: it.name) },
           targets = model.targets.mapValues { (_, target) -> target.copy(typeName = null, implementation = null) },
@@ -126,7 +180,7 @@ internal object GeneratedPatchModels {
     val selectedTypes = (marked.map { it.name } + mergePatchTypes.map { it.name }).toSet()
     val selectedPatchNames = patchNames.filterKeys { it in selectedTypes }
     return api.copy(
-      models = (if (reusePatchTypes) api.models else api.models.map { it.copy(patchable = false) }) + patches,
+      models = api.models.map { if (it.patchOf == null) it.copy(patchable = false) else it } + patches,
       services =
         api.services.map { service ->
           service.copy(

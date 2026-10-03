@@ -69,6 +69,51 @@ class GeneratedPatchModelsTest {
     val roundTrip = GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api))
     assertEquals(api, roundTrip)
     assertEquals(api.models, GeneratedPatchModels.normalizeFields(roundTrip.models))
+    assertEquals(api, GeneratedPatchModels.materialize(api))
+  }
+
+  @Test
+  fun `open member constraints allow deletion in companions without changing the original`() {
+    val model =
+      GeneratedModel(
+        "Item",
+        GeneratedModel.Kind.OBJECT,
+        patchable = true,
+        additionalProperties =
+          GeneratedAdditionalProperties(
+            allowed = true,
+            type = GeneratedTypeRef.scalar("string"),
+            allowedValues = listOf("fixed"),
+          ),
+        patternProperties =
+          listOf(
+            GeneratedPatternProperty(
+              "^x-",
+              GeneratedTypeRef.scalar("string"),
+              allowedValues = listOf("fixed"),
+            ),
+          ),
+      )
+    val api =
+      GeneratedPatchModels.materialize(
+        GeneratedApi(
+          name = "OpenPatch",
+          source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+          models = listOf(model),
+        ),
+      )
+    val original = api.models.single { it.name == "Item" }
+    val patch = api.models.single { it.name == "ItemPatch" }
+    assertEquals(listOf("fixed"), original.additionalProperties?.allowedValues)
+    assertEquals(listOf("fixed"), original.patternProperties.single().allowedValues)
+    assertEquals(listOf("fixed", null), patch.additionalProperties?.allowedValues)
+    assertEquals(listOf("fixed", null), patch.patternProperties.single().allowedValues)
+    assertEquals(true, patch.additionalProperties?.type?.nullable)
+    assertTrue(
+      patch.patternProperties
+        .single()
+        .type.nullable,
+    )
   }
 
   @Test
@@ -140,10 +185,19 @@ class GeneratedPatchModelsTest {
   ) {
     val api = patchableApi(frontend, directory)
     assertEquals("1", api.irVersion)
+    assertEquals(api, GeneratedPatchModels.materialize(api))
     val models = api.models.associateBy { it.name }
     assertFalse(models.getValue("SomeRequest").patchable)
     val patch = models.getValue("SomeRequestPatch")
     assertTrue(patch.patchable)
+    assertEquals(GeneratedTypeRef.named("SomeRequest"), patch.patchOf)
+    assertTrue(models.getValue("DetailsPatch").patchable)
+    assertEquals(
+      "DetailsPatch",
+      patch.properties
+        .single { it.name == "details" }
+        .type.name,
+    )
     val basePatch = models.getValue(patch.inherits.single().name)
     assertTrue(basePatch.patchable)
     assertEquals("1", basePatch.properties.single { it.name == "count" }.validation["minimum"])
@@ -153,10 +207,8 @@ class GeneratedPatchModelsTest {
         .single { it.name == "description" }
         .type.nullable,
     )
-    if (frontend != "raml") {
-      assertTrue(patch.properties.all { !it.required && it.defaultValue == null })
-      assertTrue(basePatch.properties.all { !it.required && it.defaultValue == null })
-    }
+    assertTrue(patch.properties.all { !it.required && it.defaultValue == null })
+    assertTrue(basePatch.properties.all { !it.required && it.defaultValue == null })
     val operations = api.services.flatMap { it.operations }
     operations.filter { it.id == "updateRequest" }.forEach { operation ->
       assertEquals("PUT", operation.method)
@@ -424,5 +476,23 @@ class GeneratedPatchModelsTest {
       )
     val error = assertThrows(Exception::class.java) { GeneratedPatchModels.materialize(source) }
     assertTrue(error.message.orEmpty().contains("must be an object schema"))
+    val recursiveMap =
+      source.copy(
+        models =
+          listOf(
+            GeneratedModel("Map", GeneratedModel.Kind.MAP, aliases = listOf(GeneratedTypeRef.named("Map"))),
+            GeneratedModel(
+              "Item",
+              GeneratedModel.Kind.OBJECT,
+              patchable = true,
+              properties =
+                listOf(
+                  GeneratedModelProperty("values", GeneratedTypeRef.named("Map")),
+                ),
+            ),
+          ),
+      )
+    val mapError = assertThrows(Exception::class.java) { GeneratedPatchModels.materialize(recursiveMap) }
+    assertTrue(mapError.message.orEmpty().contains("Recursive map schema 'Map'"))
   }
 }

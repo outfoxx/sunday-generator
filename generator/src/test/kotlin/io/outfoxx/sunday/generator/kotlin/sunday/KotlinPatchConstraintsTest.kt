@@ -314,8 +314,8 @@ class KotlinPatchConstraintsTest {
   ) {
     val result = compile(RamlToGeneratedApi().convert(TestAPIProcessing.process(source)))
     val mapper = jacksonObjectMapper()
-    val parent = result.classLoader.loadClass("io.test.Test")
-    val child = result.classLoader.loadClass("io.test.Child")
+    val parent = result.classLoader.loadClass("io.test.TestPatch")
+    val child = result.classLoader.loadClass("io.test.ChildPatch")
     assertTrue(parent.isAssignableFrom(child))
     for (model in listOf(parent, child)) {
       val empty = mapper.convertValue(emptyMap<String, Any>(), model)

@@ -105,6 +105,7 @@ import io.outfoxx.sunday.generator.swift.utils.SwiftModelConstraints
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelDefaults
 import io.outfoxx.sunday.generator.swift.utils.SwiftModelValidation
 import io.outfoxx.sunday.generator.swift.utils.SwiftNominalTypes
+import io.outfoxx.sunday.generator.swift.utils.SwiftPatchHelpers
 import io.outfoxx.sunday.generator.swift.utils.SwiftValidationViews
 import io.outfoxx.sunday.generator.swift.utils.SwiftValueConstraints
 import io.outfoxx.sunday.generator.swift.utils.TRANSPORT
@@ -172,6 +173,8 @@ class SwiftSundayIrGenerator(
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
   private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
+  private val patchHelpers by lazy { SwiftPatchHelpers(api.models) { it.swiftDeclaredTypeName() } }
+
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator =
     SwiftNominalTypes(nominalTypes, { validationViews }, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
@@ -304,6 +307,7 @@ class SwiftSundayIrGenerator(
       }.forEach { generatedModel ->
         val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
         val typeName = model.swiftDeclaredTypeName()
+        patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
         typeRegistry.addModelType(
           typeName,
           typeBuilder,
@@ -319,6 +323,7 @@ class SwiftSundayIrGenerator(
           )
         }
       }
+    if (patchHelpers.enabled) typeRegistry.addModelType(patchHelpers.supportName, patchHelpers.support())
   }
 
   private fun GeneratedModel.swiftFallbackTypeName(fallback: GeneratedDiscriminatorFallback): DeclaredTypeName {
@@ -4649,7 +4654,7 @@ class SwiftSundayIrGenerator(
                 "container.contains(.%N) ? %L : %L",
                 property.name.swiftIdentifierName,
                 decode,
-                it,
+                patchHelpers.decodingDefault(it),
               )
             }
               ?: decode,
