@@ -75,6 +75,12 @@ abstract class CommonGenerateCommand(
     help = "Preserve schema-permitted dynamic model fields for serialization",
   ).flag("-no-preserve-unknown-fields", default = true, defaultForHelp = "enabled")
 
+  /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
+  val autoPatchable by option(
+    "-auto-patchable",
+    help = "Automatically generate patchable types for application/merge-patch+json request bodies",
+  ).flag("-no-auto-patchable", default = true, defaultForHelp = "enabled")
+
   /** Explicit environment profile used by policy and security metadata. */
   val profile by option("-profile", help = "Select a named policy and security profile")
     .validate { require(it.isNotBlank()) { "Generation profile must not be blank" } }

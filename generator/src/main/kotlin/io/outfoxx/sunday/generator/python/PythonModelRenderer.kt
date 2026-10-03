@@ -22,6 +22,7 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedTolerance
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
@@ -50,7 +51,10 @@ class PythonModelRenderer(
   private val enumStringAdapters = linkedMapOf<Map<String, String>, String>()
 
   /** Renders the given models into the package `models.py` module. */
-  fun renderModels(models: List<GeneratedModel>): PythonModule {
+  fun renderModels(models: List<GeneratedModel>): PythonModule =
+    renderNormalizedModels(GeneratedPatchModels.normalizeFields(models))
+
+  private fun renderNormalizedModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
     modelIndex = models.associateBy { model -> model.name }
     modelProperties = GeneratedModelProperties { modelIndex[it.name] }
@@ -285,7 +289,9 @@ class PythonModelRenderer(
         .filter { inherited ->
           inherited.kind == GeneratedTypeRef.Kind.NAMED && modelIndex[inherited.name]?.isObjectClass() == true
         }.map { inherited -> inherited.renderPythonType(nullable = false) }
-        .ifEmpty { listOf(PythonCodeBlock.of("%T", PythonSymbol("sunday", "SundayModel"))) }
+        .ifEmpty {
+          listOf(PythonCodeBlock.of("%T", PythonSymbol("sunday", if (patchable) "SundayPatchModel" else "SundayModel")))
+        }
 
     return PythonCodeBlock.of(
       """
@@ -570,7 +576,11 @@ class PythonModelRenderer(
   }
 
   private fun GeneratedModel.renderNonNullableOptionalValidator(): PythonCodeBlock? {
-    val fields = effectiveModelProperties().filter { !it.required && !it.type.acceptsNull() }
+    val fields =
+      effectiveModelProperties().filter {
+        !it.required &&
+          (it.patchDeletionAllowed == false || !it.type.acceptsNull())
+      }
     if (fields.isEmpty()) return null
     // Field validation lets Pydantic select the effective input spelling before checking nullability.
     return PythonCodeBlock.of(
@@ -1358,25 +1368,34 @@ class PythonModelRenderer(
       literalValue?.renderPythonLiteralType()
         ?: externalDiscriminatorType
         ?: type.renderPythonType(nullable = false)
-    val propertyType =
-      if (!type.nullable && (required || defaultValue != null)) {
+    val valueType =
+      if (!type.nullable && (model.patchable || required || defaultValue != null)) {
         basePropertyType
       } else {
         PythonCodeBlock.of("%C | None", basePropertyType)
       }
+    val propertyType =
+      if (model.patchable) {
+        PythonCodeBlock.of("%C | %T", valueType, PythonSymbol("sunday", "UnsetType"))
+      } else {
+        valueType
+      }
     val alias = serializationName ?: name
     val fieldArguments = mutableListOf<PythonCodeBlock>()
-    if (!required) {
+    if (model.patchable) {
+      fieldArguments += PythonCodeBlock.of("default_factory=lambda: %T", PythonSymbol("sunday", "UNSET"))
+      fieldArguments += PythonCodeBlock.of("exclude_if=%T", PythonSymbol("sunday", "is_unset"))
+    } else if (!required) {
       fieldArguments +=
         PythonCodeBlock.of(
           "default=%C",
           defaultValue?.let { value -> renderDefaultValue(value, model.name) } ?: PythonCodeBlock.of("None"),
         )
     }
-    if (!required && !type.acceptsNull()) {
+    if (!model.patchable && !required && !type.acceptsNull()) {
       fieldArguments += PythonCodeBlock.of("exclude_if=lambda value: value is None")
     }
-    if (defaultValue != null) {
+    if (!model.patchable && defaultValue != null) {
       fieldArguments += PythonCodeBlock.of("validate_default=True")
     }
     if (alias != propertyName) {
@@ -1463,7 +1482,9 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
-      if ((enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) && inline.render(context).length > 120) {
+      if ((model.patchable || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
+        inline.render(context).length > 120
+      ) {
         val multilineArguments =
           if (arguments.render(context).length + 8 <= 120) {
             PythonCodeBlock.of("        %C", arguments)

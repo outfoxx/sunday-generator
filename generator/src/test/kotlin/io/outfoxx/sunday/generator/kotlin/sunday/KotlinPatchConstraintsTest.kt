@@ -271,9 +271,9 @@ class KotlinPatchConstraintsTest {
     val stateGetter = model.getMethod("getStateTag")
     assertEquals(state, (stateGetter.genericReturnType as ParameterizedType).actualTypeArguments.single())
     assertTrue(state.isInstance((stateGetter.invoke(decoded) as PatchOp.Set<*>).value))
-    val deleted = mapper.convertValue(mapOf("nullableStatus" to null), model)
-    assertTrue(model.getMethod("getNullableStatus").invoke(deleted) is PatchOp.Delete<*>)
-    assertEquals(mapper.valueToTree(mapOf("nullableStatus" to null)), mapper.valueToTree(deleted))
+    val deleted = mapper.convertValue(mapOf("state-tag" to null), model)
+    assertTrue(model.getMethod("getStateTag").invoke(deleted) is PatchOp.Delete<*>)
+    assertEquals(mapper.valueToTree(mapOf("state-tag" to null)), mapper.valueToTree(deleted))
     for ((field, invalid) in listOf(
       "status" to "inactive",
       "status" to null,
@@ -290,6 +290,7 @@ class KotlinPatchConstraintsTest {
       "flag" to 0,
       "flag" to true,
       "nullableStatus" to "inactive",
+      "nullableStatus" to null,
     )) {
       assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(mapOf(field to invalid), model) }
     }
@@ -319,11 +320,15 @@ class KotlinPatchConstraintsTest {
     for (model in listOf(parent, child)) {
       val empty = mapper.convertValue(emptyMap<String, Any>(), model)
       assertEquals(mapper.createObjectNode(), mapper.valueToTree(empty))
-      val payload = mapOf("string" to "value", "int" to 2, "nullable" to null)
+      val payload =
+        mapOf("string" to "value", "int" to 2, "nullable" to "value", "optional" to null, "nullableOptional" to null)
       val decoded = mapper.convertValue(payload, model)
       assertEquals(PatchOp.set("value"), model.getMethod("getString").invoke(decoded))
-      assertTrue(model.getMethod("getNullable").invoke(decoded) is PatchOp.Delete<*>)
+      assertEquals(PatchOp.set("value"), model.getMethod("getNullable").invoke(decoded))
+      assertTrue(model.getMethod("getOptional").invoke(decoded) is PatchOp.Delete<*>)
+      assertTrue(model.getMethod("getNullableOptional").invoke(decoded) is PatchOp.Delete<*>)
       assertEquals(mapper.valueToTree(payload), mapper.valueToTree(decoded))
+      assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(mapOf("nullable" to null), model) }
     }
   }
 

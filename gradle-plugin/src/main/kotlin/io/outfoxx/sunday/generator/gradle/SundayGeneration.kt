@@ -67,6 +67,9 @@ class SundayGeneration(
   val defaultTolerance: Property<Tolerance> =
     objects.property(Tolerance::class.java).convention(Tolerance.Response)
 
+  /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
+  val autoPatchable: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
   val generateModel: Property<Boolean> = objects.property(Boolean::class.java)
   val generateService: Property<Boolean> = objects.property(Boolean::class.java)
   val generateBrokerServices: Property<Boolean> = objects.property(Boolean::class.java)

@@ -80,6 +80,12 @@ class IrCommand : CliktCommand(name = "ir") {
     help = "Use the first operation tag as the generated service when no x-sunday-service is present",
   ).flag(default = false)
 
+  /** Derives patch companions for merge-patch request bodies without requiring a schema annotation. */
+  val autoPatchable by option(
+    "-auto-patchable",
+    help = "Automatically generate patchable types for application/merge-patch+json request bodies",
+  ).flag("-no-auto-patchable", default = true, defaultForHelp = "enabled")
+
   /** Selects metadata for a client or server artifact; omitted to retain all environments. */
   val mode by option("-mode", help = "Project IR metadata for client or server consumption")
     .enum<GenerationMode> { it.name.lowercase() }
@@ -113,6 +119,7 @@ class IrCommand : CliktCommand(name = "ir") {
     GeneratedApiIrExporter(
       GeneratedApiIrOptions(
         deriveServicesFromTags = servicesFromTags,
+        autoPatchable = autoPatchable,
         openApiReferences = openApiReferenceOptions(),
         projection = mode?.let { GenerationContext(it, profile) },
       ),

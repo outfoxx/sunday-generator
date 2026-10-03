@@ -73,8 +73,9 @@ class OpenApiToGeneratedApi(
         documentation = documentation(description = document.info["description"] as? String),
       )
 
+    val patchApi = GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
     return GeneratedApiFragment(
-      api = generatedApi,
+      api = patchApi,
       apiId = document.compositionApiIdentity(),
       serviceIdentities = serviceFragments.associate { fragment -> fragment.service.name to fragment.identity },
       operationIdentities =
@@ -82,7 +83,7 @@ class OpenApiToGeneratedApi(
           .flatMap { fragment -> fragment.operationIdentities }
           .toMap(),
       modelIdentities =
-        localModels.values.associate { model ->
+        patchApi.models.associate { model ->
           model.name to GeneratedIdentity.native(model.name.replaceFirstChar { char -> char.lowercase() })
         },
     )
@@ -446,6 +447,11 @@ class OpenApiToGeneratedApi(
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, localModels, discriminatorValues, scope).let { model ->
       model.copy(
+        patchable =
+          GeneratedPatchModels.annotation(
+            analysis.analyze(schema).model.schema["x-sunday-patchable"],
+            "OpenAPI model '$name'",
+          ),
         tolerance =
           GeneratedTolerance.parse(
             analysis.analyze(schema).model.schema["x-sunday-tolerance"],

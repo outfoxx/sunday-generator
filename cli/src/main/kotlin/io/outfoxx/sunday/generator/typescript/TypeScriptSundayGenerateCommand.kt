@@ -49,6 +49,7 @@ open class TypeScriptSundayGenerateCommand :
         GeneratedApiIrOptions(
           openApiReferences = openApiReferenceOptions(),
           deriveServicesFromTags = servicesFromTags,
+          autoPatchable = autoPatchable,
           generationMode = GenerationMode.Client,
         ),
       ).export(files.map { file -> file.toURI() })

@@ -65,7 +65,7 @@ This output requires Sunday Python `2.0.0-beta.2` or later, which provides `requ
 python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.5'
 ```
 
-Compiler-backed tests use `2.0.0-beta.5` by default, including directional model validation support. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
+Compiler-backed tests use `2.0.0-beta.6` by default, including directional model validation and merge-patch support. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
 
 ```sh
 SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*PythonContentTypeTest'

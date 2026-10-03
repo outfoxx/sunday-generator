@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import com.fasterxml.jackson.annotation.JsonInclude
+
 /**
  * Property declared on a generated object model.
  */
@@ -34,5 +36,9 @@ data class GeneratedModelProperty(
   val deprecated: Boolean = false,
   val documentation: GeneratedDocumentation? = null,
   /** Permitted scalar wire values; null means unrestricted, while a list may itself contain null. */
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
   val allowedValues: List<Any?>? = null,
+  /** Whether a merge-patch member may be deleted; null identifies an ordinary, unprojected property. */
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val patchDeletionAllowed: Boolean? = null,
 )

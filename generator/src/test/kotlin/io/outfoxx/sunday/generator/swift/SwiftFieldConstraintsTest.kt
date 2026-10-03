@@ -164,7 +164,7 @@ class SwiftFieldConstraintsTest {
           }
           let patch = try NullableChoicePatch()
           XCTAssertTrue(patch.isValid(.request))
-          XCTAssertThrowsError(try patch.withChoice(choice: .delete))
+          XCTAssertTrue(try patch.withOptional(optional: .delete).isValid(.request))
           XCTAssertThrowsError(try JSONDecoder().decode(NullableChoicePatch.self, from: Data(#"{"choice":null}"#.utf8)))
           XCTAssertTrue(try patch.withChoice(choice: .set("a")).isValid(.request))
         }

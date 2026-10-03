@@ -56,6 +56,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelScope
 import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedProtocolBinding
@@ -173,10 +174,12 @@ import java.util.UUID
  * Kotlin/Sunday service generator that reads the durable Sunday IR contract.
  */
 class KotlinSundayIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: KotlinTypeOutputRegistry,
   private val options: KotlinSundayOptions,
 ) {
+
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
 
   private val requestTypeVariable = TypeVariableName("Req", SUNDAY_REQUEST)
   private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable)
@@ -192,7 +195,7 @@ class KotlinSundayIrGenerator(
   }
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val apiIndex = GeneratedApiIndex(api)
+  private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator by lazy {
@@ -1904,7 +1907,7 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedModelProperty.modelPropertyTypeName(patchable: Boolean = false): TypeName =
     if (patchable) {
-      val base = if (type.nullable) PATCH_OP else UPDATE_OP
+      val base = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
       base.parameterizedBy(type.kotlinTypeName().copy(nullable = false).withCascadedValidation(type))
     } else {
       type.kotlinTypeName().copy(nullable = type.nullable || !required).withCascadedValidation(type)

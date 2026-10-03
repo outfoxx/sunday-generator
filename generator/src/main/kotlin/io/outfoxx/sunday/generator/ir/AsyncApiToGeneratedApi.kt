@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
 import java.net.URI
@@ -50,8 +51,9 @@ class AsyncApiToGeneratedApi(
           protocol = GeneratedProtocol(servers = servers).takeUnless { it == GeneratedProtocol() },
         )
 
+      val patchApi = GeneratedPatchModels.materialize(generatedApi, autoPatchable = options.autoPatchable)
       return GeneratedApiFragment(
-        api = generatedApi,
+        api = patchApi,
         apiId = sourceDocument.compositionApiIdentity(sourceUri.toString()),
         serviceIdentities = serviceFragments.associate { fragment -> fragment.service.name to fragment.identity },
         operationIdentities =
@@ -59,7 +61,7 @@ class AsyncApiToGeneratedApi(
             .flatMap { fragment -> fragment.operationIdentities }
             .toMap(),
         modelIdentities =
-          localModels.values.associate { model ->
+          patchApi.models.associate { model ->
             model.name to GeneratedIdentity.native(model.name.replaceFirstChar { char -> char.lowercase() })
           },
       )
@@ -386,6 +388,7 @@ class AsyncApiToGeneratedApi(
         kind = GeneratedTypeRef.Kind.UNION,
         name = "union",
         arguments = nonNullBranches.map { branch -> schemaTypeRef(branch, null, location, localModels) },
+        nullable = nonNullBranches.size != oneOf.size,
       )
     }
 
@@ -410,7 +413,7 @@ class AsyncApiToGeneratedApi(
         )
 
       else -> GeneratedTypeRef.scalar(schema.scalarTypeName(), format = schema["format"] as? String)
-    }
+    }.let { type -> type.copy(nullable = type.nullable || (schema["type"] as? List<*>)?.contains("null") == true) }
   }
 
   private fun materializedNamedTypeRef(
@@ -430,7 +433,8 @@ class AsyncApiToGeneratedApi(
         localModels[name] = generatedModel(name, schema, location, localModels)
       }
     }
-    return GeneratedTypeRef.named(name)
+    val reference = GeneratedTypeRef.named(name)
+    return reference.copy(nullable = GeneratedModelProperties { localModels[it.name] }.acceptsNull(reference))
   }
 
   private fun materializedInlineModel(
@@ -452,6 +456,7 @@ class AsyncApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, location, localModels).copy(
+      patchable = GeneratedPatchModels.annotation(schema["x-sunday-patchable"], "AsyncAPI model '$name'"),
       tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerance"], "AsyncAPI model '$name' x-sunday-tolerance"),
     )
 
@@ -531,7 +536,15 @@ class AsyncApiToGeneratedApi(
         kind = GeneratedModel.Kind.SCALAR_ALIAS,
         nominal = schema["x-sunday-wrapper-type"] == true,
         source = source,
-        aliases = listOf(GeneratedTypeRef.scalar(scalarTypeName, format = schema["format"] as? String)),
+        aliases =
+          listOf(
+            GeneratedTypeRef.scalar(
+              scalarTypeName,
+              nullable =
+                (schema["type"] as? List<*>)?.contains("null") == true,
+              format = schema["format"] as? String,
+            ),
+          ),
         validation = validation(schema),
         documentation = documentation(description = schema["description"] as? String),
       )

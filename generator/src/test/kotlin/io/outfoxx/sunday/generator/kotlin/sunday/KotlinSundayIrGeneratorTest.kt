@@ -2615,7 +2615,7 @@ class KotlinSundayIrGeneratorTest {
     assertContains(userSource, "public val `displayName`: String")
     assertContains(userSource, "get() = String::class.qualifiedName + \"-display\"")
     assertContains(patchSource, "public interface UserPatch : Patch")
-    assertContains(patchSource, "public var `displayName`: UpdateOp<String>")
+    assertContains(patchSource, "public var `displayName`: PatchOp<String>")
   }
 
   @OptIn(ExperimentalCompilerApi::class)

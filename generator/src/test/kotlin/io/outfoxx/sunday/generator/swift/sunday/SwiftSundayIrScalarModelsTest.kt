@@ -156,12 +156,12 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
           XCTAssertNil(RequiredIntegerDefaults().count)
           XCTAssertThrowsError(try decoder.decode(RequiredIntegerDefaults.self, from: Data("{}".utf8)))
           for value in [IntegerPatch(), try decoder.decode(IntegerPatch.self, from: Data("{}".utf8))] {
-            XCTAssertNil(value.count)
-            XCTAssertNil(value.nullable)
+            XCTAssertEqual(value.count, .unchanged)
+            XCTAssertEqual(value.nullable, .unchanged)
             XCTAssertEqual(String(data: try JSONEncoder().encode(value), encoding: .utf8), "{}")
           }
           let deleted = try decoder.decode(IntegerPatch.self, from: Data(#"{"nullable":null}"#.utf8))
-          guard case .delete? = deleted.nullable else { return XCTFail("null must remain a delete") }
+          guard case .delete = deleted.nullable else { return XCTFail("null must remain a delete") }
         }
       }
       """.trimIndent(),

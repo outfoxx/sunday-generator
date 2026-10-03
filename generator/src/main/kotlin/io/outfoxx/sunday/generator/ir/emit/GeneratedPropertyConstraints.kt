@@ -29,6 +29,12 @@ internal object GeneratedPropertyConstraints {
   ): GeneratedModelProperty =
     right.copy(
       required = left.required || right.required,
+      patchDeletionAllowed =
+        if (left.patchDeletionAllowed == null && right.patchDeletionAllowed == null) {
+          null
+        } else {
+          left.patchDeletionAllowed != false && right.patchDeletionAllowed != false
+        },
       type = right.type.copy(nullable = left.type.nullable && right.type.nullable),
       defaultValue = right.defaultValue ?: left.defaultValue,
       validation = intersectValidation(left.validation, right.validation, context),

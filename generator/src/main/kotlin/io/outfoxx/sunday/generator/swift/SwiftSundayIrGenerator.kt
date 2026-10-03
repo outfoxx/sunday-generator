@@ -29,6 +29,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelScope
 import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -159,15 +160,17 @@ import io.outfoxx.swiftpoet.tag
  * Swift/Sunday service generator that renders service declarations from Sunday IR.
  */
 class SwiftSundayIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: SwiftTypeOutputRegistry,
   private val options: SwiftSundayOptions,
 ) {
 
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
   private val transportTypeVariable = typeVariable("TransportType", bound(TRANSPORT))
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val apiIndex = GeneratedApiIndex(api)
+  private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator =
@@ -2518,13 +2521,11 @@ class SwiftSundayIrGenerator(
       kind == GeneratedModel.Kind.OBJECT &&
         !isRecursiveSwiftObjectModel &&
         patchable &&
-        inherits.isEmpty() &&
         discriminator == null &&
         discriminatorMappings.isEmpty() &&
         !externallyDiscriminated &&
         properties.none { property -> property.externalDiscriminator != null } &&
-        !isProblemModel &&
-        !hasInheritingModels
+        !isProblemModel
 
   private val GeneratedModel.isInheritedObjectValueModel: Boolean
     get() =
@@ -3119,7 +3120,8 @@ class SwiftSundayIrGenerator(
     val flattensInheritedProperties =
       isProtocolHierarchyValueModel ||
         isProblemHierarchyValueModel ||
-        isInheritedObjectValueModel
+        isInheritedObjectValueModel ||
+        isPatchableObjectValueModel
     val allowsInheritedPropertyOverrides = flattensInheritedProperties && !isProblemHierarchyValueModel
     val localProperties =
       localConstructorProperties(inheritedProperties, allowOverrides = allowsInheritedPropertyOverrides)
@@ -3144,7 +3146,7 @@ class SwiftSundayIrGenerator(
     val identifiableProperty = identifiablePropertyOrNull()
     val discriminatorProperty = discriminatorPropertyOrNull()
     val isValueModel = isSwiftValueModel
-    val isImmutableModel = isValueModel || isRecursiveReferenceModel
+    val isImmutableModel = isValueModel && !patchable || isRecursiveReferenceModel
     val storedProperties =
       if (flattensInheritedProperties) {
         effectiveInheritedProperties + localProperties
@@ -4011,8 +4013,8 @@ class SwiftSundayIrGenerator(
             properties.forEach { property ->
               addParameter(
                 ParameterSpec
-                  .builder(property.name.swiftIdentifierName, property.swiftPatchOpTypeName().makeOptional())
-                  .defaultValue(".none")
+                  .builder(property.name.swiftIdentifierName, property.swiftPatchOpTypeName())
+                  .defaultValue(".unchanged")
                   .build(),
               )
             }
@@ -4182,7 +4184,7 @@ class SwiftSundayIrGenerator(
               .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(patchable))
               .apply {
                 if (patchable) {
-                  defaultValue(".none")
+                  defaultValue(".unchanged")
                 } else if (property.swiftTypeName().optional) {
                   defaultValue("nil")
                 }
@@ -4615,13 +4617,13 @@ class SwiftSundayIrGenerator(
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =
             when {
-              patchable -> "IfExists"
+              patchable -> ""
               property.swiftTypeName().optional -> "IfPresent"
               else -> ""
             }
           val codingTypeName =
             if (patchable) {
-              property.type.swiftTypeName().makeNonOptional()
+              property.swiftPatchOpTypeName()
             } else {
               property.swiftTypeName().makeNonOptional()
             }
@@ -4708,7 +4710,7 @@ class SwiftSundayIrGenerator(
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           addStatement(
             "try container.encode%L(self.%N, forKey: .%N)",
-            if (patchable) "IfExists" else property.swiftEncodingSuffix(),
+            if (patchable) "" else property.swiftEncodingSuffix(),
             property.name.swiftIdentifierName,
             property.name.swiftIdentifierName,
           )
@@ -4886,13 +4888,13 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedModelProperty.swiftModelPropertyTypeName(patchable: Boolean): TypeName =
     if (patchable) {
-      swiftPatchOpTypeName().makeOptional()
+      swiftPatchOpTypeName()
     } else {
       swiftTypeName()
     }
 
   private fun GeneratedModelProperty.swiftPatchOpTypeName(): TypeName {
-    val base = if (type.nullable) PATCH_OP else UPDATE_OP
+    val base = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
     return base.parameterizedBy(type.swiftTypeName().makeNonOptional())
   }
 

@@ -113,6 +113,7 @@ open class KotlinJAXRSGenerateCommand :
         GeneratedApiIrOptions(
           openApiReferences = openApiReferenceOptions(),
           deriveServicesFromTags = servicesFromTags,
+          autoPatchable = autoPatchable,
           generationMode = mode,
         ),
       ).export(files.map { file -> file.toURI() })

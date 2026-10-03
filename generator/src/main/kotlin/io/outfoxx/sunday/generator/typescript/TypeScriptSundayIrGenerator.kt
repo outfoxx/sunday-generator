@@ -27,6 +27,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedNullify
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
@@ -138,15 +139,17 @@ import io.outfoxx.typescriptpoet.tag
  * TypeScript/Sunday service generator that renders service declarations from Sunday IR.
  */
 class TypeScriptSundayIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: TypeScriptTypeOutputRegistry,
   private val options: TypeScriptSundayOptions,
 ) {
 
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))
 
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val index = GeneratedApiIndex(api)
+  private val index = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(index::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(index::modelOrNull)
   private val discriminatorFallbacks: Map<GeneratedModel, GeneratedDiscriminatorFallback> by lazy {
@@ -2926,7 +2929,13 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     lazyRefType: TypeName.Standard? = null,
   ): CodeBlock {
-    val base = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
+    val schema = type.zodSchema(serviceTypeName, required, validation, lazyRefType, allowedValues)
+    val base =
+      if (patchDeletionAllowed == false && modelProperties.acceptsNull(type)) {
+        CodeBlock.of("%L.refine(value => value !== null, %S)", schema, "Required members cannot be deleted")
+      } else {
+        schema
+      }
     val default = modelProperties.scalarDefault(this)?.takeUnless { required } ?: return base
     val enumModel =
       modelProperties.declarationModel(type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM && it.unknownValue == null }
@@ -2990,6 +2999,7 @@ class TypeScriptSundayIrGenerator(
         validation.isNotEmpty() &&
         (
           enumModel != null ||
+            modelOrNull(index)?.aliasedTypeRef()?.nullable == true ||
             modelProperties.declarationModel(this)?.nominal == true ||
             declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
             declaration.formattedScalarTypeName() != null

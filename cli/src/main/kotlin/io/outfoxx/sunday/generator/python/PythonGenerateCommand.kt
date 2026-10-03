@@ -60,6 +60,7 @@ abstract class PythonGenerateCommand(
       GeneratedApiIrOptions(
         openApiReferences = openApiReferenceOptions(),
         deriveServicesFromTags = servicesFromTags,
+        autoPatchable = autoPatchable,
         generationMode = generationMode,
       ),
     ).exportWithIdentity(files.map { file -> GeneratedApiIrSource(file.toURI()) })

@@ -55,6 +55,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
@@ -138,6 +139,8 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.MULTI
 import io.outfoxx.sunday.generator.kotlin.utils.OBJECT_MAPPER
 import io.outfoxx.sunday.generator.kotlin.utils.OPERATION_RESPONSE
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH
+import io.outfoxx.sunday.generator.kotlin.utils.PATCH_OP
 import io.outfoxx.sunday.generator.kotlin.utils.QUARKUS_HTTP_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXOBSERVABLE3
@@ -145,6 +148,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE2
 import io.outfoxx.sunday.generator.kotlin.utils.RXSINGLE3
 import io.outfoxx.sunday.generator.kotlin.utils.SUNDAY_HTTP_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.UNI
+import io.outfoxx.sunday.generator.kotlin.utils.UPDATE_OP
 import io.outfoxx.sunday.generator.kotlin.utils.VERTX_MUTINY_BUFFER
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_ABSTRACT_THROWABLE_PROBLEM
 import io.outfoxx.sunday.generator.kotlin.utils.ZALANDO_EXCEPTIONAL
@@ -179,13 +183,15 @@ import java.util.concurrent.CompletionStage
  * Kotlin/JAX-RS service generator backed by Sunday IR.
  */
 class KotlinJAXRSIrGenerator(
-  private val api: GeneratedApi,
+  api: GeneratedApi,
   private val typeRegistry: KotlinTypeOutputRegistry,
   private val options: KotlinJAXRSOptions,
 ) {
 
+  private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
   private val defaultMediaTypes = api.orderedDefaultMediaTypes(options.defaultMediaTypes)
-  private val apiIndex = GeneratedApiIndex(api)
+  private val apiIndex = GeneratedApiIndex(this.api)
   private val modelProperties = GeneratedModelProperties(apiIndex::modelOrNull)
   private val nominalTypes = GeneratedNominalTypes(apiIndex::modelOrNull)
   private val nominalGenerator by lazy {
@@ -1849,6 +1855,7 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedModelProperty.modelValidationAnnotations(
     useSite: AnnotationSpec.UseSiteTarget? = AnnotationSpec.UseSiteTarget.GET,
+    patchable: Boolean = false,
   ): List<AnnotationSpec> =
     if (!typeRegistry.options.contains(ValidationConstraints)) {
       emptyList()
@@ -1856,7 +1863,7 @@ class KotlinJAXRSIrGenerator(
       buildList {
         KotlinNativeSchema
           .annotation(
-            this@modelValidationAnnotations,
+            if (patchable) copy(required = true) else this@modelValidationAnnotations,
             modelProperties,
             beanValidationTypes,
             useSite,
@@ -2198,7 +2205,7 @@ class KotlinJAXRSIrGenerator(
       }
 
     if (typeRegistry.options.contains(ImplementModel) || isProblemModel()) {
-      if (!isProblemModel() && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
+      if (!patchable && !isProblemModel() && flattensInheritedProperties && !hasDiscriminatorFallbackSubclass) {
         return dataClassTypeSpec(effectiveInheritedProperties + localProperties)
       }
       return classTypeSpec(classInheritedProperties, classLocalProperties)
@@ -2209,6 +2216,7 @@ class KotlinJAXRSIrGenerator(
       .addModifiers(KModifier.PUBLIC)
       .apply {
         addJacksonPolymorphism(this@objectTypeSpec)
+        if (patchable) addPatchModelSupport()
         if (!flattensInheritedProperties) {
           inherits.forEach { inherited ->
             addSuperinterface(inherited.kotlinTypeName())
@@ -2230,7 +2238,7 @@ class KotlinJAXRSIrGenerator(
             localProperties
           }
         declaredProperties.forEach { property ->
-          addProperty(property.propertySpec())
+          addProperty(property.propertySpec(patchable))
         }
       }
   }
@@ -2308,6 +2316,7 @@ class KotlinJAXRSIrGenerator(
           inheritedProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                patchable = patchableProperty(property.wireName),
                 effective =
                   modelProperties
                     .fields(this@classTypeSpec)
@@ -2321,6 +2330,7 @@ class KotlinJAXRSIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
+                patchable = patchable,
                 declaresProperty =
                   typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
                     !(isProblemRoot && property.isBaseProblemProperty()),
@@ -2342,11 +2352,18 @@ class KotlinJAXRSIrGenerator(
       .primaryConstructor(constructor)
       .apply {
         addJacksonPolymorphism(this@classTypeSpec)
+        if (patchable) addPatchModelSupport()
         if (!typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
           KotlinModelConstraints
             .initializer(
               modelProperties.fields(this@classTypeSpec),
               modelProperties,
+              patchParameters =
+                constructor.parameters
+                  .filter {
+                    (it.type as? ParameterizedTypeName)?.rawType in
+                      setOf(PATCH_OP, UPDATE_OP)
+                  }.mapTo(mutableSetOf()) { it.name },
             ) { it.kotlinTypeName() }
             .takeUnless {
               it.isEmpty()
@@ -2389,10 +2406,11 @@ class KotlinJAXRSIrGenerator(
           .forEach { property ->
             val propertyBuilder =
               PropertySpec
-                .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName())
+                .builder(property.name.kotlinIdentifierName, property.modelPropertyTypeName(patchable))
                 .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
-                .addAnnotations(property.jacksonInclusionAnnotations())
-                .addAnnotations(property.modelValidationAnnotations())
+                .apply { if (!patchable) addAnnotations(property.jacksonInclusionAnnotations()) }
+                .addAnnotations(property.modelValidationAnnotations(patchable = patchable))
+                .mutable(patchable)
             addProperty(
               propertyBuilder
                 .initializer(property.name.kotlinIdentifierName)
@@ -2549,14 +2567,15 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedModelProperty.constructorParameterSpec(
     effective: GeneratedModelProperty = this,
     declaresProperty: Boolean = false,
+    patchable: Boolean = false,
   ): ParameterSpec =
     ParameterSpec
-      .builder(name.kotlinIdentifierName, modelPropertyTypeName())
+      .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
       .apply {
         if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
           KotlinNativeSchema
             .annotation(
-              effective,
+              if (patchable) effective.copy(required = true) else effective,
               modelProperties,
               beanValidationTypes,
               AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
@@ -2582,8 +2601,13 @@ class KotlinJAXRSIrGenerator(
             AnnotationSpec
               .builder(JACKSON_JSON_PROPERTY)
               .addMember("value = %S", serializationName ?: name)
-              .apply { if (effective.required != required) addMember("required = %L", effective.required) }
-              .build(),
+              .apply {
+                if (!patchable &&
+                  effective.required != required
+                ) {
+                  addMember("required = %L", effective.required)
+                }
+              }.build(),
           )
         }
         if ((!effective.required || effective != this@constructorParameterSpec || effective.allowedValues != null) &&
@@ -2598,7 +2622,9 @@ class KotlinJAXRSIrGenerator(
               .build(),
           )
         }
-        if (!required || type.nullable) {
+        if (patchable) {
+          defaultValue("%T.none()", PATCH_OP)
+        } else if (!required || type.nullable) {
           defaultValue(
             KotlinModelDefaults.code(
               defaultValue,
@@ -2926,12 +2952,13 @@ class KotlinJAXRSIrGenerator(
     )
   }
 
-  private fun GeneratedModelProperty.propertySpec(): PropertySpec =
+  private fun GeneratedModelProperty.propertySpec(patchable: Boolean = false): PropertySpec =
     PropertySpec
-      .builder("`${name.kotlinIdentifierName}`", modelPropertyTypeName())
+      .builder("`${name.kotlinIdentifierName}`", modelPropertyTypeName(patchable))
       .addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
-      .addAnnotations(jacksonInclusionAnnotations())
-      .addAnnotations(modelValidationAnnotations())
+      .apply { if (!patchable) addAnnotations(jacksonInclusionAnnotations()) }
+      .addAnnotations(modelValidationAnnotations(patchable = patchable))
+      .mutable(patchable)
       .build()
 
   private fun GeneratedModelProperty.jacksonInclusionAnnotations(): List<AnnotationSpec> =
@@ -3000,8 +3027,28 @@ class KotlinJAXRSIrGenerator(
     )
   }
 
-  private fun GeneratedModelProperty.modelPropertyTypeName(): TypeName =
-    type.kotlinTypeName().withUseSiteValidationAnnotations(type).copy(nullable = type.nullable || !required)
+  private fun GeneratedModelProperty.modelPropertyTypeName(patchable: Boolean = false): TypeName =
+    if (patchable) {
+      val operation = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
+      operation.parameterizedBy(type.kotlinTypeName().copy(nullable = false).withUseSiteValidationAnnotations(type))
+    } else {
+      type.kotlinTypeName().withUseSiteValidationAnnotations(type).copy(nullable = type.nullable || !required)
+    }
+
+  private fun TypeSpec.Builder.addPatchModelSupport() {
+    addSuperinterface(PATCH)
+    if (typeRegistry.options.contains(JacksonAnnotations)) {
+      addAnnotation(
+        AnnotationSpec.builder(JACKSON_JSON_INCLUDE).addMember("%T.NON_EMPTY", JACKSON_JSON_INCLUDE_INCLUDE).build(),
+      )
+    }
+  }
+
+  private fun GeneratedModel.patchableProperty(wireName: String): Boolean =
+    inherits
+      .mapNotNull(modelProperties::declarationModel)
+      .firstOrNull { parent -> modelProperties.fields(parent).any { it.wireName == wireName } }
+      ?.patchableProperty(wireName) ?: patchable
 
   private fun GeneratedModel.allModelProperties(): List<GeneratedModelProperty> =
     inherits.flatMap { inherited -> inherited.modelOrNull(apiIndex)?.allModelProperties().orEmpty() } + properties
