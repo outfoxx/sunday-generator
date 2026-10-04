@@ -58,6 +58,7 @@ import io.outfoxx.sunday.generator.ir.emit.explicitAcceptTypes
 import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
+import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
 import io.outfoxx.sunday.generator.ir.emit.modelOrNull
 import io.outfoxx.sunday.generator.ir.emit.operationParameterViews
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
@@ -1143,8 +1144,8 @@ class SwiftSundayIrGenerator(
 
   private fun GeneratedParameter.swiftBaseUriParameterSpec(): ParameterSpec {
     val typeName =
-      if (defaultValue != null) {
-        type.swiftTypeName().makeNonOptional()
+      if (isNullableParameter(GenerationMode.Client)) {
+        type.swiftTypeName().makeOptional()
       } else {
         type.swiftTypeName()
       }
@@ -1153,7 +1154,7 @@ class SwiftSundayIrGenerator(
       .builder(name.swiftIdentifierName, typeName)
       .apply {
         defaultValue?.let { defaultValue ->
-          defaultValue(defaultValue.swiftValueCode(typeName, type))
+          defaultValue(defaultValue.swiftValueCode(typeName.makeNonOptional(), type))
         }
       }.build()
   }
@@ -5238,7 +5239,7 @@ class SwiftSundayIrGenerator(
       required = required,
       defaultValue = defaultValue,
       constantValue = constantValue,
-      isNullable = type.nullable || !required,
+      isNullable = isNullableParameter(GenerationMode.Client),
     )
   }
 
@@ -5873,11 +5874,20 @@ class SwiftSundayIrGenerator(
   ): CodeBlock {
     val nominal = typeRef?.let(modelProperties::declarationModel)?.takeIf { it.nominal }
     if (nominal != null) {
-      val rawType = nominalTypes.scalar(nominal).type.swiftTypeName()
-      return CodeBlock.of("%T(rawValue: %L)!", typeName.makeNonOptional(), swiftValueCode(rawType, null))
+      val rawType = nominalTypes.scalar(nominal).type
+      return CodeBlock.of(
+        "%T(rawValue: %L)!",
+        typeName.makeNonOptional(),
+        swiftValueCode(rawType.swiftTypeName(), rawType),
+      )
     }
     return when (this) {
       is String -> {
+        val declaration = typeRef?.let(modelProperties::declarationType)
+        val format = declaration?.format ?: declaration?.name
+        if (declaration?.kind == GeneratedTypeRef.Kind.SCALAR) {
+          SwiftModelDefaults.formatted(this, format)?.let { return it }
+        }
         val enumModel =
           typeRef
             ?.let(modelProperties::declarationModel)

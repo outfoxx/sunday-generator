@@ -18,7 +18,9 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 internal fun GeneratedApi.pythonHttpServices(): List<GeneratedService> =
   services.mapNotNull { service ->
@@ -40,3 +42,16 @@ private fun GeneratedOperation.hasNonHttpProtocolBinding(): Boolean =
 private fun String.isHttpProtocol(): Boolean = equals("http", ignoreCase = true) || equals("https", ignoreCase = true)
 
 private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
+
+/** Structured values, named types, and native or formatted scalars need validated typed defaults. */
+internal fun GeneratedParameter.hasTypedDefault(): Boolean =
+  defaultValue != null &&
+    (
+      hasMutableDefault() ||
+        type.kind != GeneratedTypeRef.Kind.SCALAR ||
+        !type.format.isNullOrBlank() ||
+        type.name in setOf("date", "time", "datetime", "datetime-only")
+    )
+
+/** JSON objects and arrays need independent defaults, including when their schema is unconstrained. */
+internal fun GeneratedParameter.hasMutableDefault(): Boolean = defaultValue is List<*> || defaultValue is Map<*, *>

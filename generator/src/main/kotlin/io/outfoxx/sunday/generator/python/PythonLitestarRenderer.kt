@@ -421,11 +421,11 @@ class PythonLitestarRenderer(
           },
         ) +
         (queryParameters() + headerParameters() + cookieParameters())
-          .filter { parameter -> parameter.required }
-          .map { parameter -> parameter.renderHandlerParameter() } +
+          .filter { parameter -> parameter.required && parameter.defaultValue == null }
+          .map { parameter -> parameter.renderHandlerParameter(this) } +
         (queryParameters() + headerParameters() + cookieParameters())
-          .filterNot { parameter -> parameter.required }
-          .map { parameter -> parameter.renderHandlerParameter() },
+          .filterNot { parameter -> parameter.required && parameter.defaultValue == null }
+          .map { parameter -> parameter.renderHandlerParameter(this) },
       separator = "\n",
     )
 
@@ -515,7 +515,7 @@ class PythonLitestarRenderer(
           "        %L: %C = %C,",
           parameter.name.pythonIdentifierName,
           parameter.renderParameterType(optional = true),
-          if (parameter.defaultValue != null && parameter.nominalWireType() != null) {
+          if (parameter.hasTypedDefault()) {
             PythonCodeBlock.of("%L", nominalDefaultName(parameter))
           } else {
             parameter.renderDefaultValue()
@@ -603,9 +603,23 @@ class PythonLitestarRenderer(
     "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_default"
 
   private fun GeneratedOperation.renderParameterArgument(parameter: GeneratedParameter): PythonCodeBlock {
-    val value = PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
+    val value =
+      if (parameter.hasCollectionDefault()) {
+        // Litestar's msgspec signature model rejects non-empty mutable defaults. Build a fresh
+        // value for an absent collection at the adapter boundary before Pydantic validates it.
+        PythonCodeBlock.of(
+          "%C if %L is None else %L",
+          parameter.renderDefaultValue(),
+          parameter.name.pythonIdentifierName,
+          parameter.name.pythonIdentifierName,
+        )
+      } else {
+        PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
+      }
     return PythonCodeBlock.of("_decode_request_parameter(%L, %C)", nominalAdapterName(parameter), value)
   }
+
+  private fun GeneratedParameter.hasCollectionDefault(): Boolean = defaultValue is List<*> || defaultValue is Map<*, *>
 
   private fun GeneratedParameter.renderPathHandlerParameter(): PythonCodeBlock =
     PythonCodeBlock.of(
@@ -615,7 +629,7 @@ class PythonLitestarRenderer(
       (nominalWireType() ?: type).renderServerPythonType(nullable = false),
     )
 
-  private fun GeneratedParameter.renderHandlerParameter(): PythonCodeBlock {
+  private fun GeneratedParameter.renderHandlerParameter(operation: GeneratedOperation): PythonCodeBlock {
     val marker =
       when (location) {
         GeneratedParameter.Location.QUERY -> PythonSymbol("litestar.params", "QueryParameter")
@@ -623,24 +637,45 @@ class PythonLitestarRenderer(
         GeneratedParameter.Location.COOKIE -> PythonSymbol("litestar.params", "CookieParameter")
         else -> error("Only query, header, and cookie parameters use annotated handler parameters")
       }
-    val type = copy(type = nominalWireType() ?: type).renderParameterType(optional = !required)
+    val type =
+      copy(
+        type = nominalWireType() ?: type,
+      ).renderParameterType(optional = !required || hasCollectionDefault())
     val defaultValue =
-      if (required) {
+      if (hasCollectionDefault()) {
+        PythonCodeBlock.of(" = None")
+      } else if (required && this.defaultValue == null) {
         PythonCodeBlock.of(
           "",
         )
+      } else if (hasTypedDefault() && nominalWireType() == null) {
+        PythonCodeBlock.of(" = %L", operation.nominalDefaultName(this))
       } else {
         PythonCodeBlock.of(" = %C", renderDefaultValue())
       }
-    return PythonCodeBlock.of(
-      "        %L: %T[%C, %T(name=%S)]%C,",
-      name.pythonIdentifierName,
-      PythonSymbol("typing", "Annotated"),
-      type,
-      marker,
-      wireName(),
-      defaultValue,
-    )
+    val inline =
+      PythonCodeBlock.of(
+        "        %L: %T[%C, %T(name=%S)]%C,",
+        name.pythonIdentifierName,
+        PythonSymbol("typing", "Annotated"),
+        type,
+        marker,
+        wireName(),
+        defaultValue,
+      )
+    return if (inline.render(PythonRenderContext(PythonImportSet())).length <= 120) {
+      inline
+    } else {
+      PythonCodeBlock.of(
+        "        %L: %T[\n            %C, %T(name=%S)\n        ]%C,",
+        name.pythonIdentifierName,
+        PythonSymbol("typing", "Annotated"),
+        type,
+        marker,
+        wireName(),
+        defaultValue,
+      )
+    }
   }
 
   private fun GeneratedOperation.routeParameters(): List<GeneratedParameter> =
@@ -788,15 +823,7 @@ class PythonLitestarRenderer(
   }
 
   private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock =
-    defaultValue?.renderPythonValue() ?: PythonCodeBlock.of("None")
-
-  private fun Any.renderPythonValue(): PythonCodeBlock =
-    when (this) {
-      is Boolean -> PythonCodeBlock.of(if (this) "True" else "False")
-      is Number -> PythonCodeBlock.of("%L", this)
-      is String -> PythonCodeBlock.of("%S", this)
-      else -> PythonCodeBlock.of("None")
-    }
+    defaultValue?.pythonValueCode() ?: PythonCodeBlock.of("None")
 
   private fun GeneratedOperation.renderRouteDecorator(
     access: GeneratedEndpointAccess,

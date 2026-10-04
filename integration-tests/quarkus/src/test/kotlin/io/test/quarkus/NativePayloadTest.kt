@@ -52,6 +52,18 @@ class NativePayloadTest {
   lateinit var resource: APIResource
 
   @Test
+  fun `defaulted client parameters can be omitted and server injection supplies defaults`() {
+    val client = QuarkusRestClientBuilder.newBuilder().baseUri(baseUri).build(NativePayloadsAPI::class.java)
+    try {
+      assertEquals(listOf("explicit", "5", "cookie", "header"), client.defaultParameters("explicit", null, null, null))
+      assertEquals(listOf("fallback", "5", "cookie", "header"), client.defaultParameters())
+      assertThrows(NullPointerException::class.java) { client.defaultParameters(null, null, null, null) }
+    } finally {
+      (client as AutoCloseable).close()
+    }
+  }
+
+  @Test
   fun `native request group reaches root collection elements`() {
     val unknown =
       io.test.quarkus.payloads.server.State

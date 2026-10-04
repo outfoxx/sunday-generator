@@ -64,6 +64,16 @@ class NativePayloadTest : JerseyTest() {
             bind(
               APIResource(
                 object : API {
+                  override fun defaultParameters(
+                    pathValue: String,
+                    queryValue: Int,
+                    cookieValue: String,
+                    headerValue: String,
+                  ): Response {
+                    calls.incrementAndGet()
+                    return Response.ok(listOf(pathValue, queryValue.toString(), cookieValue, headerValue)).build()
+                  }
+
                   override fun parameters(
                     pathState: State,
                     queryStates: List<State>?,
@@ -100,6 +110,15 @@ class NativePayloadTest : JerseyTest() {
 
   @AfterEach
   fun stop() = tearDown()
+
+  @Test
+  fun `plain JAX-RS applies defaults before invoking the delegate`() {
+    target("native/defaults/explicit").request().get().use {
+      assertEquals(200, it.status)
+      assertEquals("[\"explicit\",\"5\",\"cookie\",\"header\"]", it.readEntity(String::class.java))
+    }
+    assertEquals(1, calls.get())
+  }
 
   @Test
   fun `plain JAX-RS parameters validate after conversion before delegates`() {

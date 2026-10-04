@@ -29,9 +29,9 @@ public class API<Req : Request>(
 
   public companion object {
     public fun baseURL(
-      server: String = "master",
-      environment: Environment = Environment.Sbx,
-      version: String = "1",
+      server: String? = "master",
+      environment: Environment? = Environment.Sbx,
+      version: String? = "1",
     ): URITemplate = URITemplate(
       "http://{server}.{environment}.example.com/api/{version}",
       mapOf("server" to server, "environment" to environment, "version" to version)

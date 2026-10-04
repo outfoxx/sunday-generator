@@ -318,7 +318,7 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
       val node = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "node.ts")
       assertTrue(node.contains("'child': z.lazy(() => runtime.resolveSchema(NodeSchema)).nullable()"), node)
       val service = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "api.ts")
-      assertTrue(service.contains("limit ?? 20"), service)
+      assertTrue(service.contains("limit: number | null | undefined = 20"), service)
       val nullability = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "nullability.ts")
       assertTrue(nullability.contains("'strictText': z.string(),"), nullability)
       assertTrue(nullability.contains("'values': z.array(z.string()).nullable()"), nullability)

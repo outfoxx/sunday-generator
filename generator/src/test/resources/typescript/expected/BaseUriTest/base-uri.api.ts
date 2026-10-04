@@ -42,11 +42,12 @@ export function createAPI<Factory extends SundayTransport>(transport: Factory,
 
 export namespace API {
 
-  export function baseURL(server?: string, environment?: Environment,
-      version?: string): URLTemplate {
+  export function baseURL(server: string | null | undefined = 'master',
+      environment: Environment | null | undefined = Environment.Sbx,
+      version: string | null | undefined = '1'): URLTemplate {
     return new URLTemplate(
       'http://{server}.{environment}.example.com/api/{version}',
-      {server: server ?? 'master', environment: environment ?? Environment.Sbx, version: version ?? '1'}
+      {server, environment, version}
     );
   }
 

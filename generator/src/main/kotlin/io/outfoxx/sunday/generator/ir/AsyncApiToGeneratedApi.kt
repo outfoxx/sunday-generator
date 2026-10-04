@@ -340,6 +340,7 @@ class AsyncApiToGeneratedApi(
               ?.let { schemaTypeRef(it, generatedName.toUpperCamelCase(), location, localModels) }
               ?: GeneratedTypeRef.scalar("string"),
           required = true,
+          defaultValue = parameter["default"] ?: schema?.schemaDefault(),
           serializationName = wireName.takeUnless { it == generatedName },
           encoding = GeneratedParameterEncoding(style = "simple"),
           validation = schema?.let(::validation).orEmpty(),
@@ -365,6 +366,7 @@ class AsyncApiToGeneratedApi(
           location = GeneratedParameter.Location.HEADER,
           type = schemaTypeRef(schemaMap, generatedName.toUpperCamelCase(), location, localModels),
           required = wireName in headers.requiredNames,
+          defaultValue = schemaMap.schemaDefault(),
           serializationName = wireName.takeUnless { it == generatedName },
           validation = validation(schemaMap),
         )
@@ -968,6 +970,12 @@ class AsyncApiToGeneratedApi(
 
   private fun Map<*, *>.resolvedSchema(): Map<*, *> =
     refName()?.let { name -> currentSourceDocument.schemas()[name] } ?: this
+
+  private fun Map<*, *>.schemaDefault(visitedRefs: Set<String> = emptySet()): Any? {
+    if (containsKey("default")) return this["default"]
+    val name = refName()?.takeUnless { it in visitedRefs } ?: return null
+    return currentSourceDocument.schemas()[name]?.schemaDefault(visitedRefs + name)
+  }
 
   private fun Map<*, *>.sourcePropertyWireNames(visitedRefs: Set<String> = setOf()): Set<String> {
     val directWireNames =

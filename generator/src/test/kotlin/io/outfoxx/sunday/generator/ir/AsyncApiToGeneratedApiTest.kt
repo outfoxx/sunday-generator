@@ -25,10 +25,83 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 @ExtendWith(ResourceExtension::class)
 class AsyncApiToGeneratedApiTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = ["2.6.0", "3.0.0"])
+  fun `preserves channel and header defaults including false and zero`(
+    version: String,
+    @TempDir directory: Path,
+  ) {
+    val message =
+      "{headers: {type: object, required: [count, enabled], properties: " +
+        "{count: {\$ref: '#/components/schemas/Count'}, enabled: {\$ref: '#/components/schemas/Enabled'}, " +
+        "overridden: {\$ref: '#/components/schemas/Enabled', default: true}}}, payload: {type: string}}"
+    val source = directory.resolve("defaults.yaml")
+    val components =
+      """
+      components:
+        schemas:
+          TenantAlias: {${'$'}ref: '#/components/schemas/Tenant'}
+          Tenant: {type: string, default: public}
+          Count: {type: integer, default: 0}
+          Enabled: {type: boolean, default: false}
+      """.trimIndent()
+    source.writeText(
+      (
+        if (version == "3.0.0") {
+          """
+          asyncapi: 3.0.0
+          info: {title: Defaults, version: 1.0.0}
+          channels:
+            events:
+              address: /events/{tenant}
+              parameters:
+                tenant: {schema: {${'$'}ref: '#/components/schemas/TenantAlias'}}
+              messages:
+                event: $message
+          operations:
+            events:
+              action: send
+              channel: {${'$'}ref: '#/channels/events'}
+              messages: [{${'$'}ref: '#/channels/events/messages/event'}]
+          """.trimIndent()
+        } else {
+          """
+          asyncapi: 2.6.0
+          info: {title: Defaults, version: 1.0.0}
+          channels:
+            /events/{tenant}:
+              parameters:
+                tenant: {schema: {${'$'}ref: '#/components/schemas/TenantAlias'}}
+              publish:
+                operationId: events
+                message: $message
+          """.trimIndent()
+        }
+      ) + "\n" + components,
+    )
+    val api = AsyncApiToGeneratedApi().convertFragment(source.toUri()).api
+    val parameters =
+      api.services
+        .flatMap { it.operations }
+        .single()
+        .parameters
+        .associateBy { it.name }
+    assertEquals("public", parameters.getValue("tenant").defaultValue)
+    assertEquals(0, parameters.getValue("count").defaultValue)
+    assertEquals(false, parameters.getValue("enabled").defaultValue)
+    assertEquals(true, parameters.getValue("overridden").defaultValue)
+    assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
+  }
 
   @Test
   fun `retains dynamic property constraints on tolerant unions and objects`(

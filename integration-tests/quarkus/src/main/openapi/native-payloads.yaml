@@ -1,6 +1,19 @@
 openapi: 3.1.0
 info: {title: Native payload validation, version: 1.0.0}
 paths:
+  /native/defaults/{pathValue}:
+    get:
+      operationId: defaultParameters
+      parameters:
+        - {name: pathValue, in: path, required: true, schema: {type: string, default: fallback}}
+        - {name: queryValue, in: query, required: true, schema: {type: integer, minimum: 1, default: 5}}
+        - {name: headerValue, in: header, required: true, schema: {type: string, default: header}}
+        - {name: cookieValue, in: cookie, required: true, schema: {type: string, default: cookie}}
+      responses:
+        '200':
+          description: Resolved parameters
+          content:
+            application/json: {schema: {type: array, items: {type: string}}}
   /native/codes:
     post:
       operationId: codes

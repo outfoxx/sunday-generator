@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir.emit
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -63,11 +64,12 @@ class GeneratedOperationParametersTest {
 
     assertTrue(parameters[0].isNullable)
     assertTrue(parameters[0].shouldFilterNullValue)
-    assertFalse(parameters[1].isNullable)
+    assertTrue(parameters[1].isNullable)
     assertEquals(25, parameters[1].defaultValue)
     assertTrue(parameters[2].isConstant)
     assertFalse(parameters[2].shouldFilterNullValue)
     assertEquals("v1", parameters[2].constantValue)
+    assertFalse(operation(defaulted).operationParameterViews(GenerationMode.Server).single().isNullable)
   }
 
   @Test

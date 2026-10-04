@@ -47,46 +47,7 @@ internal object SwiftModelDefaults {
     val format = type.format ?: type.name.takeIf { it in setOf("date", "time", "datetime", "datetime-only") }
     if (type.kind != GeneratedTypeRef.Kind.SCALAR) return validatedValue?.let(scalar)
     try {
-      return when (swiftStringFormatTypeName(format)) {
-        UUID -> {
-          require(
-            java.util.UUID
-              .fromString(value)
-              .toString()
-              .equals(value, ignoreCase = true),
-          )
-          CodeBlock.of("%T(uuidString: %S)!", UUID, value)
-        }
-        URL -> {
-          URI(value)
-          CodeBlock.of("%T(string: %S)!", URL, value)
-        }
-        DATE -> {
-          val instant =
-            when (format?.lowercase()) {
-              "date", "full-date" -> LocalDate.parse(value).atStartOfDay().toInstant(ZoneOffset.UTC)
-              "time", "partial-time" -> {
-                val parsed = DateTimeFormatter.ISO_TIME.parse(value)
-                LocalTime
-                  .from(parsed)
-                  .atDate(LocalDate.of(1970, 1, 1))
-                  .toInstant(parsed.query(TemporalQueries.offset()) ?: ZoneOffset.UTC)
-              }
-              else -> {
-                val parsed = DateTimeFormatter.ISO_DATE_TIME.parse(value)
-                LocalDateTime.from(parsed).toInstant(parsed.query(TemporalQueries.offset()) ?: ZoneOffset.UTC)
-              }
-            }
-          val seconds = BigDecimal.valueOf(instant.epochSecond).add(BigDecimal.valueOf(instant.nano.toLong(), 9))
-          CodeBlock.of("%T(timeIntervalSince1970: %L)", DATE, seconds.stripTrailingZeros().toPlainString())
-        }
-        DATA -> {
-          require(format.equals("byte", ignoreCase = true)) { "Only base64 byte defaults are supported for Data" }
-          val encoded = Base64.getEncoder().encodeToString(Base64.getDecoder().decode(value))
-          CodeBlock.of("%T(base64Encoded: %S)!", DATA, encoded)
-        }
-        else -> validatedValue?.let(scalar)
-      }
+      return formatted(value, format) ?: validatedValue?.let(scalar)
     } catch (error: IllegalArgumentException) {
       genError(
         "Invalid Swift default for property '$modelName.${property.serializationName ?: property.name}' ($format): ${error.message}",
@@ -101,6 +62,52 @@ internal object SwiftModelDefaults {
       )
     }
   }
+
+  /** Renders native formatted values consistently for model and operation defaults. */
+  fun formatted(
+    value: String,
+    format: String?,
+  ): CodeBlock? =
+    when (swiftStringFormatTypeName(format)) {
+      UUID -> {
+        require(
+          java.util.UUID
+            .fromString(value)
+            .toString()
+            .equals(value, ignoreCase = true),
+        )
+        CodeBlock.of("%T(uuidString: %S)!", UUID, value)
+      }
+      URL -> {
+        URI(value)
+        CodeBlock.of("%T(string: %S)!", URL, value)
+      }
+      DATE -> {
+        val instant =
+          when (format?.lowercase()) {
+            "date", "full-date" -> LocalDate.parse(value).atStartOfDay().toInstant(ZoneOffset.UTC)
+            "time", "partial-time" -> {
+              val parsed = DateTimeFormatter.ISO_TIME.parse(value)
+              LocalTime
+                .from(parsed)
+                .atDate(LocalDate.of(1970, 1, 1))
+                .toInstant(parsed.query(TemporalQueries.offset()) ?: ZoneOffset.UTC)
+            }
+            else -> {
+              val parsed = DateTimeFormatter.ISO_DATE_TIME.parse(value)
+              LocalDateTime.from(parsed).toInstant(parsed.query(TemporalQueries.offset()) ?: ZoneOffset.UTC)
+            }
+          }
+        val seconds = BigDecimal.valueOf(instant.epochSecond).add(BigDecimal.valueOf(instant.nano.toLong(), 9))
+        CodeBlock.of("%T(timeIntervalSince1970: %L)", DATE, seconds.stripTrailingZeros().toPlainString())
+      }
+      DATA -> {
+        require(format.equals("byte", ignoreCase = true)) { "Only base64 byte defaults are supported for Data" }
+        val encoded = Base64.getEncoder().encodeToString(Base64.getDecoder().decode(value))
+        CodeBlock.of("%T(base64Encoded: %S)!", DATA, encoded)
+      }
+      else -> null
+    }
 
   private fun validateDefault(
     modelName: String,

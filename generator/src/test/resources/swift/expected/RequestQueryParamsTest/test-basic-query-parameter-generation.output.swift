@@ -24,7 +24,7 @@ public final class API<TransportType : Transport> : Sendable {
   public func fetchTest(
     obj: Test,
     strReq: String,
-    int: Int = 5
+    int: Int? = 5
   ) throws -> Sunday.Operation<Empty, Test, TransportType> {
     return Sunday.Operation(
       transport: self.transport,
@@ -36,7 +36,7 @@ public final class API<TransportType : Transport> : Sendable {
           "obj": try ParameterValues.encode(obj),
           "str-req": try ParameterValues.encode(strReq),
           "int": try ParameterValues.encode(int)
-        ],
+        ].filter { $0.value != nil },
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,

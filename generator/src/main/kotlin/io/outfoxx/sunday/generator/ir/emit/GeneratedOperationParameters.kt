@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir.emit
 
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
 import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -47,9 +48,11 @@ data class GeneratedOperationParameter(
 }
 
 /**
- * Builds target-neutral parameter views for an operation.
+ * Builds parameter views for an operation, preserving the distinction between omitted client arguments and
+ * server parameters whose defaults have already been supplied by the framework.
  */
 fun GeneratedOperation.operationParameterViews(
+  generationMode: GenerationMode = GenerationMode.Client,
   identifierName: (GeneratedParameter) -> String = { parameter -> parameter.name },
   allocateName: (GeneratedParameter, String) -> String = { _, proposedName -> proposedName },
 ): List<GeneratedOperationParameter> =
@@ -63,8 +66,15 @@ fun GeneratedOperation.operationParameterViews(
       required = parameter.required,
       defaultValue = parameter.defaultValue,
       constantValue = parameter.constantValue,
-      isNullable = parameter.type.nullable || !parameter.required,
+      isNullable = parameter.isNullableParameter(generationMode),
     )
+  }
+
+/** Whether a generated parameter can be absent at the selected application's boundary. */
+fun GeneratedParameter.isNullableParameter(generationMode: GenerationMode): Boolean =
+  when (generationMode) {
+    GenerationMode.Client -> type.nullable || !required || defaultValue != null
+    GenerationMode.Server -> defaultValue == null && (type.nullable || !required)
   }
 
 /**

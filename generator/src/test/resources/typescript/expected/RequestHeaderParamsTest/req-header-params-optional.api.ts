@@ -6,11 +6,11 @@ import {z} from 'zod';
 export interface API<Factory extends SundayTransport> {
 
   fetchTest(
-      obj: Test | undefined,
-      str: string | undefined,
-      int: number | null,
-      def1: string | undefined,
-      def2: number | null | undefined
+      obj?: Test | undefined,
+      str?: string | undefined,
+      int?: number | null,
+      def1?: string | null | undefined,
+      def2?: number | null | undefined
   ): Operation<void, Test, Factory>;
 
 }
@@ -33,8 +33,8 @@ class APIClient<Factory extends SundayTransport> {
       obj: Test | undefined = undefined,
       str: string | undefined = undefined,
       int: number | null = null,
-      def1: string | undefined = undefined,
-      def2: number | null | undefined = undefined
+      def1: string | null | undefined = 'test',
+      def2: number | null | undefined = 10
   ): Operation<void, Test, Factory> {
     return createOperation(this.transport, {
         request: {
@@ -42,15 +42,17 @@ class APIClient<Factory extends SundayTransport> {
           pathTemplate: '/tests',
           acceptTypes: this.defaultAcceptTypes,
           headers: {
-            obj,
-            str,
-            int,
-            def1: def1 ?? 'test',
-            def2: def2 ?? 10
+            obj: obj == null ? undefined : obj,
+            str: str == null ? undefined : str,
+            int: int == null ? undefined : int,
+            def1: def1 == null ? undefined : def1,
+            def2: def2 == null ? undefined : def2
           },
           parameterValidation: () => {
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: NumericDateDecoding.MILLISECONDS_SINCE_EPOCH, arrayBufferEncoding: ArrayBufferEncoding.BASE64}, 'request');
-            z.encode(runtime.resolveSchema(TestSchema).optional(), obj);
+            if (obj != null) {
+              z.encode(runtime.resolveSchema(TestSchema).optional(), obj);
+            }
           },
         },
         responseType: fetchTestReturnType

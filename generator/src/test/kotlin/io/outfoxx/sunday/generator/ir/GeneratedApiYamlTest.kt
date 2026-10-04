@@ -27,6 +27,48 @@ import kotlin.io.path.writeText
 class GeneratedApiYamlTest {
 
   @Test
+  fun `preserves empty and nested parameter defaults`() {
+    val defaults =
+      listOf(
+        "",
+        false,
+        0,
+        emptyList<String>(),
+        emptyMap<String, String>(),
+        mapOf(
+          "values" to listOf(null, false, 0),
+        ),
+      )
+    val original = craftProjectApi()
+    val service = original.services.first()
+    val operation = service.operations.first()
+    val api =
+      original.copy(
+        services =
+          listOf(
+            service.copy(
+              operations =
+                listOf(
+                  operation.copy(
+                    parameters =
+                      defaults.mapIndexed { index, value ->
+                        GeneratedParameter(
+                          "value$index",
+                          GeneratedParameter.Location.QUERY,
+                          GeneratedTypeRef.scalar("any"),
+                          defaultValue = value,
+                        )
+                      },
+                  ),
+                ),
+            ),
+          ),
+      )
+
+    assertThat(GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)), equalTo(api))
+  }
+
+  @Test
   fun `preserves tolerant enum fallback in composed IR`() {
     val api =
       GeneratedApi(

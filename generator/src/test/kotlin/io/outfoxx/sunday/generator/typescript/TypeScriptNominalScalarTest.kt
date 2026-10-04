@@ -43,7 +43,7 @@ class TypeScriptNominalScalarTest {
   ) {
     val registry = TypeScriptTypeRegistry(setOf())
     TypeScriptSundayIrGenerator(
-      nominalScalarApi(frontend, directory),
+      nominalScalarApi(frontend, directory, parameterDefaults = true),
       registry,
       typeScriptSundayTestOptions,
     ).generateServiceTypes()
@@ -73,6 +73,7 @@ class TypeScriptNominalScalarTest {
             const wrong: BaseFactSid = BaseLossSid('sid:l:abc');
             const union: AnySid = fact;
             ${if (frontend == "asyncapi") "" else "createAPI({} as never)." + (if (frontend == "raml") "getRecordsId" else "getRecord") + "(union, undefined);"}
+            ${if (frontend == "asyncapi") "" else "createAPI({} as never)." + (if (frontend == "raml") "getRecordsId" else "getRecord") + "();"}
             if (!isBaseFactSid(union) || isBaseLossSid(union)) throw new Error('branch identity lost');
             for (const value of ['sid:f:abc', 'sid:l:abc']) {
               const decoded = schema.parse(value);

@@ -35,6 +35,7 @@ import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
+import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
 
 /** Renders declarative transport-neutral Sunday Python clients from generated IR. */
 class PythonClientRenderer(
@@ -67,9 +68,13 @@ class PythonClientRenderer(
     module.addExport(className)
     service.adapterTypes().forEach { type -> module.addCode(type.renderAdapterConstant()) }
     service.operations.forEach { operation ->
-      operation.parameters.filter { it.hasNominalDefault() }.forEach { parameter ->
+      operation.parameters.filter { it.hasTypedDefault() }.forEach { parameter ->
         module.addCode(
-          PythonCodeBlock.of("%L = %C", operation.defaultName(parameter), parameter.renderDefaultValue()),
+          PythonCodeBlock.of(
+            "%C%C",
+            operation.defaultPrefix(parameter),
+            parameter.renderDefaultValue(operation.defaultPrefix(parameter)),
+          ),
         )
       }
       operation.renderDecoderFunctions()?.let(module::addCode)
@@ -217,13 +222,16 @@ class PythonClientRenderer(
           requireNotNull(parameterValidationName),
           PythonCodeBlock.join(
             checkedParameters.map { (name, type) ->
-              PythonCodeBlock.of(
-                "            if %L is not None:\n" +
-                  "                %L.validate_python(%L, strict=True, context={\"mode\": \"request\"})",
-                name,
-                type.adapterName(),
-                name,
-              )
+              val adapter = type.adapterName()
+              val arguments = "$name, strict=True, context={\"mode\": \"request\"}"
+              val inline = "                $adapter.validate_python($arguments)"
+              val validation =
+                if (inline.length <= 120) {
+                  inline
+                } else {
+                  "                $adapter.validate_python(\n                    $arguments\n                )"
+                }
+              PythonCodeBlock.of("            if %L is not None:\n%L", name, validation)
             },
             separator = "\n",
           ),
@@ -231,6 +239,7 @@ class PythonClientRenderer(
         )
       }
     val functionPrefix = if (exchange != null && streaming == null) "async def" else "def"
+    val isolatedBody = PythonCodeBlock.of("%C%C", renderDefaultCopies(), validatedBody)
 
     return if (!hasSignatureParameters()) {
       PythonCodeBlock.of(
@@ -243,7 +252,7 @@ class PythonClientRenderer(
         id.pythonIdentifierName,
         operationReturnType,
         id,
-        validatedBody,
+        isolatedBody,
       )
     } else {
       PythonCodeBlock.of(
@@ -260,10 +269,26 @@ class PythonClientRenderer(
         signature,
         operationReturnType,
         id,
-        validatedBody,
+        isolatedBody,
       )
     }
   }
+
+  private fun GeneratedOperation.renderDefaultCopies(): PythonCodeBlock =
+    PythonCodeBlock.join(
+      httpParameters().filter { it.constantValue == null && it.hasMutableDefault() }.map { parameter ->
+        // Copy before capturing parameters so deferred validation and encoding see the same per-call value.
+        PythonCodeBlock.of(
+          "        if %L is %L:\n            %L = %T(%L)\n",
+          parameter.name.pythonIdentifierName,
+          defaultName(parameter),
+          parameter.name.pythonIdentifierName,
+          PythonSymbol("copy", "deepcopy", "_deepcopy"),
+          parameter.name.pythonIdentifierName,
+        )
+      },
+      separator = "",
+    )
 
   private fun GeneratedOperation.renderOperationConstruction(operationType: PythonSymbol): PythonCodeBlock =
     nullify?.let { nullify ->
@@ -466,7 +491,7 @@ class PythonClientRenderer(
     } ?: true
 
   private fun GeneratedParameter.renderInlineParameterSpec(): PythonCodeBlock {
-    val value = constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    val value = constantValue?.pythonValueCode() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
     return PythonCodeBlock.of(
       "%T(name=%S, value=%C, location=%T.%L)",
       PythonSymbol("sunday", "ParameterSpec"),
@@ -478,7 +503,7 @@ class PythonClientRenderer(
   }
 
   private fun GeneratedParameter.renderParameterSpec(): PythonCodeBlock {
-    val value = constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    val value = renderRequestValue()
     val encoding = encoding
     val optionalArguments =
       listOfNotNull(
@@ -514,6 +539,9 @@ class PythonClientRenderer(
       PythonCodeBlock.join(optionalArguments, separator = ",\n                    "),
     )
   }
+
+  private fun GeneratedParameter.renderRequestValue(): PythonCodeBlock =
+    constantValue?.pythonValueCode() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
 
   private fun GeneratedOperation.renderResponseSpecs(): PythonCodeBlock {
     val variants = responseVariants()
@@ -675,12 +703,15 @@ class PythonClientRenderer(
             .filter { variant -> variant.runtimeType() == null }
             .map { variant -> variant.type }
         responseTypes + eventTypes + headerTypes + requestTypes + operation.validationParameters().map { it.second }
-      }.distinct()
+      }
+      // Adapters validate present values; callers handle top-level absence separately.
+      .map { it.copy(nullable = false) }
+      .distinct()
 
   private fun GeneratedTypeRef.renderAdapterConstant(): PythonCodeBlock {
     val name = adapterName()
     val type = renderClientPythonType(nullable = false)
-    return if (kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) {
+    val inline =
       PythonCodeBlock.of(
         "%L: %T[%C] = %T(%C)",
         name,
@@ -689,6 +720,10 @@ class PythonClientRenderer(
         PythonSymbol("pydantic", "TypeAdapter"),
         type,
       )
+    return if ((kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) &&
+      inline.render(PythonRenderContext(PythonImportSet())).length <= 120
+    ) {
+      inline
     } else {
       PythonCodeBlock.of(
         "%L: %T[%C] = %T(\n    %C\n)",
@@ -775,8 +810,10 @@ class PythonClientRenderer(
         .filter { parameter -> parameter.constantValue == null }
     val required =
       parameters
-        .filter { parameter -> parameter.location == GeneratedParameter.Location.PATH }
-        .map { it.renderRequiredParameter() } +
+        .filter { parameter ->
+          parameter.location == GeneratedParameter.Location.PATH &&
+            !parameter.isNullableParameter(GenerationMode.Client)
+        }.map { it.renderRequiredParameter() } +
         listOfNotNull(requestBody?.renderRequestBodyParameter()) +
         listOfNotNull(
           queryString?.let { type ->
@@ -784,12 +821,12 @@ class PythonClientRenderer(
           },
         ) +
         parameters
-          .filter { parameter -> parameter.required && parameter.location != GeneratedParameter.Location.PATH }
-          .map { it.renderRequiredParameter() }
+          .filter { parameter ->
+            !parameter.isNullableParameter(GenerationMode.Client) &&
+              parameter.location != GeneratedParameter.Location.PATH
+          }.map { it.renderRequiredParameter() }
     val optional =
-      parameters.filterNot { parameter ->
-        parameter.required || parameter.location == GeneratedParameter.Location.PATH
-      }
+      parameters.filter { parameter -> parameter.isNullableParameter(GenerationMode.Client) }
 
     return PythonCodeBlock.join(
       required + optional.map { it.renderOptionalParameter(this) },
@@ -825,26 +862,31 @@ class PythonClientRenderer(
       } else {
         PythonCodeBlock.of("%C | None", type.renderClientPythonType(nullable = false))
       },
-      if (hasNominalDefault()) PythonCodeBlock.of("%L", operation.defaultName(this)) else renderDefaultValue(),
+      if (hasTypedDefault()) PythonCodeBlock.of("%L", operation.defaultName(this)) else renderDefaultValue(),
     )
 
   private fun GeneratedOperation.defaultName(parameter: GeneratedParameter): String =
     "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_default"
 
-  private fun GeneratedParameter.hasNominalDefault(): Boolean {
-    val model = modelIndex[type.name] ?: return false
-    return defaultValue != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())
-  }
+  private fun GeneratedOperation.defaultPrefix(parameter: GeneratedParameter): PythonCodeBlock =
+    PythonCodeBlock.of("%L: %C = ", defaultName(parameter), parameter.type.renderClientPythonType(nullable = false))
 
-  private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock {
-    val value = defaultValue?.renderPythonValue() ?: return PythonCodeBlock.of("None")
-    return if (hasNominalDefault()) {
-      PythonCodeBlock.of(
-        "%T(%C).validate_python(%C)",
-        PythonSymbol("pydantic", "TypeAdapter"),
-        type.renderClientPythonType(nullable = false),
-        value,
-      )
+  private fun GeneratedParameter.renderDefaultValue(prefix: PythonCodeBlock = PythonCodeBlock.of("")): PythonCodeBlock {
+    val value = defaultValue?.pythonValueCode() ?: return PythonCodeBlock.of("None")
+    return if (hasTypedDefault()) {
+      val function =
+        PythonCodeBlock.of(
+          "%T(%C).validate_python",
+          PythonSymbol("pydantic", "TypeAdapter"),
+          type.renderClientPythonType(nullable = false),
+        )
+      val inline = PythonCodeBlock.of("%C(%C)", function, value)
+      val context = PythonRenderContext(PythonImportSet())
+      if (prefix.render(context).length + inline.render(context).length <= 120) {
+        inline
+      } else {
+        PythonCodeBlock.of("%C(\n    %C\n)", function, value)
+      }
     } else {
       value
     }
@@ -1030,9 +1072,7 @@ class PythonClientRenderer(
       httpParameters()
         .filter { parameter -> parameter.wireName() in variables }
         .map { parameter ->
-          val value =
-            parameter.constantValue?.renderPythonValue()
-              ?: PythonCodeBlock.of("%L", parameter.name.pythonIdentifierName)
+          val value = parameter.renderRequestValue()
           PythonCodeBlock.of("%S: %C", parameter.wireName(), value)
         }
     return PythonCodeBlock.of(
@@ -1086,14 +1126,6 @@ class PythonClientRenderer(
       "pipeDelimited" -> PythonCodeBlock.of("%T.PIPE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
       "deepObject" -> PythonCodeBlock.of("%T.DEEP_OBJECT", PythonSymbol("sunday", "ParameterStyle"))
       else -> genError("Unsupported Python parameter style '$this'")
-    }
-
-  private fun Any.renderPythonValue(): PythonCodeBlock =
-    when (this) {
-      is Boolean -> PythonCodeBlock.of(pythonBoolean())
-      is Number -> PythonCodeBlock.of("%L", this)
-      is String -> PythonCodeBlock.of("%S", this)
-      else -> PythonCodeBlock.of("None")
     }
 
   private fun Boolean?.pythonBoolean(): String = if (this == true) "True" else "False"

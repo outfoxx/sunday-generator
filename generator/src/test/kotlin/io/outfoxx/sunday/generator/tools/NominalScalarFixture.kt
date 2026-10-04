@@ -25,6 +25,7 @@ import kotlin.io.path.writeText
 internal fun nominalScalarApi(
   frontend: String,
   directory: Path,
+  parameterDefaults: Boolean = false,
 ): GeneratedApi {
   val schemas =
     """
@@ -67,7 +68,7 @@ internal fun nominalScalarApi(
         get:
           operationId: getRecord
           parameters:
-            - {name: id, in: path, required: true, schema: {${'$'}ref: '#/components/schemas/AnySid'}}
+            - {name: id, in: path, required: true, schema: {${'$'}ref: '#/components/schemas/AnySid'${if (parameterDefaults) ", default: 'sid:f:default'" else ""}}}
             - {name: fact, in: query, schema: {${'$'}ref: '#/components/schemas/BaseFactSid'}}
           responses:
             '200':
@@ -85,6 +86,7 @@ internal fun nominalScalarApi(
     channels:
       records:
         address: /records
+        ${if (parameterDefaults) "parameters: {id: {schema: {\$ref: '#/components/schemas/AnySid', default: 'sid:f:default'}}}" else ""}
         messages:
           record: {payload: {${'$'}ref: '#/components/schemas/Record'}}
     operations:
@@ -126,7 +128,7 @@ internal fun nominalScalarApi(
           defaults?: Defaults
     /records/{id}:
       uriParameters:
-        id: AnySid
+        id: ${if (parameterDefaults) "{type: AnySid, default: 'sid:f:default'}" else "AnySid"}
       get:
         queryParameters:
           fact?: BaseFactSid
