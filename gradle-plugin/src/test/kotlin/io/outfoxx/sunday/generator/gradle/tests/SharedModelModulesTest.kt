@@ -26,6 +26,8 @@ import java.io.File
 
 class SharedModelModulesTest {
 
+  private val sundayVersion = System.getProperty("sunday.kotlin.version")
+
   @TempDir
   lateinit var directory: File
 
@@ -117,7 +119,7 @@ class SharedModelModulesTest {
         dependencies {
           ${if (module != "models") "api project(':models')" else ""}
           api 'jakarta.ws.rs:jakarta.ws.rs-api:3.1.0'
-          ${if (module == "events") "api 'io.outfoxx.sunday:sunday-broker:2.0.0-beta.6'" else ""}
+          ${if (module == "events") "api 'io.outfoxx.sunday:sunday-broker:$sundayVersion'" else ""}
         }
         sundayGenerations {
           contract {
