@@ -1712,9 +1712,8 @@ class KotlinJAXRSIrGenerator(
         .copy(nullable = isNullableParameter(generationMode))
     val builder = ParameterSpec.builder(name, typeName)
     if (generationMode == Client && defaultValue != null) {
-      val model = modelProperties.declarationModel(type)
       val defaultCode =
-        KotlinModelDefaults.code(defaultValue.toString(), typeName, model, kotlinEnumEntries)
+        type.parameterDefaultCode(defaultValue)
           ?: genError("Unsupported default for client parameter '${this.name}'")
       builder.defaultValue(defaultCode)
     }
@@ -1725,16 +1724,48 @@ class KotlinJAXRSIrGenerator(
 
     builder.addValidationAnnotations(this, typeName)
 
-    defaultValue?.let { defaultValue ->
+    jaxRsDefaultValue()?.let { defaultValue ->
       builder.addAnnotation(
         AnnotationSpec
           .builder(jaxRsTypes.defaultValue)
-          .addMember("value = %S", defaultValue.defaultValueString())
+          .addMember("value = %S", defaultValue)
           .build(),
       )
     }
 
     return builder.build()
+  }
+
+  private fun GeneratedTypeRef.parameterDefaultCode(value: Any?): CodeBlock? {
+    if (value == null) return CodeBlock.of("null").takeIf { nullable }
+    val typeName = kotlinTypeName().copy(nullable = false)
+    val model = modelProperties.declarationModel(this)
+    if (value is List<*> && typeName is ParameterizedTypeName && typeName.rawType in setOf(LIST, SET)) {
+      val element = modelProperties.declarationType(this).arguments.firstOrNull() ?: model?.aliases?.singleOrNull()
+      val factory = if (typeName.rawType == SET) "Set" else "List"
+      if (value.isEmpty()) return CodeBlock.of("empty%L()", factory)
+      val elements = value.map { element?.parameterDefaultCode(it) ?: return null }
+      return elements.joinToCode(prefix = "${factory.lowercase()}Of(", separator = ", ", suffix = ")")
+    }
+    return KotlinModelDefaults.code(value.toString(), typeName, model, kotlinEnumEntries)
+  }
+
+  private fun GeneratedParameter.jaxRsDefaultValue(): String? {
+    val value = defaultValue ?: return null
+    if (value is List<*>) {
+      // JAX-RS injects an empty collection without @DefaultValue; the annotation represents one element only.
+      if (generationMode == Client || value.isEmpty()) return null
+      when (val element = value.singleOrNull()) {
+        is String, is Number, is Boolean -> return element.toString()
+      }
+      genError(
+        "JAX-RS server parameter '$name' requires an empty or single-scalar collection default; use an application adapter for other collection defaults",
+      )
+    }
+    if (value is Map<*, *>) {
+      genError("JAX-RS parameter '$name' has an object default that requires an application parameter converter")
+    }
+    return value.toString()
   }
 
   private fun ParameterSpec.Builder.addJaxRsParameterAnnotation(
@@ -3375,12 +3406,6 @@ class KotlinJAXRSIrGenerator(
       "uri", "url", "uri-reference", "iri", "iri-reference" -> URI::class.asTypeName()
       "byte", "binary" -> BYTE_ARRAY
       else -> null
-    }
-
-  private fun Any.defaultValueString(): String =
-    when (this) {
-      is String -> this
-      else -> toString()
     }
 
   private fun GeneratedTypeRef.namedTypeName(): TypeName {

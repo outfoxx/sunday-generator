@@ -20,6 +20,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.Operation
 import io.outfoxx.sunday.URITemplate
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
@@ -30,22 +31,113 @@ import io.outfoxx.sunday.generator.tools.withOptionalParameterTemplates
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.jdk.JdkTransport
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import jakarta.ws.rs.DefaultValue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.lang.reflect.Proxy
 import java.nio.file.Path
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
 @Tag("requests")
 class KotlinParameterDefaultsTest {
+  @ParameterizedTest
+  @CsvSource("raml,client", "openapi,client", "composed,client", "raml,server", "openapi,server", "composed,server")
+  fun `JAX-RS collection defaults preserve values without stringifying arrays`(
+    frontend: String,
+    target: String,
+    @TempDir directory: Path,
+  ) {
+    val mode = if (target == "server") GenerationMode.Server else GenerationMode.Client
+    val source = parameterDefaultsApi(frontend, directory, collections = true)
+    val api =
+      source.copy(
+        services =
+          source.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.filter { it.id == "collections" }.map { operation ->
+                  operation.copy(
+                    parameters =
+                      operation.parameters.filter { it.name != "counts" }.map { parameter ->
+                        if (mode == GenerationMode.Server &&
+                          parameter.name == "tags"
+                        ) {
+                          parameter.copy(defaultValue = listOf("a"))
+                        } else {
+                          parameter
+                        }
+                      },
+                  )
+                },
+            )
+          },
+      )
+    val registry = KotlinTypeRegistry("io.test", null, mode, setOf(KotlinTypeRegistry.Option.UseJakartaPackages))
+    KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+    val result = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    val service = result.classLoader.loadClass("io.test.service.ParametersAPI")
+    val method = service.methods.single { it.name == "collections" }
+    assertNull(method.parameters[1].getAnnotation(DefaultValue::class.java))
+    assertEquals(
+      if (mode ==
+        GenerationMode.Server
+      ) {
+        "a"
+      } else {
+        null
+      },
+      method.parameters[0].getAnnotation(DefaultValue::class.java)?.value,
+    )
+    if (mode == GenerationMode.Client) {
+      var received: List<Any?> = emptyList()
+      val client =
+        Proxy.newProxyInstance(result.classLoader, arrayOf(service)) { _, _, arguments ->
+          received = arguments.toList()
+          null
+        }
+      val defaults =
+        result.classLoader
+          .loadClass("io.test.service.ParametersAPI\$DefaultImpls")
+          .methods
+          .single { it.name == "collections\$default" }
+      defaults.invoke(null, client, null, null, 3, null)
+      assertEquals(listOf(listOf("a", "b"), emptyList<String>()), received)
+      method.invoke(client, null, null)
+      assertEquals(listOf(null, null), received)
+      method.invoke(client, listOf("explicit"), listOf(""))
+      assertEquals(listOf(listOf("explicit"), listOf("")), received)
+    }
+  }
+
+  @ParameterizedTest
+  @CsvSource("raml", "openapi", "composed")
+  fun `JAX-RS diagnoses collection defaults that cannot be injected portably`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api = parameterDefaultsApi(frontend, directory, collections = true)
+    val registry = KotlinTypeRegistry("io.test", null, GenerationMode.Server, setOf())
+    val error =
+      assertThrows(GenerationException::class.java) {
+        KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+      }
+    assertTrue(
+      error.message.orEmpty().contains("'tags' requires an empty or single-scalar collection default"),
+      error.message,
+    )
+  }
+
   @ParameterizedTest
   @CsvSource(
     "raml,client",

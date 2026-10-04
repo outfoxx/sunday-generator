@@ -28,6 +28,11 @@ class NativePayloadEndpoint : NativePayloadsAPI {
   /** Successful application invocations, independent of transport failures. */
   val calls = AtomicInteger()
 
+  override fun collectionDefaults(
+    projectId: List<String>,
+    category: List<String>,
+  ): RestResponse<List<String>> = RestResponse.ok(projectId + category)
+
   override fun defaultParameters(
     pathValue: String,
     queryValue: Int,
