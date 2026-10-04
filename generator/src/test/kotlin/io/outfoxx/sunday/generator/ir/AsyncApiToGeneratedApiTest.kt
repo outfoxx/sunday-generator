@@ -43,39 +43,51 @@ class AsyncApiToGeneratedApiTest {
   ) {
     val message =
       "{headers: {type: object, required: [count, enabled], properties: " +
-        "{count: {type: integer, default: 0}, enabled: {type: boolean, default: false}}}, payload: {type: string}}"
+        "{count: {\$ref: '#/components/schemas/Count'}, enabled: {\$ref: '#/components/schemas/Enabled'}, " +
+        "overridden: {\$ref: '#/components/schemas/Enabled', default: true}}}, payload: {type: string}}"
     val source = directory.resolve("defaults.yaml")
+    val components =
+      """
+      components:
+        schemas:
+          TenantAlias: {${'$'}ref: '#/components/schemas/Tenant'}
+          Tenant: {type: string, default: public}
+          Count: {type: integer, default: 0}
+          Enabled: {type: boolean, default: false}
+      """.trimIndent()
     source.writeText(
-      if (version == "3.0.0") {
-        """
-        asyncapi: 3.0.0
-        info: {title: Defaults, version: 1.0.0}
-        channels:
-          events:
-            address: /events/{tenant}
-            parameters:
-              tenant: {default: public}
-            messages:
-              event: $message
-        operations:
-          events:
-            action: send
-            channel: {${'$'}ref: '#/channels/events'}
-            messages: [{${'$'}ref: '#/channels/events/messages/event'}]
-        """.trimIndent()
-      } else {
-        """
-        asyncapi: 2.6.0
-        info: {title: Defaults, version: 1.0.0}
-        channels:
-          /events/{tenant}:
-            parameters:
-              tenant: {schema: {type: string, default: public}}
-            publish:
-              operationId: events
-              message: $message
-        """.trimIndent()
-      },
+      (
+        if (version == "3.0.0") {
+          """
+          asyncapi: 3.0.0
+          info: {title: Defaults, version: 1.0.0}
+          channels:
+            events:
+              address: /events/{tenant}
+              parameters:
+                tenant: {schema: {${'$'}ref: '#/components/schemas/TenantAlias'}}
+              messages:
+                event: $message
+          operations:
+            events:
+              action: send
+              channel: {${'$'}ref: '#/channels/events'}
+              messages: [{${'$'}ref: '#/channels/events/messages/event'}]
+          """.trimIndent()
+        } else {
+          """
+          asyncapi: 2.6.0
+          info: {title: Defaults, version: 1.0.0}
+          channels:
+            /events/{tenant}:
+              parameters:
+                tenant: {schema: {${'$'}ref: '#/components/schemas/TenantAlias'}}
+              publish:
+                operationId: events
+                message: $message
+          """.trimIndent()
+        }
+      ) + "\n" + components,
     )
     val api = AsyncApiToGeneratedApi().convertFragment(source.toUri()).api
     val parameters =
@@ -87,6 +99,7 @@ class AsyncApiToGeneratedApiTest {
     assertEquals("public", parameters.getValue("tenant").defaultValue)
     assertEquals(0, parameters.getValue("count").defaultValue)
     assertEquals(false, parameters.getValue("enabled").defaultValue)
+    assertEquals(true, parameters.getValue("overridden").defaultValue)
     assertEquals(api, GeneratedApiYaml.readString(GeneratedApiYaml.writeString(api)))
   }
 

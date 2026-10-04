@@ -40,14 +40,24 @@ class PythonParameterDefaultsTest : PythonTest() {
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
-    val api = parameterDefaultsApi(frontend, directory, cookies = true)
+    val api = parameterDefaultsApi(frontend, directory, cookies = true, collections = true)
     val modules =
       PythonSundayIrGenerator(
         api.withOptionalParameterTemplates(),
         PythonGeneratorOptions(packageName = "client_api"),
       ).generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)) +
         PythonLitestarIrGenerator(api, PythonGeneratorOptions(packageName = "server_api"))
-          .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service))
+          .generateModules(setOf(GeneratedTypeCategory.Model, GeneratedTypeCategory.Service)) +
+        PythonModuleBuilder("client_api/literals.py")
+          .addCode(
+            PythonCodeBlock.of(
+              "defaults = %C",
+              mapOf(
+                "a" to listOf(null, false, 0, "text"),
+                "b" to emptyMap<String, Any>(),
+              ).pythonValueCode(),
+            ),
+          ).build()
     assertTrue(
       compileModules(
         compiler,
@@ -58,12 +68,14 @@ class PythonParameterDefaultsTest : PythonTest() {
           import inspect
           from typing import get_args, get_type_hints
           from client_api.parameters import ParametersClient
+          from client_api.literals import defaults as literal_defaults
           from sunday.httpx import HttpxTransport
           from litestar import Litestar
           from litestar.testing import TestClient
           from sunday.litestar import SundayPlugin
           from server_api.parameters_server import ParametersService, create_parameters_router
 
+          assert literal_defaults == {"a": [None, False, 0, "text"], "b": {}}
           type_parameters = {value.__name__: value for value in ParametersClient.__type_params__}
           hints = get_type_hints(ParametersClient.probe, localns=type_parameters)
           signature = inspect.signature(ParametersClient.probe)
@@ -72,6 +84,10 @@ class PythonParameterDefaultsTest : PythonTest() {
               assert signature.parameters[name].default is not inspect.Parameter.empty, name
           if "cookie_value" in hints:
               assert type(None) in get_args(hints["cookie_value"])
+          collection_defaults = inspect.signature(ParametersClient.collections).parameters
+          assert collection_defaults["tags"].default == ["a", "b"]
+          assert collection_defaults["counts"].default == {"a": 0, "b": 2}
+          assert collection_defaults["empty"].default == []
           async def check_requests():
               async with HttpxTransport(base_url="https://example.com") as transport:
                   api = ParametersClient(transport)
@@ -80,6 +96,12 @@ class PythonParameterDefaultsTest : PythonTest() {
                   assert str(omitted.url) == "https://example.com/probe", omitted.url
                   assert "headerValue" not in omitted.headers
                   assert "cookie" not in omitted.headers
+                  collections = await api.collections().transport_request()
+                  assert collections.url.params.get_list("tags") == ["a", "b"]
+                  no_collections = await api.collections(tags=None, counts=None, empty=None).transport_request()
+                  assert not no_collections.url.params
+                  formatted = await api.formatted().transport_request()
+                  assert formatted.url.params["date"] == "2026-10-03"
                   scalars = await api.scalar_defaults().transport_request()
                   assert scalars.url.path == "/scalar-defaults/active"
                   assert scalars.url.params["uriValue"] == "https://example.com/default"
@@ -101,12 +123,27 @@ class PythonParameterDefaultsTest : PythonTest() {
                   captured.update(inspect.signature(ParametersService.probe).bind(self, *args).arguments)
               async def scalar_defaults(self, *args):
                   pass
+              async def collections(self, *args):
+                  values = inspect.signature(ParametersService.collections).bind(self, *args).arguments
+                  assert values["tags"] == ["a", "b"]
+                  assert values["counts"] == {"a": 0, "b": 2}
+                  captured.update({key: value.copy() if isinstance(value, (list, dict)) else value for key, value in values.items()})
+                  values["tags"].append("mutated")
+                  values["counts"]["a"] = 99
+              async def formatted(self, *args):
+                  pass
               async def required(self, *args):
                   pass
           app = Litestar(route_handlers=[create_parameters_router(Delegate())], plugins=[SundayPlugin()])
           with TestClient(app) as client:
               response = client.get("/probe/explicit", params={"nullableValue": "present"})
               assert response.status_code == 204, response.text
+              for _ in range(2):
+                  response = client.get("/collections")
+                  assert response.status_code == 204, response.text
+          assert captured["tags"] == ["a", "b"]
+          assert captured["counts"] == {"a": 0, "b": 2}
+          assert captured["empty"] == []
           assert captured["query_value"] == 5
           assert captured["zero_value"] == 0
           assert captured["false_value"] is False

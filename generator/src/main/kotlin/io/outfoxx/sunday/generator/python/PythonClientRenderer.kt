@@ -71,10 +71,9 @@ class PythonClientRenderer(
       operation.parameters.filter { it.hasTypedDefault() }.forEach { parameter ->
         module.addCode(
           PythonCodeBlock.of(
-            "%L: %C = %C",
-            operation.defaultName(parameter),
-            parameter.type.renderClientPythonType(nullable = false),
-            parameter.renderDefaultValue(),
+            "%C%C",
+            operation.defaultPrefix(parameter),
+            parameter.renderDefaultValue(operation.defaultPrefix(parameter)),
           ),
         )
       }
@@ -223,13 +222,16 @@ class PythonClientRenderer(
           requireNotNull(parameterValidationName),
           PythonCodeBlock.join(
             checkedParameters.map { (name, type) ->
-              PythonCodeBlock.of(
-                "            if %L is not None:\n" +
-                  "                %L.validate_python(%L, strict=True, context={\"mode\": \"request\"})",
-                name,
-                type.adapterName(),
-                name,
-              )
+              val adapter = type.adapterName()
+              val arguments = "$name, strict=True, context={\"mode\": \"request\"}"
+              val inline = "                $adapter.validate_python($arguments)"
+              val validation =
+                if (inline.length <= 120) {
+                  inline
+                } else {
+                  "                $adapter.validate_python(\n                    $arguments\n                )"
+                }
+              PythonCodeBlock.of("            if %L is not None:\n%L", name, validation)
             },
             separator = "\n",
           ),
@@ -472,7 +474,7 @@ class PythonClientRenderer(
     } ?: true
 
   private fun GeneratedParameter.renderInlineParameterSpec(): PythonCodeBlock {
-    val value = constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    val value = constantValue?.pythonValueCode() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
     return PythonCodeBlock.of(
       "%T(name=%S, value=%C, location=%T.%L)",
       PythonSymbol("sunday", "ParameterSpec"),
@@ -522,7 +524,7 @@ class PythonClientRenderer(
   }
 
   private fun GeneratedParameter.renderRequestValue(): PythonCodeBlock =
-    constantValue?.renderPythonValue() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
+    constantValue?.pythonValueCode() ?: PythonCodeBlock.of("%L", name.pythonIdentifierName)
 
   private fun GeneratedOperation.renderResponseSpecs(): PythonCodeBlock {
     val variants = responseVariants()
@@ -692,7 +694,7 @@ class PythonClientRenderer(
   private fun GeneratedTypeRef.renderAdapterConstant(): PythonCodeBlock {
     val name = adapterName()
     val type = renderClientPythonType(nullable = false)
-    return if (kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) {
+    val inline =
       PythonCodeBlock.of(
         "%L: %T[%C] = %T(%C)",
         name,
@@ -701,6 +703,10 @@ class PythonClientRenderer(
         PythonSymbol("pydantic", "TypeAdapter"),
         type,
       )
+    return if ((kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) &&
+      inline.render(PythonRenderContext(PythonImportSet())).length <= 120
+    ) {
+      inline
     } else {
       PythonCodeBlock.of(
         "%L: %T[%C] = %T(\n    %C\n)",
@@ -845,18 +851,25 @@ class PythonClientRenderer(
   private fun GeneratedOperation.defaultName(parameter: GeneratedParameter): String =
     "_${id.pythonIdentifierName}_${parameter.name.pythonIdentifierName}_default"
 
-  private fun GeneratedParameter.hasTypedDefault(): Boolean =
-    defaultValue != null && (type.kind != GeneratedTypeRef.Kind.SCALAR || !type.format.isNullOrBlank())
+  private fun GeneratedOperation.defaultPrefix(parameter: GeneratedParameter): PythonCodeBlock =
+    PythonCodeBlock.of("%L: %C = ", defaultName(parameter), parameter.type.renderClientPythonType(nullable = false))
 
-  private fun GeneratedParameter.renderDefaultValue(): PythonCodeBlock {
-    val value = defaultValue?.renderPythonValue() ?: return PythonCodeBlock.of("None")
+  private fun GeneratedParameter.renderDefaultValue(prefix: PythonCodeBlock = PythonCodeBlock.of("")): PythonCodeBlock {
+    val value = defaultValue?.pythonValueCode() ?: return PythonCodeBlock.of("None")
     return if (hasTypedDefault()) {
-      PythonCodeBlock.of(
-        "%T(%C).validate_python(%C)",
-        PythonSymbol("pydantic", "TypeAdapter"),
-        type.renderClientPythonType(nullable = false),
-        value,
-      )
+      val function =
+        PythonCodeBlock.of(
+          "%T(%C).validate_python",
+          PythonSymbol("pydantic", "TypeAdapter"),
+          type.renderClientPythonType(nullable = false),
+        )
+      val inline = PythonCodeBlock.of("%C(%C)", function, value)
+      val context = PythonRenderContext(PythonImportSet())
+      if (prefix.render(context).length + inline.render(context).length <= 120) {
+        inline
+      } else {
+        PythonCodeBlock.of("%C(\n    %C\n)", function, value)
+      }
     } else {
       value
     }
@@ -1096,14 +1109,6 @@ class PythonClientRenderer(
       "pipeDelimited" -> PythonCodeBlock.of("%T.PIPE_DELIMITED", PythonSymbol("sunday", "ParameterStyle"))
       "deepObject" -> PythonCodeBlock.of("%T.DEEP_OBJECT", PythonSymbol("sunday", "ParameterStyle"))
       else -> genError("Unsupported Python parameter style '$this'")
-    }
-
-  private fun Any.renderPythonValue(): PythonCodeBlock =
-    when (this) {
-      is Boolean -> PythonCodeBlock.of(pythonBoolean())
-      is Number -> PythonCodeBlock.of("%L", this)
-      is String -> PythonCodeBlock.of("%S", this)
-      else -> PythonCodeBlock.of("None")
     }
 
   private fun Boolean?.pythonBoolean(): String = if (this == true) "True" else "False"

@@ -178,10 +178,6 @@ jobs:
     if: always()
     timeout-minutes: 15
     steps:
-    - name: Require every verification job
-      env:
-        RESULTS: ${{ join(needs.*.result, ',') }}
-      run: test "$RESULTS" = 'success,success,success,success'
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -214,6 +210,10 @@ jobs:
       with:
         name: verification-swift-remainder-${{ github.sha }}
         path: build/ci-artifacts/swift-remainder
+    - name: Require every verification job
+      env:
+        RESULTS: ${{ join(needs.*.result, ',') }}
+      run: test "$RESULTS" = 'success,success,success,success'
     - name: Combine verified coverage and analyze
       run: >-
         ./gradlew sonar --dependency-verification strict -PuseLocalSundayKt=false
@@ -228,7 +228,7 @@ jobs:
         path: code-coverage/build/reports/kover
     - name: Report Tests
       uses: dorny/test-reporter@v1
-      if: success() || failure()
+      if: (success() || failure()) && hashFiles('build/ci-artifacts/**/build/test-results/*/*.xml') != ''
       with:
         name: Tests Results
         path: "build/ci-artifacts/**/build/test-results/*/*.xml"

@@ -28,6 +28,7 @@ internal fun parameterDefaultsApi(
   frontend: String,
   directory: Path,
   cookies: Boolean = false,
+  collections: Boolean = false,
 ): GeneratedApi {
   val openapi =
     """
@@ -59,6 +60,26 @@ internal fun parameterDefaultsApi(
             - {name: stateValue, in: path, required: true, schema: {${'$'}ref: '#/components/schemas/State', default: active}}
             - {name: uriValue, in: query, required: true, schema: {type: string, format: uri, default: 'https://example.com/default'}}
             - {name: nullableState, in: query, required: true, schema: {oneOf: [{${'$'}ref: '#/components/schemas/State'}, {type: 'null'}]}}
+          responses:
+            '204': {description: No content}
+      /formatted:
+        get:
+          operationId: formatted
+          parameters:
+            - {name: date, in: query, schema: {type: string, format: date, default: '2026-10-03'}}
+            - {name: time, in: query, schema: {type: string, format: time, default: '12:34:56.125'}}
+            - {name: localDateTime, in: query, schema: {type: string, format: datetime-only, default: '2026-10-03T12:34:56.125'}}
+            - {name: dateTime, in: query, schema: {type: string, format: date-time, default: '2026-10-03T12:34:56.125+02:00'}}
+            - {name: uuid, in: query, schema: {type: string, format: uuid, default: '123e4567-e89b-12d3-a456-426614174000'}}
+          responses:
+            '204': {description: No content}
+      /collections:
+        get:
+          operationId: collections
+          parameters:
+            - {name: tags, in: query, schema: {type: array, items: {type: string}, default: [a, b]}}
+            - {name: counts, in: query, schema: {type: object, additionalProperties: {type: integer}, default: {a: 0, b: 2}}}
+            - {name: empty, in: query, schema: {type: array, items: {type: string}, default: []}}
           responses:
             '204': {description: No content}
       /required/{pathValue}:
@@ -110,6 +131,26 @@ internal fun parameterDefaultsApi(
           nullableState: State | nil
         responses:
           204:
+    /formatted:
+      get:
+        displayName: formatted
+        queryParameters:
+          date: {type: date-only, default: '2026-10-03'}
+          time: {type: time-only, default: '12:34:56.125'}
+          localDateTime: {type: datetime-only, default: '2026-10-03T12:34:56.125'}
+          dateTime: {type: datetime, default: '2026-10-03T12:34:56.125+02:00'}
+          uuid: {type: string, default: '123e4567-e89b-12d3-a456-426614174000'}
+        responses:
+          204:
+    /collections:
+      get:
+        displayName: collections
+        queryParameters:
+          tags: {type: 'string[]', default: [a, b]}
+          counts: {type: object, properties: {'/.*/': integer}, default: {a: 0, b: 2}}
+          empty: {type: 'string[]', default: []}
+        responses:
+          204:
     /required/{pathValue}:
       uriParameters:
         pathValue: string
@@ -151,7 +192,7 @@ internal fun parameterDefaultsApi(
             name = "Parameters",
             group = null,
             operations =
-              service.operations.map { operation ->
+              service.operations.filter { collections || it.id != "collections" }.map { operation ->
                 operation.copy(
                   parameters =
                     operation.parameters.filter {

@@ -5874,11 +5874,20 @@ class SwiftSundayIrGenerator(
   ): CodeBlock {
     val nominal = typeRef?.let(modelProperties::declarationModel)?.takeIf { it.nominal }
     if (nominal != null) {
-      val rawType = nominalTypes.scalar(nominal).type.swiftTypeName()
-      return CodeBlock.of("%T(rawValue: %L)!", typeName.makeNonOptional(), swiftValueCode(rawType, null))
+      val rawType = nominalTypes.scalar(nominal).type
+      return CodeBlock.of(
+        "%T(rawValue: %L)!",
+        typeName.makeNonOptional(),
+        swiftValueCode(rawType.swiftTypeName(), rawType),
+      )
     }
     return when (this) {
       is String -> {
+        val declaration = typeRef?.let(modelProperties::declarationType)
+        val format = declaration?.format ?: declaration?.name
+        if (declaration?.kind == GeneratedTypeRef.Kind.SCALAR) {
+          SwiftModelDefaults.formatted(this, format)?.let { return it }
+        }
         val enumModel =
           typeRef
             ?.let(modelProperties::declarationModel)

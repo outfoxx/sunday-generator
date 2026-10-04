@@ -133,6 +133,30 @@ class KotlinParameterDefaultsTest {
         val omitted = request(arrayOf("explicit", null, null, null, null, null, null))
         assertEquals("https://example.com/probe/explicit", omitted.uri.toString())
         assertTrue(omitted.headers.none { it.first.equals("headerValue", ignoreCase = true) })
+        val formattedMethod = generated.methods.single { it.name == "formatted\$default" }
+        val formatted =
+          formattedMethod.invoke(
+            null,
+            client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            31,
+            null,
+          ) as Operation<*, *, *>
+        assertEquals(java.time.LocalDate.parse("2026-10-03"), formatted.spec.queryParameters?.get("date"))
+        assertEquals(java.time.LocalTime.parse("12:34:56.125"), formatted.spec.queryParameters?.get("time"))
+        assertEquals(
+          java.time.LocalDateTime.parse("2026-10-03T12:34:56.125"),
+          formatted.spec.queryParameters?.get("localDateTime"),
+        )
+        assertEquals(
+          java.time.OffsetDateTime.parse("2026-10-03T12:34:56.125+02:00"),
+          formatted.spec.queryParameters?.get("dateTime"),
+        )
+        runBlocking { formatted.transportRequest() }
         val defaultMethod = generated.methods.single { it.name == "probe\$default" }
         val defaultOperation =
           defaultMethod.invoke(

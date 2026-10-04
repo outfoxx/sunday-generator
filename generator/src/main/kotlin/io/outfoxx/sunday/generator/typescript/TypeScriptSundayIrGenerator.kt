@@ -468,8 +468,14 @@ class TypeScriptSundayIrGenerator(
     if (typeName == URL_TYPE) {
       return CodeBlock.of("new %T(%L)", URL_TYPE, literal(value))
     }
+    if (typeName in setOf(LOCAL_DATE, LOCAL_TIME, LOCAL_DATETIME, OFFSET_DATETIME)) {
+      return CodeBlock.of("%T.parse(%L)", typeName, literal(value))
+    }
     val model = type.modelOrNull(index)
-    if (model != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())) {
+    if (model != null && nominalTypes.branches(model).isNotEmpty()) {
+      return CodeBlock.of("%L.parse(%L)", typeRegistry.schemaInitializer(typeName), literal(value))
+    }
+    if (model?.nominal == true) {
       return CodeBlock.of("%T(%L)", typeName, literal(value))
     }
     val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }

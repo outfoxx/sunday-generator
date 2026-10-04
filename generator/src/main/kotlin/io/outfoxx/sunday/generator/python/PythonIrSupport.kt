@@ -18,7 +18,9 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 internal fun GeneratedApi.pythonHttpServices(): List<GeneratedService> =
   services.mapNotNull { service ->
@@ -40,3 +42,12 @@ private fun GeneratedOperation.hasNonHttpProtocolBinding(): Boolean =
 private fun String.isHttpProtocol(): Boolean = equals("http", ignoreCase = true) || equals("https", ignoreCase = true)
 
 private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
+
+/** Native and formatted scalars need the same typed defaults as named and collection parameters. */
+internal fun GeneratedParameter.hasTypedDefault(): Boolean =
+  defaultValue != null &&
+    (
+      type.kind != GeneratedTypeRef.Kind.SCALAR ||
+        !type.format.isNullOrBlank() ||
+        type.name in setOf("date", "time", "datetime", "datetime-only")
+    )

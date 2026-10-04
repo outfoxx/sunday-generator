@@ -56,6 +56,17 @@ class TypeScriptParameterDefaultsTest {
             import {ParametersAPI, createParametersAPI} from './parameters-api.js';
             const api = createParametersAPI(new FetchTransport(ParametersAPI.baseURL(null)));
             await api.scalarDefaults().transportRequest();
+            const formatted = await api.formatted().transportRequest();
+            if (!(formatted instanceof Request)) throw new Error("Expected a Fetch request");
+            const formattedURL = new URL(formatted.url);
+            for (const [name, value] of Object.entries({date: '[2026,10,3]', time: '[12,34,56,125000000]',
+                localDateTime: '[2026,10,3,12,34,56,125000000]', dateTime: '1791023696.125',
+                uuid: '123e4567-e89b-12d3-a456-426614174000'})) {
+              if (formattedURL.searchParams.get(name) !== value) throw new Error('Incorrect formatted default: ' + name + ': ' + formattedURL);
+            }
+            const absentFormats = await api.formatted(null, null, null, null, null).transportRequest();
+            if (!(absentFormats instanceof Request)) throw new Error("Expected a Fetch request");
+            if (new URL(absentFormats.url).searchParams.size !== 0) throw new Error('null formatted parameters were defaulted');
             const omitted = await api.probe(null, null, null, undefined, null, null, null).transportRequest();
             if (!(omitted instanceof Request)) throw new Error("Expected a Fetch request");
             if (new URL(omitted.url).pathname !== '/probe' || new URL(omitted.url).searchParams.size !== 0 || omitted.headers.has('headerValue')) {

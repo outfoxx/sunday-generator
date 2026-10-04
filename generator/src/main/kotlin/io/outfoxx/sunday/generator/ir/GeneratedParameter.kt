@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import com.fasterxml.jackson.annotation.JsonInclude
+
 /**
  * Operation parameter carried by generated IR.
  */
@@ -25,6 +27,7 @@ data class GeneratedParameter(
   val type: GeneratedTypeRef,
   val required: Boolean = false,
   val serializationName: String? = null,
+  @get:JsonInclude(value = JsonInclude.Include.NON_NULL, content = JsonInclude.Include.ALWAYS)
   val defaultValue: Any? = null,
   val constantValue: Any? = null,
   val encoding: GeneratedParameterEncoding? = null,

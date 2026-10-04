@@ -30,6 +30,11 @@ import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import java.math.BigDecimal
 import java.net.URI
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.util.UUID
 
 /** Renders scalar defaults using the inherited declaration type, including canonical enum values. */
 internal object KotlinModelDefaults {
@@ -61,6 +66,10 @@ internal object KotlinModelDefaults {
       DOUBLE -> value.toDoubleOrNull()?.let { CodeBlock.of("%L", it) }
       BigDecimal::class.asTypeName() -> CodeBlock.of("%T(%S)", type, value)
       URI::class.asTypeName() -> CodeBlock.of("%T.create(%S)", type, value)
+      UUID::class.asTypeName() -> CodeBlock.of("%T.fromString(%S)", type, value)
+      LocalDate::class.asTypeName(), LocalTime::class.asTypeName(),
+      LocalDateTime::class.asTypeName(), OffsetDateTime::class.asTypeName(),
+      -> CodeBlock.of("%T.parse(%S)", type, value)
       else -> null
     }
   }

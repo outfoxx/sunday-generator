@@ -2206,18 +2206,12 @@ class KotlinSundayIrGenerator(
     defaultValue: Any,
     typeName: TypeName,
   ): CodeBlock {
-    val enumModel = type.modelOrNull(apiIndex)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
-    if (defaultValue is String && enumModel != null) {
-      if (enumModel.unknownValue != null) {
-        return CodeBlock.of("%T.fromValue(%S)", typeName, defaultValue)
-      }
-      return CodeBlock.of(
-        "%T.%L",
-        typeName,
-        kotlinEnumEntries.requireConstantNameForValue(enumModel, defaultValue, "default"),
-      )
+    val model = modelProperties.declarationModel(type)
+    if (model?.let(nominalTypes::branches)?.isNotEmpty() == true) {
+      return CodeBlock.of("%T.fromString(%S)", typeName, defaultValue.toString())
     }
-    return valueCode(defaultValue)
+    return KotlinModelDefaults.code(defaultValue.toString(), typeName, model, kotlinEnumEntries)
+      ?: valueCode(defaultValue)
   }
 
   private fun GeneratedOperation.operationParameters(): List<GeneratedOperationParameter> {
