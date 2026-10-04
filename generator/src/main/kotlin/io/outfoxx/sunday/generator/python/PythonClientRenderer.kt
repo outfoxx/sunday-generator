@@ -239,6 +239,7 @@ class PythonClientRenderer(
         )
       }
     val functionPrefix = if (exchange != null && streaming == null) "async def" else "def"
+    val isolatedBody = PythonCodeBlock.of("%C%C", renderDefaultCopies(), validatedBody)
 
     return if (!hasSignatureParameters()) {
       PythonCodeBlock.of(
@@ -251,7 +252,7 @@ class PythonClientRenderer(
         id.pythonIdentifierName,
         operationReturnType,
         id,
-        validatedBody,
+        isolatedBody,
       )
     } else {
       PythonCodeBlock.of(
@@ -268,10 +269,26 @@ class PythonClientRenderer(
         signature,
         operationReturnType,
         id,
-        validatedBody,
+        isolatedBody,
       )
     }
   }
+
+  private fun GeneratedOperation.renderDefaultCopies(): PythonCodeBlock =
+    PythonCodeBlock.join(
+      httpParameters().filter { it.constantValue == null && it.hasMutableDefault() }.map { parameter ->
+        // Copy before capturing parameters so deferred validation and encoding see the same per-call value.
+        PythonCodeBlock.of(
+          "        if %L is %L:\n            %L = %T(%L)\n",
+          parameter.name.pythonIdentifierName,
+          defaultName(parameter),
+          parameter.name.pythonIdentifierName,
+          PythonSymbol("copy", "deepcopy", "_deepcopy"),
+          parameter.name.pythonIdentifierName,
+        )
+      },
+      separator = "",
+    )
 
   private fun GeneratedOperation.renderOperationConstruction(operationType: PythonSymbol): PythonCodeBlock =
     nullify?.let { nullify ->

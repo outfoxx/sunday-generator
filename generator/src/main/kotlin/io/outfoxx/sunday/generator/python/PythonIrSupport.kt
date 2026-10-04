@@ -43,11 +43,15 @@ private fun String.isHttpProtocol(): Boolean = equals("http", ignoreCase = true)
 
 private val asyncApiOperationMethods = setOf("PUBLISH", "SUBSCRIBE")
 
-/** Native and formatted scalars need the same typed defaults as named and collection parameters. */
+/** Structured values, named types, and native or formatted scalars need validated typed defaults. */
 internal fun GeneratedParameter.hasTypedDefault(): Boolean =
   defaultValue != null &&
     (
-      type.kind != GeneratedTypeRef.Kind.SCALAR ||
+      hasMutableDefault() ||
+        type.kind != GeneratedTypeRef.Kind.SCALAR ||
         !type.format.isNullOrBlank() ||
         type.name in setOf("date", "time", "datetime", "datetime-only")
     )
+
+/** JSON objects and arrays need independent defaults, including when their schema is unconstrained. */
+internal fun GeneratedParameter.hasMutableDefault(): Boolean = defaultValue is List<*> || defaultValue is Map<*, *>

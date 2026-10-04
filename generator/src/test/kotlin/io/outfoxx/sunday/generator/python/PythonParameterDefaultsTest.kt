@@ -17,6 +17,12 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedParameter
+import io.outfoxx.sunday.generator.ir.GeneratedService
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.parameterDefaultsApi
@@ -25,6 +31,7 @@ import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -33,6 +40,98 @@ import java.nio.file.Path
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX_LITESTAR)
 @Tag("requests")
 class PythonParameterDefaultsTest : PythonTest() {
+  @Test
+  fun `nested collection and model defaults are isolated without copying explicit values`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel("Labels", GeneratedModel.Kind.ARRAY, aliases = listOf(GeneratedTypeRef.scalar("string"))),
+        GeneratedModel("Groups", GeneratedModel.Kind.MAP, aliases = listOf(GeneratedTypeRef.named("Labels"))),
+        GeneratedModel(
+          "Filter",
+          GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("labels", GeneratedTypeRef.named("Labels"), required = true)),
+        ),
+      )
+    val service =
+      GeneratedService(
+        "Defaults",
+        operations =
+          listOf(
+            GeneratedOperation(
+              "defaults",
+              "GET",
+              "/defaults",
+              parameters =
+                listOf(
+                  GeneratedParameter(
+                    "groups",
+                    GeneratedParameter.Location.QUERY,
+                    GeneratedTypeRef.named("Groups"),
+                    defaultValue = mapOf("labels" to listOf("a")),
+                  ),
+                  GeneratedParameter(
+                    "filter",
+                    GeneratedParameter.Location.QUERY,
+                    GeneratedTypeRef.named("Filter"),
+                    defaultValue = mapOf("labels" to listOf("a")),
+                  ),
+                  GeneratedParameter(
+                    "deepcopy",
+                    GeneratedParameter.Location.QUERY,
+                    GeneratedTypeRef.scalar("any"),
+                    defaultValue = mapOf("labels" to listOf("a")),
+                  ),
+                ),
+            ),
+          ),
+      )
+    val modules =
+      listOf(
+        PythonModuleBuilder("client_api/__init__.py").build(),
+        PythonModelRenderer("client_api").renderModels(models),
+        PythonClientRenderer("client_api", models = models).renderService(service),
+      )
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          import asyncio
+          from client_api.defaults import DefaultsClient
+          from client_api.models import Filter
+          from sunday.httpx import HttpxTransport
+
+          def parameters(operation):
+              return {parameter.name: parameter.value for parameter in operation.spec.request.parameters}
+
+          async def verify():
+              async with HttpxTransport(base_url="https://example.com") as transport:
+                  api = DefaultsClient(transport)
+                  first = api.defaults()
+                  pending = api.defaults()
+                  first_values = parameters(first)
+                  first_values["groups"]["labels"].append("mutated")
+                  first_values["filter"].labels.append("mutated")
+                  first_values["deepcopy"]["labels"].append("mutated")
+                  for operation in [pending, api.defaults()]:
+                      values = parameters(operation)
+                      assert values["groups"] == {"labels": ["a"]}, values
+                      assert values["filter"].labels == ["a"], values
+                      assert values["deepcopy"] == {"labels": ["a"]}, values
+                      operation.spec.request.parameter_validation()
+                  supplied = {"groups": {"labels": ["a"]}, "filter": Filter(labels=["a"]), "deepcopy": {"labels": ["a"]}}
+                  supplied_values = parameters(api.defaults(**supplied))
+                  assert all(supplied_values[name] is supplied[name] for name in supplied)
+                  omitted = api.defaults(groups=None, filter=None, deepcopy=None)
+                  assert all(value is None for value in parameters(omitted).values())
+                  assert not (await omitted.transport_request()).url.params
+          asyncio.run(verify())
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "composed"])
   fun `client signatures preserve nullable and defaulted parameters`(
@@ -69,6 +168,7 @@ class PythonParameterDefaultsTest : PythonTest() {
           from typing import get_args, get_type_hints
           from client_api.parameters import ParametersClient
           from client_api.literals import defaults as literal_defaults
+          from sunday import RequestEncodingError
           from sunday.httpx import HttpxTransport
           from litestar import Litestar
           from litestar.testing import TestClient
@@ -96,8 +196,34 @@ class PythonParameterDefaultsTest : PythonTest() {
                   assert str(omitted.url) == "https://example.com/probe", omitted.url
                   assert "headerValue" not in omitted.headers
                   assert "cookie" not in omitted.headers
-                  collections = await api.collections().transport_request()
+                  first = api.collections()
+                  pending = api.collections()
+                  first_values = {parameter.name: parameter.value for parameter in first.spec.request.parameters}
+                  pending_values = {parameter.name: parameter.value for parameter in pending.spec.request.parameters}
+                  first_values["tags"].append("mutated")
+                  first_values["counts"]["a"] = 99
+                  first_values["empty"].append("filled")
+                  for operation in [pending, api.collections()]:
+                      values = {parameter.name: parameter.value for parameter in operation.spec.request.parameters}
+                      assert values == {"tags": ["a", "b"], "counts": {"a": 0, "b": 2}, "empty": []}, values
+                      assert all(values[name] is not first_values[name] for name in values)
+                  assert all(pending_values[name] is not collection_defaults[name].default for name in pending_values)
+                  first_values["tags"].append(1)
+                  try:
+                      await first.transport_request()
+                  except RequestEncodingError:
+                      pass
+                  else:
+                      raise AssertionError("copied defaults bypassed request validation")
+                  collections = await pending.transport_request()
                   assert collections.url.params.get_list("tags") == ["a", "b"]
+                  supplied = {"tags": ["a", "b"], "counts": {"a": 0, "b": 2}, "empty": []}
+                  supplied_operation = api.collections(**supplied)
+                  supplied_values = {parameter.name: parameter.value for parameter in supplied_operation.spec.request.parameters}
+                  assert all(supplied_values[name] is supplied[name] for name in supplied)
+                  supplied["tags"].append("explicit")
+                  supplied_request = await supplied_operation.transport_request()
+                  assert supplied_request.url.params.get_list("tags") == ["a", "b", "explicit"]
                   no_collections = await api.collections(tags=None, counts=None, empty=None).transport_request()
                   assert not no_collections.url.params
                   formatted = await api.formatted().transport_request()
