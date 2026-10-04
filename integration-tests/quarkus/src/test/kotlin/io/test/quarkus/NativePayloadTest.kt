@@ -52,6 +52,22 @@ class NativePayloadTest {
   lateinit var resource: APIResource
 
   @Test
+  fun `collection defaults agree between generated clients and native server injection`() {
+    val client = QuarkusRestClientBuilder.newBuilder().baseUri(baseUri).build(NativePayloadsAPI::class.java)
+    try {
+      assertEquals(listOf("general"), client.collectionDefaults())
+      assertEquals(listOf("general"), client.collectionDefaults(null, null))
+      assertEquals(
+        listOf("one", "two", "explicit"),
+        client.collectionDefaults(listOf("one", "two"), listOf("explicit")),
+      )
+      assertEquals(listOf("general"), client.collectionDefaults(emptyList(), emptyList()))
+    } finally {
+      (client as AutoCloseable).close()
+    }
+  }
+
+  @Test
   fun `defaulted client parameters can be omitted and server injection supplies defaults`() {
     val client = QuarkusRestClientBuilder.newBuilder().baseUri(baseUri).build(NativePayloadsAPI::class.java)
     try {

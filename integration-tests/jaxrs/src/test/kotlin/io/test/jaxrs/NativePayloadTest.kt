@@ -64,6 +64,14 @@ class NativePayloadTest : JerseyTest() {
             bind(
               APIResource(
                 object : API {
+                  override fun collectionDefaults(
+                    projectId: List<String>,
+                    category: List<String>,
+                  ): Response {
+                    calls.incrementAndGet()
+                    return Response.ok(projectId + category).build()
+                  }
+
                   override fun defaultParameters(
                     pathValue: String,
                     queryValue: Int,
@@ -110,6 +118,21 @@ class NativePayloadTest : JerseyTest() {
 
   @AfterEach
   fun stop() = tearDown()
+
+  @Test
+  fun `plain JAX-RS injects empty and single element collection defaults`() {
+    target("native/collection-defaults").request().get().use {
+      assertEquals(200, it.status)
+      assertEquals("[\"general\"]", it.readEntity(String::class.java))
+    }
+    target(
+      "native/collection-defaults",
+    ).queryParam("projectId", "one", "two").queryParam("category", "explicit").request().get().use {
+      assertEquals(200, it.status)
+      assertEquals("[\"one\",\"two\",\"explicit\"]", it.readEntity(String::class.java))
+    }
+    assertEquals(2, calls.get())
+  }
 
   @Test
   fun `plain JAX-RS applies defaults before invoking the delegate`() {

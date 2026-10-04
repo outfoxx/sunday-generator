@@ -463,22 +463,45 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedParameter.defaultValueCode(
     serviceTypeName: TypeName.Standard,
     value: Any,
+  ): CodeBlock = type.defaultValueCode(serviceTypeName, value)
+
+  private fun GeneratedTypeRef.defaultValueCode(
+    serviceTypeName: TypeName.Standard,
+    value: Any?,
   ): CodeBlock {
-    val typeName = type.typeName(serviceTypeName).nonOptional
+    if (value == null) return literal(null)
+    val model = modelOrNull(index)
+    val resolved = model?.aliasedTypeRef() ?: this
+    if (resolved != this) return resolved.defaultValueCode(serviceTypeName, value)
+    if (value is List<*> && kind == GeneratedTypeRef.Kind.ARRAY) {
+      val elements = value.map { arguments.firstOrNull()?.defaultValueCode(serviceTypeName, it) ?: literal(it) }
+      val array = elements.joinToCode(", ", "[", "]")
+      return if (collection == GeneratedCollectionKind.SET) CodeBlock.of("new %T(%L)", SET, array) else array
+    }
+    if (value is Map<*, *> && kind == GeneratedTypeRef.Kind.MAP) {
+      return value.entries
+        .map { (key, entryValue) ->
+          CodeBlock.of(
+            "[%S]: %L",
+            key.toString(),
+            arguments.firstOrNull()?.defaultValueCode(serviceTypeName, entryValue) ?: literal(entryValue),
+          )
+        }.joinToCode(", ", "{", "}")
+    }
+    val typeName = typeName(serviceTypeName).nonOptional
     if (typeName == URL_TYPE) {
       return CodeBlock.of("new %T(%L)", URL_TYPE, literal(value))
     }
     if (typeName in setOf(LOCAL_DATE, LOCAL_TIME, LOCAL_DATETIME, OFFSET_DATETIME)) {
       return CodeBlock.of("%T.parse(%L)", typeName, literal(value))
     }
-    val model = type.modelOrNull(index)
     if (model != null && nominalTypes.branches(model).isNotEmpty()) {
       return CodeBlock.of("%L.parse(%L)", typeRegistry.schemaInitializer(typeName), literal(value))
     }
     if (model?.nominal == true) {
       return CodeBlock.of("%T(%L)", typeName, literal(value))
     }
-    val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
+    val enumModel = model?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (value is String && enumModel != null) {
       val memberName = enumModel.requireTypeScriptEnumMemberNameForValue(value, "default")
       if (enumModel.unknownValue == value) {
@@ -488,6 +511,20 @@ class TypeScriptSundayIrGenerator(
         "%T.%L",
         typeName,
         memberName,
+      )
+    }
+    if (model?.kind in setOf(GeneratedModel.Kind.OBJECT, GeneratedModel.Kind.UNION)) {
+      // Defaults contain wire values; the model schema owns nested codecs and constraints.
+      return CodeBlock.of(
+        "%Q({format: 'json', dateEncoding: %T.ISO8601, " +
+          "numericDateDecoding: %T.MILLISECONDS_SINCE_EPOCH, " +
+          "arrayBufferEncoding: %T.BASE64}).resolveSchema(%L).parse(%L)",
+        SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+        TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+        TypeName.namedImport("NumericDateDecoding", "@outfoxx/sunday"),
+        TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+        schemaInitializer(serviceTypeName, typeName),
+        literal(value),
       )
     }
     return literal(value)
@@ -4339,6 +4376,12 @@ class TypeScriptSundayIrGenerator(
       is String -> CodeBlock.of("%S", value)
       is Number -> CodeBlock.of("%L", value)
       is Boolean -> CodeBlock.of("%L", value)
+      is List<*> -> value.map(::literal).joinToCode(", ", "[", "]")
+      is Map<*, *> ->
+        value.entries
+          .map { (key, entryValue) ->
+            CodeBlock.of("[%S]: %L", key.toString(), literal(entryValue))
+          }.joinToCode(", ", "{", "}")
       else -> CodeBlock.of("%S", value.toString())
     }
 

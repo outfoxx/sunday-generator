@@ -95,6 +95,20 @@ and validation metadata, independently of model constructor checks.
 
 Kotlin/JAX-RS generation is fully IR-backed after source parsing. RAML uses AMF only before `RamlToGeneratedApi`; OpenAPI and AsyncAPI use native YAML readers before composition into `GeneratedApi`.
 
+## Collection parameter defaults
+
+Kotlin client methods use native collection defaults such as `emptyList()` and
+`listOf("a", "b")`. Passing `null` explicitly preserves absence; it does not apply
+the method default. Collection defaults do not emit client `@DefaultValue` annotations.
+
+On servers, an empty collection default omits `@DefaultValue`: JAX-RS supplies an
+empty collection for an absent parameter. A single scalar element uses, for example,
+`@DefaultValue("a")`. JAX-RS interprets that annotation as one converted element,
+not JSON, so `@DefaultValue("[]")` would be incorrect. See the
+[JAX-RS default-value contract](https://jakarta.ee/specifications/restful-ws/4.0/apidocs/jakarta.ws.rs/jakarta/ws/rs/defaultvalue).
+Server defaults with multiple elements or object values require application-specific
+conversion and produce a generation diagnostic instead of silently changing values.
+
 ## Closed model decoding
 
 Models with `additionalProperties: false` reject undeclared JSON fields when Jackson

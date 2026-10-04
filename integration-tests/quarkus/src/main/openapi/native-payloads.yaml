@@ -1,6 +1,17 @@
 openapi: 3.1.0
 info: {title: Native payload validation, version: 1.0.0}
 paths:
+  /native/collection-defaults:
+    get:
+      operationId: collectionDefaults
+      parameters:
+        - {name: projectId, in: query, style: form, explode: true, schema: {type: array, items: {type: string}, default: []}}
+        - {name: category, in: query, style: form, explode: true, schema: {type: array, items: {type: string}, default: [general]}}
+      responses:
+        '200':
+          description: Resolved collection parameters
+          content:
+            application/json: {schema: {type: array, items: {type: string}}}
   /native/defaults/{pathValue}:
     get:
       operationId: defaultParameters
