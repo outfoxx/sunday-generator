@@ -513,6 +513,20 @@ class TypeScriptSundayIrGenerator(
         memberName,
       )
     }
+    if (model?.kind in setOf(GeneratedModel.Kind.OBJECT, GeneratedModel.Kind.UNION)) {
+      // Defaults contain wire values; the model schema owns nested codecs and constraints.
+      return CodeBlock.of(
+        "%Q({format: 'json', dateEncoding: %T.ISO8601, " +
+          "numericDateDecoding: %T.MILLISECONDS_SINCE_EPOCH, " +
+          "arrayBufferEncoding: %T.BASE64}).resolveSchema(%L).parse(%L)",
+        SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+        TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+        TypeName.namedImport("NumericDateDecoding", "@outfoxx/sunday"),
+        TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+        schemaInitializer(serviceTypeName, typeName),
+        literal(value),
+      )
+    }
     return literal(value)
   }
 
