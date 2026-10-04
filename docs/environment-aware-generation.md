@@ -121,6 +121,26 @@ remain omitted when absent. Invalid event requests close without reconnecting; e
 native validation failures within their transport error contract. Raw binary streams retain their
 transport-specific contracts.
 
+## Client parameter defaults
+
+Client arguments preserve schema nullability and also allow absence when a parameter is optional or
+has a declared default. This applies to path, query, header, and cookie parameters where the target
+supports them, and to generated base-URI helpers. Required parameters without nullability or a default
+remain required. Body payloads keep their existing presence contract.
+
+Client methods use language-level defaults when arguments are omitted (`undefined` in TypeScript).
+Explicit `null`, `nil`, or `None` remains absent, including for path parameters and base-URI variables.
+Sunday omits absent parameter values and expands undefined URI-template variables according to RFC 6570:
+`/items{/id}` becomes `/items` when `id` is absent, while an empty string produces `/items/`.
+Native frameworks retain their own parameter-conversion behavior. The generator does not classify path
+templates or replace explicit nulls with defaults. Enum and URI defaults retain their declared types,
+and zero and false values are preserved.
+
+JAX-RS client methods also declare Kotlin default arguments, including aggregate subresource locators;
+explicit nulls reach the native proxy unchanged. Server defaults remain framework-owned: JAX-RS uses
+`@DefaultValue`, and Litestar supplies defaults even for parameters marked required in the contract.
+Runtime validation checks supplied values without substituting defaults for absent values.
+
 ## Scoped policies
 
 ```yaml
@@ -259,9 +279,9 @@ The environment-aware output requires these companion runtimes:
 
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
-| Kotlin | `2.0.0-beta.9` | Maven Central, including validation and Quarkus client artifacts |
-| Swift | `2.0.0-beta.9` | Swift Package Manager Git tag |
-| TypeScript | `2.0.0-beta.6` | npm; Node.js 22 or later |
+| Kotlin | `2.0.0-beta.10` | Maven Central, including validation and Quarkus client artifacts |
+| Swift | `2.0.0-beta.10` | Swift Package Manager Git tag |
+| TypeScript | `2.0.0-beta.7` | npm; Node.js 22 or later |
 | Python | `2.0.0-beta.6` | Released Git tag until PyPI publication |
 
 Compiler-backed tests use these released dependencies by default. Set `SUNDAY_KOTLIN_PATH`,

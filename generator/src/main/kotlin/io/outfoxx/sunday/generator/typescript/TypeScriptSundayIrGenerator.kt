@@ -99,6 +99,7 @@ import io.outfoxx.sunday.generator.typescript.utils.Z
 import io.outfoxx.sunday.generator.typescript.utils.isNullable
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.nonOptional
 import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nullable
 import io.outfoxx.sunday.generator.typescript.utils.quotedIfNotTypeScriptIdentifier
@@ -410,9 +411,11 @@ class TypeScriptSundayIrGenerator(
       .apply {
         baseUriParameters.forEach { parameter ->
           addParameter(
-            parameter.name,
-            parameter.type.typeName(serviceTypeName),
-            optional = parameter.defaultValue != null,
+            ParameterSpec
+              .builder(parameter.name, parameter.type.typeName(serviceTypeName).optionalParameterType(parameter))
+              .apply {
+                parameter.defaultValue?.let { defaultValue(parameter.defaultValueCode(serviceTypeName, it)) }
+              }.build(),
           )
         }
       }.addCode("return new URLTemplate(%>\n")
@@ -420,11 +423,6 @@ class TypeScriptSundayIrGenerator(
       .apply {
         baseUriParameters.forEachIndexed { idx, parameter ->
           addCode("%N", parameter.name)
-
-          parameter.defaultValue?.let { defaultValue ->
-            addCode(": %N ?? ", parameter.name)
-            addCode(parameter.defaultValueCode(serviceTypeName, defaultValue))
-          }
 
           if (idx < baseUriParameters.size - 1) {
             addCode(", ")
@@ -466,7 +464,14 @@ class TypeScriptSundayIrGenerator(
     serviceTypeName: TypeName.Standard,
     value: Any,
   ): CodeBlock {
-    val typeName = type.typeName(serviceTypeName)
+    val typeName = type.typeName(serviceTypeName).nonOptional
+    if (typeName == URL_TYPE) {
+      return CodeBlock.of("new %T(%L)", URL_TYPE, literal(value))
+    }
+    val model = type.modelOrNull(index)
+    if (model != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())) {
+      return CodeBlock.of("%T(%L)", typeName, literal(value))
+    }
     val enumModel = type.modelOrNull(index)?.takeIf { model -> model.kind == GeneratedModel.Kind.ENUM }
     if (value is String && enumModel != null) {
       val memberName = enumModel.requireTypeScriptEnumMemberNameForValue(value, "default")
@@ -3358,9 +3363,16 @@ class TypeScriptSundayIrGenerator(
         val parameterSpec = parameter.parameterSpec(serviceTypeName)
         functionBuilder.addParameter(
           if (defaultOptionalParameters) {
-            methodParameter(parameterSpec)
+            if (parameter.defaultValue != null) {
+              parameterSpec
+                .toBuilder()
+                .defaultValue(parameter.source.defaultValueCode(serviceTypeName, parameter.defaultValue))
+                .build()
+            } else {
+              methodParameter(parameterSpec)
+            }
           } else {
-            parameterSpec
+            parameterSpec.toBuilder().optional(parameterSpec.type.isOptional).build()
           },
         )
       }
@@ -3374,7 +3386,7 @@ class TypeScriptSundayIrGenerator(
         if (defaultOptionalParameters) {
           methodParameter(bodyParameter)
         } else {
-          bodyParameter
+          bodyParameter.toBuilder().optional(bodyParameter.type.isOptional).build()
         },
       )
     }
@@ -3753,9 +3765,11 @@ class TypeScriptSundayIrGenerator(
         TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
       )
       checkedParameters.forEach { parameter ->
+        if (parameter.isNullable) builder.add("if (%N != null) {\n%>", parameter.name)
         builder.add("%T.encode(", Z)
         builder.add(parameter.type.zodSchema(serviceTypeName, parameter.required, runtimeName = runtimeName))
         builder.add(", %N);\n", parameter.name)
+        if (parameter.isNullable) builder.add("%<}\n")
       }
       builder.add("%<},")
     }
@@ -3820,6 +3834,7 @@ class TypeScriptSundayIrGenerator(
         parameter.wireName == parameter.name &&
         parameter.source.serializationName == null &&
         parameter.defaultValue == null &&
+        !parameter.isNullable &&
         !parameter.isConstant &&
         !parameter.source.hasDirectZodValidation()
       ) {
@@ -3869,11 +3884,14 @@ class TypeScriptSundayIrGenerator(
     val value =
       when {
         isConstant -> literal(constantValue)
-        defaultValue != null -> CodeBlock.of("%N ?? %L", name, literal(defaultValue))
         else -> CodeBlock.of("%N", name)
       }
 
-    return schemaPropertyName?.let { CodeBlock.of("%N.parse(%L)", it, value) } ?: value
+    val validated = schemaPropertyName?.let { CodeBlock.of("%N.parse(%L)", it, value) } ?: value
+    if (isConstant || !isNullable) {
+      return validated
+    }
+    return CodeBlock.of("%N == null ? undefined : %L", name, validated)
   }
 
   private fun GeneratedParameter.hasDirectZodValidation(): Boolean =
@@ -4117,10 +4135,10 @@ class TypeScriptSundayIrGenerator(
     get() = serializationName ?: name
 
   private fun TypeName.optionalParameterType(parameter: GeneratedParameter): TypeName =
-    if (parameter.defaultValue != null || !parameter.required) {
-      undefinable
-    } else {
-      this
+    when {
+      parameter.defaultValue != null -> nullable.undefinable
+      !parameter.required -> undefinable
+      else -> this
     }
 
   private val GeneratedPayload?.isTypeScriptStreamingRequestBody: Boolean

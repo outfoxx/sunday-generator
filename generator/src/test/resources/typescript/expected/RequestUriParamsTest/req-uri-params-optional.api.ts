@@ -6,11 +6,11 @@ import {z} from 'zod';
 export interface API<Factory extends SundayTransport> {
 
   fetchTest(
-      def2: number | null | undefined,
-      obj: Test | undefined,
-      str: string | undefined,
-      def1: string | undefined,
-      int: number | null,
+      def2: number | null | undefined | undefined,
+      obj: Test | undefined | undefined,
+      str: string | undefined | undefined,
+      def1: string | null | undefined | undefined,
+      int: number | null | undefined,
       def: string
   ): Operation<void, Test, Factory>;
 
@@ -31,10 +31,10 @@ class APIClient<Factory extends SundayTransport> {
   }
 
   fetchTest(
-      def2: number | null | undefined = undefined,
+      def2: number | null | undefined = 10,
       obj: Test | undefined = undefined,
       str: string | undefined = undefined,
-      def1: string | undefined = undefined,
+      def1: string | null | undefined = 'test',
       int: number | null = null,
       def: string
   ): Operation<void, Test, Factory> {
@@ -43,17 +43,19 @@ class APIClient<Factory extends SundayTransport> {
           method: 'GET',
           pathTemplate: '/tests/{obj}/{str}/{int}/{def}/{def1}/{def2}',
           pathParameters: {
-            def2: def2 ?? 10,
-            obj,
-            str,
-            def1: def1 ?? 'test',
-            int,
+            def2: def2 == null ? undefined : def2,
+            obj: obj == null ? undefined : obj,
+            str: str == null ? undefined : str,
+            def1: def1 == null ? undefined : def1,
+            int: int == null ? undefined : int,
             def
           },
           acceptTypes: this.defaultAcceptTypes,
           parameterValidation: () => {
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: NumericDateDecoding.MILLISECONDS_SINCE_EPOCH, arrayBufferEncoding: ArrayBufferEncoding.BASE64}, 'request');
-            z.encode(runtime.resolveSchema(TestSchema).optional(), obj);
+            if (obj != null) {
+              z.encode(runtime.resolveSchema(TestSchema).optional(), obj);
+            }
           },
         },
         responseType: fetchTestReturnType

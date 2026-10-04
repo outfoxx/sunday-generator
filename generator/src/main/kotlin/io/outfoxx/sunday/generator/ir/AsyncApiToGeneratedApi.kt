@@ -340,6 +340,7 @@ class AsyncApiToGeneratedApi(
               ?.let { schemaTypeRef(it, generatedName.toUpperCamelCase(), location, localModels) }
               ?: GeneratedTypeRef.scalar("string"),
           required = true,
+          defaultValue = parameter["default"] ?: schema?.get("default"),
           serializationName = wireName.takeUnless { it == generatedName },
           encoding = GeneratedParameterEncoding(style = "simple"),
           validation = schema?.let(::validation).orEmpty(),
@@ -365,6 +366,7 @@ class AsyncApiToGeneratedApi(
           location = GeneratedParameter.Location.HEADER,
           type = schemaTypeRef(schemaMap, generatedName.toUpperCamelCase(), location, localModels),
           required = wireName in headers.requiredNames,
+          defaultValue = schemaMap["default"],
           serializationName = wireName.takeUnless { it == generatedName },
           validation = validation(schemaMap),
         )

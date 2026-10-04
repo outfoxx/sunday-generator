@@ -22,7 +22,7 @@ public class API<Req : Request>(
     def: String,
     obj: Test,
     strReq: String,
-    int: Int = 5,
+    int: Int? = 5,
   ): Operation<Unit, Test, Req> = this.transport.operation<Unit, Test, Req>(
     OperationSpec(
       method = Method.Get,
@@ -32,7 +32,7 @@ public class API<Req : Request>(
         "obj" to obj,
         "str-req" to strReq,
         "int" to int
-      ),
+      ).filterValues { it != null },
       acceptTypes = this.defaultAcceptTypes
     )
   )

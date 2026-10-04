@@ -87,6 +87,7 @@ import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.hasEnabledPolicies
 import io.outfoxx.sunday.generator.ir.emit.isAsynchronous
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
+import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
 import io.outfoxx.sunday.generator.ir.emit.isReactive
 import io.outfoxx.sunday.generator.ir.emit.jsonBodyEnabled
 import io.outfoxx.sunday.generator.ir.emit.modelOrNull
@@ -741,7 +742,7 @@ class KotlinJAXRSIrGenerator(
       .map { modelType -> modelType.build() }
       .forEach(typeBuilder::addType)
 
-    return typeBuilder
+    return typeBuilder.withNativeClientDefaults()
   }
 
   private fun aggregateServiceTypeName(): ClassName {
@@ -786,8 +787,20 @@ class KotlinJAXRSIrGenerator(
         typeBuilder.addFunction(service.subresourceLocator(methodName))
       }
 
-    return typeBuilder
+    return typeBuilder.withNativeClientDefaults()
   }
+
+  private fun TypeSpec.Builder.withNativeClientDefaults(): TypeSpec.Builder =
+    apply {
+      if (generationMode == Client &&
+        options.quarkus &&
+        funSpecs.any { function -> function.parameters.any { it.defaultValue != null } }
+      ) {
+        // Quarkus rejects Kotlin DefaultImpls compatibility classes, including default-argument bridges.
+        val defaults = ClassName("kotlin.jvm", "JvmDefaultWithoutCompatibility")
+        if (annotations.none { it.typeName == defaults }) addAnnotation(defaults)
+      }
+    }
 
   private fun aggregateServicePath(services: List<GeneratedJaxRsService>): String =
     services
@@ -961,6 +974,7 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedOperation.operationParameters(): List<GeneratedOperationParameter> {
     val names = NameAllocator()
     return operationParameterViews(
+      generationMode = generationMode,
       identifierName = { parameter -> parameter.name.kotlinIdentifierName },
       allocateName = { parameter, proposedName -> names.newName(proposedName, parameter) },
     )
@@ -1695,8 +1709,15 @@ class KotlinJAXRSIrGenerator(
     val typeName =
       type
         .kotlinTypeName()
-        .copy(nullable = defaultValue == null && (type.nullable || !required))
+        .copy(nullable = isNullableParameter(generationMode))
     val builder = ParameterSpec.builder(name, typeName)
+    if (generationMode == Client && defaultValue != null) {
+      val model = modelProperties.declarationModel(type)
+      val defaultCode =
+        KotlinModelDefaults.code(defaultValue.toString(), typeName, model, kotlinEnumEntries)
+          ?: genError("Unsupported default for client parameter '${this.name}'")
+      builder.defaultValue(defaultCode)
+    }
 
     if (annotate) {
       builder.addJaxRsParameterAnnotation(location, serializationName ?: this.name, requireName)

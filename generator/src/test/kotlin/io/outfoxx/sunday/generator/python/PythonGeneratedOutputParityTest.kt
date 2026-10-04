@@ -312,7 +312,8 @@ class PythonGeneratedOutputParityTest : PythonTest() {
             "parity_api/references" +
               if (server) "_server.py" else ".py",
           )
-        assertTrue(client.contains("= 20"), client)
+        assertTrue(client.contains("validate_python(20)"), client)
+        assertTrue(client.contains("limit: Limit | None = _get_user_limit_default"), client)
       }
     }
   }

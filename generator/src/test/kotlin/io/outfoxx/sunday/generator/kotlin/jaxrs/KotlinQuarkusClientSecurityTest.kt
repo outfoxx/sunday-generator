@@ -24,9 +24,11 @@ import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedExceptionRef
+import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedPolicy
 import io.outfoxx.sunday.generator.ir.GeneratedPolicySetting
 import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
@@ -222,6 +224,49 @@ class KotlinQuarkusClientSecurityTest {
       listOf(IllegalArgumentException::class),
       transport.getAnnotation(CircuitBreaker::class.java).skipOn.toList(),
     )
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["sync", "suspend", "uni"])
+  fun `method defaults preserve authentication provider registration`(
+    style: String,
+    @TempDir directory: Path,
+  ) {
+    val source = scopedSecurityApi("openapi", directory)
+    val service = source.services.first()
+    val operation =
+      service.operations.first().copy(
+        path = "/defaults/{segment}",
+        parameters =
+          listOf(
+            GeneratedParameter(
+              name = "segment",
+              location = GeneratedParameter.Location.PATH,
+              type = GeneratedTypeRef.scalar("string"),
+              required = true,
+              defaultValue = "fallback",
+            ),
+          ),
+      )
+    val api = source.copy(services = listOf(service.copy(operations = listOf(operation))))
+    val registry = registry()
+    KotlinJAXRSIrGenerator(api, registry, options("internal", style)).generateServiceTypes()
+    val types = registry.buildTypes()
+    val compiled = compileTypesResult(types)
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode, compiled.messages)
+    val apiType =
+      types.keys
+        .filter { it.enclosingClassName() == null }
+        .map { compiled.classLoader.loadClass(it.canonicalName) }
+        .single { it.isInterface && it.declaredMethods.any { method -> method.name == operation.id } }
+    val providers =
+      apiType.getAnnotationsByType(
+        org.eclipse.microprofile.rest.client.annotation.RegisterProvider::class.java,
+      )
+    assertTrue(providers.any { it.value.java.name == "io.outfoxx.sunday.client.quarkus.ClientAuthenticationFilter" })
+    val transport = apiType.methods.single { it.getAnnotation(ClientAuthentication::class.java) != null }
+    assertEquals(operation.id + "Transport", transport.name)
+    assertTrue(apiType.methods.single { it.name == operation.id }.isDefault)
   }
 
   @Test

@@ -421,11 +421,11 @@ class PythonLitestarRenderer(
           },
         ) +
         (queryParameters() + headerParameters() + cookieParameters())
-          .filter { parameter -> parameter.required }
-          .map { parameter -> parameter.renderHandlerParameter() } +
+          .filter { parameter -> parameter.required && parameter.defaultValue == null }
+          .map { parameter -> parameter.renderHandlerParameter(this) } +
         (queryParameters() + headerParameters() + cookieParameters())
-          .filterNot { parameter -> parameter.required }
-          .map { parameter -> parameter.renderHandlerParameter() },
+          .filterNot { parameter -> parameter.required && parameter.defaultValue == null }
+          .map { parameter -> parameter.renderHandlerParameter(this) },
       separator = "\n",
     )
 
@@ -515,7 +515,9 @@ class PythonLitestarRenderer(
           "        %L: %C = %C,",
           parameter.name.pythonIdentifierName,
           parameter.renderParameterType(optional = true),
-          if (parameter.defaultValue != null && parameter.nominalWireType() != null) {
+          if (parameter.defaultValue != null &&
+            (parameter.type.kind != GeneratedTypeRef.Kind.SCALAR || !parameter.type.format.isNullOrBlank())
+          ) {
             PythonCodeBlock.of("%L", nominalDefaultName(parameter))
           } else {
             parameter.renderDefaultValue()
@@ -615,7 +617,7 @@ class PythonLitestarRenderer(
       (nominalWireType() ?: type).renderServerPythonType(nullable = false),
     )
 
-  private fun GeneratedParameter.renderHandlerParameter(): PythonCodeBlock {
+  private fun GeneratedParameter.renderHandlerParameter(operation: GeneratedOperation): PythonCodeBlock {
     val marker =
       when (location) {
         GeneratedParameter.Location.QUERY -> PythonSymbol("litestar.params", "QueryParameter")
@@ -625,10 +627,15 @@ class PythonLitestarRenderer(
       }
     val type = copy(type = nominalWireType() ?: type).renderParameterType(optional = !required)
     val defaultValue =
-      if (required) {
+      if (required && this.defaultValue == null) {
         PythonCodeBlock.of(
           "",
         )
+      } else if (this.defaultValue != null &&
+        nominalWireType() == null &&
+        (this.type.kind != GeneratedTypeRef.Kind.SCALAR || !this.type.format.isNullOrBlank())
+      ) {
+        PythonCodeBlock.of(" = %L", operation.nominalDefaultName(this))
       } else {
         PythonCodeBlock.of(" = %C", renderDefaultValue())
       }

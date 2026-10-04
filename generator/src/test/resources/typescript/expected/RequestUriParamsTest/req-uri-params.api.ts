@@ -6,7 +6,7 @@ import {z} from 'zod';
 export interface API<Factory extends SundayTransport> {
 
   fetchTest(def: string, obj: Test, strReq: string,
-      int: number | undefined): Operation<void, Test, Factory>;
+      int?: number | null | undefined): Operation<void, Test, Factory>;
 
 }
 
@@ -25,7 +25,7 @@ class APIClient<Factory extends SundayTransport> {
   }
 
   fetchTest(def: string, obj: Test, strReq: string,
-      int: number | undefined = undefined): Operation<void, Test, Factory> {
+      int: number | null | undefined = 5): Operation<void, Test, Factory> {
     return createOperation(this.transport, {
         request: {
           method: 'GET',
@@ -34,7 +34,7 @@ class APIClient<Factory extends SundayTransport> {
             def,
             obj,
             'str-req': strReq,
-            int: int ?? 5
+            int: int == null ? undefined : int
           },
           acceptTypes: this.defaultAcceptTypes,
           parameterValidation: () => {

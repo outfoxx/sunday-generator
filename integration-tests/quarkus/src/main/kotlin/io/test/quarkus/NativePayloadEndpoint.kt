@@ -28,6 +28,13 @@ class NativePayloadEndpoint : NativePayloadsAPI {
   /** Successful application invocations, independent of transport failures. */
   val calls = AtomicInteger()
 
+  override fun defaultParameters(
+    pathValue: String,
+    queryValue: Int,
+    cookieValue: String,
+    headerValue: String,
+  ): RestResponse<List<String>> = RestResponse.ok(listOf(pathValue, queryValue.toString(), cookieValue, headerValue))
+
   override fun codes(body: List<String>): RestResponse<List<String>> {
     calls.incrementAndGet()
     return RestResponse.ok(if (body == listOf("ZZ", "ZZ")) emptyList() else body)

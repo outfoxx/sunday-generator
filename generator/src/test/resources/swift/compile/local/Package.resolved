@@ -1,5 +1,5 @@
 {
-  "originHash" : "494aa3c2840cf08c511647de6a6ef069a97878bbdf96008093842f314b98f104",
+  "originHash" : "3e83de81e7576a192a39948430cf82faad1e9ae9c4bee533befb5479d243d232",
   "pins" : [
     {
       "identity" : "bigint",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/outfoxx/sunday-swift.git",
       "state" : {
-        "revision" : "15d5887013a90ed0123891b71e2221f90eb853ce",
-        "version" : "2.0.0-beta.9"
+        "revision" : "c6b4fba6c421b69f8ce200ac00d26ba8c6781599",
+        "version" : "2.0.0-beta.10"
       }
     },
     {

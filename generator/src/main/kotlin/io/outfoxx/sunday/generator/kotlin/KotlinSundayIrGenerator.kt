@@ -82,6 +82,7 @@ import io.outfoxx.sunday.generator.ir.emit.explicitContentTypes
 import io.outfoxx.sunday.generator.ir.emit.externalDiscriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.flattenedUnionTypes
 import io.outfoxx.sunday.generator.ir.emit.isNoContent
+import io.outfoxx.sunday.generator.ir.emit.isNullableParameter
 import io.outfoxx.sunday.generator.ir.emit.modelOrNull
 import io.outfoxx.sunday.generator.ir.emit.operationParameterViews
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
@@ -2190,13 +2191,13 @@ class KotlinSundayIrGenerator(
     val typeName =
       parameter.type
         .kotlinTypeName()
-        .copy(nullable = parameter.defaultValue == null && parameter.type.nullable)
+        .copy(nullable = parameter.isNullableParameter(GenerationMode.Client))
 
     return ParameterSpec
       .builder(parameter.name.kotlinIdentifierName, typeName)
       .apply {
         parameter.defaultValue?.let { defaultValue ->
-          defaultValue("%L", parameter.baseUriDefaultValueCode(defaultValue, typeName))
+          defaultValue("%L", parameter.baseUriDefaultValueCode(defaultValue, typeName.copy(nullable = false)))
         }
       }.build()
   }
@@ -2452,22 +2453,20 @@ class KotlinSundayIrGenerator(
       .apply {
         when {
           parameter.defaultValue != null -> {
-            val model = modelProperties.declarationModel(parameter.type)
-            defaultValue(
-              if (model?.nominal == true || model?.let(nominalTypes::branches)?.isNotEmpty() == true) {
-                CodeBlock.of(
-                  "%T.fromString(%S)",
-                  parameter.typeName().copy(nullable = false),
-                  parameter.defaultValue.toString(),
-                )
-              } else {
-                valueCode(parameter.defaultValue)
-              },
-            )
+            defaultValue(parameter.defaultValueCode())
           }
           parameter.typeName().isNullable -> defaultValue("null")
         }
       }.build()
+
+  private fun GeneratedOperationParameter.defaultValueCode(): CodeBlock {
+    val model = modelProperties.declarationModel(type)
+    if (model?.let(nominalTypes::branches)?.isNotEmpty() == true) {
+      return CodeBlock.of("%T.fromString(%S)", typeName().copy(nullable = false), defaultValue.toString())
+    }
+    return KotlinModelDefaults.code(defaultValue?.toString(), typeName(), model, kotlinEnumEntries)
+      ?: valueCode(defaultValue)
+  }
 
   private fun parameterValidation(parameters: List<GeneratedOperationParameter>): CodeBlock? {
     if (KotlinTypeRegistry.Option.ValidationConstraints !in typeRegistry.options) return null
@@ -2484,15 +2483,16 @@ class KotlinSundayIrGenerator(
       .apply {
         checked.forEach { parameter ->
           val schema = nativePayloads.name(parameter.type)
-          if (parameter.isNullable) beginControlFlow("%N?.let", parameter.name)
+          val nullable = parameter.shouldFilterNullValue
+          if (nullable) beginControlFlow("%N?.let", parameter.name)
           add(
             "%T.request(%L",
             typeRegistry.beanValidationTypes.modelValidation,
-            if (parameter.isNullable) "it" else parameter.name,
+            if (nullable) CodeBlock.of("it") else parameter.requestValueCode(),
           )
           schema?.let { add(", %T::class.java", it) }
           add(")\n")
-          if (parameter.isNullable) endControlFlow()
+          if (nullable) endControlFlow()
         }
       }.unindent()
       .add("}")
@@ -2508,11 +2508,7 @@ class KotlinSundayIrGenerator(
 
     parameters.forEachIndexed { index, parameter ->
       builder.add("%S to ", parameter.wireName)
-      if (parameter.isConstant) {
-        builder.add("%L", valueCode(parameter.constantValue))
-      } else {
-        builder.add("%N", parameter.name)
-      }
+      builder.add("%L", parameter.requestValueCode())
 
       if (index < parameters.size - 1) {
         builder.add(",\n")
@@ -2522,6 +2518,12 @@ class KotlinSundayIrGenerator(
     builder.add("⇤\n)%L", if (anyNullable) ".filterValues { it != null }" else "")
     return builder.build()
   }
+
+  private fun GeneratedOperationParameter.requestValueCode(): CodeBlock =
+    when {
+      isConstant -> valueCode(constantValue)
+      else -> CodeBlock.of("%N", name)
+    }
 
   private fun GeneratedOperation.returnTypeName(response: GeneratedResponse?): TypeName =
     when {
