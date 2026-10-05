@@ -32,6 +32,9 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 class OpenApiRemoteReferencesTest {
+
+  private val sundayVersion = System.getProperty("sunday.kotlin.version")
+
   @Test
   fun `revalidates transitive resources before cached parallel generation`(
     @TempDir directory: File,
@@ -118,7 +121,7 @@ class OpenApiRemoteReferencesTest {
           apply plugin: 'org.jetbrains.kotlin.jvm'
           apply plugin: 'io.outfoxx.sunday-generator'
           repositories { mavenCentral() }
-          dependencies { implementation 'io.outfoxx.sunday:sunday-problem:2.0.0-beta.5' }
+          dependencies { implementation 'io.outfoxx.sunday:sunday-problem:$sundayVersion' }
           sundayGenerations {
             client {
               source.set(files('api.yaml'))
