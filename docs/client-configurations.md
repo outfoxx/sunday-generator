@@ -106,11 +106,18 @@ Transport cleanup does not erase saved tokens. For logout, stop requests, let pe
 settle, remove the application's session entries and create fresh settings. `invalidate` retains refresh
 state and is not a logout operation. Runtime README examples describe each native lifecycle.
 
-Publication coordination: this forwarding requires the companion runtime releases implementing
-sunday-kt #65, sunday-swift #75, sunday-js #82 and sunday-python #10. The previously published Kotlin/Swift
-beta.13, TypeScript beta.10 and Python beta.9 do not have this API. Update the pinned runtime versions and
-verify their published artifacts before releasing this generator change; local worktree validation alone
-does not establish published compatibility.
+The compiler-backed tests pin the compatible runtime releases below. These versions provide the manager
+factory hook forwarded by generated clients:
+
+| Target | Runtime version | Distribution |
+| --- | --- | --- |
+| Kotlin | `2.0.0-beta.14` | Maven Central |
+| Swift | `2.0.0-beta.14` | Swift Package Manager Git tag |
+| TypeScript | `2.0.0-beta.11` | npm (`@outfoxx/sunday`) |
+| Python | `2.0.0-beta.10` | Git tag installed with pip; PyPI publication remains disabled |
+
+Kotlin/Swift beta.13, TypeScript beta.10 and Python beta.9 do not provide this hook. Consumers generating
+configuration factories must update their runtime dependencies to the compatible releases above or later.
 
 ## Credentials and alternatives
 
