@@ -34,7 +34,11 @@ import java.io.File
 
 fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode = compileTypesResult(types).exitCode
 
-internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilationResult {
+/** Compiles generated types together with optional executable consumer fixtures. */
+internal fun compileTypesResult(
+  types: Map<ClassName, TypeSpec>,
+  additionalSources: List<SourceFile> = emptyList(),
+): JvmCompilationResult {
 
   val fileSpecs =
     types.entries
@@ -52,7 +56,7 @@ internal fun compileTypesResult(types: Map<ClassName, TypeSpec>): JvmCompilation
           fileSpecs.map {
             val fileName = "${it.packageName.replace('.', '_')}_${it.name}.kt"
             SourceFile.kotlin(fileName, it.toString())
-          }
+          } + additionalSources
         kotlincArguments =
           listOf("-jvm-target", "21", "-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
         languageVersion = "2.3"

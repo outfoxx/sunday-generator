@@ -150,6 +150,43 @@ class TypeScriptClientConfigurationTest {
   }
 
   @Test
+  fun `generated factories preserve application token persistence`(
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    TypeScriptSundayIrGenerator(
+      aggregateClientConfigurationApi(directory),
+      registry,
+      TypeScriptSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    val source =
+      java.nio.file.Files
+        .readString(Path.of("src/test/resources/client-config-persistence/typescript.ts"))
+    val consumer =
+      ModuleSpec
+        .builder(
+          "PersistenceCheck",
+          ModuleSpec.Kind.MODULE,
+        ).addCode(CodeBlock.of("%L", source))
+        .build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("PersistenceCheck", "!persistence-check") to consumer),
+        "persistence-check",
+        esm = true,
+      ),
+    )
+  }
+
+  @Test
   fun `aggregate factory shares profile settings and token acquisition across children`(
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,

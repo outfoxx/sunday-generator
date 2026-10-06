@@ -34,6 +34,32 @@ import java.nio.file.Path
 @SwiftTest
 class SwiftClientConfigurationTest {
   @Test
+  fun `generated factories preserve application token persistence`(
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      aggregateClientConfigurationApi(directory),
+      registry,
+      SwiftSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.copy(
+      Path.of("src/test/resources/client-config-persistence/swift.swift"),
+      compiler.testsDir.resolve("PersistenceTests.swift"),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
   fun `credential field collisions fail before emitting source`(
     @TempDir directory: Path,
   ) {

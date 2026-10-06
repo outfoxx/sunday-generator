@@ -1,6 +1,6 @@
 import {Environment} from './environment';
 import {TestAPIConfig} from './test-api-config';
-import {ClientSettings, Credentials, MediaType, Operation, SchemaLike, SecurityBinding, StringSchema, Transport, URLTemplate, createOperation} from '@outfoxx/sunday';
+import {ClientSettings, Credentials, MediaType, Operation, SchemaLike, SecurityBinding, StringSchema, TokenManagerFactory, Transport, URLTemplate, createOperation} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -65,8 +65,8 @@ export interface APICredentials {
 /** Constructs a client from an existing application transport. */
 export function createAPI<Factory extends SundayTransport>(transport: Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, clientSettings?: ClientSettings): API<Factory>;
 /** Resolves a server and invokes the application's transport factory exactly once. */
-export function createAPI<Factory extends SundayTransport>(config: TestAPIConfig, transportFactory: (settings: ClientSettings) => Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} }): API<Factory>;
-export function createAPI<Factory extends SundayTransport>(input: Factory | TestAPIConfig, factoryOrOptions?: ((settings: ClientSettings) => Factory) | { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} } | ClientSettings): API<Factory> {
+export function createAPI<Factory extends SundayTransport>(config: TestAPIConfig, transportFactory: (settings: ClientSettings) => Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; tokenManagerFactory?: TokenManagerFactory; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} }): API<Factory>;
+export function createAPI<Factory extends SundayTransport>(input: Factory | TestAPIConfig, factoryOrOptions?: ((settings: ClientSettings) => Factory) | { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; tokenManagerFactory?: TokenManagerFactory; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} } | ClientSettings): API<Factory> {
   if (typeof factoryOrOptions !== 'function') return new APIClient(input as Factory, factoryOrOptions, options instanceof ClientSettings ? options : undefined);
   if (options instanceof ClientSettings) throw new Error('Unexpected client settings for configuration factory');
   const config = input as TestAPIConfig;
@@ -111,7 +111,7 @@ export function createAPI<Factory extends SundayTransport>(input: Factory | Test
     const required = requirements[selection];
     return [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];
   }));
-  const settings = ClientSettings.resolve(endpoint, selectedAlternatives, credentials);
+  const settings = ClientSettings.resolve(endpoint, selectedAlternatives, credentials, {}, {}, options?.tokenManagerFactory);
   const transport = factoryOrOptions(settings);
   return new APIClient(transport, options, settings);
 }

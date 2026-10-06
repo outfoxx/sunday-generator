@@ -914,6 +914,13 @@ class KotlinSundayIrGenerator(
                 LIST.parameterizedBy(MEDIA_TYPE),
               ).defaultValue("%L", mediaTypesArray(media.acceptTypes))
               .build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "tokenManagerFactory",
+                ClassName("io.outfoxx.sunday.security", "TokenManagerFactory").copy(nullable = true),
+              ).defaultValue("null")
+              .build(),
           ).addStatement("val supplied = mutableMapOf<String, %T>()", credentialsBase)
       schemes.forEach { scheme ->
         builder.addStatement("credentials.%N?.let { supplied[%S] = it }", scheme.name.kotlinIdentifierName, scheme.name)
@@ -934,7 +941,7 @@ class KotlinSundayIrGenerator(
         ).addStatement(
           "val selectedAlternatives = alternatives.mapValues { (operation, choices) -> choices.filter { securitySelection[operation]?.matches(it) ?: true } }",
         ).addStatement(
-          "val settings = %T.resolve(config.baseURL(), selectedAlternatives, supplied)",
+          "val settings = %T.resolve(config.baseURL(), selectedAlternatives, supplied, tokenManagerFactory = tokenManagerFactory)",
           clientSettingsType,
         ).addStatement("val transport = transportFactory(settings)")
         .addStatement("return %T(transport, defaultContentTypes, defaultAcceptTypes, settings)", serviceType)
