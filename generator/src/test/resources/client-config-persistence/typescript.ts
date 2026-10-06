@@ -2,7 +2,12 @@ function expect(actual: unknown) {
   function compare(expected: unknown) {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
   }
-  return {toBe: compare, toEqual: compare};
+  return {
+    toBe: (expected: unknown) => {
+      if (!Object.is(actual, expected)) throw new Error('Expected the same value or object');
+    },
+    toEqual: compare,
+  };
 }
 import { ClientSettings, FetchTransport, TokenManager, TokenManagerFactory, TokenProvider, TokenSet, TokenStore } from '@outfoxx/sunday';
 import { createExampleAPI } from './example-api.js';
