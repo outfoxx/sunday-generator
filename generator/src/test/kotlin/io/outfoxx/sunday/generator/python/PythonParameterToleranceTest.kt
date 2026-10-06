@@ -33,7 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
-@RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
+@RequiresPythonRuntime(PythonRuntimeProfile.HTTPX_LITESTAR)
 @Tag("requests")
 @Tag("validation")
 class PythonParameterToleranceTest : PythonTest() {
