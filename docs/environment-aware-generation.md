@@ -279,10 +279,10 @@ The environment-aware output requires these companion runtimes:
 
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
-| Kotlin | `2.0.0-beta.10` | Maven Central, including validation and Quarkus client artifacts |
-| Swift | `2.0.0-beta.10` | Swift Package Manager Git tag |
-| TypeScript | `2.0.0-beta.7` | npm; Node.js 22 or later |
-| Python | `2.0.0-beta.6` | Released Git tag until PyPI publication |
+| Kotlin | `2.0.0-beta.12` | Maven Central, including validation and Quarkus client artifacts |
+| Swift | `2.0.0-beta.12` | Swift Package Manager Git tag |
+| TypeScript | `2.0.0-beta.9` | npm; Node.js 22 or later |
+| Python | `2.0.0-beta.8` | Released Git tag until PyPI publication |
 
 Compiler-backed tests use these released dependencies by default. Set `SUNDAY_KOTLIN_PATH`,
 `SUNDAY_SWIFT_PATH`, `SUNDAY_TYPESCRIPT_PATH`, or `SUNDAY_PYTHON_PATH` explicitly to verify a runtime

@@ -1,6 +1,15 @@
 {
-  "originHash" : "3e83de81e7576a192a39948430cf82faad1e9ae9c4bee533befb5479d243d232",
+  "originHash" : "0c38f4860a0440126fb1a1f06f7bb1ea39d15649d29c1abf8269aadf5a50b05d",
   "pins" : [
+    {
+      "identity" : "appauth-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/openid/AppAuth-iOS.git",
+      "state" : {
+        "revision" : "a972daac82d449d58ab119e91c68153e29ddac33",
+        "version" : "3.0.0"
+      }
+    },
     {
       "identity" : "bigint",
       "kind" : "remoteSourceControl",
@@ -42,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/outfoxx/sunday-swift.git",
       "state" : {
-        "revision" : "c6b4fba6c421b69f8ce200ac00d26ba8c6781599",
-        "version" : "2.0.0-beta.10"
+        "revision" : "98a3014a612820b92624226024054705ccbe8859",
+        "version" : "2.0.0-beta.12"
       }
     },
     {
