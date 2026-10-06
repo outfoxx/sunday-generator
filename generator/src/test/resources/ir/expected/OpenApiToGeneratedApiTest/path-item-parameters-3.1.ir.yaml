@@ -60,6 +60,9 @@ services:
         description: "Branch response."
     media: {}
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Branch"
   kind: "OBJECT"
@@ -78,3 +81,6 @@ models:
       name: "string"
     required: true
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "SOURCE_LOCATION"

@@ -72,5 +72,6 @@ open class SwiftSundayGenerateCommand :
       preserveUnknownFields,
       profile,
       defaultTolerance,
+      generateClientConfig,
     )
 }

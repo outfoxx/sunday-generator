@@ -279,10 +279,10 @@ The environment-aware output requires these companion runtimes:
 
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
-| Kotlin | `2.0.0-beta.12` | Maven Central, including validation and Quarkus client artifacts |
-| Swift | `2.0.0-beta.12` | Swift Package Manager Git tag |
-| TypeScript | `2.0.0-beta.9` | npm; Node.js 22 or later |
-| Python | `2.0.0-beta.8` | Released Git tag until PyPI publication |
+| Kotlin | `2.0.0-beta.13` | Maven Central, including validation and Quarkus client artifacts |
+| Swift | `2.0.0-beta.13` | Swift Package Manager Git tag |
+| TypeScript | `2.0.0-beta.10` | npm; Node.js 22 or later |
+| Python | `2.0.0-beta.9` | Released Git tag until PyPI publication |
 
 Compiler-backed tests use these released dependencies by default. Set `SUNDAY_KOTLIN_PATH`,
 `SUNDAY_SWIFT_PATH`, `SUNDAY_TYPESCRIPT_PATH`, or `SUNDAY_PYTHON_PATH` explicitly to verify a runtime
@@ -292,3 +292,12 @@ composite substitution even when its path is set.
 Release and verify companion runtime artifacts before distributing generator output that references
 new APIs. Then generate and compile server stubs, internal clients, and external SDKs before promoting a
 consumer's shared generator version.
+
+
+## Configuration-based client construction
+
+Sunday HTTP clients generate server configuration types and require an application-supplied transport
+factory. Server security profiles can be selected independently of the generation profile used for
+policies. Client projection preserves all applicable client security profiles for these factories.
+See [client configurations](client-configurations.md) for credentials, transport adapters, profile
+precedence, and the `generateClientConfig` opt-out.

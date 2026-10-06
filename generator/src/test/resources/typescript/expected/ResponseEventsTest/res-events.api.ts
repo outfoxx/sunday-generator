@@ -1,7 +1,7 @@
 import {Test1, Test1Schema} from './test1';
 import {Test2, Test2Schema} from './test2';
 import {Test3, Test3Schema} from './test3';
-import {MediaType, SchemaLike, Transport} from '@outfoxx/sunday';
+import {ClientSettings, MediaType, SchemaLike, Transport} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -19,7 +19,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
@@ -31,6 +32,7 @@ class APIClient<Factory extends SundayTransport> {
         {
           method: 'GET',
           pathTemplate: '/test1',
+          security: this.clientSettings?.bindings['fetchEventsSimple'] ?? [],
           acceptTypes: [MediaType.EventStream],
           signal: signal,
         },
@@ -43,6 +45,7 @@ class APIClient<Factory extends SundayTransport> {
         {
           method: 'GET',
           pathTemplate: '/test2',
+          security: this.clientSettings?.bindings['fetchEventsDiscriminated'] ?? [],
           acceptTypes: [MediaType.EventStream],
           signal: signal,
         },

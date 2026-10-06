@@ -19,12 +19,12 @@ package io.outfoxx.sunday.generator.swift.sunday
 import io.outfoxx.sunday.generator.swift.SwiftTest
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
-import io.outfoxx.sunday.generator.swift.tools.findType
 import io.outfoxx.sunday.generator.swift.tools.generateSunday
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.test.extensions.ResourceUri
 import io.outfoxx.swiftpoet.DeclaredTypeName
-import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
@@ -47,15 +47,9 @@ class BaseUriTest {
     val builtTypes =
       generateSunday(testUri, typeRegistry, compiler, swiftSundayTestOptions)
 
-    val typeSpec = findType("API", builtTypes)
-
     assertSwiftSnapshot(
       "BaseUriTest/test-baseurl-generation-in-api.output.swift",
-      buildString {
-        FileSpec
-          .get("", typeSpec)
-          .writeTo(this)
-      },
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "API.swift"),
     )
 
     val envTypeSpec = builtTypes[DeclaredTypeName.typeName(".Environment")]

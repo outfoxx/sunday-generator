@@ -212,6 +212,15 @@ class RamlToGeneratedApi(
             location = document.location,
           ),
         services = services,
+        servers =
+          api.servers.map { server ->
+            GeneratedServer(
+              url = server.url,
+              variables = server.baseUriParameters(api.version, shapeIndex, rootLocation),
+              sourceUri = rootLocation,
+              securityProfile = api.findStringAnnotation(APIAnnotationName.SecurityProfile, null),
+            )
+          },
         models = models(document, api, shapeIndex, rootLocation, localModels),
         problems = problems(document, api),
         auth = apiAuth,
@@ -305,6 +314,15 @@ class RamlToGeneratedApi(
           name = name,
           baseUri = baseUri,
           baseUriParameters = baseUriParameters,
+          servers =
+            api.servers.map { server ->
+              GeneratedServer(
+                url = server.url,
+                variables = server.baseUriParameters(api.version, shapeIndex, rootLocation),
+                sourceUri = rootLocation,
+                securityProfile = api.findStringAnnotation(APIAnnotationName.SecurityProfile, null),
+              )
+            },
           operations = operations,
           auth = apiAuth,
           jaxrs = endPoints.serviceJaxrs(),
@@ -634,6 +652,13 @@ class RamlToGeneratedApi(
         GeneratedParameter(
           name = generatedName,
           location = GeneratedParameter.Location.PATH,
+          required = true,
+          allowedValues =
+            (schema as? ScalarShape)
+              ?.values
+              ?.mapNotNull {
+                it.rawScalarValue
+              }?.takeIf { it.isNotEmpty() },
           type =
             schema?.let(shapeIndex::resolve)?.let { typeRef(it, rootLocation = rootLocation) }
               ?: GeneratedTypeRef.scalar("string"),

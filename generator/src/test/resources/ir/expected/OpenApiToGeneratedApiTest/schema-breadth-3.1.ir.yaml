@@ -46,6 +46,9 @@ services:
         description: "Project page response."
     media: {}
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Metadata"
   kind: "MAP"
@@ -149,3 +152,6 @@ models:
   - "active"
   - "archived"
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "SOURCE_LOCATION"

@@ -87,5 +87,6 @@ open class KotlinSundayGenerateCommand :
       preserveUnknownFields,
       profile,
       defaultTolerance,
+      generateClientConfig,
     )
 }

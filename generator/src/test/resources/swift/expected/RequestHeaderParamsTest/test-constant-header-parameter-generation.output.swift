@@ -8,17 +8,20 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [],
     defaultAcceptTypes: [MediaType] = [.json],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func putTest(xCustom: String) throws -> Sunday.Operation<Empty, Test, TransportType> {
@@ -35,7 +38,8 @@ public final class API<TransportType : Transport> : Sendable {
         headers: [
           "Expect": try ParameterValues.encode("100-continue"),
           "x-custom": try ParameterValues.encode(xCustom)
-        ]
+        ],
+        security: clientSettings?.bindings["putTest"] ?? []
       ),
       responseValidation: { value in
         let mode = ModelMode.response

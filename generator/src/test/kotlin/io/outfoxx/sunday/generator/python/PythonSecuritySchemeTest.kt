@@ -152,7 +152,7 @@ class PythonSecuritySchemeTest : PythonTest() {
                   return operation
 
           security = ApiSecurity({name: authenticate for name in ApiSecurity.schemes})
-          app = Litestar(route_handlers=[create_secure_router(Publisher(), Publisher(), security=security)], plugins=[SundayPlugin()])
+          app = Litestar(route_handlers=[create_secure_router(Publisher(), Publisher(), Publisher(), security=security)], plugins=[SundayPlugin()])
           with TestClient(app) as client:
               def send(path, expected, headers=None):
                   response = client.get(path, headers=headers)

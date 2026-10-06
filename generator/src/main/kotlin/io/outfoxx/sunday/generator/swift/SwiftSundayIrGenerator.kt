@@ -48,7 +48,11 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNumericBounds
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
 import io.outfoxx.sunday.generator.ir.emit.ancestorModels
-import io.outfoxx.sunday.generator.ir.emit.clientSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
+import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
+import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
@@ -65,6 +69,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
@@ -214,6 +219,7 @@ class SwiftSundayIrGenerator(
     val serviceOutputGroups = services.swiftOutputGroups()
     generateModelTypes(services, serviceOutputGroups)
     generateProblemTypes(services, serviceOutputGroups)
+    generateClientConfigurations()
 
     val serviceTypes =
       services.map { service ->
@@ -225,6 +231,7 @@ class SwiftSundayIrGenerator(
       }
 
     if (options.aggregateServices && serviceTypes.size > 1) {
+      if (options.generateClientConfig) clientConfigurations.requireCompatibleAggregate(serviceTypes.map { it.service })
       val aggregateTypeName = aggregateServiceTypeName()
       if (serviceTypes.any { serviceType -> serviceType.typeName == aggregateTypeName }) {
         genError(
@@ -1004,6 +1011,267 @@ class SwiftSundayIrGenerator(
     val name: String,
   )
 
+  private val clientSettingsType = DeclaredTypeName.typeName("Sunday.ClientSettings")
+  private val clientConfigurations by lazy {
+    if (options.generateClientConfig) api.clientConfigurations(api.swiftSundayServices()) else emptyList()
+  }
+
+  private fun generateClientConfigurations() {
+    clientConfigurations.forEach { plan ->
+      val type = DeclaredTypeName.typeName(".${plan.name}")
+      val builder =
+        TypeSpec
+          .structBuilder(type)
+          .addModifiers(PUBLIC)
+          .addSuperType(SENDABLE)
+          .addDoc("Server variables for ${plan.name}.")
+      val init = FunctionSpec.constructorBuilder().addModifiers(PUBLIC).addDoc("Creates server configuration values.")
+      if (plan.requiresDocumentBaseUri) {
+        builder.addProperty(PropertySpec.builder("documentBaseURL", URL, PUBLIC).build())
+        init.addParameter("documentBaseURL", URL).addStatement("self.documentBaseURL = documentBaseURL")
+      }
+      plan.variables.forEach { variable ->
+        val name = variable.name.swiftIdentifierName
+        val variableType = variable.type.swiftTypeName().makeNonOptional()
+        builder.addProperty(
+          PropertySpec.builder(name, variableType, PUBLIC).addSwiftDoc(variable.documentation).build(),
+        )
+        init
+          .addParameter(
+            ParameterSpec
+              .builder(name, variableType)
+              .apply {
+                variable.defaultValue?.let { defaultValue(it.swiftValueCode(variableType, variable.type)) }
+              }.build(),
+          ).addStatement("self.%N = %N", name, name)
+      }
+      builder.addFunction(init.build())
+      val endpoint =
+        FunctionSpec
+          .builder("baseURL")
+          .addModifiers(PUBLIC)
+          .throws(true)
+          .returns(URL)
+          .addDoc("Validates variables and resolves this server's endpoint.")
+      plan.variables.forEach { variable ->
+        variable.allowedValues?.let { values ->
+          endpoint.addCode(
+            "guard [%L].contains(%N) else { throw %T() }\n",
+            values
+              .map {
+                requireNotNull(it).swiftValueCode(variable.type.swiftTypeName().makeNonOptional(), variable.type)
+              }.joinToCode(", "),
+            variable.name.swiftIdentifierName,
+            DeclaredTypeName.typeName("Sunday.TokenProviderError"),
+          )
+        }
+      }
+      val variables =
+        plan.variables.map { variable ->
+          CodeBlock.of(
+            "%S: String(describing: %N)",
+            variable.serializationName ?: variable.name,
+            variable.name.swiftIdentifierName,
+          )
+        }
+      endpoint.addCode(
+        "return try %T.serverURL(template: %S, variables: %L, documentBaseURL: %L)\n",
+        clientSettingsType,
+        plan.server.url,
+        if (variables.isEmpty()) CodeBlock.of("[:]") else CodeBlock.of("[%L]", variables.joinToCode(", ")),
+        if (plan.requiresDocumentBaseUri) {
+          CodeBlock.of("documentBaseURL")
+        } else {
+          plan.documentBaseUri?.let { CodeBlock.of("%T(string: %S)!", URL, it) }
+            ?: CodeBlock.of("nil")
+        },
+      )
+      builder.addFunction(endpoint.build())
+      typeRegistry.addServiceType(type, builder)
+    }
+  }
+
+  private fun configurationFactories(
+    serviceType: DeclaredTypeName,
+    service: GeneratedService,
+  ): List<FunctionSpec> {
+    val plans = clientConfigurations.filter { service.name in it.services }
+    if (plans.isEmpty()) return emptyList()
+    val profiles = api.clientFactoryProfiles(service, options.profile)
+    val securities =
+      profiles.associateWith {
+        api.clientFactorySecurity(
+          service,
+          it,
+          plans.map { plan ->
+            plan.server
+          },
+        )
+      }
+    val schemes =
+      securities.values
+        .flatMap { it.values.flatten() }
+        .flatMap { it.schemes.values }
+        .distinctBy { it.name }
+    require(schemes.map { it.name.swiftIdentifierName }.distinct().size == schemes.size) {
+      "Client credential field name collision"
+    }
+    val credentialType = DeclaredTypeName.typeName(".${serviceType.simpleName}Credentials")
+    val credentials =
+      TypeSpec
+        .structBuilder(credentialType)
+        .addModifiers(PUBLIC)
+        .addSuperType(SENDABLE)
+        .addDoc("Scheme-specific credentials for configuration-based client construction.")
+    val init =
+      FunctionSpec
+        .constructorBuilder()
+        .addModifiers(
+          PUBLIC,
+        ).addDoc("Supplies credentials for the selected security alternatives.")
+    schemes.forEach { scheme ->
+      val type =
+        DeclaredTypeName
+          .typeName(
+            "Sunday." +
+              when (scheme.type) {
+                "apiKey" -> "ApiKeyCredential"
+                "oauth2", "openIdConnect" -> "OAuthCredential"
+                "http" -> if (scheme.scheme.equals("basic", true)) "BasicCredential" else "BearerCredential"
+                else -> "ProviderCredentials"
+              },
+          ).makeOptional()
+      val name = scheme.name.swiftIdentifierName
+      credentials.addProperty(PropertySpec.builder(name, type, PUBLIC).build())
+      init
+        .addParameter(
+          ParameterSpec.builder(name, type).defaultValue("nil").build(),
+        ).addStatement("self.%N = %N", name, name)
+    }
+    credentials.addFunction(init.build())
+    typeRegistry.addServiceType(credentialType, credentials)
+    val alternativeType = DeclaredTypeName.typeName(".${serviceType.simpleName}SecurityAlternative")
+    val alternative =
+      TypeSpec
+        .enumBuilder(alternativeType)
+        .addModifiers(PUBLIC)
+        .addSuperType(SENDABLE)
+        .addDoc("Complete security alternatives, including each scheme's required scopes.")
+    val matches =
+      FunctionSpec
+        .builder("matches")
+        .addParameter("_", "bindings", ARRAY.parameterizedBy(DeclaredTypeName.typeName("Sunday.SecurityBinding")))
+        .returns(BOOL)
+        .addCode("switch self {\n")
+    securities.values.clientFactoryAlternatives().forEach { choice ->
+      val name = choice.name.swiftEnumCaseName
+      alternative.addEnumCase(name)
+      val requirement =
+        choice.requirement.permissions
+          .map { (scheme, scopes) ->
+            CodeBlock.of("%S: Set([%L])", scheme, scopes.map { CodeBlock.of("%S", it) }.joinToCode(", "))
+          }.joinToCode(", ")
+      matches.addCode(
+        "case .%N: return Dictionary(uniqueKeysWithValues: bindings.map { ($0.scheme, $0.scopes) }) == [%L]\n",
+        name,
+        if (choice.requirement.schemes.isEmpty()) CodeBlock.of(":") else requirement,
+      )
+    }
+    matches.addCode("}\n")
+    alternative.addFunction(matches.build())
+    typeRegistry.addServiceType(alternativeType, alternative)
+
+    return plans.map { plan ->
+      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(service, it, plan.server) }
+      val media = service.defaultMediaSelection(defaultMediaTypes)
+      val factory =
+        FunctionSpec
+          .builder("create${serviceType.simpleName}")
+          .addModifiers(PUBLIC)
+          .addDoc("Resolves a server and invokes the application's transport factory exactly once.")
+          .addTypeVariable(transportTypeVariable)
+          .throws(true)
+          .returns(serviceType.parameterizedBy(transportTypeVariable))
+          .addParameter("config", DeclaredTypeName.typeName(".${plan.name}"))
+          .addParameter(
+            "transportFactory",
+            DeclaredTypeName.typeName("Sunday.ClientTransportFactory").parameterizedBy(transportTypeVariable),
+          ).addParameter(ParameterSpec.builder("credentials", credentialType).defaultValue(".init()").build())
+          .addParameter(
+            ParameterSpec
+              .builder("securityProfile", STRING.makeOptional())
+              .defaultValue(
+                "%L",
+                (plan.server.securityProfile ?: options.profile)?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil"),
+              ).build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "securitySelection",
+                DICTIONARY.parameterizedBy(STRING, alternativeType),
+              ).defaultValue("[:]")
+              .build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "defaultContentTypes",
+                MEDIA_TYPE_ARRAY,
+              ).defaultValue("%L", mediaTypesArray(media.contentTypes))
+              .build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "defaultAcceptTypes",
+                MEDIA_TYPE_ARRAY,
+              ).defaultValue("%L", mediaTypesArray(media.acceptTypes))
+              .build(),
+          )
+      factory.addCode(
+        "%L supplied: [String: any %T] = [:]\n",
+        if (schemes.isEmpty()) "let" else "var",
+        DeclaredTypeName.typeName("Sunday.Credentials"),
+      )
+      schemes.forEach { scheme ->
+        factory.addCode(
+          "if let value = credentials.%N { supplied[%S] = value }\n",
+          scheme.name.swiftIdentifierName,
+          scheme.name,
+        )
+      }
+      factory.addCode(
+        "let alternatives: [String: [[%T]]]\nswitch securityProfile {\n",
+        DeclaredTypeName.typeName("Sunday.SecurityBinding"),
+      )
+      selectedSecurity.forEach { (profile, operations) ->
+        factory.addCode(
+          "case %L:\n%>alternatives = [\n%>",
+          profile?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil"),
+        )
+        operations.forEach { (id, alternatives) ->
+          factory.addCode("%S: [%L],\n", id, alternatives.map { it.swiftBindings(profile) }.joinToCode(", "))
+        }
+        factory.addCode("%<]\n%<")
+      }
+      factory.addCode("default: throw %T()\n}\n", DeclaredTypeName.typeName("Sunday.TokenProviderError"))
+      factory.addCode(
+        "guard securitySelection.keys.allSatisfy({ alternatives[$0] != nil }) else { throw %T() }\n",
+        DeclaredTypeName.typeName("Sunday.TokenProviderError"),
+      )
+      factory.addCode(
+        "let selectedAlternatives = Dictionary(uniqueKeysWithValues: alternatives.map { entry in (entry.key, entry.value.filter { securitySelection[entry.key]?.matches($0) ?? true }) })\n",
+      )
+      factory.addCode(
+        "let settings = try %T.resolve(baseURL: config.baseURL(), alternatives: selectedAlternatives, credentials: supplied)\n",
+        clientSettingsType,
+      )
+      factory.addCode(
+        "let transport = try transportFactory(settings)\nreturn %T(transport: transport, defaultContentTypes: defaultContentTypes, defaultAcceptTypes: defaultAcceptTypes, clientSettings: settings)\n",
+        serviceType,
+      )
+      factory.build()
+    }
+  }
+
   private fun generateServiceType(
     serviceTypeName: DeclaredTypeName,
     service: GeneratedService,
@@ -1063,6 +1331,16 @@ class SwiftSundayIrGenerator(
           .build(),
       ).addStatement("problemTypes.forEach { ${'$'}0.register(on: transport) }")
 
+    if (options.generateClientConfig) {
+      serviceTypeBuilder.addProperty(
+        PropertySpec.builder("clientSettings", clientSettingsType.makeOptional(), PRIVATE).build(),
+      )
+      constructorBuilder
+        .addParameter(
+          ParameterSpec.builder("clientSettings", clientSettingsType.makeOptional()).defaultValue("nil").build(),
+        ).addStatement("self.clientSettings = clientSettings")
+      serviceTypeBuilder.tag(AssociatedFunctions(configurationFactories(serviceTypeName, service)))
+    }
     serviceTypeBuilder.addFunction(constructorBuilder.build())
     service.baseUrlFunctionOrNull()?.let(serviceTypeBuilder::addFunction)
 
@@ -4910,10 +5188,24 @@ class SwiftSundayIrGenerator(
     val response = primarySuccessResponse()
     val returnType = returnTypeName(response)
     val parameters = swiftParameterViews(service)
-    val security =
+    val legacySecurity =
       api
-        .clientSecurity(service, this, options.generationContext(GenerationMode.Client))
-        ?.swiftBindings(options.profile)
+        .clientConstructorSecurity(
+          service,
+          this,
+          options.generationContext(GenerationMode.Client),
+          options.generateClientConfig,
+        )?.swiftBindings(options.profile)
+    val security =
+      if (options.generateClientConfig) {
+        CodeBlock.of(
+          "clientSettings?.bindings[%S] ?? %L",
+          id,
+          legacySecurity ?: CodeBlock.of("[]"),
+        )
+      } else {
+        legacySecurity
+      }
     val functionBuilder =
       FunctionSpec
         .builder(id)
@@ -5207,8 +5499,15 @@ class SwiftSundayIrGenerator(
     val securityParameters =
       api
         .effectiveAuth(service, this)
-        ?.takeIf { api.clientSecurity(service, this, options.generationContext(GenerationMode.Client)) == null }
-        ?.securitySchemes
+        ?.takeIf {
+          api.clientConstructorSecurity(
+            service,
+            this,
+            options.generationContext(GenerationMode.Client),
+            options.generateClientConfig,
+          ) ==
+            null
+        }?.securitySchemes
         .orEmpty()
         .flatMap { scheme -> scheme.swiftSecurityParameterViews(names) }
 

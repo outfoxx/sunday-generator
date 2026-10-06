@@ -647,6 +647,7 @@ class AsyncApiToGeneratedApiTest {
           servers =
             listOf(
               GeneratedServer(
+                sourceUri = testUri.toString(),
                 name = "production",
                 url = "broker.example.com:9092",
                 protocol = "kafka",

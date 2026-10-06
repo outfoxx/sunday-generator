@@ -17,6 +17,7 @@
 package io.test.quarkus
 
 import io.smallrye.mutiny.Multi
+import io.test.quarkus.asyncapi.AsyncCombinedEventsAPI
 import io.test.quarkus.asyncapi.AsyncEventsAPI
 import io.test.quarkus.asyncapi.AsyncKeysAPI
 import jakarta.inject.Singleton
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Singleton
 class AsyncEvents :
   AsyncEventsAPI,
+  AsyncCombinedEventsAPI,
   AsyncKeysAPI {
   val calls = AtomicInteger()
 

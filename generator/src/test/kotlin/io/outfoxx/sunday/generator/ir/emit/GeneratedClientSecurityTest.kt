@@ -205,7 +205,8 @@ class GeneratedClientSecurityTest {
       requirement("token"),
       projected.clientSecurity(projected.services.single(), operation, external)!!.requirement,
     )
-    assertNull(
+    assertEquals(
+      internal.bindings,
       projected.auth!!
         .securitySchemes
         .single { it.name == "internal" }

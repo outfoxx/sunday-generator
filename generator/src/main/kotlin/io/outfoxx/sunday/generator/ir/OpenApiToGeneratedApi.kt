@@ -64,6 +64,7 @@ class OpenApiToGeneratedApi(
         name = document.title,
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, document.location),
         services = serviceFragments.map { fragment -> fragment.service },
+        servers = document.effectiveServers(emptyMap<Any, Any>(), emptyMap<Any, Any>()),
         models = localModels.values.sortedBy { model -> model.name },
         problems = document.problems(),
         auth = auth,
@@ -108,12 +109,18 @@ class OpenApiToGeneratedApi(
               "OpenAPI service '$serviceName' has conflicting x-sunday-jaxrs metadata. " +
                 "Move REST client metadata to the API root, a single service tag, or align the operation metadata."
             }
+            val serviceServers = fragments.map { it.servers }.distinct()
+            require(serviceServers.size == 1) {
+              "OpenAPI service '$serviceName' has incompatible server lists; group operations with the same effective servers together"
+            }
+            val selectedServers = serviceServers.single()
             ServiceFragment(
               service =
                 GeneratedService(
                   name = serviceName,
-                  baseUri = servers.firstOrNull()?.get("url") as? String,
-                  baseUriParameters = servers.firstOrNull()?.serverVariables().orEmpty(),
+                  baseUri = selectedServers.firstOrNull()?.url,
+                  baseUriParameters = selectedServers.firstOrNull()?.variables.orEmpty(),
+                  servers = selectedServers,
                   operations = operations,
                   auth = auth(zanzibar = rootZanzibar()),
                   jaxrs = serviceJaxrsValues.singleOrNull(),
@@ -167,6 +174,7 @@ class OpenApiToGeneratedApi(
           identity = operation.compositionOperationIdentity(operationId),
           seed = seed,
           serviceJaxrs = serviceJaxrs,
+          servers = effectiveServers(operation, pathItem),
         )
       }
     }
@@ -1268,19 +1276,70 @@ class OpenApiToGeneratedApi(
       providers = listValue("providers").mapNotNull { provider -> (provider as? String)?.trimToNull() }.distinct(),
     ).takeUnless { it == GeneratedJaxrsRestClient() }
 
-  private fun Map<*, *>.serverVariables(): List<GeneratedParameter> =
-    mapValue("variables").orEmpty().mapNotNull { (nameValue, value) ->
-      val name = nameValue as? String ?: return@mapNotNull null
-      val variable = value as? Map<*, *> ?: return@mapNotNull null
+  private fun OpenApiSourceDocument.effectiveServers(
+    operation: Map<*, *>,
+    pathItem: Map<*, *>,
+  ): List<GeneratedServer> {
+    val declaration =
+      when {
+        operation.containsKey("servers") -> operation["servers"]
+        pathItem.containsKey("servers") -> pathItem["servers"]
+        else -> source["servers"]
+      }
+    require(declaration == null || declaration is List<*>) { "OpenAPI servers must be an array" }
+    val values = declaration.orEmpty().ifEmpty { listOf(mapOf("url" to "/")) }
+    val names = mutableSetOf<String>()
+    return values.map { value ->
+      val server = value as? Map<*, *> ?: genError("OpenAPI server must be an object")
+      val url = server["url"] as? String ?: genError("OpenAPI server requires a URL")
+      val name = server["name"]?.let { it as? String ?: genError("OpenAPI server name must be a string") }
+      require(
+        name == null || name.isNotBlank() && names.add(name),
+      ) { "OpenAPI server names must be nonblank and unique" }
+      val profile =
+        server["x-sunday-security-profile"]?.let {
+          (it as? String)?.takeIf(String::isNotBlank) ?: genError("Server security profile must be a nonblank string")
+        }
+      GeneratedServer(
+        name = name,
+        url = url,
+        variables = server.serverVariables(),
+        sourceUri = resolution.serverOrigins[server] ?: resolution.retrievalUri ?: location,
+        securityProfile = profile,
+        documentation = documentation(description = server["description"] as? String),
+      )
+    }
+  }
+
+  private fun Map<*, *>.serverVariables(): List<GeneratedParameter> {
+    require(
+      this["variables"] == null || this["variables"] is Map<*, *>,
+    ) { "OpenAPI server variables must be an object" }
+    return mapValue("variables").orEmpty().map { (nameValue, value) ->
+      val name = nameValue as? String ?: genError("OpenAPI server variable name must be a string")
+      val variable = value as? Map<*, *> ?: genError("OpenAPI server variable '$name' must be an object")
+      val default =
+        variable["default"] as? String ?: genError("OpenAPI server variable '$name' requires a string default")
+      val allowed =
+        variable["enum"]?.let { values ->
+          val entries = values as? List<*> ?: genError("OpenAPI server variable '$name' enum must be an array")
+          require(entries.isNotEmpty() && entries.all { it is String } && default in entries) {
+            "OpenAPI server variable '$name' enum must contain strings and include its default"
+          }
+          entries.toList()
+        }
       GeneratedParameter(
         name = name.toLowerCamelCase(),
         location = GeneratedParameter.Location.PATH,
         type = scalar("string"),
-        defaultValue = variable["default"],
+        required = true,
+        defaultValue = default,
         serializationName = name.takeUnless { it == name.toLowerCamelCase() },
+        allowedValues = allowed,
         documentation = documentation(description = variable["description"] as? String),
       )
     }
+  }
 
   private fun validation(schema: Map<*, *>): Map<String, String> =
     buildMap {
@@ -1450,6 +1509,7 @@ class OpenApiToGeneratedApi(
     val identity: GeneratedIdentity,
     val seed: ServiceIdentitySeed,
     val serviceJaxrs: GeneratedJaxrs?,
+    val servers: List<GeneratedServer>,
   )
 
   private data class ServiceFragment(
@@ -1460,7 +1520,7 @@ class OpenApiToGeneratedApi(
 
   private class OpenApiSourceDocument(
     val location: String,
-    resolution: OpenApiReferenceResolution,
+    val resolution: OpenApiReferenceResolution,
   ) {
     val source = resolution.document
 

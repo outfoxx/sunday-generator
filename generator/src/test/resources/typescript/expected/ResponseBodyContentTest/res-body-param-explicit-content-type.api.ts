@@ -1,4 +1,4 @@
-import {ArrayBufferSchema, MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
+import {ArrayBufferSchema, ClientSettings, MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -14,7 +14,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
@@ -26,6 +27,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['fetchTest'] ?? [],
           acceptTypes: [MediaType.OctetStream],
         },
         responseType: fetchTestReturnType

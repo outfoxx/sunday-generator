@@ -266,11 +266,11 @@ remains public. An operation's wire-security override does not discard inherited
 metadata. Composition captures each fragment's effective authentication before merging defaults and
 rejects conflicting definitions for the same logical scheme.
 
-`GeneratedApi.projectEnvironment(context)` validates client acquisition or server validation-provider selection before projecting policy/security
-metadata to the chosen role and profile, including auth on protocol servers. It removes other profiles
-and role bindings while retaining logical schemes, wire requirements, scopes, and standard OAuth/OIDC
-metadata. Consequently, public wire metadata itself must contain public URLs; projection does not rewrite
-issuer URLs or standard scheme endpoints. The selected named profile stays explicit in projected IR.
+`GeneratedApi.projectEnvironment(context)` projects policies to the selected role/profile. Client
+projection retains every applicable client security profile needed by configuration factories and removes
+server-role bindings. Server projection continues to resolve the selected validation-provider profile.
+Wire requirements, scopes, and standard scheme endpoints remain unchanged. See
+[client configurations](client-configurations.md) for runtime profile selection.
 
 ## Examples
 
@@ -391,3 +391,13 @@ accepted dynamic fields by default. `-no-preserve-unknown-fields` discards them
 after validation; it never relaxes closed schemas or value constraints. This is
 a generation option and does not change the IR contract. See
 [dynamic model fields](unknown-fields.md) for configuration and model access.
+
+
+## Server configurations
+
+`GeneratedApi.servers` retains API-level declarations. `GeneratedService.servers` contains the effective
+server list after operation/path/API inheritance; legacy `baseUri` and `baseUriParameters` remain available.
+Servers retain names, variables (including defaults, allowed values, documentation, and wire names),
+source retrieval locations, and `securityProfile`. AsyncAPI operations may include `serverAuth`, indexed
+by server name, so factories can select complete server-plus-operation requirements without changing
+legacy constructor defaults. Composition and environment projection preserve this metadata.

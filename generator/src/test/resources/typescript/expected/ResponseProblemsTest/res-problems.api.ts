@@ -1,7 +1,7 @@
 import {InvalidIdProblemSchema} from './invalid-id-problem';
 import {Test, TestSchema} from './test';
 import {TestNotFoundProblemSchema} from './test-not-found-problem';
-import {MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
+import {ClientSettings, MediaType, Operation, SchemaLike, Transport, createOperation} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -17,7 +17,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
@@ -31,6 +32,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['fetchTest'] ?? [],
           acceptTypes: this.defaultAcceptTypes,
         },
         responseType: fetchTestReturnType

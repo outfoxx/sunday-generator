@@ -98,7 +98,18 @@ class GeneratedApiComposer {
       problems = problems.values.map { it.problem },
       auth = sources.firstNotNullOfOrNull { it.api.auth },
       jaxrs = sources.firstNotNullOfOrNull { it.api.jaxrs },
-      protocol = sources.firstNotNullOfOrNull { it.api.protocol },
+      servers = sources.flatMap { it.api.servers }.distinct(),
+      protocol =
+        sources.mapNotNull { it.api.protocol }.takeIf { it.isNotEmpty() }?.let { protocols ->
+          GeneratedProtocol(
+            servers =
+              protocols
+                .flatMap {
+                  it.servers
+                }.distinct(),
+            bindings = protocols.flatMap { it.bindings }.distinct(),
+          )
+        },
       media = sources.firstNotNullOfOrNull { it.api.media },
       targets = targets,
       tags = tags.values.toList(),
@@ -112,7 +123,8 @@ class GeneratedApiComposer {
         .flatMap { fragment ->
           listOfNotNull(fragment.api.auth) +
             fragment.api.services.flatMap { service ->
-              listOfNotNull(service.auth) + service.operations.mapNotNull { it.auth }
+              listOfNotNull(service.auth) + service.operations.mapNotNull { it.auth } +
+                service.operations.flatMap { it.serverAuth.values }
             }
         }.flatMap { it.securitySchemes }
         .groupBy { it.name }
@@ -120,13 +132,28 @@ class GeneratedApiComposer {
           val contracts =
             definitions
               .map {
-                it.normalizedSecurityScheme(requireSupported = false).copy(documentation = null, bearerFormat = null)
+                it
+                  .normalizedSecurityScheme(
+                    requireSupported = false,
+                  ).copy(documentation = null, bearerFormat = null, bindings = null)
               }.distinct()
           val formats = definitions.mapNotNull { it.bearerFormat }.distinct()
           if (contracts.size != 1 || formats.size > 1) {
             throw GeneratedApiCompositionException("Conflicting security scheme definitions for '$name'")
           }
+          val bindings =
+            definitions.mapNotNull { it.bindings }.distinct().reduceOrNull { first, second ->
+              first.merge(second) { base, override ->
+                if (base != override) {
+                  throw GeneratedApiCompositionException(
+                    "Conflicting security binding for '$name' in the same environment",
+                  )
+                }
+                base
+              }
+            }
           definitions.first().copy(
+            bindings = bindings,
             bearerFormat = formats.singleOrNull(),
             documentation = definitions.firstNotNullOfOrNull { it.documentation },
           )
@@ -144,7 +171,13 @@ class GeneratedApiComposer {
                   auth = service.auth?.canonical(),
                   operations =
                     service.operations.map { operation ->
-                      operation.copy(auth = operation.auth?.canonical())
+                      operation.copy(
+                        auth = operation.auth?.canonical(),
+                        serverAuth =
+                          operation.serverAuth.mapValues { (_, auth) ->
+                            auth.canonical()
+                          },
+                      )
                     },
                 )
               },
@@ -447,6 +480,7 @@ class GeneratedApiComposer {
 
   private fun GeneratedService.mergeMetadata(other: GeneratedService): GeneratedService =
     copy(
+      servers = mergeServers(other),
       baseUri = baseUri ?: other.baseUri,
       baseUriParameters = baseUriParameters.ifEmpty { other.baseUriParameters },
       auth = auth ?: other.auth,
@@ -455,6 +489,26 @@ class GeneratedApiComposer {
       media = media ?: other.media,
       documentation = documentation ?: other.documentation,
     )
+
+  private fun GeneratedService.mergeServers(other: GeneratedService): List<GeneratedServer> {
+    if (servers.isEmpty()) return other.servers
+    if (other.servers.isEmpty()) return servers
+
+    fun GeneratedServer.identity() =
+      copy(
+        protocol = protocol.takeUnless { it in setOf("http", "https") },
+        sourceUri =
+          sourceUri.takeIf {
+            !java.net.URI(url.replace(Regex("\\{[^}]+}"), "variable")).isAbsolute
+          },
+      )
+    val http = servers.filter { it.protocol == null || it.protocol in setOf("http", "https") }
+    val otherHttp = other.servers.filter { it.protocol == null || it.protocol in setOf("http", "https") }
+    if (http.isNotEmpty() && otherHttp.isNotEmpty() && http.map { it.identity() } != otherHttp.map { it.identity() }) {
+      throw GeneratedApiCompositionException("Composed service '$name' has incompatible server lists")
+    }
+    return (servers + other.servers).distinctBy { it.identity() }
+  }
 
   private data class ServiceState(
     var service: GeneratedService,

@@ -1,5 +1,5 @@
 import {Test, TestSchema} from './test';
-import {ArrayBufferEncoding, DateEncoding, MediaType, NumericDateDecoding, Operation, SchemaLike, Transport, createOperation, createSchemaRuntime} from '@outfoxx/sunday';
+import {ArrayBufferEncoding, ClientSettings, DateEncoding, MediaType, NumericDateDecoding, Operation, SchemaLike, Transport, createOperation, createSchemaRuntime} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
@@ -19,7 +19,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
@@ -32,6 +33,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['fetchTest'] ?? [],
           acceptTypes: this.defaultAcceptTypes,
           headers: {
             obj,
@@ -52,6 +54,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'DELETE',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['deleteTest'] ?? [],
         }
     });
   }

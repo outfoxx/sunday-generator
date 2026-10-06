@@ -81,6 +81,9 @@ services:
         description: "Bearer token authentication."
     securityOverride: true
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -105,3 +108,6 @@ auth:
       description: "Bearer token authentication."
   securityOverride: true
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "SOURCE_LOCATION"

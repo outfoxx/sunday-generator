@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -89,9 +90,9 @@ class ScopedSecurityIrTest {
         .export(sourceUris)
     assertEquals(publicApi, exported)
     val serialized = GeneratedApiYaml.writeString(publicApi)
-    assertFalse(serialized.contains("identity.internal"))
+    assertTrue(serialized.contains("identity.internal"))
     assertFalse(serialized.contains("verifier"))
-    assertFalse(serialized.contains("internal:"))
+    assertTrue(serialized.contains("internal:"))
     assertEquals(publicApi, GeneratedApiYaml.readString(serialized))
     api.services.zip(publicApi.services).forEach { (original, projected) ->
       original.operations.zip(projected.operations).forEach { (before, after) ->
@@ -184,9 +185,9 @@ class ScopedSecurityIrTest {
     }
     val projected = api.projectEnvironment(GenerationContext(GenerationMode.Client, "external"))
     val serialized = GeneratedApiYaml.writeString(projected)
-    assertFalse(serialized.contains("apiProvider"))
-    assertFalse(serialized.contains("eventsProvider"))
-    assertFalse(serialized.contains("identity.internal"))
+    assertEquals(GeneratedApiYaml.writeString(api).contains("apiProvider"), serialized.contains("apiProvider"))
+    assertEquals(GeneratedApiYaml.writeString(api).contains("eventsProvider"), serialized.contains("eventsProvider"))
+    assertTrue(serialized.contains("identity.internal"))
     projected.services.forEach { service ->
       service.operations.forEach { operation ->
         assertEquals(

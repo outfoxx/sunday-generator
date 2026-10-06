@@ -74,6 +74,9 @@ services:
         description: "Updated project response."
     media: {}
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -97,3 +100,6 @@ models:
       name: "string"
     required: true
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "SOURCE_LOCATION"

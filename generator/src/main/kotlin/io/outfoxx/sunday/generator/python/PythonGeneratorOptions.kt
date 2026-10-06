@@ -34,5 +34,7 @@ data class PythonGeneratorOptions(
   val preserveUnknownFields: Boolean = true,
   override val profile: String? = null,
   override val defaultTolerance: Tolerance = Tolerance.Response,
+  /** Generate server configurations for Sunday clients; ignored by server targets. */
+  val generateClientConfig: Boolean = true,
 ) : BrokerGenerationOptions,
   EnvironmentGenerationOptions

@@ -12,6 +12,7 @@ services:
     type:
       kind: "SCALAR"
       name: "string"
+    required: true
     defaultValue: "v1"
   operations:
   - id: "createProject"
@@ -117,6 +118,17 @@ services:
       permission: "project.create"
       resourceType: "project"
   media: {}
+  servers:
+  - url: "https://api.example.com/{version}"
+    variables:
+    - name: "version"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      defaultValue: "v1"
+    sourceUri: "SOURCE_LOCATION"
 problems:
 - name: "InvalidProjectProblem"
   sourceName: "invalid_project"
@@ -212,3 +224,14 @@ tags:
     description: "Project operations."
 - name: "audit"
   policy: {}
+servers:
+- url: "https://api.example.com/{version}"
+  variables:
+  - name: "version"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    defaultValue: "v1"
+  sourceUri: "SOURCE_LOCATION"

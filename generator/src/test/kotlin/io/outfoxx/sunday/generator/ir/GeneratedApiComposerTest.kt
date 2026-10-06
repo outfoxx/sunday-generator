@@ -441,7 +441,7 @@ class GeneratedApiComposerTest {
     )
     assertThat(
       api.services.map { service -> service.baseUri },
-      equalTo(listOf("broker.example.com:9092", "broker.example.com:9092")),
+      equalTo(listOf("/", "/")),
     )
     assertThat(
       api.models.map { model -> model.name },

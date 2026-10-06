@@ -60,6 +60,9 @@ class SundayGeneration(
   val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
 
+  /** Generate server configurations and required application transport factories. */
+  val generateClientConfig: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
   /** Explicit environment profile used by policy and security metadata. */
   val profile: Property<String> = objects.property(String::class.java)
 

@@ -28,6 +28,7 @@ import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.LONG
+import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MAP
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.NameAllocator
@@ -73,7 +74,11 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.GeneratedOperationParameter
-import io.outfoxx.sunday.generator.ir.emit.clientSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
+import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
+import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorFallbackOrNull
 import io.outfoxx.sunday.generator.ir.emit.enabledFor
@@ -89,10 +94,12 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
 import io.outfoxx.sunday.generator.ir.emit.withLocation
+import io.outfoxx.sunday.generator.kotlin.utils.AssociatedFunctions
 import io.outfoxx.sunday.generator.kotlin.utils.FLOW
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_DESERIALIZATION_CONTEXT
 import io.outfoxx.sunday.generator.kotlin.utils.JACKSON_JSON_CREATOR
@@ -157,6 +164,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.addKotlinPatchHelpers
 import io.outfoxx.sunday.generator.kotlin.utils.addModelDecodingDefaults
 import io.outfoxx.sunday.generator.kotlin.utils.addNativeModelGraphs
 import io.outfoxx.sunday.generator.kotlin.utils.addOpenModelProperties
+import io.outfoxx.sunday.generator.kotlin.utils.kotlinBindings
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFallbackTypeSpec
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIdentifierName
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinIntegerScalarTypeName
@@ -182,6 +190,11 @@ class KotlinSundayIrGenerator(
 ) {
 
   private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
+
+  private val clientSettingsType = ClassName("io.outfoxx.sunday.security", "ClientSettings")
+  private val clientConfigurations by lazy {
+    if (options.generateClientConfig) api.clientConfigurations(api.kotlinSundayServices()) else emptyList()
+  }
 
   private val requestTypeVariable = TypeVariableName("Req", SUNDAY_REQUEST)
   private val transportType = TRANSPORT.parameterizedBy(requestTypeVariable)
@@ -269,6 +282,7 @@ class KotlinSundayIrGenerator(
 
     generateModelTypes(services + brokerServices)
     generateProblemTypes(services)
+    generateClientConfigurations()
 
     val serviceTypes =
       services.map { service ->
@@ -281,6 +295,7 @@ class KotlinSundayIrGenerator(
       }
 
     if (options.aggregateServices && serviceTypes.size > 1) {
+      if (options.generateClientConfig) clientConfigurations.requireCompatibleAggregate(serviceTypes.map { it.service })
       val aggregateTypeName = aggregateServiceTypeName()
       if (serviceTypes.any { serviceType -> serviceType.typeName == aggregateTypeName }) {
         genError(
@@ -656,6 +671,253 @@ class KotlinSundayIrGenerator(
     val uniqueRequiredWireNames: List<String>,
   )
 
+  private fun GeneratedParameter.clientConfigStringCode(): CodeBlock =
+    if (type.kotlinTypeName().copy(nullable = false) == STRING) {
+      CodeBlock.of("%N", name.kotlinIdentifierName)
+    } else {
+      CodeBlock.of("%N.toString()", name.kotlinIdentifierName)
+    }
+
+  private fun generateClientConfigurations() {
+    clientConfigurations.forEach { plan ->
+      val typeName = ClassName(servicePackageName(), plan.name)
+      val type = TypeSpec.classBuilder(typeName).addKdoc("Server variables for %L.\n", plan.name)
+      val constructor = FunSpec.constructorBuilder()
+      plan.variables.forEach { variable ->
+        val variableType = variable.type.kotlinTypeName().copy(nullable = false)
+        val parameter =
+          ParameterSpec
+            .builder(variable.name.kotlinIdentifierName, variableType)
+            .apply {
+              variable.defaultValue?.let { defaultValue("%L", variable.baseUriDefaultValueCode(it, variableType)) }
+            }.build()
+        constructor.addParameter(parameter)
+        type.addProperty(
+          PropertySpec
+            .builder(parameter.name, parameter.type)
+            .initializer("%N", parameter.name)
+            .addKdoc(
+              "%L\n",
+              variable.documentation?.description ?: "Server variable ${variable.serializationName ?: variable.name}.",
+            ).build(),
+        )
+        variable.allowedValues?.let { values ->
+          type.addInitializerBlock(
+            CodeBlock.of(
+              "require(%L in listOf(%L)) { %S }\n",
+              variable.clientConfigStringCode(),
+              values.map { CodeBlock.of("%S", it.toString()) }.joinToCode(),
+              "Invalid server variable '${variable.name}'",
+            ),
+          )
+        }
+      }
+      val uri = ClassName("java.net", "URI")
+      if (plan.requiresDocumentBaseUri) {
+        constructor.addParameter("documentBaseURL", uri)
+        type.addProperty(
+          PropertySpec
+            .builder(
+              "documentBaseURL",
+              uri,
+            ).initializer(
+              "documentBaseURL",
+            ).addKdoc("HTTP retrieval location for resolving a relative server URL.\n")
+            .build(),
+        )
+      }
+      type.primaryConstructor(constructor.build())
+      val variables =
+        plan.variables
+          .map {
+            CodeBlock.of("%S to %L", it.serializationName ?: it.name, it.clientConfigStringCode())
+          }.joinToCode()
+      val documentBase =
+        when {
+          plan.requiresDocumentBaseUri -> CodeBlock.of("documentBaseURL")
+          plan.documentBaseUri != null -> CodeBlock.of("%T(%S)", uri, plan.documentBaseUri)
+          else -> CodeBlock.of("null")
+        }
+      type.addFunction(
+        FunSpec
+          .builder(
+            "baseURL",
+          ).returns(uri)
+          .addKdoc("Resolves the server endpoint without constructing a transport.\n")
+          .addStatement(
+            "return %T.serverURL(%S, mapOf(%L), %L)",
+            clientSettingsType,
+            plan.server.url,
+            variables,
+            documentBase,
+          ).build(),
+      )
+      typeRegistry.addServiceType(typeName, type)
+    }
+  }
+
+  private fun clientFactoryFunctions(
+    service: GeneratedService,
+    serviceType: ClassName,
+  ): List<FunSpec> {
+    val plans = clientConfigurations.filter { service.name in it.services }
+    if (plans.isEmpty()) return emptyList()
+    val profiles = api.clientFactoryProfiles(service, options.profile)
+    val security = profiles.associateWith { api.clientFactorySecurity(service, it, plans.map { plan -> plan.server }) }
+    val schemes =
+      security.values
+        .flatMap { it.values.flatten() }
+        .flatMap { it.schemes.values }
+        .distinctBy { it.name }
+    require(schemes.map { it.name.kotlinIdentifierName }.distinct().size == schemes.size) {
+      "Client credential field name collision"
+    }
+    val credentialsType = ClassName(serviceType.packageName, serviceType.simpleName + "Credentials")
+    val credentials =
+      TypeSpec
+        .classBuilder(
+          credentialsType,
+        ).addKdoc(
+          "Scheme credentials for %L. Each operation requires one complete alternative.\n",
+          serviceType.simpleName,
+        )
+    val constructor = FunSpec.constructorBuilder()
+    schemes.forEach { scheme ->
+      val family =
+        when (scheme.type) {
+          "apiKey" -> "ApiKey"
+          "oauth2", "openIdConnect" -> "OAuth"
+          "http" -> if (scheme.scheme.equals("basic", true)) "Basic" else "Bearer"
+          else -> null
+        }
+      val type =
+        (
+          family?.let { ClassName("io.outfoxx.sunday.security", "Credentials", it) }
+            ?: ClassName("io.outfoxx.sunday.security", "ProviderCredentials")
+        ).copy(nullable = true)
+      val name = scheme.name.kotlinIdentifierName
+      constructor.addParameter(ParameterSpec.builder(name, type).defaultValue("null").build())
+      credentials.addProperty(
+        PropertySpec
+          .builder(name, type)
+          .initializer("%N", name)
+          .addKdoc("Credentials for %L.\n", scheme.name)
+          .build(),
+      )
+    }
+    credentials.primaryConstructor(constructor.build())
+    typeRegistry.addServiceType(credentialsType, credentials)
+    val credentialsBase = ClassName("io.outfoxx.sunday.security", "Credentials")
+    val bindingsType = ClassName("io.outfoxx.sunday.security", "SecurityBinding")
+    val alternativesType = MAP.parameterizedBy(STRING, LIST.parameterizedBy(LIST.parameterizedBy(bindingsType)))
+    val alternativeType = ClassName(serviceType.packageName, serviceType.simpleName + "SecurityAlternative")
+    val alternatives = security.values.clientFactoryAlternatives()
+    val alternative =
+      TypeSpec
+        .enumBuilder(alternativeType)
+        .addKdoc("Complete security alternatives, including each scheme's required scopes.\n")
+    val matches =
+      FunSpec
+        .builder("matches")
+        .addModifiers(KModifier.INTERNAL)
+        .addParameter("bindings", LIST.parameterizedBy(bindingsType))
+        .returns(BOOLEAN)
+        .addCode("return when (this) {\n⇥")
+    alternatives.forEach { choice ->
+      alternative.addEnumConstant(choice.name)
+      val requirement =
+        choice.requirement.permissions
+          .map { (scheme, scopes) ->
+            CodeBlock.of("%S to setOf(%L)", scheme, scopes.map { CodeBlock.of("%S", it) }.joinToCode())
+          }.joinToCode()
+      matches.addCode(
+        "%N -> bindings.associate { it.scheme to it.scopes } == mapOf<String, Set<String>>(%L)\n",
+        choice.name,
+        requirement,
+      )
+    }
+    matches.addCode("⇤}\n")
+    alternative.addFunction(matches.build())
+    typeRegistry.addServiceType(alternativeType, alternative)
+
+    val media = service.defaultMediaSelection(defaultMediaTypes)
+    return plans.map { plan ->
+      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(service, it, plan.server) }
+      val builder =
+        FunSpec
+          .builder("create" + serviceType.simpleName)
+          .addKdoc(
+            "Creates %L using the application's chosen transport. The caller owns its lifecycle.\n",
+            serviceType.simpleName,
+          ).addTypeVariable(requestTypeVariable)
+          .returns(serviceType.parameterizedBy(requestTypeVariable))
+          .addParameter("config", ClassName(servicePackageName(), plan.name))
+          .addParameter(
+            "transportFactory",
+            LambdaTypeName.get(parameters = arrayOf(clientSettingsType), returnType = transportType),
+          ).addParameter(
+            ParameterSpec.builder("credentials", credentialsType).defaultValue("%T()", credentialsType).build(),
+          ).addParameter(
+            ParameterSpec
+              .builder("securityProfile", STRING.copy(nullable = true))
+              .defaultValue(
+                "%L",
+                (plan.server.securityProfile ?: options.profile)?.let {
+                  CodeBlock.of(
+                    "%S",
+                    it,
+                  )
+                } ?: CodeBlock.of("null"),
+              ).build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "securitySelection",
+                MAP.parameterizedBy(STRING, alternativeType),
+              ).defaultValue("emptyMap()")
+              .build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "defaultContentTypes",
+                LIST.parameterizedBy(MEDIA_TYPE),
+              ).defaultValue("%L", mediaTypesArray(media.contentTypes))
+              .build(),
+          ).addParameter(
+            ParameterSpec
+              .builder(
+                "defaultAcceptTypes",
+                LIST.parameterizedBy(MEDIA_TYPE),
+              ).defaultValue("%L", mediaTypesArray(media.acceptTypes))
+              .build(),
+          ).addStatement("val supplied = mutableMapOf<String, %T>()", credentialsBase)
+      schemes.forEach { scheme ->
+        builder.addStatement("credentials.%N?.let { supplied[%S] = it }", scheme.name.kotlinIdentifierName, scheme.name)
+      }
+      builder.addCode("val alternatives: %T = when (securityProfile) {\n", alternativesType).addCode("⇥")
+      selectedSecurity.forEach { (profile, operations) ->
+        builder.addCode("%L -> mapOf(\n", profile?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null")).addCode("⇥")
+        operations.forEach { (id, choices) ->
+          builder.addCode("%S to listOf(%L),\n", id, choices.map { it.kotlinBindings(profile) }.joinToCode())
+        }
+        builder.addCode("⇤").addCode(")\n")
+      }
+      builder.addStatement("else -> error(%S)", "Unknown client security profile").addCode("⇤").addCode("}\n")
+      builder
+        .addStatement(
+          "require(securitySelection.keys.all { it in alternatives }) { %S }",
+          "Unknown operation in security selection",
+        ).addStatement(
+          "val selectedAlternatives = alternatives.mapValues { (operation, choices) -> choices.filter { securitySelection[operation]?.matches(it) ?: true } }",
+        ).addStatement(
+          "val settings = %T.resolve(config.baseURL(), selectedAlternatives, supplied)",
+          clientSettingsType,
+        ).addStatement("val transport = transportFactory(settings)")
+        .addStatement("return %T(transport, defaultContentTypes, defaultAcceptTypes, settings)", serviceType)
+      builder.build()
+    }
+  }
+
   private fun generateServiceType(
     serviceTypeName: ClassName,
     service: GeneratedService,
@@ -680,6 +942,25 @@ class KotlinSundayIrGenerator(
           .build(),
       )
 
+    if (options.generateClientConfig) {
+      constructorBuilder.addAnnotation(JvmOverloads::class)
+      constructorBuilder.addParameter(
+        ParameterSpec.builder("clientSettings", clientSettingsType.copy(nullable = true)).defaultValue("null").build(),
+      )
+      serviceTypeBuilder.addProperty(
+        PropertySpec
+          .builder(
+            "clientSettings",
+            clientSettingsType.copy(nullable = true),
+            KModifier.PRIVATE,
+          ).initializer("clientSettings")
+          .build(),
+      )
+      serviceTypeBuilder.tag(
+        AssociatedFunctions::class,
+        AssociatedFunctions(clientFactoryFunctions(service, serviceTypeName)),
+      )
+    }
     val referencedProblems = service.referencedProblems(apiIndex)
     referencedProblems.forEach { problem ->
       constructorBuilder.addStatement(
@@ -720,8 +1001,24 @@ class KotlinSundayIrGenerator(
             operation,
             operationParameters,
             api
-              .clientSecurity(service, operation, options.generationContext(GenerationMode.Client))
-              .kotlinTransport(options.profile),
+              .clientConstructorSecurity(
+                service,
+                operation,
+                options.generationContext(GenerationMode.Client),
+                options.generateClientConfig,
+              ).kotlinTransport(options.profile)
+              .let { legacy ->
+                if (!options.generateClientConfig) {
+                  legacy
+                } else {
+                  CodeBlock.of(
+                    "(if (clientSettings != null) this.transport.%M(clientSettings.bindings.getValue(%S)) else %L)",
+                    MemberName("io.outfoxx.sunday", "withSecurity"),
+                    operation.id,
+                    legacy,
+                  )
+                }
+              },
           ),
         )
       }

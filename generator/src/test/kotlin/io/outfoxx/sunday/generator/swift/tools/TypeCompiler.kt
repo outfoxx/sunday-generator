@@ -16,11 +16,11 @@
 
 package io.outfoxx.sunday.generator.swift.tools
 
+import io.outfoxx.sunday.generator.swift.swiftGeneratedFile
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.test.utils.Compilation
 import io.outfoxx.swiftpoet.DeclaredTypeName
-import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.TypeSpec
 import org.opentest4j.AssertionFailedError
 import java.nio.file.Files
@@ -43,7 +43,7 @@ private fun compileTypesUnsafe(
     val fileSpecs =
       types.entries
         .filter { it.key.topLevelTypeName() == it.key }
-        .map { (typeName, typeSpec) -> FileSpec.get(typeName.moduleName, typeSpec) }
+        .map { (typeName, typeSpec) -> swiftGeneratedFile(typeName, typeSpec) }
 
     fileSpecs.forEach { it.writeTo(compiler.srcDir) }
     Files.createDirectories(compiler.testsDir)

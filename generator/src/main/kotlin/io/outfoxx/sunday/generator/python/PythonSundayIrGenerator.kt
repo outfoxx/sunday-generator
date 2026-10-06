@@ -21,9 +21,11 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
-import io.outfoxx.sunday.generator.ir.emit.clientSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
+import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
+import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
 
@@ -61,15 +63,26 @@ class PythonSundayIrGenerator(
           models = api.models,
           defaultMediaTypes = defaultMediaTypes,
           profile = options.profile,
+          configurationFactories = options.generateClientConfig,
           security = {
             service,
             operation,
             ->
-            api.clientSecurity(service, operation, options.generationContext(GenerationMode.Client))
+            api.clientConstructorSecurity(
+              service,
+              operation,
+              options.generationContext(GenerationMode.Client),
+              options.generateClientConfig,
+            )
           },
         )
-      modules += services.map(clientRenderer::renderService)
+      val configurations = if (options.generateClientConfig) api.clientConfigurations(services) else emptyList()
+      val factories = PythonClientConfigurations(api, packageName, options.profile, defaultMediaTypes)
+      if (configurations.isNotEmpty()) modules += factories.configurations(configurations)
+      modules +=
+        services.map { service -> factories.factories(clientRenderer.renderService(service), service, configurations) }
       if (options.aggregateServices && services.size > 1) {
+        if (options.generateClientConfig) configurations.requireCompatibleAggregate(services)
         modules += renderAggregate(packageName, services, defaultMediaTypes)
       }
     }

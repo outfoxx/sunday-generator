@@ -1,6 +1,6 @@
 import {PatchableTest, PatchableTestSchema} from './patchable-test';
 import {Test, TestSchema} from './test';
-import {MediaType, Operation, SchemaLike, Transport, TransportRequest, createOperation} from '@outfoxx/sunday';
+import {ClientSettings, MediaType, Operation, SchemaLike, Transport, TransportRequest, createOperation} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -34,7 +34,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [MediaType.JSON];
     this.defaultAcceptTypes =
@@ -46,6 +47,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['fetchTest'] ?? [],
           acceptTypes: this.defaultAcceptTypes,
         },
         responseType: fetchTestReturnType
@@ -57,6 +59,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'PUT',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['putTest'] ?? [],
           body: body,
           bodyType: putTestBodyType,
           contentTypes: this.defaultContentTypes,
@@ -71,6 +74,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'POST',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['postTest'] ?? [],
           body: body,
           bodyType: postTestBodyType,
           contentTypes: this.defaultContentTypes,
@@ -85,6 +89,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'PATCH',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['patchTest'] ?? [],
           body: body,
           bodyType: patchTestBodyType,
           contentTypes: this.defaultContentTypes,
@@ -99,6 +104,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'DELETE',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['deleteTest'] ?? [],
         }
     });
   }
@@ -108,6 +114,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'HEAD',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['headTest'] ?? [],
         }
     });
   }
@@ -117,6 +124,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'OPTIONS',
           pathTemplate: '/tests',
+          security: this.clientSettings?.bindings['optionsTest'] ?? [],
         }
     });
   }
@@ -126,6 +134,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'PATCH',
           pathTemplate: '/tests2',
+          security: this.clientSettings?.bindings['patchableTest'] ?? [],
           body: body,
           bodyType: patchableTestBodyType,
           contentTypes: this.defaultContentTypes,
@@ -140,6 +149,7 @@ class APIClient<Factory extends SundayTransport> {
         {
           method: 'GET',
           pathTemplate: '/request',
+          security: this.clientSettings?.bindings['requestTest'] ?? [],
           acceptTypes: this.defaultAcceptTypes,
           signal: signal,
         }
@@ -151,6 +161,7 @@ class APIClient<Factory extends SundayTransport> {
         {
           method: 'GET',
           pathTemplate: '/response',
+          security: this.clientSettings?.bindings['responseTest'] ?? [],
           acceptTypes: this.defaultAcceptTypes,
           signal: signal,
         }

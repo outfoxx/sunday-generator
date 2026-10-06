@@ -33,6 +33,9 @@ services:
     media: {}
     deprecated: true
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "LegacyProject"
   kind: "OBJECT"
@@ -58,3 +61,6 @@ models:
     deprecated: true
   deprecated: true
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "SOURCE_LOCATION"

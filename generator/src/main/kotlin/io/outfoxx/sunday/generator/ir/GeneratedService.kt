@@ -30,4 +30,6 @@ data class GeneratedService(
   val protocol: GeneratedProtocol? = null,
   val media: GeneratedMedia? = null,
   val documentation: GeneratedDocumentation? = null,
+  /** Effective server alternatives shared by every operation in this service. */
+  val servers: List<GeneratedServer> = listOf(),
 )

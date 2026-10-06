@@ -39,4 +39,6 @@ data class GeneratedOperation(
   val deprecated: Boolean = false,
   val tags: List<String> = listOf(),
   val documentation: GeneratedDocumentation? = null,
+  /** Complete operation security for each named server, before choosing a deployment. */
+  val serverAuth: Map<String, GeneratedAuth> = mapOf(),
 )

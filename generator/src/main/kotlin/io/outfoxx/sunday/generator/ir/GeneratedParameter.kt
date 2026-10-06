@@ -35,6 +35,8 @@ data class GeneratedParameter(
   val examples: List<GeneratedExample> = listOf(),
   val deprecated: Boolean = false,
   val documentation: GeneratedDocumentation? = null,
+  /** Restricted values retained for server configuration variables. */
+  val allowedValues: List<Any?>? = null,
 ) {
 
   /** Wire locations supported by operation parameters. */

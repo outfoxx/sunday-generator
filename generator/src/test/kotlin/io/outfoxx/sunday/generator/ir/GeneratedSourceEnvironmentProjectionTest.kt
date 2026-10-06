@@ -43,7 +43,7 @@ class GeneratedSourceEnvironmentProjectionTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["openapi", "asyncapi", "asyncapi3", "composed"])
-  fun `source projection preserves wire requirements and selected bindings`(
+  fun `source projection preserves wire requirements and all client security profiles`(
     frontend: String,
     @TempDir directory: Path,
   ) {
@@ -55,9 +55,9 @@ class GeneratedSourceEnvironmentProjectionTest {
         val result = GeneratedSourceEnvironmentProjection.project(input, external)
         assertEquals(input, mapper.readValue(source.toFile(), mapType))
         val yaml = mapper.writeValueAsString(result)
-        assertFalse(yaml.contains("identity.internal"))
+        assertTrue(yaml.contains("identity.internal"))
         assertFalse(yaml.contains("verifier"))
-        assertFalse(yaml.contains("internal:"))
+        assertTrue(yaml.contains("internal:"))
         directory.resolve("public-${source.fileName}").also { Files.writeString(it, yaml) }.toUri()
       }
     val output = GeneratedApiIrExporter().export(projected)
@@ -140,13 +140,13 @@ class GeneratedSourceEnvironmentProjectionTest {
         .valueToTree<com.fasterxml.jackson.databind.JsonNode>(
           output,
         ).at("/components/securitySchemes/token/x-sunday-security")
-    assertTrue(binding.at("/profiles/external/client").isObject)
-    assertTrue(binding.at("/profiles/external/client").isEmpty)
+    assertTrue(binding.isObject)
+    assertTrue(binding.isEmpty)
   }
 
   @Test
-  fun `profiled projection requires explicit profile and rejects removed policy members`() {
-    assertThrows(GenerationException::class.java) {
+  fun `profiled client projection retains alternatives and rejects removed policy members`() {
+    val projected =
       GeneratedSourceEnvironmentProjection.project(
         mapOf(
           "x-sunday-security" to
@@ -156,7 +156,7 @@ class GeneratedSourceEnvironmentProjectionTest {
         ),
         GenerationContext(GenerationMode.Client),
       )
-    }
+    assertTrue(mapper.writeValueAsString(projected).contains("external:"))
     assertThrows(GenerationException::class.java) {
       GeneratedSourceEnvironmentProjection.project(mapOf("x-sunday-policy" to mapOf("clientRateLimit" to 3)), external)
     }
