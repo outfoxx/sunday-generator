@@ -477,7 +477,11 @@ class TypeScriptSundayIrGenerator(
       }
       builder.add("endpoint = %T.serverUrl(%S, {", clientSettingsType, plan.server.url)
       plan.variables.forEachIndexed { i, variable ->
-        builder.add("%S: globalThis.String(variable%L),", variable.serializationName ?: variable.name, i)
+        builder.add(
+          "%L: globalThis.String(variable%L),",
+          objectPropertyKey(variable.serializationName ?: variable.name),
+          i,
+        )
       }
       builder.add(
         "}, %L);\n",
@@ -508,7 +512,11 @@ class TypeScriptSundayIrGenerator(
       profiles.associateWith { api.clientFactorySecurity(this, it, plan.server) }.forEach { (profile, operations) ->
         builder.add("case %L: alternatives = {", profile?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"))
         operations.forEach { (id, alternatives) ->
-          builder.add("%S: [%L],", id, alternatives.map { it.typeScriptBindings(profile) }.joinToCode(", "))
+          builder.add(
+            "%L: [%L],",
+            objectPropertyKey(id),
+            alternatives.map { it.typeScriptBindings(profile) }.joinToCode(", "),
+          )
         }
         builder.add("}; break;\n")
       }
@@ -517,12 +525,13 @@ class TypeScriptSundayIrGenerator(
     }
     builder.add("default: throw new globalThis.TypeError('Unknown server configuration');\n%<}\n")
     builder.add(
-      "const credentials: {[scheme: string]: %T} = {};\n",
+      "const credentials: {[scheme: string]: %T} = globalThis.Object.create(null);\n",
       TypeName.namedImport("Credentials", "@outfoxx/sunday"),
     )
     schemes.forEach { scheme ->
       builder.add(
-        "if (options?.credentials?.[%S]) credentials[%S] = options.credentials[%S];\n",
+        "if (globalThis.Object.hasOwn(options?.credentials ?? {}, %S) && options?.credentials?.[%S]) credentials[%S] = options.credentials[%S];\n",
+        scheme.name,
         scheme.name,
         scheme.name,
         scheme.name,
@@ -537,10 +546,10 @@ class TypeScriptSundayIrGenerator(
     }
     builder.add("};\n")
     builder.add(
-      "if (globalThis.Object.keys(options?.securitySelection ?? {}).some(operation => !(operation in alternatives))) throw new globalThis.TypeError('Unknown operation in security selection');\n",
+      "if (globalThis.Object.keys(options?.securitySelection ?? {}).some(operation => !globalThis.Object.hasOwn(alternatives, operation))) throw new globalThis.TypeError('Unknown operation in security selection');\n",
     )
     builder.add(
-      "const selectedAlternatives = globalThis.Object.fromEntries(globalThis.Object.entries(alternatives).map(([operation, choices]) => {\n%>const selection = options?.securitySelection?.[operation];\nif (selection === undefined) return [operation, choices];\nconst required = requirements[selection];\nreturn [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];\n%<}));\n",
+      "const selectedAlternatives = globalThis.Object.fromEntries(globalThis.Object.entries(alternatives).map(([operation, choices]) => {\n%>const selection = options?.securitySelection && globalThis.Object.hasOwn(options.securitySelection, operation) ? options.securitySelection[operation] : undefined;\nif (selection === undefined) return [operation, choices];\nconst required = requirements[selection];\nreturn [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];\n%<}));\n",
     )
     builder.add(
       "const settings = %T.resolve(endpoint, selectedAlternatives, credentials);\n",

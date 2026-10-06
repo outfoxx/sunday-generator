@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
@@ -32,14 +33,30 @@ import java.nio.file.Path
 class TypeScriptClientConfigurationTest {
   @ParameterizedTest
   @ValueSource(
-    strings = ["raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security"],
+    strings = [
+      "raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security", "prototype",
+    ],
   )
   fun `configuration callback preserves transport type and is invoked once`(
     frontend: String,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
-    val api = clientConfigurationApi(frontend, directory)
+    fun prototypeVariable(server: GeneratedServer): GeneratedServer =
+      server.copy(
+        url = server.url.replace("{tenant}", "{__proto__}"),
+        variables = server.variables.map { it.copy(serializationName = "__proto__") },
+      )
+    val sourceApi = clientConfigurationApi(frontend, directory)
+    val api =
+      if (frontend == "prototype") {
+        sourceApi.copy(
+          servers = sourceApi.servers.map(::prototypeVariable),
+          services = sourceApi.services.map { it.copy(servers = it.servers.map(::prototypeVariable)) },
+        )
+      } else {
+        sourceApi
+      }
     val authenticated = frontend in setOf("security", "alternatives", "server-security")
     val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
     TypeScriptSundayIrGenerator(

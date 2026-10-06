@@ -99,13 +99,13 @@ export function createAPI<Factory extends SundayTransport>(input: Factory | Test
     }
     default: throw new globalThis.TypeError('Unknown server configuration');
   }
-  const credentials: {[scheme: string]: Credentials} = {};
+  const credentials: {[scheme: string]: Credentials} = globalThis.Object.create(null);
   const requirements: {readonly [alternative in APISecurityAlternative]: {readonly [scheme: string]: readonly string[]}} = {
   [APISecurityAlternative.Public]: {},
   };
-  if (globalThis.Object.keys(options?.securitySelection ?? {}).some(operation => !(operation in alternatives))) throw new globalThis.TypeError('Unknown operation in security selection');
+  if (globalThis.Object.keys(options?.securitySelection ?? {}).some(operation => !globalThis.Object.hasOwn(alternatives, operation))) throw new globalThis.TypeError('Unknown operation in security selection');
   const selectedAlternatives = globalThis.Object.fromEntries(globalThis.Object.entries(alternatives).map(([operation, choices]) => {
-    const selection = options?.securitySelection?.[operation];
+    const selection = options?.securitySelection && globalThis.Object.hasOwn(options.securitySelection, operation) ? options.securitySelection[operation] : undefined;
     if (selection === undefined) return [operation, choices];
     const required = requirements[selection];
     return [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];
