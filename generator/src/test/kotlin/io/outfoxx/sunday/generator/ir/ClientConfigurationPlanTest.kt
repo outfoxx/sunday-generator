@@ -22,8 +22,10 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
 import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
 import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
+import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
 import io.outfoxx.sunday.generator.ir.emit.projectEnvironment
 import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
+import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -280,5 +282,69 @@ class ClientConfigurationPlanTest {
         .isEmpty(),
     )
     assertEquals(3, choices.map { it.name }.toSet().size)
+  }
+
+  @Test
+  fun `aggregate security retains child service inheritance and public overrides`() {
+    val original = aggregateClientConfigurationApi(directory)
+    val services =
+      original.services.map { service ->
+        service.copy(
+          auth = original.auth,
+          operations =
+            service.operations.map {
+              if (it.id == "register") it else it.copy(auth = null)
+            },
+        )
+      }
+    val api = original.copy(auth = null, services = services)
+    val security = api.clientFactorySecurity(services, "external-development", services.first().servers.last())
+    assertEquals(setOf("listUsers", "listProjects", "register"), security.keys)
+    assertEquals(
+      emptyList<String>(),
+      security
+        .getValue("register")
+        .single()
+        .requirement.schemes,
+    )
+    for (id in listOf("listUsers", "listProjects")) {
+      val selected = security.getValue(id).first()
+      assertEquals(listOf("items:read"), selected.requirement.permissions.getValue("identity"))
+      assertEquals(
+        "https://auth.dev.example/.well-known/openid-configuration",
+        selected.bindings.getValue("identity").discoveryUrl,
+      )
+    }
+  }
+
+  @Test
+  fun `aggregate security rejects duplicate operation identities`() {
+    val api = aggregateClientConfigurationApi(directory)
+    val services = listOf(api.services.first(), api.services.first().copy(name = "Duplicate"))
+    assertThrows(IllegalArgumentException::class.java) { api.clientFactorySecurity(services, "external") }
+  }
+
+  @Test
+  fun `aggregate security rejects conflicting scheme definitions`() {
+    val api = aggregateClientConfigurationApi(directory)
+    val services =
+      api.services.mapIndexed { index, service ->
+        if (index == 0) {
+          service
+        } else {
+          service.copy(
+            operations =
+              service.operations.map { operation ->
+                operation.copy(
+                  auth =
+                    api.auth!!.copy(
+                      securitySchemes = api.auth.securitySchemes.map { it.copy(bearerFormat = "conflicting-format") },
+                    ),
+                )
+              },
+          )
+        }
+      }
+    assertThrows(IllegalArgumentException::class.java) { api.clientFactorySecurity(services, "external") }
   }
 }

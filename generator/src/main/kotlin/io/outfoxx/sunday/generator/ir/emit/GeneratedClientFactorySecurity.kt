@@ -168,3 +168,37 @@ fun GeneratedApi.clientFactorySecurity(
     .flatMap { clientFactorySecurity(service, profile, it).entries }
     .groupBy({ it.key }, { it.value })
     .mapValues { (_, choices) -> choices.flatten().distinct() }
+
+/** Resolves every child's security before an aggregate creates its shared transport. */
+fun GeneratedApi.clientFactorySecurity(
+  services: List<GeneratedService>,
+  profile: String?,
+  server: GeneratedServer? = null,
+): Map<String, List<GeneratedClientSecurity>> {
+  val operations = services.flatMap { clientFactorySecurity(it, profile, server).entries }
+  require(operations.map { it.key }.distinct().size == operations.size) {
+    "Aggregate client operations must have unique security identities"
+  }
+  val schemes = operations.flatMap { it.value }.flatMap { it.schemes.values }.groupBy { it.name }
+  require(schemes.values.all { it.distinct().size == 1 }) {
+    "Aggregate client services have conflicting security scheme definitions"
+  }
+  return operations.associate { it.key to it.value }
+}
+
+/** Collects the shared credential surface across all aggregate server alternatives. */
+fun GeneratedApi.clientFactorySecurity(
+  services: List<GeneratedService>,
+  profile: String?,
+  servers: List<GeneratedServer>,
+): Map<String, List<GeneratedClientSecurity>> =
+  servers
+    .flatMap { clientFactorySecurity(services, profile, it).entries }
+    .groupBy({ it.key }, { it.value })
+    .mapValues { (_, choices) -> choices.flatten().distinct() }
+
+/** Includes profiles declared by any child; unavailable child alternatives still fail resolution. */
+fun GeneratedApi.clientFactoryProfiles(
+  services: List<GeneratedService>,
+  generationProfile: String?,
+): Set<String?> = services.flatMap { clientFactoryProfiles(it, generationProfile) }.toSet()

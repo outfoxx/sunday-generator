@@ -83,7 +83,17 @@ class PythonSundayIrGenerator(
         services.map { service -> factories.factories(clientRenderer.renderService(service), service, configurations) }
       if (options.aggregateServices && services.size > 1) {
         if (options.generateClientConfig) configurations.requireCompatibleAggregate(services)
-        modules += renderAggregate(packageName, services, defaultMediaTypes)
+        val className = options.aggregateServiceName?.pythonTypeName ?: api.aggregateTypeName
+        modules +=
+          factories.factories(
+            renderAggregate(packageName, services, defaultMediaTypes),
+            services.first(),
+            configurations,
+            services,
+            className,
+            className,
+            services.aggregateMediaSelection(defaultMediaTypes),
+          )
       }
     }
 
@@ -112,6 +122,7 @@ class PythonSundayIrGenerator(
                 *,
                 default_content_types: %T[%T] = %C,
                 default_accept_types: %T[%T] = %C,
+        %C
             ) -> None:
                 self.transport = transport
                 self.default_content_types = tuple(default_content_types)
@@ -126,6 +137,14 @@ class PythonSundayIrGenerator(
         PythonSymbol("collections.abc", "Sequence"),
         PythonSymbol("sunday", "MediaType"),
         renderMediaTypes(mediaSelection.acceptTypes),
+        if (options.generateClientConfig) {
+          PythonCodeBlock.of(
+            "        client_settings: %T | None = None,",
+            PythonSymbol("sunday", "ClientSettings"),
+          )
+        } else {
+          PythonCodeBlock.of("")
+        },
         PythonCodeBlock.join(
           services.map { service ->
             PythonCodeBlock.of(
@@ -134,6 +153,7 @@ class PythonSundayIrGenerator(
               |            transport,
               |            default_content_types=self.default_content_types,
               |            default_accept_types=self.default_accept_types,
+              |${if (options.generateClientConfig) "            client_settings=client_settings," else ""}
               |        )
               """.trimMargin(),
               service.pythonServiceIdentifierName,

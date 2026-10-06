@@ -20,6 +20,8 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
+import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
+import io.outfoxx.sunday.generator.tools.aggregateFrontendConfigurationApi
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
@@ -202,5 +204,110 @@ class PythonClientConfigurationTest : PythonTest() {
           """.trimIndent(),
       ),
     )
+  }
+
+  @Test
+  fun `aggregate factory shares settings and lazy token cache`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val modules =
+      PythonSundayIrGenerator(
+        aggregateClientConfigurationApi(directory),
+        PythonGeneratorOptions(
+          packageName = "example_api",
+          profile = "external",
+          aggregateServices = true,
+          aggregateServiceName = "ExampleAPI",
+        ),
+      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          import asyncio
+          import httpx
+          from sunday import BearerCredentials, ProviderCredentials, TokenConfiguration, TokenSet
+          from sunday.httpx import HttpxTransport
+          from example_api.config import ExampleAPIDevelopmentConfig
+          from example_api.api import create_example_api, ExampleAPICredentials, ExampleAPISecurityAlternative
+          acquired = []
+          requests = []
+          class Provider:
+              identity = "application"
+              def configure(self, binding):
+                  return TokenConfiguration("client", "session")
+              async def acquire(self, request):
+                  acquired.append(request)
+                  return TokenSet("token")
+          def handler(request):
+              requests.append(request)
+              return httpx.Response(204)
+          async def run():
+              for override in (False, True):
+                  acquired.clear()
+                  requests.clear()
+                  calls = []
+                  expected = "external" if override else "external-development"
+                  async with httpx.AsyncClient(base_url="https://api.dev.example", transport=httpx.MockTransport(handler)) as native:
+                      def factory(settings):
+                          calls.append(settings)
+                          assert settings.base_url == "https://api.dev.example"
+                          assert set(settings.bindings) == {"listUsers", "listProjects", "register"}
+                          assert not settings.bindings["register"]
+                          for operation in ("listUsers", "listProjects"):
+                              binding = settings.bindings[operation][0]
+                              assert binding.profile == expected and binding.scopes == ("items:read",)
+                          return HttpxTransport.from_settings(settings, native)
+                      client = create_example_api(ExampleAPIDevelopmentConfig(), factory,
+                          credentials=ExampleAPICredentials(identity=ProviderCredentials(Provider())),
+                          security_selection={"listProjects": ExampleAPISecurityAlternative.IDENTITY},
+                          **({"security_profile": "external"} if override else {}))
+                      assert len(calls) == 1 and not acquired
+                      assert client.users.transport is client.transport and client.projects.transport is client.transport
+                      await client.users.register().execute()
+                      assert not acquired and "authorization" not in requests[0].headers
+                      await client.users.list_users().execute()
+                      await client.projects.list_projects().execute()
+                      assert len(acquired) == 1 and acquired[0].profile == expected
+                      assert all(r.headers["authorization"].lower() == "bearer token" for r in requests[1:])
+              def unexpected(settings):
+                  raise AssertionError("Transport constructed before validation")
+              for credentials in (
+                  ExampleAPICredentials(),
+                  ExampleAPICredentials(identity=ProviderCredentials(Provider()), backup_token=BearerCredentials("key")),
+              ):
+                  try:
+                      create_example_api(ExampleAPIDevelopmentConfig(), unexpected, credentials=credentials)
+                  except ValueError:
+                      pass
+                  else:
+                      raise AssertionError("Invalid credentials accepted")
+          asyncio.run(run())
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `aggregate factories compile for every frontend`(
+    frontend: String,
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+
+    val modules =
+      PythonSundayIrGenerator(
+        aggregateFrontendConfigurationApi(frontend, directory),
+        PythonGeneratorOptions(
+          packageName = "example_api",
+          aggregateServices = true,
+          aggregateServiceName = "ExampleAPI",
+        ),
+      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+    assertTrue(compileModules(compiler, modules, listOf("example_api.api")))
   }
 }
