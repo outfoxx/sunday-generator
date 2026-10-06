@@ -39,6 +39,39 @@ import java.nio.file.Path
 @KotlinTest
 class KotlinClientConfigurationTest {
   @Test
+  fun `generated factories preserve application token persistence`(
+    @TempDir directory: Path,
+  ) {
+    val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+    KotlinSundayIrGenerator(
+      aggregateClientConfigurationApi(directory),
+      registry,
+      KotlinSundayOptions(
+        "example",
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    val result =
+      compileTypesResult(
+        registry.buildTypes(),
+        listOf(
+          com.tschuchort.compiletesting.SourceFile.fromPath(
+            Path.of("src/test/resources/client-config-persistence/PersistenceCheck.kt").toFile(),
+          ),
+        ),
+      )
+    assertTrue(result.exitCode == KotlinCompilation.ExitCode.OK)
+    result.classLoader
+      .loadClass("example.PersistenceCheck")
+      .getMethod("verify")
+      .invoke(null)
+  }
+
+  @Test
   fun `credential field collisions fail before emitting source`(
     @TempDir directory: Path,
   ) {

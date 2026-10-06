@@ -423,22 +423,24 @@ class TypeScriptSundayIrGenerator(
     )
     builder.add("/** Resolves a server and invokes the application's transport factory exactly once. */\n")
     builder.add(
-      "export function %L<Factory extends SundayTransport>(config: %L, transportFactory: (settings: %T) => Factory, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} }): %T<Factory>;\n",
+      "export function %L<Factory extends SundayTransport>(config: %L, transportFactory: (settings: %T) => Factory, options?: %T & { credentials?: %L; tokenManagerFactory?: %T; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} }): %T<Factory>;\n",
       serviceTypeName.factoryFunctionName,
       configType,
       clientSettingsType,
       serviceOptionsType(),
       credentialsName,
+      TypeName.namedImport("TokenManagerFactory", "@outfoxx/sunday"),
       serviceTypeName,
     )
     builder.add(
-      "export function %L<Factory extends SundayTransport>(input: Factory | %L, factoryOrOptions?: ((settings: %T) => Factory) | %T, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} } | %T): %T<Factory> {%>\n",
+      "export function %L<Factory extends SundayTransport>(input: Factory | %L, factoryOrOptions?: ((settings: %T) => Factory) | %T, options?: %T & { credentials?: %L; tokenManagerFactory?: %T; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} } | %T): %T<Factory> {%>\n",
       serviceTypeName.factoryFunctionName,
       configType,
       clientSettingsType,
       serviceOptionsType(),
       serviceOptionsType(),
       credentialsName,
+      TypeName.namedImport("TokenManagerFactory", "@outfoxx/sunday"),
       clientSettingsType,
       serviceTypeName,
     )
@@ -566,7 +568,7 @@ class TypeScriptSundayIrGenerator(
       "const selectedAlternatives = globalThis.Object.fromEntries(globalThis.Object.entries(alternatives).map(([operation, choices]) => {\n%>const selection = options?.securitySelection && globalThis.Object.hasOwn(options.securitySelection, operation) ? options.securitySelection[operation] : undefined;\nif (selection === undefined) return [operation, choices];\nconst required = requirements[selection];\nreturn [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];\n%<}));\n",
     )
     builder.add(
-      "const settings = %T.resolve(endpoint, selectedAlternatives, credentials);\n",
+      "const settings = %T.resolve(endpoint, selectedAlternatives, credentials, {}, {}, options?.tokenManagerFactory);\n",
       clientSettingsType,
     )
     builder.add(

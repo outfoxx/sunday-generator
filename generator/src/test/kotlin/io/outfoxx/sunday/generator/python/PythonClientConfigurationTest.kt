@@ -37,6 +37,26 @@ import java.nio.file.Path
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
 class PythonClientConfigurationTest : PythonTest() {
   @Test
+  fun `generated factories preserve application token persistence`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val modules =
+      PythonSundayIrGenerator(
+        aggregateClientConfigurationApi(directory),
+        PythonGeneratorOptions(
+          packageName = "example_api",
+          aggregateServices = true,
+          aggregateServiceName = "ExampleAPI",
+        ),
+      ).generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+    val source =
+      java.nio.file.Files
+        .readString(Path.of("src/test/resources/client-config-persistence/python.py"))
+    assertTrue(compileModules(compiler, modules, smokeCode = source))
+  }
+
+  @Test
   fun `credential field collisions fail before emitting source`(
     @TempDir directory: Path,
   ) {

@@ -51,6 +51,67 @@ profile overrides, scopes, public operations, and token caching remain consisten
 Credential and alternative validation happens before constructing any child. All services must have
 compatible effective server configurations and unique operation security identities.
 
+## Application-owned token persistence
+
+Both per-service and aggregate configuration factories accept an optional runtime `TokenManagerFactory`:
+`tokenManagerFactory` in Kotlin and Swift, `options.tokenManagerFactory` in TypeScript, and
+`token_manager_factory` in Python. The factory receives the complete resolved provider map and returns
+one native manager; consumers do not reconstruct provider names or implement another cache/refresh layer.
+There is no unused default manager when a factory is supplied. With no selected providers the hook is
+skipped. Without a hook, settings continue to create their default memory-only manager.
+
+For example, use the generated TypeScript entry point with an application-managed store:
+
+```typescript
+import { FetchTransport, TokenManager } from '@outfoxx/sunday';
+
+const client = createAPI(config, settings => FetchTransport.fromSettings(settings), {
+  credentials,
+  tokenManagerFactory: providers => new TokenManager(providers, { store: applicationStore }),
+});
+```
+
+Equivalent hooks for native manager options are:
+
+```kotlin
+tokenManagerFactory = { providers ->
+  TokenManager(providers, store = applicationStore, expirySkew = skew, clock = clock, scope = scope)
+}
+```
+
+```swift
+tokenManagerFactory: { providers in
+  try TokenManager(providers: providers, store: applicationStore, expirySkew: skew, now: clock)
+}
+```
+
+```python
+token_manager_factory=lambda providers: TokenManager(
+    providers, store=application_store, expiry_skew=skew, now=clock,
+)
+```
+
+Factories must construct managers without token acquisition or storage I/O. Authentication stays lazy,
+including on public operations. The application owns storage security, session/environment identity and
+manager lifecycle. Retain one client/aggregate for concurrent work: separate managers sharing a store do
+not coordinate refreshes. Reopening a session may use a new client with the same store and stable identities.
+Distinct sessions/environments need distinct grant/provider/profile/endpoint identities or isolated stores;
+the API base URL alone does not create a storage namespace.
+
+Kotlin exposes clock, skew and parent coroutine scope; close the manager when all sharing clients are done.
+Swift accepts a Sendable store and clock in its Sendable factory; call `await manager.close()` at shutdown.
+TypeScript supports `expirySkewMs` and a millisecond clock; Python supports `expiry_skew` and a seconds clock
+on its asyncio loop. Those managers have no close method: cancel/await requests before discarding them.
+Transport cleanup does not erase saved tokens. For logout, stop requests, let pending rotation commits
+settle, remove the application's session entries and create fresh settings. `invalidate` retains refresh
+state and is not a logout operation. Runtime README examples describe each native lifecycle.
+
+Publication coordination: this forwarding requires the companion runtime releases implementing
+sunday-kt #65, sunday-swift #75, sunday-js #82 and sunday-python #10. The previously published Kotlin/Swift
+beta.13, TypeScript beta.10 and Python beta.9 do not have this API. Update the pinned runtime versions and
+verify their published artifacts before releasing this generator change; local worktree validation alone
+does not establish published compatibility.
+
 ## Credentials and alternatives
 
 Server configurations contain no credentials. Generated `<Service>Credentials` groupings use the

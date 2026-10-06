@@ -11,6 +11,7 @@ import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.security.ClientSettings
 import io.outfoxx.sunday.security.Credentials
 import io.outfoxx.sunday.security.SecurityBinding
+import io.outfoxx.sunday.security.TokenManagerFactory
 import io.outfoxx.sunday.withSecurity
 import io.test.Environment
 import kotlin.String
@@ -30,6 +31,7 @@ public fun <Req : Request> createAPI(
   securitySelection: Map<String, APISecurityAlternative> = emptyMap(),
   defaultContentTypes: List<MediaType> = listOf(),
   defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+  tokenManagerFactory: TokenManagerFactory? = null,
 ): API<Req> {
   val supplied = mutableMapOf<String, Credentials>()
   val alternatives: Map<String, List<List<SecurityBinding>>> = when (securityProfile) {
@@ -42,7 +44,8 @@ public fun <Req : Request> createAPI(
       "Unknown operation in security selection" }
   val selectedAlternatives = alternatives.mapValues { (operation, choices) -> choices.filter {
       securitySelection[operation]?.matches(it) ?: true } }
-  val settings = ClientSettings.resolve(config.baseURL(), selectedAlternatives, supplied)
+  val settings = ClientSettings.resolve(config.baseURL(), selectedAlternatives, supplied,
+      tokenManagerFactory = tokenManagerFactory)
   val transport = transportFactory(settings)
   return API(transport, defaultContentTypes, defaultAcceptTypes, settings)
 }

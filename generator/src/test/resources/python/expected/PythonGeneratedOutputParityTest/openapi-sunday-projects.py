@@ -5,6 +5,7 @@ from enum import Enum as _Enum
 from collections.abc import Callable as _Callable, Mapping as _Mapping, Sequence as _Sequence
 from sunday import (
     ClientSettings as _ClientSettings,
+    TokenManagerFactory as _TokenManagerFactory,
     UNSET as _UNSET,
     UnsetType as _UnsetType,
     MediaType as _MediaType,
@@ -114,6 +115,7 @@ def create_projects[TransportRequestT, TransportResponseT](
     default_accept_types: _Sequence[_MediaType] | None = None,
     security_profile: str | None | _UnsetType = _UNSET,
     security_selection: _Mapping[str, ProjectsSecurityAlternative] | None = None,
+    token_manager_factory: _TokenManagerFactory | None = None,
 ) -> ProjectsClient[TransportRequestT, TransportResponseT]:
     """Construct a service with the application's chosen transport and compatible credentials."""
     credentials = credentials or ProjectsCredentials()
@@ -138,7 +140,9 @@ def create_projects[TransportRequestT, TransportResponseT](
         if selection is not None:
             choices = [choice for choice in choices if selection.matches(choice)]
         selected_alternatives[operation] = choices
-    settings = _ClientSettings.resolve(config.base_url(), selected_alternatives, supplied)
+    settings = _ClientSettings.resolve(
+        config.base_url(), selected_alternatives, supplied, token_manager_factory=token_manager_factory
+    )
     transport = transport_factory(settings)
     return ProjectsClient(
         transport,

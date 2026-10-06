@@ -67,7 +67,8 @@ public func createAPI<TransportType : Transport>(
   securityProfile: String? = nil,
   securitySelection: [String : APISecurityAlternative] = [:],
   defaultContentTypes: [MediaType] = [],
-  defaultAcceptTypes: [MediaType] = [.json]
+  defaultAcceptTypes: [MediaType] = [.json],
+  tokenManagerFactory: TokenManagerFactory? = nil
 ) throws -> API<TransportType> {
   let supplied: [String: any Credentials] = [:]
   let alternatives: [String: [[SecurityBinding]]]
@@ -82,7 +83,7 @@ public func createAPI<TransportType : Transport>(
   }
   guard securitySelection.keys.allSatisfy({ alternatives[$0] != nil }) else { throw TokenProviderError() }
   let selectedAlternatives = Dictionary(uniqueKeysWithValues: alternatives.map { entry in (entry.key, entry.value.filter { securitySelection[entry.key]?.matches($0) ?? true }) })
-  let settings = try ClientSettings.resolve(baseURL: config.baseURL(), alternatives: selectedAlternatives, credentials: supplied)
+  let settings = try ClientSettings.resolve(baseURL: config.baseURL(), alternatives: selectedAlternatives, credentials: supplied, tokenManagerFactory: tokenManagerFactory)
   let transport = try transportFactory(settings)
   return API(transport: transport, defaultContentTypes: defaultContentTypes, defaultAcceptTypes: defaultAcceptTypes, clientSettings: settings)
 }
