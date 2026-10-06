@@ -19,6 +19,8 @@ package io.outfoxx.sunday.generator.swift
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
+import io.outfoxx.sunday.generator.tools.aggregateFrontendConfigurationApi
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -108,5 +110,142 @@ class SwiftClientConfigurationTest {
       """.trimIndent(),
     )
     assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @Test
+  fun `aggregate factory shares settings and lazy token cache`(
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      aggregateClientConfigurationApi(directory),
+      registry,
+      SwiftSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        profile = "external",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("AggregateTests.swift"),
+      """
+      import Foundation
+      import Synchronization
+      import XCTest
+      import Sunday
+      @testable import SundayGenTest
+      final class AggregateTests: XCTestCase {
+        func testSharedSettings() async throws {
+          for override in [false, true] {
+            CaptureProtocol.requests.withLock { ${'$'}0.removeAll() }
+            let provider = Provider()
+            var calls = 0
+            let expected = override ? "external" : "external-development"
+            let factory: ClientTransportFactory<URLSessionTransport> = { settings in
+              calls += 1
+              XCTAssertEqual(settings.baseURL.absoluteString, "https://api.dev.example")
+              XCTAssertEqual(Set(settings.bindings.keys), ["listUsers", "listProjects", "register"])
+              XCTAssertEqual(settings.bindings["register"]?.count, 0)
+              for id in ["listUsers", "listProjects"] {
+                XCTAssertEqual(settings.bindings[id]?.first?.profile, expected)
+                XCTAssertEqual(settings.bindings[id]?.first?.scopes, ["items:read"])
+              }
+              let config = URLSessionConfiguration.ephemeral
+              config.protocolClasses = [CaptureProtocol.self]
+              let session = URLSession(configuration: config)
+              return URLSessionTransport(baseURL: URI.Template(stringLiteral: settings.baseURL.absoluteString), session: session, eventSession: session,
+                                         tokenManager: settings.tokenManager)
+            }
+            let credentials = ExampleAPICredentials(identity: ProviderCredentials(provider: provider))
+            let client = try override
+              ? createExampleAPI(config: ExampleAPIDevelopmentConfig(), transportFactory: factory, credentials: credentials, securityProfile: "external")
+              : createExampleAPI(config: ExampleAPIDevelopmentConfig(), transportFactory: factory, credentials: credentials,
+                  securitySelection: ["listProjects": .identity])
+            defer { client.transport.close() }
+            XCTAssertEqual(calls, 1)
+            XCTAssertTrue(provider.requests.withLock { ${'$'}0.isEmpty })
+            XCTAssertTrue(client.users.transport === client.transport)
+            XCTAssertTrue(client.projects.transport === client.transport)
+            try await client.users.register().execute()
+            XCTAssertTrue(provider.requests.withLock { ${'$'}0.isEmpty })
+            XCTAssertNil(CaptureProtocol.requests.withLock { ${'$'}0.first?.value(forHTTPHeaderField: "Authorization") })
+            try await client.users.listUsers().execute()
+            try await client.projects.listProjects().execute()
+            let acquired = provider.requests.withLock { ${'$'}0 }
+            XCTAssertEqual(acquired.count, 1)
+            XCTAssertEqual(acquired.first?.binding.profile, expected)
+          }
+          for credentials in [
+            ExampleAPICredentials(),
+            ExampleAPICredentials(identity: ProviderCredentials(provider: Provider()), backupToken: BearerCredentials(token: "key"))
+          ] {
+          var invalidCalls = 0
+          XCTAssertThrowsError(try createExampleAPI(config: ExampleAPIDevelopmentConfig(), transportFactory: { settings in
+            invalidCalls += 1
+            return URLSessionTransport(settings: settings)
+          }, credentials: credentials))
+          XCTAssertEqual(invalidCalls, 0)
+          }
+        }
+      }
+      private final class Provider: TokenProvider {
+        let identity = "application"
+        let requests = Mutex<[TokenRequest]>([])
+        func configure(_ binding: SecurityBinding) -> TokenConfiguration {
+          TokenConfiguration(clientIdentity: "public-client", grantIdentity: "session")
+        }
+        func acquire(_ request: TokenRequest) async throws -> TokenSet {
+          requests.withLock { ${'$'}0.append(request) }
+          return TokenSet(accessToken: "external-token")
+        }
+      }
+
+      private final class CaptureProtocol: URLProtocol, @unchecked Sendable {
+        static let requests = Mutex<[URLRequest]>([])
+        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+        override func startLoading() {
+          Self.requests.withLock { ${'$'}0.append(request) }
+          let response = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: "HTTP/1.1", headerFields: [:])!
+          client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+          client?.urlProtocolDidFinishLoading(self)
+        }
+        override func stopLoading() {}
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `aggregate factories compile for every frontend`(
+    frontend: String,
+    compiler: SwiftCompiler,
+    @TempDir directory: Path,
+  ) {
+
+    val registry = SwiftTypeRegistry(setOf())
+    SwiftSundayIrGenerator(
+      aggregateFrontendConfigurationApi(frontend, directory),
+      registry,
+      SwiftSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    assertTrue(
+      io.outfoxx.sunday.generator.swift.tools
+        .compileTypes(compiler, registry.buildTypes()),
+    )
   }
 }

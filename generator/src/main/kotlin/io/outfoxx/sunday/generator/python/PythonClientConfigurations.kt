@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientConfiguration
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
+import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
 import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
 import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
@@ -111,15 +112,18 @@ internal class PythonClientConfigurations(
     module: PythonModule,
     service: GeneratedService,
     plans: List<GeneratedClientConfiguration>,
+    services: List<GeneratedService> = listOf(service),
+    clientType: String = "${service.pythonServiceBaseName.pythonTypeName}Client",
+    factoryBaseName: String = service.pythonServiceBaseName,
+    media: GeneratedMediaSelection = service.defaultMediaSelection(defaultMediaTypes),
   ): PythonModule {
-    val applicable = plans.filter { service.name in it.services }
+    val applicable = plans.filter { plan -> services.all { it.name in plan.services } }
     if (applicable.isEmpty()) return module
-    val media = service.defaultMediaSelection(defaultMediaTypes)
-    val profiles = api.clientFactoryProfiles(service, generationProfile)
+    val profiles = api.clientFactoryProfiles(services, generationProfile)
     val security =
       profiles.associateWith {
         api.clientFactorySecurity(
-          service,
+          services,
           it,
           applicable.map { plan ->
             plan.server
@@ -134,10 +138,9 @@ internal class PythonClientConfigurations(
     require(schemes.map { it.name.pythonIdentifierName }.distinct().size == schemes.size) {
       "Client credential field name collision"
     }
-    val credentialType = "${service.pythonServiceBaseName.pythonTypeName}Credentials"
-    val alternativeType = "${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative"
-    val clientType = "${service.pythonServiceBaseName.pythonTypeName}Client"
-    val factoryName = "create_${service.pythonServiceBaseName.pythonIdentifierName}"
+    val credentialType = "${factoryBaseName.pythonTypeName}Credentials"
+    val alternativeType = "${factoryBaseName.pythonTypeName}SecurityAlternative"
+    val factoryName = "create_${factoryBaseName.pythonIdentifierName}"
     val credentialTypes = schemes.map { credentialType(it.type, it.scheme) }.toSet()
     val imports =
       buildString {
@@ -231,7 +234,7 @@ internal class PythonClientConfigurations(
         )
         appendLine("    alternatives: dict[tuple[str, str | None], dict[str, list[list[_SecurityBinding]]]] = {")
         applicable.forEach { plan ->
-          val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(service, it, plan.server) }
+          val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(services, it, plan.server) }
           selectedSecurity.forEach { (profile, operations) ->
             appendLine("        (${plan.discriminator.pythonStringLiteral()}, ${literal(profile)}): {")
             operations.forEach { (id, alternatives) ->

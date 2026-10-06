@@ -361,11 +361,21 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedService.configurationFactory(
     serviceTypeName: TypeName.Standard,
     serviceClassName: TypeName.Standard,
+    services: List<GeneratedService> = listOf(this),
   ): CodeBlock? {
-    val plans = clientConfigurations.filter { name in it.services }
+    val plans = clientConfigurations.filter { plan -> services.all { it.name in plan.services } }
     if (plans.isEmpty()) return null
-    val profiles = api.clientFactoryProfiles(this, options.profile)
-    val securities = profiles.associateWith { api.clientFactorySecurity(this, it, plans.map { plan -> plan.server }) }
+    val profiles = api.clientFactoryProfiles(services, options.profile)
+    val securities =
+      profiles.associateWith {
+        api.clientFactorySecurity(
+          services,
+          it,
+          plans.map { plan ->
+            plan.server
+          },
+        )
+      }
     val schemes =
       securities.values
         .flatMap { it.values.flatten() }
@@ -405,9 +415,10 @@ class TypeScriptSundayIrGenerator(
     builder.add("%<}\n")
     builder.add("/** Constructs a client from an existing application transport. */\n")
     builder.add(
-      "export function %L<Factory extends SundayTransport>(transport: Factory, options?: %T): %T<Factory>;\n",
+      "export function %L<Factory extends SundayTransport>(transport: Factory, options?: %T, clientSettings?: %T): %T<Factory>;\n",
       serviceTypeName.factoryFunctionName,
       serviceOptionsType(),
+      clientSettingsType,
       serviceTypeName,
     )
     builder.add("/** Resolves a server and invokes the application's transport factory exactly once. */\n")
@@ -421,18 +432,21 @@ class TypeScriptSundayIrGenerator(
       serviceTypeName,
     )
     builder.add(
-      "export function %L<Factory extends SundayTransport>(input: Factory | %L, factoryOrOptions?: ((settings: %T) => Factory) | %T, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} }): %T<Factory> {%>\n",
+      "export function %L<Factory extends SundayTransport>(input: Factory | %L, factoryOrOptions?: ((settings: %T) => Factory) | %T, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} } | %T): %T<Factory> {%>\n",
       serviceTypeName.factoryFunctionName,
       configType,
       clientSettingsType,
       serviceOptionsType(),
       serviceOptionsType(),
       credentialsName,
+      clientSettingsType,
       serviceTypeName,
     )
     builder.add(
-      "if (typeof factoryOrOptions !== 'function') return new %T(input as Factory, factoryOrOptions);\n",
+      "if (typeof factoryOrOptions !== 'function') return new %T(input as Factory, factoryOrOptions, options instanceof %T ? options : undefined);\nif (options instanceof %T) throw new Error('Unexpected client settings for configuration factory');\n",
       serviceClassName,
+      clientSettingsType,
+      clientSettingsType,
     )
     builder.add(
       "const config = input as %L;\nlet endpoint: string;\nlet defaultProfile: string | undefined;\n",
@@ -509,7 +523,7 @@ class TypeScriptSundayIrGenerator(
     plans.forEach { plan ->
       builder.add("case %S: {%>\n", plan.discriminator)
       builder.add("switch (profile) {%>\n")
-      profiles.associateWith { api.clientFactorySecurity(this, it, plan.server) }.forEach { (profile, operations) ->
+      profiles.associateWith { api.clientFactorySecurity(services, it, plan.server) }.forEach { (profile, operations) ->
         builder.add("case %L: alternatives = {", profile?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"))
         operations.forEach { (id, alternatives) ->
           builder.add(
@@ -852,6 +866,12 @@ class TypeScriptSundayIrGenerator(
           mediaTypesArray(mediaSelection.acceptTypes),
         )
 
+    if (options.generateClientConfig) {
+      constructorBuilder.addParameter(
+        ParameterSpec.builder("clientSettings", clientSettingsType.undefinable).defaultValue("undefined").build(),
+      )
+    }
+
     val aggregateInterfaceBuilder =
       InterfaceSpec
         .builder(aggregateTypeName.simpleName())
@@ -885,7 +905,8 @@ class TypeScriptSundayIrGenerator(
       )
       constructorBuilder.addStatement(
         "this.%N = %T(transport, { defaultContentTypes: this.defaultContentTypes, " +
-          "defaultAcceptTypes: this.defaultAcceptTypes })",
+          "defaultAcceptTypes: this.defaultAcceptTypes }" +
+          (if (clientConfigurations.isNotEmpty()) ", clientSettings" else "") + ")",
         serviceProperty.name,
         serviceProperty.typeName.factoryFunctionTypeName(),
       )
@@ -896,7 +917,12 @@ class TypeScriptSundayIrGenerator(
       listOf(
         transportAliasCode(),
         aggregateBuilder.constructor(constructorBuilder.build()).build(),
-        aggregateFactoryFunction(aggregateTypeName, aggregateClassName),
+        services.first().service.configurationFactory(
+          aggregateTypeName,
+          aggregateClassName,
+          services.map { it.service },
+        )
+          ?: aggregateFactoryFunction(aggregateTypeName, aggregateClassName),
       ),
     )
   }

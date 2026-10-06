@@ -584,6 +584,13 @@ class KotlinSundayIrGenerator(
             .build(),
         )
 
+    if (options.generateClientConfig) {
+      constructorBuilder.addAnnotation(JvmOverloads::class)
+      constructorBuilder.addParameter(
+        ParameterSpec.builder("clientSettings", clientSettingsType.copy(nullable = true)).defaultValue("null").build(),
+      )
+    }
+
     val initBlock =
       CodeBlock
         .builder()
@@ -594,7 +601,8 @@ class KotlinSundayIrGenerator(
     serviceProperties.forEach { serviceProperty ->
       initBlock.addStatement(
         "this.%N = %T(transport = transport, defaultContentTypes = defaultContentTypes, " +
-          "defaultAcceptTypes = defaultAcceptTypes)",
+          "defaultAcceptTypes = defaultAcceptTypes" +
+          (if (options.generateClientConfig) ", clientSettings = clientSettings" else "") + ")",
         serviceProperty.name,
         serviceProperty.typeName,
       )
@@ -628,6 +636,21 @@ class KotlinSundayIrGenerator(
                 serviceProperty.typeName.parameterizedBy(requestTypeVariable),
                 KModifier.PUBLIC,
               ).build(),
+          )
+        }
+        if (options.generateClientConfig) {
+          tag(
+            AssociatedFunctions::class,
+            AssociatedFunctions(
+              clientFactoryFunctions(
+                services.first().service,
+                aggregateTypeName,
+                services.map {
+                  it.service
+                },
+                mediaSelection,
+              ),
+            ),
           )
         }
       }.addInitializerBlock(initBlock.build())
@@ -759,11 +782,13 @@ class KotlinSundayIrGenerator(
   private fun clientFactoryFunctions(
     service: GeneratedService,
     serviceType: ClassName,
+    services: List<GeneratedService> = listOf(service),
+    media: GeneratedMediaSelection = service.defaultMediaSelection(defaultMediaTypes),
   ): List<FunSpec> {
-    val plans = clientConfigurations.filter { service.name in it.services }
+    val plans = clientConfigurations.filter { plan -> services.all { it.name in plan.services } }
     if (plans.isEmpty()) return emptyList()
-    val profiles = api.clientFactoryProfiles(service, options.profile)
-    val security = profiles.associateWith { api.clientFactorySecurity(service, it, plans.map { plan -> plan.server }) }
+    val profiles = api.clientFactoryProfiles(services, options.profile)
+    val security = profiles.associateWith { api.clientFactorySecurity(services, it, plans.map { plan -> plan.server }) }
     val schemes =
       security.values
         .flatMap { it.values.flatten() }
@@ -840,9 +865,8 @@ class KotlinSundayIrGenerator(
     alternative.addFunction(matches.build())
     typeRegistry.addServiceType(alternativeType, alternative)
 
-    val media = service.defaultMediaSelection(defaultMediaTypes)
     return plans.map { plan ->
-      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(service, it, plan.server) }
+      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(services, it, plan.server) }
       val builder =
         FunSpec
           .builder("create" + serviceType.simpleName)

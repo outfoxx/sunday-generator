@@ -37,6 +37,20 @@ in TypeScript, and `HttpxTransport.from_settings` in Python. The HTTPX adapter b
 client and checks that its base URL matches the resolved endpoint. Native constructors remain available
 inside the callback for additional transport options.
 
+## Aggregate clients
+
+With `-aggregate-services -aggregate-service-name ExampleAPI`, the aggregate has the same configuration
+factory surface as an individual service: `createExampleAPI` in Kotlin, Swift, and TypeScript, and
+`create_example_api` in Python. Credentials and security alternatives are named for the aggregate
+(`ExampleAPICredentials` and `ExampleAPISecurityAlternative`). The existing transport entry point remains
+available.
+
+The aggregate resolves security for every child operation before invoking the transport callback once.
+All children receive the same transport and resolved settings, so server-selected profiles, explicit
+profile overrides, scopes, public operations, and token caching remain consistent across services.
+Credential and alternative validation happens before constructing any child. All services must have
+compatible effective server configurations and unique operation security identities.
+
 ## Credentials and alternatives
 
 Server configurations contain no credentials. Generated `<Service>Credentials` groupings use the

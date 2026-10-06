@@ -937,6 +937,12 @@ class SwiftSundayIrGenerator(
             .build(),
         )
 
+    if (options.generateClientConfig) {
+      constructorBuilder.addParameter(
+        ParameterSpec.builder("clientSettings", clientSettingsType.makeOptional()).defaultValue("nil").build(),
+      )
+    }
+
     val typeBuilder =
       TypeSpec
         .classBuilder(aggregateTypeName)
@@ -970,12 +976,26 @@ class SwiftSundayIrGenerator(
       )
       constructorBuilder.addCode(
         "self.%N = %T(%>\ntransport: transport,\ndefaultContentTypes: defaultContentTypes," +
-          "\ndefaultAcceptTypes: defaultAcceptTypes,\nproblemTypes: problemTypes%<\n)\n",
+          "\ndefaultAcceptTypes: defaultAcceptTypes,\nproblemTypes: problemTypes" +
+          (if (options.generateClientConfig) ",\nclientSettings: clientSettings" else "") + "%<\n)\n",
         serviceProperty.name,
         serviceProperty.typeName,
       )
     }
 
+    if (options.generateClientConfig) {
+      typeBuilder
+        .tag(
+          AssociatedFunctions(
+            configurationFactories(
+              aggregateTypeName,
+              services.first().service,
+              services.map { it.service },
+              mediaSelection,
+            ),
+          ),
+        )
+    }
     return typeBuilder.addFunction(constructorBuilder.build())
   }
 
@@ -1094,14 +1114,16 @@ class SwiftSundayIrGenerator(
   private fun configurationFactories(
     serviceType: DeclaredTypeName,
     service: GeneratedService,
+    services: List<GeneratedService> = listOf(service),
+    media: GeneratedMediaSelection = service.defaultMediaSelection(defaultMediaTypes),
   ): List<FunctionSpec> {
-    val plans = clientConfigurations.filter { service.name in it.services }
+    val plans = clientConfigurations.filter { plan -> services.all { it.name in plan.services } }
     if (plans.isEmpty()) return emptyList()
-    val profiles = api.clientFactoryProfiles(service, options.profile)
+    val profiles = api.clientFactoryProfiles(services, options.profile)
     val securities =
       profiles.associateWith {
         api.clientFactorySecurity(
-          service,
+          services,
           it,
           plans.map { plan ->
             plan.server
@@ -1182,8 +1204,7 @@ class SwiftSundayIrGenerator(
     typeRegistry.addServiceType(alternativeType, alternative)
 
     return plans.map { plan ->
-      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(service, it, plan.server) }
-      val media = service.defaultMediaSelection(defaultMediaTypes)
+      val selectedSecurity = profiles.associateWith { api.clientFactorySecurity(services, it, plan.server) }
       val factory =
         FunctionSpec
           .builder("create${serviceType.simpleName}")

@@ -17,6 +17,8 @@
 package io.outfoxx.sunday.generator.typescript
 
 import io.outfoxx.sunday.generator.ir.GeneratedServer
+import io.outfoxx.sunday.generator.tools.aggregateClientConfigurationApi
+import io.outfoxx.sunday.generator.tools.aggregateFrontendConfigurationApi
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
 import io.outfoxx.sunday.generator.typescript.tools.TypeScriptCompiler
 import io.outfoxx.sunday.generator.typescript.tools.compileAndRunTypes
@@ -24,6 +26,7 @@ import io.outfoxx.typescriptpoet.CodeBlock
 import io.outfoxx.typescriptpoet.ModuleSpec
 import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -143,6 +146,112 @@ class TypeScriptClientConfigurationTest {
         "config-check",
         esm = true,
       ),
+    )
+  }
+
+  @Test
+  fun `aggregate factory shares profile settings and token acquisition across children`(
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+    val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    TypeScriptSundayIrGenerator(
+      aggregateClientConfigurationApi(directory),
+      registry,
+      TypeScriptSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        profile = "external",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    val check =
+      ModuleSpec
+        .builder("AggregateCheck", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            """
+            import {FetchTransport, TokenProvider, TokenRequest} from '@outfoxx/sunday';
+            import {createExampleAPI, ExampleAPICredentials, ExampleAPISecurityAlternative} from './example-api.js';
+            const acquired: TokenRequest[] = [];
+            const provider: TokenProvider = {
+              identity: 'application',
+              configure: () => ({clientIdentity: 'client', grantIdentity: 'session'}),
+              acquire: async request => { acquired.push(request); return {accessToken: 'token'}; }
+            };
+            for (const override of [false, true]) {
+              acquired.length = 0;
+              let calls = 0;
+              const expected = override ? 'external' : 'external-development';
+              const client = createExampleAPI({serverId: 'development'}, settings => {
+                calls++;
+                if (settings.baseUrl !== 'https://api.dev.example/') throw new Error('Wrong URL');
+                if (Object.keys(settings.bindings).length !== 3 || settings.bindings.register.length !== 0) throw new Error('Incomplete operation selection');
+                for (const id of ['listUsers', 'listProjects']) {
+                  const binding = settings.bindings[id][0];
+                  if (binding.profile !== expected || binding.scopes.join(',') !== 'items:read') throw new Error('Wrong binding');
+                }
+                return FetchTransport.fromSettings(settings);
+              }, {credentials: {identity: {kind: 'provider', provider}},
+                  ...(override ? {securityProfile: 'external'} : {}),
+                  securitySelection: {listProjects: ExampleAPISecurityAlternative.Identity}});
+              if (calls !== 1 || acquired.length !== 0) throw new Error('Eager acquisition or duplicate transport');
+              const publicRequest = await client.users.register().transportRequest();
+              if (publicRequest.headers.has('Authorization') || acquired.length !== 0) throw new Error('Public operation authenticated');
+              const users = await client.users.listUsers().transportRequest();
+              const projects = await client.projects.listProjects().transportRequest();
+              if (Number(acquired.length) !== 1 || acquired[0].profile !== expected) throw new Error('Settings or cache not shared');
+              if (users.headers.get('Authorization')?.toLowerCase() !== 'bearer token' || projects.headers.get('Authorization')?.toLowerCase() !== 'bearer token') throw new Error('Missing credentials');
+            }
+            const invalidCredentials: ExampleAPICredentials[] = [
+              {},
+              {identity: {kind: 'provider', provider}, backupToken: {kind: 'bearer', token: 'key'}}
+            ];
+            for (const credentials of invalidCredentials) {
+              let invalidCalls = 0;
+              let rejected = false;
+              try { createExampleAPI({serverId: 'development'}, settings => { invalidCalls++; return FetchTransport.fromSettings(settings); }, {credentials}); }
+              catch { rejected = true; }
+              if (!rejected || invalidCalls !== 0) throw new Error('Invalid credentials accepted');
+            }
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() + (TypeName.namedImport("AggregateCheck", "!aggregate-check") to check),
+        "aggregate-check",
+        esm = true,
+      ),
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
+  fun `aggregate factories compile for every frontend`(
+    frontend: String,
+    compiler: TypeScriptCompiler,
+    @TempDir directory: Path,
+  ) {
+
+    val registry = TypeScriptTypeRegistry(setOf())
+    TypeScriptSundayIrGenerator(
+      aggregateFrontendConfigurationApi(frontend, directory),
+      registry,
+      TypeScriptSundayOptions(
+        "https://example.com/",
+        listOf("application/json"),
+        "API",
+        aggregateServices = true,
+        aggregateServiceName = "ExampleAPI",
+      ),
+    ).generateServiceTypes()
+    assertTrue(
+      io.outfoxx.sunday.generator.typescript.tools
+        .compileTypes(compiler, registry.buildTypes()),
     )
   }
 }

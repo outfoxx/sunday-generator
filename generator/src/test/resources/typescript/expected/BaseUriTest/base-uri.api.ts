@@ -63,11 +63,12 @@ export enum APISecurityAlternative {
 export interface APICredentials {
 }
 /** Constructs a client from an existing application transport. */
-export function createAPI<Factory extends SundayTransport>(transport: Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }): API<Factory>;
+export function createAPI<Factory extends SundayTransport>(transport: Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, clientSettings?: ClientSettings): API<Factory>;
 /** Resolves a server and invokes the application's transport factory exactly once. */
 export function createAPI<Factory extends SundayTransport>(config: TestAPIConfig, transportFactory: (settings: ClientSettings) => Factory, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} }): API<Factory>;
-export function createAPI<Factory extends SundayTransport>(input: Factory | TestAPIConfig, factoryOrOptions?: ((settings: ClientSettings) => Factory) | { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} }): API<Factory> {
-  if (typeof factoryOrOptions !== 'function') return new APIClient(input as Factory, factoryOrOptions);
+export function createAPI<Factory extends SundayTransport>(input: Factory | TestAPIConfig, factoryOrOptions?: ((settings: ClientSettings) => Factory) | { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> }, options?: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } & { credentials?: APICredentials; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: APISecurityAlternative} } | ClientSettings): API<Factory> {
+  if (typeof factoryOrOptions !== 'function') return new APIClient(input as Factory, factoryOrOptions, options instanceof ClientSettings ? options : undefined);
+  if (options instanceof ClientSettings) throw new Error('Unexpected client settings for configuration factory');
   const config = input as TestAPIConfig;
   let endpoint: string;
   let defaultProfile: string | undefined;
