@@ -9,7 +9,7 @@
   "author": "nobody",
   "license": "outfox",
   "dependencies": {
-    "@outfoxx/sunday": "2.0.0-beta.7"
+    "@outfoxx/sunday": "2.0.0-beta.9"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
