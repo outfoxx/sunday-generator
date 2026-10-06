@@ -1113,6 +1113,9 @@ class SwiftSundayIrGenerator(
         .flatMap { it.values.flatten() }
         .flatMap { it.schemes.values }
         .distinctBy { it.name }
+    require(schemes.map { it.name.swiftIdentifierName }.distinct().size == schemes.size) {
+      "Client credential field name collision"
+    }
     val credentialType = DeclaredTypeName.typeName(".${serviceType.simpleName}Credentials")
     val credentials =
       TypeSpec

@@ -34,7 +34,8 @@ class TypeScriptClientConfigurationTest {
   @ParameterizedTest
   @ValueSource(
     strings = [
-      "raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security", "prototype",
+      "raml", "openapi", "asyncapi", "composed", "security", "multi",
+      "alternatives", "server-security", "server-profile", "prototype",
     ],
   )
   fun `configuration callback preserves transport type and is invoked once`(
@@ -57,7 +58,7 @@ class TypeScriptClientConfigurationTest {
       } else {
         sourceApi
       }
-    val authenticated = frontend in setOf("security", "alternatives", "server-security")
+    val authenticated = frontend in setOf("security", "alternatives", "server-security", "server-profile")
     val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
     TypeScriptSundayIrGenerator(
       api,
@@ -101,9 +102,9 @@ class TypeScriptClientConfigurationTest {
             }) throw new Error('Manager was not prepared');
               if (settings.baseUrl !== 'https://secondary.example/v1') throw new Error('Endpoint mismatch');
               return FetchTransport.fromSettings(settings);
-            }${if (frontend == "alternatives") {
+            }${if (frontend in setOf("alternatives", "server-profile")) {
               ", {credentials: {identity: {kind: 'bearer', token: 'secret'}, accessKey: {kind: 'apiKey', key: 'key'}}, securitySelection: {listItems: APISecurityAlternative.AccessKeyAndIdentity}}"
-            } else if (frontend in setOf("security", "server-security")) {
+            } else if (frontend in setOf("security", "server-security", "server-profile")) {
               ", {credentials: {identity: {kind: 'bearer', token: 'secret'}}}"
             } else {
               ""
@@ -113,6 +114,7 @@ class TypeScriptClientConfigurationTest {
               setOf(
                 "asyncapi",
                 "server-security",
+                "server-profile",
               )
             ) {
               ""
@@ -124,6 +126,7 @@ class TypeScriptClientConfigurationTest {
               setOf(
                 "asyncapi",
                 "server-security",
+                "server-profile",
               )
             ) {
               "void direct;"

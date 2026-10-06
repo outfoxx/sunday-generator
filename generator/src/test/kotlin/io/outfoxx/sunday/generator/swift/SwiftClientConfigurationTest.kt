@@ -20,7 +20,9 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -29,9 +31,28 @@ import java.nio.file.Path
 
 @SwiftTest
 class SwiftClientConfigurationTest {
+  @Test
+  fun `credential field collisions fail before emitting source`(
+    @TempDir directory: Path,
+  ) {
+    val api = clientConfigurationApi("credential-collision", directory)
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        SwiftSundayIrGenerator(
+          api,
+          SwiftTypeRegistry(setOf()),
+          SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
+        ).generateServiceTypes()
+      }
+    assertTrue(error.message.orEmpty().contains("credential field name collision"))
+  }
+
   @ParameterizedTest
   @ValueSource(
-    strings = ["raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security"],
+    strings = [
+      "raml", "openapi", "asyncapi", "composed", "security", "multi",
+      "alternatives", "server-security", "server-profile",
+    ],
   )
   fun `configuration callback preserves transport type and is invoked once`(
     frontend: String,
@@ -39,7 +60,7 @@ class SwiftClientConfigurationTest {
     @TempDir directory: Path,
   ) {
     val api = clientConfigurationApi(frontend, directory)
-    val authenticated = frontend in setOf("security", "alternatives", "server-security")
+    val authenticated = frontend in setOf("security", "alternatives", "server-security", "server-profile")
     val configType =
       if (frontend in
         setOf("multi", "server-security")
@@ -72,9 +93,9 @@ class SwiftClientConfigurationTest {
       })
             XCTAssertEqual(settings.baseURL.absoluteString, "https://secondary.example/v1")
             return URLSessionTransport(settings: settings)
-          }${if (frontend == "alternatives") {
+          }${if (frontend in setOf("alternatives", "server-profile")) {
         ", credentials: APICredentials(identity: BearerCredentials(token: \"secret\"), accessKey: ApiKeyCredentials(key: \"key\")), securitySelection: [\"listItems\": .accessKeyAndIdentity]"
-      } else if (frontend in setOf("security", "server-security")) {
+      } else if (frontend in setOf("security", "server-security", "server-profile")) {
         ", credentials: APICredentials(identity: BearerCredentials(token: \"secret\"))"
       } else {
         ""

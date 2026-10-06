@@ -76,7 +76,7 @@ services:
   media: {}
   servers:
   - url: "https://api.example.com/v1"
-    sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/operation-surface-3.1.yaml"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -102,4 +102,4 @@ models:
 media: {}
 servers:
 - url: "https://api.example.com/v1"
-  sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/operation-surface-3.1.yaml"
+  sourceUri: "SOURCE_LOCATION"

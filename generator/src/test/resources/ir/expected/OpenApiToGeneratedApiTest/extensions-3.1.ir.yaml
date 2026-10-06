@@ -128,7 +128,7 @@ services:
         name: "string"
       required: true
       defaultValue: "v1"
-    sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/extensions-3.1.yaml"
+    sourceUri: "SOURCE_LOCATION"
 problems:
 - name: "InvalidProjectProblem"
   sourceName: "invalid_project"
@@ -234,4 +234,4 @@ servers:
       name: "string"
     required: true
     defaultValue: "v1"
-  sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/extensions-3.1.yaml"
+  sourceUri: "SOURCE_LOCATION"

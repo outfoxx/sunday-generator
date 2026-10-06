@@ -47,6 +47,35 @@ internal fun clientConfigurationApi(
             responses:
               204:
         """.trimIndent()
+      "server-profile" ->
+        """
+        asyncapi: 2.6.0
+        info: {title: Example API, version: '1'}
+        servers:
+          production:
+            url: 'https://{tenant}.example/v1'
+            protocol: https
+            x-sunday-security-profile: production
+            variables:
+              tenant: {default: primary, enum: [primary, secondary]}
+            security: [{identity: []}]
+        channels:
+          /items:
+            security: [{accessKey: []}]
+            subscribe:
+              operationId: listItems
+              message: {payload: {type: string}}
+        components:
+          securitySchemes:
+            identity:
+              type: http
+              scheme: bearer
+              x-sunday-security:
+                profiles:
+                  production:
+                    client: {provider: identity, flow: static}
+            accessKey: {type: httpApiKey, in: header, name: X-API-Key}
+        """.trimIndent()
       "asyncapi", "server-security" ->
         """
         asyncapi: 3.0.0
@@ -139,7 +168,7 @@ internal fun clientConfigurationApi(
         """.trimIndent(),
     )
   }
-  if (frontend == "alternatives") {
+  if (frontend in setOf("alternatives", "credential-collision")) {
     source.writeText(
       java.nio.file.Files.readString(source).replace(
         "'204': {description: Success}",
@@ -168,6 +197,14 @@ internal fun clientConfigurationApi(
               x-sunday-security:
                 client: {provider: accessKey, flow: static}
         """.trimIndent(),
+    )
+  }
+  if (frontend == "credential-collision") {
+    source.writeText(
+      java.nio.file.Files
+        .readString(source)
+        .replace("accessKey", "access-key")
+        .replace("identity", "access_key"),
     )
   }
   val sources = mutableListOf(source.toUri())

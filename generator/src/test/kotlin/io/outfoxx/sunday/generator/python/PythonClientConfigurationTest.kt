@@ -17,22 +17,119 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Files
 import java.nio.file.Path
 
 @RequiresPythonRuntime(PythonRuntimeProfile.HTTPX)
 class PythonClientConfigurationTest : PythonTest() {
+  @Test
+  fun `credential field collisions fail before emitting source`(
+    @TempDir directory: Path,
+  ) {
+    val api = clientConfigurationApi("credential-collision", directory)
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
+          .generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+      }
+    assertTrue(error.message.orEmpty().contains("credential field name collision"))
+  }
+
+  @Test
+  fun `unavailable security alternatives never become public`(
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("profiles.yaml")
+    Files.writeString(
+      source,
+      """
+      openapi: 3.2.0
+      info: {title: Example API, version: '1'}
+      servers:
+        - url: https://api.example
+          x-sunday-security-profile: production
+      paths:
+        /production:
+          get:
+            operationId: production
+            security: [{production: []}]
+            responses: {'204': {description: Success}}
+        /development:
+          get:
+            operationId: development
+            security: [{development: []}]
+            responses: {'204': {description: Success}}
+      components:
+        securitySchemes:
+          production:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              profiles:
+                production:
+                  client: {provider: production, flow: static}
+          development:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              profiles:
+                development:
+                  client: {provider: development, flow: static}
+      """.trimIndent(),
+    )
+    val original = OpenApiToGeneratedApi().convert(source.toUri())
+    val api = original.copy(services = original.services.map { it.copy(name = "Service", group = null) })
+    val modules =
+      PythonSundayIrGenerator(api, PythonGeneratorOptions(packageName = "example_api"))
+        .generateModules(setOf(GeneratedTypeCategory.Service, GeneratedTypeCategory.Model))
+    val service = api.services.single()
+    assertTrue(
+      compileModules(
+        compiler,
+        modules,
+        smokeCode =
+          """
+          from example_api.config import ExampleAPIConfig
+          from example_api.${service.pythonServiceModuleName} import create_${service.pythonServiceBaseName.pythonIdentifierName}, ${service.pythonServiceBaseName.pythonTypeName}Credentials
+          from sunday import BearerCredentials
+
+          def unexpected_transport(settings):
+              raise AssertionError("Transport must not be constructed for an unavailable security profile")
+
+          for profile in ("production", "development"):
+              try:
+                  create_${service.pythonServiceBaseName.pythonIdentifierName}(ExampleAPIConfig(), unexpected_transport,
+                      credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(
+                          production=BearerCredentials("prod"), development=BearerCredentials("dev")),
+                      security_profile=profile)
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("Unavailable protected operation was accepted as public")
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(
-    strings = ["raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security"],
+    strings = [
+      "raml", "openapi", "asyncapi", "composed", "security", "multi",
+      "alternatives", "server-security", "server-profile",
+    ],
   )
   fun `configuration factory uses exactly one application transport and validates server variables`(
     frontend: String,
@@ -40,7 +137,7 @@ class PythonClientConfigurationTest : PythonTest() {
     @TempDir directory: Path,
   ) {
     val api = clientConfigurationApi(frontend, directory)
-    val authenticated = frontend in setOf("security", "alternatives", "server-security")
+    val authenticated = frontend in setOf("security", "alternatives", "server-security", "server-profile")
     val configType =
       if (frontend in
         setOf("multi", "server-security")
@@ -82,9 +179,14 @@ class PythonClientConfigurationTest : PythonTest() {
             "False"
           }}
                       return HttpxTransport.from_settings(settings, native)
-                  client = $factory(config, transport_factory${if (frontend == "alternatives") {
+                  client = $factory(config, transport_factory${if (frontend in
+            setOf(
+              "alternatives",
+              "server-profile",
+            )
+          ) {
             ", credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(identity=BearerCredentials(\"secret\"), access_key=ApiKeyCredentials(\"key\")), security_selection={\"listItems\": ${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative.ACCESS_KEY_AND_IDENTITY}"
-          } else if (frontend in setOf("security", "server-security")) {
+          } else if (frontend in setOf("security", "server-security", "server-profile")) {
             ", credentials=${service.pythonServiceBaseName.pythonTypeName}Credentials(identity=BearerCredentials(\"secret\"))"
           } else {
             ""

@@ -131,6 +131,9 @@ internal class PythonClientConfigurations(
         .flatMap { it.values.flatten() }
         .flatMap { it.schemes.values }
         .distinctBy { it.name }
+    require(schemes.map { it.name.pythonIdentifierName }.distinct().size == schemes.size) {
+      "Client credential field name collision"
+    }
     val credentialType = "${service.pythonServiceBaseName.pythonTypeName}Credentials"
     val alternativeType = "${service.pythonServiceBaseName.pythonTypeName}SecurityAlternative"
     val clientType = "${service.pythonServiceBaseName.pythonTypeName}Client"
@@ -232,7 +235,9 @@ internal class PythonClientConfigurations(
           selectedSecurity.forEach { (profile, operations) ->
             appendLine("        (${plan.discriminator.pythonStringLiteral()}, ${literal(profile)}): {")
             operations.forEach { (id, alternatives) ->
-              if (alternatives.all { it.bindings.isEmpty() }) {
+              if (alternatives.isEmpty()) {
+                appendLine("            ${id.pythonStringLiteral()}: [],")
+              } else if (alternatives.all { it.bindings.isEmpty() }) {
                 appendLine("            ${id.pythonStringLiteral()}: [[]],")
               } else {
                 appendLine("            ${id.pythonStringLiteral()}: [")

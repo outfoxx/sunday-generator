@@ -26,7 +26,9 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.tools.clientConfigurationApi
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -34,16 +36,36 @@ import java.nio.file.Path
 
 @KotlinTest
 class KotlinClientConfigurationTest {
+  @Test
+  fun `credential field collisions fail before emitting source`(
+    @TempDir directory: Path,
+  ) {
+    val api = clientConfigurationApi("credential-collision", directory)
+    val error =
+      assertThrows(IllegalArgumentException::class.java) {
+        val registry = KotlinTypeRegistry("example", null, GenerationMode.Client, setOf(), KotlinProblemLibrary.SUNDAY)
+        KotlinSundayIrGenerator(
+          api,
+          registry,
+          KotlinSundayOptions("example", "https://example.com/", listOf("application/json"), "API"),
+        ).generateServiceTypes()
+      }
+    assertTrue(error.message.orEmpty().contains("credential field name collision"))
+  }
+
   @ParameterizedTest
   @ValueSource(
-    strings = ["raml", "openapi", "asyncapi", "composed", "security", "multi", "alternatives", "server-security"],
+    strings = [
+      "raml", "openapi", "asyncapi", "composed", "security", "multi",
+      "alternatives", "server-security", "server-profile",
+    ],
   )
   fun `configuration factory compiles with generic transport`(
     frontend: String,
     @TempDir directory: Path,
   ) {
     val api = clientConfigurationApi(frontend, directory)
-    val authenticated = frontend in setOf("security", "alternatives", "server-security")
+    val authenticated = frontend in setOf("security", "alternatives", "server-security", "server-profile")
     val configType =
       if (frontend in
         setOf("multi", "server-security")
@@ -77,9 +99,9 @@ class KotlinClientConfigurationTest {
               })
                   check(settings.baseURL.toString() == "https://secondary.example/v1")
                   transport
-                }${if (frontend == "alternatives") {
+                }${if (frontend in setOf("alternatives", "server-profile")) {
                 ", credentials = APICredentials(identity = io.outfoxx.sunday.security.BearerCredentials(\"secret\"), accessKey = io.outfoxx.sunday.security.ApiKeyCredentials(\"key\")), securitySelection = mapOf(\"listItems\" to APISecurityAlternative.AccessKeyAndIdentity)"
-              } else if (frontend in setOf("security", "server-security")) {
+              } else if (frontend in setOf("security", "server-security", "server-profile")) {
                 ", credentials = APICredentials(identity = io.outfoxx.sunday.security.BearerCredentials(\"secret\"))"
               } else {
                 ""

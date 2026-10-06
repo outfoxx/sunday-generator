@@ -124,9 +124,11 @@ fun GeneratedApi.clientFactoryProfiles(
   val declared =
     buildSet {
       service.operations.forEach { operation ->
-        val auth = effectiveAuth(service, operation)
-        auth?.selection?.securityProfileNames(context)?.let(::addAll)
-        auth?.securitySchemes.orEmpty().forEach { it.bindings?.securityProfileNames(context)?.let(::addAll) }
+        val sources = listOfNotNull(effectiveAuth(service, operation)) + operation.serverAuth.values
+        sources.forEach { auth ->
+          auth.selection?.securityProfileNames(context)?.let(::addAll)
+          auth.securitySchemes.forEach { it.bindings?.securityProfileNames(context)?.let(::addAll) }
+        }
       }
     }
   val requested = service.servers.mapNotNull { it.securityProfile }

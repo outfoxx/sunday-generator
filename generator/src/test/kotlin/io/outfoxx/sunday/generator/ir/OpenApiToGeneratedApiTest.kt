@@ -739,10 +739,19 @@ class OpenApiToGeneratedApiTest {
           .distinct()
           .filterNot { location -> location == api.source.location }
           .sorted()
-          .fold(yaml.replace(api.source.location, "SOURCE_LOCATION")) { normalized, location ->
-            normalized.replace(location, "SOURCE_LOCATION_REFERENCE")
+          .fold(yaml.replaceSourceLocation(api.source.location, "SOURCE_LOCATION")) { normalized, location ->
+            normalized.replaceSourceLocation(location, "SOURCE_LOCATION_REFERENCE")
           }
       }
+
+  private fun String.replaceSourceLocation(
+    location: String,
+    replacement: String,
+  ): String {
+    val uri = URI(location)
+    val canonical = if (uri.scheme == "file") Path.of(uri).toUri().toString() else location
+    return replace(location, replacement).replace(canonical, replacement)
+  }
 
   private fun writeConcurrentOpenApi(
     source: Path,
