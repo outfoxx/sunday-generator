@@ -25,6 +25,9 @@ data class OpenApiReferenceResolution(
   /** Retrieval URIs, including redirect aliases, mapped to captured source content. */
   val documents: Map<URI, OpenApiLoadedDocument>,
 ) {
+  internal val serverOrigins = java.util.IdentityHashMap<Map<*, *>, String>()
+  internal var retrievalUri: String? = null
+
   internal val schemas: Map<String, Map<*, *>> =
     ((document["components"] as? Map<*, *>)?.get("schemas") as? Map<*, *>)
       .orEmpty()

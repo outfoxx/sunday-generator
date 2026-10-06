@@ -100,6 +100,10 @@ abstract class SundayGenerate
     @get:Input
     val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
 
+    /** Generate server configurations and required application transport factories. */
+    @get:Input
+    val generateClientConfig: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
     /** Explicit environment profile used by policy and security metadata. */
     @get:Input
     @get:Optional
@@ -454,6 +458,7 @@ abstract class SundayGenerate
                   preserveUnknownFields = preserveUnknownFields.get(),
                   profile = profile.orNull,
                   defaultTolerance = defaultTolerance.get(),
+                  generateClientConfig = generateClientConfig.get(),
                 ),
               ).generateServiceTypes()
           }

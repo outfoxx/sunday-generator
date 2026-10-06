@@ -129,7 +129,7 @@ operations:
     - "$ref": "#/channels/combined/messages/event"
     security:
     - "$ref": "#/components/securitySchemes/eventToken"
-    x-sunday-service: AsyncEvents
+    x-sunday-service: AsyncCombinedEvents
 components:
   securitySchemes:
     headerKey:

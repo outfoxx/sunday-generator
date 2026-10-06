@@ -74,6 +74,9 @@ services:
         description: "Updated project response."
     media: {}
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/operation-surface-3.1.yaml"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -97,3 +100,6 @@ models:
       name: "string"
     required: true
 media: {}
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/operation-surface-3.1.yaml"

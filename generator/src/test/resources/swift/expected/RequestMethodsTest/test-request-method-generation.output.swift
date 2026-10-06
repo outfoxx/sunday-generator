@@ -8,17 +8,20 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [.json],
     defaultAcceptTypes: [MediaType] = [.json],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func fetchTest() throws -> Sunday.Operation<Empty, Test, TransportType> {
@@ -32,7 +35,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest"] ?? []
       ),
       responseValidation: { value in
         let mode = ModelMode.response
@@ -56,6 +60,7 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: self.defaultContentTypes,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
+        security: clientSettings?.bindings["putTest"] ?? [],
         requestValidation: { value in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
@@ -86,6 +91,7 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: self.defaultContentTypes,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
+        security: clientSettings?.bindings["postTest"] ?? [],
         requestValidation: { value in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
@@ -116,6 +122,7 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: self.defaultContentTypes,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
+        security: clientSettings?.bindings["patchTest"] ?? [],
         requestValidation: { value in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
@@ -145,7 +152,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["deleteTest"] ?? []
       )
     )
   }
@@ -161,7 +169,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["headTest"] ?? []
       )
     )
   }
@@ -177,7 +186,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["optionsTest"] ?? []
       )
     )
   }
@@ -194,6 +204,7 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: self.defaultContentTypes,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
+        security: clientSettings?.bindings["patchableTest"] ?? [],
         requestValidation: { value in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)
@@ -214,27 +225,33 @@ public final class API<TransportType : Transport> : Sendable {
 
   public func requestTest() async throws -> TransportType.Request {
     return try await self.transport.transportRequest(
-      method: .get,
-      pathTemplate: "/request",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/request",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil,
+        security: clientSettings?.bindings["requestTest"] ?? []
+      )
     )
   }
 
   public func responseTest() async throws -> TransportType.Response {
     return try await self.transport.transportResponse(
-      method: .get,
-      pathTemplate: "/response",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: self.defaultAcceptTypes,
-      headers: nil
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/response",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: self.defaultAcceptTypes,
+        headers: nil,
+        security: clientSettings?.bindings["responseTest"] ?? []
+      )
     )
   }
 

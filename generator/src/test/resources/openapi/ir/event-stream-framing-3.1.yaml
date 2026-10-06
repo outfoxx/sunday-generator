@@ -3,6 +3,9 @@ info:
   title: Craft HTTP API
   version: 1.0.0
 x-sunday-apiId: craft
+servers:
+  - name: sse
+    url: https://api.example.com
 paths:
   /events:
     get:

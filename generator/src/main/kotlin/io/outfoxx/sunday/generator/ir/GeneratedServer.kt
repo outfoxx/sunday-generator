@@ -28,4 +28,8 @@ data class GeneratedServer(
   val auth: GeneratedAuth? = null,
   val bindings: List<GeneratedProtocolBinding> = listOf(),
   val documentation: GeneratedDocumentation? = null,
+  /** Retrieval location used to resolve relative server URLs. */
+  val sourceUri: String? = null,
+  /** Default client security profile for this server; independent of policy profiles. */
+  val securityProfile: String? = null,
 )

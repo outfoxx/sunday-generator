@@ -11,17 +11,20 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [],
     defaultAcceptTypes: [MediaType] = [.json],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func fetchTest1(limit: Int) throws -> Sunday.NilableOperation<Empty, Test, TransportType> {
@@ -37,7 +40,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest1"] ?? []
       ),
       nilify: Sunday.NilifySpec(
         statuses: [404, 405],
@@ -66,7 +70,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest2"] ?? []
       ),
       nilify: Sunday.NilifySpec(
         statuses: [404],
@@ -95,7 +100,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest3"] ?? []
       ),
       nilify: Sunday.NilifySpec(
         statuses: [],
@@ -124,7 +130,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest4"] ?? []
       ),
       nilify: Sunday.NilifySpec(
         statuses: [404, 405],
@@ -153,7 +160,8 @@ public final class API<TransportType : Transport> : Sendable {
         body: Empty.none,
         contentTypes: nil,
         acceptTypes: self.defaultAcceptTypes,
-        headers: nil
+        headers: nil,
+        security: clientSettings?.bindings["fetchTest5"] ?? []
       ),
       nilify: Sunday.NilifySpec(
         statuses: [404],

@@ -218,8 +218,10 @@ fun GeneratedSecurityScheme.credentialTransport(): GeneratedClientSecurity.Crede
   when (type) {
     "http", "oauth2", "openIdConnect" ->
       GeneratedClientSecurity.CredentialTransport("header", "Authorization", if (type == "http") scheme else "Bearer")
-    "apiKey" -> {
-      val parameter = (headers + queryParameters + cookieParameters).single()
+    "apiKey", "passThrough" -> {
+      val parameter =
+        (headers + queryParameters + cookieParameters).singleOrNull()
+          ?: genError("Client credential transport '$name' requires exactly one header, query, or cookie parameter")
       GeneratedClientSecurity.CredentialTransport(
         parameter.location.name.lowercase(),
         parameter.serializationName ?: parameter.name,
@@ -228,7 +230,7 @@ fun GeneratedSecurityScheme.credentialTransport(): GeneratedClientSecurity.Crede
     else -> genError("Unsupported client credential transport '$type' for '$name'")
   }
 
-private fun checkCredentialTransports(
+internal fun checkCredentialTransports(
   schemes: Collection<GeneratedSecurityScheme>,
   operation: String,
 ) {

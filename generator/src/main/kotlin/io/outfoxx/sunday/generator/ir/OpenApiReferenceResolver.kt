@@ -60,6 +60,7 @@ class OpenApiReferenceResolver(
     private val pendingSchemas = ArrayDeque<Pair<String, Node>>()
     private val nameAllocator = OpenApiNameAllocator()
     private val resolving = mutableSetOf<Pair<Target, Kind>>()
+    private val serverOrigins = java.util.IdentityHashMap<Map<*, *>, String>()
     private val normalizedSchemas = mutableListOf<OpenApiSchema>()
 
     /** Reads a root document and imports only the external objects it references. */
@@ -94,6 +95,7 @@ class OpenApiReferenceResolver(
       rootSchemas.forEach { (name, schema) -> schemas[name] = normalize(schema, Kind.SCHEMA) }
 
       val result = root.objectValue().toMutableMap()
+      if (root.value.has("servers")) result["servers"] = normalizedServers(root.child("servers"))
       result["paths"] = root.child("paths").children().mapValues { (_, path) -> normalize(path, Kind.PATH_ITEM) }
       result["components"] =
         components.objectValue().toMutableMap().apply {
@@ -109,6 +111,8 @@ class OpenApiReferenceResolver(
         schemas[name] = normalize(schema, Kind.SCHEMA)
       }
       return OpenApiReferenceResolution(result, capturedDocuments.toMap()).also { resolution ->
+        resolution.serverOrigins.putAll(serverOrigins)
+        resolution.retrievalUri = root.document.uri.toString()
         resolution.analysis.validateAll(normalizedSchemas)
       }
     }
@@ -151,6 +155,15 @@ class OpenApiReferenceResolver(
       }
     }
 
+    private fun normalizedServers(node: Node): Any? {
+      if (!node.value.isArray) return node.rawValue()
+      return node.elements().map { server ->
+        server.rawValue().also { value ->
+          if (value is Map<*, *>) serverOrigins[value] = server.document.uri.toString()
+        }
+      }
+    }
+
     private fun normalizeFields(
       node: Node,
       kind: Kind,
@@ -171,6 +184,7 @@ class OpenApiReferenceResolver(
         }.mapValues { (name, child) ->
           val location = OpenApiReferenceLocations.child(kind, name)
           when {
+            name == "servers" && kind in setOf(Kind.PATH_ITEM, Kind.OPERATION) -> normalizedServers(child)
             kind == Kind.SCHEMA && name == "discriminator" -> discriminator(child)
             // An unpromoted boolean retains the converter's unrestricted-object additionalProperties form.
             kind == Kind.SCHEMA &&
@@ -747,7 +761,7 @@ class OpenApiReferenceResolver(
     ) {
       val schemaSource = OpenApiSchema.Source(uri.toString(), bytes)
       val isOpenApi =
-        value.path("openapi").asText().matches(Regex("3\\.[01]\\.[0-9]+.*")) &&
+        value.path("openapi").asText().matches(Regex("3\\.[012]\\.[0-9]+.*")) &&
           value.path("info").isObject &&
           value.properties().none { (name, _) -> OpenApiSchemaKeywords.isAssertion(name) }
       val dialect =

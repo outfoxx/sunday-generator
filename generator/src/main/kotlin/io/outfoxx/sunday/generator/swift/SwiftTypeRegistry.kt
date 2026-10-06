@@ -24,7 +24,6 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry.Option.AddGeneratedHeader
 import io.outfoxx.swiftpoet.DeclaredTypeName
 import io.outfoxx.swiftpoet.ExtensionSpec
-import io.outfoxx.swiftpoet.FileSpec
 import io.outfoxx.swiftpoet.Modifier.PUBLIC
 import io.outfoxx.swiftpoet.TypeName
 import io.outfoxx.swiftpoet.TypeSpec
@@ -64,18 +63,6 @@ class SwiftTypeRegistry(
     outputDirectory: Path,
   ) {
 
-    fun addExtensions(
-      builder: FileSpec.Builder,
-      typeSpec: TypeSpec,
-    ) {
-      typeSpec.tag<AssociatedExtensions>()?.forEach { builder.addExtension(it) }
-      typeSpec.typeSpecs.forEach {
-        if (it is TypeSpec) {
-          addExtensions(builder, it)
-        }
-      }
-    }
-
     val builtTypes = buildTypes()
 
     val generatedFiles =
@@ -83,11 +70,7 @@ class SwiftTypeRegistry(
         .filter { it.key.topLevelTypeName() == it.key }
         .filter { type -> categories.contains(type.value.tag(GeneratedTypeCategory::class)) }
         .map { (typeName, typeSpec) ->
-          FileSpec
-            .builder(typeName.moduleName, typeSpec.name)
-            .addType(typeSpec)
-            .apply { addExtensions(this, typeSpec) }
-            .build() to typeName.outputLocation(typeSpec)
+          swiftGeneratedFile(typeName, typeSpec) to typeName.outputLocation(typeSpec)
         }
 
     val generatedPaths =

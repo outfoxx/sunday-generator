@@ -72,5 +72,6 @@ open class TypeScriptSundayGenerateCommand :
       preserveUnknownFields,
       profile,
       defaultTolerance,
+      generateClientConfig,
     )
 }

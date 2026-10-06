@@ -39,6 +39,9 @@ services:
     - "application/json"
     response:
     - "application/json"
+  servers:
+  - url: "https://api.example.com/v1/"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -159,3 +162,6 @@ media:
   - "application/json"
   response:
   - "application/json"
+servers:
+- url: "https://api.example.com/v1/"
+  sourceUri: "SOURCE_LOCATION"

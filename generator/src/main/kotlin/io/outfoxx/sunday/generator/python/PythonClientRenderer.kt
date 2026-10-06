@@ -44,6 +44,7 @@ class PythonClientRenderer(
   models: List<GeneratedModel> = emptyList(),
   private val defaultMediaTypes: List<String> = listOf("application/json"),
   private val profile: String? = null,
+  private val configurationFactories: Boolean = false,
   private val security: (GeneratedService, GeneratedOperation) -> GeneratedClientSecurity? = { _, _ -> null },
 ) {
 
@@ -92,11 +93,11 @@ class PythonClientRenderer(
                 transport: %T[TransportRequestT, TransportResponseT],
                 *,
                 default_content_types: %T[%T] = %C,
-                default_accept_types: %T[%T] = %C,
+                default_accept_types: %T[%T] = %C,%C
             ) -> None:
                 self.transport = transport
                 self.default_content_types = tuple(default_content_types)
-                self.default_accept_types = tuple(default_accept_types)%C
+                self.default_accept_types = tuple(default_accept_types)%C%C
 
         %C
         """.trimIndent(),
@@ -109,6 +110,21 @@ class PythonClientRenderer(
         PythonSymbol("collections.abc", "Sequence"),
         PythonSymbol("sunday", "MediaType"),
         renderMediaTypes(mediaSelection.acceptTypes),
+        if (configurationFactories) {
+          PythonCodeBlock.of(
+            "\n        client_settings: %T | None = None,",
+            PythonSymbol("sunday", "ClientSettings"),
+          )
+        } else {
+          PythonCodeBlock.of("")
+        },
+        if (configurationFactories) {
+          PythonCodeBlock.of(
+            "\n        self._client_settings = client_settings",
+          )
+        } else {
+          PythonCodeBlock.of("")
+        },
         problemRegistration,
         PythonCodeBlock.join(
           service.operations.map {
@@ -346,7 +362,26 @@ class PythonClientRenderer(
       ),
       renderRequestPayloadSpec(defaultContentTypes),
       renderAcceptTypes(defaultAcceptTypes),
-      security?.let { PythonCodeBlock.of("            security=%C,\n", it.renderBindings()) } ?: PythonCodeBlock.of(""),
+      if (configurationFactories) {
+        PythonCodeBlock.of(
+          if (security != null ||
+            (
+              "            security=self._client_settings.bindings.get(${id.pythonStringLiteral()}, ())" +
+                " if self._client_settings is not None else (),"
+            ).length >
+            120
+          ) {
+            "            security=self._client_settings.bindings.get(%S, ())\n            if self._client_settings is not None\n            else %C,\n"
+          } else {
+            "            security=self._client_settings.bindings.get(%S, ()) if self._client_settings is not None else %C,\n"
+          },
+          id,
+          security?.renderBindings() ?: PythonCodeBlock.of("()"),
+        )
+      } else {
+        security?.let { PythonCodeBlock.of("            security=%C,\n", it.renderBindings()) }
+          ?: PythonCodeBlock.of("")
+      },
     )
 
   private fun GeneratedClientSecurity.renderBindings(): PythonCodeBlock =

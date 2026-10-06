@@ -133,6 +133,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.framework.takeIf { it.isPresent }?.let { genTask.framework.set(it) }
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           genTask.profile.set(gen.profile)
+          genTask.generateClientConfig.set(gen.generateClientConfig)
           genTask.defaultTolerance.set(gen.defaultTolerance)
           genTask.autoPatchable.set(gen.autoPatchable)
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }

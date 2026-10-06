@@ -8,43 +8,52 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [],
     defaultAcceptTypes: [MediaType] = [],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func fetchEventsSimple() -> AsyncStream<any Base> {
     return self.transport.eventStream(
-      method: .get,
-      pathTemplate: "/test1",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: [.eventStream],
-      headers: nil,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test1",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: [.eventStream],
+        headers: nil,
+        security: clientSettings?.bindings["fetchEventsSimple"] ?? []
+      ),
       decoder: { decoder, _, _, data, _ in try decoder.decode(BaseRef.self, from: data).value }
     )
   }
 
   public func fetchEventsDiscriminated() -> AsyncStream<any Base> {
     return self.transport.eventStream(
-      method: .get,
-      pathTemplate: "/test2",
-      pathParameters: nil,
-      queryParameters: nil,
-      body: Empty.none,
-      contentTypes: nil,
-      acceptTypes: [.eventStream],
-      headers: nil,
+      spec: Sunday.OperationSpec(
+        method: .get,
+        pathTemplate: "/test2",
+        pathParameters: nil,
+        queryParameters: nil,
+        body: Empty.none,
+        contentTypes: nil,
+        acceptTypes: [.eventStream],
+        headers: nil,
+        security: clientSettings?.bindings["fetchEventsDiscriminated"] ?? []
+      ),
       decoder: { decoder, event, _, data, log in
         switch event {
         case "Test1": return try decoder.decode(Test1.self, from: data)

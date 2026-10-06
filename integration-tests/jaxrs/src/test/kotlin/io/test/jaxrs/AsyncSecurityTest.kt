@@ -16,6 +16,8 @@
 
 package io.test.jaxrs
 
+import io.test.jaxrs.asyncapi.AsyncCombinedEventsAPI
+import io.test.jaxrs.asyncapi.AsyncCombinedEventsAPIResource
 import io.test.jaxrs.asyncapi.AsyncEventsAPI
 import io.test.jaxrs.asyncapi.AsyncEventsAPIResource
 import io.test.jaxrs.asyncapi.AsyncKeysAPI
@@ -42,13 +44,17 @@ class AsyncSecurityTest : JerseyTest() {
 
   override fun configure(): Application {
     forceSet(TestProperties.CONTAINER_PORT, "0")
-    return ResourceConfig(AsyncEventsAPIResource::class.java, AsyncKeysAPIResource::class.java)
-      .property(ServerProperties.WADL_FEATURE_DISABLE, true)
+    return ResourceConfig(
+      AsyncEventsAPIResource::class.java,
+      AsyncCombinedEventsAPIResource::class.java,
+      AsyncKeysAPIResource::class.java,
+    ).property(ServerProperties.WADL_FEATURE_DISABLE, true)
       .register(
         object : AbstractBinder() {
           override fun configure() {
             val security = security()
             bind(AsyncEventsAPIResource(delegate, security)).to(AsyncEventsAPIResource::class.java)
+            bind(AsyncCombinedEventsAPIResource(delegate, security)).to(AsyncCombinedEventsAPIResource::class.java)
             bind(AsyncKeysAPIResource(delegate, security)).to(AsyncKeysAPIResource::class.java)
           }
         },
@@ -112,6 +118,7 @@ class AsyncSecurityTest : JerseyTest() {
 
   private class Events :
     AsyncEventsAPI,
+    AsyncCombinedEventsAPI,
     AsyncKeysAPI {
     var calls = 0
 

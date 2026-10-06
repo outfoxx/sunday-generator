@@ -42,6 +42,8 @@ fun kotlinFileSpec(
     builder.addAliasedImport(QUARKUS_HTTP_PROBLEM, QUARKUS_HTTP_PROBLEM_ALIAS)
   }
 
+  typeSpec.tag(AssociatedFunctions::class)?.functions?.forEach(builder::addFunction)
+
   return builder
     .addType(typeSpec)
     .build()

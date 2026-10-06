@@ -33,6 +33,8 @@ data class GeneratedApi(
   val targets: Map<String, GeneratedTarget> = mapOf(),
   val tags: List<GeneratedTag> = listOf(),
   val documentation: GeneratedDocumentation? = null,
+  /** Complete API-level server declarations before operation inheritance. */
+  val servers: List<GeneratedServer> = emptyList(),
 ) {
 
   companion object {

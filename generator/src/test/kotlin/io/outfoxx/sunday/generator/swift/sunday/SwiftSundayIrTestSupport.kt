@@ -32,10 +32,10 @@ import io.outfoxx.sunday.generator.swift.SwiftSundayOptions
 import io.outfoxx.sunday.generator.swift.SwiftTypeRegistry
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileTypes
-import io.outfoxx.sunday.generator.swift.tools.findType
+import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
+import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.assertSwiftSnapshot
 import io.outfoxx.sunday.generator.utils.TestAPIProcessing
-import io.outfoxx.swiftpoet.FileSpec
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.net.URI
 
@@ -55,16 +55,11 @@ abstract class SwiftSundayIrTestSupport {
       .generateServiceTypes()
 
     val builtTypes = typeRegistry.buildTypes()
-    val typeSpec = findType("API", builtTypes)
 
     assertTrue(compileTypes(compiler, builtTypes))
     assertSwiftSnapshot(
       snapshotPath,
-      buildString {
-        FileSpec
-          .get("", typeSpec)
-          .writeTo(this)
-      },
+      CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "API.swift"),
     )
   }
 

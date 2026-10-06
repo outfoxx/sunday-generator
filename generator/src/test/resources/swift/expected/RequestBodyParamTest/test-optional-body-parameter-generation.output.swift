@@ -8,17 +8,20 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [.json],
     defaultAcceptTypes: [MediaType] = [.json],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func fetchTest(body: Test?) throws -> Sunday.Operation<Test?, Test, TransportType> {
@@ -33,6 +36,7 @@ public final class API<TransportType : Transport> : Sendable {
         contentTypes: self.defaultContentTypes,
         acceptTypes: self.defaultAcceptTypes,
         headers: nil,
+        security: clientSettings?.bindings["fetchTest"] ?? [],
         requestValidation: { value in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)

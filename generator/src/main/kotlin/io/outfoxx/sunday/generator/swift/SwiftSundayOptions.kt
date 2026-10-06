@@ -33,6 +33,8 @@ class SwiftSundayOptions(
   preserveUnknownFields: Boolean = true,
   profile: String? = null,
   defaultTolerance: Tolerance = Tolerance.Response,
+  /** Generate server configurations and application-supplied transport factories. */
+  val generateClientConfig: Boolean = true,
 ) : GenerationOptions(
     defaultProblemBaseUri,
     defaultMediaTypes,

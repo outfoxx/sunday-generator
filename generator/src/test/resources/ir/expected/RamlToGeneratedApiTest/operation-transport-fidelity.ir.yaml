@@ -12,12 +12,14 @@ services:
     type:
       kind: "SCALAR"
       name: "string"
+    required: true
     defaultValue: "us"
   - name: "version"
     location: "PATH"
     type:
       kind: "SCALAR"
       name: "string"
+    required: true
     defaultValue: "v1"
   operations:
   - id: "createProject"
@@ -74,6 +76,24 @@ services:
     - "application/json"
     response:
     - "application/json"
+  servers:
+  - url: "https://{region}.api.example.com/{version}"
+    variables:
+    - name: "region"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      defaultValue: "us"
+    - name: "version"
+      location: "PATH"
+      type:
+        kind: "SCALAR"
+        name: "string"
+      required: true
+      defaultValue: "v1"
+    sourceUri: "SOURCE_LOCATION"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -129,3 +149,21 @@ media:
   - "application/json"
   response:
   - "application/json"
+servers:
+- url: "https://{region}.api.example.com/{version}"
+  variables:
+  - name: "region"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    defaultValue: "us"
+  - name: "version"
+    location: "PATH"
+    type:
+      kind: "SCALAR"
+      name: "string"
+    required: true
+    defaultValue: "v1"
+  sourceUri: "SOURCE_LOCATION"

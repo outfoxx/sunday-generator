@@ -7,22 +7,28 @@ import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.operation
+import io.outfoxx.sunday.security.ClientSettings
+import io.outfoxx.sunday.withSecurity
 import io.test.InvalidIdProblem
 import io.test.Test
 import io.test.TestNotFoundProblem
 import kotlin.Unit
 import kotlin.collections.List
+import kotlin.jvm.JvmOverloads
 
-public class API<Req : Request>(
+public class API<Req : Request> @JvmOverloads constructor(
   public val transport: Transport<Req>,
   public val defaultContentTypes: List<MediaType> = listOf(),
   public val defaultAcceptTypes: List<MediaType> = listOf(MediaType.JSON),
+  private val clientSettings: ClientSettings? = null,
 ) {
   init {
     transport.registerProblem("http://example.com/invalid_id", InvalidIdProblem::class)
     transport.registerProblem("http://example.com/test_not_found", TestNotFoundProblem::class)
   }
-  public fun fetchTest(): Operation<Unit, Test, Req> = this.transport.operation<Unit, Test, Req>(
+  public fun fetchTest(): Operation<Unit, Test, Req> = (if (clientSettings != null)
+      this.transport.withSecurity(clientSettings.bindings.getValue("fetchTest")) else
+      this.transport).operation<Unit, Test, Req>(
     OperationSpec(
       method = Method.Get,
       pathTemplate = "/tests",

@@ -1,7 +1,7 @@
 import {AnotherNotFoundProblem, AnotherNotFoundProblemSchema} from './another-not-found-problem';
 import {Test, TestSchema} from './test';
 import {TestNotFoundProblem, TestNotFoundProblemSchema} from './test-not-found-problem';
-import {MediaType, NullableOperation, SchemaLike, Transport, createNullableOperation} from '@outfoxx/sunday';
+import {ClientSettings, MediaType, NullableOperation, SchemaLike, Transport, createNullableOperation} from '@outfoxx/sunday';
 
 
 export interface API<Factory extends SundayTransport> {
@@ -25,7 +25,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [];
     this.defaultAcceptTypes =
@@ -39,6 +40,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/test1',
+          security: this.clientSettings?.bindings['fetchTest1'] ?? [],
           queryParameters: {
             limit
           },
@@ -56,6 +58,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/test2',
+          security: this.clientSettings?.bindings['fetchTest2'] ?? [],
           queryParameters: {
             limit
           },
@@ -73,6 +76,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/test3',
+          security: this.clientSettings?.bindings['fetchTest3'] ?? [],
           queryParameters: {
             limit
           },
@@ -90,6 +94,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/test4',
+          security: this.clientSettings?.bindings['fetchTest4'] ?? [],
           queryParameters: {
             limit
           },
@@ -107,6 +112,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'GET',
           pathTemplate: '/test5',
+          security: this.clientSettings?.bindings['fetchTest5'] ?? [],
           queryParameters: {
             limit
           },

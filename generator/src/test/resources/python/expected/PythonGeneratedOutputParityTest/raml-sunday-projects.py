@@ -5,6 +5,7 @@ from .problems import register_problems
 from collections.abc import Sequence
 from pydantic import TypeAdapter
 from sunday import (
+    ClientSettings,
     MediaType,
     Operation,
     OperationSpec,
@@ -39,10 +40,12 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
         *,
         default_content_types: Sequence[MediaType] = (),
         default_accept_types: Sequence[MediaType] = (MediaType("application/json"),),
+        client_settings: ClientSettings | None = None,
     ) -> None:
         self.transport = transport
         self.default_content_types = tuple(default_content_types)
         self.default_accept_types = tuple(default_accept_types)
+        self._client_settings = client_settings
         register_problems(self.transport)
 
     def get_project(
@@ -55,6 +58,7 @@ class ProjectsClient[TransportRequestT, TransportResponseT]:
             path_template="/projects/{projectId}",
             parameters=(ParameterSpec(name="projectId", value=project_id, location=ParameterLocation.PATH),),
             accept_types=self.default_accept_types,
+            security=self._client_settings.bindings.get("getProject", ()) if self._client_settings is not None else (),
         )
         operation_spec: OperationSpec[None, Project] = OperationSpec(
             request=request_spec,

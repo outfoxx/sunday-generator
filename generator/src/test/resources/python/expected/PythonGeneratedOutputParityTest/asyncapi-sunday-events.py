@@ -3,7 +3,7 @@ from __future__ import annotations
 from .models import EventEnvelope
 from collections.abc import Sequence
 from pydantic import TypeAdapter
-from sunday import EventStream, MediaType, RequestSpec, ServerSentEvent, Transport
+from sunday import ClientSettings, EventStream, MediaType, RequestSpec, ServerSentEvent, Transport
 
 __all__ = ["EventsClient"]
 
@@ -26,10 +26,12 @@ class EventsClient[TransportRequestT, TransportResponseT]:
         *,
         default_content_types: Sequence[MediaType] = (),
         default_accept_types: Sequence[MediaType] = (),
+        client_settings: ClientSettings | None = None,
     ) -> None:
         self.transport = transport
         self.default_content_types = tuple(default_content_types)
         self.default_accept_types = tuple(default_accept_types)
+        self._client_settings = client_settings
 
     def stream_events(self) -> EventStream[EventEnvelope]:
         """Create the streamEvents operation."""
@@ -37,5 +39,8 @@ class EventsClient[TransportRequestT, TransportResponseT]:
             method="GET",
             path_template="/events",
             accept_types=(MediaType("application/json"),),
+            security=self._client_settings.bindings.get("streamEvents", ())
+            if self._client_settings is not None
+            else (),
         )
         return self.transport.event_stream(request_spec, _decode_stream_events_event)

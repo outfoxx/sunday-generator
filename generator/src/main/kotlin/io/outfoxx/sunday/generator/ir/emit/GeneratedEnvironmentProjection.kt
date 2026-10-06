@@ -31,7 +31,7 @@ fun GeneratedApi.projectEnvironment(context: GenerationContext): GeneratedApi {
   services.forEach { service ->
     service.operations.forEach { operation ->
       when (context.role) {
-        GenerationMode.Client -> clientSecurity(service, operation, context)
+        GenerationMode.Client -> Unit
         GenerationMode.Server -> endpointSecurityPolicy(service, operation, context)
       }
     }
@@ -43,13 +43,24 @@ fun GeneratedApi.projectEnvironment(context: GenerationContext): GeneratedApi {
         value.securitySchemes.map { scheme ->
           scheme.copy(
             bindings =
-              scheme.bindings
-                ?.takeIf { bindings ->
-                  bindings.securityProfileNames(context).let { it.isEmpty() || context.profile in it }
-                }?.project(context) { first, second -> first.merge(second) },
+              if (context.role == GenerationMode.Client) {
+                scheme.bindings?.retainClientProfiles()
+              } else {
+                scheme.bindings
+                  ?.takeIf { bindings ->
+                    bindings.securityProfileNames(context).let { it.isEmpty() || context.profile in it }
+                  }?.project(context) { first, second -> first.merge(second) }
+              },
           )
         },
-      selection = value.selection?.project(context) { first, second -> first.merge(second) },
+      selection =
+        if (context.role ==
+          GenerationMode.Client
+        ) {
+          value.selection?.retainClientProfiles()
+        } else {
+          value.selection?.project(context) { first, second -> first.merge(second) }
+        },
     )
 
   fun protocol(value: GeneratedProtocol?): GeneratedProtocol? =
@@ -58,16 +69,19 @@ fun GeneratedApi.projectEnvironment(context: GenerationContext): GeneratedApi {
     )
   return copy(
     auth = auth(auth),
+    servers = servers.map { it.copy(auth = auth(it.auth)) },
     protocol = protocol(protocol),
     services =
       services.map { service ->
         service.copy(
           auth = auth(service.auth),
+          servers = service.servers.map { it.copy(auth = auth(it.auth)) },
           protocol = protocol(service.protocol),
           operations =
             service.operations.map { operation ->
               operation.copy(
                 auth = auth(operation.auth),
+                serverAuth = operation.serverAuth.mapValues { (_, value) -> auth(value)!! },
                 protocol = protocol(operation.protocol),
                 policy = operation.policy?.project(context) { first, second -> first.merge(second) },
               )
@@ -100,3 +114,14 @@ private fun <T> GeneratedEnvironment<T>.project(
     GeneratedEnvironment(client = scope.client, server = scope.server)
   }
 }
+
+private fun <T> GeneratedEnvironment<T>.retainClientProfiles(): GeneratedEnvironment<T> =
+  copy(
+    server = null,
+    profiles =
+      profiles.mapValues { (_, scope) -> scope.copy(server = null) }.filterValues {
+        it.all != null ||
+          it.client != null
+      },
+    inherited = inherited.map { it.retainClientProfiles() },
+  )

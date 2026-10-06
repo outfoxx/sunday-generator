@@ -80,6 +80,9 @@ services:
       summary: "Create project"
       description: "Creates a project from metadata-rich input."
   media: {}
+  servers:
+  - url: "https://api.example.com/v1"
+    sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/metadata-3.1.yaml"
 models:
 - name: "Project"
   kind: "OBJECT"
@@ -137,3 +140,6 @@ tags:
     description: "Project operations."
 documentation:
   description: "Metadata API documentation."
+servers:
+- url: "https://api.example.com/v1"
+  sourceUri: "file:///Users/kdubb/.codex/worktrees/f1c0/sunday-generator/generator/build/resources/test/openapi/ir/metadata-3.1.yaml"

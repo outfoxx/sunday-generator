@@ -46,6 +46,7 @@ class AsyncApiToGeneratedApi(
           name = sourceDocument.title() ?: "API",
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, sourceUri.toString()),
           services = services,
+          servers = servers,
           models = AsyncApiModelRefinements(localModels.values.toList()).refine(),
           auth = sourceDocument.auth(),
           protocol = GeneratedProtocol(servers = servers).takeUnless { it == GeneratedProtocol() },
@@ -121,11 +122,26 @@ class AsyncApiToGeneratedApi(
           .takeIf { it.isNotEmpty() }
           ?.let {
             val serviceName = serviceName(seed.serviceLabel)
+            val effectiveServers = fragments.map { fragment -> fragment.channel.effectiveServers(this) }.distinct()
+            val httpServers =
+              effectiveServers.map { servers ->
+                servers.filter { it.protocol in setOf("http", "https") }
+              }
+            require(
+              httpServers.distinct().size <= 1,
+            ) { "Service '$serviceName' has incompatible effective server lists" }
+            val declaredServers = effectiveServers.flatten().distinct()
             ServiceFragment(
               service =
                 GeneratedService(
                   name = serviceName,
-                  baseUri = fragments.firstNotNullOfOrNull { fragment -> fragment.channel.serverUrl(this) },
+                  baseUri = declaredServers.firstOrNull()?.url,
+                  baseUriParameters =
+                    declaredServers
+                      .firstOrNull()
+                      ?.variables
+                      .orEmpty(),
+                  servers = declaredServers,
                   operations = operations,
                   media =
                     GeneratedMedia(
@@ -220,6 +236,14 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
+          serverAuth =
+            factoryServerAuth(
+              this,
+              security + operation.security,
+              "#/channels/$name/$method",
+              source,
+              operation.source,
+            ),
           auth =
             sourceAuth(security + operation.security, "#/channels/$name/$method/security")
               .withSelection(source, operation.source),
@@ -287,6 +311,14 @@ class AsyncApiToGeneratedApi(
             },
           exchange = GeneratedExchange.REQUEST.takeIf { publish },
           streaming = GeneratedStreaming(kind = GeneratedStreaming.Kind.EVENT_STREAM).takeUnless { publish },
+          serverAuth =
+            factoryServerAuth(
+              channel,
+              channel.security + security,
+              "#/operations/$operationId",
+              channel.source,
+              source,
+            ),
           auth =
             (
               if (currentSourceDocument.security.isVersion3) {
@@ -302,6 +334,26 @@ class AsyncApiToGeneratedApi(
         ),
       identity = compositionOperationIdentity(operationId),
     )
+  }
+
+  private fun factoryServerAuth(
+    channel: AsyncApiChannel,
+    security: List<Map<*, *>>,
+    path: String,
+    vararg owners: Map<*, *>,
+  ): Map<String, GeneratedAuth> {
+    if (currentSourceDocument.servers().all { it.security.isEmpty() }) return emptyMap()
+    return channel.effectiveServers(currentSourceDocument).associate { server ->
+      val name = requireNotNull(server.name)
+      val pointer = name.replace("~", "~0").replace("/", "~1")
+      val selectedChannel = channel.source + mapOf("servers" to listOf(mapOf("${'$'}ref" to "#/servers/$pointer")))
+      name to
+        (
+          currentSourceDocument.security
+            .operationAuth(selectedChannel, security, path)
+            .withSelection(*owners) ?: GeneratedAuth()
+        ).copy(securityOverride = true)
+    }
   }
 
   private fun GeneratedAuth?.withSelection(vararg owners: Map<*, *>): GeneratedAuth? {
@@ -811,6 +863,34 @@ class AsyncApiToGeneratedApi(
     GeneratedServer(
       name = name,
       url = url ?: "",
+      variables =
+        variables.map { (name, value) ->
+          val variable = value as? Map<*, *> ?: genError("Server variable '$name' must be an object")
+          val default = variable["default"] as? String ?: genError("Server variable '$name' requires a string default")
+          val values =
+            variable["enum"]?.let { raw ->
+              val entries = raw as? List<*> ?: genError("Server variable '$name' enum must be an array")
+              require(
+                entries.isNotEmpty() &&
+                  entries.all {
+                    it is String
+                  } &&
+                  default in entries,
+              ) { "Invalid enum for server variable '$name'" }
+              entries
+            }
+          GeneratedParameter(
+            name.toString(),
+            GeneratedParameter.Location.PATH,
+            GeneratedTypeRef.scalar("string"),
+            required = true,
+            defaultValue = default,
+            allowedValues = values,
+            documentation = GeneratedDocumentation(description = variable["description"] as? String),
+          )
+        },
+      sourceUri = sourceDocument.location,
+      securityProfile = securityProfile,
       protocol = protocol,
       protocolVersion = protocolVersion,
       auth = sourceAuth(security, "#/servers/$name/security"),
@@ -906,10 +986,15 @@ class AsyncApiToGeneratedApi(
       ?.let { GeneratedIdentity.explicit(it) }
       ?: GeneratedIdentity.native(operationId)
 
-  private fun AsyncApiChannel.serverUrl(sourceDocument: AsyncApiSourceDocument): String? =
-    serverNames.firstOrNull()?.let { name ->
-      sourceDocument.servers().firstOrNull { server -> server.name == name }?.url
-    }
+  private fun AsyncApiChannel.effectiveServers(sourceDocument: AsyncApiSourceDocument): List<GeneratedServer> {
+    val servers = sourceDocument.servers()
+    require(
+      serverNames.all { name ->
+        servers.any { it.name == name }
+      },
+    ) { "Channel '$name' references an unknown server" }
+    return servers.filter { serverNames.isEmpty() || it.name in serverNames }.map { it.generatedServer(sourceDocument) }
+  }
 
   private fun AsyncApiMessage.modelName(): String = name ?: "Message"
 
@@ -1215,7 +1300,7 @@ class AsyncApiToGeneratedApi(
 
   private class AsyncApiSourceDocument(
     private val source: Map<*, *>,
-    location: String,
+    val location: String,
   ) {
 
     val security = AsyncApiSecurity(source, location)
@@ -1279,6 +1364,12 @@ class AsyncApiToGeneratedApi(
             protocolVersion = server["protocolVersion"] as? String,
             description = server["description"] as? String,
             security = security.declarations(server, "#/servers/$serverName/security"),
+            variables = server.mapValue("variables").orEmpty(),
+            securityProfile =
+              server["x-sunday-security-profile"]?.let {
+                (it as? String)?.takeIf(String::isNotBlank)
+                  ?: genError("Invalid security profile on server '$serverName'")
+              },
           )
         }
 
@@ -1298,7 +1389,13 @@ class AsyncApiToGeneratedApi(
                 .let { servers ->
                   servers as? List<*>
                 }.orEmpty()
-                .filterIsInstance<String>(),
+                .mapNotNull { value ->
+                  when (value) {
+                    is String -> value
+                    is Map<*, *> -> (value["${'$'}ref"] as? String)?.substringAfterLast('/')
+                    else -> null
+                  }
+                },
             security = security.declarations(channel, "#/channels/$channelName/security"),
           )
         }
@@ -1500,6 +1597,8 @@ class AsyncApiToGeneratedApi(
     val protocolVersion: String?,
     val description: String?,
     val security: List<Map<*, *>>,
+    val variables: Map<*, *>,
+    val securityProfile: String?,
   )
 
   private data class AsyncApiChannel(

@@ -38,12 +38,17 @@ import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.allowsUnknown
 import io.outfoxx.sunday.generator.ir.emit.GeneratedApiIndex
+import io.outfoxx.sunday.generator.ir.emit.GeneratedClientConfiguration
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.GeneratedDiscriminatorFallback
 import io.outfoxx.sunday.generator.ir.emit.GeneratedMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
-import io.outfoxx.sunday.generator.ir.emit.clientSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientConfigurations
+import io.outfoxx.sunday.generator.ir.emit.clientConstructorSecurity
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryAlternatives
+import io.outfoxx.sunday.generator.ir.emit.clientFactoryProfiles
+import io.outfoxx.sunday.generator.ir.emit.clientFactorySecurity
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
 import io.outfoxx.sunday.generator.ir.emit.discriminatorChildren
@@ -59,6 +64,7 @@ import io.outfoxx.sunday.generator.ir.emit.orderedDefaultMediaTypes
 import io.outfoxx.sunday.generator.ir.emit.primarySuccessResponse
 import io.outfoxx.sunday.generator.ir.emit.problemOrNull
 import io.outfoxx.sunday.generator.ir.emit.referencedProblems
+import io.outfoxx.sunday.generator.ir.emit.requireCompatibleAggregate
 import io.outfoxx.sunday.generator.ir.emit.requireNoUnsupportedPolicies
 import io.outfoxx.sunday.generator.ir.emit.resolvedTypeUri
 import io.outfoxx.sunday.generator.ir.emit.target
@@ -187,6 +193,7 @@ class TypeScriptSundayIrGenerator(
     registerCompanionSchemaTypes()
     generateModelTypes()
     generateProblemTypes(services)
+    generateClientConfigurations()
 
     val serviceTypes =
       services.map { service ->
@@ -196,7 +203,12 @@ class TypeScriptSundayIrGenerator(
 
         securityByService[serviceTypeName] =
           service.operations.associateWith {
-            api.clientSecurity(service, it, options.generationContext(GenerationMode.Client))
+            api.clientConstructorSecurity(
+              service,
+              it,
+              options.generationContext(GenerationMode.Client),
+              options.generateClientConfig,
+            )
           }
         val serviceType = generateServiceType(serviceTypeName, service)
         typeRegistry.addServiceType(serviceTypeName, serviceType.interfaceBuilder, serviceType.extras)
@@ -204,6 +216,7 @@ class TypeScriptSundayIrGenerator(
       }
 
     if (options.aggregateServices && serviceTypes.size > 1) {
+      if (options.generateClientConfig) clientConfigurations.requireCompatibleAggregate(serviceTypes.map { it.service })
       val aggregateTypeName = aggregateServiceTypeName()
       if (serviceTypes.any { serviceType -> serviceType.typeName == aggregateTypeName }) {
         error(
@@ -304,6 +317,242 @@ class TypeScriptSundayIrGenerator(
       }
   }
 
+  private val clientSettingsType = TypeName.namedImport("ClientSettings", "@outfoxx/sunday")
+  private val clientConfigurations by lazy {
+    if (options.generateClientConfig) api.clientConfigurations(api.typeScriptSundayServices()) else emptyList()
+  }
+
+  private fun GeneratedClientConfiguration.typeName(): TypeName.Standard =
+    typeRegistry.generatedTypeName(name, resolveServiceModulePath(name, api.targets["typescript"]?.moduleName))
+
+  private fun generateClientConfigurations() {
+    clientConfigurations.forEach { plan ->
+      val typeName = plan.typeName()
+      val builder =
+        InterfaceSpec
+          .builder(plan.name)
+          .addTSDoc("Server variables for ${plan.name}.")
+          .addProperty(
+            PropertySpec
+              .builder("serverId", TypeName.implicit(CodeBlock.of("%S", plan.discriminator).toString()), false)
+              .optional(clientConfigurations.size == 1)
+              .build(),
+          )
+      if (plan.requiresDocumentBaseUri) {
+        builder.addProperty(
+          PropertySpec.builder("documentBaseURL", STRING, false).build(),
+        )
+      }
+      plan.variables.forEach { variable ->
+        val doc =
+          variable.documentation?.description ?: "Server variable '${variable.serializationName ?: variable.name}'."
+        builder.addProperty(
+          PropertySpec
+            .builder(variable.name.typeScriptIdentifierName, variable.type.typeName(typeName), false)
+            .addTSDoc(doc)
+            .optional(variable.defaultValue != null)
+            .build(),
+        )
+      }
+      typeRegistry.addServiceType(typeName, builder)
+    }
+  }
+
+  private fun GeneratedService.configurationFactory(
+    serviceTypeName: TypeName.Standard,
+    serviceClassName: TypeName.Standard,
+  ): CodeBlock? {
+    val plans = clientConfigurations.filter { name in it.services }
+    if (plans.isEmpty()) return null
+    val profiles = api.clientFactoryProfiles(this, options.profile)
+    val securities = profiles.associateWith { api.clientFactorySecurity(this, it, plans.map { plan -> plan.server }) }
+    val schemes =
+      securities.values
+        .flatMap { it.values.flatten() }
+        .flatMap { it.schemes.values }
+        .distinctBy { it.name }
+    val configType = plans.map { CodeBlock.of("%T", it.typeName()) }.joinToCode(" | ")
+    val builder = CodeBlock.builder()
+    val credentialsName = "${serviceTypeName.simpleName()}Credentials"
+    val alternativeName = "${serviceTypeName.simpleName()}SecurityAlternative"
+    val alternatives = securities.values.clientFactoryAlternatives()
+    builder.add(
+      "/** Complete scheme-and-scope alternatives accepted by this service. */\nexport enum %L {%>\n",
+      alternativeName,
+    )
+    alternatives.forEach { builder.add("%L = %S,\n", it.name, it.name) }
+    builder.add("%<}\n")
+
+    builder.add(
+      "/** API scheme credentials used by configuration factories. */\nexport interface %L {%>\n",
+      credentialsName,
+    )
+    schemes.forEach { scheme ->
+      val credential =
+        when (scheme.type) {
+          "apiKey" -> "ApiKeyCredentials"
+          "oauth2", "openIdConnect" -> "OAuthCredentials"
+          "http" -> if (scheme.scheme.equals("basic", true)) "BasicCredentials" else "BearerCredentials"
+          else -> "ProviderCredentials"
+        }
+      builder.add(
+        "readonly %S?: %T | %T;\n",
+        scheme.name,
+        TypeName.namedImport(credential, "@outfoxx/sunday"),
+        TypeName.namedImport("ProviderCredentials", "@outfoxx/sunday"),
+      )
+    }
+    builder.add("%<}\n")
+    builder.add("/** Constructs a client from an existing application transport. */\n")
+    builder.add(
+      "export function %L<Factory extends SundayTransport>(transport: Factory, options?: %T): %T<Factory>;\n",
+      serviceTypeName.factoryFunctionName,
+      serviceOptionsType(),
+      serviceTypeName,
+    )
+    builder.add("/** Resolves a server and invokes the application's transport factory exactly once. */\n")
+    builder.add(
+      "export function %L<Factory extends SundayTransport>(config: %L, transportFactory: (settings: %T) => Factory, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} }): %T<Factory>;\n",
+      serviceTypeName.factoryFunctionName,
+      configType,
+      clientSettingsType,
+      serviceOptionsType(),
+      credentialsName,
+      serviceTypeName,
+    )
+    builder.add(
+      "export function %L<Factory extends SundayTransport>(input: Factory | %L, factoryOrOptions?: ((settings: %T) => Factory) | %T, options?: %T & { credentials?: %L; securityProfile?: string | null; securitySelection?: {readonly [operation: string]: $alternativeName} }): %T<Factory> {%>\n",
+      serviceTypeName.factoryFunctionName,
+      configType,
+      clientSettingsType,
+      serviceOptionsType(),
+      serviceOptionsType(),
+      credentialsName,
+      serviceTypeName,
+    )
+    builder.add(
+      "if (typeof factoryOrOptions !== 'function') return new %T(input as Factory, factoryOrOptions);\n",
+      serviceClassName,
+    )
+    builder.add(
+      "const config = input as %L;\nlet endpoint: string;\nlet defaultProfile: string | undefined;\n",
+      configType,
+    )
+    builder.add(
+      "switch (config.serverId%L) {%>\n",
+      if (clientConfigurations.size ==
+        1
+      ) {
+        CodeBlock.of(" ?? %S", plans.first().discriminator)
+      } else {
+        ""
+      },
+    )
+    plans.forEach { plan ->
+      builder.add("case %S: {%>\nconst values = config as %T;\n", plan.discriminator, plan.typeName())
+      plan.variables.forEachIndexed { i, variable ->
+        builder.add("const variable%L = values.%L", i, variable.name.typeScriptIdentifierName)
+        variable.defaultValue?.let { builder.add(" ?? %L", variable.defaultValueCode(plan.typeName(), it)) }
+        builder.add(";\n")
+        val scalar =
+          when (variable.type.name) {
+            "integer", "number" -> "number"
+            "boolean" -> "boolean"
+            else -> "string"
+          }
+        builder.add(
+          "if (typeof variable%L !== %S) throw new globalThis.TypeError(%S);\n",
+          i,
+          scalar,
+          "Invalid server variable '${variable.name}'",
+        )
+        variable.allowedValues?.let { values ->
+          builder.add(
+            "if (!(%L as readonly unknown[]).includes(variable%L)) throw new globalThis.TypeError(%S);\n",
+            literal(values),
+            i,
+            "Invalid server variable '${variable.name}'",
+          )
+        }
+      }
+      builder.add("endpoint = %T.serverUrl(%S, {", clientSettingsType, plan.server.url)
+      plan.variables.forEachIndexed { i, variable ->
+        builder.add("%S: globalThis.String(variable%L),", variable.serializationName ?: variable.name, i)
+      }
+      builder.add(
+        "}, %L);\n",
+        if (plan.requiresDocumentBaseUri) {
+          CodeBlock.of("values.documentBaseURL")
+        } else {
+          plan.documentBaseUri?.let { CodeBlock.of("%S", it) }
+            ?: CodeBlock.of("undefined")
+        },
+      )
+      builder.add(
+        "defaultProfile = %L;\nbreak;\n%<}\n",
+        (plan.server.securityProfile ?: options.profile)?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
+      )
+    }
+    builder.add("default: throw new globalThis.TypeError('Unknown server configuration');\n%<}\n")
+    builder.add(
+      "const profile = options?.securityProfile === undefined ? defaultProfile : options.securityProfile ?? undefined;\n",
+    )
+    builder.add(
+      "let alternatives: {readonly [operation: string]: readonly (readonly %T[])[]};\n",
+      TypeName.namedImport("SecurityBinding", "@outfoxx/sunday"),
+    )
+    builder.add("switch (config.serverId ?? %S) {%>\n", plans.first().discriminator)
+    plans.forEach { plan ->
+      builder.add("case %S: {%>\n", plan.discriminator)
+      builder.add("switch (profile) {%>\n")
+      profiles.associateWith { api.clientFactorySecurity(this, it, plan.server) }.forEach { (profile, operations) ->
+        builder.add("case %L: alternatives = {", profile?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"))
+        operations.forEach { (id, alternatives) ->
+          builder.add("%S: [%L],", id, alternatives.map { it.typeScriptBindings(profile) }.joinToCode(", "))
+        }
+        builder.add("}; break;\n")
+      }
+      builder.add("default: throw new globalThis.TypeError('Unknown client security profile');\n%<}\n")
+      builder.add("break;\n%<}\n")
+    }
+    builder.add("default: throw new globalThis.TypeError('Unknown server configuration');\n%<}\n")
+    builder.add(
+      "const credentials: {[scheme: string]: %T} = {};\n",
+      TypeName.namedImport("Credentials", "@outfoxx/sunday"),
+    )
+    schemes.forEach { scheme ->
+      builder.add(
+        "if (options?.credentials?.[%S]) credentials[%S] = options.credentials[%S];\n",
+        scheme.name,
+        scheme.name,
+        scheme.name,
+      )
+    }
+    builder.add(
+      "const requirements: {readonly [alternative in %L]: {readonly [scheme: string]: readonly string[]}} = {\n",
+      alternativeName,
+    )
+    alternatives.forEach { choice ->
+      builder.add("[%L.%L]: %L,\n", alternativeName, choice.name, literal(choice.requirement.permissions))
+    }
+    builder.add("};\n")
+    builder.add(
+      "if (globalThis.Object.keys(options?.securitySelection ?? {}).some(operation => !(operation in alternatives))) throw new globalThis.TypeError('Unknown operation in security selection');\n",
+    )
+    builder.add(
+      "const selectedAlternatives = globalThis.Object.fromEntries(globalThis.Object.entries(alternatives).map(([operation, choices]) => {\n%>const selection = options?.securitySelection?.[operation];\nif (selection === undefined) return [operation, choices];\nconst required = requirements[selection];\nreturn [operation, choices.filter(choice => choice.length === globalThis.Object.keys(required).length && choice.every(binding => required[binding.scheme]?.length === binding.scopes.length && binding.scopes.every(scope => required[binding.scheme].includes(scope))))];\n%<}));\n",
+    )
+    builder.add(
+      "const settings = %T.resolve(endpoint, selectedAlternatives, credentials);\n",
+      clientSettingsType,
+    )
+    builder.add(
+      "const transport = factoryOrOptions(settings);\nreturn new %T(transport, options, settings);\n%<}\n",
+      serviceClassName,
+    )
+    return builder.build()
+  }
+
   private fun generateServiceType(
     serviceTypeName: TypeName.Standard,
     service: GeneratedService,
@@ -364,6 +613,18 @@ class TypeScriptSundayIrGenerator(
       )
     }
 
+    if (options.generateClientConfig) {
+      constructorBuilder.addParameter(
+        ParameterSpec
+          .builder(
+            "clientSettings",
+            clientSettingsType.undefinable,
+            false,
+            Modifier.PRIVATE,
+          ).defaultValue("undefined")
+          .build(),
+      )
+    }
     serviceClassBuilder.constructor(constructorBuilder.build())
 
     generateLocalModelTypes(serviceTypeName, service)
@@ -385,7 +646,8 @@ class TypeScriptSundayIrGenerator(
         transportAliasCode(),
         serviceClassBuilder.extraCode(),
         serviceClassBuilder.build(),
-        service.factoryFunction(serviceTypeName, serviceClassName, mediaSelection),
+        service.configurationFactory(serviceTypeName, serviceClassName)
+          ?: service.factoryFunction(serviceTypeName, serviceClassName, mediaSelection),
         service.baseUrlNamespace(serviceTypeName),
       ),
     )
@@ -3755,7 +4017,14 @@ class TypeScriptSundayIrGenerator(
     builder.add("{%>")
     builder.add("\nmethod: %S,", requestMethod())
     builder.add("\npathTemplate: %S,", path)
-    securityByService[serviceTypeName]?.get(this)?.let { security ->
+    val security = securityByService[serviceTypeName]?.get(this)
+    if (options.generateClientConfig) {
+      builder.add(
+        "\nsecurity: this.clientSettings?.bindings[%S] ?? %L,",
+        id,
+        security?.typeScriptBindings() ?: CodeBlock.of("[]"),
+      )
+    } else if (security != null) {
       builder.add("\nsecurity: %L,", security.typeScriptBindings())
     }
 
@@ -3825,7 +4094,7 @@ class TypeScriptSundayIrGenerator(
     return builder.build()
   }
 
-  private fun GeneratedClientSecurity.typeScriptBindings(): CodeBlock =
+  private fun GeneratedClientSecurity.typeScriptBindings(profile: String? = options.profile): CodeBlock =
     bindings.entries
       .map { (name, binding) ->
         val scheme = schemes.getValue(name)
@@ -3835,7 +4104,7 @@ class TypeScriptSundayIrGenerator(
           .builder()
           .apply {
             add("{ scheme: %S, provider: %S, flow: %S,", name, binding.provider, flow)
-            options.profile?.let { add(" profile: %S,", it) }
+            profile?.let { add(" profile: %S,", it) }
             add(
               " scopes: [%L],",
               requirement.permissions[name]

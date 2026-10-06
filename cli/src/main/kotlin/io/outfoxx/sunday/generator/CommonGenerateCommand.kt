@@ -69,6 +69,12 @@ abstract class CommonGenerateCommand(
     defaultForHelp = if (generateBrokerServicesDefault) "enabled" else "disabled",
   )
 
+  /** Enables server configuration types and required application transport factories. */
+  val generateClientConfig by option(
+    "-client-config",
+    help = "Generate server configurations and client factories for Sunday targets",
+  ).flag("-no-client-config", default = true, defaultForHelp = "enabled")
+
   /** Controls storage of dynamic fields without relaxing schema validation. */
   val preserveUnknownFields by option(
     "-preserve-unknown-fields",

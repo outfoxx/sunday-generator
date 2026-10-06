@@ -292,3 +292,12 @@ composite substitution even when its path is set.
 Release and verify companion runtime artifacts before distributing generator output that references
 new APIs. Then generate and compile server stubs, internal clients, and external SDKs before promoting a
 consumer's shared generator version.
+
+
+## Configuration-based client construction
+
+Sunday HTTP clients generate server configuration types and require an application-supplied transport
+factory. Server security profiles can be selected independently of the generation profile used for
+policies. Client projection preserves all applicable client security profiles for these factories.
+See [client configurations](client-configurations.md) for credentials, transport adapters, profile
+precedence, and the `generateClientConfig` opt-out.

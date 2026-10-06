@@ -1,4 +1,4 @@
-import {MediaType, Operation, SchemaLike, SchemaRuntime, Transport, createOperation, defineSchema} from '@outfoxx/sunday';
+import {ClientSettings, MediaType, Operation, SchemaLike, SchemaRuntime, Transport, createOperation, defineSchema} from '@outfoxx/sunday';
 import {z} from 'zod';
 
 
@@ -15,7 +15,8 @@ class APIClient<Factory extends SundayTransport> {
   defaultAcceptTypes: Array<MediaType>;
 
   constructor(public transport: Factory,
-      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined) {
+      options: { defaultContentTypes?: Array<MediaType>, defaultAcceptTypes?: Array<MediaType> } | undefined = undefined,
+      private clientSettings: ClientSettings | undefined = undefined) {
     this.defaultContentTypes =
         options?.defaultContentTypes ?? [MediaType.JSON];
     this.defaultAcceptTypes =
@@ -27,6 +28,7 @@ class APIClient<Factory extends SundayTransport> {
         request: {
           method: 'POST',
           pathTemplate: '/aliases',
+          security: this.clientSettings?.bindings['checkAliases'] ?? [],
           body: body,
           bodyType: checkAliasesBodyType,
           contentTypes: this.defaultContentTypes,

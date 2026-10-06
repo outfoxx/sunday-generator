@@ -74,5 +74,6 @@ abstract class PythonGenerateCommand(
       preserveUnknownFields = preserveUnknownFields,
       profile = profile,
       defaultTolerance = defaultTolerance,
+      generateClientConfig = generateClientConfig,
     )
 }

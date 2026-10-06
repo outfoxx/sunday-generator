@@ -38,7 +38,7 @@ import kotlin.io.path.writeText
 
 class IrCLITest {
   @Test
-  fun `exports only the selected environment while preserving wire security`(
+  fun `exports client security profiles while preserving wire security`(
     @TempDir directory: Path,
   ) {
     val source = directory.resolve("security.yaml")
@@ -81,7 +81,7 @@ class IrCLITest {
         .schemes,
     )
     val publicText = Files.readString(output)
-    assertFalse(publicText.contains("internal"))
+    assertTrue(publicText.contains("internal"))
     assertTrue(publicText.contains("application"))
     assertTrue(publicText.contains("external"))
     assertEquals("1", api.irVersion)

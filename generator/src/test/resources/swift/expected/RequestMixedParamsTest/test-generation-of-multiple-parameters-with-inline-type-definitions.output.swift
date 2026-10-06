@@ -9,17 +9,20 @@ public final class API<TransportType : Transport> : Sendable {
   public let transport: TransportType
   public let defaultContentTypes: [MediaType]
   public let defaultAcceptTypes: [MediaType]
+  private let clientSettings: ClientSettings?
 
   public init(
     transport: TransportType,
     defaultContentTypes: [MediaType] = [],
     defaultAcceptTypes: [MediaType] = [.json],
-    problemTypes: [ProblemRegistration] = API.problemTypes
+    problemTypes: [ProblemRegistration] = API.problemTypes,
+    clientSettings: ClientSettings? = nil
   ) {
     self.transport = transport
     self.defaultContentTypes = defaultContentTypes
     self.defaultAcceptTypes = defaultAcceptTypes
     problemTypes.forEach { $0.register(on: transport) }
+    self.clientSettings = clientSettings
   }
 
   public func fetchTest(
@@ -44,6 +47,7 @@ public final class API<TransportType : Transport> : Sendable {
         headers: [
           "x-type": try ParameterValues.encode(xType)
         ],
+        security: clientSettings?.bindings["fetchTest"] ?? [],
         parameterValidation: { [parameter = select, parameter_ = page, parameter__ = xType] in
           let mode = ModelMode.request
           var context = ModelValidationContext(collectsDiagnostics: true)

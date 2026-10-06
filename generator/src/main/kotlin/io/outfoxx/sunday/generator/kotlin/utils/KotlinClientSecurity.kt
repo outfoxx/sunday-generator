@@ -24,8 +24,16 @@ import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 
 /** Emits the selected complete security alternative without embedding application credentials. */
-internal fun GeneratedClientSecurity?.kotlinTransport(profile: String?): CodeBlock {
-  if (this == null || bindings.isEmpty()) return CodeBlock.of("this.transport")
+internal fun GeneratedClientSecurity?.kotlinTransport(profile: String?): CodeBlock =
+  if (this == null || bindings.isEmpty()) {
+    CodeBlock.of("this.transport")
+  } else {
+    CodeBlock.of("this.transport.%M(%L)", MemberName("io.outfoxx.sunday", "withSecurity"), kotlinBindings(profile))
+  }
+
+/** Emits immutable operation binding metadata for configured clients. */
+internal fun GeneratedClientSecurity.kotlinBindings(profile: String?): CodeBlock {
+  if (bindings.isEmpty()) return CodeBlock.of("emptyList()")
   val bindingType = ClassName("io.outfoxx.sunday.security", "SecurityBinding")
   val endpointType = ClassName("io.outfoxx.sunday.security", "SecurityEndpoints")
   val transportType = bindingType.nestedClass("CredentialTransport")
@@ -67,8 +75,7 @@ internal fun GeneratedClientSecurity?.kotlinTransport(profile: String?): CodeBlo
         .build()
     }
   return CodeBlock.of(
-    "this.transport.%M(listOf(⇥\n%L⇤\n))",
-    MemberName("io.outfoxx.sunday", "withSecurity"),
+    "listOf(⇥\n%L⇤\n)",
     values.joinToCode(",\n"),
   )
 }

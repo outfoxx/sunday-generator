@@ -2117,8 +2117,8 @@ class KotlinSundayIrGeneratorTest {
       compactServiceSource,
       "public fun importArchiveOrNil(body: StreamingBody): NullableOperation<StreamingBody, ImportAccepted, Req>",
     )
-    assertContains(serviceSource, "this.transport.operation<StreamingBody, ImportAccepted, Req>")
-    assertContains(serviceSource, "this.transport.nullableOperation<StreamingBody, ImportAccepted, Req>")
+    assertContains(serviceSource, ".operation<StreamingBody, ImportAccepted, Req>")
+    assertContains(serviceSource, ".nullableOperation<StreamingBody, ImportAccepted, Req>")
   }
 
   @OptIn(ExperimentalCompilerApi::class)
@@ -2766,15 +2766,11 @@ class KotlinSundayIrGeneratorTest {
   fun `generates base URL companion from IR with existing Kotlin Sunday output shape`(
     @ResourceUri("raml/resource-gen/base-uri.raml") testUri: URI,
   ) {
-    val typeSpec = generateServiceType(testUri)
+    generateServiceType(testUri)
 
     assertKotlinSundaySnapshot(
       "BaseUriTest/test-baseurl-generation-in-api.output.kt",
-      buildString {
-        FileSpec
-          .get("io.test.service", typeSpec)
-          .writeTo(this)
-      },
+      compiledServiceSource(),
     )
   }
 
@@ -3456,7 +3452,7 @@ class KotlinSundayIrGeneratorTest {
         "io/test/service/SubscribeOnlyBroker.kt",
       )
 
-    assertTrue(mixedHttpSource.contains("public class EventsBroker<Req : Request>("), mixedHttpSource)
+    assertTrue(mixedHttpSource.contains("public class EventsBroker<Req : Request>"), mixedHttpSource)
     assertTrue(mixedBrokerSource.contains("public class EventsAmqpBroker("), mixedBrokerSource)
     assertTrue(mixedBrokerSource.contains("private val producer: BrokerProducer"), mixedBrokerSource)
     assertFalse(mixedBrokerSource.contains("private val consumer: BrokerConsumer"), mixedBrokerSource)

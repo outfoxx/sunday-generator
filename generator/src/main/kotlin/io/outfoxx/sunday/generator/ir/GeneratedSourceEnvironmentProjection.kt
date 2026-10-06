@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.GenerationContext
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.emit.securityProfileNames
 
@@ -82,6 +83,22 @@ object GeneratedSourceEnvironmentProjection {
       name == "x-sunday-policy" -> GeneratedPolicyReader.read(value, location)
       binding -> GeneratedSecurityReader.binding(value, location)
       else -> GeneratedSecurityReader.selection(value, location)
+    }
+    if (name == "x-sunday-security" && context.role == GenerationMode.Client) {
+      val declarations = GeneratedEnvironmentReader.objectValue(value, location)
+      return declarations.filterKeys { it != "server" }.mapValues { (key, declaration) ->
+        if (key !=
+          "profiles"
+        ) {
+          declaration
+        } else {
+          GeneratedEnvironmentReader
+            .objectValue(declaration, "$location.profiles")
+            .mapValues { (_, scope) ->
+              GeneratedEnvironmentReader.objectValue(scope, location).filterKeys { it != "server" }
+            }
+        }
+      }
     }
     val environment =
       GeneratedEnvironmentReader.read(
