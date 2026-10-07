@@ -20,6 +20,7 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.common.http.TestHTTPResource
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.jwt.build.Jwt
+import jakarta.inject.Inject
 import org.eclipse.microprofile.config.ConfigProvider
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -41,6 +42,10 @@ import java.util.Base64
 @QuarkusTestResource(MockOidcResource::class)
 class PackagedSecurityTest {
   @TestHTTPResource lateinit var baseUri: URI
+
+  @Inject lateinit var relationships: TestRelationships
+
+  @Inject lateinit var protectedCalls: ProtectedCalls
   private val client = HttpClient.newHttpClient()
 
   @Test
@@ -169,21 +174,90 @@ class PackagedSecurityTest {
     expectThat(statistics).isEqualTo("1:1")
   }
 
+  @Test
+  fun `new native and shared bindings enforce authentication before Zanzibar and delegation`() {
+    val nativeOnly = System.getProperty("fixture.native-only") == "true"
+    (if (nativeOnly) listOf("native") else listOf("first", "native", "composite")).forEach { service ->
+      val path = "/$service/documents/allowed"
+      val beforeFga = relationships.checks.size
+      val beforeCalls = protectedCalls.calls.size
+      expectThat(request(path).statusCode()).isEqualTo(401)
+      expectThat(request(path, "invalid", "service-secret").statusCode()).isEqualTo(401)
+      expectThat(request(path, token(scopes = ""), "service-secret").statusCode()).isEqualTo(403)
+      expectThat(relationships.checks.size).isEqualTo(beforeFga)
+      expectThat(protectedCalls.calls.size).isEqualTo(beforeCalls)
+      val response = request(path, token(), "service-secret")
+      expectThat(response.statusCode()).isEqualTo(200)
+      expectThat(response.body()).isEqualTo("alice")
+      val relationship = relationships.checks.last()
+      expectThat(relationship.userId()).isEqualTo("alice")
+      expectThat(relationship.userType()).isEqualTo("user")
+      expectThat(relationship.objectId()).isEqualTo("allowed")
+      expectThat(relationship.objectType()).isEqualTo("document")
+      expectThat(relationship.relation()).isEqualTo("viewer")
+      expectThat(protectedCalls.calls.last()).isEqualTo(Triple(service, "allowed", "alice"))
+      val delegated = protectedCalls.calls.size
+      expectThat(request("/$service/documents/denied", token(), "service-secret").statusCode()).isEqualTo(403)
+      expectThat(protectedCalls.calls.size).isEqualTo(delegated)
+    }
+  }
+
+  @Test
+  fun `shared composite bindings select subjects isolate concurrent identities and retain alternatives`() {
+    org.junit.jupiter.api.Assumptions
+      .assumeFalse(System.getProperty("fixture.native-only") == "true")
+    expectThat(request("/composite/protected", token()).statusCode()).isEqualTo(401)
+    expectThat(request("/composite/protected", null, "service-secret").statusCode()).isEqualTo(401)
+    val beforeFga = relationships.checks.size
+    val beforeCalls = protectedCalls.calls.size
+    expectThat(request("/composite/documents/allowed", token(), "wrong-key").statusCode()).isEqualTo(401)
+    expectThat(relationships.checks.size).isEqualTo(beforeFga)
+    expectThat(protectedCalls.calls.size).isEqualTo(beforeCalls)
+    expectThat(request("/composite/alternative", token()).body()).isEqualTo("alice")
+    expectThat(request("/composite/alternative", null, "service-secret").body()).isEqualTo("service-key")
+    expectThat(request("/composite/alternative").statusCode()).isEqualTo(401)
+    expectThat(request("/composite/public").statusCode()).isEqualTo(200)
+    val calls =
+      (1..8).map { index ->
+        val subject = "user-$index"
+        subject to
+          client.sendAsync(
+            HttpRequest
+              .newBuilder(baseUri.resolve("/composite/documents/$subject"))
+              .header("Authorization", "Bearer " + token(subject = subject))
+              .header("X-Service-Key", "service-secret")
+              .GET()
+              .build(),
+            HttpResponse.BodyHandlers.ofString(),
+          )
+      }
+    calls.forEach { (subject, future) ->
+      val response = future.join()
+      expectThat(response.statusCode()).isEqualTo(200)
+      expectThat(response.body()).isEqualTo(subject)
+      expectThat(relationships.checks.any { it.objectId() == subject && it.userId() == subject }).isEqualTo(true)
+      expectThat(protectedCalls.calls.contains(Triple("composite", subject, subject))).isEqualTo(true)
+    }
+  }
+
   private fun request(
     path: String,
     token: String? = null,
+    serviceKey: String? = null,
   ): HttpResponse<String> =
     client.send(
       HttpRequest
         .newBuilder(baseUri.resolve(path))
         .apply {
           if (token != null) header("Authorization", "Bearer $token")
+          if (serviceKey != null) header("X-Service-Key", serviceKey)
         }.GET()
         .build(),
       HttpResponse.BodyHandlers.ofString(),
     )
 
   private fun token(
+    subject: String = "alice",
     issuer: String = "https://issuer.test",
     audience: String = "integration",
     scopes: String = "read",
@@ -192,7 +266,7 @@ class PackagedSecurityTest {
   ): String =
     Jwt
       .issuer(issuer)
-      .subject("alice")
+      .subject(subject)
       .audience(audience)
       .claim("scope", scopes)
       .expiresAt(expires)

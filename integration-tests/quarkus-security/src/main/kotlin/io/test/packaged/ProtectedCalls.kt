@@ -16,22 +16,20 @@
 
 package io.test.packaged
 
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.inject.Singleton
-import org.jboss.resteasy.reactive.RestResponse
+import java.util.concurrent.CopyOnWriteArrayList
 
-/** Application behavior behind a resource discovered from a dependency jar. */
+/** Records protected delegation independently of the authorization backend. */
 @Singleton
-class FirstDelegate(
-  private val identity: SecurityIdentity,
-  private val calls: ProtectedCalls,
-) : io.test.packaged.first.API {
-  override fun protectedCall(): RestResponse<String> = RestResponse.ok(identity.principal.name)
+class ProtectedCalls {
+  val calls = CopyOnWriteArrayList<Triple<String, String, String>>()
 
-  override fun document(documentId: String): RestResponse<String> {
-    calls.record("first", documentId, identity.principal.name)
-    return RestResponse.ok(identity.principal.name)
+  /** Captures the service, resource, and trusted subject observed by a delegate. */
+  fun record(
+    service: String,
+    document: String,
+    subject: String,
+  ) {
+    calls.add(Triple(service, document, subject))
   }
-
-  override fun publicCall(): RestResponse<String> = RestResponse.ok("public")
 }

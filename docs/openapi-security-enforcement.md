@@ -232,15 +232,40 @@ it does not replay the rejected HTTP request. Native mode introduces no automati
 same-invocation retry. Existing Sunday recovery remains available by omitting the
 native binding. Explicit fault-tolerance policies remain application choices.
 
+### Application metadata output
+
+Quarkus configuration defaults derived from the API are emitted as Kotlin configuration
+sources in the service package. Their discovery registrations retain the standard
+`META-INF/services` filenames; renaming a configuration file also updates its class
+name and registration. The generator does not create or overwrite `application.properties`.
+
+| CLI option | Gradle generation property | Default |
+| --- | --- | --- |
+| `-application-metadata` / `-no-application-metadata` | `generateApplicationMetadata` | `true` |
+| `-server-configuration` / `-no-server-configuration` | `generateServerConfiguration` | `true` |
+| `-client-configuration` / `-no-client-configuration` | `generateClientConfiguration` | `true` |
+| `-server-configuration-file` | `serverConfigurationFileName` | `OpenAPIServerOidcConfiguration.kt` |
+| `-client-configuration-file` | `clientConfigurationFileName` | `OpenAPIOidcConfiguration.kt` |
+
+The master switch overrides the individual switches. Disabling a file also omits its
+service-provider registration. It does not disable endpoint authentication, authorization,
+or required-extension/configuration checks: the application must supply the equivalent
+Quarkus configuration itself. Filenames are Kotlin class basenames ending in `.kt`,
+starting with an uppercase letter, with no directory segments. These options do not
+control build-owned manifests or indexes. For direct CLI regeneration, use a clean output
+directory when removing or renaming generated files; Gradle replaces its owned output automatically.
+
 ### Shared provider SPI
 
 `server.quarkus.mode: provider` emits an overridable `@DefaultBean` producer for
 the package-specific `OpenAPISecurity`. The companion Kotlin runtime provides
 `ServerSecurityProvider`, including its request, scheme, authenticator, and binding
 contracts. A shared library implements this interface once, exposes a CDI bean,
-and includes a bean archive descriptor. It must not depend on generated service
-packages. Generated contract jars also contain a bean archive descriptor, so
-consumers need no manual indexing or CDI registration.
+and, when packaged as a dependency jar, supplies a Jandex index or a zero-byte
+`META-INF/beans.xml` marker. It must not depend on generated service packages.
+Contract library builds must likewise supply an index or marker; the generator
+does not emit `beans.xml`. Sources compiled directly into the application need
+neither because Quarkus indexes application classes automatically.
 
 The generated producer resolves exactly one provider for each declared provider
 name. Missing or duplicate names fail startup. The provider's `binding()` resolves

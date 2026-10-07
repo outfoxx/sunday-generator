@@ -48,6 +48,7 @@ class KotlinTypeRegistry(
   problemRfc: KotlinProblemRfc = KotlinProblemRfc.RFC9457,
   val validateProblemRfc: Boolean = false,
   generationTimestamp: String? = LocalDateTime.now().format(ISO_LOCAL_DATE_TIME),
+  override val applicationMetadata: KotlinApplicationMetadataOptions = KotlinApplicationMetadataOptions(),
 ) : KotlinTypeOutputRegistry {
 
   enum class Option {
@@ -65,7 +66,6 @@ class KotlinTypeRegistry(
 
   val generationTimestamp = generationTimestamp?.ifBlank { null }
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
-  private var beanArchive = false
   private val serviceProviders = linkedMapOf<ClassName, MutableSet<ClassName>>()
   internal val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   override val beanValidationTypes =
@@ -89,24 +89,12 @@ class KotlinTypeRegistry(
       .map { kotlinFileSpec(it.key.packageName, it.value) }
       .forEach { it.writeTo(outputDirectory) }
     if (GeneratedTypeCategory.Service in categories) {
-      if (beanArchive) {
-        val resource = outputDirectory.resolve("META-INF/beans.xml")
-        Files.createDirectories(resource.parent)
-        Files.writeString(
-          resource,
-          "<beans xmlns=\"https://jakarta.ee/xml/ns/jakartaee\" bean-discovery-mode=\"annotated\" version=\"4.0\"/>\n",
-        )
-      }
       serviceProviders.forEach { (service, implementations) ->
         val resource = outputDirectory.resolve("META-INF/services/${service.canonicalName}")
         Files.createDirectories(resource.parent)
         Files.writeString(resource, implementations.joinToString("\n", postfix = "\n") { it.canonicalName })
       }
     }
-  }
-
-  override fun addBeanArchive() {
-    beanArchive = true
   }
 
   override fun addServiceProvider(

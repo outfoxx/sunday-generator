@@ -134,6 +134,11 @@ class SundayGeneratorPlugin : Plugin<Project> {
           gen.mode.takeIf { it.isPresent }?.let { genTask.mode.set(it) }
           genTask.profile.set(gen.profile)
           genTask.generateClientConfig.set(gen.generateClientConfig)
+          genTask.generateApplicationMetadata.set(gen.generateApplicationMetadata)
+          genTask.generateServerConfiguration.set(gen.generateServerConfiguration)
+          genTask.generateClientConfiguration.set(gen.generateClientConfiguration)
+          genTask.serverConfigurationFileName.set(gen.serverConfigurationFileName)
+          genTask.clientConfigurationFileName.set(gen.clientConfigurationFileName)
           genTask.defaultTolerance.set(gen.defaultTolerance)
           genTask.autoPatchable.set(gen.autoPatchable)
           gen.generateModel.takeIf { it.isPresent }?.let { genTask.generateModel.set(it) }
@@ -175,7 +180,6 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       val sourceSetName = gen.targetSourceSet.get()
       sourceSets.getByName(sourceSetName).java.srcDir(genTask)
-      val resources = sourceSets.getByName(sourceSetName).resources
       val mergedResources = project.layout.buildDirectory.dir("generated/resources/sunday/$sourceSetName")
       val mergeName = "sundayMergeServiceProviders_$sourceSetName"
       val merge =
@@ -185,29 +189,12 @@ class SundayGeneratorPlugin : Plugin<Project> {
           project.tasks
             .register(mergeName, SundayMergeServiceProviders::class.java) {
               it.outputDirectory.set(mergedResources)
-              it.applicationBeanArchives.from(
-                project
-                  .files(
-                    project.provider {
-                      resources.srcDirs.filter { directory -> directory != mergedResources.get().asFile }
-                    },
-                  ).asFileTree
-                  .matching { patterns -> patterns.include("META-INF/beans.xml") },
-              )
-              // Keep resource producers without introducing a dependency on this merge task itself.
-              it.applicationBeanArchives.builtBy(
-                project.provider {
-                  resources.sourceDirectories.buildDependencies.getDependencies(it).filter { producer ->
-                    producer != it
-                  }
-                },
-              )
             }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
         }
       merge.configure { task ->
         task.descriptors.from(
           genTask.flatMap { it.outputDir }.map { directory ->
-            directory.asFileTree.matching { it.include("META-INF/services/**", "META-INF/beans.xml") }
+            directory.asFileTree.matching { it.include("META-INF/services/**") }
           },
         )
       }

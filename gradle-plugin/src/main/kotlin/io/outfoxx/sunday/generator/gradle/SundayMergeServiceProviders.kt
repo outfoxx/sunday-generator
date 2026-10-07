@@ -35,11 +35,6 @@ abstract class SundayMergeServiceProviders : DefaultTask() {
   @get:PathSensitive(PathSensitivity.NAME_ONLY)
   abstract val descriptors: ConfigurableFileCollection
 
-  /** Application-owned bean descriptors take precedence over generated discovery defaults. */
-  @get:InputFiles
-  @get:PathSensitive(PathSensitivity.RELATIVE)
-  abstract val applicationBeanArchives: ConfigurableFileCollection
-
   /** Dedicated resource directory consumed by the source set's processResources task. */
   @get:OutputDirectory
   abstract val outputDirectory: DirectoryProperty
@@ -48,16 +43,14 @@ abstract class SundayMergeServiceProviders : DefaultTask() {
   @TaskAction
   fun merge() {
     val services = sortedMapOf<String, MutableSet<String>>()
-    val archives = descriptors.files.filter { it.isFile && it.name == "beans.xml" }
-    val archive = outputDirectory.get().asFile.resolve("META-INF/beans.xml")
-    if (archives.isNotEmpty() && applicationBeanArchives.isEmpty) {
-      val contents = archives.map { it.readText().trim() }.distinct()
-      require(contents.size == 1) { "Conflicting generated CDI bean archive descriptors" }
-      archive.parentFile.mkdirs()
-      archive.writeText(contents.single() + "\n")
-    } else {
-      Files.deleteIfExists(archive.toPath())
-    }
+    // Remove only the legacy descriptor in this task's dedicated output directory.
+    Files.deleteIfExists(
+      outputDirectory
+        .get()
+        .asFile
+        .resolve("META-INF/beans.xml")
+        .toPath(),
+    )
     descriptors.files.filter { it.isFile && it.name != "beans.xml" }.forEach { descriptor ->
       val providers = services.getOrPut(descriptor.name) { sortedSetOf() }
       descriptor

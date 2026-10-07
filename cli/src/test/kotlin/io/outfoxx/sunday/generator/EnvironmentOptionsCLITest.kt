@@ -30,6 +30,35 @@ import org.junit.jupiter.api.Test
 
 class EnvironmentOptionsCLITest {
   @Test
+  fun `application metadata options reach the Kotlin registry`() {
+    val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
+    val command =
+      object : KotlinJAXRSGenerateCommand() {
+        override fun run() = Unit
+      }
+    command.parse(
+      arrayOf(
+        "-no-application-metadata",
+        "-no-server-configuration",
+        "-no-client-configuration",
+        "-server-configuration-file",
+        "ServerDefaults.kt",
+        "-client-configuration-file",
+        "ClientDefaults.kt",
+        "-out",
+        source.resolve("..").path,
+        source.path,
+      ),
+    )
+    val metadata = command.typeRegistry.applicationMetadata
+    assertEquals(false, metadata.enabled)
+    assertEquals(false, metadata.serverConfiguration)
+    assertEquals(false, metadata.clientConfiguration)
+    assertEquals("ServerDefaults.kt", metadata.serverConfigurationFileName)
+    assertEquals("ClientDefaults.kt", metadata.clientConfigurationFileName)
+  }
+
+  @Test
   fun `all targets expose response tolerance defaults and explicit profiles consistently`() {
     val source = requireNotNull(javaClass.getResource("/empty.raml")).toURI()
     for ((flags, expected) in listOf(

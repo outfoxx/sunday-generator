@@ -229,16 +229,16 @@ internal class KotlinQuarkusClientSecurity(
             ).build(),
         )
     registry.addServiceType(ClassName(packageName, "OpenAPIClientRequirements"), type)
-    registry.addBeanArchive()
   }
 
   fun register(registry: KotlinTypeOutputRegistry) {
     if (requiredExtensions.isNotEmpty()) registerRequirements(registry)
-    if (clients.isEmpty()) return
+    val metadata = registry.applicationMetadata
+    if (clients.isEmpty() || !metadata.enabled || !metadata.clientConfiguration) return
     val factory = ClassName("io.smallrye.config", "ConfigSourceFactory")
     val context = ClassName("io.smallrye.config", "ConfigSourceContext")
     val source = ClassName("org.eclipse.microprofile.config.spi", "ConfigSource")
-    val name = ClassName(packageName, "OpenAPIOidcConfiguration")
+    val name = ClassName(packageName, metadata.clientConfigurationFileName.removeSuffix(".kt"))
     val values = MAP.parameterizedBy(STRING, STRING)
     val runtimeSource = name.nestedClass("Source")
     val type =

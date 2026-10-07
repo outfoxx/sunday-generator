@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.kotlin
 
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import io.outfoxx.sunday.generator.CommonGenerateCommand
@@ -105,6 +106,34 @@ abstract class KotlinGenerateCommand(
 
   protected open fun effectiveProblemRfc(): KotlinProblemRfc = problemRfc
 
+  /** Emit API-derived application metadata. */
+  val generateApplicationMetadata by option("-application-metadata", help = "Emit API-derived application metadata")
+    .flag("-no-application-metadata", default = true)
+
+  /** Emit Quarkus server configuration metadata. */
+  val generateServerConfiguration by option(
+    "-server-configuration",
+    help = "Emit Quarkus server configuration metadata",
+  ).flag("-no-server-configuration", default = true)
+
+  /** Emit Quarkus client configuration metadata. */
+  val generateClientConfiguration by option(
+    "-client-configuration",
+    help = "Emit Quarkus client configuration metadata",
+  ).flag("-no-client-configuration", default = true)
+
+  /** Kotlin basename for application configuration metadata. */
+  val serverConfigurationFileName by option(
+    "-server-configuration-file",
+    help = "Kotlin configuration filename in the service package",
+  ).default("OpenAPIServerOidcConfiguration.kt")
+
+  /** Kotlin basename for application configuration metadata. */
+  val clientConfigurationFileName by option(
+    "-client-configuration-file",
+    help = "Kotlin configuration filename in the service package",
+  ).default("OpenAPIOidcConfiguration.kt")
+
   val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(
       modelPackageName ?: packageName,
@@ -113,6 +142,14 @@ abstract class KotlinGenerateCommand(
       allRegistryOptions(),
       effectiveProblemLibrary(),
       effectiveProblemRfc(),
+      applicationMetadata =
+        KotlinApplicationMetadataOptions(
+          enabled = generateApplicationMetadata,
+          serverConfiguration = generateServerConfiguration,
+          clientConfiguration = generateClientConfiguration,
+          serverConfigurationFileName = serverConfigurationFileName,
+          clientConfigurationFileName = clientConfigurationFileName,
+        ),
     )
   }
 

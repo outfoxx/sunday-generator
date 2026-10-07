@@ -22,16 +22,18 @@ import org.jboss.resteasy.reactive.RestResponse
 
 /** Application behavior behind a resource discovered from a dependency jar. */
 @Singleton
-class NativeDelegate(
+class CompositeDelegate(
   private val identity: SecurityIdentity,
   private val calls: ProtectedCalls,
-) : io.test.packaged.native.API {
+) : io.test.packaged.composite.API {
   override fun protectedCall(): RestResponse<String> = RestResponse.ok(identity.principal.name)
 
   override fun document(documentId: String): RestResponse<String> {
-    calls.record("native", documentId, identity.principal.name)
+    calls.record("composite", documentId, identity.principal.name)
     return RestResponse.ok(identity.principal.name)
   }
+
+  override fun alternative(): RestResponse<String> = RestResponse.ok(identity.principal.name)
 
   override fun publicCall(): RestResponse<String> = RestResponse.ok("public")
 }
