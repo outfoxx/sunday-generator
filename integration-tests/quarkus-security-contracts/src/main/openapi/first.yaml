@@ -10,6 +10,9 @@ components:
         server:
           provider: shared
           quarkus: {mode: provider}
+x-sunday-zanzibar:
+  user-source:
+    jwt: {claims: [sub], principal-fallback: false}
 paths:
   /first/protected:
     get:
@@ -24,6 +27,18 @@ paths:
     get:
       operationId: publicCall
       security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /first/documents/{documentId}:
+    get:
+      operationId: document
+      x-sunday-zanzibar: {objectType: document, pathParam: documentId, relation: viewer, userType: user}
+      parameters:
+        - {name: documentId, in: path, required: true, schema: {type: string}}
       responses:
         '200':
           description: OK

@@ -8,13 +8,14 @@ dependencies {
   generator(project(":cli"))
   implementation(platform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
   implementation("io.quarkus:quarkus-rest")
+  implementation(libs.quarkiverseZanzibar)
   implementation("io.quarkus:quarkus-oidc")
   implementation("io.quarkus:quarkus-rest-client-oidc-filter")
   implementation("io.quarkus:quarkus-rest-client-oidc-token-propagation")
   implementation("io.outfoxx.sunday:sunday-jaxrs-quarkus:${libs.versions.sundayKt.get()}")
 }
 
-listOf("first", "second", "native", "client", "web").forEach { name ->
+listOf("first", "second", "native", "client", "web", "composite").forEach { name ->
   val output = layout.buildDirectory.dir("generated/$name")
   val generate =
     tasks.register<JavaExec>("generate${name.replaceFirstChar { it.uppercase() }}") {
@@ -63,3 +64,9 @@ listOf("first", "second", "native", "client", "web").forEach { name ->
 ktlint {
   filter { exclude { it.file.path.contains("/generated/") } }
 }
+
+// Runtime descriptors belong to each contract jar, not the aggregate source archive.
+tasks.named<Jar>("sourcesJar") { exclude("META-INF/**") }
+
+// Exercise the archive used by publication on every PR check.
+tasks.check { dependsOn(tasks.named("sourcesJar")) }

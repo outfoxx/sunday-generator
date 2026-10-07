@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
@@ -25,6 +26,7 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecurityProvider
+import io.outfoxx.sunday.jaxrs.quarkus.ServerSecuritySubjectSelector
 import io.smallrye.config.ConfigSourceFactory
 import io.smallrye.config.SmallRyeConfigBuilder
 import io.smallrye.mutiny.Uni
@@ -95,6 +97,87 @@ class KotlinQuarkusIntegrationTest {
     expectCatching { resolve(listOf(provider)) }.isSuccess()
     expectCatching { resolve(emptyList()) }.isFailure().isA<IllegalArgumentException>()
     expectCatching { resolve(listOf(provider, provider)) }.isFailure().isA<IllegalArgumentException>()
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `shared provider factories validate composite subject selectors for every frontend`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val source = scopedSecurityApi(frontend, directory, serverQuarkus = "provider")
+    val auth =
+      (
+        listOfNotNull(source.auth) +
+          source.services.flatMap { service ->
+            listOfNotNull(service.auth) +
+              service.operations.flatMap { operation ->
+                listOfNotNull(operation.auth) + operation.serverAuth.values
+              }
+          }
+      ).first { it.securitySchemes.isNotEmpty() }.let {
+        it.copy(
+          securitySchemes = it.securitySchemes + it.securitySchemes.single().copy(name = "second"),
+          requirements = listOf(GeneratedSecurityRequirement(listOf("token", "second"))),
+        )
+      }
+    val api =
+      source.copy(
+        auth = auth,
+        services =
+          source.services.map { service ->
+            service.copy(
+              auth = auth,
+              operations = service.operations.map { it.copy(auth = auth, serverAuth = emptyMap()) },
+            )
+          },
+      )
+    val registry = registry(GenerationMode.Server)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Server)).generateServiceTypes()
+    val types = registry.buildTypes()
+    val compiled = compileTypesResult(types)
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    val factory = compiled.classLoader.loadClass("io.test.OpenAPISecurityFactory")
+    expectThat(
+      factory.declaredMethods
+        .single {
+          it.name == "security"
+        }.returnType.name,
+    ).isEqualTo("io.test.OpenAPISecurity")
+    val producer = factory.getDeclaredConstructor().newInstance()
+    val method = factory.getMethod("security", Instance::class.java, Instance::class.java)
+    val provider =
+      object : ServerSecurityProvider {
+        override val name = "verifier"
+
+        override fun binding() =
+          ServerSecurityProvider.Binding(
+            ServerSecurityProvider.Authenticator { _, _, _ ->
+              Uni.createFrom().nullItem()
+            },
+            permissions = { emptySet() },
+          )
+      }
+
+    fun resolve(selectors: List<ServerSecuritySubjectSelector>) =
+      try {
+        method.invoke(producer, instance(listOf(provider)), instance(selectors))
+      } catch (failure: java.lang.reflect.InvocationTargetException) {
+        throw failure.targetException
+      }
+    val selected = mutableListOf<Pair<String, Set<String>>>()
+    val selector =
+      ServerSecuritySubjectSelector { service, schemes ->
+        selected.add(service to schemes)
+        "token"
+      }
+    expectCatching { resolve(listOf(selector)) }.isSuccess()
+    expectThat(selected.toList()).isEqualTo(listOf("io.test.OpenAPISecurity" to setOf("token", "second")))
+    expectCatching { resolve(emptyList()) }.isFailure().isA<IllegalArgumentException>()
+    expectCatching { resolve(listOf(selector, selector)) }.isFailure().isA<IllegalArgumentException>()
+    expectCatching { resolve(listOf(ServerSecuritySubjectSelector { _, _ -> "unknown" })) }
+      .isFailure()
+      .isA<IllegalArgumentException>()
   }
 
   @ParameterizedTest

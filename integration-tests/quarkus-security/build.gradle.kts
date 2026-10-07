@@ -9,6 +9,7 @@ dependencies {
   implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
   implementation("io.quarkus:quarkus-kotlin")
   implementation("io.quarkus:quarkus-rest")
+  implementation(libs.quarkiverseZanzibar)
   implementation("io.quarkus:quarkus-oidc")
   implementation("io.quarkus:quarkus-rest-client-oidc-filter")
   implementation("io.quarkus:quarkus-rest-client-oidc-token-propagation")
@@ -22,7 +23,7 @@ dependencies {
         "client",
       )
     } else {
-      listOf("first", "second", "native", "client", "web")
+      listOf("first", "second", "native", "client", "web", "composite")
     }
   ).forEach { name ->
     implementation(project(path = ":integration-tests:quarkus-security-contracts", configuration = "${name}Elements"))
@@ -43,7 +44,9 @@ kotlin.compilerOptions {
 }
 
 if (nativeSecurityOnly) {
-  kotlin.sourceSets.main { kotlin.exclude("**/FirstDelegate.kt", "**/SecondDelegate.kt", "**/WebDelegate.kt") }
+  kotlin.sourceSets.main {
+    kotlin.exclude("**/FirstDelegate.kt", "**/SecondDelegate.kt", "**/WebDelegate.kt", "**/CompositeDelegate.kt")
+  }
   tasks.test {
     systemProperty("quarkus.http.auth.proactive", "true")
     systemProperty("fixture.native-only", "true")
