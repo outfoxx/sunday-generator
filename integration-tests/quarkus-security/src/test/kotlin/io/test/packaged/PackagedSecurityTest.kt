@@ -208,6 +208,11 @@ class PackagedSecurityTest {
       .assumeFalse(System.getProperty("fixture.native-only") == "true")
     expectThat(request("/composite/protected", token()).statusCode()).isEqualTo(401)
     expectThat(request("/composite/protected", null, "service-secret").statusCode()).isEqualTo(401)
+    val beforeFga = relationships.checks.size
+    val beforeCalls = protectedCalls.calls.size
+    expectThat(request("/composite/documents/allowed", token(), "wrong-key").statusCode()).isEqualTo(401)
+    expectThat(relationships.checks.size).isEqualTo(beforeFga)
+    expectThat(protectedCalls.calls.size).isEqualTo(beforeCalls)
     expectThat(request("/composite/alternative", token()).body()).isEqualTo("alice")
     expectThat(request("/composite/alternative", null, "service-secret").body()).isEqualTo("service-key")
     expectThat(request("/composite/alternative").statusCode()).isEqualTo(401)
