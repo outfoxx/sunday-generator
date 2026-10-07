@@ -21,10 +21,17 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
 class SundayNativeSecurityTest {
+  private val sundayDependency =
+    System.getProperty("sunday.kotlin.quarkus.classpath")?.let { classpath ->
+      val files = classpath.split(File.pathSeparator).joinToString(", ") { "'" + it.replace("'", "\\'") + "'" }
+      "implementation files($files)"
+    } ?: "implementation 'io.outfoxx.sunday:sunday-jaxrs-quarkus:${System.getProperty("sunday.kotlin.version")}'"
+
   @Test
   fun `native policies compile with default Gradle registry options`(
     @TempDir directory: Path,
@@ -63,7 +70,7 @@ class SundayNativeSecurityTest {
         implementation platform('io.quarkus.platform:quarkus-bom:${System.getProperty("quarkus.version")}')
         implementation 'io.quarkus:quarkus-rest'
         implementation 'io.quarkus:quarkus-oidc'
-        implementation 'io.outfoxx.sunday:sunday-jaxrs-quarkus:${System.getProperty("sunday.kotlin.version")}'
+        $sundayDependency
       }
       kotlin {
         jvmToolchain(21)

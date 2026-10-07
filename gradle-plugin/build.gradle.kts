@@ -5,9 +5,12 @@ plugins {
 }
 
 val companionRuntime by configurations.creating
+val companionQuarkusRuntime by configurations.creating
 
 dependencies {
   companionRuntime(libs.sundayKt)
+  companionQuarkusRuntime(platform("io.quarkus.platform:quarkus-bom:${libs.versions.quarkus.rest.get()}"))
+  companionQuarkusRuntime("io.outfoxx.sunday:sunday-jaxrs-quarkus:${libs.versions.sundayKt.get()}")
   if (providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent) {
     companionRuntime("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
   }
@@ -46,11 +49,18 @@ tasks {
         .get(),
     )
     if (providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent) {
-      inputs.files(companionRuntime)
-      dependsOn(companionRuntime)
+      inputs.files(companionRuntime, companionQuarkusRuntime)
+      dependsOn(companionRuntime, companionQuarkusRuntime)
       jvmArgumentProviders.add(
         objects.newInstance<CompanionRuntimeArguments>().apply {
+          propertyName.set("sunday.kotlin.classpath")
           classpath.from(companionRuntime)
+        },
+      )
+      jvmArgumentProviders.add(
+        objects.newInstance<CompanionRuntimeArguments>().apply {
+          propertyName.set("sunday.kotlin.quarkus.classpath")
+          classpath.from(companionQuarkusRuntime)
         },
       )
     }
@@ -85,8 +95,11 @@ gradlePlugin {
 
 /** Defers included-build artifact resolution until the test JVM is launched. */
 abstract class CompanionRuntimeArguments : org.gradle.process.CommandLineArgumentProvider {
+  @get:Input
+  abstract val propertyName: Property<String>
+
   @get:Classpath
   abstract val classpath: ConfigurableFileCollection
 
-  override fun asArguments(): Iterable<String> = listOf("-Dsunday.kotlin.classpath=${classpath.asPath}")
+  override fun asArguments(): Iterable<String> = listOf("-D${propertyName.get()}=${classpath.asPath}")
 }
