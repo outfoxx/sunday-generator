@@ -8,6 +8,7 @@ dependencies {
   kover(project(":cli"))
   kover(project(":gradle-plugin"))
   kover(project(":integration-tests:quarkus"))
+  kover(project(":integration-tests:quarkus-security"))
 }
 
 tasks {

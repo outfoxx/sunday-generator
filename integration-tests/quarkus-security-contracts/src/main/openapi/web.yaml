@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info: {title: web security, version: 1.0.0}
+security: [{bearer: [read]}]
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      x-sunday-security:
+        server:
+          provider: shared
+          quarkus: {mode: webApp, tenant: browser}
+paths:
+  /web/protected:
+    get:
+      operationId: protectedCall
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /web/public:
+    get:
+      operationId: publicCall
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}

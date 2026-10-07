@@ -9,12 +9,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PARTITIONS = json.loads((Path(__file__).parent / "partitions.json").read_text())
-MODULES = ("generator", "cli", "gradle-plugin", "integration-tests/quarkus")
+MODULES = ("generator", "cli", "gradle-plugin", "integration-tests/quarkus", "integration-tests/quarkus-security")
 TEST_TASKS = {
     "generator": ("test",),
     "cli": ("test",),
     "gradle-plugin": ("test",),
     "integration-tests/quarkus": ("test", "configurationTest"),
+    "integration-tests/quarkus-security": ("test",),
     "integration-tests/jaxrs": ("test", "defaultModelTest"),
 }
 TEST_MODULES = tuple(TEST_TASKS)

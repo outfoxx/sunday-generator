@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info: {title: Native client, version: 1.0.0}
+components:
+  securitySchemes:
+    service:
+      type: http
+      scheme: bearer
+      x-sunday-security:
+        client:
+          provider: service
+          flow: clientCredentials
+          tokenUrl: https://deployment.invalid/token
+          quarkus: {mode: acquire}
+    user:
+      type: http
+      scheme: bearer
+      x-sunday-security:
+        client:
+          provider: incoming
+          flow: external
+          quarkus: {mode: propagate}
+    exchange:
+      type: http
+      scheme: bearer
+      x-sunday-security:
+        client:
+          provider: exchange
+          flow: external
+          quarkus: {mode: exchange}
+paths:
+  /write:
+    get:
+      operationId: writeCall
+      security: [{service: [write]}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /service:
+    get:
+      operationId: serviceCall
+      security: [{service: [read]}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /user:
+    get:
+      operationId: userCall
+      security: [{user: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /exchange:
+    get:
+      operationId: exchangeCall
+      security: [{exchange: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /public:
+    get:
+      operationId: publicCall
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /reject-get:
+    get:
+      operationId: rejectedGet
+      security: [{service: [read]}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+  /reject-post:
+    post:
+      operationId: rejectedPost
+      security: [{service: [read]}]
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}

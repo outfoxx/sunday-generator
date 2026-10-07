@@ -32,7 +32,7 @@ class CoverageArtifactsTest(unittest.TestCase):
             coverage.package(source, self.artifacts, partition, "commit-a")
 
     def test_complete_partitions_are_accepted_without_executing_tests(self):
-        self.assertEqual(10, len(coverage.verify(self.artifacts, "commit-a")))
+        self.assertEqual(11, len(coverage.verify(self.artifacts, "commit-a")))
 
     def test_missing_secondary_test_task_is_rejected(self):
         directory = self.artifacts / "infrastructure"

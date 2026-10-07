@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.gradle.tests
 
 import io.outfoxx.sunday.generator.gradle.SundayMergeServiceProviders
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -26,15 +27,146 @@ import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 class SundayServiceProvidersTest {
+  @ParameterizedTest
+  @CsvSource("src/main/resources,false", "extra-resources,false", "task-generated,false", "task-generated,true")
+  fun `packaged resources preserve application bean archives and restore generated defaults`(
+    resourceDirectory: String,
+    clean: Boolean,
+    @TempDir directory: Path,
+  ) {
+    directory.resolve("settings.gradle").writeText("rootProject.name = 'bean-archives'")
+    directory.resolve("api.yaml").writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Test, version: 1.0.0}
+      security: [{bearer: []}]
+      components:
+        securitySchemes:
+          bearer:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client:
+                provider: service
+                flow: clientCredentials
+                tokenUrl: https://identity.example/token
+                quarkus: {mode: acquire}
+      paths:
+        /items:
+          get:
+            operationId: fetchItems
+            responses: {'204': {description: OK}}
+      """.trimIndent(),
+    )
+    val resourceConfiguration =
+      if (resourceDirectory == "task-generated") {
+        """
+        def applicationResources = tasks.register('zzzApplicationResources', Sync) {
+          from('task-generated')
+          into(layout.buildDirectory.dir('application-resources'))
+        }
+        sourceSets.main.resources.srcDir(applicationResources)
+        """.trimIndent()
+      } else {
+        "sourceSets.main.resources.srcDir('extra-resources')"
+      }
+    directory.resolve("build.gradle").writeText(
+      """
+      plugins { id 'java'; id 'io.outfoxx.sunday-generator' }
+      $resourceConfiguration
+      sundayGenerations {
+        client {
+          source.set(files('api.yaml'))
+          framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
+          mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
+          quarkus.set(true)
+          pkgName.set('io.test')
+        }
+      }
+      tasks.register('resourceJar', Jar) {
+        from(tasks.named('processResources'))
+        archiveFileName.set('resources.jar')
+      }
+      """.trimIndent(),
+    )
+
+    fun build() =
+      GradleRunner
+        .create()
+        .withProjectDir(directory.toFile())
+        .withPluginClasspath()
+        .withArguments(
+          listOfNotNull(if (clean) "clean" else null, "resourceJar", "--configuration-cache", "--stacktrace"),
+        ).build()
+
+    fun descriptor(): String =
+      JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
+        val archives =
+          jar
+            .entries()
+            .asSequence()
+            .filter { it.name == "META-INF/beans.xml" }
+            .toList()
+        assertEquals(1, archives.size)
+        assertTrue(jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory") != null)
+        jar.getInputStream(archives.single()).bufferedReader().readText()
+      }
+    build()
+    val generated = descriptor()
+    val application =
+      directory
+        .resolve(resourceDirectory)
+        .resolve("META-INF")
+        .createDirectories()
+        .resolve("beans.xml")
+    val custom = "<beans xmlns=\"https://jakarta.ee/xml/ns/jakartaee\" bean-discovery-mode=\"all\" version=\"4.0\"/>"
+    application.writeText(custom)
+    build()
+    assertEquals(custom, descriptor())
+    assertTrue(build().output.contains("Reusing configuration cache"))
+    application.writeText(custom + "\n<!-- application-owned -->\n")
+    build()
+    assertEquals(application.readText(), descriptor())
+    Files.delete(application)
+    build()
+    assertEquals(generated, descriptor())
+  }
+
+  @Test
+  fun `bean archives merge identically and reject conflicting descriptors`(
+    @TempDir directory: Path,
+  ) {
+    val first = directory.resolve("one/META-INF").createDirectories().resolve("beans.xml")
+    val second = directory.resolve("two/META-INF").createDirectories().resolve("beans.xml")
+    val contents = "<beans bean-discovery-mode=\"annotated\"/>\n"
+    first.writeText(contents)
+    second.writeText(contents)
+    val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+    val task = project.tasks.register("merge", SundayMergeServiceProviders::class.java).get()
+    task.descriptors.from(first.toFile(), second.toFile())
+    task.outputDirectory.set(directory.resolve("merged").toFile())
+    task.merge()
+    val archive = directory.resolve("merged/META-INF/beans.xml")
+    assertEquals(contents, archive.readText())
+    second.writeText("<beans bean-discovery-mode=\"all\"/>")
+    assertThrows(IllegalArgumentException::class.java) { task.merge() }
+    task.descriptors.setFrom(emptyList<Any>())
+    task.merge()
+    assertFalse(Files.exists(archive))
+  }
+
   @Test
   fun `failed stale registration deletion fails the merge`(
     @TempDir directory: Path,

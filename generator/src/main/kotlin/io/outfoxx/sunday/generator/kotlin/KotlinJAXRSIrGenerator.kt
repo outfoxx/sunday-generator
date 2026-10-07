@@ -323,6 +323,8 @@ class KotlinJAXRSIrGenerator(
         securityPolicies.mapValues { (packageName, policies) ->
           KotlinQuarkusSecurityGenerator(ClassName(packageName, "OpenAPISecurity"), policies).also { generator ->
             generator.generate().forEach { (name, type) -> typeRegistry.addServiceType(name, type) }
+            generator.register(typeRegistry)
+            if (generator.sharedProviders || generator.nativeBindings) typeRegistry.addBeanArchive()
           }
         }
       } else {

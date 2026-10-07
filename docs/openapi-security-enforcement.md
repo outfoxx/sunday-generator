@@ -142,7 +142,7 @@ Tests compile generated Kotlin and Python for RAML, OpenAPI, AsyncAPI, and compo
 
 Quarkus tests additionally use the real Zanzibar extension, a deterministic relationship backend, and signed JWTs validated by the native provider. They cover identity propagation, explicit subject selection, FGA denial, concurrent-request isolation, validation/permission-reader counts, and native authorization event counts. They verify that proactive authentication fails startup and conflicting early HTTP authentication fails before Zanzibar or delegation. Compile-backed specialization tests verify that uniform policies do not generate per-operation dispatch or redundant evaluators.
 
-The Quarkus HTTP suite runs against the default 3.31.2 and CI versions 3.34.5, 3.36.3, 3.38.3, and 3.39.3. Run a particular version locally with:
+The Quarkus HTTP suite runs against the default 3.39.4 and CI versions 3.34.5, 3.36.3, 3.38.3, and 3.39.3. Run a particular version locally with:
 
 ```sh
 ./gradlew --dependency-verification strict --no-configuration-cache \
@@ -150,3 +150,110 @@ The Quarkus HTTP suite runs against the default 3.31.2 and CI versions 3.34.5, 3
 ```
 
 The selection regression uses generated class-level bearer annotations, a separate API-key strategy, and application-provided bindings. It checks valid/missing/invalid credentials, exactly one selected provider call, and no generated provider calls on unrelated fallback or Basic-authenticated routes.
+
+## Explicit Quarkus integration
+
+Quarkus 3.39.4 or later can use an explicit `quarkus` binding under the existing
+client/server/profile metadata. Omitting it preserves the generated-binding path
+and its existing client recovery behavior. Generic JAX-RS and Sunday SDK bindings
+continue to use their application providers.
+
+```yaml
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      x-sunday-security:
+        server:
+          provider: identity
+          quarkus: {mode: oidc}
+        client:
+          provider: service
+          flow: clientCredentials
+          quarkus: {mode: acquire}
+```
+
+### Native server
+
+`oidc` selects native bearer authentication; `webApp` explicitly selects a host
+application's browser login. Neither is inferred from `bearerFormat`, discovery
+metadata, or an advertised authorization-code flow. Add `quarkus-oidc` and retain
+the generated `META-INF` resources in the contract jar. Generated defaults have
+configuration ordinal 100, below application configuration, and do not write
+`application.properties`.
+
+The deployment supplies `quarkus.oidc.auth-server-url` (or a configured public key),
+`quarkus.oidc.token.issuer`, and `quarkus.oidc.token.audience`. An issuer of `any`,
+a disabled tenant, or a mismatched application type fails startup. Issuer,
+audience, credentials, and TLS settings are never inferred from the contract.
+
+An optional `tenant` selects a named OIDC tenant, not a business tenant or FGA
+object. Tenant selection emits `@Tenant` and requires
+`quarkus.http.auth.proactive=false`; the generated default is checked at startup.
+A default-tenant bearer binding leaves proactive authentication configurable.
+With proactive authentication enabled, invalid supplied credentials can reject
+public requests; `@PermitAll` still allows credential-free public requests.
+
+A native policy checks the authenticated OIDC credential, the selected tenant,
+and only the scopes explicitly required by the operation. It uses Quarkus
+`SecurityIdentity.checkPermission(StringPermission(scope))`; it does not reinterpret
+roles or Zanzibar relations as scopes. Quarkus does not allow combining
+`@AuthorizationPolicy` with `@PermissionsAllowed` on one endpoint, so these checks
+share one policy. Existing Zanzibar annotations remain on the generated resource.
+Native mode currently requires one bearer scheme and one alternative per
+operation. Composite policies fail generation and can use shared providers.
+
+### Native clients
+
+Add `quarkus-rest-client-oidc-filter` for `acquire`, or
+`quarkus-rest-client-oidc-token-propagation` for `propagate` and `exchange`.
+Generated startup checks diagnose missing native filter classes and required
+client settings. Native annotations are method-specific; public operations do
+not receive a credential annotation.
+
+- `acquire` requires `flow: clientCredentials` and emits `@OidcClientFilter`.
+  Configure the named provider under `quarkus.oidc-client.<provider>`, including
+  its client ID and credentials. Contract token/discovery URLs provide endpoint
+  defaults; deployment configuration can override them. Startup checks validate
+  these effective settings on each generated client. Generated clients isolate
+  different contracts, scopes, and acquisition settings.
+- `propagate` requires `flow: external` and emits `@AccessToken`. It forwards the
+  current authenticated access token. It does not acquire a service-account token
+  when no user token exists. Audience/resource changes require exchange.
+- `exchange` requires `flow: external` and emits
+  `@AccessToken(exchangeTokenClient = ...)`. Configure its provider with native
+  `grant.type=exchange`. Exchange clients retain separate scope/audience settings.
+
+Native filters own expiry checks, pre-expiry skew, token acquisition, and refresh.
+Configure `refresh-token-time-skew` on the provider to leave a transit margin.
+Native `refresh-on-unauthorized` renews credentials on the next invocation of the affected client method;
+it does not replay the rejected HTTP request. Native mode introduces no automatic
+same-invocation retry. Existing Sunday recovery remains available by omitting the
+native binding. Explicit fault-tolerance policies remain application choices.
+
+### Shared provider SPI
+
+`server.quarkus.mode: provider` emits an overridable `@DefaultBean` producer for
+the package-specific `OpenAPISecurity`. The companion Kotlin runtime provides
+`ServerSecurityProvider`, including its request, scheme, authenticator, and binding
+contracts. A shared library implements this interface once, exposes a CDI bean,
+and includes a bean archive descriptor. It must not depend on generated service
+packages. Generated contract jars also contain a bean archive descriptor, so
+consumers need no manual indexing or CDI registration.
+
+The generated producer resolves exactly one provider for each declared provider
+name. Missing or duplicate names fail startup. The provider's `binding()` resolves
+its required deployment configuration; its authenticator validates the supplied
+credential and returns a trusted native identity. It must never accept an
+unrelated existing identity as evidence for a scheme. A permissions reader is
+required whenever the contract declares permissions. Composite requirements use
+one shared `ServerSecuritySubjectSelector` to choose a member of each AND group.
+Existing scheme evidence, alternative evaluation, and Zanzibar ordering are
+retained. An explicit application `OpenAPISecurity` producer overrides the
+generated default without creating ambiguous beans.
+
+The shared SPI requires Sunday Kotlin `2.0.0-beta.15` or later, which includes
+[sunday-kt #67](https://github.com/outfoxx/sunday-kt/pull/67). Published artifacts
+include the provider contracts; a local runtime checkout is only needed when
+developing runtime changes.

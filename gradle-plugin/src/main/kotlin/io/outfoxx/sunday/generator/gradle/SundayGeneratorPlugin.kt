@@ -175,6 +175,8 @@ class SundayGeneratorPlugin : Plugin<Project> {
 
       val sourceSetName = gen.targetSourceSet.get()
       sourceSets.getByName(sourceSetName).java.srcDir(genTask)
+      val resources = sourceSets.getByName(sourceSetName).resources
+      val mergedResources = project.layout.buildDirectory.dir("generated/resources/sunday/$sourceSetName")
       val mergeName = "sundayMergeServiceProviders_$sourceSetName"
       val merge =
         if (mergeName in project.tasks.names) {
@@ -182,13 +184,30 @@ class SundayGeneratorPlugin : Plugin<Project> {
         } else {
           project.tasks
             .register(mergeName, SundayMergeServiceProviders::class.java) {
-              it.outputDirectory.set(project.layout.buildDirectory.dir("generated/resources/sunday/$sourceSetName"))
+              it.outputDirectory.set(mergedResources)
+              it.applicationBeanArchives.from(
+                project
+                  .files(
+                    project.provider {
+                      resources.srcDirs.filter { directory -> directory != mergedResources.get().asFile }
+                    },
+                  ).asFileTree
+                  .matching { patterns -> patterns.include("META-INF/beans.xml") },
+              )
+              // Keep resource producers without introducing a dependency on this merge task itself.
+              it.applicationBeanArchives.builtBy(
+                project.provider {
+                  resources.sourceDirectories.buildDependencies.getDependencies(it).filter { producer ->
+                    producer != it
+                  }
+                },
+              )
             }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
         }
       merge.configure { task ->
         task.descriptors.from(
           genTask.flatMap { it.outputDir }.map { directory ->
-            directory.asFileTree.matching { it.include("META-INF/services/**") }
+            directory.asFileTree.matching { it.include("META-INF/services/**", "META-INF/beans.xml") }
           },
         )
       }

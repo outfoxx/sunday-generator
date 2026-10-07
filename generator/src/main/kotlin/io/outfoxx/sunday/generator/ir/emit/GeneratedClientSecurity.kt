@@ -23,6 +23,7 @@ import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedEnvironment
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
@@ -142,7 +143,20 @@ fun GeneratedSecurityScheme.resolveSecurityBinding(
     )
   }
   if (context.role == GenerationMode.Server) {
-    if (binding.copy(provider = null) != GeneratedSecurityBinding()) {
+    if (binding.quarkus != null &&
+      binding.quarkus.mode !in
+      setOf(
+        GeneratedQuarkusSecurityBinding.Mode.PROVIDER,
+        GeneratedQuarkusSecurityBinding.Mode.OIDC,
+        GeneratedQuarkusSecurityBinding.Mode.WEB_APP,
+      )
+    ) {
+      genError("Server Quarkus binding '$name' requires provider, oidc, or webApp mode")
+    }
+    if (binding.quarkus?.mode == GeneratedQuarkusSecurityBinding.Mode.PROVIDER && binding.quarkus.tenant != null) {
+      genError("Shared providers own tenant selection; tenant is only valid for native OIDC bindings")
+    }
+    if (binding.copy(provider = null, quarkus = null) != GeneratedSecurityBinding()) {
       genError(
         "Server security binding '$name' accepts a validation provider only; acquisition settings belong in client scope",
       )

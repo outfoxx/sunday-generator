@@ -22,6 +22,7 @@ val jakartaValidationRuntime by configurations.creating
 val generatedCodeClasspath by configurations.creating {
   // Preserve the existing lightweight annotation fixtures without duplicate API definitions.
   exclude(group = "org.eclipse.microprofile.rest.client", module = "microprofile-rest-client-api")
+  exclude(group = "org.hibernate.validator", module = "hibernate-validator")
 }
 configurations.testImplementation { extendsFrom(generatedCodeClasspath) }
 
@@ -77,6 +78,10 @@ dependencies {
   generatedCodeClasspath(libs.rxJava2)
   generatedCodeClasspath(libs.quarkusRest)
   generatedCodeClasspath(libs.quarkusSecurity)
+  generatedCodeClasspath("io.outfoxx.sunday:sunday-jaxrs-quarkus:${libs.versions.sundayKt.get()}")
+  generatedCodeClasspath("io.quarkus:quarkus-oidc:${libs.versions.quarkus.rest.get()}")
+  generatedCodeClasspath("io.quarkus:quarkus-rest-client-oidc-filter:${libs.versions.quarkus.rest.get()}")
+  generatedCodeClasspath("io.quarkus:quarkus-rest-client-oidc-token-propagation:${libs.versions.quarkus.rest.get()}")
   generatedCodeClasspath("io.quarkus:quarkus-vertx-http:${libs.versions.quarkus.rest.get()}")
   generatedCodeClasspath(libs.quarkiverseZanzibar)
   // END: generated code dependencies
