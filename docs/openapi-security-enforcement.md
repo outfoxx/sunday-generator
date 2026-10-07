@@ -251,7 +251,7 @@ Existing scheme evidence, alternative evaluation, and Zanzibar ordering are
 retained. An explicit application `OpenAPISecurity` producer overrides the
 generated default without creating ambiguous beans.
 
-The new SPI requires [sunday-kt #67](https://github.com/outfoxx/sunday-kt/pull/67); beta.14 does
-not contain these types. During development, point `SUNDAY_KOTLIN_PATH` at that
-runtime checkout. Publish and pin the companion runtime before releasing this
-new generator capability.
+The shared SPI requires Sunday Kotlin `2.0.0-beta.15` or later, which includes
+[sunday-kt #67](https://github.com/outfoxx/sunday-kt/pull/67). Published artifacts
+include the provider contracts; a local runtime checkout is only needed when
+developing runtime changes.
