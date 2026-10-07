@@ -43,6 +43,7 @@ internal object GeneratedSecurityReader {
           "refreshUrl",
           "audience",
           "resource",
+          "quarkus",
         ),
       )
     return GeneratedSecurityBinding(
@@ -63,7 +64,26 @@ internal object GeneratedSecurityReader {
       refreshUrl = fields.endpoint("refreshUrl", path),
       audience = fields.text("audience", path),
       resource = fields.text("resource", path),
+      quarkus = if (fields.containsKey("quarkus")) quarkusBinding(fields["quarkus"], "$path.quarkus") else null,
     )
+  }
+
+  private fun quarkusBinding(
+    raw: Any?,
+    path: String,
+  ): GeneratedQuarkusSecurityBinding {
+    val fields = GeneratedEnvironmentReader.objectValue(raw, path, setOf("mode", "tenant"))
+    val mode =
+      when (val value = fields.text("mode", path)) {
+        "provider" -> GeneratedQuarkusSecurityBinding.Mode.PROVIDER
+        "oidc" -> GeneratedQuarkusSecurityBinding.Mode.OIDC
+        "webApp" -> GeneratedQuarkusSecurityBinding.Mode.WEB_APP
+        "acquire" -> GeneratedQuarkusSecurityBinding.Mode.ACQUIRE
+        "propagate" -> GeneratedQuarkusSecurityBinding.Mode.PROPAGATE
+        "exchange" -> GeneratedQuarkusSecurityBinding.Mode.EXCHANGE
+        else -> genError("Unsupported $path.mode '$value'")
+      }
+    return GeneratedQuarkusSecurityBinding(mode, fields.text("tenant", path))
   }
 
   fun selection(

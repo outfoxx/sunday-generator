@@ -188,7 +188,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
       merge.configure { task ->
         task.descriptors.from(
           genTask.flatMap { it.outputDir }.map { directory ->
-            directory.asFileTree.matching { it.include("META-INF/services/**") }
+            directory.asFileTree.matching { it.include("META-INF/services/**", "META-INF/beans.xml") }
           },
         )
       }

@@ -26,6 +26,8 @@ data class GeneratedSecurityBinding(
   val refreshUrl: String? = null,
   val audience: String? = null,
   val resource: String? = null,
+  /** Explicit framework integration; absent preserves the existing application binding. */
+  val quarkus: GeneratedQuarkusSecurityBinding? = null,
 ) {
   /** Supported acquisition contracts; interactive authorization and secrets stay with the application. */
   enum class Flow(
@@ -49,5 +51,6 @@ data class GeneratedSecurityBinding(
       refreshUrl = other.refreshUrl ?: refreshUrl,
       audience = other.audience ?: audience,
       resource = other.resource ?: resource,
+      quarkus = other.quarkus ?: quarkus,
     )
 }

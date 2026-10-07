@@ -43,7 +43,17 @@ abstract class SundayMergeServiceProviders : DefaultTask() {
   @TaskAction
   fun merge() {
     val services = sortedMapOf<String, MutableSet<String>>()
-    descriptors.files.filter { it.isFile }.forEach { descriptor ->
+    val archives = descriptors.files.filter { it.isFile && it.name == "beans.xml" }
+    val archive = outputDirectory.get().asFile.resolve("META-INF/beans.xml")
+    if (archives.isNotEmpty()) {
+      val contents = archives.map { it.readText().trim() }.distinct()
+      require(contents.size == 1) { "Conflicting generated CDI bean archive descriptors" }
+      archive.parentFile.mkdirs()
+      archive.writeText(contents.single() + "\n")
+    } else {
+      Files.deleteIfExists(archive.toPath())
+    }
+    descriptors.files.filter { it.isFile && it.name != "beans.xml" }.forEach { descriptor ->
       val providers = services.getOrPut(descriptor.name) { sortedSetOf() }
       descriptor
         .readLines()

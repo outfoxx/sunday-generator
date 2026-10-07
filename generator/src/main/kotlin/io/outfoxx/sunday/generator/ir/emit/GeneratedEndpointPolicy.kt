@@ -21,6 +21,7 @@ import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedOperation
+import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
 import io.outfoxx.sunday.generator.ir.GeneratedService
@@ -31,6 +32,8 @@ data class GeneratedEndpointPolicy(
   val schemes: Map<String, GeneratedSecurityScheme>,
   /** Application provider identifiers, kept separate from the logical wire scheme names. */
   val providers: Map<String, String> = schemes.keys.associateWith { it },
+  /** Resolved server bindings, including explicit framework selections. */
+  val bindings: Map<String, GeneratedSecurityBinding> = emptyMap(),
 )
 
 /** Resolves a complete endpoint policy and rejects security metadata that cannot be enforced. */
@@ -71,11 +74,13 @@ fun GeneratedApi.endpointSecurityPolicy(
       val scheme = definitions.singleOrNull() ?: genError("Conflicting security scheme definitions for '$name'")
       scheme.normalizedSecurityScheme()
     }
-  val providers =
-    schemes.mapValues { (name, scheme) ->
-      scheme.resolveSecurityBinding(context, auth.selection?.mapNotNull { it.bindings[name] })?.provider ?: name
-    }
-  return GeneratedEndpointPolicy(requirements, schemes, providers)
+  val resolvedBindings =
+    schemes
+      .mapNotNull { (name, scheme) ->
+        scheme.resolveSecurityBinding(context, auth.selection?.mapNotNull { it.bindings[name] })?.let { name to it }
+      }.toMap()
+  val providers = schemes.keys.associateWith { resolvedBindings[it]?.provider ?: it }
+  return GeneratedEndpointPolicy(requirements, schemes, providers, resolvedBindings)
 }
 
 /** Combines provider selections without silently routing the same wire scheme to different validators. */

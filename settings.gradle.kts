@@ -74,4 +74,7 @@ include(
   "code-coverage",
   "integration-tests:quarkus",
   "integration-tests:jaxrs",
+  "integration-tests:quarkus-security-contracts",
+  "integration-tests:quarkus-security-provider",
+  "integration-tests:quarkus-security",
 )

@@ -31,6 +31,7 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
 import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
@@ -44,6 +45,8 @@ internal class KotlinQuarkusClientSecurity(
 ) {
   private val clients = linkedMapOf<String, String>()
   private val defaults = linkedMapOf<String, String>()
+  private val nativeProviders = linkedSetOf<String>()
+  private val requiredExtensions = linkedSetOf<String>()
 
   fun annotation(security: GeneratedClientSecurity): AnnotationSpec? {
     if (security.bindings.isEmpty()) return null
@@ -65,9 +68,50 @@ internal class KotlinQuarkusClientSecurity(
     ) {
       genError("Quarkus OIDC requires a bearer Authorization header for '$name'")
     }
-    if (binding.flow != GeneratedSecurityBinding.Flow.CLIENT_CREDENTIALS) {
+    val native = binding.quarkus
+    if (native != null) {
+      when (native.mode) {
+        GeneratedQuarkusSecurityBinding.Mode.ACQUIRE -> {
+          nativeProviders.add(binding.provider)
+          requiredExtensions.add("io.quarkus.oidc.client.reactive.filter.OidcClientRequestReactiveFilter")
+        }
+        GeneratedQuarkusSecurityBinding.Mode.PROPAGATE, GeneratedQuarkusSecurityBinding.Mode.EXCHANGE -> {
+          requiredExtensions.add("io.quarkus.oidc.token.propagation.reactive.AccessTokenRequestReactiveFilter")
+          if (native.mode == GeneratedQuarkusSecurityBinding.Mode.EXCHANGE) nativeProviders.add(binding.provider)
+        }
+        else -> Unit
+      }
+    }
+    if (native?.tenant != null) genError("Client bindings cannot select a server OIDC tenant")
+    if (native != null &&
+      native.mode !in
+      setOf(
+        GeneratedQuarkusSecurityBinding.Mode.ACQUIRE,
+        GeneratedQuarkusSecurityBinding.Mode.PROPAGATE,
+        GeneratedQuarkusSecurityBinding.Mode.EXCHANGE,
+      )
+    ) {
+      genError("Quarkus client binding '$name' requires acquire, propagate, or exchange mode")
+    }
+    if (native?.mode in
+      setOf(GeneratedQuarkusSecurityBinding.Mode.PROPAGATE, GeneratedQuarkusSecurityBinding.Mode.EXCHANGE)
+    ) {
+      if (binding.flow != GeneratedSecurityBinding.Flow.EXTERNAL) {
+        genError("Quarkus token propagation/exchange requires external flow; host login is a separate server binding")
+      }
+      if (native?.mode == GeneratedQuarkusSecurityBinding.Mode.PROPAGATE) {
+        if (binding.audience != null ||
+          binding.resource != null
+        ) {
+          genError("Token propagation cannot change audience or resource; select exchange")
+        }
+        return AnnotationSpec.builder(ClassName("io.quarkus.oidc.token.propagation.common", "AccessToken")).build()
+      }
+    }
+    val exchange = native?.mode == GeneratedQuarkusSecurityBinding.Mode.EXCHANGE
+    if (!exchange && binding.flow != GeneratedSecurityBinding.Flow.CLIENT_CREDENTIALS) {
       genError(
-        "Quarkus OIDC binding '$name' supports clientCredentials; use a Sunday client for application-managed authorizationCode, external, or static providers, or retain an explicit JAX-RS provider without acquisition bindings",
+        "Quarkus OIDC binding '$name' supports clientCredentials; use an explicit native propagation/exchange binding or a Sunday client",
       )
     }
     if (binding.refreshUrl != null && binding.refreshUrl != binding.tokenUrl) {
@@ -98,7 +142,10 @@ internal class KotlinQuarkusClientSecurity(
     ) {
       defaults[prefix + key] = value
     }
-    setting("grant.type", "client")
+    val grant = if (exchange) "exchange" else "client"
+    setting("grant.type", grant)
+    // The native propagation filter reads this literal unquoted key instead of the OIDC config mapping.
+    if (exchange) defaults["quarkus.oidc-client.$client.grant.type"] = grant
     setting("early-tokens-acquisition", "false")
     if (binding.discoveryUrl != null) {
       val discovery = URI(binding.discoveryUrl)
@@ -110,21 +157,84 @@ internal class KotlinQuarkusClientSecurity(
       setting("discovery-enabled", "false")
     }
     binding.tokenUrl?.let { setting("token-path", it) }
-    binding.audience?.let { setting("grant-options.client.audience", it) }
-    binding.resource?.let { setting("grant-options.client.resource", it) }
+    binding.audience?.let { setting("grant-options.$grant.audience", it) }
+    binding.resource?.let { setting("grant-options.$grant.resource", it) }
     if (scopes.isNotEmpty()) {
       setting(
         "scopes",
         scopes.joinToString(",") { it.replace("\\", "\\\\").replace(",", "\\,") },
       )
     }
+    if (exchange) {
+      return AnnotationSpec
+        .builder(ClassName("io.quarkus.oidc.token.propagation.common", "AccessToken"))
+        .addMember("exchangeTokenClient = %S", client)
+        .build()
+    }
     return AnnotationSpec
-      .builder(ClassName("io.outfoxx.sunday.client.quarkus", "ClientAuthentication"))
-      .addMember("%S", client)
+      .builder(
+        if (native?.mode == GeneratedQuarkusSecurityBinding.Mode.ACQUIRE) {
+          ClassName("io.quarkus.oidc.client.filter", "OidcClientFilter")
+        } else {
+          ClassName("io.outfoxx.sunday.client.quarkus", "ClientAuthentication")
+        },
+      ).addMember("%S", client)
       .build()
   }
 
+  private fun registerRequirements(registry: KotlinTypeOutputRegistry) {
+    val type =
+      TypeSpec
+        .classBuilder(ClassName(packageName, "OpenAPIClientRequirements"))
+        .addKdoc("Fails startup when explicitly selected native extensions or provider configuration are missing.\n")
+        .addAnnotation(ClassName("jakarta.inject", "Singleton"))
+        .addAnnotation(ClassName("io.quarkus.runtime", "Startup"))
+        .primaryConstructor(
+          FunSpec
+            .constructorBuilder()
+            .addParameter("config", ClassName("org.eclipse.microprofile.config", "Config"))
+            .build(),
+        ).addInitializerBlock(
+          CodeBlock
+            .builder()
+            .addStatement(
+              "val required = listOf(%L)",
+              requiredExtensions.map { CodeBlock.of("%S", it) }.joinToCode(", "),
+            ).add(
+              """
+              for (extension in required) {
+                require(runCatching { Class.forName(extension, false, javaClass.classLoader) }.isSuccess) {
+                  "Missing required native Quarkus OIDC extension: " + extension
+                }
+              }
+              """.trimIndent().replace(' ', '·') + "\n",
+            ).addStatement(
+              "val providers = listOf<String>(%L)",
+              nativeProviders.map { CodeBlock.of("%S", it) }.joinToCode(", "),
+            ).add(
+              """
+              require(providers.isEmpty() || config.getOptionalValue("quarkus.oidc-client.enabled", Boolean::class.java).orElse(true)) {
+                "Required native OIDC client feature is disabled"
+              }
+              for (provider in providers) {
+                    fun setting(member: String): String? =
+                      config.getOptionalValue("quarkus.oidc-client." + provider + "." + member, String::class.java).orElse(null)
+                        ?: config.getOptionalValue("quarkus.oidc-client.\"" + provider + "\"." + member, String::class.java).orElse(null)
+                    require(!setting("client-id").isNullOrBlank()) { "Missing native OIDC client-id: " + provider }
+                    require(!setting("auth-server-url").isNullOrBlank() || !setting("token-path").isNullOrBlank()) {
+                      "Missing native OIDC client endpoint: " + provider
+                    }
+                    require(setting("client-enabled") != "false") { "Required native OIDC client is disabled: " + provider }
+                  }
+              """.trimIndent().replace(' ', '·') + "\n",
+            ).build(),
+        )
+    registry.addServiceType(ClassName(packageName, "OpenAPIClientRequirements"), type)
+    registry.addBeanArchive()
+  }
+
   fun register(registry: KotlinTypeOutputRegistry) {
+    if (requiredExtensions.isNotEmpty()) registerRequirements(registry)
     if (clients.isEmpty()) return
     val factory = ClassName("io.smallrye.config", "ConfigSourceFactory")
     val context = ClassName("io.smallrye.config", "ConfigSourceContext")
@@ -172,8 +282,8 @@ internal class KotlinQuarkusClientSecurity(
                   val prefix = prefixes.firstOrNull { key.startsWith(it) } ?: continue
                   val member = key.removePrefix(prefix)
                   val value = context.getValue(key)?.value ?: continue
-                  require(member != "grant.type" || value == "client") {
-                    "Selected OIDC provider must use client_credentials: " + provider
+                  require(member != "grant.type" || value == values[target + "grant.type"]) {
+                    "Selected OIDC provider has an incompatible grant: " + provider
                   }
                   if (member !in setOf("id", "scopes", "early-tokens-acquisition")) values[target + member] = value
                 }

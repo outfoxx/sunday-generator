@@ -95,6 +95,11 @@ jobs:
         name: verification-${{ matrix.partition }}-${{ github.sha }}
         path: build/ci-artifacts/${{ matrix.partition }}
         if-no-files-found: error
+    - name: Verify native-only proactive authentication
+      if: matrix.partition == 'infrastructure'
+      run: >-
+        ./gradlew :integration-tests:quarkus-security:test
+        --dependency-verification strict -PuseLocalSundayKt=false -PnativeSecurityOnly=true
 
   swift:
     env:

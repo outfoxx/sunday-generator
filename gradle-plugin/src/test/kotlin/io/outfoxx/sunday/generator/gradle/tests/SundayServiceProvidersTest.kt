@@ -36,6 +36,29 @@ import kotlin.io.path.writeText
 
 class SundayServiceProvidersTest {
   @Test
+  fun `bean archives merge identically and reject conflicting descriptors`(
+    @TempDir directory: Path,
+  ) {
+    val first = directory.resolve("one/META-INF").createDirectories().resolve("beans.xml")
+    val second = directory.resolve("two/META-INF").createDirectories().resolve("beans.xml")
+    val contents = "<beans bean-discovery-mode=\"annotated\"/>\n"
+    first.writeText(contents)
+    second.writeText(contents)
+    val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+    val task = project.tasks.register("merge", SundayMergeServiceProviders::class.java).get()
+    task.descriptors.from(first.toFile(), second.toFile())
+    task.outputDirectory.set(directory.resolve("merged").toFile())
+    task.merge()
+    val archive = directory.resolve("merged/META-INF/beans.xml")
+    assertEquals(contents, archive.readText())
+    second.writeText("<beans bean-discovery-mode=\"all\"/>")
+    assertThrows(IllegalArgumentException::class.java) { task.merge() }
+    task.descriptors.setFrom(emptyList<Any>())
+    task.merge()
+    assertFalse(Files.exists(archive))
+  }
+
+  @Test
   fun `failed stale registration deletion fails the merge`(
     @TempDir directory: Path,
   ) {

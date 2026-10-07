@@ -46,6 +46,9 @@ interface KotlinTypeOutputRegistry {
     implementation: ClassName,
   )
 
+  /** Marks generated service classes as a discoverable CDI bean archive. */
+  fun addBeanArchive()
+
   fun addModelType(
     className: ClassName,
     modelType: TypeSpec.Builder,

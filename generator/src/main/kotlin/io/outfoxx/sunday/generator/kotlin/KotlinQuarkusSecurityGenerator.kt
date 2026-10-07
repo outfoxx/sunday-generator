@@ -33,6 +33,8 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
+import io.outfoxx.sunday.generator.genError
+import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
 import io.outfoxx.sunday.generator.ir.emit.endpointSecurityProviders
 import io.outfoxx.sunday.generator.ir.emit.endpointSecuritySchemes
@@ -48,6 +50,25 @@ internal class KotlinQuarkusSecurityGenerator(
   val typeName: ClassName,
   policies: List<GeneratedEndpointPolicy>,
 ) {
+  private val frameworkBindings =
+    policies
+      .flatMap { it.bindings.entries }
+      .groupBy({ it.key }, { it.value.quarkus })
+      .mapValues { (name, values) ->
+        values.distinct().singleOrNull()
+          ?: if (values.all { it == null }) null else genError("Conflicting Quarkus bindings for '$name'")
+      }
+  private val native =
+    if (frameworkBindings.values.any {
+        it?.mode in setOf(GeneratedQuarkusSecurityBinding.Mode.OIDC, GeneratedQuarkusSecurityBinding.Mode.WEB_APP)
+      }
+    ) {
+      KotlinQuarkusNativeSecurity(typeName, policies)
+    } else {
+      null
+    }
+  val nativeBindings: Boolean get() = native != null
+  val sharedProviders = frameworkBindings.values.any { it?.mode == GeneratedQuarkusSecurityBinding.Mode.PROVIDER }
   private val plan = KotlinQuarkusSecurityPlan(policies)
   private val schemes = policies.endpointSecuritySchemes()
   private val providers = policies.endpointSecurityProviders()
@@ -65,10 +86,21 @@ internal class KotlinQuarkusSecurityGenerator(
   private val singleton = ClassName("jakarta.inject", "Singleton")
   private val requirements = LIST.parameterizedBy(MAP.parameterizedBy(STRING, SET.parameterizedBy(STRING)))
 
+  fun register(registry: KotlinTypeOutputRegistry) {
+    native?.register(registry)
+  }
+
   fun generate(): Map<ClassName, TypeSpec.Builder> {
+    native?.let { return it.generate() }
     if (plan.policies.isEmpty()) return emptyMap()
     return buildMap {
       put(typeName, runtime())
+      if (sharedProviders) {
+        require(schemes.keys.all { frameworkBindings[it]?.mode == GeneratedQuarkusSecurityBinding.Mode.PROVIDER }) {
+          "Shared provider generation requires an explicit provider binding for every protected scheme in the package"
+        }
+        put(typeName.peerClass("OpenAPISecurityFactory"), KotlinQuarkusProviderFactory.generate(typeName))
+      }
       plan.authentication.forEach { policy -> put(authenticationType(policy), authentication(policy)) }
       plan.policies.filterNot { it.simple }.forEach { policy -> put(policyType(policy), authorization(policy)) }
     }
@@ -76,6 +108,7 @@ internal class KotlinQuarkusSecurityGenerator(
 
   fun annotations(value: GeneratedEndpointPolicy?): List<AnnotationSpec> {
     if (value == null) return emptyList()
+    native?.let { return it.annotations(value) }
     if (value.requirements.isEmpty()) {
       return listOf(
         AnnotationSpec.builder(ClassName("jakarta.annotation.security", "PermitAll")).build(),

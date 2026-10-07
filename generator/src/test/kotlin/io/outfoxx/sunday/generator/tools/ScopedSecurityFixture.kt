@@ -27,6 +27,8 @@ internal fun scopedSecurityApi(
   directory: Path,
   profiledServer: Boolean = false,
   endpointBindings: Boolean = false,
+  serverQuarkus: String? = null,
+  clientQuarkus: String? = null,
 ): GeneratedApi {
   val binding =
     """
@@ -44,15 +46,46 @@ internal fun scopedSecurityApi(
           flow: authorizationCode
           authorizationUrl: https://identity.example/authorize
           tokenUrl: https://identity.example/token
-    """.trimIndent().let { declarations ->
-      if (profiledServer) {
-        declarations
-          .replace("  internal:\n", "  internal:\n    server: {provider: internalVerifier}\n")
-          .replace("  external:\n", "  external:\n    server: {provider: externalVerifier}\n")
-      } else {
-        declarations
+    """.trimIndent()
+      .let { source ->
+        source
+          .let {
+            if (serverQuarkus ==
+              null
+            ) {
+              it
+            } else {
+              it.replace(
+                "server: {provider: verifier}",
+                "server: {provider: verifier, quarkus: {mode: $serverQuarkus}}",
+              )
+            }
+          }.let {
+            if (clientQuarkus ==
+              null
+            ) {
+              it
+            } else {
+              it.replace("provider: service", "provider: service\n      quarkus: {mode: $clientQuarkus}")
+            }
+          }
+      }.let { declarations ->
+        if (clientQuarkus in setOf("propagate", "exchange")) {
+          declarations
+            .replace("flow: clientCredentials", "flow: external")
+            .replace("      tokenUrl: https://identity.internal/token\n", "")
+        } else {
+          declarations
+        }
+      }.let { declarations ->
+        if (profiledServer) {
+          declarations
+            .replace("  internal:\n", "  internal:\n    server: {provider: internalVerifier}\n")
+            .replace("  external:\n", "  external:\n    server: {provider: externalVerifier}\n")
+        } else {
+          declarations
+        }
       }
-    }
   val openapi =
     """
     openapi: 3.1.0
