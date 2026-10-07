@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,9 +40,10 @@ import kotlin.io.path.writeText
 
 class SundayServiceProvidersTest {
   @ParameterizedTest
-  @ValueSource(strings = ["src/main/resources", "extra-resources"])
+  @CsvSource("src/main/resources,false", "extra-resources,false", "task-generated,false", "task-generated,true")
   fun `packaged resources preserve application bean archives and restore generated defaults`(
     resourceDirectory: String,
+    clean: Boolean,
     @TempDir directory: Path,
   ) {
     directory.resolve("settings.gradle").writeText("rootProject.name = 'bean-archives'")
@@ -69,10 +70,22 @@ class SundayServiceProvidersTest {
             responses: {'204': {description: OK}}
       """.trimIndent(),
     )
+    val resourceConfiguration =
+      if (resourceDirectory == "task-generated") {
+        """
+        def applicationResources = tasks.register('zzzApplicationResources', Sync) {
+          from('task-generated')
+          into(layout.buildDirectory.dir('application-resources'))
+        }
+        sourceSets.main.resources.srcDir(applicationResources)
+        """.trimIndent()
+      } else {
+        "sourceSets.main.resources.srcDir('extra-resources')"
+      }
     directory.resolve("build.gradle").writeText(
       """
       plugins { id 'java'; id 'io.outfoxx.sunday-generator' }
-      sourceSets.main.resources.srcDir('extra-resources')
+      $resourceConfiguration
       sundayGenerations {
         client {
           source.set(files('api.yaml'))
@@ -94,8 +107,9 @@ class SundayServiceProvidersTest {
         .create()
         .withProjectDir(directory.toFile())
         .withPluginClasspath()
-        .withArguments("resourceJar", "--configuration-cache", "--stacktrace")
-        .build()
+        .withArguments(
+          listOfNotNull(if (clean) "clean" else null, "resourceJar", "--configuration-cache", "--stacktrace"),
+        ).build()
 
     fun descriptor(): String =
       JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->

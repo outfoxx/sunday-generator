@@ -186,11 +186,20 @@ class SundayGeneratorPlugin : Plugin<Project> {
             .register(mergeName, SundayMergeServiceProviders::class.java) {
               it.outputDirectory.set(mergedResources)
               it.applicationBeanArchives.from(
+                project
+                  .files(
+                    project.provider {
+                      resources.srcDirs.filter { directory -> directory != mergedResources.get().asFile }
+                    },
+                  ).asFileTree
+                  .matching { patterns -> patterns.include("META-INF/beans.xml") },
+              )
+              // Keep resource producers without introducing a dependency on this merge task itself.
+              it.applicationBeanArchives.builtBy(
                 project.provider {
-                  resources.srcDirs
-                    .filter { directory -> directory != mergedResources.get().asFile }
-                    .map { directory -> directory.resolve("META-INF/beans.xml") }
-                    .filter { descriptor -> descriptor.isFile }
+                  resources.sourceDirectories.buildDependencies.getDependencies(it).filter { producer ->
+                    producer != it
+                  }
                 },
               )
             }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
