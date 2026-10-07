@@ -30,7 +30,9 @@ internal fun scopedSecurityApi(
   serverQuarkus: String? = null,
   clientQuarkus: String? = null,
   clientDiscovery: Boolean = false,
+  serverTenant: String? = null,
 ): GeneratedApi {
+  val tenantBinding = serverTenant?.let { ", tenant: $it" } ?: ""
   val binding =
     """
     all: {provider: identity}
@@ -58,7 +60,7 @@ internal fun scopedSecurityApi(
             } else {
               it.replace(
                 "server: {provider: verifier}",
-                "server: {provider: verifier, quarkus: {mode: $serverQuarkus}}",
+                "server: {provider: verifier, quarkus: {mode: $serverQuarkus$tenantBinding}}",
               )
             }
           }.let {

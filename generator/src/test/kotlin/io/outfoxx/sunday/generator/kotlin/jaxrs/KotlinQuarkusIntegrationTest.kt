@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
+import com.squareup.kotlinpoet.ClassName
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
@@ -234,6 +235,42 @@ class KotlinQuarkusIntegrationTest {
         valid + ("quarkus.oidc.token.issuer" to "any"),
       )
     }.isFailure().isA<IllegalArgumentException>()
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native server policies compile with public API warning suppression`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    for (mode in listOf("oidc", "webApp")) {
+      for (tenant in listOf(null, "application")) {
+        val api = scopedSecurityApi(frontend, directory, serverQuarkus = mode, serverTenant = tenant)
+        val registry =
+          KotlinTypeRegistry(
+            "io.test",
+            null,
+            GenerationMode.Server,
+            setOf(KotlinTypeRegistry.Option.SuppressPublicApiWarnings, KotlinTypeRegistry.Option.UseJakartaPackages),
+          )
+        KotlinJAXRSIrGenerator(
+          api,
+          registry,
+          options(GenerationMode.Server, coroutines = true),
+        ).generateServiceTypes()
+        val types = registry.buildTypes()
+        val compiled = compileTypesResult(types)
+        expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+        val policies = types.filterKeys { it.simpleName.startsWith("OpenAPIOidcPolicy_") }.values
+        expectThat(policies).isNotEmpty()
+        policies.forEach { policy ->
+          val suppression = ClassName("kotlin", "Suppress")
+          expectThat(policy.annotations.count { it.typeName == suppression }).isEqualTo(1)
+          val parameter = requireNotNull(policy.primaryConstructor).parameters.single { it.name == "oidc" }
+          expectThat(parameter.annotations.count { it.typeName == suppression }).isEqualTo(1)
+        }
+      }
+    }
   }
 
   @ParameterizedTest
@@ -474,21 +511,23 @@ class KotlinQuarkusIntegrationTest {
 
   private fun registry(mode: GenerationMode) = KotlinTypeRegistry("io.test", null, mode, emptySet())
 
-  private fun options(mode: GenerationMode) =
-    KotlinJAXRSOptions(
-      coroutineServiceMethods = false,
-      coroutineFlowMethods = false,
-      reactiveResponseType = null,
-      explicitSecurityParameters = false,
-      baseUriMode = null,
-      alwaysUseResponseReturn = false,
-      defaultServicePackageName = "io.test",
-      defaultProblemBaseUri = "https://example.com/problems/",
-      defaultMediaTypes = listOf("application/json"),
-      serviceSuffix = "API",
-      quarkus = true,
-      resourceAdapters = mode == GenerationMode.Server,
-      enforceSecuritySchemes = mode == GenerationMode.Server,
-      profile = "internal",
-    )
+  private fun options(
+    mode: GenerationMode,
+    coroutines: Boolean = false,
+  ) = KotlinJAXRSOptions(
+    coroutineServiceMethods = coroutines,
+    coroutineFlowMethods = false,
+    reactiveResponseType = null,
+    explicitSecurityParameters = false,
+    baseUriMode = null,
+    alwaysUseResponseReturn = false,
+    defaultServicePackageName = "io.test",
+    defaultProblemBaseUri = "https://example.com/problems/",
+    defaultMediaTypes = listOf("application/json"),
+    serviceSuffix = "API",
+    quarkus = true,
+    resourceAdapters = mode == GenerationMode.Server,
+    enforceSecuritySchemes = mode == GenerationMode.Server,
+    profile = "internal",
+  )
 }

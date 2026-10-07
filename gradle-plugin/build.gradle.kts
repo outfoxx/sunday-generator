@@ -40,6 +40,11 @@ tasks {
   test {
     systemProperty("sunday.generator.source-root", rootProject.projectDir.absolutePath)
     systemProperty("sunday.kotlin.version", libs.versions.sundayKt.get())
+    systemProperty(
+      "quarkus.version",
+      libs.versions.quarkus.rest
+        .get(),
+    )
     if (providers.environmentVariable("SUNDAY_KOTLIN_PATH").isPresent) {
       inputs.files(companionRuntime)
       dependsOn(companionRuntime)

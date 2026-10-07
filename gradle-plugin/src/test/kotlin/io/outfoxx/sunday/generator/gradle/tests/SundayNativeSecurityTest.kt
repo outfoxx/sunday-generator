@@ -1,0 +1,97 @@
+/*
+ * Copyright 2026 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.outfoxx.sunday.generator.gradle.tests
+
+import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.io.path.writeText
+
+class SundayNativeSecurityTest {
+  @Test
+  fun `native policies compile with default Gradle registry options`(
+    @TempDir directory: Path,
+  ) {
+    directory.resolve("settings.gradle").writeText("rootProject.name = 'native-security'")
+    directory.resolve("api.yaml").writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Native OIDC, version: 1.0.0}
+      security: [{bearerAuth: []}]
+      paths:
+        /ping:
+          get:
+            operationId: ping
+            responses: {'204': {description: Success}}
+      components:
+        securitySchemes:
+          bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            x-sunday-security:
+              server:
+                provider: bearerAuth
+                quarkus: {mode: oidc}
+      """.trimIndent(),
+    )
+    directory.resolve("build.gradle").writeText(
+      """
+      plugins {
+        id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+        id 'io.outfoxx.sunday-generator'
+      }
+      repositories { mavenCentral() }
+      dependencies {
+        implementation platform('io.quarkus.platform:quarkus-bom:${System.getProperty("quarkus.version")}')
+        implementation 'io.quarkus:quarkus-rest'
+        implementation 'io.quarkus:quarkus-oidc'
+        implementation 'io.outfoxx.sunday:sunday-jaxrs-quarkus:${System.getProperty("sunday.kotlin.version")}'
+      }
+      kotlin {
+        jvmToolchain(21)
+        compilerOptions { allWarningsAsErrors = true }
+      }
+      sundayGenerations {
+        server {
+          source.set(files('api.yaml'))
+          framework.set(io.outfoxx.sunday.generator.gradle.TargetFramework.JAXRS)
+          mode.set(io.outfoxx.sunday.generator.GenerationMode.Server)
+          quarkus.set(true)
+          resourceAdapters.set(true)
+          enforceSecuritySchemes.set(true)
+          useJakartaPackages.set(true)
+          coroutines.set(true)
+          pkgName.set('example.nativeauth')
+        }
+      }
+      """.trimIndent(),
+    )
+    val result =
+      GradleRunner
+        .create()
+        .withProjectDir(directory.toFile())
+        .withPluginClasspath()
+        .withArguments("compileKotlin", "--stacktrace")
+        .build()
+    assertEquals(TaskOutcome.SUCCESS, result.task(":sundayGenerate_server")?.outcome)
+    assertEquals(TaskOutcome.SUCCESS, result.task(":compileKotlin")?.outcome)
+  }
+}

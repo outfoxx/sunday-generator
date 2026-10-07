@@ -33,6 +33,7 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
         "-mode",
         if (name == "client") "client" else "server",
         "-quarkus",
+        "-suppress-public-api-warnings",
         "-pkg",
         "io.test.packaged.$name",
         "-out",
