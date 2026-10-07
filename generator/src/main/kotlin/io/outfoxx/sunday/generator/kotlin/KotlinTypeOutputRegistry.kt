@@ -28,6 +28,9 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrarySupport
  */
 interface KotlinTypeOutputRegistry {
 
+  /** API-derived application metadata output controls. */
+  val applicationMetadata: KotlinApplicationMetadataOptions get() = KotlinApplicationMetadataOptions()
+
   val defaultModelPackageName: String?
   val generationMode: GenerationMode
   val options: Set<KotlinTypeRegistry.Option>
@@ -45,9 +48,6 @@ interface KotlinTypeOutputRegistry {
     service: ClassName,
     implementation: ClassName,
   )
-
-  /** Marks generated service classes as a discoverable CDI bean archive. */
-  fun addBeanArchive()
 
   fun addModelType(
     className: ClassName,

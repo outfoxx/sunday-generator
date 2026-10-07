@@ -19,6 +19,7 @@ package io.outfoxx.sunday.generator.gradle.tests
 import io.outfoxx.sunday.generator.gradle.SundayGenerate
 import io.outfoxx.sunday.generator.gradle.SundayGenerations
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -35,6 +36,19 @@ class SundayClientConfigOptionsTest {
     assertTrue(generation.generateClientConfig.get())
     val task = project.tasks.named("sundayGenerate_client", SundayGenerate::class.java).get()
     assertTrue(task.generateClientConfig.get())
+    assertTrue(task.generateApplicationMetadata.get())
+    assertTrue(task.generateServerConfiguration.get())
+    assertTrue(task.generateClientConfiguration.get())
+    generation.generateApplicationMetadata.set(false)
+    generation.generateServerConfiguration.set(false)
+    generation.generateClientConfiguration.set(false)
+    generation.serverConfigurationFileName.set("ServerDefaults.kt")
+    generation.clientConfigurationFileName.set("ClientDefaults.kt")
+    assertFalse(task.generateApplicationMetadata.get())
+    assertFalse(task.generateServerConfiguration.get())
+    assertFalse(task.generateClientConfiguration.get())
+    assertEquals("ServerDefaults.kt", task.serverConfigurationFileName.get())
+    assertEquals("ClientDefaults.kt", task.clientConfigurationFileName.get())
     generation.generateClientConfig.set(false)
     assertFalse(task.generateClientConfig.get())
   }

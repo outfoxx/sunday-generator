@@ -41,7 +41,7 @@ import kotlin.io.path.writeText
 class SundayServiceProvidersTest {
   @ParameterizedTest
   @CsvSource("src/main/resources,false", "extra-resources,false", "task-generated,false", "task-generated,true")
-  fun `packaged resources preserve application bean archives and restore generated defaults`(
+  fun `packaged resources preserve application bean archives without generating a descriptor`(
     resourceDirectory: String,
     clean: Boolean,
     @TempDir directory: Path,
@@ -93,6 +93,7 @@ class SundayServiceProvidersTest {
           mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
           quarkus.set(true)
           pkgName.set('io.test')
+          clientConfigurationFileName.set('ClientDefaults.kt')
         }
       }
       tasks.register('resourceJar', Jar) {
@@ -111,7 +112,7 @@ class SundayServiceProvidersTest {
           listOfNotNull(if (clean) "clean" else null, "resourceJar", "--configuration-cache", "--stacktrace"),
         ).build()
 
-    fun descriptor(): String =
+    fun descriptor(): String? =
       JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
         val archives =
           jar
@@ -119,12 +120,14 @@ class SundayServiceProvidersTest {
             .asSequence()
             .filter { it.name == "META-INF/beans.xml" }
             .toList()
-        assertEquals(1, archives.size)
-        assertTrue(jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory") != null)
-        jar.getInputStream(archives.single()).bufferedReader().readText()
+        assertTrue(archives.size <= 1)
+        val registration = jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory")
+        assertTrue(registration != null)
+        assertEquals("io.test.ClientDefaults\n", jar.getInputStream(registration).bufferedReader().readText())
+        archives.singleOrNull()?.let { jar.getInputStream(it).bufferedReader().readText() }
       }
     build()
-    val generated = descriptor()
+    assertEquals(null, descriptor())
     val application =
       directory
         .resolve(resourceDirectory)
@@ -141,30 +144,35 @@ class SundayServiceProvidersTest {
     assertEquals(application.readText(), descriptor())
     Files.delete(application)
     build()
-    assertEquals(generated, descriptor())
+    assertEquals(null, descriptor())
+    val script = directory.resolve("build.gradle")
+    val enabled = script.readText()
+    for (setting in listOf("generateClientConfiguration", "generateApplicationMetadata")) {
+      script.writeText(enabled + "\nsundayGenerations.client.$setting.set(false)\n")
+      build()
+      JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
+        assertEquals(null, jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory"))
+      }
+      script.writeText(enabled)
+      build()
+      assertEquals(null, descriptor())
+    }
   }
 
   @Test
-  fun `bean archives merge identically and reject conflicting descriptors`(
+  fun `merge removes its legacy bean descriptor without modifying application resources`(
     @TempDir directory: Path,
   ) {
-    val first = directory.resolve("one/META-INF").createDirectories().resolve("beans.xml")
-    val second = directory.resolve("two/META-INF").createDirectories().resolve("beans.xml")
-    val contents = "<beans bean-discovery-mode=\"annotated\"/>\n"
-    first.writeText(contents)
-    second.writeText(contents)
+    val application = directory.resolve("src/main/resources/META-INF").createDirectories().resolve("beans.xml")
+    application.writeText("")
+    val archive = directory.resolve("merged/META-INF").createDirectories().resolve("beans.xml")
+    archive.writeText("<beans/>\n")
     val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
     val task = project.tasks.register("merge", SundayMergeServiceProviders::class.java).get()
-    task.descriptors.from(first.toFile(), second.toFile())
     task.outputDirectory.set(directory.resolve("merged").toFile())
     task.merge()
-    val archive = directory.resolve("merged/META-INF/beans.xml")
-    assertEquals(contents, archive.readText())
-    second.writeText("<beans bean-discovery-mode=\"all\"/>")
-    assertThrows(IllegalArgumentException::class.java) { task.merge() }
-    task.descriptors.setFrom(emptyList<Any>())
-    task.merge()
     assertFalse(Files.exists(archive))
+    assertEquals("", application.readText())
   }
 
   @Test

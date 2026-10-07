@@ -17,8 +17,10 @@
 package io.outfoxx.sunday.generator.kotlin.jaxrs
 
 import com.tschuchort.compiletesting.KotlinCompilation
+import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
+import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinTest
@@ -35,6 +37,7 @@ import org.eclipse.microprofile.config.Config
 import org.eclipse.microprofile.config.spi.ConfigSource
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -48,6 +51,7 @@ import strikt.assertions.isNotEmpty
 import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
 import java.lang.reflect.Proxy
+import java.nio.file.Files
 import java.nio.file.Path
 
 @KotlinTest
@@ -383,6 +387,73 @@ class KotlinQuarkusIntegrationTest {
         }.isFailure().isA<IllegalArgumentException>()
       }
       expectCatching { validate(configuration(emptyMap())) }.isFailure().isA<IllegalArgumentException>()
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `application metadata names and switches preserve compiled security bindings`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    for (mode in listOf(GenerationMode.Server, GenerationMode.Client)) {
+      val api =
+        scopedSecurityApi(
+          frontend,
+          directory,
+          serverQuarkus = if (mode == GenerationMode.Server) "oidc" else null,
+          clientQuarkus = if (mode == GenerationMode.Client) "acquire" else null,
+        )
+      for (selection in listOf("renamed", "disabled", "all-disabled")) {
+        val metadata =
+          KotlinApplicationMetadataOptions(
+            enabled = selection != "all-disabled",
+            serverConfiguration = selection != "disabled" || mode != GenerationMode.Server,
+            clientConfiguration = selection != "disabled" || mode != GenerationMode.Client,
+            serverConfigurationFileName = "ServerDefaults.kt",
+            clientConfigurationFileName = "ClientDefaults.kt",
+          )
+        val registry = KotlinTypeRegistry("io.test", null, mode, emptySet(), applicationMetadata = metadata)
+        KotlinJAXRSIrGenerator(api, registry, options(mode)).generateServiceTypes()
+        val types = registry.buildTypes()
+        val compiled = compileTypesResult(types)
+        expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+        val output = directory.resolve("$mode-$selection")
+        registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+        val name = if (mode == GenerationMode.Server) "ServerDefaults" else "ClientDefaults"
+        val service =
+          if (mode == GenerationMode.Server) {
+            "org.eclipse.microprofile.config.spi.ConfigSource"
+          } else {
+            "io.smallrye.config.ConfigSourceFactory"
+          }
+        expectThat(Files.exists(output.resolve("io/test/$name.kt"))).isEqualTo(selection == "renamed")
+        val descriptor = output.resolve("META-INF/services/$service")
+        expectThat(Files.exists(descriptor)).isEqualTo(selection == "renamed")
+        if (selection == "renamed") {
+          expectThat(Files.readString(descriptor)).isEqualTo("io.test.$name\n")
+          expectThat(compiled.classLoader.loadClass("io.test.$name").simpleName).isEqualTo(name)
+        }
+        expectThat(Files.exists(output.resolve("META-INF/beans.xml"))).isFalse()
+        expectThat(
+          types.keys.any {
+            if (mode == GenerationMode.Server) {
+              it.simpleName.startsWith("OpenAPIOidcPolicy_")
+            } else {
+              it.simpleName == "OpenAPIClientRequirements"
+            }
+          },
+        ).isTrue()
+      }
+    }
+  }
+
+  @Test
+  fun `application metadata filenames reject directories and non Kotlin basenames`() {
+    for (name in listOf("../Defaults.kt", "/Defaults.kt", "defaults.json", "")) {
+      expectCatching { KotlinApplicationMetadataOptions(serverConfigurationFileName = name) }
+        .isFailure()
+        .isA<IllegalArgumentException>()
     }
   }
 

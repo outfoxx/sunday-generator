@@ -39,6 +39,12 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
         output.get().asFile.absolutePath,
         contract.asFile.absolutePath,
       )
+      args(
+        "-server-configuration-file",
+        "${name.replaceFirstChar { it.uppercase() }}ServerDefaults.kt",
+        "-client-configuration-file",
+        "${name.replaceFirstChar { it.uppercase() }}ClientDefaults.kt",
+      )
       if (name != "client") args("-resource-adapters", "-enforce-security-schemes")
     }
   kotlin.sourceSets.main { kotlin.srcDir(generate) }
@@ -52,6 +58,7 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
           .output.classesDirs,
       ) { include("io/test/packaged/$name/**") }
       from(generate) { include("META-INF/**") }
+      from("src/main/resources") { include("META-INF/beans.xml") }
     }
   configurations.create("${name}Elements") {
     isCanBeResolved = false

@@ -70,7 +70,14 @@ internal class KotlinQuarkusNativeSecurity(
           if (binding.tenant != null) put("quarkus.http.auth.proactive", "false")
         }
       }
-    KotlinQuarkusConfiguration.register(registry, name.peerClass("OpenAPIServerOidcConfiguration"), defaults)
+    val metadata = registry.applicationMetadata
+    if (metadata.enabled && metadata.serverConfiguration) {
+      KotlinQuarkusConfiguration.register(
+        registry,
+        name.peerClass(metadata.serverConfigurationFileName.removeSuffix(".kt")),
+        defaults,
+      )
+    }
   }
 
   private fun selection(policy: GeneratedEndpointPolicy): GeneratedQuarkusSecurityBinding {

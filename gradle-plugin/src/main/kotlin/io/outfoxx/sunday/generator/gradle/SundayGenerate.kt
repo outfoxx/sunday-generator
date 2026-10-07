@@ -26,6 +26,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrOptions
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrSource
 import io.outfoxx.sunday.generator.ir.OpenApiDocumentSnapshot
+import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions.BaseUriMode
@@ -99,6 +100,34 @@ abstract class SundayGenerate
 
     @get:Input
     val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
+
+    /** Master switch for API-derived application metadata. */
+    @get:Input
+    val generateApplicationMetadata: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+    /** Emit Quarkus server configuration metadata. */
+    @get:Input
+    val generateServerConfiguration: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+    /** Emit Quarkus client configuration metadata. */
+    @get:Input
+    val generateClientConfiguration: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+    /** Kotlin basename for server configuration metadata. */
+    @get:Input
+    val serverConfigurationFileName: Property<String> =
+      objects
+        .property(
+          String::class.java,
+        ).convention("OpenAPIServerOidcConfiguration.kt")
+
+    /** Kotlin basename for client configuration metadata. */
+    @get:Input
+    val clientConfigurationFileName: Property<String> =
+      objects
+        .property(
+          String::class.java,
+        ).convention("OpenAPIOidcConfiguration.kt")
 
     /** Generate server configurations and required application transport factories. */
     @get:Input
@@ -326,6 +355,14 @@ abstract class SundayGenerate
           effectiveProblemLibrary,
           problemRfc.get(),
           generationTimestamp = generationTimestamp.orNull,
+          applicationMetadata =
+            KotlinApplicationMetadataOptions(
+              enabled = generateApplicationMetadata.get(),
+              serverConfiguration = generateServerConfiguration.get(),
+              clientConfiguration = generateClientConfiguration.get(),
+              serverConfigurationFileName = serverConfigurationFileName.get(),
+              clientConfigurationFileName = clientConfigurationFileName.get(),
+            ),
         )
 
       processFiles(

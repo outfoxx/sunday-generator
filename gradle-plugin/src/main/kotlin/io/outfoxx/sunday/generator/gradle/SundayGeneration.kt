@@ -60,6 +60,29 @@ class SundayGeneration(
   val framework: Property<TargetFramework> = objects.property(TargetFramework::class.java)
   val mode: Property<GenerationMode> = objects.property(GenerationMode::class.java)
 
+  /** Master switch for API-derived application metadata. */
+  val generateApplicationMetadata: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+  /** Emit Quarkus server configuration metadata. */
+  val generateServerConfiguration: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+  /** Emit Quarkus client configuration metadata. */
+  val generateClientConfiguration: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+
+  /** Kotlin basename for server configuration metadata. */
+  val serverConfigurationFileName: Property<String> =
+    objects
+      .property(
+        String::class.java,
+      ).convention("OpenAPIServerOidcConfiguration.kt")
+
+  /** Kotlin basename for client configuration metadata. */
+  val clientConfigurationFileName: Property<String> =
+    objects
+      .property(
+        String::class.java,
+      ).convention("OpenAPIOidcConfiguration.kt")
+
   /** Generate server configurations and required application transport factories. */
   val generateClientConfig: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
