@@ -45,7 +45,7 @@ internal class KotlinQuarkusClientSecurity(
 ) {
   private val clients = linkedMapOf<String, String>()
   private val defaults = linkedMapOf<String, String>()
-  private val nativeProviders = linkedSetOf<String>()
+  private val nativeClients = linkedSetOf<String>()
   private val requiredExtensions = linkedSetOf<String>()
 
   fun annotation(security: GeneratedClientSecurity): AnnotationSpec? {
@@ -72,12 +72,10 @@ internal class KotlinQuarkusClientSecurity(
     if (native != null) {
       when (native.mode) {
         GeneratedQuarkusSecurityBinding.Mode.ACQUIRE -> {
-          nativeProviders.add(binding.provider)
           requiredExtensions.add("io.quarkus.oidc.client.reactive.filter.OidcClientRequestReactiveFilter")
         }
         GeneratedQuarkusSecurityBinding.Mode.PROPAGATE, GeneratedQuarkusSecurityBinding.Mode.EXCHANGE -> {
           requiredExtensions.add("io.quarkus.oidc.token.propagation.reactive.AccessTokenRequestReactiveFilter")
-          if (native.mode == GeneratedQuarkusSecurityBinding.Mode.EXCHANGE) nativeProviders.add(binding.provider)
         }
         else -> Unit
       }
@@ -134,6 +132,7 @@ internal class KotlinQuarkusClientSecurity(
         .joinToString("") { "%02x".format(it) }
     val client = "sunday-$digest"
     clients[client] = binding.provider
+    if (native != null) nativeClients.add(client)
     val prefix = "quarkus.oidc-client.\"$client\"."
 
     fun setting(
@@ -209,23 +208,23 @@ internal class KotlinQuarkusClientSecurity(
               }
               """.trimIndent().replace(' ', '·') + "\n",
             ).addStatement(
-              "val providers = listOf<String>(%L)",
-              nativeProviders.map { CodeBlock.of("%S", it) }.joinToCode(", "),
+              "val clients = listOf<String>(%L)",
+              nativeClients.map { CodeBlock.of("%S", it) }.joinToCode(", "),
             ).add(
               """
-              require(providers.isEmpty() || config.getOptionalValue("quarkus.oidc-client.enabled", Boolean::class.java).orElse(true)) {
+              require(clients.isEmpty() || config.getOptionalValue("quarkus.oidc-client.enabled", Boolean::class.java).orElse(true)) {
                 "Required native OIDC client feature is disabled"
               }
-              for (provider in providers) {
-                    fun setting(member: String): String? =
-                      config.getOptionalValue("quarkus.oidc-client." + provider + "." + member, String::class.java).orElse(null)
-                        ?: config.getOptionalValue("quarkus.oidc-client.\"" + provider + "\"." + member, String::class.java).orElse(null)
-                    require(!setting("client-id").isNullOrBlank()) { "Missing native OIDC client-id: " + provider }
-                    require(!setting("auth-server-url").isNullOrBlank() || !setting("token-path").isNullOrBlank()) {
-                      "Missing native OIDC client endpoint: " + provider
-                    }
-                    require(setting("client-enabled") != "false") { "Required native OIDC client is disabled: " + provider }
-                  }
+              for (client in clients) {
+                fun setting(member: String): String? =
+                  config.getOptionalValue("quarkus.oidc-client." + client + "." + member, String::class.java).orElse(null)
+                    ?: config.getOptionalValue("quarkus.oidc-client.\"" + client + "\"." + member, String::class.java).orElse(null)
+                require(!setting("client-id").isNullOrBlank()) { "Missing native OIDC client-id: " + client }
+                require(!setting("auth-server-url").isNullOrBlank() || !setting("token-path").isNullOrBlank()) {
+                  "Missing native OIDC client endpoint: " + client
+                }
+                require(setting("client-enabled") != "false") { "Required native OIDC client is disabled: " + client }
+              }
               """.trimIndent().replace(' ', '·') + "\n",
             ).build(),
         )

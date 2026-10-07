@@ -214,8 +214,10 @@ not receive a credential annotation.
 
 - `acquire` requires `flow: clientCredentials` and emits `@OidcClientFilter`.
   Configure the named provider under `quarkus.oidc-client.<provider>`, including
-  its client ID, endpoint/discovery configuration, and credentials. Generated
-  clients isolate different contracts, scopes, and acquisition settings.
+  its client ID and credentials. Contract token/discovery URLs provide endpoint
+  defaults; deployment configuration can override them. Startup checks validate
+  these effective settings on each generated client. Generated clients isolate
+  different contracts, scopes, and acquisition settings.
 - `propagate` requires `flow: external` and emits `@AccessToken`. It forwards the
   current authenticated access token. It does not acquire a service-account token
   when no user token exists. Audience/resource changes require exchange.

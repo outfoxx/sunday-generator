@@ -29,6 +29,7 @@ internal fun scopedSecurityApi(
   endpointBindings: Boolean = false,
   serverQuarkus: String? = null,
   clientQuarkus: String? = null,
+  clientDiscovery: Boolean = false,
 ): GeneratedApi {
   val binding =
     """
@@ -69,6 +70,15 @@ internal fun scopedSecurityApi(
               it.replace("provider: service", "provider: service\n      quarkus: {mode: $clientQuarkus}")
             }
           }
+      }.let { declarations ->
+        if (clientDiscovery) {
+          declarations.replace(
+            "tokenUrl: https://identity.internal/token",
+            "discoveryUrl: https://identity.internal/.well-known/openid-configuration",
+          )
+        } else {
+          declarations
+        }
       }.let { declarations ->
         if (clientQuarkus in setOf("propagate", "exchange")) {
           declarations

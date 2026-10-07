@@ -25,10 +25,12 @@ import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecurityProvider
+import io.smallrye.config.ConfigSourceFactory
 import io.smallrye.config.SmallRyeConfigBuilder
 import io.smallrye.mutiny.Uni
 import jakarta.enterprise.inject.Instance
 import org.eclipse.microprofile.config.Config
+import org.eclipse.microprofile.config.spi.ConfigSource
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
@@ -217,6 +219,88 @@ class KotlinQuarkusIntegrationTest {
     KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Server)).generateServiceTypes()
     val compiled = compileTypesResult(registry.buildTypes())
     expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native startup validates effective client settings including contract endpoints`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    listOf(false, true).forEach { discovery ->
+      val api = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire", clientDiscovery = discovery)
+      val registry = registry(GenerationMode.Client)
+      KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+      val compiled = compileTypesResult(registry.buildTypes())
+      expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+      val factory =
+        compiled.classLoader
+          .loadClass("io.test.OpenAPIOidcConfiguration")
+          .getConstructor()
+          .newInstance() as ConfigSourceFactory
+      val requirements =
+        compiled.classLoader
+          .loadClass("io.test.OpenAPIClientRequirements")
+          .getConstructor(Config::class.java)
+      val deployment =
+        mapOf(
+          "quarkus.oidc-client.service.client-id" to "application",
+          "quarkus.oidc-client.service.credentials.secret" to "application-secret",
+        )
+
+      fun configuration(settings: Map<String, String>): Config =
+        SmallRyeConfigBuilder()
+          .withSources(
+            object : ConfigSource {
+              override fun getName() = "application"
+
+              override fun getProperties() = settings
+
+              override fun getPropertyNames() = settings.keys
+
+              override fun getValue(name: String) = settings[name]
+
+              override fun getOrdinal() = 250
+            },
+          ).withSources(factory)
+          .build()
+
+      fun validate(config: Config) {
+        try {
+          requirements.newInstance(config)
+        } catch (failure: java.lang.reflect.InvocationTargetException) {
+          throw failure.targetException
+        }
+      }
+      val config = configuration(deployment)
+      expectCatching { validate(config) }.isSuccess()
+      val prefixes =
+        config.propertyNames
+          .filter {
+            it.startsWith("quarkus.oidc-client.\"sunday-") &&
+              it.endsWith("grant.type")
+          }.map { it.removeSuffix("grant.type") }
+      expectThat(prefixes).isNotEmpty()
+      prefixes.forEach { prefix ->
+        expectThat(config.getValue(prefix + "client-id", String::class.java)).isEqualTo("application")
+        expectThat(config.getValue(prefix + "credentials.secret", String::class.java)).isEqualTo("application-secret")
+        val endpoint = if (discovery) "auth-server-url" else "token-path"
+        val expected = if (discovery) "https://identity.internal" else "https://identity.internal/token"
+        expectThat(config.getValue(prefix + endpoint, String::class.java)).isEqualTo(expected)
+        val overridden = configuration(deployment + (prefix + endpoint to "https://deployment.example/endpoint"))
+        expectCatching { validate(overridden) }.isSuccess()
+        expectThat(
+          overridden.getValue(prefix + endpoint, String::class.java),
+        ).isEqualTo("https://deployment.example/endpoint")
+        expectCatching {
+          validate(configuration(deployment + mapOf(prefix + "token-path" to "", prefix + "auth-server-url" to "")))
+        }.isFailure().isA<IllegalArgumentException>()
+        expectCatching {
+          validate(configuration(deployment + (prefix + "client-enabled" to "false")))
+        }.isFailure().isA<IllegalArgumentException>()
+      }
+      expectCatching { validate(configuration(emptyMap())) }.isFailure().isA<IllegalArgumentException>()
+    }
   }
 
   @Suppress("UNCHECKED_CAST")
