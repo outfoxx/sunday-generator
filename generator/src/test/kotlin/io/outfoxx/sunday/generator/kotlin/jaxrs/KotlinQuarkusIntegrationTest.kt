@@ -20,6 +20,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
 import io.outfoxx.sunday.generator.ir.GeneratedAuth
 import io.outfoxx.sunday.generator.ir.GeneratedEnvironment
@@ -27,6 +28,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
 import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -492,6 +494,99 @@ class KotlinQuarkusIntegrationTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native startup distinguishes overlapping provider names`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val input = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire")
+    val providers = listOf("accounts", "accounts.worker")
+    val api =
+      input.copy(
+        services =
+          input.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.flatMap { operation ->
+                  providers.mapIndexed { index, provider ->
+                    val auth = requireNotNull(input.effectiveAuth(service, operation))
+                    operation.copy(
+                      id = operation.id + index,
+                      path = operation.path + "/" + index,
+                      serverAuth = emptyMap(),
+                      auth =
+                        auth.copy(
+                          securitySchemes =
+                            auth.securitySchemes.map { scheme ->
+                              scheme.copy(bindings = scheme.bindings?.mapNotNull { it.copy(provider = provider) })
+                            },
+                        ),
+                    )
+                  }
+                },
+            )
+          },
+      )
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    val output = directory.resolve("overlapping-providers")
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    val generated =
+      io.smallrye.config.PropertiesConfigSource(
+        output.resolve("META-INF/microprofile-config.properties").toUri().toURL(),
+      )
+    val requirements =
+      compiled.classLoader
+        .loadClass(
+          "io.test.OpenAPIClientRequirements",
+        ).getConstructor(Config::class.java)
+
+    fun configuration(settings: Map<String, String>): Config =
+      SmallRyeConfigBuilder()
+        .withSources(io.smallrye.config.PropertiesConfigSource(settings, "application", 250), generated)
+        .addDefaultInterceptors()
+        .build()
+
+    fun validate(config: Config) {
+      try {
+        requirements.newInstance(config)
+      } catch (failure: java.lang.reflect.InvocationTargetException) {
+        throw failure.targetException
+      }
+    }
+
+    for (quoted in listOf(false, true)) {
+      val deployment =
+        providers.associate { provider ->
+          val name = if (quoted) "\"$provider\"" else provider
+          "quarkus.oidc-client.$name.client-id" to provider
+        }
+      val config = configuration(deployment)
+      validate(config)
+      val clientIds =
+        config.propertyNames
+          .filter {
+            it.startsWith("quarkus.oidc-client.sunday-") && it.endsWith(".client-id")
+          }.map { config.getValue(it, String::class.java) }
+          .toSet()
+      expectThat(clientIds).isEqualTo(providers.toSet())
+      for (provider in providers) {
+        val name = if (quoted) "\"$provider\"" else provider
+        val key = "quarkus.oidc-client.$name.headers.X-Undeclared"
+        val failure =
+          org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            validate(configuration(deployment + (key to "unexpected")))
+          }
+        expectThat(
+          failure.message,
+        ).isEqualTo("Unforwarded OIDC provider setting: $key; declare quarkus.providerProperties")
+      }
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
   fun `application metadata names and switches preserve compiled security bindings`(
     frontend: String,
     @TempDir directory: Path,
@@ -763,6 +858,81 @@ class KotlinQuarkusIntegrationTest {
           ).use { load(it) }
       }
     expectThat(props.values.contains("https://selected.example/api")).isTrue()
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["default", "primary", "secondary", "0", "1"])
+  fun `native AsyncAPI server selection resolves distinct usable security alternatives`(
+    selector: String,
+    @TempDir directory: Path,
+  ) {
+    val document = directory.resolve("servers.yaml")
+    Files.writeString(
+      document,
+      """
+      asyncapi: 3.0.0
+      info: {title: Selected server security, version: 1.0.0}
+      servers:
+        primary:
+          host: primary.example
+          protocol: https
+          security: [{"${'$'}ref": "#/components/securitySchemes/primary"}]
+        secondary:
+          host: secondary.example
+          protocol: https
+          security: [{"${'$'}ref": "#/components/securitySchemes/secondary"}]
+      components:
+        securitySchemes:
+          primary:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: primary, flow: clientCredentials, tokenUrl: https://primary.example/token, quarkus: {mode: acquire}}
+          secondary:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: secondary, flow: clientCredentials, tokenUrl: https://secondary.example/token, quarkus: {mode: acquire}}
+      channels:
+        events:
+          address: /events
+          servers: [{"${'$'}ref": "#/servers/primary"}, {"${'$'}ref": "#/servers/secondary"}]
+          messages:
+            item: {payload: {type: string}}
+      operations:
+        events:
+          action: receive
+          channel: {"${'$'}ref": "#/channels/events"}
+          messages: [{"${'$'}ref": "#/channels/events/messages/item"}]
+      """.trimIndent() +
+        if (selector == "default") "" else "\nx-sunday-quarkus-config:\n  client: {server: '$selector'}\n",
+    )
+    val api = GeneratedApiIrExporter().export(listOf(document.toUri()))
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    val filters =
+      registry
+        .buildTypes()
+        .keys
+        .map { compiled.classLoader.loadClass(it.canonicalName) }
+        .filter { it.isInterface }
+        .flatMap { it.declaredMethods.toList() }
+        .flatMap { it.annotations.toList() }
+        .filter { it.annotationClass.simpleName == "OidcClientFilter" }
+    expectThat(filters.size).isEqualTo(1)
+    val output = directory.resolve("selected-alternative")
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    val props =
+      Properties().apply {
+        Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
+      }
+    val selected = if (selector in listOf("secondary", "1")) "secondary" else "primary"
+    val other = if (selected == "primary") "secondary" else "primary"
+    expectThat(props.values.contains("https://$selected.example")).isTrue()
+    expectThat(props.values.any { it.toString().contains("https://$selected.example/token") }).isTrue()
+    expectThat(props.values.any { it.toString().contains("$other.example") }).isFalse()
   }
 
   @Test

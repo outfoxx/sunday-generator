@@ -349,14 +349,18 @@ class KotlinJAXRSIrGenerator(
         )
         val native =
           service.operations.any { operation ->
-            api.clientSecurity(service, operation, clientContext(service))?.bindings?.values?.any {
-              it.quarkus?.mode in
-                setOf(
-                  GeneratedQuarkusSecurityBinding.Mode.ACQUIRE,
-                  GeneratedQuarkusSecurityBinding.Mode.PROPAGATE,
-                  GeneratedQuarkusSecurityBinding.Mode.EXCHANGE,
-                )
-            } == true
+            val selectedOperation = operation.copy(auth = operation.serverAuth[selected?.name] ?: operation.auth)
+            val security = api.clientSecurity(service, selectedOperation, clientContext(service))
+            // Public operations still use their native client's selected server and base URL.
+            security == null ||
+              security.bindings.values.any {
+                it.quarkus?.mode in
+                  setOf(
+                    GeneratedQuarkusSecurityBinding.Mode.ACQUIRE,
+                    GeneratedQuarkusSecurityBinding.Mode.PROPAGATE,
+                    GeneratedQuarkusSecurityBinding.Mode.EXCHANGE,
+                  )
+              }
           }
         if (native || effectiveConfiguration != null) {
           require(selected != null || candidates.isEmpty()) {

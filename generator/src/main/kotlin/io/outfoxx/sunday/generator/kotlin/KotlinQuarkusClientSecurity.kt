@@ -299,6 +299,10 @@ internal class KotlinQuarkusClientSecurity(
                 }.joinToCode(", "),
             ).add(
               """
+              val providerPrefixes = providers.values.distinct().flatMap { provider ->
+                listOf("quarkus.oidc-client." + provider + ".", "quarkus.oidc-client.\"" + provider + "\".")
+                  .map { it to provider }
+              }.sortedByDescending { it.first.length }
               for ((client, provider) in providers) {
                 for (member in forwarded.getValue(client) - setOf("id", "scopes", "grant.type", "early-tokens-acquisition")) {
                   config.getOptionalValue("quarkus.oidc-client." + client + "." + member, String::class.java)
@@ -309,9 +313,9 @@ internal class KotlinQuarkusClientSecurity(
                     "Missing required OIDC provider alias: " + provider + "." + member + " (or configure " + key + ")"
                   }
                 }
-                val prefixes = listOf("quarkus.oidc-client." + provider + ".", "quarkus.oidc-client.\"" + provider + "\".")
                 for (key in config.propertyNames) {
-                  val prefix = prefixes.firstOrNull { key.startsWith(it) } ?: continue
+                  val (prefix, owner) = providerPrefixes.firstOrNull { key.startsWith(it.first) } ?: continue
+                  if (owner != provider) continue
                   val member = key.removePrefix(prefix)
                   require(member in forwarded.getValue(client)) {
                     "Unforwarded OIDC provider setting: " + key + "; declare quarkus.providerProperties"
