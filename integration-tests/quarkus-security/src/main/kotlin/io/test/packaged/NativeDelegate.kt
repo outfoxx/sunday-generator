@@ -33,5 +33,7 @@ class NativeDelegate(
     return RestResponse.ok(identity.principal.name)
   }
 
+  override fun unannotated(): RestResponse<String> = RestResponse.ok("unannotated")
+
   override fun publicCall(): RestResponse<String> = RestResponse.ok("public")
 }

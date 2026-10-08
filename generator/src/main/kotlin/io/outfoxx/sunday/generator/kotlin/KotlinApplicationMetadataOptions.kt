@@ -16,24 +16,23 @@
 
 package io.outfoxx.sunday.generator.kotlin
 
-/** Controls API-derived Quarkus configuration sources, independently of build-owned discovery artifacts. */
+import io.outfoxx.sunday.generator.utils.GeneratedProperties
+
+/** Controls API-derived configuration resources independently of build-owned discovery artifacts. */
 data class KotlinApplicationMetadataOptions(
   /** Master switch; false overrides both per-file switches. */
   val enabled: Boolean = true,
-  /** Emit server OIDC defaults and their discovery registration. */
+  /** Emit server configuration defaults. */
   val serverConfiguration: Boolean = true,
-  /** Emit client OIDC defaults and their discovery registration. */
+  /** Emit client configuration defaults. */
   val clientConfiguration: Boolean = true,
-  /** Kotlin basename in the generated service package; also determines the configuration class name. */
-  val serverConfigurationFileName: String = "OpenAPIServerOidcConfiguration.kt",
-  /** Kotlin basename in the generated service package; also determines the configuration class name. */
-  val clientConfigurationFileName: String = "OpenAPIOidcConfiguration.kt",
+  /** Output-relative server properties resource path. */
+  val serverConfigurationFileName: String = "META-INF/microprofile-config.properties",
+  /** Output-relative client properties resource path. */
+  val clientConfigurationFileName: String = "META-INF/microprofile-config.properties",
 ) {
   init {
-    listOf(serverConfigurationFileName, clientConfigurationFileName).forEach { name ->
-      require(Regex("[A-Z][A-Za-z0-9_]*\\.kt").matches(name)) {
-        "Application metadata filename must be an uppercase Kotlin class basename ending in .kt: $name"
-      }
-    }
+    GeneratedProperties.validatePath(serverConfigurationFileName)
+    GeneratedProperties.validatePath(clientConfigurationFileName)
   }
 }

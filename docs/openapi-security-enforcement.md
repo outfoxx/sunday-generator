@@ -183,10 +183,11 @@ the generated `META-INF` resources in the contract jar. Generated defaults have
 configuration ordinal 100, below application configuration, and do not write
 `application.properties`.
 
-The deployment supplies `quarkus.oidc.auth-server-url` (or a configured public key),
-`quarkus.oidc.token.issuer`, and `quarkus.oidc.token.audience`. An issuer of `any`,
-a disabled tenant, or a mismatched application type fails startup. Issuer,
-audience, credentials, and TLS settings are never inferred from the contract.
+Declare trusted `token.issuer`, `token.audience`, and `auth-server-url` (or `public-key`)
+in the selected server binding's `quarkus.properties`, or supply genuinely deployment-specific
+values in application configuration. An issuer of `any`, a disabled tenant, or a mismatched
+application type fails startup. Server trust is never inferred from client acquisition URLs.
+Client IDs and secret-bearing values in contract metadata must use runtime property expressions.
 
 An optional `tenant` selects a named OIDC tenant, not a business tenant or FGA
 object. Tenant selection emits `@Tenant` and requires
@@ -222,11 +223,11 @@ not receive a credential annotation.
   current authenticated access token. It does not acquire a service-account token
   when no user token exists. Audience/resource changes require exchange.
 - `exchange` requires `flow: external` and emits
-  `@AccessToken(exchangeTokenClient = ...)`. Configure its provider with native
-  `grant.type=exchange`. Exchange clients retain separate scope/audience settings.
+  `@AccessToken(exchangeTokenClient = ...)`. Its generated grant is `exchange`; an
+  explicitly configured provider grant must agree. Exchange clients retain separate scope/audience settings.
 
 Native filters own expiry checks, pre-expiry skew, token acquisition, and refresh.
-Configure `refresh-token-time-skew` on the provider to leave a transit margin.
+Declare `refresh-token-time-skew` in the binding properties, or explicitly alias it from the provider, to leave a transit margin.
 Native `refresh-on-unauthorized` renews credentials on the next invocation of the affected client method;
 it does not replay the rejected HTTP request. Native mode introduces no automatic
 same-invocation retry. Existing Sunday recovery remains available by omitting the
@@ -234,26 +235,202 @@ native binding. Explicit fault-tolerance policies remain application choices.
 
 ### Application metadata output
 
-Quarkus configuration defaults derived from the API are emitted as Kotlin configuration
-sources in the service package. Their discovery registrations retain the standard
-`META-INF/services` filenames; renaming a configuration file also updates its class
-name and registration. The generator does not create or overwrite `application.properties`.
+Explicit native Quarkus bindings emit ordinary properties resources, with no generated
+`ConfigSource`, `ConfigSourceFactory`, or configuration service registration. Each client
+or server-stub artifact defaults to `META-INF/microprofile-config.properties` and includes
+`config_ordinal=100`. The generator never writes `application.properties` or `beans.xml`.
+Non-native client integration retains its existing configuration factory.
 
 | CLI option | Gradle generation property | Default |
 | --- | --- | --- |
 | `-application-metadata` / `-no-application-metadata` | `generateApplicationMetadata` | `true` |
 | `-server-configuration` / `-no-server-configuration` | `generateServerConfiguration` | `true` |
 | `-client-configuration` / `-no-client-configuration` | `generateClientConfiguration` | `true` |
-| `-server-configuration-file` | `serverConfigurationFileName` | `OpenAPIServerOidcConfiguration.kt` |
-| `-client-configuration-file` | `clientConfigurationFileName` | `OpenAPIOidcConfiguration.kt` |
+| `-server-configuration-file` | `serverConfigurationFileName` | `META-INF/microprofile-config.properties` |
+| `-client-configuration-file` | `clientConfigurationFileName` | `META-INF/microprofile-config.properties` |
 
-The master switch overrides the individual switches. Disabling a file also omits its
-service-provider registration. It does not disable endpoint authentication, authorization,
-or required-extension/configuration checks: the application must supply the equivalent
-Quarkus configuration itself. Filenames are Kotlin class basenames ending in `.kt`,
-starting with an uppercase letter, with no directory segments. These options do not
-control build-owned manifests or indexes. For direct CLI regeneration, use a clean output
-directory when removing or renaming generated files; Gradle replaces its owned output automatically.
+The master switch overrides the individual switches. Disabling metadata retains all
+security annotations, policy enforcement, and startup requirements. The application must
+then supply equivalent configuration. Paths must be relative `.properties` paths; absolute
+paths, traversal, symlink escapes, and `application.properties` are rejected.
+
+Custom paths such as `config/client.properties` are included by the application:
+
+```properties
+quarkus.config.locations=config/client.properties,config/server.properties
+```
+
+The property is `quarkus.config.locations`, not `quarkus.config.sources`. The application
+owns one effective inclusion list; lists from dependencies do not concatenate. Explicit
+`config_ordinal=100` prevents custom defaults inheriting the higher ordinal of the source
+that declares their location. Application properties (250), environment variables (300),
+and system properties (400) override library defaults for runtime-configurable settings.
+Build-time settings must be supplied before augmentation and require a rebuild to change.
+See [Quarkus configuration](https://quarkus.io/guides/config-reference/).
+
+Matching paths in separate dependency JARs are valid. Within one generated artifact,
+disjoint properties merge, equal values deduplicate, and conflicting values fail with
+source diagnostics. Use separate generation directories; independent CLI invocations
+refuse to overwrite an existing properties resource. Different filenames do not resolve
+conflicting property keys across dependency JARs: align host-wide policy or supply an
+intentional application override at the appropriate build/runtime phase.
+
+### Scoped native policy
+
+OpenAPI and AsyncAPI accept root `x-sunday-quarkus-config`; RAML uses
+`(sunday.quarkus-config)`. All frontends and durable IR retain the existing `all`, `client`,
+`server`, and `profiles` layering. More-local layers override inherited property keys;
+conflicting peer declarations in composed inputs fail.
+
+```yaml
+x-sunday-quarkus-config:
+  server:
+    properties:
+      quarkus.zanzibar.filter.deny-unannotated-resource-methods: true
+      quarkus.zanzibar.filter.unauthenticated-user: anonymous
+  profiles:
+    internal:
+      client:
+        server: 0
+        properties:
+          quarkus.rest-client-oidc-filter.refresh-on-unauthorized: true
+          quarkus.rest-client."accounts".read-timeout: 10000
+```
+
+`server` is a client-only declared server name or zero-based index. Without it, generation
+uses the first applicable server. Selection/profile conflicts fail. The selected server
+supplies the REST-client URL under its existing config key (or interface name), and its
+security profile when no explicit profile is selected. Server-variable defaults expand;
+unresolved variables use `${sunday.server.<service>.<variable>}` runtime inputs. URL paths
+belong to the configured base URL rather than being duplicated in the interface path.
+
+OIDC settings belong to the selected security binding, using native suffixes:
+
+```yaml
+x-sunday-security:
+  profiles:
+    internal:
+      client:
+        provider: service
+        flow: clientCredentials
+        tokenUrl: https://identity.example/token
+        quarkus:
+          mode: acquire
+          properties:
+            refresh-token-time-skew: 30S
+          providerProperties: [tls.tls-configuration-name]
+      server:
+        provider: identity
+        quarkus:
+          mode: oidc
+          properties:
+            auth-server-url: ${identity.url}
+            token.issuer: https://identity.example
+            token.audience: accounts
+            token.principal-claim: sub
+```
+
+Native configuration rejects unsupported keys, server-only policy in client output,
+incompatible grants/scopes, and literal caller IDs/secrets. Supported areas include OIDC
+trust and client acquisition, REST-client URL/timeouts, native renewal after unauthorized
+responses, and Zanzibar filter policy. Database and business-service configuration is not
+inferred or accepted as API policy.
+
+### Provider aliases and runtime inputs
+
+Native clients retain separate deterministic OIDC client IDs for contract, profile, scheme,
+scopes, and acquisition settings. They use property expressions to reference named providers;
+they no longer copy arbitrary provider subtrees at runtime. Basic application inputs are:
+
+```properties
+quarkus.oidc-client.service.client-id=${CALLER_CLIENT_ID}
+quarkus.oidc-client.service.credentials.secret=${CALLER_CLIENT_SECRET}
+```
+
+Built-in aliases cover `client-id`, `credentials.secret`, `auth-server-url`,
+`discovery-enabled`, `discovery-path`, and `token-path`. Endpoints fall back to contract
+values. Optional secret/URL strings can be absent; required client identity cannot.
+Quoted and unquoted provider spellings are supported (quoted wins if both are configured).
+A direct higher-priority override of the generated isolated-client property wins.
+
+Declare additional suffixes in `providerProperties`, including supported JWT credentials,
+credential-provider, TLS, proxy, custom token headers (`headers.<name>`), and grant options
+(`grant-options.<grant>.<name>`). These aliases are required unless a contract value supplies
+a fallback. Do not use aliases to replace isolated-client IDs, scopes, grants, or acquisition
+timing. Startup fails for unforwarded provider settings with a diagnostic naming the setting.
+For dynamic named configuration, keep the provider/property declaration in application
+properties and reference an environment variable there; this avoids ambiguous environment
+normalization of punctuation in names. For example, a contract using provider
+`accounts.worker` and alias `tls.tls-configuration-name` can use:
+
+```properties
+quarkus.oidc-client."accounts.worker".client-id=${ACCOUNTS_WORKER_CLIENT_ID}
+quarkus.oidc-client."accounts.worker".credentials.secret=${ACCOUNTS_WORKER_CLIENT_SECRET}
+quarkus.oidc-client."accounts.worker".tls.tls-configuration-name=${CALLER_TLS_CONFIGURATION}
+```
+
+No secret value is embedded in a generated artifact. Generated isolated-client keys use
+unquoted `sunday-<digest>` names consistently, including the grant key read by native
+exchange filters. These names are derived from contract identity, profile, scheme and
+acquisition settings; configure reusable caller inputs under provider names instead of
+hard-coding a generated digest.
+
+### Configuration ownership and migration
+
+| Configuration | Owner |
+| --- | --- |
+| Base URL, token/discovery endpoint, grant, scopes, declared audience/resource | Selected contract |
+| Refresh skew, optional next-invocation renewal, REST timeouts | Explicit contract policy, otherwise framework defaults |
+| OIDC application type, tenant-selection timing, browser PKCE/nonce/access-token checks | Native binding defaults and retained checks |
+| Issuer/audience/principal claim | Explicit server policy or documented deployment input |
+| Caller ID, secret, test/deployment addresses | Runtime inputs |
+| Zanzibar enabled, deny-unannotated, timeout | Explicit policy, otherwise Zanzibar 2.15.0 defaults: true, true, 5S |
+| Zanzibar unauthenticated identity | Explicit contract policy; no assumed anonymous identity |
+| Test ports, test keys, Dev Services | Test infrastructure |
+
+Zanzibar 2.15.0 is the tested baseline. All four filter settings are build-time, host-wide
+settings. Generated server resources must be packaged before augmentation. Their effects
+include unrelated resource methods in the same application. Explicit FGA annotations and
+`ignore` operations remain generated from `x-sunday-zanzibar`; `security: []` does not
+implicitly disable Zanzibar. Client artifacts contain no server filter policy.
+
+Native acquisition remains lazy (`early-tokens-acquisition=false`) unless explicitly
+configured in binding policy. Web login retains PKCE, nonce, access-token verification,
+and access-token roles. There are no new retries or authorization semantics.
+
+When upgrading from beta.40, change `.kt` filename overrides to `.properties` paths.
+Gradle replaces its owned output and removes obsolete sources/descriptors, renamed files,
+and disabled metadata. Rebuild the artifact to remove stale compiled classes. For unmanaged
+CLI output, remove only previously generated output or regenerate into a fresh directory;
+never delete application-authored resources. Replace reliance on wildcard provider copying
+with explicit aliases. Generic/shared-provider bindings and Sunday SDK configuration retain
+their existing behavior.
+
+Minimal inputs by native mode:
+
+- `oidc`: supply only trust values/keys not explicitly declared in the server binding.
+- `webApp`: additionally supply the host application's client identity and credentials.
+- `acquire`: supply caller credentials under the named provider and any unresolved endpoint inputs.
+- `propagate`: supply an authenticated incoming identity; no acquisition credentials are generated.
+- `exchange`: supply the exchange provider's runtime credentials and unresolved endpoint inputs.
+
+For example, if issuer/audience/endpoints are already declared by the contract, the
+remaining application inputs for a bearer server using an offline key and a client using
+provider `service` are:
+
+```properties
+quarkus.oidc.public-key=${TRUSTED_PUBLIC_KEY}
+quarkus.oidc-client.service.client-id=${CALLER_CLIENT_ID}
+quarkus.oidc-client.service.credentials.secret=${CALLER_CLIENT_SECRET}
+```
+
+For `webApp`, supply `quarkus.oidc.client-id=${LOGIN_CLIENT_ID}` and
+`quarkus.oidc.credentials.secret=${LOGIN_CLIENT_SECRET}` instead of an offline key, and
+supply `auth-server-url`, issuer, and audience only when the server contract leaves them
+unresolved. Prefix these keys with the selected tenant when the contract names one.
+`exchange` uses the same provider inputs as `acquire`, under its selected provider name;
+`propagate` needs no OIDC-client credential properties. Neither mode introduces request
+replay after a rejected request.
 
 ### Shared provider SPI
 

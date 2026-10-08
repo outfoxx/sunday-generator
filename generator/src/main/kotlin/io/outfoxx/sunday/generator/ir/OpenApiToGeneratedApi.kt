@@ -62,6 +62,11 @@ class OpenApiToGeneratedApi(
     val generatedApi =
       GeneratedApi(
         name = document.title,
+        quarkusConfig =
+          GeneratedQuarkusConfig.read(
+            document.source["x-sunday-quarkus-config"],
+            "${document.location}#/x-sunday-quarkus-config",
+          ),
         source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, document.location),
         services = serviceFragments.map { fragment -> fragment.service },
         servers = document.effectiveServers(emptyMap<Any, Any>(), emptyMap<Any, Any>()),

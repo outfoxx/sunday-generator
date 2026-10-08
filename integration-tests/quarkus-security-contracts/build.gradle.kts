@@ -3,6 +3,12 @@ plugins {
 }
 
 val generator by configurations.creating
+val customSecurityResources =
+  providers
+    .gradleProperty(
+      "customSecurityResources",
+    ).map(String::toBoolean)
+    .getOrElse(false)
 
 dependencies {
   generator(project(":cli"))
@@ -21,6 +27,7 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
     tasks.register<JavaExec>("generate${name.replaceFirstChar { it.uppercase() }}") {
       val contract = layout.projectDirectory.file("src/main/openapi/$name.yaml")
       inputs.file(contract)
+      inputs.property("customSecurityResources", customSecurityResources)
       outputs.dir(output)
       doFirst {
         output.get().asFile.deleteRecursively()
@@ -40,12 +47,14 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
         output.get().asFile.absolutePath,
         contract.asFile.absolutePath,
       )
-      args(
-        "-server-configuration-file",
-        "${name.replaceFirstChar { it.uppercase() }}ServerDefaults.kt",
-        "-client-configuration-file",
-        "${name.replaceFirstChar { it.uppercase() }}ClientDefaults.kt",
-      )
+      if (customSecurityResources) {
+        args(
+          "-server-configuration-file",
+          "$name-security.properties",
+          "-client-configuration-file",
+          "$name-security.properties",
+        )
+      }
       if (name != "client") args("-resource-adapters", "-enforce-security-schemes")
     }
   kotlin.sourceSets.main { kotlin.srcDir(generate) }
@@ -58,7 +67,7 @@ listOf("first", "second", "native", "client", "web", "composite").forEach { name
           .get()
           .output.classesDirs,
       ) { include("io/test/packaged/$name/**") }
-      from(generate) { include("META-INF/**") }
+      from(generate) { include("META-INF/**", "*.properties") }
       from("src/main/resources") { include("META-INF/beans.xml") }
     }
   configurations.create("${name}Elements") {

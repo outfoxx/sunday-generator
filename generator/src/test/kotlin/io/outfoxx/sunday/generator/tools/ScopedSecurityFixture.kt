@@ -29,8 +29,10 @@ internal fun scopedSecurityApi(
   endpointBindings: Boolean = false,
   serverQuarkus: String? = null,
   clientQuarkus: String? = null,
+  clientQuarkusOptions: String = "",
   clientDiscovery: Boolean = false,
   serverTenant: String? = null,
+  quarkusConfiguration: String? = null,
 ): GeneratedApi {
   val tenantBinding = serverTenant?.let { ", tenant: $it" } ?: ""
   val binding =
@@ -69,7 +71,10 @@ internal fun scopedSecurityApi(
             ) {
               it
             } else {
-              it.replace("provider: service", "provider: service\n      quarkus: {mode: $clientQuarkus}")
+              it.replace(
+                "provider: service",
+                "provider: service\n      quarkus: {mode: $clientQuarkus$clientQuarkusOptions}",
+              )
             }
           }
       }.let { declarations ->
@@ -122,6 +127,7 @@ internal fun scopedSecurityApi(
     title: Scoped security
     annotationTypes:
       sunday.security: {type: object, allowedTargets: [API, Resource, Method, SecurityScheme]}
+      sunday.quarkus-config: {type: object, allowedTargets: [API]}
     securitySchemes:
       token:
         type: OAuth 2.0
@@ -210,7 +216,14 @@ internal fun scopedSecurityApi(
         } else {
           content
         }
-      directory.resolve(name).also { it.writeText(selected) }.toUri()
+      val configured =
+        if (quarkusConfiguration == null) {
+          selected
+        } else {
+          val annotation = if (name.endsWith(".raml")) "(sunday.quarkus-config)" else "x-sunday-quarkus-config"
+          selected + "\n$annotation:\n" + quarkusConfiguration.prependIndent("  ") + "\n"
+        }
+      directory.resolve(name).also { it.writeText(configured) }.toUri()
     },
   )
 }

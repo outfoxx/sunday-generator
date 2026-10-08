@@ -36,7 +36,12 @@ dependencies {
   testRuntimeOnly(libs.junitPlatform)
 }
 
-tasks.test { systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager") }
+tasks.test {
+  systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+  // Run in a real test JVM with native configuration override sources.
+  environment("QUARKUS_REST_CLIENT__IO_TEST_PACKAGED_CLIENT_API__READ_TIMEOUT", "3000")
+  systemProperty("quarkus.rest-client.\"io.test.packaged.client.API\".max-redirects", "4")
+}
 
 kotlin.compilerOptions {
   allWarningsAsErrors.set(true)
@@ -50,5 +55,20 @@ if (nativeSecurityOnly) {
   tasks.test {
     systemProperty("quarkus.http.auth.proactive", "true")
     systemProperty("fixture.native-only", "true")
+  }
+}
+
+if (providers.gradleProperty("customSecurityResources").map(String::toBoolean).getOrElse(false)) {
+  tasks.test {
+    systemProperty(
+      "quarkus.config.locations",
+      listOfNotNull(
+        "native-security.properties",
+        "client-security.properties",
+        "web-security.properties".takeUnless {
+          nativeSecurityOnly
+        },
+      ).joinToString(","),
+    )
   }
 }

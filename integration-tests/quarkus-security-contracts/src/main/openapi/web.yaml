@@ -9,7 +9,15 @@ components:
       x-sunday-security:
         server:
           provider: shared
-          quarkus: {mode: webApp, tenant: browser}
+          quarkus:
+            mode: webApp
+            tenant: browser
+            properties:
+              auth-server-url: ${fixture.idp.url}/browser
+              token.issuer: https://issuer.test
+              token.audience: browser-app
+              token.refresh-expired: true
+              token.lifespan-grace: 0
 paths:
   /web/protected:
     get:

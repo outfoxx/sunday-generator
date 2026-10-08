@@ -44,6 +44,7 @@ class AsyncApiToGeneratedApi(
       val generatedApi =
         GeneratedApi(
           name = sourceDocument.title() ?: "API",
+          quarkusConfig = sourceDocument.quarkusConfig(),
           source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.ASYNCAPI, sourceUri.toString()),
           services = services,
           servers = servers,
@@ -1306,6 +1307,9 @@ class AsyncApiToGeneratedApi(
     val security = AsyncApiSecurity(source, location)
 
     fun title(): String? = source.mapValue("info")?.get("title") as? String
+
+    fun quarkusConfig() =
+      GeneratedQuarkusConfig.read(source["x-sunday-quarkus-config"], "$location#/x-sunday-quarkus-config")
 
     fun securitySelection(): GeneratedEnvironment<GeneratedSecuritySelection>? =
       if (source.containsKey(

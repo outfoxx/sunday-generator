@@ -98,6 +98,16 @@ class GeneratedApiComposer {
       problems = problems.values.map { it.problem },
       auth = sources.firstNotNullOfOrNull { it.api.auth },
       jaxrs = sources.firstNotNullOfOrNull { it.api.jaxrs },
+      quarkusConfig =
+        sources.mapNotNull { it.api.quarkusConfig }.reduceOrNull { first, next ->
+          try {
+            first.merge(next) { left, right -> left.combine(right) }
+          } catch (failure: IllegalArgumentException) {
+            throw GeneratedApiCompositionException(
+              "${failure.message}; sources: ${sources.joinToString { it.api.source.location }}",
+            )
+          }
+        },
       servers = sources.flatMap { it.api.servers }.distinct(),
       protocol =
         sources.mapNotNull { it.api.protocol }.takeIf { it.isNotEmpty() }?.let { protocols ->

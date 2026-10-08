@@ -16,13 +16,18 @@
 
 package io.outfoxx.sunday.generator.gradle.tests
 
+import io.outfoxx.sunday.generator.gradle.GeneratedOutputOwnership
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Path
+import java.util.jar.JarFile
+import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
 class SundayNativeSecurityTest {
@@ -87,6 +92,7 @@ class SundayNativeSecurityTest {
           useJakartaPackages.set(true)
           coroutines.set(true)
           pkgName.set('example.nativeauth')
+          outputDir.set(layout.buildDirectory.dir('generated/native'))
         }
       }
       """.trimIndent(),
@@ -100,5 +106,56 @@ class SundayNativeSecurityTest {
         .build()
     assertEquals(TaskOutcome.SUCCESS, result.task(":sundayGenerate_server")?.outcome)
     assertEquals(TaskOutcome.SUCCESS, result.task(":compileKotlin")?.outcome)
+    val output = directory.resolve("build/generated/native")
+    output
+      .resolve("example/nativeauth/LegacyMetadata.kt")
+      .also { it.parent.createDirectories() }
+      .writeText("package example.nativeauth\nclass LegacyMetadata\n")
+    output
+      .resolve("META-INF/services/org.eclipse.microprofile.config.spi.ConfigSource")
+      .also {
+        it.parent.createDirectories()
+      }.writeText("example.nativeauth.LegacyMetadata\n")
+
+    java.nio.file.Files
+      .delete(output.resolve(".sunday-generated-output.json"))
+    GeneratedOutputOwnership
+      .record(output.toFile(), ":sundayGenerate_server")
+
+    fun jar(legacy: Boolean = false) =
+      GradleRunner
+        .create()
+        .withProjectDir(directory.toFile())
+        .withPluginClasspath()
+        .withArguments(
+          if (legacy) {
+            listOf(
+              "compileKotlin",
+              "-x",
+              "sundayGenerate_server",
+              "--stacktrace",
+            )
+          } else {
+            listOf("jar", "--stacktrace")
+          },
+        ).build()
+    jar(legacy = true)
+    val artifact = directory.resolve("build/libs/native-security.jar").toFile()
+    org.junit.jupiter.api.Assertions.assertTrue(
+      directory.resolve("build/classes/kotlin/main/example/nativeauth/LegacyMetadata.class").toFile().isFile,
+    )
+    directory
+      .resolve(
+        "api.yaml",
+      ).toFile()
+      .appendText(
+        "\nx-sunday-quarkus-config:\n  server:\n    properties:\n      quarkus.zanzibar.filter.timeout: 7S\n",
+      )
+    jar()
+    JarFile(artifact).use {
+      assertNull(it.getEntry("example/nativeauth/LegacyMetadata.class"))
+      assertNull(it.getEntry("META-INF/services/org.eclipse.microprofile.config.spi.ConfigSource"))
+      assertNotNull(it.getEntry("META-INF/microprofile-config.properties"))
+    }
   }
 }

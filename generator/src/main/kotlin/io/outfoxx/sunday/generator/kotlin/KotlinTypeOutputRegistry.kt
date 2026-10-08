@@ -49,6 +49,13 @@ interface KotlinTypeOutputRegistry {
     implementation: ClassName,
   )
 
+  /** Registers API-derived properties, retaining provenance for collision diagnostics. */
+  fun addProperties(
+    path: String,
+    values: Map<String, String>,
+    owner: String,
+  )
+
   fun addModelType(
     className: ClassName,
     modelType: TypeSpec.Builder,

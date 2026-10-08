@@ -1,5 +1,16 @@
 openapi: 3.1.0
 info: {title: Native client, version: 1.0.0}
+servers:
+  - url: http://{host}/api
+    variables:
+      host: {default: '${fixture.idp.authority}'}
+x-sunday-quarkus-config:
+  client:
+    properties:
+      quarkus.rest-client-oidc-filter.refresh-on-unauthorized: true
+      quarkus.rest-client."io.test.packaged.client.API".read-timeout: 1000
+      quarkus.rest-client."io.test.packaged.client.API".connect-timeout: 1000
+      quarkus.rest-client."io.test.packaged.client.API".max-redirects: 1
 components:
   securitySchemes:
     service:
@@ -9,8 +20,12 @@ components:
         client:
           provider: service
           flow: clientCredentials
-          tokenUrl: https://deployment.invalid/token
-          quarkus: {mode: acquire}
+          quarkus:
+            mode: acquire
+            properties:
+              token-path: ${fixture.idp.url}/token
+              discovery-enabled: false
+              refresh-token-time-skew: 8S
     user:
       type: http
       scheme: bearer
@@ -26,7 +41,11 @@ components:
         client:
           provider: exchange
           flow: external
-          quarkus: {mode: exchange}
+          quarkus:
+            mode: exchange
+            properties:
+              token-path: ${fixture.idp.url}/token
+              discovery-enabled: false
 paths:
   /write:
     get:

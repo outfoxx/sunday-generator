@@ -61,7 +61,7 @@ class MockOidcResource : QuarkusTestResourceLifecycleManager {
       exchange.sendResponseHeaders(200, body.size.toLong())
       exchange.responseBody.use { it.write(body) }
     }
-    server.createContext("/reject") { exchange ->
+    server.createContext("/api/reject") { exchange ->
       rejected.incrementAndGet()
       val auth = exchange.requestHeaders.getFirst("Authorization").orEmpty()
       if (rejectedPaths.computeIfAbsent(exchange.requestURI.path) { AtomicInteger() }.incrementAndGet() == 1) {
@@ -76,6 +76,13 @@ class MockOidcResource : QuarkusTestResourceLifecycleManager {
       }
     }
     server.createContext("/") { exchange ->
+      if (exchange.requestURI.path !in
+        setOf("/api/service", "/api/write", "/api/user", "/api/exchange", "/api/public")
+      ) {
+        exchange.sendResponseHeaders(404, -1)
+        exchange.close()
+        return@createContext
+      }
       val body = (exchange.requestHeaders.getFirst("Authorization") ?: "anonymous").toByteArray()
       exchange.responseHeaders.add("Content-Type", "text/plain")
       exchange.sendResponseHeaders(200, body.size.toLong())
@@ -94,15 +101,11 @@ class MockOidcResource : QuarkusTestResourceLifecycleManager {
     return buildMap {
       putAll(browser)
       put("fixture.idp.url", address)
-      put("quarkus.oidc-client.service.refresh-token-time-skew", "8S")
-      put("quarkus.rest-client.\"io.test.packaged.client.API\".url", address)
+      put("fixture.idp.authority", "127.0.0.1:${server.address.port}")
       listOf("service", "exchange").forEach { name ->
         put("quarkus.oidc-client.$name.client-id", name)
         put("quarkus.oidc-client.$name.credentials.secret", "test-secret")
-        put("quarkus.oidc-client.$name.discovery-enabled", "false")
-        put("quarkus.oidc-client.$name.token-path", "$address/token")
       }
-      put("quarkus.oidc-client.exchange.grant.type", "exchange")
     }
   }
 

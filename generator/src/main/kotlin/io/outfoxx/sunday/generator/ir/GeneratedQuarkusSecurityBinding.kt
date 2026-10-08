@@ -20,7 +20,29 @@ package io.outfoxx.sunday.generator.ir
 data class GeneratedQuarkusSecurityBinding(
   val mode: Mode,
   val tenant: String? = null,
+  /** Native suffixes relative to the selected OIDC client or tenant. */
+  val properties: Map<String, String> = emptyMap(),
+  /** Additional named-provider suffixes explicitly forwarded through property expressions. */
+  val providerProperties: List<String> = emptyList(),
 ) {
+  init {
+    require(mode !in setOf(Mode.PROVIDER, Mode.PROPAGATE) || properties.isEmpty() && providerProperties.isEmpty()) {
+      "Native OIDC properties and provider aliases are not applicable to $mode bindings"
+    }
+  }
+
+  /** Merges native policy when a more-local declaration retains the same integration mode. */
+  fun merge(other: GeneratedQuarkusSecurityBinding): GeneratedQuarkusSecurityBinding =
+    if (mode != other.mode) {
+      other
+    } else {
+      other.copy(
+        tenant = other.tenant ?: tenant,
+        properties = properties + other.properties,
+        providerProperties = (providerProperties + other.providerProperties).distinct(),
+      )
+    }
+
   /** Native authentication/acquisition strategies and the optional shared server-provider SPI. */
   enum class Mode {
     PROVIDER,

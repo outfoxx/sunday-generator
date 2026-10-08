@@ -192,6 +192,7 @@ class SundayGeneratorPlugin : Plugin<Project> {
             }.also { task -> sourceSets.getByName(sourceSetName).resources.srcDir(task) }
         }
       merge.configure { task ->
+        task.resourceRoots.from(genTask.flatMap { it.outputDir })
         task.descriptors.from(
           genTask.flatMap { it.outputDir }.map { directory ->
             directory.asFileTree.matching { it.include("META-INF/services/**") }
