@@ -21,6 +21,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
@@ -162,15 +163,17 @@ internal class KotlinQuarkusNativeSecurity(
           .addKdoc("Checks native OIDC identity provenance before delegation; Quarkus owns credential validation.\n")
           .addAnnotation(ClassName("jakarta.inject", "Singleton"))
           .addAnnotation(ClassName("io.quarkus.runtime", "Startup"))
-          .addAnnotation(
-            AnnotationSpec.builder(ClassName("kotlin", "Suppress")).addMember("%S", "UNUSED_PARAMETER").build(),
-          ).addSuperinterface(policy)
+          .addSuperinterface(policy)
           .primaryConstructor(
             FunSpec
               .constructorBuilder()
               .addParameter("config", config)
-              .addParameter("oidc", ClassName("io.quarkus.oidc", "TenantIdentityProvider"))
-              .build(),
+              .addParameter(
+                ParameterSpec
+                  .builder("oidc", ClassName("io.quarkus.oidc", "TenantIdentityProvider"))
+                  .addAnnotation(AnnotationSpec.builder(Suppress::class).addMember("%S", "UNUSED_PARAMETER").build())
+                  .build(),
+              ).build(),
           ).addInitializerBlock(
             CodeBlock
               .builder()
