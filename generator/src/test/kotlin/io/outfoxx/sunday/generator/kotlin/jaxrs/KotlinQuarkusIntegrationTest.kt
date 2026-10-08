@@ -20,7 +20,15 @@ import com.squareup.kotlinpoet.ClassName
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
+import io.outfoxx.sunday.generator.ir.GeneratedApiYaml
+import io.outfoxx.sunday.generator.ir.GeneratedAuth
+import io.outfoxx.sunday.generator.ir.GeneratedEnvironment
+import io.outfoxx.sunday.generator.ir.GeneratedParameter
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityRequirement
+import io.outfoxx.sunday.generator.ir.GeneratedServer
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
+import io.outfoxx.sunday.generator.ir.emit.effectiveAuth
 import io.outfoxx.sunday.generator.kotlin.KotlinApplicationMetadataOptions
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSIrGenerator
 import io.outfoxx.sunday.generator.kotlin.KotlinJAXRSOptions
@@ -30,7 +38,6 @@ import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.tools.scopedSecurityApi
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecurityProvider
 import io.outfoxx.sunday.jaxrs.quarkus.ServerSecuritySubjectSelector
-import io.smallrye.config.ConfigSourceFactory
 import io.smallrye.config.SmallRyeConfigBuilder
 import io.smallrye.mutiny.Uni
 import jakarta.enterprise.inject.Instance
@@ -54,6 +61,7 @@ import strikt.assertions.isTrue
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Properties
 
 @KotlinTest
 @OptIn(ExperimentalCompilerApi::class)
@@ -352,16 +360,28 @@ class KotlinQuarkusIntegrationTest {
     @TempDir directory: Path,
   ) {
     listOf(false, true).forEach { discovery ->
-      val api = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire", clientDiscovery = discovery)
+      val api =
+        scopedSecurityApi(
+          frontend,
+          directory,
+          clientQuarkus = "acquire",
+          clientDiscovery = discovery,
+          clientQuarkusOptions =
+            ", properties: {token-path: https://identity.internal/token, " +
+              "refresh-token-time-skew: '${'$'}{runtime.refresh-skew}'}, " +
+              "providerProperties: [refresh-token-time-skew, tls.verification, proxy.port, headers.X-Tenant, " +
+              "credentials.jwt.source, credentials.client-secret.provider.name, grant-options.client.custom]",
+        )
       val registry = registry(GenerationMode.Client)
       KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
       val compiled = compileTypesResult(registry.buildTypes())
       expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
-      val factory =
-        compiled.classLoader
-          .loadClass("io.test.OpenAPIOidcConfiguration")
-          .getConstructor()
-          .newInstance() as ConfigSourceFactory
+      val output = directory.resolve("defaults-$discovery")
+      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      val generated =
+        io.smallrye.config.PropertiesConfigSource(
+          output.resolve("META-INF/microprofile-config.properties").toUri().toURL(),
+        )
       val requirements =
         compiled.classLoader
           .loadClass("io.test.OpenAPIClientRequirements")
@@ -369,6 +389,13 @@ class KotlinQuarkusIntegrationTest {
       val deployment =
         mapOf(
           "quarkus.oidc-client.service.client-id" to "application",
+          "quarkus.oidc-client.service.refresh-token-time-skew" to "9S",
+          "quarkus.oidc-client.service.tls.verification" to "required",
+          "quarkus.oidc-client.service.proxy.port" to "8080",
+          "quarkus.oidc-client.service.headers.X-Tenant" to "tenant-one",
+          "quarkus.oidc-client.service.credentials.jwt.source" to "client",
+          "quarkus.oidc-client.service.credentials.client-secret.provider.name" to "vault",
+          "quarkus.oidc-client.service.grant-options.client.custom" to "custom-value",
           "quarkus.oidc-client.service.credentials.secret" to "application-secret",
         )
 
@@ -386,7 +413,8 @@ class KotlinQuarkusIntegrationTest {
 
               override fun getOrdinal() = 250
             },
-          ).withSources(factory)
+          ).withSources(generated)
+          .addDefaultInterceptors()
           .build()
 
       fun validate(config: Config) {
@@ -397,22 +425,46 @@ class KotlinQuarkusIntegrationTest {
         }
       }
       val config = configuration(deployment)
-      expectCatching { validate(config) }.isSuccess()
+      validate(config)
       val prefixes =
         config.propertyNames
           .filter {
-            it.startsWith("quarkus.oidc-client.\"sunday-") &&
+            it.startsWith("quarkus.oidc-client.sunday-") &&
               it.endsWith("grant.type")
           }.map { it.removeSuffix("grant.type") }
       expectThat(prefixes).isNotEmpty()
       prefixes.forEach { prefix ->
         expectThat(config.getValue(prefix + "client-id", String::class.java)).isEqualTo("application")
+        expectThat(config.getValue(prefix + "refresh-token-time-skew", String::class.java)).isEqualTo("9S")
+        for (suffix in listOf(
+          "tls.verification",
+          "proxy.port",
+          "headers.X-Tenant",
+          "credentials.jwt.source",
+          "credentials.client-secret.provider.name",
+          "grant-options.client.custom",
+        )) {
+          expectThat(
+            config.getValue(prefix + suffix, String::class.java),
+          ).isEqualTo(deployment["quarkus.oidc-client.service.$suffix"])
+        }
         expectThat(config.getValue(prefix + "credentials.secret", String::class.java)).isEqualTo("application-secret")
         val endpoint = if (discovery) "auth-server-url" else "token-path"
         val expected = if (discovery) "https://identity.internal" else "https://identity.internal/token"
         expectThat(config.getValue(prefix + endpoint, String::class.java)).isEqualTo(expected)
+        for (provider in listOf("service", "\"service\"")) {
+          val providerOverride =
+            configuration(
+              deployment + ("quarkus.oidc-client.$provider.$endpoint" to "https://provider.example/endpoint"),
+            )
+          validate(providerOverride)
+          expectThat(
+            providerOverride.getValue(prefix + endpoint, String::class.java),
+          ).isEqualTo("https://provider.example/endpoint")
+        }
+
         val overridden = configuration(deployment + (prefix + endpoint to "https://deployment.example/endpoint"))
-        expectCatching { validate(overridden) }.isSuccess()
+        validate(overridden)
         expectThat(
           overridden.getValue(prefix + endpoint, String::class.java),
         ).isEqualTo("https://deployment.example/endpoint")
@@ -423,7 +475,113 @@ class KotlinQuarkusIntegrationTest {
           validate(configuration(deployment + (prefix + "client-enabled" to "false")))
         }.isFailure().isA<IllegalArgumentException>()
       }
-      expectCatching { validate(configuration(emptyMap())) }.isFailure().isA<IllegalArgumentException>()
+      expectCatching { validate(configuration(emptyMap())) }.isFailure()
+      expectCatching {
+        validate(configuration(deployment - "quarkus.oidc-client.service.refresh-token-time-skew"))
+      }.isFailure()
+      expectCatching {
+        validate(
+          configuration(
+            deployment + ("quarkus.oidc-client.service.headers.X-Undeclared" to "unexpected"),
+          ),
+        )
+      }.isFailure()
+      expectCatching {
+        validate(configuration(deployment + ("quarkus.oidc-client.service.grant.type" to "password")))
+      }.isFailure()
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native startup distinguishes overlapping provider names`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val input = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire")
+    val providers = listOf("accounts", "accounts.worker")
+    val api =
+      input.copy(
+        services =
+          input.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.flatMap { operation ->
+                  providers.mapIndexed { index, provider ->
+                    val auth = requireNotNull(input.effectiveAuth(service, operation))
+                    operation.copy(
+                      id = operation.id + index,
+                      path = operation.path + "/" + index,
+                      serverAuth = emptyMap(),
+                      auth =
+                        auth.copy(
+                          securitySchemes =
+                            auth.securitySchemes.map { scheme ->
+                              scheme.copy(bindings = scheme.bindings?.mapNotNull { it.copy(provider = provider) })
+                            },
+                        ),
+                    )
+                  }
+                },
+            )
+          },
+      )
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    val output = directory.resolve("overlapping-providers")
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    val generated =
+      io.smallrye.config.PropertiesConfigSource(
+        output.resolve("META-INF/microprofile-config.properties").toUri().toURL(),
+      )
+    val requirements =
+      compiled.classLoader
+        .loadClass(
+          "io.test.OpenAPIClientRequirements",
+        ).getConstructor(Config::class.java)
+
+    fun configuration(settings: Map<String, String>): Config =
+      SmallRyeConfigBuilder()
+        .withSources(io.smallrye.config.PropertiesConfigSource(settings, "application", 250), generated)
+        .addDefaultInterceptors()
+        .build()
+
+    fun validate(config: Config) {
+      try {
+        requirements.newInstance(config)
+      } catch (failure: java.lang.reflect.InvocationTargetException) {
+        throw failure.targetException
+      }
+    }
+
+    for (quoted in listOf(false, true)) {
+      val deployment =
+        providers.associate { provider ->
+          val name = if (quoted) "\"$provider\"" else provider
+          "quarkus.oidc-client.$name.client-id" to provider
+        }
+      val config = configuration(deployment)
+      validate(config)
+      val clientIds =
+        config.propertyNames
+          .filter {
+            it.startsWith("quarkus.oidc-client.sunday-") && it.endsWith(".client-id")
+          }.map { config.getValue(it, String::class.java) }
+          .toSet()
+      expectThat(clientIds).isEqualTo(providers.toSet())
+      for (provider in providers) {
+        val name = if (quoted) "\"$provider\"" else provider
+        val key = "quarkus.oidc-client.$name.headers.X-Undeclared"
+        val failure =
+          org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            validate(configuration(deployment + (key to "unexpected")))
+          }
+        expectThat(
+          failure.message,
+        ).isEqualTo("Unforwarded OIDC provider setting: $key; declare quarkus.providerProperties")
+      }
     }
   }
 
@@ -447,8 +605,8 @@ class KotlinQuarkusIntegrationTest {
             enabled = selection != "all-disabled",
             serverConfiguration = selection != "disabled" || mode != GenerationMode.Server,
             clientConfiguration = selection != "disabled" || mode != GenerationMode.Client,
-            serverConfigurationFileName = "ServerDefaults.kt",
-            clientConfigurationFileName = "ClientDefaults.kt",
+            serverConfigurationFileName = "config/server.properties",
+            clientConfigurationFileName = "config/client.properties",
           )
         val registry = KotlinTypeRegistry("io.test", null, mode, emptySet(), applicationMetadata = metadata)
         KotlinJAXRSIrGenerator(api, registry, options(mode)).generateServiceTypes()
@@ -457,19 +615,22 @@ class KotlinQuarkusIntegrationTest {
         expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
         val output = directory.resolve("$mode-$selection")
         registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
-        val name = if (mode == GenerationMode.Server) "ServerDefaults" else "ClientDefaults"
-        val service =
-          if (mode == GenerationMode.Server) {
-            "org.eclipse.microprofile.config.spi.ConfigSource"
-          } else {
-            "io.smallrye.config.ConfigSourceFactory"
-          }
-        expectThat(Files.exists(output.resolve("io/test/$name.kt"))).isEqualTo(selection == "renamed")
-        val descriptor = output.resolve("META-INF/services/$service")
-        expectThat(Files.exists(descriptor)).isEqualTo(selection == "renamed")
-        if (selection == "renamed") {
-          expectThat(Files.readString(descriptor)).isEqualTo("io.test.$name\n")
-          expectThat(compiled.classLoader.loadClass("io.test.$name").simpleName).isEqualTo(name)
+        val path = if (mode == GenerationMode.Server) "config/server.properties" else "config/client.properties"
+        expectThat(Files.exists(output.resolve(path))).isEqualTo(selection == "renamed")
+        expectThat(
+          Files.exists(output.resolve("META-INF/services/org.eclipse.microprofile.config.spi.ConfigSource")),
+        ).isFalse()
+        expectThat(Files.exists(output.resolve("META-INF/services/io.smallrye.config.ConfigSourceFactory"))).isFalse()
+        expectThat(
+          types.keys.none {
+            it.simpleName in
+              setOf("OpenAPIOidcConfiguration", "OpenAPIServerOidcConfiguration")
+          },
+        ).isTrue()
+        if (selection ==
+          "renamed"
+        ) {
+          expectThat(Files.readString(output.resolve(path)).contains("config_ordinal=100")).isTrue()
         }
         expectThat(Files.exists(output.resolve("META-INF/beans.xml"))).isFalse()
         expectThat(
@@ -485,9 +646,307 @@ class KotlinQuarkusIntegrationTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native properties retain selected role profile and durable IR`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api =
+      scopedSecurityApi(
+        frontend,
+        directory,
+        serverQuarkus = "oidc",
+        clientQuarkus = "acquire",
+        quarkusConfiguration =
+          """
+          server:
+            properties:
+              quarkus.zanzibar.filter.unauthenticated-user: guest
+          client:
+            properties:
+              quarkus.rest-client-oidc-filter.refresh-on-unauthorized: false
+          profiles:
+            internal:
+              client:
+                properties:
+                  quarkus.rest-client-oidc-filter.refresh-on-unauthorized: true
+            external:
+              client:
+                properties:
+                  quarkus.rest-client-oidc-filter.refresh-on-unauthorized: false
+          """.trimIndent(),
+      )
+    val roundtrip =
+      GeneratedApiYaml.readString(
+        GeneratedApiYaml
+          .writeString(api),
+      )
+    expectThat(roundtrip.quarkusConfig).isEqualTo(api.quarkusConfig)
+    for (mode in listOf(GenerationMode.Client, GenerationMode.Server)) {
+      val registry = registry(mode)
+      KotlinJAXRSIrGenerator(roundtrip, registry, options(mode)).generateServiceTypes()
+      expectThat(compileTypesResult(registry.buildTypes()).exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+      val output = directory.resolve("resources-$mode")
+      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      val properties =
+        Properties().apply {
+          Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
+        }
+      expectThat(properties.getProperty("quarkus.zanzibar.filter.unauthenticated-user")).isEqualTo(
+        if (mode ==
+          GenerationMode.Server
+        ) {
+          "guest"
+        } else {
+          null
+        },
+      )
+      expectThat(properties.getProperty("quarkus.rest-client-oidc-filter.refresh-on-unauthorized")).isEqualTo(
+        if (mode ==
+          GenerationMode.Client
+        ) {
+          "true"
+        } else {
+          null
+        },
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native server selection uses profile compatible endpoint exactly once`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val input = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire")
+    val servers =
+      listOf(
+        GeneratedServer(
+          name = "external",
+          url = "https://external.example/api",
+          securityProfile = "external",
+        ),
+        GeneratedServer(
+          name = "internal",
+          url = "https://{host}/api/{region}",
+          variables =
+            listOf(
+              GeneratedParameter(
+                "host",
+                GeneratedParameter.Location.PATH,
+                GeneratedTypeRef.scalar("string"),
+                defaultValue = "internal.example",
+              ),
+              GeneratedParameter("region", GeneratedParameter.Location.PATH, GeneratedTypeRef.scalar("string")),
+            ),
+          securityProfile = "internal",
+        ),
+      )
+    val api =
+      input.copy(
+        servers = servers,
+        services =
+          input.services.map {
+            it.copy(servers = servers, baseUri = "https://old.example/api")
+          },
+      )
+    for (selector in listOf(null, "internal", "1")) {
+      val selected =
+        api.copy(
+          quarkusConfig =
+            GeneratedEnvironment(
+              client =
+                io.outfoxx.sunday.generator.ir
+                  .GeneratedQuarkusConfig(server = selector),
+            ),
+        )
+      val registry = registry(GenerationMode.Client)
+      KotlinJAXRSIrGenerator(selected, registry, options(GenerationMode.Client)).generateServiceTypes()
+      val compiled = compileTypesResult(registry.buildTypes())
+      expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+      val output = directory.resolve("selected-${selector ?: "default"}")
+      registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+      val props =
+        Properties().apply {
+          Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
+        }
+      api.services.forEach { service ->
+        expectThat(
+          props.values.contains("https://internal.example/api/${'$'}{sunday.server.${service.name}.region}"),
+        ).isTrue()
+      }
+      expectThat(props.values.contains("https://external.example/api")).isFalse()
+      registry
+        .buildTypes()
+        .keys
+        .map {
+          compiled.classLoader.loadClass(
+            it.canonicalName,
+          )
+        }.filter { it.isInterface }
+        .forEach { type ->
+          expectThat(type.annotations.none { it.annotationClass.simpleName == "Path" }).isTrue()
+        }
+    }
+    for (selector in listOf("missing", "-1", "0")) {
+      val selected =
+        api.copy(
+          quarkusConfig =
+            GeneratedEnvironment(
+              client =
+                io.outfoxx.sunday.generator.ir
+                  .GeneratedQuarkusConfig(server = selector),
+            ),
+        )
+      expectCatching {
+        KotlinJAXRSIrGenerator(
+          selected,
+          registry(GenerationMode.Client),
+          options(GenerationMode.Client),
+        ).generateServiceTypes()
+      }.isFailure()
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["raml", "openapi", "asyncapi", "asyncapi3", "composed"])
+  fun `native selected server supplies security as well as URL`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val input = scopedSecurityApi(frontend, directory, clientQuarkus = "acquire")
+    val server = GeneratedServer(name = "internal", url = "https://selected.example/api", securityProfile = "internal")
+    val api =
+      input.copy(
+        servers = listOf(server),
+        services =
+          input.services.map { service ->
+            service.copy(
+              servers = listOf(server),
+              operations =
+                service.operations.map { operation ->
+                  operation.copy(serverAuth = mapOf("internal" to GeneratedAuth(securityOverride = true)))
+                },
+            )
+          },
+      )
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    registry
+      .buildTypes()
+      .keys
+      .map {
+        compiled.classLoader.loadClass(
+          it.canonicalName,
+        )
+      }.filter { it.isInterface }
+      .forEach { type ->
+        type.declaredMethods.forEach { method ->
+          expectThat(method.annotations.none { it.annotationClass.simpleName == "OidcClientFilter" }).isTrue()
+        }
+      }
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), directory.resolve("selected-security"))
+    val props =
+      Properties().apply {
+        Files
+          .newBufferedReader(
+            directory.resolve("selected-security/META-INF/microprofile-config.properties"),
+          ).use { load(it) }
+      }
+    expectThat(props.values.contains("https://selected.example/api")).isTrue()
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["default", "primary", "secondary", "0", "1"])
+  fun `native AsyncAPI server selection resolves distinct usable security alternatives`(
+    selector: String,
+    @TempDir directory: Path,
+  ) {
+    val document = directory.resolve("servers.yaml")
+    Files.writeString(
+      document,
+      """
+      asyncapi: 3.0.0
+      info: {title: Selected server security, version: 1.0.0}
+      servers:
+        primary:
+          host: primary.example
+          protocol: https
+          security: [{"${'$'}ref": "#/components/securitySchemes/primary"}]
+        secondary:
+          host: secondary.example
+          protocol: https
+          security: [{"${'$'}ref": "#/components/securitySchemes/secondary"}]
+      components:
+        securitySchemes:
+          primary:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: primary, flow: clientCredentials, tokenUrl: https://primary.example/token, quarkus: {mode: acquire}}
+          secondary:
+            type: http
+            scheme: bearer
+            x-sunday-security:
+              client: {provider: secondary, flow: clientCredentials, tokenUrl: https://secondary.example/token, quarkus: {mode: acquire}}
+      channels:
+        events:
+          address: /events
+          servers: [{"${'$'}ref": "#/servers/primary"}, {"${'$'}ref": "#/servers/secondary"}]
+          messages:
+            item: {payload: {type: string}}
+      operations:
+        events:
+          action: receive
+          channel: {"${'$'}ref": "#/channels/events"}
+          messages: [{"${'$'}ref": "#/channels/events/messages/item"}]
+      """.trimIndent() +
+        if (selector == "default") "" else "\nx-sunday-quarkus-config:\n  client: {server: '$selector'}\n",
+    )
+    val api = GeneratedApiIrExporter().export(listOf(document.toUri()))
+    val registry = registry(GenerationMode.Client)
+    KotlinJAXRSIrGenerator(api, registry, options(GenerationMode.Client)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    expectThat(compiled.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+    val filters =
+      registry
+        .buildTypes()
+        .keys
+        .map { compiled.classLoader.loadClass(it.canonicalName) }
+        .filter { it.isInterface }
+        .flatMap { it.declaredMethods.toList() }
+        .flatMap { it.annotations.toList() }
+        .filter { it.annotationClass.simpleName == "OidcClientFilter" }
+    expectThat(filters.size).isEqualTo(1)
+    val output = directory.resolve("selected-alternative")
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), output)
+    val props =
+      Properties().apply {
+        Files.newBufferedReader(output.resolve("META-INF/microprofile-config.properties")).use { load(it) }
+      }
+    val selected = if (selector in listOf("secondary", "1")) "secondary" else "primary"
+    val other = if (selected == "primary") "secondary" else "primary"
+    expectThat(props.values.contains("https://$selected.example")).isTrue()
+    expectThat(props.values.any { it.toString().contains("https://$selected.example/token") }).isTrue()
+    expectThat(props.values.any { it.toString().contains("$other.example") }).isFalse()
+  }
+
   @Test
-  fun `application metadata filenames reject directories and non Kotlin basenames`() {
-    for (name in listOf("../Defaults.kt", "/Defaults.kt", "defaults.json", "")) {
+  fun `application metadata filenames reject unsafe paths and application configuration`() {
+    for (name in listOf(
+      "../defaults.properties",
+      "/defaults.properties",
+      "defaults.json",
+      "Defaults.kt",
+      "application.properties",
+      "Application.properties",
+      "config/application.properties",
+      "",
+    )) {
       expectCatching { KotlinApplicationMetadataOptions(serverConfigurationFileName = name) }
         .isFailure()
         .isA<IllegalArgumentException>()

@@ -113,21 +113,21 @@ abstract class SundayGenerate
     @get:Input
     val generateClientConfiguration: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
-    /** Kotlin basename for server configuration metadata. */
+    /** Properties resource path for server configuration metadata. */
     @get:Input
     val serverConfigurationFileName: Property<String> =
       objects
         .property(
           String::class.java,
-        ).convention("OpenAPIServerOidcConfiguration.kt")
+        ).convention("META-INF/microprofile-config.properties")
 
-    /** Kotlin basename for client configuration metadata. */
+    /** Properties resource path for client configuration metadata. */
     @get:Input
     val clientConfigurationFileName: Property<String> =
       objects
         .property(
           String::class.java,
-        ).convention("OpenAPIOidcConfiguration.kt")
+        ).convention("META-INF/microprofile-config.properties")
 
     /** Generate server configurations and required application transport factories. */
     @get:Input

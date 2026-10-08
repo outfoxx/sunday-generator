@@ -59,8 +59,10 @@ import io.outfoxx.sunday.generator.ir.GeneratedPatchModels
 import io.outfoxx.sunday.generator.ir.GeneratedPayload
 import io.outfoxx.sunday.generator.ir.GeneratedPolicyValues
 import io.outfoxx.sunday.generator.ir.GeneratedProblem
+import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedResponse
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityScheme
+import io.outfoxx.sunday.generator.ir.GeneratedServer
 import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
@@ -168,6 +170,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.kotlinTypeName
 import io.outfoxx.sunday.generator.kotlin.utils.rawType
 import io.outfoxx.sunday.generator.kotlin.utils.tolerantEnumTypeSpec
 import io.outfoxx.sunday.generator.requireBrokerServicesSupported
+import io.outfoxx.sunday.generator.utils.GeneratedProperties
 import io.outfoxx.sunday.generator.utils.equalsInAnyOrder
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
 import io.outfoxx.sunday.generator.utils.toUpperCamelCase
@@ -262,6 +265,193 @@ class KotlinJAXRSIrGenerator(
     }
 
   private val clientSecurityGenerators = linkedMapOf<String, KotlinQuarkusClientSecurity>()
+  private val selectedServers = linkedMapOf<String, GeneratedServer>()
+  private val nativeClientServices = linkedSetOf<String>()
+  private val selectedProfiles = linkedMapOf<String, String>()
+
+  private fun clientContext(service: GeneratedService) =
+    options.generationContext(Client).let { context ->
+      context.copy(profile = context.profile ?: selectedProfiles[service.name])
+    }
+
+  private fun selectedClientSecurity(
+    service: GeneratedService,
+    operation: GeneratedOperation,
+  ) = api.clientSecurity(
+    service,
+    if (service.name in nativeClientServices) {
+      operation.copy(auth = operation.serverAuth[selectedServers[service.name]?.name] ?: operation.auth)
+    } else {
+      operation
+    },
+    clientContext(service),
+  )
+
+  private fun configureNativeResources(services: List<GeneratedService>) {
+    if (!options.quarkus) return
+    val context = options.generationContext(generationMode)
+    val configuration = api.quarkusConfig?.resolve(context) { first, second -> first.merge(second) }
+    require(generationMode == Client || configuration?.server == null) { "Quarkus server selection is client-only" }
+    val values = (if (generationMode == Client) emptyMap() else configuration?.properties.orEmpty()).toMutableMap()
+    values.forEach { (key, value) -> KotlinQuarkusProperties.global(key, value, generationMode) }
+    if (generationMode == Client) {
+      services.forEach { service ->
+        if (api.quarkusConfig == null && !service.hasNativeClientBindings()) return@forEach
+        val candidates = service.servers.ifEmpty { api.servers }
+        val selector = configuration?.server
+        val initialServer =
+          if (selector != null) {
+            candidates.firstOrNull { it.name == selector } ?: selector.toIntOrNull()?.let { candidates.getOrNull(it) }
+              ?: genError("Invalid native server selector '$selector' for '${service.name}'")
+          } else {
+            candidates.firstOrNull {
+              it.securityProfile == null ||
+                context.profile == null ||
+                it.securityProfile == context.profile
+            }
+          }
+        if (initialServer != null) {
+          require(
+            context.profile == null ||
+              initialServer.securityProfile == null ||
+              context.profile == initialServer.securityProfile,
+          ) {
+            "Native server '${initialServer.name ?: initialServer.url}' conflicts with selected security profile '${context.profile}'"
+          }
+          selectedServers[service.name] = initialServer
+          initialServer.securityProfile?.let { selectedProfiles[service.name] = it }
+        }
+        val effectiveConfiguration =
+          api.quarkusConfig?.resolve(
+            clientContext(service),
+          ) { first, second -> first.merge(second) }
+        val selected =
+          effectiveConfiguration?.server?.takeIf { it != selector }?.let { profileSelector ->
+            val alternative =
+              candidates.firstOrNull { it.name == profileSelector }
+                ?: profileSelector.toIntOrNull()?.let { candidates.getOrNull(it) }
+                ?: genError("Invalid native server selector '$profileSelector' for '${service.name}'")
+            require(
+              alternative.securityProfile == null || alternative.securityProfile == clientContext(service).profile,
+            ) {
+              "Native server selector '$profileSelector' changes the selected security profile"
+            }
+            selectedServers[service.name] = alternative
+            alternative
+          } ?: initialServer
+        effectiveConfiguration?.properties?.forEach { (key, value) ->
+          KotlinQuarkusProperties.global(key, value, Client)
+        }
+        GeneratedProperties.merge(
+          values,
+          effectiveConfiguration?.properties.orEmpty(),
+          "${api.source.location}: ${service.name}",
+        )
+        val native =
+          service.operations.any { operation ->
+            val selectedOperation = operation.copy(auth = operation.serverAuth[selected?.name] ?: operation.auth)
+            val security = api.clientSecurity(service, selectedOperation, clientContext(service))
+            // Public operations still use their native client's selected server and base URL.
+            security == null ||
+              security.bindings.values.any {
+                it.quarkus?.mode in
+                  setOf(
+                    GeneratedQuarkusSecurityBinding.Mode.ACQUIRE,
+                    GeneratedQuarkusSecurityBinding.Mode.PROPAGATE,
+                    GeneratedQuarkusSecurityBinding.Mode.EXCHANGE,
+                  )
+              }
+          }
+        if (native || effectiveConfiguration != null) {
+          require(selected != null || candidates.isEmpty()) {
+            "No native server matches profile '${context.profile}' for '${service.name}'"
+          }
+          nativeClientServices.add(service.name)
+          if (selected != null) {
+            var url = selected.url
+            selected.variables.forEach { variable ->
+              val wire = variable.serializationName ?: variable.name
+              val value = variable.defaultValue?.toString() ?: "${'$'}{sunday.server.${service.name}.$wire}"
+              url = url.replace("{$wire}", value)
+            }
+            val key =
+              api.jaxrs
+                ?.restClient
+                .mergeWith(service.jaxrs?.restClient)
+                ?.configKey
+                ?: serviceTypeName(service).canonicalName
+            val property = "quarkus.rest-client.\"$key\".url"
+            if (property !in effectiveConfiguration?.properties.orEmpty()) {
+              GeneratedProperties.merge(
+                values,
+                mapOf(property to url),
+                "${api.source.location}: ${service.name}",
+              )
+            }
+          }
+        }
+      }
+      if (options.aggregateServices && services.size > 1 && nativeClientServices.isNotEmpty()) {
+        val urls =
+          services
+            .mapNotNull { service ->
+              val key =
+                api.jaxrs
+                  ?.restClient
+                  .mergeWith(service.jaxrs?.restClient)
+                  ?.configKey
+                  ?: serviceTypeName(service).canonicalName
+              values["quarkus.rest-client.\"$key\".url"]
+            }.distinct()
+        require(urls.size <= 1) { "Native aggregate REST client requires compatible selected server URLs" }
+        urls.singleOrNull()?.let { url ->
+          val key = api.jaxrs?.restClient?.configKey ?: aggregateServiceTypeName().canonicalName
+          GeneratedProperties.merge(
+            values,
+            mapOf(
+              "quarkus.rest-client.\"$key\".url" to url,
+            ),
+            api.source.location,
+          )
+        }
+        nativeClientServices.addAll(services.map { it.name })
+      }
+    }
+    val metadata = typeRegistry.applicationMetadata
+    if (values.isNotEmpty() &&
+      metadata.enabled &&
+      (if (generationMode == Client) metadata.clientConfiguration else metadata.serverConfiguration)
+    ) {
+      val path =
+        if (generationMode ==
+          Client
+        ) {
+          metadata.clientConfigurationFileName
+        } else {
+          metadata.serverConfigurationFileName
+        }
+      typeRegistry.addProperties(path, values, api.source.location)
+    }
+  }
+
+  private fun GeneratedService.hasNativeClientBindings(): Boolean {
+    val modes =
+      setOf(
+        GeneratedQuarkusSecurityBinding.Mode.ACQUIRE,
+        GeneratedQuarkusSecurityBinding.Mode.PROPAGATE,
+        GeneratedQuarkusSecurityBinding.Mode.EXCHANGE,
+      )
+    return operations.any { operation ->
+      (listOfNotNull(api.effectiveAuth(this, operation)) + operation.serverAuth.values).any { auth ->
+        auth.securitySchemes.any { scheme ->
+          scheme.bindings?.mapNotNull { it.quarkus?.takeIf { native -> native.mode in modes } } != null
+        } ||
+          auth.selection?.mapNotNull { selection ->
+            selection.takeIf { it.bindings.values.any { binding -> binding.quarkus?.mode in modes } }
+          } != null
+      }
+    }
+  }
 
   private fun GeneratedService.hasClientSecurityBindings(): Boolean =
     operations.any { operation ->
@@ -285,6 +475,7 @@ class KotlinJAXRSIrGenerator(
       genError("Security scheme enforcement extracts credentials separately; disable explicit security parameters")
     }
     val services = api.jaxRsServices()
+    configureNativeResources(services)
 
     generateModelTypes()
     generateProblemTypes(services)
@@ -704,7 +895,7 @@ class KotlinJAXRSIrGenerator(
         ?.takeIf { path -> path.isNotEmpty() }
         ?.let { path -> typeBuilder.addAnnotation(jaxRsTypes.path, path) }
       typeBuilder.addQuarkusRestClientAnnotations(
-        expandedBaseUri(),
+        expandedBaseUri().takeUnless { name in nativeClientServices },
         api.jaxrs?.restClient.mergeWith(jaxrs?.restClient),
         hasClientSecurityBindings(),
       )
@@ -767,9 +958,10 @@ class KotlinJAXRSIrGenerator(
 
     typeBuilder.addAnnotation(jaxRsTypes.path, aggregateServicePath(services))
     typeBuilder.addQuarkusRestClientAnnotations(
-      services.firstNotNullOfOrNull { service ->
-        service.service.expandedBaseUri()
-      },
+      services
+        .firstNotNullOfOrNull { service ->
+          service.service.expandedBaseUri()
+        }.takeUnless { nativeClientServices.isNotEmpty() },
       api.jaxrs?.restClient,
       services.any { it.service.hasClientSecurityBindings() },
     )
@@ -932,6 +1124,7 @@ class KotlinJAXRSIrGenerator(
     size >= prefix.size && prefix.indices.all { index -> this[index] == prefix[index] }
 
   private fun GeneratedService.servicePath(): String? {
+    if (name in nativeClientServices) return null
     val expandedBaseUri = expandedBaseUri() ?: return null
     val baseUriMode =
       options.baseUriMode ?: if (generationMode == Client && !options.quarkus) {
@@ -998,7 +1191,7 @@ class KotlinJAXRSIrGenerator(
       functionBuilder.addAnnotation(jaxRsTypes.path, path)
     }
     if (generationMode == Client) {
-      api.clientSecurity(service, this, options.generationContext(Client))?.let { security ->
+      selectedClientSecurity(service, this)?.let { security ->
         if (!options.quarkus) {
           genError(
             "Scoped JAX-RS client security requires Quarkus; use a Sunday client for portable token acquisition",
@@ -1006,8 +1199,8 @@ class KotlinJAXRSIrGenerator(
         }
         val packageName = serviceTypeName(service).packageName
         clientSecurityGenerators
-          .getOrPut(packageName) { KotlinQuarkusClientSecurity(packageName, options.profile) }
-          .annotation(security)
+          .getOrPut(packageName) { KotlinQuarkusClientSecurity(packageName, api.name, options.profile) }
+          .annotation(security, clientContext(service).profile)
           ?.let(functionBuilder::addAnnotation)
       }
     }

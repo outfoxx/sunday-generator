@@ -122,17 +122,17 @@ abstract class KotlinGenerateCommand(
     help = "Emit Quarkus client configuration metadata",
   ).flag("-no-client-configuration", default = true)
 
-  /** Kotlin basename for application configuration metadata. */
+  /** Properties resource path for application configuration metadata. */
   val serverConfigurationFileName by option(
     "-server-configuration-file",
-    help = "Kotlin configuration filename in the service package",
-  ).default("OpenAPIServerOidcConfiguration.kt")
+    help = "Output-relative .properties resource path",
+  ).default("META-INF/microprofile-config.properties")
 
-  /** Kotlin basename for application configuration metadata. */
+  /** Properties resource path for application configuration metadata. */
   val clientConfigurationFileName by option(
     "-client-configuration-file",
-    help = "Kotlin configuration filename in the service package",
-  ).default("OpenAPIOidcConfiguration.kt")
+    help = "Output-relative .properties resource path",
+  ).default("META-INF/microprofile-config.properties")
 
   val typeRegistry: KotlinTypeRegistry by lazy {
     KotlinTypeRegistry(

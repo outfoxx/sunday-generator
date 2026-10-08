@@ -26,6 +26,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.emit.GeneratedEndpointPolicy
@@ -69,15 +70,26 @@ internal class KotlinQuarkusNativeSecurity(
             put(prefix + "roles.source", "accesstoken")
           }
           if (binding.tenant != null) put("quarkus.http.auth.proactive", "false")
+          require(binding.providerProperties.isEmpty()) { "Server bindings cannot alias client provider properties" }
+          binding.properties.forEach { (key, value) ->
+            KotlinQuarkusProperties.suffix(key, value, GenerationMode.Server)
+            require(
+              binding.mode == GeneratedQuarkusSecurityBinding.Mode.WEB_APP ||
+                !key.startsWith("authentication.") &&
+                !key.startsWith("logout.") &&
+                !key.startsWith("token.refresh"),
+            ) {
+              "Native OIDC property '$key' requires webApp mode"
+            }
+            require(key != "application-type" || value == get(prefix + key)) { "Conflicting native application-type" }
+            require(prefix + key !in this || get(prefix + key) == value) { "Conflicting native property '$prefix$key'" }
+            put(prefix + key, value)
+          }
         }
       }
     val metadata = registry.applicationMetadata
     if (metadata.enabled && metadata.serverConfiguration) {
-      KotlinQuarkusConfiguration.register(
-        registry,
-        name.peerClass(metadata.serverConfigurationFileName.removeSuffix(".kt")),
-        defaults,
-      )
+      registry.addProperties(metadata.serverConfigurationFileName, defaults, name.canonicalName)
     }
   }
 

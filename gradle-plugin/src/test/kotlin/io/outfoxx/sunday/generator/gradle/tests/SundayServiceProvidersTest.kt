@@ -93,7 +93,7 @@ class SundayServiceProvidersTest {
           mode.set(io.outfoxx.sunday.generator.GenerationMode.Client)
           quarkus.set(true)
           pkgName.set('io.test')
-          clientConfigurationFileName.set('ClientDefaults.kt')
+          clientConfigurationFileName.set('config/client.properties')
         }
       }
       tasks.register('resourceJar', Jar) {
@@ -109,7 +109,13 @@ class SundayServiceProvidersTest {
         .withProjectDir(directory.toFile())
         .withPluginClasspath()
         .withArguments(
-          listOfNotNull(if (clean) "clean" else null, "resourceJar", "--configuration-cache", "--stacktrace"),
+          listOfNotNull(
+            if (clean) "clean" else null,
+            "resourceJar",
+            "--configuration-cache",
+            "--build-cache",
+            "--stacktrace",
+          ),
         ).build()
 
     fun descriptor(): String? =
@@ -121,9 +127,15 @@ class SundayServiceProvidersTest {
             .filter { it.name == "META-INF/beans.xml" }
             .toList()
         assertTrue(archives.size <= 1)
-        val registration = jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory")
+        val registration = jar.getEntry("config/client.properties")
         assertTrue(registration != null)
-        assertEquals("io.test.ClientDefaults\n", jar.getInputStream(registration).bufferedReader().readText())
+        assertTrue(
+          jar
+            .getInputStream(registration)
+            .bufferedReader()
+            .readText()
+            .contains("config_ordinal=100"),
+        )
         archives.singleOrNull()?.let { jar.getInputStream(it).bufferedReader().readText() }
       }
     build()
@@ -151,12 +163,48 @@ class SundayServiceProvidersTest {
       script.writeText(enabled + "\nsundayGenerations.client.$setting.set(false)\n")
       build()
       JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
-        assertEquals(null, jar.getEntry("META-INF/services/io.smallrye.config.ConfigSourceFactory"))
+        assertEquals(null, jar.getEntry("config/client.properties"))
       }
       script.writeText(enabled)
       build()
       assertEquals(null, descriptor())
     }
+    script.writeText(
+      enabled + "\nsundayGenerations.client.clientConfigurationFileName.set('config/renamed.properties')\n",
+    )
+    build()
+    JarFile(directory.resolve("build/libs/resources.jar").toFile()).use { jar ->
+      assertEquals(null, jar.getEntry("config/client.properties"))
+      assertTrue(jar.getEntry("config/renamed.properties") != null)
+    }
+  }
+
+  @Test
+  fun `properties merge compatible contributions preserve paths and reject conflicts`(
+    @TempDir directory: Path,
+  ) {
+    val one = directory.resolve("one/config/client.properties").also { it.parent.createDirectories() }
+    val two = directory.resolve("two/config/client.properties").also { it.parent.createDirectories() }
+    one.writeText("config_ordinal=100\nfirst=one\nshared=same\n")
+    two.writeText("config_ordinal=100\nsecond=two\nshared=same\n")
+    val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+    val task = project.tasks.register("merge", SundayMergeServiceProviders::class.java).get()
+    task.resourceRoots.from(directory.resolve("one").toFile(), directory.resolve("two").toFile())
+    task.outputDirectory.set(directory.resolve("merged").toFile())
+    task.merge()
+    val merged = directory.resolve("merged/config/client.properties")
+    assertEquals("config_ordinal=100\nfirst=one\nsecond=two\nshared=same\n", merged.readText())
+    two.writeText("shared=different\n")
+    assertThrows(IllegalArgumentException::class.java) { task.merge() }
+    assertTrue(merged.readText().contains("shared=same"))
+    Files.move(two, two.resolveSibling("another.properties"))
+    assertThrows(IllegalArgumentException::class.java) { task.merge() }
+    Files.delete(two.resolveSibling("another.properties"))
+    task.merge()
+    assertFalse(merged.readText().contains("second="))
+    Files.delete(one)
+    task.merge()
+    assertFalse(Files.exists(merged))
   }
 
   @Test

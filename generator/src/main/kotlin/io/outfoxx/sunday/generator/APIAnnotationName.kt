@@ -65,6 +65,7 @@ enum class APIAnnotationName(
   Nullify("nullify", false),
   Policy("policy", false),
   Security("security", false),
+  QuarkusConfig("quarkus-config", false),
   SecurityProfile("security-profile", false),
   Zanzibar("zanzibar", false),
 

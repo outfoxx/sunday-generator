@@ -9,7 +9,15 @@ components:
       x-sunday-security:
         server:
           provider: shared
-          quarkus: {mode: oidc}
+          quarkus:
+            mode: oidc
+            properties:
+              token.issuer: https://issuer.test
+              token.audience: integration
+x-sunday-quarkus-config:
+  server:
+    properties:
+      quarkus.zanzibar.filter.deny-unannotated-resource-methods: false
 x-sunday-zanzibar:
   user-source:
     jwt: {claims: [sub], principal-fallback: false}
@@ -27,6 +35,7 @@ paths:
     get:
       operationId: publicCall
       security: []
+      x-sunday-zanzibar: {ignore: true}
       responses:
         '200':
           description: OK
@@ -39,6 +48,17 @@ paths:
       x-sunday-zanzibar: {objectType: document, pathParam: documentId, relation: viewer, userType: user}
       parameters:
         - {name: documentId, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema: {type: string}
+
+  /native/unannotated:
+    get:
+      operationId: unannotated
+      security: []
       responses:
         '200':
           description: OK

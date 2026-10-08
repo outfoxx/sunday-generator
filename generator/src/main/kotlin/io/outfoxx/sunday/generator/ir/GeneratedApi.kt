@@ -35,6 +35,8 @@ data class GeneratedApi(
   val documentation: GeneratedDocumentation? = null,
   /** Complete API-level server declarations before operation inheritance. */
   val servers: List<GeneratedServer> = emptyList(),
+  /** Native application configuration, resolved only for Quarkus output. */
+  val quarkusConfig: GeneratedEnvironment<GeneratedQuarkusConfig>? = null,
 ) {
 
   companion object {

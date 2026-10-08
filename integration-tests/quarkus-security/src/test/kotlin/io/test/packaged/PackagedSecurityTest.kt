@@ -49,6 +49,23 @@ class PackagedSecurityTest {
   private val client = HttpClient.newHttpClient()
 
   @Test
+  fun `library properties load at default ordinal and retain application environment and system overrides`() {
+    expectThat(request("/native/unannotated").statusCode()).isEqualTo(200)
+    val config = ConfigProvider.getConfig().unwrap(io.smallrye.config.SmallRyeConfig::class.java)
+    val prefix = "quarkus.rest-client.\"io.test.packaged.client.API\"."
+    expectThat(config.getValue(prefix + "connect-timeout", String::class.java)).isEqualTo("2000")
+    expectThat(config.getConfigValue(prefix + "connect-timeout").configSourceOrdinal).isEqualTo(250)
+    expectThat(config.getValue(prefix + "read-timeout", String::class.java)).isEqualTo("3000")
+    expectThat(config.getConfigValue(prefix + "read-timeout").configSourceOrdinal).isEqualTo(300)
+    expectThat(config.getValue(prefix + "max-redirects", String::class.java)).isEqualTo("4")
+    expectThat(config.getConfigValue(prefix + "max-redirects").configSourceOrdinal).isEqualTo(400)
+    expectThat(
+      config.getConfigValue(prefix + "url").configSourceOrdinal,
+    ).isEqualTo(100)
+    expectThat(config.getValue("quarkus.oidc.token.issuer", String::class.java)).isEqualTo("https://issuer.test")
+  }
+
+  @Test
   fun `dependency jars discover shared providers and native OIDC rejects untrusted tokens`() {
     val badKey =
       KeyPairGenerator

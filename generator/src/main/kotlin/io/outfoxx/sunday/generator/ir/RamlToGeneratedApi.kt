@@ -206,6 +206,11 @@ class RamlToGeneratedApi(
     val generatedApi =
       GeneratedApi(
         name = api.name ?: "API",
+        quarkusConfig =
+          GeneratedQuarkusConfig.read(
+            api.findAnnotation(APIAnnotationName.QuarkusConfig, null)?.anyValue,
+            "${document.location}#(sunday.quarkus-config)",
+          ),
         source =
           GeneratedSourceSpec(
             kind = sourceKind,

@@ -141,13 +141,8 @@ class BrowserOidcFixture(
     }
     server.createContext("/browser/stats") { exchange -> exchange.json("${logins.get()}:${refreshes.get()}") }
     return mapOf(
-      "quarkus.oidc.browser.auth-server-url" to address,
       "quarkus.oidc.browser.client-id" to "browser-app",
       "quarkus.oidc.browser.credentials.secret" to "browser-test-secret",
-      "quarkus.oidc.browser.token.issuer" to "https://issuer.test",
-      "quarkus.oidc.browser.token.audience" to "browser-app",
-      "quarkus.oidc.browser.token.refresh-expired" to "true",
-      "quarkus.oidc.browser.token.lifespan-grace" to "0",
     )
   }
 

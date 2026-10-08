@@ -100,6 +100,11 @@ jobs:
       run: >-
         ./gradlew :integration-tests:quarkus-security:test
         --dependency-verification strict -PuseLocalSundayKt=false -PnativeSecurityOnly=true
+    - name: Verify custom native configuration resources
+      if: matrix.partition == 'infrastructure'
+      run: >-
+        ./gradlew :integration-tests:quarkus-security:test
+        --dependency-verification strict -PuseLocalSundayKt=false -PcustomSecurityResources=true
 
   swift:
     env:

@@ -30,6 +30,7 @@ import com.squareup.kotlinpoet.SET
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
+import io.outfoxx.sunday.generator.GenerationMode
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedQuarkusSecurityBinding
 import io.outfoxx.sunday.generator.ir.GeneratedSecurityBinding
@@ -41,14 +42,20 @@ import java.security.MessageDigest
 /** Projects a selected binding into native named OIDC clients and overridable deployment defaults. */
 internal class KotlinQuarkusClientSecurity(
   private val packageName: String,
+  private val contractName: String,
   private val profile: String?,
 ) {
   private val clients = linkedMapOf<String, String>()
   private val defaults = linkedMapOf<String, String>()
   private val nativeClients = linkedSetOf<String>()
+  private val providerMembers = linkedMapOf<String, Set<String>>()
+  private val requiredMembers = linkedMapOf<String, Set<String>>()
   private val requiredExtensions = linkedSetOf<String>()
 
-  fun annotation(security: GeneratedClientSecurity): AnnotationSpec? {
+  fun annotation(
+    security: GeneratedClientSecurity,
+    selectedProfile: String? = profile,
+  ): AnnotationSpec? {
     if (security.bindings.isEmpty()) return null
     val name =
       security.requirement.schemes.singleOrNull()
@@ -98,6 +105,9 @@ internal class KotlinQuarkusClientSecurity(
         genError("Quarkus token propagation/exchange requires external flow; host login is a separate server binding")
       }
       if (native?.mode == GeneratedQuarkusSecurityBinding.Mode.PROPAGATE) {
+        require(native.properties.isEmpty() && native.providerProperties.isEmpty()) {
+          "Token propagation does not acquire tokens; OIDC client properties and provider aliases require acquire or exchange"
+        }
         if (binding.audience != null ||
           binding.resource != null
         ) {
@@ -122,7 +132,16 @@ internal class KotlinQuarkusClientSecurity(
         .orEmpty()
         .distinct()
         .sorted()
-    val identity = listOf(packageName, profile.orEmpty(), name, binding.toString()) + scopes
+    val canonicalBinding =
+      binding.copy(
+        quarkus =
+          binding.quarkus?.let {
+            it.copy(properties = it.properties.toSortedMap(), providerProperties = it.providerProperties.sorted())
+          },
+      )
+    val identity =
+      listOf(packageName, selectedProfile.orEmpty(), name, canonicalBinding.toString()) +
+        listOfNotNull(contractName.takeIf { native != null }) + scopes
     val digest =
       MessageDigest
         .getInstance("SHA-256")
@@ -133,7 +152,9 @@ internal class KotlinQuarkusClientSecurity(
     val client = "sunday-$digest"
     clients[client] = binding.provider
     if (native != null) nativeClients.add(client)
-    val prefix = "quarkus.oidc-client.\"$client\"."
+    val prefix = if (native == null) "quarkus.oidc-client.\"$client\"." else "quarkus.oidc-client.$client."
+    // Several operations can share the same isolated client; rebuild aliases from contract defaults.
+    defaults.keys.removeAll { it.startsWith(prefix) }
 
     fun setting(
       key: String,
@@ -163,6 +184,59 @@ internal class KotlinQuarkusClientSecurity(
         "scopes",
         scopes.joinToString(",") { it.replace("\\", "\\\\").replace(",", "\\,") },
       )
+    }
+    if (native != null) {
+      val controlled =
+        setOf("id", "scopes", "grant.type", "grant-options.$grant.audience", "grant-options.$grant.resource")
+      native.properties.forEach { (key, value) ->
+        KotlinQuarkusProperties.suffix(key, value, GenerationMode.Client)
+        require(
+          key !in controlled ||
+            defaults[prefix + key] == value ||
+            key.startsWith("grant-options.") &&
+            defaults[prefix + key] == null,
+        ) { "Conflicting native OIDC '$key'" }
+        require(!key.startsWith("grant-options.") || key.startsWith("grant-options.$grant.")) {
+          "Native OIDC property '$key' is incompatible with grant '$grant'"
+        }
+        setting(key, value)
+      }
+      val aliases =
+        setOf(
+          "client-id",
+          "credentials.secret",
+          "auth-server-url",
+          "discovery-enabled",
+          "discovery-path",
+          "token-path",
+        ) +
+          native.providerProperties
+      native.providerProperties.forEach { key ->
+        KotlinQuarkusProperties.suffix(key, null, GenerationMode.Client)
+        require(!key.startsWith("grant-options.") || key.startsWith("grant-options.$grant.")) {
+          "Provider alias '$key' is incompatible with grant '$grant'"
+        }
+        require(
+          key !in setOf("id", "scopes", "grant.type", "early-tokens-acquisition"),
+        ) { "Provider cannot override isolated client '$key'" }
+      }
+      providerMembers[client] = aliases + setOf("id", "scopes", "grant.type", "early-tokens-acquisition")
+      val required = linkedSetOf<String>()
+      aliases.forEach { key ->
+        val fallback =
+          defaults[prefix + key] ?: when (key) {
+            "credentials.secret", "auth-server-url", "discovery-path", "token-path" -> ""
+            "discovery-enabled" -> "true"
+            else -> null
+          }
+        if (fallback == null || key in native.providerProperties && fallback.isNotEmpty()) required.add(key)
+        val unquoted = "quarkus.oidc-client.${binding.provider}.$key"
+        val quoted = "quarkus.oidc-client.\"${binding.provider}\".$key"
+        val tail = fallback?.let { ":$it" }.orEmpty()
+        setting(key, "${'$'}{$quoted:${'$'}{$unquoted$tail}}")
+      }
+      required.addAll(native.properties.filterValues { it.contains("${'$'}{") }.keys)
+      requiredMembers[client] = required
     }
     if (exchange) {
       return AnnotationSpec
@@ -197,6 +271,64 @@ internal class KotlinQuarkusClientSecurity(
           CodeBlock
             .builder()
             .addStatement(
+              "val providers = mapOf<String, String>(%L)",
+              clients
+                .filterKeys { it in nativeClients }
+                .map { (client, provider) ->
+                  CodeBlock.of("%S to %S", client, provider)
+                }.joinToCode(", "),
+            ).addStatement(
+              "val forwarded = mapOf<String, Set<String>>(%L)",
+              providerMembers
+                .map { (client, members) ->
+                  CodeBlock.of(
+                    "%S to setOf(%L)",
+                    client,
+                    members.sorted().map { CodeBlock.of("%S", it) }.joinToCode(", "),
+                  )
+                }.joinToCode(", "),
+            ).addStatement(
+              "val requiredInputs = mapOf<String, Set<String>>(%L)",
+              requiredMembers
+                .map { (client, members) ->
+                  CodeBlock.of(
+                    "%S to setOf(%L)",
+                    client,
+                    members.sorted().map { CodeBlock.of("%S", it) }.joinToCode(", "),
+                  )
+                }.joinToCode(", "),
+            ).add(
+              """
+              val providerPrefixes = providers.values.distinct().flatMap { provider ->
+                listOf("quarkus.oidc-client." + provider + ".", "quarkus.oidc-client.\"" + provider + "\".")
+                  .map { it to provider }
+              }.sortedByDescending { it.first.length }
+              for ((client, provider) in providers) {
+                for (member in forwarded.getValue(client) - setOf("id", "scopes", "grant.type", "early-tokens-acquisition")) {
+                  config.getOptionalValue("quarkus.oidc-client." + client + "." + member, String::class.java)
+                }
+                for (member in requiredInputs.getValue(client)) {
+                  val key = "quarkus.oidc-client." + client + "." + member
+                  require(!config.getOptionalValue(key, String::class.java).orElse(null).isNullOrBlank()) {
+                    "Missing required OIDC provider alias: " + provider + "." + member + " (or configure " + key + ")"
+                  }
+                }
+                for (key in config.propertyNames) {
+                  val (prefix, owner) = providerPrefixes.firstOrNull { key.startsWith(it.first) } ?: continue
+                  if (owner != provider) continue
+                  val member = key.removePrefix(prefix)
+                  require(member in forwarded.getValue(client)) {
+                    "Unforwarded OIDC provider setting: " + key + "; declare quarkus.providerProperties"
+                  }
+                  if (member == "grant.type") {
+                    val actual = config.getValue(key, String::class.java)
+                    val expected = config.getValue("quarkus.oidc-client." + client + ".grant.type", String::class.java)
+                    require(actual == expected) { "Selected OIDC provider has an incompatible grant: " + provider }
+                  }
+                }
+              }
+              """.trimIndent() + "\n",
+            ).addStatement(
               "val required = listOf(%L)",
               requiredExtensions.map { CodeBlock.of("%S", it) }.joinToCode(", "),
             ).add(
@@ -235,10 +367,29 @@ internal class KotlinQuarkusClientSecurity(
     if (requiredExtensions.isNotEmpty()) registerRequirements(registry)
     val metadata = registry.applicationMetadata
     if (clients.isEmpty() || !metadata.enabled || !metadata.clientConfiguration) return
+    val nativeDefaults =
+      defaults.filterKeys { key ->
+        nativeClients.any {
+          key.startsWith(
+            "quarkus.oidc-client.\"$it\".",
+          ) ||
+            key.startsWith("quarkus.oidc-client.$it.")
+        }
+      }
+    if (nativeDefaults.isNotEmpty()) {
+      registry.addProperties(
+        metadata.clientConfigurationFileName,
+        nativeDefaults,
+        packageName,
+      )
+    }
+    val legacyClients = clients.filterKeys { it !in nativeClients }
+    if (legacyClients.isEmpty()) return
+    val legacyDefaults = defaults - nativeDefaults.keys
     val factory = ClassName("io.smallrye.config", "ConfigSourceFactory")
     val context = ClassName("io.smallrye.config", "ConfigSourceContext")
     val source = ClassName("org.eclipse.microprofile.config.spi", "ConfigSource")
-    val name = ClassName(packageName, metadata.clientConfigurationFileName.removeSuffix(".kt"))
+    val name = ClassName(packageName, "OpenAPIOidcConfiguration")
     val values = MAP.parameterizedBy(STRING, STRING)
     val runtimeSource = name.nestedClass("Source")
     val type =
@@ -261,13 +412,13 @@ internal class KotlinQuarkusClientSecurity(
             .returns(ITERABLE.parameterizedBy(source))
             .addCode(
               "val clients = mapOf(%L)\n",
-              clients
+              legacyClients
                 .map { (key, value) ->
                   CodeBlock.of("%S to %S", key, value)
                 }.joinToCode(",\n"),
             ).addCode(
               "val values = mutableMapOf(%L)\n",
-              defaults
+              legacyDefaults
                 .map { (key, value) ->
                   CodeBlock.of("%S to %S", key, value)
                 }.joinToCode(",\n"),

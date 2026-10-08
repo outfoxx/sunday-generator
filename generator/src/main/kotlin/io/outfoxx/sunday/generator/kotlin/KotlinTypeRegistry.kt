@@ -33,6 +33,7 @@ import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrarySupport
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemRfc
 import io.outfoxx.sunday.generator.kotlin.utils.kotlinFileSpec
+import io.outfoxx.sunday.generator.utils.GeneratedProperties
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDateTime
@@ -67,6 +68,8 @@ class KotlinTypeRegistry(
   val generationTimestamp = generationTimestamp?.ifBlank { null }
   private val generatedAnnotationName = ClassName.bestGuess(generatedAnnotationName ?: Generated::class.qualifiedName!!)
   private val serviceProviders = linkedMapOf<ClassName, MutableSet<ClassName>>()
+  private val propertyResources = linkedMapOf<String, MutableMap<String, String>>()
+  private val propertyOwners = linkedMapOf<String, MutableSet<String>>()
   internal val typeBuilders = mutableMapOf<ClassName, TypeSpec.Builder>()
   override val beanValidationTypes =
     if (options.contains(UseJakartaPackages)) {
@@ -82,6 +85,12 @@ class KotlinTypeRegistry(
   ) {
 
     val builtTypes = buildTypes()
+    if (GeneratedTypeCategory.Service in categories) {
+      propertyResources.keys.forEach {
+        GeneratedProperties
+          .destination(outputDirectory, it)
+      }
+    }
 
     builtTypes.entries
       .filter { it.key.topLevelClassName() == it.key }
@@ -89,12 +98,42 @@ class KotlinTypeRegistry(
       .map { kotlinFileSpec(it.key.packageName, it.value) }
       .forEach { it.writeTo(outputDirectory) }
     if (GeneratedTypeCategory.Service in categories) {
+      propertyResources.forEach { (path, values) ->
+        GeneratedProperties
+          .write(outputDirectory, path, values)
+      }
       serviceProviders.forEach { (service, implementations) ->
         val resource = outputDirectory.resolve("META-INF/services/${service.canonicalName}")
         Files.createDirectories(resource.parent)
         Files.writeString(resource, implementations.joinToString("\n", postfix = "\n") { it.canonicalName })
       }
     }
+  }
+
+  override fun addProperties(
+    path: String,
+    values: Map<String, String>,
+    owner: String,
+  ) {
+    GeneratedProperties
+      .validatePath(path)
+    val artifactValues =
+      propertyResources.values
+        .flatMap { it.entries }
+        .associate { it.toPair() }
+        .toMutableMap()
+    GeneratedProperties.merge(
+      artifactValues,
+      values,
+      "$path from $propertyOwners and $owner",
+    )
+    val owners = propertyOwners.getOrPut(path) { linkedSetOf() }
+    GeneratedProperties.merge(
+      propertyResources.getOrPut(path) { linkedMapOf() },
+      values,
+      "$path from ${owners + owner}",
+    )
+    owners.add(owner)
   }
 
   override fun addServiceProvider(

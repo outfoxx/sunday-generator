@@ -72,7 +72,12 @@ internal object GeneratedSecurityReader {
     raw: Any?,
     path: String,
   ): GeneratedQuarkusSecurityBinding {
-    val fields = GeneratedEnvironmentReader.objectValue(raw, path, setOf("mode", "tenant"))
+    val fields =
+      GeneratedEnvironmentReader.objectValue(
+        raw,
+        path,
+        setOf("mode", "tenant", "properties", "providerProperties"),
+      )
     val mode =
       when (val value = fields.text("mode", path)) {
         "provider" -> GeneratedQuarkusSecurityBinding.Mode.PROVIDER
@@ -83,7 +88,20 @@ internal object GeneratedSecurityReader {
         "exchange" -> GeneratedQuarkusSecurityBinding.Mode.EXCHANGE
         else -> genError("Unsupported $path.mode '$value'")
       }
-    return GeneratedQuarkusSecurityBinding(mode, fields.text("tenant", path))
+    val aliases =
+      fields["providerProperties"]
+        ?.let { rawAliases ->
+          (rawAliases as? List<*>)?.map { alias ->
+            (alias as? String)?.takeIf { it.isNotBlank() }
+              ?: genError("$path.providerProperties requires non-blank suffixes")
+          } ?: genError("$path.providerProperties must be a list")
+        }.orEmpty()
+    return GeneratedQuarkusSecurityBinding(
+      mode,
+      fields.text("tenant", path),
+      GeneratedQuarkusConfig.readProperties(fields["properties"], "$path.properties"),
+      aliases.distinct(),
+    )
   }
 
   fun selection(

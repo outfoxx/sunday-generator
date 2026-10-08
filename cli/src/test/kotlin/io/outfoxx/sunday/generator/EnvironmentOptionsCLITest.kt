@@ -42,9 +42,9 @@ class EnvironmentOptionsCLITest {
         "-no-server-configuration",
         "-no-client-configuration",
         "-server-configuration-file",
-        "ServerDefaults.kt",
+        "config/server.properties",
         "-client-configuration-file",
-        "ClientDefaults.kt",
+        "config/client.properties",
         "-out",
         source.resolve("..").path,
         source.path,
@@ -54,8 +54,8 @@ class EnvironmentOptionsCLITest {
     assertEquals(false, metadata.enabled)
     assertEquals(false, metadata.serverConfiguration)
     assertEquals(false, metadata.clientConfiguration)
-    assertEquals("ServerDefaults.kt", metadata.serverConfigurationFileName)
-    assertEquals("ClientDefaults.kt", metadata.clientConfigurationFileName)
+    assertEquals("config/server.properties", metadata.serverConfigurationFileName)
+    assertEquals("config/client.properties", metadata.clientConfigurationFileName)
   }
 
   @Test

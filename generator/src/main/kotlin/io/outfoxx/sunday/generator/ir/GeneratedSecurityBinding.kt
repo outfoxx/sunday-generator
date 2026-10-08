@@ -51,6 +51,6 @@ data class GeneratedSecurityBinding(
       refreshUrl = other.refreshUrl ?: refreshUrl,
       audience = other.audience ?: audience,
       resource = other.resource ?: resource,
-      quarkus = other.quarkus ?: quarkus,
+      quarkus = other.quarkus?.let { quarkus?.merge(it) ?: it } ?: quarkus,
     )
 }
