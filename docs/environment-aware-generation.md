@@ -280,7 +280,7 @@ The environment-aware output requires these companion runtimes:
 | Target | Runtime version | Distribution |
 | --- | --- | --- |
 | Kotlin | `2.0.0-beta.14` | Maven Central, including validation and Quarkus client artifacts |
-| Swift | `2.0.0-beta.14` | Swift Package Manager Git tag |
+| Swift | `2.0.0-beta.15` | Swift Package Manager Git tag |
 | TypeScript | `2.0.0-beta.11` | npm; Node.js 22 or later |
 | Python | `2.0.0-beta.10` | Released Git tag until PyPI publication |
 

@@ -104,8 +104,10 @@ hierarchies cannot themselves become partial discriminated unions; place such un
 patchable containing object instead.
 
 Merge-patch generation requires Sunday Swift `2.0.0-beta.9`, Sunday Kotlin `2.0.0-beta.9`, and Sunday
-Python `2.0.0-beta.6` or later. The compiler-backed tests use Swift and Kotlin `2.0.0-beta.14` and Python
-`2.0.0-beta.10`, including Swift's explicit-state API and decoder fixes and Python's `UNSET` API.
+Python `2.0.0-beta.6` or later. Swift patch companions with inferred `Identifiable` conformance require
+`2.0.0-beta.15` or later for conditional `Hashable` support on `PatchOp` and `UpdateOp`. The compiler-backed
+tests use Swift `2.0.0-beta.15`, Kotlin `2.0.0-beta.14`, and Python `2.0.0-beta.10`, including Swift's
+explicit-state API and decoder fixes and Python's `UNSET` API.
 Python uses its released Git tag until PyPI publishing is enabled. The Kotlin runtime rejects
 `UpdateOp` deletion directly and supports decoding operations at root and collection positions,
 without relying on generated Jackson field annotations.
