@@ -76,20 +76,20 @@ class SwiftPatchableTypesTest {
       import Testing
       import SundayGenTest
 
-      @Test func patchIdentityPreservesOperationStates() throws {
+      @Test func patchIdentityPreservesOperationStates() {
         func identity<Model: Identifiable>(of model: Model) -> Model.ID { model.id }
 
-        let unchanged = try RecordPatch()
-        let first = try RecordPatch($property: .set("one"))
-        let duplicate = try RecordPatch($property: .set("one"))
-        let second = try RecordPatch($property: .set("two"))
+        let unchanged = RecordPatch()
+        let first = RecordPatch($property: .set("one"))
+        let duplicate = RecordPatch($property: .set("one"))
+        let second = RecordPatch($property: .set("two"))
         #expect(identity(of: first) == ${if (required) "UpdateOp" else "PatchOp"}<String>.set("one"))
         #expect(Set([identity(of: unchanged), identity(of: first), identity(of: duplicate), identity(of: second)]).count == 3)
         ${if (required) {
         ""
       } else {
         """
-        let deleted = try RecordPatch($property: .delete)
+        let deleted = RecordPatch($property: .delete)
         #expect(Set([identity(of: unchanged), identity(of: first), identity(of: deleted)]).count == 3)
         """.trimIndent()
       }}
