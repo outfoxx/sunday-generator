@@ -17,6 +17,11 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -28,6 +33,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
@@ -37,6 +43,62 @@ import java.nio.file.Path
 @Tag("validation")
 @Tag("requests")
 class SwiftPatchableTypesTest {
+  @ParameterizedTest
+  @CsvSource("id,true", "id,false", "recordId,true", "recordId,false")
+  fun `patch operation identities remain hashable`(
+    property: String,
+    required: Boolean,
+    compiler: SwiftCompiler,
+  ) {
+    val registry = SwiftTypeRegistry(setOf(SwiftTypeRegistry.Option.DefaultIdentifiableTypes))
+    val api =
+      GeneratedApi(
+        name = "Patch identity",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel(
+              name = "RecordPatch",
+              kind = GeneratedModel.Kind.OBJECT,
+              patchable = true,
+              properties =
+                listOf(GeneratedModelProperty(property, GeneratedTypeRef.scalar("string"), required = required)),
+            ),
+          ),
+      )
+    SwiftSundayIrGenerator(api, registry, swiftSundayTestOptions).generateServiceTypes()
+    registry.generateFiles(GeneratedTypeCategory.entries.toSet(), compiler.srcDir)
+    Files.createDirectories(compiler.testsDir)
+    Files.writeString(
+      compiler.testsDir.resolve("PatchIdentityTests.swift"),
+      """
+      import Sunday
+      import Testing
+      import SundayGenTest
+
+      @Test func patchIdentityPreservesOperationStates() throws {
+        func identity<Model: Identifiable>(of model: Model) -> Model.ID { model.id }
+
+        let unchanged = try RecordPatch()
+        let first = try RecordPatch($property: .set("one"))
+        let duplicate = try RecordPatch($property: .set("one"))
+        let second = try RecordPatch($property: .set("two"))
+        #expect(identity(of: first) == ${if (required) "UpdateOp" else "PatchOp"}<String>.set("one"))
+        #expect(Set([identity(of: unchanged), identity(of: first), identity(of: duplicate), identity(of: second)]).count == 3)
+        ${if (required) {
+        ""
+      } else {
+        """
+        let deleted = try RecordPatch($property: .delete)
+        #expect(Set([identity(of: unchanged), identity(of: first), identity(of: deleted)]).count == 3)
+        """.trimIndent()
+      }}
+      }
+      """.trimIndent(),
+    )
+    assertTrue(compileAndTestGeneratedFiles(compiler))
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed"])
   fun `recursive ordinary and patch children flatten value parents`(
