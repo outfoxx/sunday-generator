@@ -58,7 +58,18 @@ internal class OpenApiNullUnionProjection(
       fail(origin, "null-only branch assertions cannot be evaluated")
     }
     val payloadSchema = composition.resolve(payload)
-    val nonNullPayload = withoutNull(payloadSchema, origin)
+    // A named payload that already excludes null needs no union expansion. Keep its
+    // declaration intact; constrain still rejects unsupported wrapper intersections.
+    val nonNullPayload =
+      if (OpenApiSchemaReferences.canonicalName(payload) != null &&
+        payloadSchema.keys.any { it in setOf("oneOf", "anyOf") } &&
+        payloadSchema.keys.none { it in setOf("not", "if", "then", "else") } &&
+        nullability.acceptsNull(payloadSchema) == false
+      ) {
+        payloadSchema
+      } else {
+        withoutNull(payloadSchema, origin)
+      }
     val wrapper = withoutNull(effective.filterKeys { it !in keywords }, origin)
     val constrained = composition.constrain(nonNullPayload, wrapper, origin)
     if (nullability.acceptsNull(constrained) != false) {

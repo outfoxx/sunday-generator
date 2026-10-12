@@ -77,6 +77,37 @@ class SwiftSundayIrGeneratorTest : SwiftSundayIrTestSupport() {
         @testable import SundayGenTest
 
         final class NullUnionTests: XCTestCase {
+          func testNamedNullableUnion() throws {
+            let decoder = JSONDecoder()
+            for kind in ["cat", "dog"] {
+              let pet: [String: Any] = ["kind": kind, "name": "Milo"]
+              let base: [String: Any] = ["requiredPet": NSNull(), "nonNullPet": pet]
+              for payload in [base, base.merging(["pet": NSNull()]) { _, value in value },
+                              base.merging(["pet": pet, "requiredPet": pet]) { _, value in value }] {
+                let record = try decoder.decode(NullablePetRecord.self, from: JSONSerialization.data(withJSONObject: payload))
+                let _: NamedPet? = record.pet
+                let _: NamedPet? = record.requiredPet
+                let _: NamedPet = record.nonNullPet
+                let encoded = try JSONEncoder().encode(record)
+                let restored = try JSONSerialization.jsonObject(with: encoded) as! NSDictionary
+                XCTAssertEqual(restored["nonNullPet"] as? NSDictionary, pet as NSDictionary)
+                XCTAssertEqual(restored["requiredPet"] as? NSObject, payload["requiredPet"] as? NSObject)
+                XCTAssertEqual(restored["pet"] as? NSObject, (payload["pet"] ?? NSNull()) as? NSObject)
+                _ = try decoder.decode(NullablePetRecord.self, from: encoded)
+              }
+              let invalids: [[String: Any]] = [
+                ["nonNullPet": pet], ["requiredPet": NSNull()],
+                base.merging(["nonNullPet": NSNull()]) { _, value in value },
+                base.merging(["pet": "invalid"]) { _, value in value },
+                base.merging(["pet": ["kind": kind]]) { _, value in value },
+                base.merging(["pet": ["kind": kind, "name": ""]]) { _, value in value }
+              ]
+              for invalid in invalids {
+                XCTAssertThrowsError(try decoder.decode(NullablePetRecord.self, from: JSONSerialization.data(withJSONObject: invalid)))
+              }
+            }
+          }
+
           func testSdkContracts() throws {
             let decoder = JSONDecoder()
             let mappedPayload = Data(#"{"kind":"cat","name":"Mittens"}"#.utf8)

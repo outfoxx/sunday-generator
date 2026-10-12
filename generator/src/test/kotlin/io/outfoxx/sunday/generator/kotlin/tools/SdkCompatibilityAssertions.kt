@@ -34,6 +34,35 @@ import java.util.Base64
 fun assertSdkCompatibility(classLoader: ClassLoader) {
   fun model(name: String): Class<*> = classLoader.loadClass("io.test.$name")
   val mapper = jacksonObjectMapper()
+  val petRecord = model("NullablePetRecord")
+  for (property in listOf("Pet", "RequiredPet", "NonNullPet")) {
+    assertEquals(model("NamedPet"), petRecord.getMethod("get$property").returnType)
+  }
+  for ((kind, variant) in listOf("cat" to "NamedCat", "dog" to "NamedDog")) {
+    val pet = mapOf("kind" to kind, "name" to "Milo")
+    val base = mapOf("requiredPet" to null, "nonNullPet" to pet)
+    for (payload in listOf(base, base + ("pet" to null), base + ("pet" to pet) + ("requiredPet" to pet))) {
+      val value = mapper.convertValue(payload, petRecord)
+      assertEquals(model(variant), petRecord.getMethod("getNonNullPet").invoke(value).javaClass)
+      val encoded = mapper.readTree(mapper.writeValueAsBytes(value))
+      assertEquals(mapper.valueToTree(pet), encoded["nonNullPet"])
+      assertEquals(mapper.valueToTree(payload["requiredPet"]), encoded["requiredPet"])
+      assertEquals(mapper.valueToTree(payload["pet"]), encoded["pet"])
+      mapper.readValue(mapper.writeValueAsBytes(value), petRecord)
+    }
+    for (invalid in listOf(
+      base - "requiredPet",
+      base - "nonNullPet",
+      base + ("nonNullPet" to null),
+      base + ("pet" to "invalid"),
+      base + ("pet" to mapOf("kind" to kind)),
+      base + ("pet" to mapOf("kind" to kind, "name" to "")),
+    )) {
+      assertThrows(IllegalArgumentException::class.java, {
+        mapper.convertValue(invalid, petRecord)
+      }, "Invalid payload accepted: $invalid")
+    }
+  }
   val mappedPayload = mapOf("kind" to "cat", "name" to "Mittens")
   val mappedValue = mapper.convertValue(mappedPayload, model("SdkMappedPet"))
   assertTrue(model("SdkWrappedCat").isInstance(mappedValue))
