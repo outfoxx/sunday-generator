@@ -230,6 +230,24 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                     |  entitySchema.parse(restored);
                     |  if (String(asset?.state) !== state) throw new Error('canonical discriminator lost');
                     |}
+                    |const petRecordSchema = runtime.resolveSchema(%T);
+                    |for (const kind of ['cat', 'dog']) {
+                    |  const pet = {kind, name: 'Milo'};
+                    |  const base = {requiredPet: null, nonNullPet: pet};
+                    |  for (const payload of [base, {...base, pet: null}, {...base, pet, requiredPet: pet}]) {
+                    |    const record: %T = petRecordSchema.parse(payload);
+                    |    const canonical: %T | null | undefined = record.pet;
+                    |    if (canonical && canonical.kind !== kind) throw new Error('variant lost');
+                    |    const encoded: any = %T.encode(petRecordSchema, record);
+                    |    if (encoded.nonNullPet.kind !== kind || encoded.nonNullPet.name !== 'Milo') throw new Error('pet payload lost');
+                    |    if (encoded.requiredPet !== null && encoded.requiredPet.kind !== kind) throw new Error('required nullable pet lost');
+                    |    petRecordSchema.parse(encoded);
+                    |  }
+                    |  for (const invalid of [{nonNullPet: pet}, {requiredPet: null}, {...base, nonNullPet: null},
+                    |                         {...base, pet: 'invalid'}, {...base, pet: {kind}}, {...base, pet: {kind, name: ''}}]) {
+                    |    if (petRecordSchema.safeParse(invalid).success) throw new Error('invalid nullable union accepted');
+                    |  }
+                    |}
                     |const eventSchema = runtime.resolveSchema(%T);
                     |const event: %T = eventSchema.parse({type: 'character', id: 'one'});
                     |const baseEvent: %T = event;
@@ -271,6 +289,10 @@ class TypeScriptSundayIrGeneratorTest : TypeScriptSundayIrTestSupport() {
                     TypeName.namedImport("EntityDetailsSchema", "!entity-details"),
                     TypeName.namedImport("EntityDetails", "!entity-details"),
                     TypeName.namedImport("CurrentAsset", "!current-asset"),
+                    TypeName.namedImport("z", "zod"),
+                    TypeName.namedImport("NullablePetRecordSchema", "!nullable-pet-record"),
+                    TypeName.namedImport("NullablePetRecord", "!nullable-pet-record"),
+                    TypeName.namedImport("NamedPet", "!named-pet"),
                     TypeName.namedImport("z", "zod"),
                     TypeName.namedImport("CharacterChangeEventSchema", "!character-change-event"),
                     TypeName.namedImport("CharacterChangeEvent", "!character-change-event"),

@@ -1795,6 +1795,12 @@ class KotlinSundayIrGenerator(
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
       .apply {
+        // A nullable value still needs a creator argument when the wire property is required.
+        val requiresPresence =
+          !patchable &&
+            effective.required &&
+            modelProperties.acceptsNull(effective.type) &&
+            effective.defaultValue == null
         if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
           KotlinNativeSchema
             .annotation(
@@ -1818,7 +1824,7 @@ class KotlinSundayIrGenerator(
         if (serializationName != null ||
           name.kotlinIdentifierName != name ||
           !patchable &&
-          effective.required != required &&
+          (effective.required != required || requiresPresence) &&
           typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
         ) {
           addAnnotation(
@@ -1827,7 +1833,7 @@ class KotlinSundayIrGenerator(
               .addMember("value = %S", serializationName ?: name)
               .apply {
                 if (!patchable &&
-                  effective.required != required
+                  (effective.required != required || requiresPresence)
                 ) {
                   addMember("required = %L", effective.required)
                 }
@@ -1849,7 +1855,7 @@ class KotlinSundayIrGenerator(
         }
         if (patchable) {
           defaultValue("%T.none()", PATCH_OP)
-        } else if (!required || type.nullable) {
+        } else if ((!required || type.nullable) && !requiresPresence) {
           defaultValue(
             KotlinModelDefaults.code(
               defaultValue,

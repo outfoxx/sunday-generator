@@ -105,6 +105,28 @@ class PythonGeneratedOutputParityTest : PythonTest() {
               from pydantic import ValidationError
               from parity_api.models import SdkAliasBase, SdkAliasChild, SdkMappedPet, SdkMappedCat, SdkWrappedCat
               from pydantic import TypeAdapter
+              from parity_api.models import NullablePetRecord, NamedPet, NamedCat, NamedDog
+              for kind, variant in [('cat', NamedCat), ('dog', NamedDog)]:
+                  pet = {'kind': kind, 'name': 'Milo'}
+                  base = {'requiredPet': None, 'nonNullPet': pet}
+                  for payload in [base, {**base, 'pet': None}, {**base, 'pet': pet, 'requiredPet': pet}]:
+                      record = NullablePetRecord.model_validate(payload)
+                      assert type(record.non_null_pet) is variant
+                      assert record.pet is None or type(record.pet) is variant
+                      encoded = record.model_dump(mode='json', by_alias=True)
+                      assert encoded['nonNullPet'] == pet
+                      assert encoded['requiredPet'] == payload['requiredPet']
+                      assert encoded['pet'] == payload.get('pet')
+                      NullablePetRecord.model_validate_json(record.model_dump_json())
+                  for invalid in [{'nonNullPet': pet}, {'requiredPet': None}, {**base, 'nonNullPet': None},
+                                  {**base, 'pet': 'invalid'}, {**base, 'pet': {'kind': kind}},
+                                  {**base, 'pet': {'kind': kind, 'name': ''}}]:
+                      try:
+                          NullablePetRecord.model_validate(invalid)
+                      except ValidationError:
+                          pass
+                      else:
+                          raise AssertionError(f'Invalid nullable union accepted: {invalid}')
               mapped_adapter = TypeAdapter(SdkMappedPet)
               mapped_payload = {'kind': 'cat', 'name': 'Mittens'}
               mapped_value = mapped_adapter.validate_python(mapped_payload)

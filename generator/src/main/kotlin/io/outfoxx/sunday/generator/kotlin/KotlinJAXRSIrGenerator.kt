@@ -2826,6 +2826,12 @@ class KotlinJAXRSIrGenerator(
     ParameterSpec
       .builder(name.kotlinIdentifierName, modelPropertyTypeName(patchable))
       .apply {
+        // A nullable value still needs a creator argument when the wire property is required.
+        val requiresPresence =
+          !patchable &&
+            effective.required &&
+            modelProperties.acceptsNull(effective.type) &&
+            effective.defaultValue == null
         if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
           KotlinNativeSchema
             .annotation(
@@ -2848,7 +2854,7 @@ class KotlinJAXRSIrGenerator(
         addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.PARAM))
         if (serializationName != null ||
           name.kotlinIdentifierName != name ||
-          effective.required != required &&
+          (effective.required != required || requiresPresence) &&
           typeRegistry.options.contains(KotlinTypeRegistry.Option.JacksonAnnotations)
         ) {
           addAnnotation(
@@ -2857,7 +2863,7 @@ class KotlinJAXRSIrGenerator(
               .addMember("value = %S", serializationName ?: name)
               .apply {
                 if (!patchable &&
-                  effective.required != required
+                  (effective.required != required || requiresPresence)
                 ) {
                   addMember("required = %L", effective.required)
                 }
@@ -2878,7 +2884,7 @@ class KotlinJAXRSIrGenerator(
         }
         if (patchable) {
           defaultValue("%T.none()", PATCH_OP)
-        } else if (!required || type.nullable) {
+        } else if ((!required || type.nullable) && !requiresPresence) {
           defaultValue(
             KotlinModelDefaults.code(
               defaultValue,

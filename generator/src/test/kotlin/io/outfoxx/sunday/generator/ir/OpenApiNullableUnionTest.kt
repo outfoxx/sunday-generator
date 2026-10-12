@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.ir
 
 import io.outfoxx.sunday.generator.GenerationException
+import io.outfoxx.sunday.generator.tools.OpenApiReferenceDocuments
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -29,6 +30,129 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 class OpenApiNullableUnionTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["openapi", "asyncapi"])
+  fun `named discriminated payloads keep declaration identity and independent nullability`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("api.yaml")
+    val header =
+      if (frontend == "openapi") {
+        "openapi: 3.1.0\npaths: {}"
+      } else {
+        """
+        asyncapi: 3.0.0
+        channels:
+          pets:
+            address: /pets
+            messages:
+              record:
+                payload: {${'$'}ref: '#/components/schemas/NullablePetRecord'}
+        operations:
+          receivePet:
+            action: receive
+            channel: {${'$'}ref: '#/channels/pets'}
+            messages: [{${'$'}ref: '#/channels/pets/messages/record'}]
+        """.trimIndent()
+      }
+    source.writeText(
+      header + "\ninfo: {title: Nullable unions, version: 1.0.0}\ncomponents:\n  schemas:\n" +
+        OpenApiReferenceDocuments.nullableDiscriminatedUnions.prependIndent("    "),
+    )
+    val api = GeneratedApiIrExporter().export(source.toUri())
+    assertNamedPet(api)
+    val exported = directory.resolve("api.ir.yaml")
+    GeneratedApiIrExporter().writeYaml(listOf(source.toUri()), exported)
+    assertNamedPet(GeneratedApiYaml.readPath(exported))
+  }
+
+  @Test
+  fun `external nullable union references survive composed IR export`(
+    @TempDir directory: Path,
+  ) {
+    val schemas = directory.resolve("schemas.yaml")
+    schemas.writeText(
+      OpenApiReferenceDocuments.document("Nullable unions", OpenApiReferenceDocuments.nullableDiscriminatedUnions),
+    )
+    val source = directory.resolve("api.yaml")
+    source.writeText(
+      OpenApiReferenceDocuments.document(
+        "Nullable unions",
+        """
+        ExternalRecord:
+          type: object
+          properties:
+            pet:
+              anyOf: [{${'$'}ref: 'schemas.yaml#/components/schemas/NamedPet'}, {type: 'null'}]
+        """.trimIndent(),
+      ),
+    )
+    for (sources in listOf(listOf(source.toUri(), schemas.toUri()), listOf(schemas.toUri(), source.toUri()))) {
+      val exported = directory.resolve("composed.ir.yaml")
+      GeneratedApiIrExporter().writeYaml(sources, exported)
+      val api = GeneratedApiYaml.readPath(exported)
+      assertNamedPet(api.copy(models = api.models.filterNot { it.name == "ExternalRecord" }))
+      assertEquals(
+        GeneratedTypeRef.named("NamedPet", nullable = true),
+        api.models
+          .single { it.name == "ExternalRecord" }
+          .properties
+          .single()
+          .type,
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["minProperties: 1", "type: object", "required: [extra]", "not: {type: string}"])
+  fun `named unions retain unsupported wrapper intersection diagnostics`(
+    assertion: String,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("api.yaml")
+    source.writeText(
+      OpenApiReferenceDocuments.document(
+        "Nullable unions",
+        OpenApiReferenceDocuments.nullableDiscriminatedUnions,
+        """
+        Constrained:
+          $assertion
+          anyOf: [{${'$'}ref: '#/components/schemas/NamedPet'}, {type: 'null'}]
+        """.trimIndent(),
+      ),
+    )
+    val error = assertThrows<GenerationException> { OpenApiToGeneratedApi().convert(source.toUri()) }
+    assertTrue(error.message!!.contains("Unsupported OpenAPI"), error.message)
+    assertTrue(error.file.endsWith("api.yaml"), error.message)
+    assertTrue(error.line > 0, error.message)
+  }
+
+  private fun assertNamedPet(api: GeneratedApi) {
+    assertEquals(setOf("NamedPet", "NamedCat", "NamedDog", "NullablePetRecord"), api.models.map { it.name }.toSet())
+    val pet = api.models.single { it.name == "NamedPet" }
+    assertEquals("kind", pet.discriminator)
+    assertEquals(listOf(GeneratedTypeRef.named("NamedCat"), GeneratedTypeRef.named("NamedDog")), pet.aliases)
+    assertEquals(
+      mapOf("cat" to GeneratedTypeRef.named("NamedCat"), "dog" to GeneratedTypeRef.named("NamedDog")),
+      pet.discriminatorMappings,
+    )
+    val properties =
+      api.models
+        .single { it.name == "NullablePetRecord" }
+        .properties
+        .associateBy { it.name }
+    for (name in listOf("pet", "requiredPet", "nonNullPet")) {
+      assertEquals(GeneratedTypeRef.named("NamedPet", nullable = name != "nonNullPet"), properties.getValue(name).type)
+      assertEquals(name != "pet", properties.getValue(name).required)
+    }
+    for (name in listOf("NamedCat", "NamedDog")) {
+      val variant = api.models.single { it.name == name }
+      assertTrue(variant.properties.all { it.required && !it.type.nullable })
+      assertEquals(mapOf("minLength" to "1"), variant.properties.single { it.name == "name" }.validation)
+    }
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["oneOf", "anyOf"])
   fun `nullable unions retain their payload type when promoted`(

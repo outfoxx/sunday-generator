@@ -31,6 +31,41 @@ object OpenApiReferenceDocuments {
       schemas:
     """.trimIndent() + "\n" + schemas.joinToString("\n").prependIndent("    ")
 
+  /** Named discriminated unions with independent property presence and nullability. */
+  val nullableDiscriminatedUnions: String =
+    """
+    NullablePetRecord:
+      type: object
+      required: [requiredPet, nonNullPet]
+      properties:
+        pet:
+          anyOf: [{${'$'}ref: '#/components/schemas/NamedPet'}, {type: 'null'}]
+        requiredPet:
+          oneOf: [{${'$'}ref: '#/components/schemas/NamedPet'}, {type: 'null'}]
+        nonNullPet: {${'$'}ref: '#/components/schemas/NamedPet'}
+    NamedPet:
+      oneOf:
+        - {${'$'}ref: '#/components/schemas/NamedCat'}
+        - {${'$'}ref: '#/components/schemas/NamedDog'}
+      discriminator:
+        propertyName: kind
+        mapping:
+          cat: '#/components/schemas/NamedCat'
+          dog: '#/components/schemas/NamedDog'
+    NamedCat:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: {type: string, enum: [cat]}
+        name: {type: string, minLength: 1}
+    NamedDog:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: {type: string, enum: [dog]}
+        name: {type: string, minLength: 1}
+    """.trimIndent()
+
   /** Canonical nullable references and representable inherited field restrictions used by real SDKs. */
   val sdkCompatibility: String =
     """
@@ -318,12 +353,13 @@ object OpenApiReferenceDocuments {
         timestamp: {type: string, format: date-time, default: '2026-01-01T01:00:00.125+01:00'}
         aliasInline: {${'$'}ref: '#/components/schemas/SdkInlineAliasChild'}
         inline: {${'$'}ref: '#/components/schemas/SdkInlineChild'}
+        nullablePet: {${'$'}ref: '#/components/schemas/NullablePetRecord'}
         entity: {${'$'}ref: '#/components/schemas/EntityDetails'}
         event: {${'$'}ref: '#/components/schemas/CharacterChangeEvent'}
         edit: {${'$'}ref: '#/components/schemas/FactEditOp'}
         problem: {${'$'}ref: '#/components/schemas/BadRequestProblem'}
         restrictions: {${'$'}ref: '#/components/schemas/ScalarRestrictions'}
-    """.trimIndent()
+    """.trimIndent() + "\n" + nullableDiscriminatedUnions
 
   /** Decimal integer spelling for the Swift and IR default regressions. */
   val sdkCompatibilityDecimalDefaults: String =
