@@ -3081,6 +3081,24 @@ class KotlinJAXRSIrGenerator(
               val fallbackTypeName = ClassName(hierarchyTypeName.packageName, fallback.modelName.toUpperCamelCase())
               addStatement("return parser.codec.treeToValue(tree, %T::class.java)", fallbackTypeName)
             }
+          } else if (unionMode != GeneratedModel.UnionMode.ONE_OF) {
+            // Open alternatives may share distinguishing fields, so only a complete decode selects a case.
+            val processingException = ClassName("com.fasterxml.jackson.core", "JsonProcessingException")
+            addStatement("val failures = mutableListOf<%T>()", processingException)
+            cases.forEach { model ->
+              beginControlFlow("try")
+              addStatement("return %L", model.unionCaseDecodeCode(unionTypeName, directCases))
+              nextControlFlow("catch (cause: %T)", processingException)
+              addStatement("failures.add(cause)")
+              endControlFlow()
+            }
+            addStatement(
+              "val failure = %T.from(parser, %S)",
+              JACKSON_JSON_MAPPING_EXCEPTION,
+              "unable to determine union case for \"$name\"",
+            )
+            addStatement("failures.forEach(failure::addSuppressed)")
+            addStatement("throw failure")
           } else {
             propertyBranches
               .filter { branch -> branch.uniqueRequiredWireNames.isNotEmpty() }
