@@ -18,6 +18,7 @@ package io.outfoxx.sunday.generator.kotlin.utils
 
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
@@ -41,13 +42,16 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
   setterName: String,
   fieldName: String?,
   omittedNullProperties: Set<String>,
+  nestedModelNames: Set<String>,
   register: (ClassName, TypeSpec.Builder) -> Unit,
 ) {
   val names = NameAllocator()
-  typeSpecs.mapNotNull { it.name }.forEach { names.newName(it) }
+  (typeSpecs.mapNotNull { it.name } + nestedModelNames).distinct().forEach { names.newName(it) }
   val storage = owner.nestedClass(names.newName("RuntimeExtensionStorage"))
   val any = ANY.copy(nullable = true)
   val map = MUTABLE_MAP.parameterizedBy(STRING, any)
+  val entryType = MUTABLE_MAP.nestedClass("MutableEntry").parameterizedBy(STRING, any)
+  val iteratorType = ClassName("kotlin.collections", "MutableIterator").parameterizedBy(entryType)
   // Jackson inherits interface annotations before superclass annotations. The runtime methods are final,
   // so this contract masks only their wire bindings without overriding their implementation.
   addSuperinterface(binding)
@@ -56,7 +60,7 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
     TypeSpec
       .interfaceBuilder(binding)
       .apply {
-        for (name in omittedNullProperties) {
+        for (name in setOf("type", "title", "status", "detail", "instance")) {
           val type =
             when (name) {
               "type", "instance" -> ClassName("java.net", "URI")
@@ -67,16 +71,27 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
             PropertySpec
               .builder(name, type.copy(nullable = true))
               .addModifiers(KModifier.ABSTRACT)
-              .addKdoc("Omits an absent optional problem field from JSON.\n")
+              .addKdoc("Binds the inherited problem field to its JSON property.\n")
               .addAnnotation(
                 AnnotationSpec
                   .builder(
-                    JACKSON_JSON_INCLUDE,
-                  ).useSiteTarget(
-                    AnnotationSpec.UseSiteTarget.GET,
-                  ).addMember("%T.NON_NULL", JACKSON_JSON_INCLUDE_INCLUDE)
+                    JACKSON_JSON_PROPERTY,
+                  ).useSiteTarget(AnnotationSpec.UseSiteTarget.GET)
+                  .addMember("%S", name)
                   .build(),
-              ).build(),
+              ).apply {
+                if (name in omittedNullProperties) {
+                  addAnnotation(
+                    AnnotationSpec
+                      .builder(
+                        JACKSON_JSON_INCLUDE,
+                      ).useSiteTarget(
+                        AnnotationSpec.UseSiteTarget.GET,
+                      ).addMember("%T.NON_NULL", JACKSON_JSON_INCLUDE_INCLUDE)
+                      .build(),
+                  )
+                }
+              }.build(),
           )
         }
       }.addKdoc("Keeps runtime extension APIs from competing with this model's schema-aware Jackson bindings.\n")
@@ -137,12 +152,53 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
         PropertySpec
           .builder(
             "entries",
-            MUTABLE_SET.parameterizedBy(
-              ClassName("kotlin.collections", "MutableMap", "MutableEntry").parameterizedBy(STRING, any),
-            ),
+            MUTABLE_SET.parameterizedBy(entryType),
           ).addModifiers(KModifier.OVERRIDE)
-          .getter(FunSpec.getterBuilder().addStatement("return fields.entries").build())
-          .build(),
+          .getter(
+            FunSpec
+              .getterBuilder()
+              .addCode(
+                """
+                return object : %T() {
+                  override val size: %T get() = fields.size
+
+                  override fun add(element: %T): %T =
+                    throw %T("Entries cannot be added directly")
+
+                  override fun iterator(): %T {
+                    val iterator = fields.entries.iterator()
+                    return object : %T by iterator {
+                      override fun next(): %T {
+                        val entry = iterator.next()
+                        return object : %T by entry {
+                          override fun setValue(newValue: %T): %T = this@%N.put(key, newValue)
+                          override fun equals(other: %T): %T = entry == other
+                          override fun hashCode(): %T = entry.hashCode()
+                          override fun toString(): %T = entry.toString()
+                        }
+                      }
+                    }
+                  }
+                }
+                """.trimIndent(),
+                ClassName("kotlin.collections", "AbstractMutableSet").parameterizedBy(entryType),
+                INT,
+                entryType,
+                BOOLEAN,
+                UnsupportedOperationException::class,
+                iteratorType,
+                iteratorType,
+                entryType,
+                entryType,
+                any,
+                any,
+                storage.simpleName,
+                any,
+                BOOLEAN,
+                INT,
+                STRING,
+              ).build(),
+          ).build(),
       ).addFunction(
         FunSpec
           .builder("put")
@@ -155,16 +211,5 @@ internal fun TypeSpec.Builder.addSundayProblemExtensions(
           .addStatement("return previous")
           .build(),
       ).build(),
-  )
-}
-
-/** Keeps Throwable diagnostics out of problem documents, including classes with their own closed-field annotation. */
-internal fun TypeSpec.Builder.ignoreSundayProblemExceptionProperties() {
-  val ignoredProperties = annotations.firstOrNull { it.typeName == JACKSON_JSON_IGNORE_PROPERTIES }
-  annotations.remove(ignoredProperties)
-  addAnnotation(
-    (ignoredProperties?.toBuilder() ?: AnnotationSpec.builder(JACKSON_JSON_IGNORE_PROPERTIES))
-      .addMember("value = [%S, %S, %S, %S, %S]", "cause", "stackTrace", "message", "localizedMessage", "suppressed")
-      .build(),
   )
 }

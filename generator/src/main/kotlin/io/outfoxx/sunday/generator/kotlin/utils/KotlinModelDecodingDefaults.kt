@@ -45,7 +45,10 @@ internal fun addModelDecodingDefaults(
     // Factory parameters alone do not reliably bind inherited accessors with custom Jackson deserializers.
     builder.propertySpecs.replaceAll { property ->
       val field = fields[property.name]
-      if (field == null || field.wireName == property.name) {
+      if (field == null ||
+        field.wireName == property.name ||
+        property.annotations.any { it.typeName == JACKSON_JSON_PROPERTY }
+      ) {
         property
       } else {
         property

@@ -188,7 +188,11 @@ internal fun addOpenModelProperties(
   modelTypes.keys.forEach { bindingNames.newName(it.simpleName) }
   classes.forEach { (type, entry) ->
     if (classes[root(type)]?.second?.build()?.superclass == SUNDAY_HTTP_PROBLEM) {
-      entry.second.ignoreSundayProblemExceptionProperties()
+      entry.second.addSundayProblemJackson(
+        type,
+        properties.fields(entry.first).associate { it.storage.name.kotlinIdentifierName to it.wireName },
+        modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
+      )
     }
     if (entry.second.build().superclass == SUNDAY_HTTP_PROBLEM) {
       completed[type]?.let { storage ->
@@ -202,6 +206,7 @@ internal fun addOpenModelProperties(
             val field = properties.fields(entry.first).firstOrNull { it.wireName == name }?.effective
             field == null || !field.required && !properties.acceptsNull(field.type)
           },
+          modelTypes.keys.filter { it.enclosingClassName() == type }.mapTo(mutableSetOf()) { it.simpleName },
           register,
         )
       }

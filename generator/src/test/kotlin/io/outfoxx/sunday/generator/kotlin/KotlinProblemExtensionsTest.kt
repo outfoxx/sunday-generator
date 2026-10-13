@@ -23,6 +23,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedNestedType
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.kotlin.tools.compileTypesResult
 import io.outfoxx.sunday.generator.kotlin.tools.withNativeBeanValidation
 import io.outfoxx.sunday.generator.kotlin.utils.KotlinProblemLibrary
@@ -64,7 +68,22 @@ class KotlinProblemExtensionsTest {
         },
         problemLibrary = KotlinProblemLibrary.SUNDAY,
       )
-    val api = problemExtensionsApi(frontend, directory)
+    val source = problemExtensionsApi(frontend, directory)
+    val api =
+      source.copy(
+        models =
+          source.models +
+            GeneratedModel(
+              name = "ProblemStorage",
+              kind = GeneratedModel.Kind.OBJECT,
+              properties = listOf(GeneratedModelProperty("value", GeneratedTypeRef.scalar("string"), required = true)),
+              nested =
+                GeneratedNestedType(
+                  enclosedIn = GeneratedTypeRef.named("Problem"),
+                  name = "RuntimeExtensionStorage",
+                ),
+            ),
+      )
     if (target == "sunday") {
       KotlinSundayIrGenerator(
         api,
@@ -122,6 +141,17 @@ class KotlinProblemExtensionsTest {
           assertThrows(IllegalArgumentException::class.java) { value.extension("title", "spoofed") }
           assertThrows(IllegalArgumentException::class.java) { value.extensions["status"] = 200 }
         }
+        for (field in listOf("message", "cause", "stackTrace", "localizedMessage", "suppressed")) {
+          for (extension in listOf("\"Try again\"", "{\"nested\":true}", "null")) {
+            val diagnostic = raw.dropLast(1) + ",\"$field\":$extension}"
+            val decoded = mapper.readValue(diagnostic, type)
+            assertEquals(
+              mapper.readTree(diagnostic),
+              mapper.readTree(mapper.writeValueAsString(decoded)),
+              "$name/$field",
+            )
+          }
+        }
         for (invalid in listOf(
           """{"type":"about:blank","status":400}""",
           """{"type":"about:blank","title":"x","status":400}""",
@@ -130,6 +160,13 @@ class KotlinProblemExtensionsTest {
           assertThrows(JsonMappingException::class.java, { mapper.readValue(invalid, type) }, "$name: $invalid")
         }
       }
+      val nestedName = if (target == "sunday") "io.test.Problem\$RuntimeExtensionStorage" else "io.test.ProblemStorage"
+      val nested = result.classLoader.loadClass(nestedName)
+      val nestedRaw = """{"value":"model"}"""
+      assertEquals(
+        mapper.readTree(nestedRaw),
+        mapper.readTree(mapper.writeValueAsString(mapper.readValue(nestedRaw, nested))),
+      )
       val base = """{"type":"about:blank","title":"Failure","status":400}"""
       val closed = result.classLoader.loadClass("io.test.ClosedProblem")
       val closedValue = mapper.readValue(base, closed) as SundayHttpProblem
@@ -142,6 +179,16 @@ class KotlinProblemExtensionsTest {
       val typed = result.classLoader.loadClass("io.test.TypedProblem")
       val typedRaw = base.dropLast(1) + """, "count":2}"""
       val typedValue = mapper.readValue(typedRaw, typed) as SundayHttpProblem
+      for (field in listOf("message", "cause", "stackTrace", "localizedMessage", "suppressed")) {
+        val allowed = base.dropLast(1) + ",\"$field\":2}"
+        val rejected = base.dropLast(1) + ",\"$field\":0}"
+        assertEquals(
+          mapper.readTree(allowed),
+          mapper.readTree(mapper.writeValueAsString(mapper.readValue(allowed, typed))),
+        )
+        assertThrows(JsonMappingException::class.java) { mapper.readValue(rejected, typed) }
+        assertThrows(JsonMappingException::class.java) { mapper.readValue(allowed, closed) }
+      }
       assertEquals(mapOf("count" to 2), typedValue.extensions)
       assertEquals(mapper.readTree(typedRaw), mapper.readTree(mapper.writeValueAsString(typedValue)))
       assertThrows(
@@ -155,6 +202,14 @@ class KotlinProblemExtensionsTest {
       val patternValue = mapper.readValue(patternRaw, patterned) as SundayHttpProblem
       assertEquals(mapper.readTree(patternRaw), mapper.readTree(mapper.writeValueAsString(patternValue)))
       assertEquals(mapOf("x-count" to 2), patternValue.extensions)
+      val entry = patternValue.extensions.entries.single()
+      assertThrows(RuntimeException::class.java) { entry.setValue(0) }
+      assertEquals(2, entry.value)
+      assertEquals(2, entry.setValue(3))
+      assertEquals(3, patternValue.extensions["x-count"])
+      assertThrows(RuntimeException::class.java) { patternValue.extensions.replaceAll { _, _ -> 0 } }
+      assertEquals(3, patternValue.extensions["x-count"])
+      assertEquals(3, mapper.readTree(mapper.writeValueAsString(patternValue))["x-count"].intValue())
       assertThrows(JsonMappingException::class.java) {
         mapper.readValue(base.dropLast(1) + """, "extra":2}""", patterned)
       }
