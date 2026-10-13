@@ -45,6 +45,7 @@ internal fun addOpenModelProperties(
   properties: GeneratedModelProperties,
   preserveUnknownFields: Boolean,
   nativeTypes: BeanValidationTypes?,
+  register: (ClassName, TypeSpec.Builder) -> Unit,
   typeName: (GeneratedTypeRef) -> TypeName,
 ) {
   if (KotlinTypeRegistry.Option.JacksonAnnotations !in options) {
@@ -183,6 +184,29 @@ internal fun addOpenModelProperties(
       }
     }
   }
+  val bindingNames = NameAllocator()
+  modelTypes.keys.forEach { bindingNames.newName(it.simpleName) }
+  classes.forEach { (type, entry) ->
+    if (classes[root(type)]?.second?.build()?.superclass == SUNDAY_HTTP_PROBLEM) {
+      entry.second.ignoreSundayProblemExceptionProperties()
+    }
+    if (entry.second.build().superclass == SUNDAY_HTTP_PROBLEM) {
+      completed[type]?.let { storage ->
+        val binding = ClassName(type.packageName, bindingNames.newName("${type.simpleName}RuntimeExtensionBinding"))
+        entry.second.addSundayProblemExtensions(
+          type,
+          binding,
+          storage.setterName,
+          storage.fieldName,
+          setOf("type", "title", "status", "detail", "instance").filterTo(mutableSetOf()) { name ->
+            val field = properties.fields(entry.first).firstOrNull { it.wireName == name }?.effective
+            field == null || !field.required && !properties.acceptsNull(field.type)
+          },
+          register,
+        )
+      }
+    }
+  }
 }
 
 /** Storage and setter contract shared by generated descendants. */
@@ -192,6 +216,7 @@ internal data class OpenModelExtensionStorage(
   val setterName: String,
   val valueType: TypeName,
   val preserves: Boolean,
+  val fieldName: String? = null,
 )
 
 private fun TypeSpec.Builder.addOpenModelStorage(
@@ -298,7 +323,12 @@ private fun TypeSpec.Builder.addOpenModelStorage(
   val valueType = model.additionalProperties?.type?.let(typeName) ?: ANY.copy(nullable = true)
   // Schema refinements can change JVM representations (for example Double to Int).
   // Share storage, but let each model's Jackson decoder enforce its own value type.
-  val storageType = if (inheritable) ANY.copy(nullable = true) else valueType
+  val storageType =
+    if (inheritable || build().superclass == SUNDAY_HTTP_PROBLEM) {
+      ANY.copy(nullable = true)
+    } else {
+      valueType
+    }
   val decoder =
     if (model.additionalProperties?.type != null) extensionDecoder(className, storageType, valueType) else null
   val mapType = MAP.parameterizedBy(STRING, storageType)
@@ -343,7 +373,14 @@ private fun TypeSpec.Builder.addOpenModelStorage(
         *if (constructorStorage) arrayOf(storageName, storageName) else arrayOf(storageName),
       ).build(),
   )
-  return OpenModelExtensionStorage(permitsName, closed = false, setterName, storageType, preserves = true)
+  return OpenModelExtensionStorage(
+    permitsName,
+    closed = false,
+    setterName,
+    storageType,
+    preserves = true,
+    fieldName = storageName,
+  )
 }
 
 /** Includes extension fields in data-class copies without sharing mutable map updates. */

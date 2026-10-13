@@ -654,6 +654,7 @@ class KotlinJAXRSIrGenerator(
       modelProperties,
       options.preserveUnknownFields,
       beanValidationTypes.takeIf { KotlinTypeRegistry.Option.ValidationConstraints in typeRegistry.options },
+      typeRegistry::addModelType,
     ) {
       it.kotlinTypeName()
     }

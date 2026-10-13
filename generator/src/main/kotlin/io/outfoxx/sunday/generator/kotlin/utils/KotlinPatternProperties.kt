@@ -177,7 +177,14 @@ internal fun TypeSpec.Builder.addPatternModelStorage(
           .build(),
       ).build()
   }
-  return OpenModelExtensionStorage("", closed, setterName, parent?.valueType ?: any, preserves = preserve)
+  return OpenModelExtensionStorage(
+    "",
+    closed,
+    setterName,
+    parent?.valueType ?: any,
+    preserves = preserve,
+    fieldName = parent?.fieldName ?: storageName,
+  )
 }
 
 private fun TypeSpec.Builder.patternDecoder(
