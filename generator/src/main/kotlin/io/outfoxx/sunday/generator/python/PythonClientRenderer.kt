@@ -51,6 +51,8 @@ class PythonClientRenderer(
   private val modelIndex = models.associateBy { model -> model.name }
   private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
 
+  private var adapterNames = emptyMap<Pair<String, String>, String>()
+
   /** Renders one generated service client. */
   fun renderService(service: GeneratedService): PythonModule {
     val module = PythonModuleBuilder("$packageName/${service.pythonServiceModuleName}.py")
@@ -67,7 +69,11 @@ class PythonClientRenderer(
       }
 
     module.addExport(className)
-    service.adapterTypes().forEach { type -> module.addCode(type.renderAdapterConstant()) }
+    val adapterTypes = service.adapterTypes().distinctBy { it.adapterKey() }
+    val allocator = NameAllocator()
+    adapterNames =
+      adapterTypes.associate { type -> type.adapterKey() to allocator.newName(type.adapterNameSuggestion()) }
+    adapterTypes.forEach { type -> module.addCode(type.renderAdapterConstant()) }
     service.operations.forEach { operation ->
       operation.parameters.filter { it.hasTypedDefault() }.forEach { parameter ->
         module.addCode(
@@ -755,9 +761,7 @@ class PythonClientRenderer(
         PythonSymbol("pydantic", "TypeAdapter"),
         type,
       )
-    return if ((kind != GeneratedTypeRef.Kind.UNION || arguments.size <= 1) &&
-      inline.render(PythonRenderContext(PythonImportSet())).length <= 120
-    ) {
+    return if (inline.render(PythonRenderContext(PythonImportSet())).length <= 120) {
       inline
     } else {
       PythonCodeBlock.of(
@@ -771,7 +775,16 @@ class PythonClientRenderer(
     }
   }
 
-  private fun GeneratedTypeRef.adapterName(): String =
+  // Reuse precisely the validation expression passed to TypeAdapter, including its symbol origins.
+  private fun GeneratedTypeRef.adapterKey(): Pair<String, String> {
+    val imports = PythonImportSet()
+    val type = renderClientPythonType(nullable = false).render(PythonRenderContext(imports))
+    return type to imports.render()
+  }
+
+  private fun GeneratedTypeRef.adapterName(): String = adapterNames.getValue(adapterKey())
+
+  private fun GeneratedTypeRef.adapterNameSuggestion(): String =
     "_" +
       when (kind) {
         GeneratedTypeRef.Kind.NAMED -> "named_$name"
