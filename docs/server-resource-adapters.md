@@ -62,10 +62,10 @@ JSON `format: byte` values and binary fields inside structured models continue t
 This output requires Sunday Python `2.0.0-beta.2` or later, which provides `request_bytes`. Until PyPI publication, install the Litestar extra from the released Git tag:
 
 ```sh
-python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.10'
+python -m pip install 'sunday-python[litestar] @ git+https://github.com/outfoxx/sunday-python.git@2.0.0-beta.11'
 ```
 
-Compiler-backed tests use `2.0.0-beta.10` by default, including directional model validation and merge-patch support. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
+Compiler-backed tests use `2.0.0-beta.11` by default, including directional model validation and merge-patch support. To verify a local runtime change, set `SUNDAY_PYTHON_PATH` to its checkout:
 
 ```sh
 SUNDAY_PYTHON_PATH=/path/to/sunday-python ./gradlew :generator:test --tests '*PythonContentTypeTest'
@@ -112,11 +112,11 @@ Content-Type fixtures additionally verify raw binary delegation, exact and wildc
 ### Whole-body binary client responses
 
 Python clients emit `ResponseSpec(binary_body=True)` for whole-body `file`/`binary` schemas, including named scalar aliases.
-The matching Sunday Python runtime must support this flag; beta.10 and earlier do not. It bypasses media decoding so
+Sunday Python `2.0.0-beta.11` or later is required; beta.10 and earlier do not support this flag. It bypasses media decoding so
 JSON/text assets and empty downloads retain their bytes, while successful status/media checks and typed headers remain
 active. Structured models and encoded byte properties retain normal decoding.
 
-Until the coordinated runtime release is available, verify this change with `SUNDAY_PYTHON_PATH` pointing to the runtime
-checkout containing the binary-response fix. Release the runtime and update the Python compiler fixture's runtime tag
-before releasing this generator change. Regenerate consuming clients after both releases; a runtime update alone cannot
-identify binary bodies in previously generated clients.
+Compiler-backed tests install the published `2.0.0-beta.11` Git tag by default. Run without `SUNDAY_PYTHON_PATH` to verify
+the released runtime rather than a local checkout. PyPI publication remains disabled; install from the Git tag as shown
+above. Regenerate consuming clients after the generator release; a runtime update alone cannot identify binary bodies
+in previously generated clients.
