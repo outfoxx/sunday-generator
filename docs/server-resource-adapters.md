@@ -122,10 +122,10 @@ above. Regenerate consuming clients after the generator release; a runtime updat
 in previously generated clients.
 
 TypeScript clients likewise emit `RequestSpec.binaryResponse: true` for whole-body binary schemas, aliases, and
-all-binary unions. This requires the runtime change in [sunday-js #84](https://github.com/outfoxx/sunday-js/pull/84).
-Release that runtime and update the TypeScript compiler-fixture package/lockfile pin before releasing this generator
-change. Until then, build that runtime and set `SUNDAY_TYPESCRIPT_PATH` to its checkout for coordinated verification;
-the currently pinned npm beta.11 does not support this metadata.
+all-binary unions. Sunday TypeScript `2.0.0-beta.12` or later is required; earlier versions do not support this metadata.
+The compiler fixture pins the published npm package `@outfoxx/sunday@2.0.0-beta.12` and its integrity-checked tarball.
+Run without `SUNDAY_TYPESCRIPT_PATH` to verify the released runtime rather than a local checkout. Regenerate consuming
+clients after the generator release; updating the runtime alone cannot add metadata to older clients.
 
 Compiler-backed OpenAPI and RAML download fixtures execute the generated Kotlin, Swift, and TypeScript clients.
 They verify exact bytes for direct binary schemas, aliases, unions, and nested unions across JSON, text, image, and
