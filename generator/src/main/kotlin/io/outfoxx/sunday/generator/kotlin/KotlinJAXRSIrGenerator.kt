@@ -573,6 +573,12 @@ class KotlinJAXRSIrGenerator(
     quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator?,
   ) {
     val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
+    if (service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true }) {
+      typeRegistry.addServiceType(
+        KotlinJAXRSOptionalBodyReader.typeName(service.typeName),
+        KotlinJAXRSOptionalBodyReader.generate(service.typeName, jaxRsTypes),
+      )
+    }
     if (options.resourceAdapters) {
       val adapter =
         KotlinJAXRSResourceAdapterGenerator(
@@ -1247,7 +1253,11 @@ class KotlinJAXRSIrGenerator(
       if (requestBody.mediaTypes.isOverridingDefaultMediaTypes() && !operationParameters.hasClientContentTypeHeader()) {
         functionBuilder.addAnnotation(jaxRsTypes.consumes, requestBody.mediaTypes)
       }
-      functionBuilder.addParameter(requestBody.bodyParameterSpec(jaxrs?.jsonBodyEnabled(generationMode) == true))
+      val bodyParameter = requestBody.bodyParameterSpec(jaxrs?.jsonBodyEnabled(generationMode) == true).toBuilder()
+      if (requestBody.rejectsSuppliedNull()) {
+        bodyParameter.addAnnotation(KotlinJAXRSOptionalBodyReader.binding(serviceTypeName(service)))
+      }
+      functionBuilder.addParameter(bodyParameter.build())
     }
 
     val response = primarySuccessResponse()
@@ -1552,6 +1562,13 @@ class KotlinJAXRSIrGenerator(
     }
     return name
   }
+
+  private fun GeneratedPayload.rejectsSuppliedNull(): Boolean =
+    generationMode == Server &&
+      !required &&
+      !isQuarkusStreamingRequestBody &&
+      !modelProperties.acceptsNull(type) &&
+      payloads.none { modelProperties.acceptsNull(it.type) }
 
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
     val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = generationMode == Server)

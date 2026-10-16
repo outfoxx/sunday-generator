@@ -37,6 +37,9 @@ class OptionalBodyEndpoint : API {
   override suspend fun optionalDelete(body: io.test.quarkus.optional.server.OptionalInput?): RestResponse<Unit> =
     accepted(body)
 
+  override suspend fun nullablePost(body: io.test.quarkus.optional.server.OptionalInput?): RestResponse<Unit> =
+    accepted(body)
+
   override suspend fun requiredPost(body: io.test.quarkus.optional.server.OptionalInput): RestResponse<Unit> =
     accepted(body)
 

@@ -62,6 +62,101 @@ class KotlinJAXRSResourceAdapterTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["javax", "jakarta", "quarkus"])
+  fun `optional body readers retain presence and bind only non nullable schemas`(target: String) {
+    val source = export("optional-bodies/api.yaml")
+    val api =
+      source.copy(
+        services =
+          source.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.map { operation ->
+                  if (operation.id == "defaultPost") {
+                    val body = requireNotNull(operation.requestBody)
+                    operation.copy(requestBody = body.copy(type = body.type.copy(nullable = true)))
+                  } else {
+                    operation
+                  }
+                },
+            )
+          },
+      )
+    val registry = registry(target)
+    KotlinJAXRSIrGenerator(api, registry, options(target)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes())
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode)
+    val resource = compiled.classLoader.loadClass("io.test.APIResource")
+    for (method in listOf("optionalPost", "defaultPost", "requiredPost")) {
+      val annotations =
+        resource.declaredMethods
+          .single { it.name == method }
+          .parameterAnnotations
+          .single()
+      assertEquals(method == "optionalPost", annotations.any { it.annotationClass.simpleName == "NonNull" })
+    }
+    val reader =
+      compiled.classLoader
+        .loadClass("io.test.APIOptionalBodyReader")
+        .getConstructor()
+        .newInstance()
+    val namespace = if (target == "javax") "javax" else "jakarta"
+    val contextClass = compiled.classLoader.loadClass("$namespace.ws.rs.ext.ReaderInterceptorContext")
+    val aroundRead = reader.javaClass.getMethod("aroundReadFrom", contextClass)
+
+    fun read(
+      wire: String,
+      decoded: Any?,
+      annotated: Boolean = true,
+    ): Any? {
+      var stream: java.io.InputStream = wire.byteInputStream()
+      val context =
+        java.lang.reflect.Proxy.newProxyInstance(contextClass.classLoader, arrayOf(contextClass)) { _, method, args ->
+          when (method.name) {
+            "getAnnotations" ->
+              if (annotated) {
+                resource.declaredMethods
+                  .single { it.name == "optionalPost" }
+                  .parameterAnnotations
+                  .single()
+              } else {
+                emptyArray<Annotation>()
+              }
+            "getInputStream" -> stream
+            "setInputStream" -> {
+              stream = args!![0] as java.io.InputStream
+              null
+            }
+            "proceed" -> {
+              assertEquals(wire, stream.readBytes().decodeToString(), "The reader must receive the original bytes")
+              decoded
+            }
+            else -> error("Unexpected interceptor call: ${method.name}")
+          }
+        }
+      return try {
+        aroundRead.invoke(reader, context)
+      } catch (exception: java.lang.reflect.InvocationTargetException) {
+        throw exception.targetException
+      }
+    }
+    assertEquals(null, read("", null))
+    assertEquals(null, read("null", null, annotated = false))
+    assertEquals("value", read("{}", "value"))
+    // The test runtime provides Jakarta RuntimeDelegate; javax is covered by compilation above.
+    if (target == "javax") return
+    for (wire in listOf("null", " \n null \t")) {
+      val failure = assertThrows(RuntimeException::class.java) { read(wire, null) }
+      assertEquals("$namespace.ws.rs.BadRequestException", failure.javaClass.name)
+      val treeFailure =
+        assertThrows(RuntimeException::class.java) {
+          read(wire, com.fasterxml.jackson.databind.node.NullNode.instance)
+        }
+      assertEquals("$namespace.ws.rs.BadRequestException", treeFailure.javaClass.name)
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["javax", "jakarta", "quarkus"])
   fun `RAML anonymous alternatives compile to public endpoints without relaxing protected overrides`(target: String) {
     val raml = "raml/ir/security-overrides.raml"
     val openApi = "openapi/ir/server-adapters.yaml"

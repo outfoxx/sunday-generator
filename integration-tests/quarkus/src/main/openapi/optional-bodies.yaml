@@ -18,6 +18,19 @@ paths:
           application/json: {schema: {$ref: '#/components/schemas/OptionalInput'}}
       responses:
         '204': {description: Accepted}
+  /native/nullablePost:
+    post:
+      operationId: nullablePost
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - {$ref: '#/components/schemas/OptionalInput'}
+                - {type: 'null'}
+      responses:
+        '204': {description: Accepted}
   /native/requiredPost:
     post:
       operationId: requiredPost
