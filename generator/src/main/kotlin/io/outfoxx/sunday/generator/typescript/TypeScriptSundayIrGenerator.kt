@@ -4038,6 +4038,23 @@ class TypeScriptSundayIrGenerator(
       ?: (typeName as? TypeName.Standard)?.simpleName()
       ?: typeName.toString()
 
+  private fun GeneratedTypeRef.isBinaryBody(visited: Set<GeneratedTypeRef> = emptySet()): Boolean {
+    if (this in visited) return false
+    val declaration = modelProperties.declarationType(this)
+    val model = modelProperties.declarationModel(declaration)
+    val alternatives =
+      when {
+        declaration.kind == GeneratedTypeRef.Kind.UNION -> declaration.arguments
+        model?.kind == GeneratedModel.Kind.UNION -> model.aliases
+        else -> emptyList()
+      }
+    if (alternatives.isNotEmpty()) {
+      return alternatives.all { it.isBinaryBody(visited + this) }
+    }
+    return declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+      (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
+  }
+
   private fun GeneratedOperation.spec(
     serviceTypeName: TypeName.Standard,
     returnType: TypeName,
@@ -4081,6 +4098,10 @@ class TypeScriptSundayIrGenerator(
       builder.add("\nbody: body,")
       requestBodyTypeProperty?.let { builder.add("\nbodyType: %L,", it) }
       builder.add("\ncontentTypes: %L,", requestBody.contentTypes(contentTypeParameter))
+    }
+
+    if (response?.type?.isBinaryBody() == true && returnType != VOID) {
+      builder.add("\nbinaryResponse: true,")
     }
 
     val acceptTypes = response?.mediaTypes?.ifEmpty { defaultMediaTypes } ?: emptyList()

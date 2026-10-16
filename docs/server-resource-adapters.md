@@ -111,7 +111,7 @@ Content-Type fixtures additionally verify raw binary delegation, exact and wildc
 
 ### Whole-body binary client responses
 
-Python clients emit `ResponseSpec(binary_body=True)` for whole-body `file`/`binary` schemas, including named scalar aliases.
+Python clients emit `ResponseSpec(binary_body=True)` for whole-body `file`/`binary` schemas, including named scalar aliases and unions whose branches are all binary.
 Sunday Python `2.0.0-beta.11` or later is required; beta.10 and earlier do not support this flag. It bypasses media decoding so
 JSON/text assets and empty downloads retain their bytes, while successful status/media checks and typed headers remain
 active. Structured models and encoded byte properties retain normal decoding.
@@ -120,3 +120,16 @@ Compiler-backed tests install the published `2.0.0-beta.11` Git tag by default. 
 the released runtime rather than a local checkout. PyPI publication remains disabled; install from the Git tag as shown
 above. Regenerate consuming clients after the generator release; a runtime update alone cannot identify binary bodies
 in previously generated clients.
+
+TypeScript clients likewise emit `RequestSpec.binaryResponse: true` for whole-body binary schemas, aliases, and
+all-binary unions. This requires the runtime change in [sunday-js #84](https://github.com/outfoxx/sunday-js/pull/84).
+Release that runtime and update the TypeScript compiler-fixture package/lockfile pin before releasing this generator
+change. Until then, build that runtime and set `SUNDAY_TYPESCRIPT_PATH` to its checkout for coordinated verification;
+the currently pinned npm beta.11 does not support this metadata.
+
+Compiler-backed OpenAPI and RAML download fixtures execute the generated Kotlin, Swift, and TypeScript clients.
+They verify exact bytes for direct binary schemas, aliases, unions, and nested unions across JSON, text, image, and
+custom media types through both operation result APIs. Mixed unions retain media decoding. Kotlin and Swift beta.16
+preserve nonempty binary downloads by their native `ByteArray`/`Data` return types, but deliberately reject empty typed
+responses with their no-data errors. TypeScript and Python accept empty successful 200 binary bodies. These empty-body
+contracts are tested explicitly; byte-preservation parity does not imply identical empty-body behavior.
