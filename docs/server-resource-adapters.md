@@ -108,3 +108,15 @@ The runtime fixtures generate source from OpenAPI and RAML contracts during the 
 Jersey exercises the standard JAX-RS request pipeline. Quarkus runs HTTP requests against the CDI-managed aggregate and verifies public access, anonymous 401 responses, and authenticated delegation. Litestar tests verify middleware exclusions, protected access, and a fail-closed guard when no authentication middleware supplies a user.
 
 Content-Type fixtures additionally verify raw binary delegation, exact and wildcard media restrictions, strict and tolerant enum conversion, constants, defaults and missing headers. Compiler-backed AsyncAPI and composed cases reuse an enum for header binding and an `allOf` child restriction, preserving the behavior fixed by #217.
+
+### Whole-body binary client responses
+
+Python clients emit `ResponseSpec(binary_body=True)` for whole-body `file`/`binary` schemas, including named scalar aliases.
+The matching Sunday Python runtime must support this flag; beta.10 and earlier do not. It bypasses media decoding so
+JSON/text assets and empty downloads retain their bytes, while successful status/media checks and typed headers remain
+active. Structured models and encoded byte properties retain normal decoding.
+
+Until the coordinated runtime release is available, verify this change with `SUNDAY_PYTHON_PATH` pointing to the runtime
+checkout containing the binary-response fix. Release the runtime and update the Python compiler fixture's runtime tag
+before releasing this generator change. Regenerate consuming clients after both releases; a runtime update alone cannot
+identify binary bodies in previously generated clients.

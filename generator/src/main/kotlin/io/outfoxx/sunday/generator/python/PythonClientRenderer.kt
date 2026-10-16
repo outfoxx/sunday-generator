@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
@@ -50,6 +51,7 @@ class PythonClientRenderer(
 
   private val modelIndex = models.associateBy { model -> model.name }
   private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
+  private val modelProperties = GeneratedModelProperties { modelIndex[it.name] }
 
   private var adapterNames = emptyMap<Pair<String, String>, String>()
 
@@ -631,6 +633,12 @@ class PythonClientRenderer(
         }
         if (hasBody()) {
           add(PythonCodeBlock.of("decoder=%L.validate_python", checkNotNull(type).adapterName()))
+          val declaration = modelProperties.declarationType(checkNotNull(type))
+          if (declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+            (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
+          ) {
+            add(PythonCodeBlock.of("binary_body=True"))
+          }
         } else {
           add(PythonCodeBlock.of("body_expected=False"))
         }
@@ -709,7 +717,7 @@ class PythonClientRenderer(
       PythonCodeBlock.of("()")
     } else {
       PythonCodeBlock.of(
-        "(%C,)",
+        if (mediaTypes.size == 1) "(%C,)" else "(%C)",
         PythonCodeBlock.join(
           mediaTypes.map { mediaType ->
             PythonCodeBlock.of("%T(%S)", PythonSymbol("sunday", "MediaType"), mediaType)
