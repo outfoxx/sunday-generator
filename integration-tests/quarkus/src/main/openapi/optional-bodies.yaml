@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info: {title: Optional bodies, version: '1'}
+paths:
+  /native/optionalPost:
+    post:
+      operationId: optionalPost
+      requestBody:
+        required: false
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/OptionalInput'}}
+      responses:
+        '204': {description: Accepted}
+  /native/optionalDelete:
+    delete:
+      operationId: optionalDelete
+      requestBody:
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/OptionalInput'}}
+      responses:
+        '204': {description: Accepted}
+  /native/requiredPost:
+    post:
+      operationId: requiredPost
+      requestBody:
+        required: true
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/OptionalInput'}}
+      responses:
+        '204': {description: Accepted}
+components:
+  schemas:
+    OptionalInput:
+      type: object
+      properties:
+        target: {type: string, minLength: 2}

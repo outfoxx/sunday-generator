@@ -1,0 +1,13 @@
+import {FetchTransport} from '@outfoxx/sunday';
+import {createOptionalAPI} from './optional-api.js';
+const client = createOptionalAPI(new FetchTransport('https://example.com'));
+const captured = {body: ""};
+globalThis.fetch = async (input, init) => { captured.body = await new Request(input, init).text(); return new Response(null, {status: 204}); };
+await client.optionalPost().execute();
+if (captured.body.length !== 0) throw new Error('Omitted body sent an entity');
+await client.defaultPost().execute();
+if (captured.body.length !== 0) throw new Error('Default optional body sent an entity');
+await client.optionalPost({target: 'ok'}).execute();
+if (!String(captured.body).includes('ok')) throw new Error('Supplied body missing');
+await client.requiredPost({}).execute();
+if (captured.body.length === 0) throw new Error('Required body missing');

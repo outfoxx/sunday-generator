@@ -284,6 +284,7 @@ class OpenApiToGeneratedApi(
       payloads = payloads.takeIf { it.size > 1 }.orEmpty(),
       examples = content.flatMap { (mediaType, media) -> media.examples(mediaType) },
       streaming = requestBody.modeFlag("x-sunday-streaming"),
+      required = requestBody["required"] == true,
       documentation = documentation(description = requestBody["description"] as? String),
     )
   }

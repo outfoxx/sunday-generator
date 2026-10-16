@@ -28,7 +28,7 @@ import org.jboss.resteasy.reactive.RestResponse
  */
 @Singleton
 @Path(value = "/")
-public class APIResource @Inject constructor(
+public open class APIResource @Inject constructor(
   private val `delegate`: API,
 ) {
   /**
@@ -38,7 +38,7 @@ public class APIResource @Inject constructor(
   @Path(value = "/sync")
   @EntitySchema
   @Authenticated
-  public suspend fun sync(): RestResponse<String> = this.delegate.sync()
+  public open suspend fun sync(): RestResponse<String> = this.delegate.sync()
 
   /**
    * Invokes the application delegate for created.
@@ -46,7 +46,7 @@ public class APIResource @Inject constructor(
   @POST
   @Path(value = "/created")
   @Authenticated
-  public suspend fun created(@Context uriInfo: UriInfo): RestResponse<Unit> =
+  public open suspend fun created(@Context uriInfo: UriInfo): RestResponse<Unit> =
       this.delegate.created(uriInfo)
 
   /**
@@ -56,7 +56,7 @@ public class APIResource @Inject constructor(
   @Path(value = "/async")
   @EntitySchema
   @Authenticated
-  public suspend fun asynchronous(@Suspended asyncResponse: AsyncResponse) {
+  public open suspend fun asynchronous(@Suspended asyncResponse: AsyncResponse) {
     this.delegate.asynchronous(asyncResponse)
   }
 
@@ -67,7 +67,7 @@ public class APIResource @Inject constructor(
   @Path(value = "/reactive")
   @EntitySchema
   @Authenticated
-  public suspend fun reactive(): Uni<RestResponse<String>> = this.delegate.reactive()
+  public open suspend fun reactive(): Uni<RestResponse<String>> = this.delegate.reactive()
 
   /**
    * Invokes the application delegate for sse.
@@ -76,7 +76,7 @@ public class APIResource @Inject constructor(
   @Path(value = "/sse")
   @Produces(value = ["text/event-stream"])
   @Authenticated
-  public suspend fun sse() {
+  public open suspend fun sse() {
     this.delegate.sse()
   }
 
@@ -96,8 +96,9 @@ public class APIResource @Inject constructor(
   @Path(value = "/keywords")
   @EntitySchema
   @Authenticated
-  public suspend fun `when`(@RestQuery delegate_: String?, @RestQuery securityContext: String?):
-      RestResponse<String> = this.delegate.`when`(delegate_, securityContext)
+  public open suspend fun `when`(@RestQuery delegate_: String?, @RestQuery
+      securityContext: String?): RestResponse<String> = this.delegate.`when`(delegate_,
+      securityContext)
 
   /**
    * Invokes the application delegate for policy.
@@ -115,5 +116,5 @@ public class APIResource @Inject constructor(
   @FGARelation("reader")
   @EntitySchema
   @Authenticated
-  public suspend fun policy(): RestResponse<String> = this.delegate.policy()
+  public open suspend fun policy(): RestResponse<String> = this.delegate.policy()
 }

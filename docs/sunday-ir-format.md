@@ -115,6 +115,10 @@ Composition keeps the first fragment's API-level metadata by default and fills m
 - `problems`: Problem type declarations.
 - `auth`, `media`, `policy`, `targets`, `tags`, and `documentation`: Optional shared metadata.
 
+## Request body presence
+
+Request payloads carry `required` separately from schema nullability. OpenAPI request bodies default to optional when `required` is omitted; `required: false` has the same meaning. The IR field defaults to `true` for compatibility with existing RAML, AsyncAPI, and saved IR payloads. Optional HTTP bodies may be omitted without sending a JSON `null` or an empty object.
+
 ## Documentation
 
 Every major IR level may carry `documentation` with `summary` and/or `description` when the source specification provides it. This includes APIs, services, operations, parameters, request payloads, responses, models, model properties, and problems.

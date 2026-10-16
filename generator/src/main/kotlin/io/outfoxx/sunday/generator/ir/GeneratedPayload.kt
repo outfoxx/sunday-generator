@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import com.fasterxml.jackson.annotation.JsonInclude
+
 /**
  * Request or response payload metadata.
  */
@@ -26,4 +28,14 @@ data class GeneratedPayload(
   val examples: List<GeneratedExample> = listOf(),
   val streaming: GeneratedModeFlag? = null,
   val documentation: GeneratedDocumentation? = null,
-)
+  /** Whether a request must contain an entity, independently of its schema nullability. */
+  @get:JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = RequiredByDefault::class)
+  val required: Boolean = true,
+) {
+  /** Omits the legacy default while retaining false under the IR mapper's NON_DEFAULT policy. */
+  class RequiredByDefault {
+    override fun equals(other: Any?): Boolean = other == true
+
+    override fun hashCode(): Int = true.hashCode()
+  }
+}

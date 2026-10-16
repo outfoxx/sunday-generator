@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info: {title: Optional, version: '1'}
+paths:
+  /optionalPost:
+    post:
+      operationId: optionalPost
+      requestBody:
+        required: false
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/Input'}}
+      responses:
+        '204': {description: Done}
+  /defaultPost:
+    post:
+      operationId: defaultPost
+      requestBody:
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/Input'}}
+      responses:
+        '204': {description: Done}
+  /requiredPost:
+    post:
+      operationId: requiredPost
+      requestBody:
+        required: true
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/Input'}}
+      responses:
+        '204': {description: Done}
+components:
+  schemas:
+    Input:
+      type: object
+      properties:
+        target: {type: string}

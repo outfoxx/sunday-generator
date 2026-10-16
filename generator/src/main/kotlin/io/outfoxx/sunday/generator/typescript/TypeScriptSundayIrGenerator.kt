@@ -3722,7 +3722,7 @@ class TypeScriptSundayIrGenerator(
     requestBody?.let { body ->
       val bodyParameter =
         ParameterSpec
-          .builder("body", requestBodyType(serviceTypeName))
+          .builder("body", requestBodyType(serviceTypeName).let { if (body.required) it else it.undefinable })
           .build()
       functionBuilder.addParameter(
         if (defaultOptionalParameters) {

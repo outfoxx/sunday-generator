@@ -447,7 +447,11 @@ class PythonClientRenderer(
     when {
       requestBody == null -> PythonCodeBlock.of("")
       requestBody.payloads.isNotEmpty() ->
-        PythonCodeBlock.of("            payload=%L(body),\n", requestPayloadFunctionName())
+        PythonCodeBlock.of(
+          "            payload=%L(body)%L,\n",
+          requestPayloadFunctionName(),
+          if (requestBody.required) "" else " if body is not None else None",
+        )
       else ->
         PythonCodeBlock.of(
           "            body=body,\n" +
@@ -463,7 +467,11 @@ class PythonClientRenderer(
           ) {
             PythonCodeBlock.of("")
           } else {
-            PythonCodeBlock.of("            body_adapter=%L,\n", requestBody.type.adapterName())
+            PythonCodeBlock.of(
+              "            body_adapter=%L%L,\n",
+              requestBody.type.adapterName(),
+              if (requestBody.required) "" else " if body is not None else None",
+            )
           },
         )
     }
@@ -884,7 +892,7 @@ class PythonClientRenderer(
           parameter.location == GeneratedParameter.Location.PATH &&
             !parameter.isNullableParameter(GenerationMode.Client)
         }.map { it.renderRequiredParameter() } +
-        listOfNotNull(requestBody?.renderRequestBodyParameter()) +
+        listOfNotNull(requestBody?.takeIf { it.required }?.renderRequestBodyParameter()) +
         listOfNotNull(
           queryString?.let { type ->
             PythonCodeBlock.of("        query_string: %C,", type.renderClientPythonType(nullable = false))
@@ -899,7 +907,8 @@ class PythonClientRenderer(
       parameters.filter { parameter -> parameter.isNullableParameter(GenerationMode.Client) }
 
     return PythonCodeBlock.join(
-      required + optional.map { it.renderOptionalParameter(this) },
+      required + listOfNotNull(requestBody?.takeUnless { it.required }?.renderRequestBodyParameter()) +
+        optional.map { it.renderOptionalParameter(this) },
       separator = "\n",
     )
   }
@@ -908,7 +917,11 @@ class PythonClientRenderer(
     PythonCodeBlock.of("        %L: %C,", name.pythonIdentifierName, type.renderClientPythonType(nullable = false))
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
-    if (isPythonStreamingRequestBody) {
+    if (!required && isPythonStreamingRequestBody) {
+      PythonCodeBlock.of("        body: %T | None = None,", PythonSymbol("sunday", "StreamingBody"))
+    } else if (!required) {
+      PythonCodeBlock.of("        body: %C | None = None,", renderClientBodyType())
+    } else if (isPythonStreamingRequestBody) {
       PythonCodeBlock.of("        body: %T,", PythonSymbol("sunday", "StreamingBody"))
     } else {
       PythonCodeBlock.of("        body: %C,", renderClientBodyType())

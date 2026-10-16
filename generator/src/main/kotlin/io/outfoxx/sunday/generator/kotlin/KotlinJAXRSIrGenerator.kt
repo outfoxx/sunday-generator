@@ -1556,14 +1556,17 @@ class KotlinJAXRSIrGenerator(
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
     val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = generationMode == Server)
     val builder = ParameterSpec.builder("body", typeName)
+    if (!required && generationMode == Client) {
+      builder.defaultValue("null")
+    }
     if (typeRegistry.options.contains(ValidationConstraints) &&
-      typeName != JSON_NODE &&
+      typeName.copy(nullable = false) != JSON_NODE &&
       !isQuarkusStreamingRequestBody
     ) {
       if (generationMode == Server) {
         KotlinNativeSchema
           .annotation(
-            nativePayloads.property(type),
+            nativePayloads.property(type).copy(required = required),
             modelProperties,
             beanValidationTypes,
             objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
@@ -1577,7 +1580,7 @@ class KotlinJAXRSIrGenerator(
       }
     }
 
-    if (generationMode == Server && typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
+    if (generationMode == Server && typeName.copy(nullable = false) != JSON_NODE && !isQuarkusStreamingRequestBody) {
       builder.addValidationAnnotations(
         GeneratedParameter(
           name = "body",
@@ -1601,7 +1604,7 @@ class KotlinJAXRSIrGenerator(
       jsonBodyEnabled -> JSON_NODE
       includeValidationAnnotations -> type.kotlinTypeName().withUseSiteValidationAnnotations(type, request = true)
       else -> type.kotlinTypeName()
-    }
+    }.let { if (required) it else it.copy(nullable = true) }
 
   private val GeneratedPayload.isQuarkusStreamingRequestBody: Boolean
     get() = options.quarkus && streaming?.enabledFor(generationMode) == true
@@ -1628,7 +1631,10 @@ class KotlinJAXRSIrGenerator(
                 jaxrs?.jsonBodyEnabled(generationMode) == true,
                 includeValidationAnnotations = false,
               )
-            ParameterSpec.builder("body", typeName).build()
+            ParameterSpec
+              .builder("body", typeName)
+              .apply { if (!requestBody.required) defaultValue("null") }
+              .build()
           },
         )
     val problemTypeNames =

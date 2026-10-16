@@ -114,7 +114,10 @@ class KotlinJAXRSResourceAdapterTest {
     assertFalse(handler.contains("@FGA"), handler)
     assertTrue(resource.contains("this.delegate.created(uriInfo)"), resource)
     assertTrue(resource.contains("this.delegate.asynchronous(asyncResponse)"), resource)
-    assertTrue(resource.contains("this.delegate.`when`(delegate_, securityContext)"), resource)
+    assertTrue(
+      resource.replace(Regex("\\s+"), "").contains("this.delegate.`when`(delegate_,securityContext)"),
+      resource,
+    )
     assertTrue(resource.contains("@Suspended"), resource)
     assertTrue(resource.contains("@Context"), resource)
     if (target == "quarkus") {

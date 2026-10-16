@@ -91,6 +91,9 @@ internal class KotlinJAXRSResourceAdapterGenerator(
         service.funSpecs.forEach { function ->
           val endpoint = function.toBuilder()
           endpoint.modifiers.remove(KModifier.ABSTRACT)
+          if (quarkus && KModifier.SUSPEND in function.modifiers) {
+            endpoint.addModifiers(KModifier.OPEN)
+          }
           endpoint.addKdoc("Invokes the application delegate for %L.\n", function.name)
           if (nativeAnnotations != null) {
             if (sharedAnnotations == null) endpoint.addAnnotations(nativeAnnotations.getValue(function.name))
@@ -140,6 +143,10 @@ internal class KotlinJAXRSResourceAdapterGenerator(
   ): TypeSpec.Builder =
     TypeSpec.classBuilder(resourceTypeName).apply {
       addAnnotations(contract.annotations)
+      // Quarkus cannot remove final from suspend methods during interceptor enhancement.
+      if (quarkus && contract.funSpecs.any { KModifier.SUSPEND in it.modifiers }) {
+        addModifiers(KModifier.OPEN)
+      }
       if (quarkus) {
         addAnnotation(ClassName("jakarta.inject", "Singleton"))
       }

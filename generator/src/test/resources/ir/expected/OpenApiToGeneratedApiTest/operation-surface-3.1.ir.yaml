@@ -43,6 +43,7 @@ services:
         name: "ProjectUpdate"
       mediaTypes:
       - "application/json"
+      required: false
     responses:
     - status: 200
       type:

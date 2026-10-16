@@ -2112,11 +2112,11 @@ class KotlinSundayIrGeneratorTest {
 
     assertContains(
       compactServiceSource,
-      "public fun importArchive(body: StreamingBody): StreamingOperation<ImportAccepted, Req>",
+      "public fun importArchive(body: StreamingBody? = null): StreamingOperation<ImportAccepted, Req>",
     )
     assertContains(
       compactServiceSource,
-      "public fun importArchiveOrNil(body: StreamingBody): NullableOperation<StreamingBody, ImportAccepted, Req>",
+      "public fun importArchiveOrNil(body: StreamingBody? = null): NullableOperation<StreamingBody, ImportAccepted, Req>",
     )
     assertContains(serviceSource, ".operation<StreamingBody, ImportAccepted, Req>")
     assertContains(serviceSource, ".nullableOperation<StreamingBody, ImportAccepted, Req>")
