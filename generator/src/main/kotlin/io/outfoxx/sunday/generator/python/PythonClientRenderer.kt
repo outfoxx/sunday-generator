@@ -30,6 +30,7 @@ import io.outfoxx.sunday.generator.ir.GeneratedService
 import io.outfoxx.sunday.generator.ir.GeneratedStreaming
 import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedClientSecurity
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.ir.emit.GeneratedNominalTypes
 import io.outfoxx.sunday.generator.ir.emit.credentialTransport
 import io.outfoxx.sunday.generator.ir.emit.defaultMediaSelection
@@ -50,6 +51,7 @@ class PythonClientRenderer(
 
   private val modelIndex = models.associateBy { model -> model.name }
   private val nominalTypes = GeneratedNominalTypes { modelIndex[it.name] }
+  private val modelProperties = GeneratedModelProperties { modelIndex[it.name] }
 
   private var adapterNames = emptyMap<Pair<String, String>, String>()
 
@@ -631,6 +633,9 @@ class PythonClientRenderer(
         }
         if (hasBody()) {
           add(PythonCodeBlock.of("decoder=%L.validate_python", checkNotNull(type).adapterName()))
+          if (checkNotNull(type).isBinaryBody()) {
+            add(PythonCodeBlock.of("binary_body=True"))
+          }
         } else {
           add(PythonCodeBlock.of("body_expected=False"))
         }
@@ -653,6 +658,23 @@ class PythonClientRenderer(
         PythonCodeBlock.join(arguments, separator = ",\n        "),
       )
     }
+  }
+
+  private fun GeneratedTypeRef.isBinaryBody(visited: Set<GeneratedTypeRef> = emptySet()): Boolean {
+    if (this in visited) return false
+    val declaration = modelProperties.declarationType(this)
+    val model = modelProperties.declarationModel(declaration)
+    val alternatives =
+      when {
+        declaration.kind == GeneratedTypeRef.Kind.UNION -> declaration.arguments
+        model?.kind == GeneratedModel.Kind.UNION -> model.aliases
+        else -> emptyList()
+      }
+    if (alternatives.isNotEmpty()) {
+      return alternatives.all { it.isBinaryBody(visited + this) }
+    }
+    return declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+      (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
   }
 
   private fun GeneratedResponse.renderResponseHeaderSpecs(): PythonCodeBlock {
@@ -709,7 +731,7 @@ class PythonClientRenderer(
       PythonCodeBlock.of("()")
     } else {
       PythonCodeBlock.of(
-        "(%C,)",
+        if (mediaTypes.size == 1) "(%C,)" else "(%C)",
         PythonCodeBlock.join(
           mediaTypes.map { mediaType ->
             PythonCodeBlock.of("%T(%S)", PythonSymbol("sunday", "MediaType"), mediaType)

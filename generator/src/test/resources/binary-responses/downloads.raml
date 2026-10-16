@@ -1,0 +1,48 @@
+#%RAML 1.0
+title: Downloads
+types:
+  Binary: file
+  OtherBinary: file
+  BinaryUnion: Binary | OtherBinary
+  Nested: BinaryUnion | Binary
+  Mixed: string | Binary
+/direct:
+  get:
+    displayName: directDownload
+    responses:
+      200:
+        body:
+          application/json:
+            type: file
+/alias:
+  get:
+    displayName: aliasDownload
+    responses:
+      200:
+        body:
+          application/json:
+            type: Binary
+/union:
+  get:
+    displayName: unionDownload
+    responses:
+      200:
+        body:
+          application/json:
+            type: BinaryUnion
+/nested:
+  get:
+    displayName: nestedDownload
+    responses:
+      200:
+        body:
+          application/json:
+            type: Nested
+/mixed:
+  get:
+    displayName: mixedDownload
+    responses:
+      200:
+        body:
+          application/json:
+            type: Mixed

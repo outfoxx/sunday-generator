@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info: {title: Downloads, version: '1.0'}
+paths:
+  /direct:
+    get:
+      operationId: directDownload
+      responses:
+        '200':
+          description: Download
+          content:
+            application/json:
+              schema: {type: string, format: binary}
+  /alias:
+    get:
+      operationId: aliasDownload
+      responses:
+        '200':
+          description: Download
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Binary'}
+  /union:
+    get:
+      operationId: unionDownload
+      responses:
+        '200':
+          description: Download
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BinaryUnion'}
+  /nested:
+    get:
+      operationId: nestedDownload
+      responses:
+        '200':
+          description: Download
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Nested'}
+  /mixed:
+    get:
+      operationId: mixedDownload
+      responses:
+        '200':
+          description: Download
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Mixed'}
+components:
+  schemas:
+    Binary: {type: string, format: binary}
+    BinaryUnion:
+      anyOf:
+        - {$ref: '#/components/schemas/Binary'}
+        - {type: string, format: binary}
+    Nested:
+      anyOf:
+        - {$ref: '#/components/schemas/BinaryUnion'}
+        - {$ref: '#/components/schemas/Binary'}
+    Mixed:
+      anyOf:
+        - {type: string}
+        - {$ref: '#/components/schemas/Binary'}

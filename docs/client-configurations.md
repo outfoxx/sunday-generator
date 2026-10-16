@@ -113,8 +113,8 @@ factory hook forwarded by generated clients:
 | --- | --- | --- |
 | Kotlin | `2.0.0-beta.16` | Maven Central |
 | Swift | `2.0.0-beta.16` | Swift Package Manager Git tag |
-| TypeScript | `2.0.0-beta.11` | npm (`@outfoxx/sunday`) |
-| Python | `2.0.0-beta.10` | Git tag installed with pip; PyPI publication remains disabled |
+| TypeScript | `2.0.0-beta.12` | npm (`@outfoxx/sunday`) |
+| Python | `2.0.0-beta.11` | Git tag installed with pip; PyPI publication remains disabled |
 
 Kotlin/Swift beta.13, TypeScript beta.10 and Python beta.9 do not provide this hook. Consumers generating
 configuration factories must update their runtime dependencies to the compatible releases above or later.

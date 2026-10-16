@@ -28,6 +28,7 @@ class APIClient<Factory extends SundayTransport> {
           method: 'GET',
           pathTemplate: '/tests',
           security: this.clientSettings?.bindings['fetchTest'] ?? [],
+          binaryResponse: true,
           acceptTypes: [MediaType.OctetStream],
         },
         responseType: fetchTestReturnType
