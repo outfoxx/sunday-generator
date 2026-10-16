@@ -38,6 +38,7 @@ fun compileTypes(types: Map<ClassName, TypeSpec>): KotlinCompilation.ExitCode = 
 internal fun compileTypesResult(
   types: Map<ClassName, TypeSpec>,
   additionalSources: List<SourceFile> = emptyList(),
+  classpathFilter: (File) -> Boolean = { true },
 ): JvmCompilationResult {
 
   val fileSpecs =
@@ -64,7 +65,7 @@ internal fun compileTypesResult(
         classpaths =
           requireNotNull(System.getProperty("sunday.validation.kotlin.classpath")) {
             "Run compiler-backed tests through Gradle to supply the generated-code classpath"
-          }.split(File.pathSeparator).map(::File).filter(File::exists)
+          }.split(File.pathSeparator).map(::File).filter(File::exists).filter(classpathFilter)
         verbose = false
         allWarningsAsErrors = true
         reportOutputFiles = true

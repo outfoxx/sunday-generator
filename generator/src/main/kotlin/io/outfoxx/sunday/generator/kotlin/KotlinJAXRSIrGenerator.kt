@@ -576,7 +576,13 @@ class KotlinJAXRSIrGenerator(
     if (service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true }) {
       typeRegistry.addServiceType(
         KotlinJAXRSOptionalBodyReader.typeName(service.typeName),
-        KotlinJAXRSOptionalBodyReader.generate(service.typeName, jaxRsTypes),
+        KotlinJAXRSOptionalBodyReader.generate(
+          service.typeName,
+          jaxRsTypes,
+          service.service.operations.any {
+            it.requestBody?.rejectsSuppliedNull() == true && it.jaxrs?.jsonBodyEnabled(generationMode) == true
+          },
+        ),
       )
     }
     if (options.resourceAdapters) {

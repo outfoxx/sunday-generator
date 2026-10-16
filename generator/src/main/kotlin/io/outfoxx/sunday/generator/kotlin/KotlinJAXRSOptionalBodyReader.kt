@@ -19,9 +19,11 @@ package io.outfoxx.sunday.generator.kotlin
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.TypeSpec
+import io.outfoxx.sunday.generator.kotlin.utils.JSON_NODE
 import io.outfoxx.sunday.generator.kotlin.utils.JaxRsTypes
 
 /** Preserves entity presence across decoding for optional, non-nullable request schemas. */
@@ -33,6 +35,7 @@ internal object KotlinJAXRSOptionalBodyReader {
   fun generate(
     service: ClassName,
     types: JaxRsTypes,
+    jsonBody: Boolean,
   ): TypeSpec.Builder {
     val namespace = types.path.packageName
     val binding = binding(service)
@@ -73,14 +76,18 @@ internal object KotlinJAXRSOptionalBodyReader {
             if (first != -1) stream.unread(first)
             context.inputStream = stream
             val value = context.proceed()
-            if (first != -1 && (value == null || value is %T && value.isNull)) {
+            if (first != -1 && (%L)) {
               throw %T("Request body must not be null")
             }
             return value
             """.trimIndent().replace(' ', '·'),
             binding,
             ClassName("java.io", "PushbackInputStream"),
-            ClassName("com.fasterxml.jackson.databind", "JsonNode"),
+            if (jsonBody) {
+              CodeBlock.of("value == null || value is %T && value.isNull", JSON_NODE)
+            } else {
+              CodeBlock.of("value == null")
+            },
             ClassName(namespace, "BadRequestException"),
           ).build(),
       )

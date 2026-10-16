@@ -34,7 +34,7 @@ data class GeneratedPayload(
 ) {
   /** Omits the legacy default while retaining false under the IR mapper's NON_DEFAULT policy. */
   class RequiredByDefault {
-    override fun equals(other: Any?): Boolean = other == true
+    override fun equals(other: Any?): Boolean = other is Boolean && other
 
     override fun hashCode(): Int = true.hashCode()
   }

@@ -61,8 +61,40 @@ import org.junit.jupiter.params.provider.ValueSource
 class KotlinJAXRSResourceAdapterTest {
 
   @ParameterizedTest
-  @ValueSource(strings = ["javax", "jakarta", "quarkus"])
-  fun `optional body readers retain presence and bind only non nullable schemas`(target: String) {
+  @ValueSource(strings = ["javax", "jakarta"])
+  fun `optional text body servers compile without Jackson`(target: String) {
+    val source = export("optional-bodies/api.yaml")
+    val api =
+      source.copy(
+        services =
+          source.services.map { service ->
+            service.copy(
+              operations =
+                service.operations.map { operation ->
+                  operation.copy(
+                    requestBody =
+                      requireNotNull(operation.requestBody).copy(
+                        type = GeneratedTypeRef.scalar("string"),
+                        payloads = emptyList(),
+                        mediaTypes = listOf("text/plain"),
+                      ),
+                  )
+                },
+            )
+          },
+      )
+    val registry = registry(target)
+    KotlinJAXRSIrGenerator(api, registry, options(target)).generateServiceTypes()
+    val compiled = compileTypesResult(registry.buildTypes(), classpathFilter = { !it.name.contains("jackson", true) })
+    assertEquals(KotlinCompilation.ExitCode.OK, compiled.exitCode)
+  }
+
+  @ParameterizedTest
+  @CsvSource("javax,false", "javax,true", "jakarta,false", "jakarta,true", "quarkus,false", "quarkus,true")
+  fun `optional body readers retain presence and bind only non nullable schemas`(
+    target: String,
+    jsonBody: Boolean,
+  ) {
     val source = export("optional-bodies/api.yaml")
     val api =
       source.copy(
@@ -76,7 +108,7 @@ class KotlinJAXRSResourceAdapterTest {
                     operation.copy(requestBody = body.copy(type = body.type.copy(nullable = true)))
                   } else {
                     operation
-                  }
+                  }.let { it.copy(jaxrs = GeneratedJaxrs(jsonBody = GeneratedModeFlag(all = jsonBody))) }
                 },
             )
           },
@@ -147,6 +179,7 @@ class KotlinJAXRSResourceAdapterTest {
     for (wire in listOf("null", " \n null \t")) {
       val failure = assertThrows(RuntimeException::class.java) { read(wire, null) }
       assertEquals("$namespace.ws.rs.BadRequestException", failure.javaClass.name)
+      if (!jsonBody) continue
       val treeFailure =
         assertThrows(RuntimeException::class.java) {
           read(wire, com.fasterxml.jackson.databind.node.NullNode.instance)

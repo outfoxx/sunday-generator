@@ -917,14 +917,12 @@ class PythonClientRenderer(
     PythonCodeBlock.of("        %L: %C,", name.pythonIdentifierName, type.renderClientPythonType(nullable = false))
 
   private fun GeneratedPayload.renderRequestBodyParameter(): PythonCodeBlock =
-    if (!required && isPythonStreamingRequestBody) {
-      PythonCodeBlock.of("        body: %T | None = None,", PythonSymbol("sunday", "StreamingBody"))
-    } else if (!required) {
-      PythonCodeBlock.of("        body: %C | None = None,", renderClientBodyType())
-    } else if (isPythonStreamingRequestBody) {
-      PythonCodeBlock.of("        body: %T,", PythonSymbol("sunday", "StreamingBody"))
-    } else {
-      PythonCodeBlock.of("        body: %C,", renderClientBodyType())
+    when {
+      !required && isPythonStreamingRequestBody ->
+        PythonCodeBlock.of("        body: %T | None = None,", PythonSymbol("sunday", "StreamingBody"))
+      !required -> PythonCodeBlock.of("        body: %C | None = None,", renderClientBodyType())
+      isPythonStreamingRequestBody -> PythonCodeBlock.of("        body: %T,", PythonSymbol("sunday", "StreamingBody"))
+      else -> PythonCodeBlock.of("        body: %C,", renderClientBodyType())
     }
 
   private fun GeneratedPayload.renderClientBodyType(): PythonCodeBlock =

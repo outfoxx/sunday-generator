@@ -284,6 +284,8 @@ val optionalBodyContract = layout.projectDirectory.file("src/main/openapi/option
 val optionalBodyGenerators =
   listOf("server", "client").map { role ->
     tasks.register<JavaExec>("generate${role.replaceFirstChar { it.uppercase() }}OptionalBodies") {
+      group = "code generation"
+      description = "Generates the optional request body $role fixture."
       val output = layout.buildDirectory.dir("generated/optional-bodies-$role")
       inputs.file(optionalBodyContract)
       outputs.dir(output)

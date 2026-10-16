@@ -89,12 +89,7 @@ internal class KotlinJAXRSResourceAdapterGenerator(
         val sharedAnnotations = nativeAnnotations?.values?.distinct()?.singleOrNull()
         sharedAnnotations?.let(::addAnnotations)
         service.funSpecs.forEach { function ->
-          val endpoint = function.toBuilder()
-          endpoint.modifiers.remove(KModifier.ABSTRACT)
-          if (quarkus && KModifier.SUSPEND in function.modifiers) {
-            endpoint.addModifiers(KModifier.OPEN)
-          }
-          endpoint.addKdoc("Invokes the application delegate for %L.\n", function.name)
+          val endpoint = delegatedEndpoint(function)
           if (nativeAnnotations != null) {
             if (sharedAnnotations == null) endpoint.addAnnotations(nativeAnnotations.getValue(function.name))
           } else if (securityGenerator != null) {
@@ -108,6 +103,15 @@ internal class KotlinJAXRSResourceAdapterGenerator(
           addFunction(endpoint.build())
         }
       }
+
+  private fun delegatedEndpoint(function: FunSpec): FunSpec.Builder =
+    function.toBuilder().apply {
+      modifiers.remove(KModifier.ABSTRACT)
+      if (quarkus && KModifier.SUSPEND in function.modifiers) {
+        addModifiers(KModifier.OPEN)
+      }
+      addKdoc("Invokes the application delegate for %L.\n", function.name)
+    }
 
   // Subresources stay CDI-managed so Quarkus interceptors run on their endpoint methods.
   fun aggregateResource(
