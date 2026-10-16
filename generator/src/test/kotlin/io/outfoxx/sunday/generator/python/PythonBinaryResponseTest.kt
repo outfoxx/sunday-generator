@@ -35,7 +35,12 @@ import java.nio.file.Path
 class PythonBinaryResponseTest : PythonTest() {
 
   @ParameterizedTest
-  @ValueSource(strings = ["raml", "openapi", "asyncapi", "composed", "openapi-alias", "openapi-concrete"])
+  @ValueSource(
+    strings = [
+      "raml", "openapi", "asyncapi", "composed", "openapi-alias", "openapi-concrete",
+      "openapi-union", "openapi-nested-union", "openapi-mixed-union",
+    ],
+  )
   fun `binary downloads preserve bytes across frontends`(
     frontend: String,
     compiler: PythonCompiler,
@@ -108,6 +113,36 @@ class PythonBinaryResponseTest : PythonTest() {
           source = source.replace("{type: string, format: binary}", "{${'$'}ref: '#/components/schemas/Asset'}") +
             "\ncomponents:\n  schemas:\n    Asset: {type: string, format: binary}\n"
         }
+        if (frontend == "openapi-union") {
+          source = source.replace("{type: string, format: binary}", "{${'$'}ref: '#/components/schemas/Asset'}") +
+            "\ncomponents:\n  schemas:\n    Asset:\n" +
+            "      anyOf: [{type: string, format: binary}, {type: string, format: binary}]\n"
+        }
+        if (frontend == "openapi-nested-union" || frontend == "openapi-mixed-union") {
+          val alternative =
+            if (frontend ==
+              "openapi-mixed-union"
+            ) {
+              "{type: string}"
+            } else {
+              "{type: string, format: binary}"
+            }
+          source = source.replace("{type: string, format: binary}", "{${'$'}ref: '#/components/schemas/Asset'}") +
+            "\n" +
+            """
+            components:
+              schemas:
+                Binary: {type: string, format: binary}
+                Nested:
+                  anyOf:
+                    - {${'$'}ref: '#/components/schemas/Binary'}
+                    - $alternative
+                Asset:
+                  anyOf:
+                    - {${'$'}ref: '#/components/schemas/Nested'}
+                    - {${'$'}ref: '#/components/schemas/Binary'}
+            """.trimIndent()
+        }
         if (frontend == "openapi-concrete") {
           source = source.replace("application/octet-stream:", "image/png:").replace("'*/*':", "application/pdf:")
         }
@@ -158,10 +193,13 @@ class PythonBinaryResponseTest : PythonTest() {
                   ("application/json", b'{ "asset": true }\n'),
                   ("text/plain; charset=iso-8859-1", bytes([99, 97, 102, 233])),
               ]
+              mixed = "$frontend" == "openapi-mixed-union"
+              if mixed:
+                  cases = [("application/json", b'"asset"')]
               for media, payload in cases:
                   if "$frontend" == "openapi-concrete" and media not in ("image/png", "application/pdf"):
                       continue
-                  for body in (payload, b""):
+                  for body in ((payload,) if mixed else (payload, b"")):
                       async with httpx.AsyncClient(base_url="https://example.test", transport=httpx.MockTransport(
                           lambda request: httpx.Response(200, content=body, headers={"Content-Type": media})
                       )) as native:
@@ -173,8 +211,9 @@ class PythonBinaryResponseTest : PythonTest() {
                                   await stream.aclose()
                               for name in [$methods]:
                                   operation = getattr(client, name)()
-                                  assert await operation.execute() == body, (name, media)
-                                  assert (await operation.response()).result == body, (name, media)
+                                  expected = ("asset", b"asset") if mixed else (body,)
+                                  assert await operation.execute() in expected, (name, media)
+                                  assert (await operation.response()).result in expected, (name, media)
           asyncio.run(main())
           """.trimIndent(),
       ),

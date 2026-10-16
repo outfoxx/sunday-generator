@@ -633,10 +633,7 @@ class PythonClientRenderer(
         }
         if (hasBody()) {
           add(PythonCodeBlock.of("decoder=%L.validate_python", checkNotNull(type).adapterName()))
-          val declaration = modelProperties.declarationType(checkNotNull(type))
-          if (declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
-            (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
-          ) {
+          if (checkNotNull(type).isBinaryBody()) {
             add(PythonCodeBlock.of("binary_body=True"))
           }
         } else {
@@ -661,6 +658,23 @@ class PythonClientRenderer(
         PythonCodeBlock.join(arguments, separator = ",\n        "),
       )
     }
+  }
+
+  private fun GeneratedTypeRef.isBinaryBody(visited: Set<GeneratedTypeRef> = emptySet()): Boolean {
+    if (this in visited) return false
+    val declaration = modelProperties.declarationType(this)
+    val model = modelProperties.declarationModel(declaration)
+    val alternatives =
+      when {
+        declaration.kind == GeneratedTypeRef.Kind.UNION -> declaration.arguments
+        model?.kind == GeneratedModel.Kind.UNION -> model.aliases
+        else -> emptyList()
+      }
+    if (alternatives.isNotEmpty()) {
+      return alternatives.all { it.isBinaryBody(visited + this) }
+    }
+    return declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
+      (declaration.name in setOf("file", "binary") || declaration.format.equals("binary", ignoreCase = true))
   }
 
   private fun GeneratedResponse.renderResponseHeaderSpecs(): PythonCodeBlock {
