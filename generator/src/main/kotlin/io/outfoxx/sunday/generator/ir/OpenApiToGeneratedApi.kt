@@ -653,7 +653,10 @@ class OpenApiToGeneratedApi(
       closed = true.takeIf { schema["additionalProperties"] == false },
       additionalProperties = additionalProperties(name, schema, localModels, scope),
       patternProperties = patternProperties(name, schema, localModels),
-      aliases = branches.map { branch -> schemaTypeRef(branch, null, null, localModels) },
+      aliases =
+        branches.mapIndexed { index, branch ->
+          schemaTypeRef(analysis.unionBranch(schema, branch), "${name}Case${index + 1}", scope, localModels)
+        },
       discriminator = schema.discriminatorProperty(),
       discriminatorMappings =
         schema

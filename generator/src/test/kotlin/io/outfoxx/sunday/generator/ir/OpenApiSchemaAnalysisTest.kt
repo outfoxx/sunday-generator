@@ -72,5 +72,16 @@ class OpenApiSchemaAnalysisTest {
     assertNotSame(nullable, OpenApiSchemaAnalysis(schemas).analyze(use))
   }
 
+  @Test
+  fun `union assertions preserve unchanged nominal branches and constrain anonymous alternatives`() {
+    val fields = mapOf("branchId" to mapOf("type" to "string"), "targetCommitId" to mapOf("type" to "string"))
+    val base = mapOf("type" to "object", "properties" to fields)
+    val required = mapOf("required" to listOf("branchId"))
+    val analysis = OpenApiSchemaAnalysis(mapOf("Branch" to base + required))
+    val reference = ref("Branch")
+    assertSame(reference, analysis.unionBranch(base, reference))
+    assertEquals(base + required, analysis.unionBranch(base, required))
+  }
+
   private fun ref(name: String) = mapOf("\$ref" to "#/components/schemas/$name")
 }
