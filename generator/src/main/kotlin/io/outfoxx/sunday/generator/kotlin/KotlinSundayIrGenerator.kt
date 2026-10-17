@@ -431,7 +431,12 @@ class KotlinSundayIrGenerator(
     ) {
       it.kotlinTypeName()
     }
-    addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
+    addModelDecodingDefaults(
+      modelTypes,
+      typeRegistry.options,
+      modelProperties,
+      kotlinEnumEntries,
+    ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.kotlinTypeName() }
     }
