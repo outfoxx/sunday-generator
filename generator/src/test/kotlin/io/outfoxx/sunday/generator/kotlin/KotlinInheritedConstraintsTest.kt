@@ -59,10 +59,10 @@ class KotlinInheritedConstraintsTest {
     val beta = mapper.convertValue("beta", enumType)
     for (name in listOf("AlphaEvent", "AlphaLeafEvent", "ReferencedAlphaEvent")) {
       val model = result.classLoader.loadClass("io.test.$name")
-      val constructor = model.getConstructor(enumType)
-      assertEquals(alpha, model.getMethod("getType").invoke(constructor.newInstance(alpha)))
+      val constructor = model.getConstructor()
+      assertEquals(alpha, model.getMethod("getType").invoke(constructor.newInstance()))
       assertEquals(alpha, model.getMethod("getType").invoke(mapper.readValue("""{"type":"alpha"}""", model)))
-      assertThrows(InvocationTargetException::class.java) { constructor.newInstance(beta) }
+      assertThrows(NoSuchMethodException::class.java) { model.getConstructor(enumType) }
       for (json in listOf("{}", """{"type":null}""", """{"type":"beta"}""")) {
         assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) {
           mapper.readValue(json, model)
@@ -71,7 +71,8 @@ class KotlinInheritedConstraintsTest {
     }
     val betaModel = result.classLoader.loadClass("io.test.BetaEvent")
     assertEquals(beta, betaModel.getMethod("getType").invoke(mapper.readValue("""{"type":"beta"}""", betaModel)))
-    assertThrows(InvocationTargetException::class.java) { betaModel.getConstructor(enumType).newInstance(alpha) }
+    assertEquals(beta, betaModel.getMethod("getType").invoke(betaModel.getConstructor().newInstance()))
+    assertThrows(NoSuchMethodException::class.java) { betaModel.getConstructor(enumType) }
     val optional = result.classLoader.loadClass("io.test.OptionalAlphaEvent")
     mapper.readValue("{}", optional)
     val json = """{"event-type":"alpha"}"""

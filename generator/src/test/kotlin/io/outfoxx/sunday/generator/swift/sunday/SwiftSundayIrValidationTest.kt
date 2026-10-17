@@ -75,8 +75,8 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
 
       final class InheritedEnumTests: XCTestCase {
         func testInheritedStorageAndRequiredness() throws {
-          let types: [EventType] = try [AlphaEvent(type: .alpha).type, BetaEvent(type: .beta).type,
-                                   AlphaLeafEvent(type: .alpha).type, ReferencedAlphaEvent(type: .alpha).type]
+          let types: [EventType] = try [AlphaEvent().type, BetaEvent().type,
+                                   AlphaLeafEvent().type, ReferencedAlphaEvent().type]
           XCTAssertEqual(types, [.alpha, .beta, .alpha, .alpha])
           func check<T: Codable>(_ type: T.Type, value: String, invalidValue: String) throws -> T {
             let data = Data("{\"type\":\"\(value)\"}".utf8)
@@ -100,7 +100,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
 
         func testOptionalWireProperty() throws {
           let decoder = JSONDecoder()
-          XCTAssertNil(try decoder.decode(OptionalAlphaEvent.self, from: Data("{}".utf8)).eventType)
+          XCTAssertEqual(try decoder.decode(OptionalAlphaEvent.self, from: Data("{}".utf8)).eventType, .alpha)
           let data = Data(#"{"event-type":"alpha"}"#.utf8)
           let decoded = try decoder.decode(OptionalAlphaEvent.self, from: data)
           let canonical: EventType? = decoded.eventType
@@ -136,6 +136,7 @@ class SwiftSundayIrValidationTest : SwiftSundayIrTestSupport() {
           let decoder = JSONDecoder()
           let data = Data(#"{"type":"alpha","next":{"type":"alpha"}}"#.utf8)
           let decoded = try decoder.decode(RecursiveAlphaEvent.self, from: data)
+          XCTAssertEqual(try RecursiveAlphaEvent().type, .alpha)
           let base: RecursiveBaseEvent = decoded
           let canonical: EventType = decoded.type
           XCTAssertEqual(canonical, .alpha)

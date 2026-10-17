@@ -105,6 +105,7 @@ import io.outfoxx.sunday.generator.typescript.utils.Z
 import io.outfoxx.sunday.generator.typescript.utils.isNullable
 import io.outfoxx.sunday.generator.typescript.utils.isOptional
 import io.outfoxx.sunday.generator.typescript.utils.isUndefinable
+import io.outfoxx.sunday.generator.typescript.utils.nonNullable
 import io.outfoxx.sunday.generator.typescript.utils.nonOptional
 import io.outfoxx.sunday.generator.typescript.utils.nonUndefinable
 import io.outfoxx.sunday.generator.typescript.utils.nullable
@@ -1664,7 +1665,11 @@ class TypeScriptSundayIrGenerator(
 
     declaredProperties.forEach { property ->
       val propertyName = property.name.typeScriptIdentifierName
-      val propertyType = property.type.typeName(ownerTypeName).modelPropertyType(property)
+      // Inherited problem properties retain their runtime types; wire schemas still enforce constants.
+      val propertyType =
+        property.type.typeName(ownerTypeName).modelPropertyType(
+          if (isProblemModel) property.copy(allowedValues = null) else property,
+        )
       interfaceBuilder.addProperty(
         PropertySpec
           .builder(propertyName, propertyType.nonUndefinable)
@@ -2318,11 +2323,30 @@ class TypeScriptSundayIrGenerator(
       .build()
   }
 
+  private fun GeneratedModel.unionDiscriminatorCases(): List<Pair<String?, GeneratedModel>> =
+    aliases.mapNotNull { it.modelOrNull(index) }.flatMap { child ->
+      val mappings = discriminatorMappings.filterValues { it.modelOrNull(index) == child }.keys
+      if (mappings.isNotEmpty()) {
+        mappings.map { it to child }
+      } else {
+        val value =
+          modelProperties
+            .fields(child)
+            .firstOrNull { it.wireName == discriminator }
+            ?.effective
+            ?.allowedValues
+            ?.singleOrNull() as? String
+        listOf((value ?: child.discriminatorValue) to child)
+      }
+    }
+
   private fun unionSchemaCode(
     typeName: TypeName.Standard,
     model: GeneratedModel,
     schemaTypeName: TypeName.Standard? = null,
   ): CodeBlock {
+    // Zod's discriminator lookup uses a prototype-bearing object internally.
+    val guardDiscriminator = if (model.discriminator == "__proto__") "tag" else model.discriminator
     if (nominalTypes.branches(model).isNotEmpty()) {
       nominalTypes.unionType(model)
       val schemas = model.aliases.map { typeRegistry.schemaInitializer(it.typeName(typeName)) }
@@ -2368,11 +2392,55 @@ class TypeScriptSundayIrGenerator(
       .apply {
         schemaTypeName?.let { add(": %T", SCHEMA_LIKE.parameterized(it)) }
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
-      .add("  const branchesSchema = %T.union([\n", Z)
-      .add(schemas.joinToCode(",\n"))
+      .apply {
+        if (model.discriminator != null) {
+          add("  const discriminatorSchema = %T.discriminatedUnion(%S, [\n", Z, guardDiscriminator)
+          add(
+            model
+              .unionDiscriminatorCases()
+              .map { (mapped, child) ->
+                CodeBlock.of(
+                  "%T.object({ %L: %T.literal(%S) })",
+                  Z,
+                  objectPropertyKey(requireNotNull(guardDiscriminator)),
+                  Z,
+                  mapped ?: child.discriminatorValue ?: child.name,
+                )
+              }.joinToCode(",\n"),
+          )
+          add("\n  ]);\n")
+        }
+        add("  const branchesSchema = %T.union([\n", Z)
+      }.add(schemas.joinToCode(",\n"))
       .add("\n  ]);\n")
       .apply {
-        val checked = applyUnionCommonConstraints(model, typeName, "branchesSchema")
+        if (model.discriminator != null) {
+          // Model codecs retain raw unknown fields and may rename keys; inspect the tag without transforming the input.
+          add(
+            "  const discriminatedSchema = %T.custom<%T.input<typeof branchesSchema>>(value => discriminatorSchema.safeParse(%L).success).pipe(branchesSchema);\n",
+            Z,
+            Z,
+            if (model.discriminator ==
+              "__proto__"
+            ) {
+              "typeof value === 'object' && value !== null ? {tag: (value as Record<string, unknown>)['__proto__']} : value"
+            } else {
+              "value"
+            },
+          )
+        }
+        val checked =
+          applyUnionCommonConstraints(
+            model,
+            typeName,
+            if (model.discriminator !=
+              null
+            ) {
+              "discriminatedSchema"
+            } else {
+              "branchesSchema"
+            },
+          )
         add("  const wireSchema = %L;\n", checked)
         if (fallbackSchema != null) {
           add(
@@ -3443,6 +3511,16 @@ class TypeScriptSundayIrGenerator(
         declaration.name == "boolean" -> CodeBlock.of("%T.boolean()", Z)
         else -> CodeBlock.of("%T.unknown()", Z)
       }
+    if (allowedValues?.size == 1 &&
+      formattedType == null &&
+      enumModel == null &&
+      modelProperties.declarationModel(this)?.nominal != true &&
+      declaration.name in setOf("string", "integer", "number", "boolean")
+    ) {
+      val constant = CodeBlock.of("%T.literal(%L)", Z, literal(allowedValues.single()))
+      val checked = CodeBlock.of("%L.refine(value => %L.safeParse(value).success)", constant, schema)
+      return if (required) checked else checked.appendSchemaCall("optional()")
+    }
     val wireType = if (enumModel != null) GeneratedTypeRef.scalar("string") else declaration
     var wire = wireType.applyZodValidation(primitive, validation)
     if (!required) {
@@ -4515,11 +4593,13 @@ class TypeScriptSundayIrGenerator(
     get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
   private fun TypeName.modelPropertyType(property: io.outfoxx.sunday.generator.ir.GeneratedModelProperty): TypeName =
-    if (!property.required) {
-      undefinable
-    } else {
-      this
-    }
+    property.allowedValues
+      ?.takeIf { values -> values.size == 1 && nonOptional.nonNullable in setOf(STRING, NUMBER, BOOLEAN) }
+      ?.let { values -> TypeName.implicit(literal(values.single()).toString()) }
+      .let { literalType ->
+        val valueType = literalType ?: this
+        if (!property.required) valueType.undefinable else valueType
+      }
 
   private fun TypeName.isSetType(): Boolean = (nonUndefinable as? TypeName.Parameterized)?.rawType == SET
 

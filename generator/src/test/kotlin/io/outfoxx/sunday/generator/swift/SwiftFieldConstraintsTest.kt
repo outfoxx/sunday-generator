@@ -143,9 +143,11 @@ class SwiftFieldConstraintsTest {
           }
         }
         func testNumericAllowedValuesRejectNonFiniteValues() throws {
-          XCTAssertTrue(try NumericChoice(choice: 1.0).isValid(.response))
-          for value in [Double.nan, Double.infinity, -Double.infinity, 2.0] {
-            XCTAssertThrowsError(try NumericChoice(choice: value))
+          XCTAssertTrue(try NumericChoice().isValid(.response))
+          let decoder = JSONDecoder()
+          decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+          for json in [#"{"choice":"NaN"}"#, #"{"choice":"Infinity"}"#, #"{"choice":"-Infinity"}"#, #"{"choice":2.0}"#] {
+            XCTAssertThrowsError(try decoder.decode(NumericChoice.self, from: Data(json.utf8)))
           }
         }
         func testNestedCollectionAlias() throws {
@@ -157,8 +159,7 @@ class SwiftFieldConstraintsTest {
           XCTAssertThrowsError(try JSONDecoder().decode(CollectionOwner.self, from: Data(#"{"values":[]}"#.utf8)))
         }
         func testAllowedNullsAndPatchPresence() throws {
-          _ = try NullableChoices(choice: "a")
-          XCTAssertThrowsError(try NullableChoices(choice: nil))
+          XCTAssertEqual(try NullableChoices().choice, "a")
           for json in [#"{"choice":null}"#, #"{"choice":"a","optional":null}"#] {
             XCTAssertThrowsError(try JSONDecoder().decode(NullableChoices.self, from: Data(json.utf8)))
           }

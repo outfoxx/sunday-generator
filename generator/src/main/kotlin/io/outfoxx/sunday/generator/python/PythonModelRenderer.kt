@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -278,6 +279,7 @@ class PythonModelRenderer(
           renderedProperties.takeIf { it.isNotEmpty() }?.let { modelProperties ->
             PythonCodeBlock.join(modelProperties.map { property -> property.renderProperty(this) })
           },
+          renderConstantConstructor(),
           renderNonNullableOptionalValidator(),
           renderExternalDiscriminatorValidator(),
           renderWireValueValidator(),
@@ -305,6 +307,66 @@ class PythonModelRenderer(
       className,
       PythonCodeBlock.join(bases, separator = ", "),
       body,
+    )
+  }
+
+  // Pydantic must still accept wire tags during validation; static callers construct models without constant arguments.
+  private fun GeneratedModel.renderConstantConstructor(): PythonCodeBlock? {
+    if (patchable) return null
+    val fields = effectiveModelProperties()
+    val constants = fields.filter { it.allowedValues?.size == 1 }
+    if (constants.isEmpty()) return null
+    val names = NameAllocator(preallocateKeywords = false)
+    val parameterNames =
+      fields.associateWith { property ->
+        (property.serializationName ?: property.name).takeIf { it.isPythonIdentifier }
+          ?: property.name.pythonIdentifierName
+      }
+    parameterNames.values.forEach { names.newName(it) }
+    val receiver = names.newName("self")
+    val parameters =
+      fields.filterNot { it in constants }.map { property ->
+        PythonCodeBlock.of(
+          "%L: %C%L",
+          parameterNames.getValue(property),
+          property.type
+            .copy(
+              nullable = (!property.required && property.defaultValue == null) || property.type.nullable,
+            ).renderPythonType(),
+          if (property.required) "" else " = ...",
+        )
+      }
+    val signature =
+      if (parameters.isEmpty()) {
+        PythonCodeBlock.of("%L", receiver)
+      } else {
+        PythonCodeBlock.of("%L, *, %C", receiver, PythonCodeBlock.join(parameters, ", "))
+      }
+    val inline = PythonCodeBlock.of("        def __init__(%C) -> None: ...", signature)
+    val context = PythonRenderContext(PythonImportSet())
+    val constructor =
+      if (inline.render(context).length <= 120) {
+        inline
+      } else {
+        PythonCodeBlock.of(
+          "        def __init__(\n            %L,\n            *,\n%C,\n        ) -> None: ...",
+          receiver,
+          PythonCodeBlock.join(parameters.map { PythonCodeBlock.of("            %C", it) }, ",\n"),
+        )
+      }
+    return PythonCodeBlock.of(
+      "    if %T:\n\n%C\n\n" +
+        "    def model_post_init(self, context: %T, /) -> None:\n" +
+        "        \"\"\"Keep implicit constants present when serializing only explicitly set fields.\"\"\"\n" +
+        "        super().model_post_init(context)\n%C",
+      PythonSymbol("typing", "TYPE_CHECKING"),
+      constructor,
+      PythonSymbol("typing", "Any"),
+      PythonCodeBlock.join(
+        constants.map {
+          PythonCodeBlock.of("        self.__pydantic_fields_set__.add(%S)", it.name.pythonIdentifierName)
+        },
+      ),
     )
   }
 
@@ -1366,6 +1428,7 @@ class PythonModelRenderer(
 
   private fun GeneratedModelProperty.renderProperty(model: GeneratedModel): PythonCodeBlock {
     val propertyName = name.pythonIdentifierName
+    val constant = allowedValues?.takeIf { it.size == 1 && !model.patchable }
     val literalValue = discriminatorLiteralValue(model)
     val externalDiscriminatorType = renderExternalDiscriminatorPropertyType()
     val basePropertyType =
@@ -1377,6 +1440,7 @@ class PythonModelRenderer(
         (
           model.patchable ||
             required ||
+            constant != null ||
             defaultValue != null &&
             !patchHelpers.canMerge(model)
         )
@@ -1396,6 +1460,11 @@ class PythonModelRenderer(
     if (model.patchable) {
       fieldArguments += PythonCodeBlock.of("default_factory=lambda: %T", PythonSymbol("sunday", "UNSET"))
       fieldArguments += PythonCodeBlock.of("exclude_if=%T", PythonSymbol("sunday", "is_unset"))
+    } else if (constant != null) {
+      fieldArguments +=
+        PythonCodeBlock.of("default=%C", constant.single()?.renderPythonValue() ?: PythonCodeBlock.of("None"))
+      fieldArguments += PythonCodeBlock.of("frozen=True")
+      fieldArguments += PythonCodeBlock.of("validate_default=True")
     } else if (!required) {
       fieldArguments +=
         PythonCodeBlock.of(
@@ -1406,7 +1475,7 @@ class PythonModelRenderer(
     if (!model.patchable && !required && !type.acceptsNull()) {
       fieldArguments += PythonCodeBlock.of("exclude_if=lambda value: value is None")
     }
-    if (!model.patchable && defaultValue != null) {
+    if (!model.patchable && defaultValue != null && constant == null) {
       fieldArguments += PythonCodeBlock.of("validate_default=True")
     }
     if (alias != propertyName) {
@@ -1493,8 +1562,10 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
-      if ((model.patchable || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
-        inline.render(context).length > 120
+      // Ruff excludes trailing type-ignore comments when deciding whether the field fits on one line.
+      val inlineLength = inline.render(context).length - overrideSuffix.length
+      if ((model.patchable || constant != null || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
+        inlineLength > 120
       ) {
         val multilineArguments =
           if (arguments.render(context).length + 8 <= 120) {
@@ -1512,7 +1583,7 @@ class PythonModelRenderer(
         )
       } else if (defaultValue == null ||
         required ||
-        inline.render(context).length <= 120 ||
+        inlineLength <= 120 ||
         arguments.render(context).length + 8 > 120
       ) {
         inline

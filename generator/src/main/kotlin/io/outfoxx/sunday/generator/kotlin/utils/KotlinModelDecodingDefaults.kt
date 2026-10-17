@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday.generator.kotlin.utils
 
+import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.BYTE_ARRAY
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
@@ -26,16 +28,34 @@ import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.kotlin.KotlinTypeRegistry
 
-/** Separates ordinary construction from the defaults applied to absent decoded fields. */
+/** Separates implicit constants and decode-only defaults from public construction. */
 internal fun addModelDecodingDefaults(
   models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
   options: Set<KotlinTypeRegistry.Option>,
   properties: GeneratedModelProperties,
+  enumEntries: KotlinEnumEntriesResolver,
+  typeName: (GeneratedTypeRef) -> TypeName,
 ) {
+  fun constantCode(field: GeneratedModelProperties.Field): CodeBlock {
+    val value = field.effective.allowedValues!!.single() ?: return CodeBlock.of("null")
+    val type = typeName(field.storage.type).copy(nullable = false)
+    if (type == ANY) return if (value is String) CodeBlock.of("%S", value) else CodeBlock.of("%L", value)
+    if (type == BYTE_ARRAY) return CodeBlock.of("%T.getDecoder().decode(%S)", java.util.Base64::class, value.toString())
+    return KotlinModelDefaults.code(
+      value.toString(),
+      type,
+      properties.declarationModel(field.storage.type),
+      enumEntries,
+    )
+      ?: genError("Cannot render constant for '${field.wireName}'")
+  }
+
   val annotated = mutableSetOf<ClassName>()
 
   fun bindWireNames(name: ClassName) {
@@ -71,6 +91,7 @@ internal fun addModelDecodingDefaults(
     val type = builder.build()
     val constructor = type.primaryConstructor ?: return@forEach
     val fields = properties.fields(model).associateBy { it.storage.name.kotlinIdentifierName }
+    val constants = fields.filterValues { it.effective.allowedValues?.size == 1 }
     val defaulted =
       constructor.parameters
         .filter { parameter ->
@@ -86,7 +107,7 @@ internal fun addModelDecodingDefaults(
         .filter { parameter ->
           parameter.annotations.any { it.typeName == ClassName("com.fasterxml.jackson.annotation", "JsonAnySetter") }
         }.mapTo(mutableSetOf()) { it.name }
-    if (defaulted.isEmpty() && extensionParameters.isEmpty()) return@forEach
+    if (defaulted.isEmpty() && extensionParameters.isEmpty() && constants.isEmpty()) return@forEach
     // Keep extension storage in data-class copy(), but never bind its implementation name as a JSON field.
     val decodedParameters = constructor.parameters.filter { it.name !in extensionParameters }
     if (KotlinTypeRegistry.Option.JacksonAnnotations in options) bindWireNames(name)
@@ -94,6 +115,7 @@ internal fun addModelDecodingDefaults(
       constructor
         .toBuilder()
         .apply {
+          parameters.removeAll { it.name in constants }
           parameters.replaceAll { parameter ->
             parameter
               .toBuilder()
@@ -105,6 +127,41 @@ internal fun addModelDecodingDefaults(
           annotations.removeIf { it.typeName == JACKSON_JSON_CREATOR }
         }.build(),
     )
+    builder.propertySpecs.replaceAll { property ->
+      constants[property.name]?.let { field ->
+        property
+          .toBuilder()
+          .mutable(false)
+          .initializer(constantCode(field))
+          .build()
+      }
+        ?: property
+    }
+    if (builder.initializerIndex >= 0 && constants.isNotEmpty()) {
+      // Constant fields no longer initialize as constructor parameters, so validation must follow their storage.
+      val lastConstantIndex = builder.propertySpecs.indexOfLast { it.name in constants }
+      builder.initializerIndex = maxOf(builder.initializerIndex, lastConstantIndex + 1)
+    }
+    if (builder
+        .build()
+        .primaryConstructor
+        ?.parameters
+        ?.isEmpty() == true
+    ) {
+      builder.modifiers.remove(KModifier.DATA)
+    }
+    val parent = models[type.superclass]?.first
+    if (parent != null) {
+      val parentConstants =
+        properties
+          .fields(parent)
+          .filter { it.effective.allowedValues?.size == 1 }
+          .mapTo(mutableSetOf()) { it.storage.name.kotlinIdentifierName }
+      builder.superclassConstructorParameters.removeAll { it.toString().removeSurrounding("`") in parentConstants }
+    }
+    builder.superclassConstructorParameters.replaceAll { argument ->
+      constants[argument.toString().removeSurrounding("`")]?.let(::constantCode) ?: argument
+    }
     if (type.modifiers.any { it in setOf(KModifier.ABSTRACT, KModifier.SEALED) }) return@forEach
 
     val companion = type.typeSpecs.firstOrNull { it.isCompanion }
@@ -137,13 +194,17 @@ internal fun addModelDecodingDefaults(
             )
           }
         }.returns(name)
-        .addStatement(
+        .apply {
+          addCode(
+            KotlinModelConstraints.initializer(constants.values.toList(), properties, typeName = typeName),
+          )
+        }.addStatement(
           "return %T(%L)",
           name,
           CodeBlock
             .builder()
             .apply {
-              decodedParameters.forEachIndexed { index, parameter ->
+              decodedParameters.filterNot { it.name in constants }.forEachIndexed { index, parameter ->
                 if (index > 0) add(", ")
                 add("%N = %N", parameter.name, parameter.name)
               }

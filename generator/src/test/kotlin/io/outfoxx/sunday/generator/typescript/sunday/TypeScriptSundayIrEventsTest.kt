@@ -331,7 +331,7 @@ class TypeScriptSundayIrEventsTest : TypeScriptSundayIrTestSupport() {
       identityOutput,
     )
     assertTrue(identityOutput.contains("z.union(["), identityOutput)
-    assertFalse(identityOutput.contains("z.discriminatedUnion("), identityOutput)
+    assertTrue(identityOutput.contains("z.discriminatedUnion('kind', ["), identityOutput)
     assertTrue(serviceOutput.contains("Operation<void, EventEnvelope, Factory>"), serviceOutput)
     assertTrue(serviceOutput.contains("SchemaLike<EventEnvelope>"), serviceOutput)
   }

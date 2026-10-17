@@ -183,7 +183,7 @@ class SwiftObjectUnionValidationTest {
             XCTAssertTrue(holder.isValid(.request))
             XCTAssertNoThrow(try Holder(additionalProperties: ["extra-choice": ["kind": .string(kind), "value": 2]]))
           }
-          let reused = try Large(kind: "large", value: 9)
+          let reused = try Large(value: 9)
           XCTAssertTrue(reused.isValid(.request))
           XCTAssertFalse($choiceType.large(reused).isValid(.request))
           XCTAssertThrowsError(try $choiceType.large(reused).validate(.response))

@@ -431,7 +431,12 @@ class KotlinSundayIrGenerator(
     ) {
       it.kotlinTypeName()
     }
-    addModelDecodingDefaults(modelTypes, typeRegistry.options, modelProperties)
+    addModelDecodingDefaults(
+      modelTypes,
+      typeRegistry.options,
+      modelProperties,
+      kotlinEnumEntries,
+    ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.kotlinTypeName() }
     }
@@ -1547,6 +1552,21 @@ class KotlinSundayIrGenerator(
           ) { it.kotlinTypeName() }
           .takeUnless {
             it.isEmpty()
+          }?.let { checks ->
+            if (!patchable &&
+              isProblemModel() &&
+              typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO &&
+              modelProperties.fields(this).any { it.storage.name == "status" && it.effective.allowedValues?.size == 1 }
+            ) {
+              // Removing the numeric constructor argument exposes Zalando's StatusType property instead.
+              CodeBlock
+                .builder()
+                .addStatement("val status = this.status?.statusCode")
+                .add(checks)
+                .build()
+            } else {
+              checks
+            }
           }
       } else {
         null

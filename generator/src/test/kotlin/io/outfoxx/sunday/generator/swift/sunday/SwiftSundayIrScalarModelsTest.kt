@@ -147,7 +147,7 @@ class SwiftSundayIrScalarModelsTest : SwiftSundayIrTestSupport() {
             XCTAssertEqual(parent.count, 2)
           }
           XCTAssertNil(IntegerDefaults().count)
-          XCTAssertNil(try RefinedIntegerDefaults().count)
+          XCTAssertEqual(try RefinedIntegerDefaults().count, 2)
           XCTAssertThrowsError(try decoder.decode(RefinedIntegerDefaults.self, from: Data(#"{"count":1}"#.utf8)))
           XCTAssertThrowsError(try decoder.decode(IntegerDefaults.self, from: Data(#"{"count":null}"#.utf8)))
           let null = try decoder.decode(IntegerDefaults.self, from: Data(#"{"nullable":null}"#.utf8))

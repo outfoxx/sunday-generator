@@ -3538,7 +3538,7 @@ class SwiftSundayIrGenerator(
           PropertySpec
             .abstractBuilder(property.name.swiftIdentifierName, propertyTypeName)
             .getter(FunctionSpec.getterBuilder().build())
-        } else if (isProblemModel || isImmutableModel) {
+        } else if (isProblemModel || isImmutableModel || constantCode(property) != null) {
           PropertySpec.builder(property.name.swiftIdentifierName, propertyTypeName, PUBLIC)
         } else {
           PropertySpec.varBuilder(property.name.swiftIdentifierName, propertyTypeName, PUBLIC)
@@ -3628,7 +3628,7 @@ class SwiftSundayIrGenerator(
           false,
         ),
       )
-      (effectiveInheritedProperties + localProperties).forEach { property ->
+      (effectiveInheritedProperties + localProperties).filter { constantCode(it) == null }.forEach { property ->
         typeBuilder.addFunction(
           modelWithFunction(
             this,
@@ -3669,6 +3669,14 @@ class SwiftSundayIrGenerator(
     }
 
     return typeBuilder
+  }
+
+  private fun GeneratedModel.constantCode(property: GeneratedModelProperty): CodeBlock? {
+    if (patchable) return null
+    val effective = modelProperties.fields(this).firstOrNull { it.wireName == property.wireName }?.effective ?: property
+    val values = effective.allowedValues?.takeIf { it.size == 1 } ?: return null
+    return values.single()?.swiftValueCode(property.swiftTypeName().makeNonOptional(), property.type)
+      ?: CodeBlock.of("nil")
   }
 
   private fun GeneratedModel.constructorProperties(): List<GeneratedModelProperty> =
@@ -4478,8 +4486,17 @@ class SwiftSundayIrGenerator(
     isRootProblemModel: Boolean,
     addNilProblemParameters: Boolean = false,
   ): FunctionSpec {
+    val parameters = (inheritedProperties + localProperties).filter { model.constantCode(it) == null }
+    val parent = model.inherits.firstOrNull()?.modelOrNull(apiIndex)
+    val parentParameters = parent?.allConstructorProperties()?.filter { parent.constantCode(it) == null }
+    val overrides =
+      inheritedTypeName != null &&
+        parent != null &&
+        parameters.map { it.name to it.swiftModelPropertyTypeName(patchable) } ==
+        parentParameters?.map { it.name to it.swiftModelPropertyTypeName(patchable) } &&
+        model.preservesExtensions() == parent.preservesExtensions()
     val modifiers =
-      if (inheritedTypeName != null && localProperties.isEmpty()) {
+      if (overrides) {
         arrayOf(PUBLIC, OVERRIDE)
       } else {
         arrayOf(PUBLIC)
@@ -4490,7 +4507,7 @@ class SwiftSundayIrGenerator(
       .addModifiers(*modifiers)
       .throws(model.constructorThrows())
       .apply {
-        (inheritedProperties + localProperties).forEach { property ->
+        parameters.forEach { property ->
           addParameter(
             ParameterSpec
               .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(patchable))
@@ -4517,7 +4534,11 @@ class SwiftSundayIrGenerator(
         localProperties
           .filterNot { property -> isRootProblemModel && property.isSatisfiedByBaseProblemClass() }
           .forEach { property ->
-            addStatement("self.%N = %N", property.name.swiftIdentifierName, property.name.swiftIdentifierName)
+            addStatement(
+              "self.%N = %L",
+              property.name.swiftIdentifierName,
+              model.constantCode(property) ?: CodeBlock.of("%N", property.name.swiftIdentifierName),
+            )
           }
         if (addNilProblemParameters) {
           addStatement("self.parameters = nil")
@@ -4534,11 +4555,16 @@ class SwiftSundayIrGenerator(
         } else if (inheritedTypeName != null) {
           val inheritedConstructorParameters =
             inheritedProperties
-              .map { property ->
+              .filter { property ->
+                model.inherits
+                  .firstOrNull()
+                  ?.modelOrNull(apiIndex)
+                  ?.constantCode(property) == null
+              }.map { property ->
                 CodeBlock.of(
-                  "%N: %N",
+                  "%N: %L",
                   property.name.swiftIdentifierName,
-                  property.name.swiftIdentifierName,
+                  model.constantCode(property) ?: CodeBlock.of("%N", property.name.swiftIdentifierName),
                 )
               }.let { parameters ->
                 if (model.inheritsExtensionStorage()) {
@@ -4942,7 +4968,7 @@ class SwiftSundayIrGenerator(
           val default =
             if (!patchable && !property.required) {
               decodingDefaultNames[model to property.wireName]?.let { CodeBlock.of("Self.%N", it) }
-                ?: property.swiftDefault(model)
+                ?: property.swiftDecodingDefault(model)
             } else {
               null
             }
@@ -5144,6 +5170,7 @@ class SwiftSundayIrGenerator(
         if (validates) "return try %T(%L)" else "return %T(%L)",
         typeName,
         properties
+          .filter { model.constantCode(it) == null }
           .map { current ->
             val valueCode =
               if (current == property) {
@@ -6143,6 +6170,15 @@ class SwiftSundayIrGenerator(
     }
   }
 
+  private fun GeneratedModelProperty.swiftDecodingDefault(model: GeneratedModel): CodeBlock? =
+    swiftDefault(model) ?: model.constantCode(this).takeUnless {
+      modelProperties
+        .fields(model)
+        .firstOrNull { field -> field.wireName == wireName }
+        ?.effective
+        ?.required == true
+    }
+
   private fun GeneratedModel.swiftClassChain(): List<GeneratedModel> =
     generateSequence(this) { it.inherits.firstOrNull()?.modelOrNull(apiIndex) }
       .takeWhile { it.isSwiftClassModel && !it.patchable }
@@ -6158,7 +6194,7 @@ class SwiftSundayIrGenerator(
       modelProperties.fields(model).filter { it.inherited && !it.declaration.required }.forEach field@{ field ->
         val parentField = parentFields[field.wireName] ?: return@field
         if (field.storage.externalDiscriminator == null &&
-          field.storage.swiftDefault(model) != parentField.storage.swiftDefault(parent)
+          field.storage.swiftDecodingDefault(model) != parentField.storage.swiftDecodingDefault(parent)
         ) {
           val owner = chain.last { ancestor -> modelProperties.fields(ancestor).any { it.wireName == field.wireName } }
           declarations += owner to field.wireName
@@ -6188,8 +6224,10 @@ class SwiftSundayIrGenerator(
       val (owner, wireName) = declaration
       if (owner !in chain) return@mapNotNull null
       val field = fields.getValue(wireName)
-      val default = field.storage.swiftDefault(this)
-      if (owner != this && default == parentFields.getValue(wireName).storage.swiftDefault(requireNotNull(parent))) {
+      val default = field.storage.swiftDecodingDefault(this)
+      if (owner != this &&
+        default == parentFields.getValue(wireName).storage.swiftDecodingDefault(requireNotNull(parent))
+      ) {
         return@mapNotNull null
       }
       PropertySpec
