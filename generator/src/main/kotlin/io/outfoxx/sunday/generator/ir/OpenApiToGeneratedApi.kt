@@ -649,7 +649,14 @@ class OpenApiToGeneratedApi(
     val generatedPatternProperties = patternProperties(name, schema, localModels)
     val aliases =
       branches.mapIndexed { index, branch ->
-        schemaTypeRef(analysis.unionBranch(schema, branch), "${name}Case${index + 1}", scope, localModels)
+        // Named oneOf payloads remain reusable; their common assertions are enforced by the union validator.
+        val caseSchema =
+          if (schema["oneOf"] != null && analysis.analyze(branch).canonicalReference != null) {
+            branch
+          } else {
+            analysis.unionBranch(schema, branch)
+          }
+        schemaTypeRef(caseSchema, "${name}Case${index + 1}", scope, localModels)
       }
     val replacements =
       branches
