@@ -648,7 +648,8 @@ class OpenApiToGeneratedApi(
     val generatedAdditionalProperties = additionalProperties(name, schema, localModels, scope)
     val generatedPatternProperties = patternProperties(name, schema, localModels)
     val unmodeledRequirements =
-      schema.listValue("required").filterIsInstance<String>().toSet() - generatedProperties.map { it.name }.toSet()
+      schema.listValue("required").filterIsInstance<String>().toSet() -
+        generatedProperties.map { it.serializationName ?: it.name }.toSet()
     val aliases =
       branches.mapIndexed { index, branch ->
         val branchAnalysis = analysis.analyze(branch)
