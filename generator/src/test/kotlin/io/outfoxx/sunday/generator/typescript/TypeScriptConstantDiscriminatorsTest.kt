@@ -27,22 +27,31 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 
 @TypeScriptTest
 @Tag("models")
 class TypeScriptConstantDiscriminatorsTest {
   @ParameterizedTest
-  @ValueSource(strings = ["openapi", "asyncapi", "composed"])
+  @CsvSource(
+    "openapi,kind",
+    "asyncapi,kind",
+    "composed,kind",
+    "openapi,__proto__",
+    "asyncapi,__proto__",
+    "composed,__proto__",
+  )
   fun `constant discriminators narrow and validate`(
     frontend: String,
+    discriminator: String,
     compiler: TypeScriptCompiler,
     @TempDir directory: Path,
   ) {
+    val extraField = if (discriminator == "__proto__") "extra" else "__proto__"
     val registry = TypeScriptTypeRegistry(setOf())
     TypeScriptSundayIrGenerator(
-      constantDiscriminatorsApi(directory, frontend),
+      constantDiscriminatorsApi(directory, frontend, discriminator),
       registry,
       typeScriptSundayTestOptions,
     ).generateServiceTypes()
@@ -63,13 +72,13 @@ class TypeScriptConstantDiscriminatorsTest {
             }
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
             const schema = runtime.resolveSchema(ExtentSchema);
-            if (narrow(schema.parse({kind: 'beat', beats: 2})) !== 2) throw new Error('wrong branch');
-            if (schema.safeParse({kind: 'x'}).success) throw new Error('unknown tag accepted');
-            const raw = JSON.parse('{"kind":"beat","beats":2,"__proto__":{"kept":true}}');
+            if (narrow(schema.parse({['kind']: 'beat', beats: 2})) !== 2) throw new Error('wrong branch');
+            if (schema.safeParse({['kind']: 'x'}).success) throw new Error('unknown tag accepted');
+            const raw = JSON.parse('{"kind":"beat","beats":2,"$extraField":{"kept":true}}');
             const encoded = schema.encode(schema.parse(raw));
-            if (encoded.kind !== 'beat' || !Object.hasOwn(encoded, '__proto__')) throw new Error('codec lost wire data');
-            if (runtime.resolveSchema(BeatExtentSchema).safeParse({kind: 'x'}).success) throw new Error('invalid constant accepted');
-            """.trimIndent(),
+            if (encoded.kind !== 'beat' || !Object.hasOwn(encoded, '$extraField')) throw new Error('codec lost wire data');
+            if (runtime.resolveSchema(BeatExtentSchema).safeParse({['kind']: 'x'}).success) throw new Error('invalid constant accepted');
+            """.trimIndent().replace("kind", discriminator),
           ),
         ).build()
     assertTrue(

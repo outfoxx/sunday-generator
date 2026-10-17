@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.squareup.kotlinpoet.NameAllocator
 import io.outfoxx.sunday.generator.Tolerance
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
@@ -315,6 +316,9 @@ class PythonModelRenderer(
     val fields = effectiveModelProperties()
     val constants = fields.filter { it.allowedValues?.size == 1 }
     if (constants.isEmpty()) return null
+    val names = NameAllocator(preallocateKeywords = false)
+    fields.forEach { names.newName(it.name.pythonIdentifierName) }
+    val receiver = names.newName("self")
     val parameters =
       fields.filterNot { it in constants }.map { property ->
         PythonCodeBlock.of(
@@ -329,9 +333,9 @@ class PythonModelRenderer(
       }
     val signature =
       if (parameters.isEmpty()) {
-        PythonCodeBlock.of("self")
+        PythonCodeBlock.of("%L", receiver)
       } else {
-        PythonCodeBlock.of("self, *, %C", PythonCodeBlock.join(parameters, ", "))
+        PythonCodeBlock.of("%L, *, %C", receiver, PythonCodeBlock.join(parameters, ", "))
       }
     val inline = PythonCodeBlock.of("        def __init__(%C) -> None: ...", signature)
     val context = PythonRenderContext(PythonImportSet())
@@ -340,7 +344,8 @@ class PythonModelRenderer(
         inline
       } else {
         PythonCodeBlock.of(
-          "        def __init__(\n            self,\n            *,\n%C,\n        ) -> None: ...",
+          "        def __init__(\n            %L,\n            *,\n%C,\n        ) -> None: ...",
+          receiver,
           PythonCodeBlock.join(parameters.map { PythonCodeBlock.of("            %C", it) }, ",\n"),
         )
       }
@@ -1552,7 +1557,7 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
-      if ((model.patchable || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
+      if ((model.patchable || constant != null || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
         inline.render(context).length > 120
       ) {
         val multilineArguments =

@@ -149,12 +149,12 @@ class KotlinContentTypeTest {
           val mediaType = result.classLoader.loadClass("io.test.EventMediaType")
           val fromString = mediaType.getMethod("fromString", String::class.java)
           val png = fromString.invoke(null, "image/png")
-          val jpeg = fromString.invoke(null, "image/jpeg")
           val envelope = result.classLoader.loadClass("io.test.PngEnvelope")
-          assertTrue(envelope.constructors.any { it.parameterTypes.toList() == listOf(mediaType) }, generated)
-          val constructor = envelope.getConstructor(mediaType)
-          constructor.newInstance(png)
-          assertThrows(InvocationTargetException::class.java) { constructor.newInstance(jpeg) }
+          val instance = envelope.getConstructor().newInstance()
+          assertEquals(png, envelope.getMethod("getContentType").invoke(instance))
+          assertThrows(InvocationTargetException::class.java) {
+            envelope.getMethod("fromJson", mediaType).invoke(null, fromString.invoke(null, "image/jpeg"))
+          }
           if (adapters) {
             val mapper = jacksonObjectMapper()
             mapper.readValue("""{"contentType":"image/png"}""", envelope)

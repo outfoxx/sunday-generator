@@ -35,7 +35,7 @@ class PythonConstantDiscriminatorsTest : PythonTest() {
     compiler: PythonCompiler,
     @TempDir directory: Path,
   ) {
-    val api = constantDiscriminatorsApi(directory, frontend)
+    val api = constantDiscriminatorsApi(directory, frontend, receiverField = true)
     assertTrue(
       compileModules(
         compiler,
@@ -45,7 +45,7 @@ class PythonConstantDiscriminatorsTest : PythonTest() {
           PythonModuleBuilder("test_api/consumer.py")
             .addCode(
               PythonCodeBlock.of(
-                "from .models import BeatExtent\n\nvalue: BeatExtent = BeatExtent()\n" +
+                "from .models import BeatExtent\n\nvalue: BeatExtent = BeatExtent(self=\"mine\")\n" +
                   "explicit_tag = BeatExtent(kind=\"beat\")  # type: ignore[call-arg]\n",
               ),
             ).build(),

@@ -1665,7 +1665,11 @@ class TypeScriptSundayIrGenerator(
 
     declaredProperties.forEach { property ->
       val propertyName = property.name.typeScriptIdentifierName
-      val propertyType = property.type.typeName(ownerTypeName).modelPropertyType(property)
+      // Inherited problem properties retain their runtime types; wire schemas still enforce constants.
+      val propertyType =
+        property.type.typeName(ownerTypeName).modelPropertyType(
+          if (isProblemModel) property.copy(allowedValues = null) else property,
+        )
       interfaceBuilder.addProperty(
         PropertySpec
           .builder(propertyName, propertyType.nonUndefinable)
@@ -2341,6 +2345,8 @@ class TypeScriptSundayIrGenerator(
     model: GeneratedModel,
     schemaTypeName: TypeName.Standard? = null,
   ): CodeBlock {
+    // Zod's discriminator lookup uses a prototype-bearing object internally.
+    val guardDiscriminator = if (model.discriminator == "__proto__") "tag" else model.discriminator
     if (nominalTypes.branches(model).isNotEmpty()) {
       nominalTypes.unionType(model)
       val schemas = model.aliases.map { typeRegistry.schemaInitializer(it.typeName(typeName)) }
@@ -2388,15 +2394,15 @@ class TypeScriptSundayIrGenerator(
       }.add(" = %Q((runtime: %T) => {\n", DEFINE_MODEL_SCHEMA, SCHEMA_RUNTIME)
       .apply {
         if (model.discriminator != null) {
-          add("  const discriminatorSchema = %T.discriminatedUnion(%S, [\n", Z, model.discriminator)
+          add("  const discriminatorSchema = %T.discriminatedUnion(%S, [\n", Z, guardDiscriminator)
           add(
             model
               .unionDiscriminatorCases()
               .map { (mapped, child) ->
                 CodeBlock.of(
-                  "%T.object({ %S: %T.literal(%S) })",
+                  "%T.object({ %L: %T.literal(%S) })",
                   Z,
-                  model.discriminator,
+                  objectPropertyKey(requireNotNull(guardDiscriminator)),
                   Z,
                   mapped ?: child.discriminatorValue ?: child.name,
                 )
@@ -2411,9 +2417,16 @@ class TypeScriptSundayIrGenerator(
         if (model.discriminator != null) {
           // Model codecs retain raw unknown fields and may rename keys; inspect the tag without transforming the input.
           add(
-            "  const discriminatedSchema = %T.custom<%T.input<typeof branchesSchema>>(value => discriminatorSchema.safeParse(value).success).pipe(branchesSchema);\n",
+            "  const discriminatedSchema = %T.custom<%T.input<typeof branchesSchema>>(value => discriminatorSchema.safeParse(%L).success).pipe(branchesSchema);\n",
             Z,
             Z,
+            if (model.discriminator ==
+              "__proto__"
+            ) {
+              "typeof value === 'object' && value !== null ? {tag: (value as Record<string, unknown>)['__proto__']} : value"
+            } else {
+              "value"
+            },
           )
         }
         val checked =
@@ -3501,6 +3514,7 @@ class TypeScriptSundayIrGenerator(
     if (allowedValues?.size == 1 &&
       formattedType == null &&
       enumModel == null &&
+      modelProperties.declarationModel(this)?.nominal != true &&
       declaration.name in setOf("string", "integer", "number", "boolean")
     ) {
       val constant = CodeBlock.of("%T.literal(%L)", Z, literal(allowedValues.single()))

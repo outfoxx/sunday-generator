@@ -42,8 +42,25 @@ class TypeScriptNominalScalarTest {
     @TempDir directory: Path,
   ) {
     val registry = TypeScriptTypeRegistry(setOf())
+    val api = nominalScalarApi(frontend, directory, parameterDefaults = true)
+    val constrained =
+      api.copy(
+        models =
+          api.models.map { model ->
+            if (model.name == "Record") {
+              model.copy(
+                properties =
+                  model.properties.map { property ->
+                    if (property.name == "fact") property.copy(allowedValues = listOf("sid:f:abc")) else property
+                  },
+              )
+            } else {
+              model
+            }
+          },
+      )
     TypeScriptSundayIrGenerator(
-      nominalScalarApi(frontend, directory, parameterDefaults = true),
+      constrained,
       registry,
       typeScriptSundayTestOptions,
     ).generateServiceTypes()
@@ -102,6 +119,9 @@ class TypeScriptNominalScalarTest {
             const recordSchema = runtime.resolveSchema(RecordSchema);
             rejects(() => recordSchema.parse({...wire, count: 1.5}));
             const record = recordSchema.parse(wire);
+            const nominalFact: BaseFactSid = record.fact;
+            if (nominalFact !== fact) throw new Error('constant nominal identity lost');
+            rejects(() => recordSchema.parse({...wire, fact: 'sid:f:other'}));
             if (JSON.stringify(z.encode(recordSchema, record)) !== JSON.stringify(wire)) throw new Error('record roundtrip failed');
             """.trimIndent(),
           ),

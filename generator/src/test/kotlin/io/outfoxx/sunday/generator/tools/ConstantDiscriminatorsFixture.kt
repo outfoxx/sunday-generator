@@ -25,6 +25,8 @@ import kotlin.io.path.writeText
 internal fun constantDiscriminatorsApi(
   directory: Path,
   frontend: String = "openapi",
+  discriminator: String = "kind",
+  receiverField: Boolean = false,
 ): GeneratedApi {
   val source = directory.resolve("constants.yaml")
   source.writeText(
@@ -61,6 +63,7 @@ internal fun constantDiscriminatorsApi(
           properties:
             kind: {type: string, const: beat}
             beats: {type: integer}
+            ${if (receiverField) "self: {type: string}" else ""}
             constants: {${'$'}ref: '#/components/schemas/OnlyConstants'}
         TimeExtent:
           type: object
@@ -77,7 +80,7 @@ internal fun constantDiscriminatorsApi(
             mapping:
               beat: '#/components/schemas/BeatExtent'
               time: '#/components/schemas/TimeExtent'
-    """.trimIndent(),
+    """.trimIndent().replace("kind", discriminator),
   )
   if (frontend == "openapi") return GeneratedApiIrExporter().export(source.toUri())
   val events = directory.resolve("events.yaml")
