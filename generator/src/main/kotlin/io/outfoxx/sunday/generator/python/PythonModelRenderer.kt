@@ -317,13 +317,18 @@ class PythonModelRenderer(
     val constants = fields.filter { it.allowedValues?.size == 1 }
     if (constants.isEmpty()) return null
     val names = NameAllocator(preallocateKeywords = false)
-    fields.forEach { names.newName(it.name.pythonIdentifierName) }
+    val parameterNames =
+      fields.associateWith { property ->
+        (property.serializationName ?: property.name).takeIf { it.isPythonIdentifier }
+          ?: property.name.pythonIdentifierName
+      }
+    parameterNames.values.forEach { names.newName(it) }
     val receiver = names.newName("self")
     val parameters =
       fields.filterNot { it in constants }.map { property ->
         PythonCodeBlock.of(
           "%L: %C%L",
-          property.name.pythonIdentifierName,
+          parameterNames.getValue(property),
           property.type
             .copy(
               nullable = (!property.required && property.defaultValue == null) || property.type.nullable,

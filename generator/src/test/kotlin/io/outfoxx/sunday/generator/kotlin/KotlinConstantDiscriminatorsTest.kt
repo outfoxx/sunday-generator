@@ -50,7 +50,7 @@ class KotlinConstantDiscriminatorsTest {
     frontend: String,
     @TempDir directory: Path,
   ) {
-    val api = constantDiscriminatorsApi(directory, frontend)
+    val api = constantDiscriminatorsApi(directory, frontend, problemFields = true)
     val registry =
       KotlinTypeRegistry(
         "io.test",
@@ -95,9 +95,10 @@ class KotlinConstantDiscriminatorsTest {
           SourceFile.kotlin(
             "Consumer.kt",
             """
-              package io.test
-              fun newBeat(): BeatExtent = BeatExtent()
+            package io.test
+            fun newBeat(): BeatExtent = BeatExtent()
             fun newConstants(): OnlyConstants = OnlyConstants()
+            fun newFailure(): FailureProblem = FailureProblem(type = java.net.URI.create("about:blank"))
             """.trimIndent(),
           ),
         ),
@@ -122,6 +123,20 @@ class KotlinConstantDiscriminatorsTest {
       mapper.readTree("""{"tag-value":"fixed","zero":0,"flag":false,"optional":"fixed"}"""),
       mapper.valueToTree(constants),
     )
+    val failure =
+      result.classLoader
+        .loadClass("io.test.ConsumerKt")
+        .getMethod("newFailure")
+        .invoke(null)
+    val failureJson = mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(failure)
+    assertEquals("Failure", failureJson["title"].asText())
+    assertEquals(400, failureJson["status"].asInt())
+    val failureType = result.classLoader.loadClass("io.test.FailureProblem")
+    val decodedFailure = mapper.readValue("""{"type":"about:blank","title":"Failure","status":400}""", failureType)
+    assertEquals(failureJson, mapper.valueToTree(decodedFailure))
+    assertThrows(Exception::class.java) {
+      mapper.readValue("""{"type":"about:blank","title":"Wrong","status":400}""", failureType)
+    }
     val constantType = result.classLoader.loadClass("io.test.OnlyConstants")
     val decodedConstants = mapper.readValue("""{"tag-value":"fixed","zero":0,"flag":false}""", constantType)
     assertEquals(

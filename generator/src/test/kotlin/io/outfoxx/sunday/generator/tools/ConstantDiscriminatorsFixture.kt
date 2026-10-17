@@ -27,6 +27,7 @@ internal fun constantDiscriminatorsApi(
   frontend: String = "openapi",
   discriminator: String = "kind",
   receiverField: Boolean = false,
+  problemFields: Boolean = false,
 ): GeneratedApi {
   val source = directory.resolve("constants.yaml")
   source.writeText(
@@ -64,13 +65,18 @@ internal fun constantDiscriminatorsApi(
             kind: {type: string, const: beat}
             beats: {type: integer}
             ${if (receiverField) "self: {type: string}" else ""}
+            ${if (receiverField) "projectId: {type: string}" else ""}
+            ${if (receiverField) "project-key: {type: string}" else ""}
+            ${if (receiverField) "class: {type: string}" else ""}
+            ${if (problemFields) "failure: {${'$'}ref: '#/components/schemas/FailureProblem'}" else ""}
             constants: {${'$'}ref: '#/components/schemas/OnlyConstants'}
         TimeExtent:
           type: object
-          required: [kind]
+          required: [kind${if (receiverField) ", projectId" else ""}]
           properties:
             kind: {type: string, const: time}
             seconds: {type: number}
+            ${if (receiverField) "projectId: {type: string}" else ""}
         Extent:
           oneOf:
             - {${'$'}ref: '#/components/schemas/BeatExtent'}
@@ -80,7 +86,23 @@ internal fun constantDiscriminatorsApi(
             mapping:
               beat: '#/components/schemas/BeatExtent'
               time: '#/components/schemas/TimeExtent'
-    """.trimIndent().replace("kind", discriminator),
+    """.trimIndent().replace("kind", discriminator) +
+      if (problemFields) {
+        "\n" +
+          """
+          FailureProblem:
+            type: object
+            required: [type, title, status]
+            properties:
+              type: {type: string, format: uri}
+              title: {type: string, const: Failure}
+              status: {type: integer, const: 400}
+              detail: {type: string}
+              instance: {type: string, format: uri}
+          """.trimIndent().prependIndent("    ") + "\n"
+      } else {
+        ""
+      },
   )
   if (frontend == "openapi") return GeneratedApiIrExporter().export(source.toUri())
   val events = directory.resolve("events.yaml")

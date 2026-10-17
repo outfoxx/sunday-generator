@@ -60,6 +60,10 @@ private val pythonKeywords =
     "yield",
   )
 
+/** Whether a wire alias can be used directly as a Python parameter name. */
+internal val String.isPythonIdentifier: Boolean
+  get() = matches("[A-Za-z_][A-Za-z0-9_]*".toRegex()) && this !in pythonKeywords
+
 /** Converts a source name to a Python class/type name. */
 val String.pythonTypeName: String
   get() = toUpperCamelCase()

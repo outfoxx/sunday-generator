@@ -158,9 +158,9 @@ internal fun addModelDecodingDefaults(
           .filter { it.effective.allowedValues?.size == 1 }
           .mapTo(mutableSetOf()) { it.storage.name.kotlinIdentifierName }
       builder.superclassConstructorParameters.removeAll { it.toString().removeSurrounding("`") in parentConstants }
-      builder.superclassConstructorParameters.replaceAll { argument ->
-        constants[argument.toString().removeSurrounding("`")]?.let(::constantCode) ?: argument
-      }
+    }
+    builder.superclassConstructorParameters.replaceAll { argument ->
+      constants[argument.toString().removeSurrounding("`")]?.let(::constantCode) ?: argument
     }
     if (type.modifiers.any { it in setOf(KModifier.ABSTRACT, KModifier.SEALED) }) return@forEach
 

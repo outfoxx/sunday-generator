@@ -45,7 +45,11 @@ class PythonConstantDiscriminatorsTest : PythonTest() {
           PythonModuleBuilder("test_api/consumer.py")
             .addCode(
               PythonCodeBlock.of(
-                "from .models import BeatExtent\n\nvalue: BeatExtent = BeatExtent(self=\"mine\")\n" +
+                "from .models import BeatExtent, TimeExtent\n\nvalue: BeatExtent = BeatExtent(self=\"mine\")\n" +
+                  "aliased = BeatExtent(projectId=\"project-1\", project_key=\"key\", class_=\"value\")\n" +
+                  "required_alias = TimeExtent(projectId=\"project-1\")\n" +
+                  "missing_required_alias = TimeExtent()  # type: ignore[call-arg]\n" +
+                  "wrong_alias_type = BeatExtent(projectId=1)  # type: ignore[arg-type]\n" +
                   "explicit_tag = BeatExtent(kind=\"beat\")  # type: ignore[call-arg]\n",
               ),
             ).build(),
@@ -57,6 +61,7 @@ class PythonConstantDiscriminatorsTest : PythonTest() {
           from test_api.models import BeatExtent, OnlyConstants
           assert OnlyConstants().model_dump(by_alias=True, exclude_unset=True) == {'tag-value': 'fixed', 'zero': 0, 'flag': False, 'optional': 'fixed'}
           assert BeatExtent().model_dump(by_alias=True, exclude_none=True) == {'kind': 'beat'}
+          assert BeatExtent(projectId='project-1', project_key='key', class_='value').project_id == 'project-1'
           assert BeatExtent.model_validate({'kind': 'beat'}).kind == 'beat'
           assert BeatExtent().model_dump(exclude_unset=True) == {'kind': 'beat'}
           try:
