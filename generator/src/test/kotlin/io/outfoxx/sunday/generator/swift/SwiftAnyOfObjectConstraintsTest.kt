@@ -20,6 +20,7 @@ import io.outfoxx.sunday.generator.GeneratedTypeCategory
 import io.outfoxx.sunday.generator.swift.sunday.swiftSundayTestOptions
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
+import io.outfoxx.sunday.generator.swift.tools.compileGeneratedFiles
 import io.outfoxx.sunday.generator.tools.anyOfObjectConstraintsApi
 import io.outfoxx.sunday.generator.tools.anyOfObjectInvalidWires
 import io.outfoxx.sunday.generator.tools.anyOfObjectValidWires
@@ -37,7 +38,7 @@ import java.nio.file.Path
 @Tag("validation")
 class SwiftAnyOfObjectConstraintsTest {
   @ParameterizedTest
-  @ValueSource(strings = ["shared", "inline", "named", "shared-composed"])
+  @ValueSource(strings = ["shared", "inline", "named", "shared-composed", "nested"])
   fun `object anyOf preserves inclusive requirements and round trips`(
     shape: String,
     compiler: SwiftCompiler,
@@ -51,6 +52,11 @@ class SwiftAnyOfObjectConstraintsTest {
       swiftSundayTestOptions,
     ).generateServiceTypes()
     registry.generateFiles(setOf(GeneratedTypeCategory.Model), compiler.srcDir)
+    // Nested unions currently use Swift aliases; this regression covers generation and compilation.
+    if (shape == "nested") {
+      assertTrue(compileGeneratedFiles(compiler))
+      return
+    }
     Files.createDirectories(compiler.testsDir)
     Files.writeString(
       compiler.testsDir.resolve("AnyOfTests.swift"),

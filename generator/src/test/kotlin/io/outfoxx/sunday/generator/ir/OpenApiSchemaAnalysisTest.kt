@@ -83,5 +83,22 @@ class OpenApiSchemaAnalysisTest {
     assertEquals(base + required, analysis.unionBranch(base, required))
   }
 
+  @Test
+  fun `outer assertions reach nested alternatives without changing union operators or references`() {
+    for (keyword in listOf("anyOf", "oneOf")) {
+      val leaf = mapOf("type" to "object", "properties" to mapOf("id" to mapOf("type" to "string")))
+      val branches = listOf(ref("Leaf"), mapOf("type" to "object"))
+      val nested = mapOf(keyword to branches)
+      val analysis = OpenApiSchemaAnalysis(mapOf("Nested" to nested, "Leaf" to leaf))
+      val outer = mapOf("type" to "object", "required" to listOf("id"))
+      val constrained = analysis.unionBranch(outer, ref("Nested"))
+      assertEquals(branches, constrained[keyword])
+      assertEquals("object", constrained["type"])
+      assertEquals(listOf("id"), constrained["required"])
+      assertEquals(leaf + ("required" to listOf("id")), analysis.unionBranch(constrained, branches.first()))
+      assertEquals(mapOf(keyword to branches), nested)
+    }
+  }
+
   private fun ref(name: String) = mapOf("\$ref" to "#/components/schemas/$name")
 }

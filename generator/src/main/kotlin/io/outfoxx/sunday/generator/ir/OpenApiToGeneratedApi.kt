@@ -637,37 +637,54 @@ class OpenApiToGeneratedApi(
     branches: List<Map<*, *>>,
     scope: GeneratedModelScope?,
     localModels: MutableMap<String, GeneratedModel>,
-  ): GeneratedModel =
-    GeneratedModel(
+  ): GeneratedModel {
+    val generatedProperties =
+      properties(
+        schema,
+        name,
+        schema.listValue("required").filterIsInstance<String>().toSet(),
+        localModels,
+      )
+    val generatedAdditionalProperties = additionalProperties(name, schema, localModels, scope)
+    val generatedPatternProperties = patternProperties(name, schema, localModels)
+    val aliases =
+      branches.mapIndexed { index, branch ->
+        schemaTypeRef(analysis.unionBranch(schema, branch), "${name}Case${index + 1}", scope, localModels)
+      }
+    val replacements =
+      branches
+        .zip(aliases)
+        .mapNotNull { (branch, alias) ->
+          analysis
+            .analyze(branch)
+            .canonicalReference
+            ?.takeUnless { it == alias.name }
+            ?.let { it to alias }
+        }.toMap()
+    val mappings = schema.objectDiscriminatorMappings()
+    // Implicit selectors retain their declared names when constraints allocate replacement cases.
+    val implicitMappings =
+      if (schema.discriminatorProperty() != null) {
+        replacements.filterKeys { original -> mappings.values.none { it.name == original } }
+      } else {
+        emptyMap()
+      }
+    return GeneratedModel(
       name = name,
       kind = GeneratedModel.Kind.UNION,
       unionMode = if (schema["oneOf"] != null) GeneratedModel.UnionMode.ONE_OF else GeneratedModel.UnionMode.ANY_OF,
       scope = scope,
-      properties =
-        properties(
-          schema,
-          name,
-          schema.listValue("required").filterIsInstance<String>().toSet(),
-          localModels,
-        ),
+      properties = generatedProperties,
       closed = true.takeIf { schema["additionalProperties"] == false },
-      additionalProperties = additionalProperties(name, schema, localModels, scope),
-      patternProperties = patternProperties(name, schema, localModels),
-      aliases =
-        branches.mapIndexed { index, branch ->
-          schemaTypeRef(analysis.unionBranch(schema, branch), "${name}Case${index + 1}", scope, localModels)
-        },
+      additionalProperties = generatedAdditionalProperties,
+      patternProperties = generatedPatternProperties,
+      aliases = aliases,
       discriminator = schema.discriminatorProperty(),
       discriminatorMappings =
-        schema
-          .mapValue("discriminator")
-          ?.mapValue("mapping")
-          .orEmpty()
-          .mapNotNull { (value, ref) ->
-            (value as? String)?.let { it to GeneratedTypeRef.named((ref as String).substringAfterLast('/')) }
-          }.toMap(),
+        implicitMappings + mappings.mapValues { (_, target) -> replacements[target.name] ?: target },
       documentation = documentation(description = schema["description"] as? String),
     )
+  }
 
   private fun Map<*, *>.objectDiscriminatorMappings(): Map<String, GeneratedTypeRef> =
     mapValue("discriminator")

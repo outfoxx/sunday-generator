@@ -29,6 +29,33 @@ internal fun anyOfObjectConstraintsApi(
   val properties = "properties: {branchId: {type: string}, targetCommitId: {type: string}}"
   val schema =
     when (shape.removeSuffix("-composed")) {
+      "nested" ->
+        """
+        CheckoutRequest:
+          type: object
+          anyOf:
+            - {${'$'}ref: '#/components/schemas/Targets'}
+            - {type: object, required: [targetCommitId], $properties}
+        Targets:
+          anyOf:
+            - {type: object, required: [branchId], $properties}
+            - {type: object, required: [targetCommitId], $properties}
+        """.trimIndent()
+      "discriminator", "implicit-discriminator" ->
+        """
+        CheckoutRequest:
+          required: [kind]
+          discriminator:
+            propertyName: kind
+            mapping:
+              cat: '#/components/schemas/Cat'
+              dog: '#/components/schemas/Dog'
+          anyOf:
+            - {${'$'}ref: '#/components/schemas/Cat'}
+            - {${'$'}ref: '#/components/schemas/Dog'}
+        Cat: {type: object, properties: {kind: {type: string}}}
+        Dog: {type: object, properties: {kind: {type: string}}}
+        """.trimIndent()
       "inline" ->
         """
         CheckoutRequest:
@@ -73,7 +100,17 @@ internal fun anyOfObjectConstraintsApi(
             '204': {description: Updated}
     components:
       schemas:
-    """.trimIndent() + "\n" + schema.prependIndent("    "),
+    """.trimIndent() + "\n" +
+      (
+        if (shape == "implicit-discriminator") {
+          schema.replace(
+            "    mapping:\n      cat: '#/components/schemas/Cat'\n      dog: '#/components/schemas/Dog'\n",
+            "",
+          )
+        } else {
+          schema
+        }
+      ).prependIndent("    "),
   )
   val sources = mutableListOf(source.toUri())
   if (shape.endsWith("-composed")) {

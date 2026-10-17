@@ -45,6 +45,12 @@ import java.nio.file.Path
 class KotlinAnyOfObjectConstraintsTest {
   @ParameterizedTest
   @CsvSource(
+    "implicit-discriminator,server",
+    "implicit-discriminator,sunday",
+    "nested,server",
+    "discriminator,server",
+    "nested,sunday",
+    "discriminator,sunday",
     "shared,server",
     "inline,server",
     "named,server",
@@ -59,7 +65,7 @@ class KotlinAnyOfObjectConstraintsTest {
     "inline,sunday",
     "named,sunday",
   )
-  fun `object anyOf preserves inclusive requirements and round trips`(
+  fun `object anyOf compiles and preserves inclusive requirements`(
     shape: String,
     target: String,
     @TempDir directory: Path,
@@ -107,6 +113,8 @@ class KotlinAnyOfObjectConstraintsTest {
     }
     val result = compileTypesResult(registry.buildTypes())
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    // Nested unions currently use Kotlin aliases; the regression here is successful generation and compilation.
+    if (shape == "nested") return
     withNativeBeanValidation(namespace, result.classLoader) {
       val mapper =
         jacksonObjectMapper()
@@ -125,11 +133,27 @@ class KotlinAnyOfObjectConstraintsTest {
           )
         }
       }
-      mapper.readTree(anyOfObjectValidWires).forEach { raw ->
+      val validWires =
+        when (shape) {
+          "implicit-discriminator" -> """[{"kind":"Cat"},{"kind":"Dog"}]"""
+          "discriminator" -> """[{"kind":"cat"},{"kind":"dog"}]"""
+          else -> anyOfObjectValidWires
+        }
+      val invalidWires =
+        if (shape.endsWith("discriminator")) {
+          """[{}, {"kind":null}, {"kind":"unknown"}]"""
+        } else {
+          anyOfObjectInvalidWires
+        }
+      mapper.readTree(validWires).forEach { raw ->
         val value = mapper.readValue(raw.toString(), union)
+        if (shape.endsWith("discriminator")) {
+          val expectedCase = if (raw["kind"].asText().equals("dog", ignoreCase = true)) 2 else 1
+          assertEquals("CheckoutRequestCase$expectedCase", value.javaClass.simpleName)
+        }
         assertEquals(raw, mapper.readTree(mapper.writeValueAsString(value)), raw.toString())
       }
-      for (invalid in mapper.readTree(anyOfObjectInvalidWires)) {
+      for (invalid in mapper.readTree(invalidWires)) {
         assertThrows(JsonMappingException::class.java) { mapper.readValue(invalid.toString(), union) }
       }
     }

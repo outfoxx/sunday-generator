@@ -49,7 +49,15 @@ internal class OpenApiSchemaAnalysis(
         }.associate { it.key.toString() to it.value }
     if (constraints.isEmpty()) return branch
     val effective = composition.resolve(branch)
-    val constrained = composition.constrain(branch, constraints, schema)
+    val unions = effective.filterKeys { it in setOf("oneOf", "anyOf") }
+    val constrained =
+      if (unions.isEmpty()) {
+        composition.constrain(branch, constraints, schema)
+      } else {
+        // Keep nested alternatives intact; their generation distributes these assertions in turn.
+        val fields = composition.constrain(effective.filterKeys { it !in unions }, constraints, schema) + unions
+        (schema as? OpenApiSchema)?.withFields(fields, false) ?: fields
+      }
     // Preserve nominal references when the surrounding assertions add no restrictions.
     return if (constrained == effective) branch else constrained
   }

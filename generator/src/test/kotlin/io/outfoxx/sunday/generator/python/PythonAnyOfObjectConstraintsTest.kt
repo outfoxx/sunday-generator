@@ -33,7 +33,7 @@ import java.nio.file.Path
 @Tag("validation")
 class PythonAnyOfObjectConstraintsTest : PythonTest() {
   @ParameterizedTest
-  @ValueSource(strings = ["shared", "inline", "named", "shared-composed"])
+  @ValueSource(strings = ["shared", "inline", "named", "shared-composed", "nested"])
   fun `object anyOf preserves inclusive requirements and round trips`(
     shape: String,
     compiler: PythonCompiler,
