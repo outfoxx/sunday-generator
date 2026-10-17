@@ -41,6 +41,7 @@ services:
           description: "Minimal project creation payload."
       documentation:
         description: "Project creation request."
+      required: false
     responses:
     - status: 201
       type:

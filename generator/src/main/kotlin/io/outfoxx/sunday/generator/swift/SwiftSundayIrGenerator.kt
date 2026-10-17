@@ -5245,7 +5245,14 @@ class SwiftSundayIrGenerator(
       }
 
     requestBody?.let { body ->
-      functionBuilder.addParameter("body", body.swiftRequestBodyTypeName())
+      functionBuilder.addParameter(
+        ParameterSpec
+          .builder(
+            "body",
+            body.swiftRequestBodyTypeName().let { if (body.required) it else it.makeOptional() },
+          ).apply { if (!body.required) defaultValue("nil") }
+          .build(),
+      )
     }
 
     if (returnType != VOID) {

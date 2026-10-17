@@ -573,6 +573,18 @@ class KotlinJAXRSIrGenerator(
     quarkusSecurityGenerator: KotlinQuarkusSecurityGenerator?,
   ) {
     val serviceType = service.service.serviceType(service.typeName, service.subresourcePath)
+    if (service.service.operations.any { it.requestBody?.rejectsSuppliedNull() == true }) {
+      typeRegistry.addServiceType(
+        KotlinJAXRSOptionalBodyReader.typeName(service.typeName),
+        KotlinJAXRSOptionalBodyReader.generate(
+          service.typeName,
+          jaxRsTypes,
+          service.service.operations.any {
+            it.requestBody?.rejectsSuppliedNull() == true && it.jaxrs?.jsonBodyEnabled(generationMode) == true
+          },
+        ),
+      )
+    }
     if (options.resourceAdapters) {
       val adapter =
         KotlinJAXRSResourceAdapterGenerator(
@@ -1247,7 +1259,11 @@ class KotlinJAXRSIrGenerator(
       if (requestBody.mediaTypes.isOverridingDefaultMediaTypes() && !operationParameters.hasClientContentTypeHeader()) {
         functionBuilder.addAnnotation(jaxRsTypes.consumes, requestBody.mediaTypes)
       }
-      functionBuilder.addParameter(requestBody.bodyParameterSpec(jaxrs?.jsonBodyEnabled(generationMode) == true))
+      val bodyParameter = requestBody.bodyParameterSpec(jaxrs?.jsonBodyEnabled(generationMode) == true).toBuilder()
+      if (requestBody.rejectsSuppliedNull()) {
+        bodyParameter.addAnnotation(KotlinJAXRSOptionalBodyReader.binding(serviceTypeName(service)))
+      }
+      functionBuilder.addParameter(bodyParameter.build())
     }
 
     val response = primarySuccessResponse()
@@ -1553,17 +1569,27 @@ class KotlinJAXRSIrGenerator(
     return name
   }
 
+  private fun GeneratedPayload.rejectsSuppliedNull(): Boolean =
+    generationMode == Server &&
+      !required &&
+      !isQuarkusStreamingRequestBody &&
+      !modelProperties.acceptsNull(type) &&
+      payloads.none { modelProperties.acceptsNull(it.type) }
+
   private fun GeneratedPayload.bodyParameterSpec(jsonBodyEnabled: Boolean): ParameterSpec {
     val typeName = bodyTypeName(jsonBodyEnabled, includeValidationAnnotations = generationMode == Server)
     val builder = ParameterSpec.builder("body", typeName)
+    if (!required && generationMode == Client) {
+      builder.defaultValue("null")
+    }
     if (typeRegistry.options.contains(ValidationConstraints) &&
-      typeName != JSON_NODE &&
+      typeName.copy(nullable = false) != JSON_NODE &&
       !isQuarkusStreamingRequestBody
     ) {
       if (generationMode == Server) {
         KotlinNativeSchema
           .annotation(
-            nativePayloads.property(type),
+            nativePayloads.property(type).copy(required = required),
             modelProperties,
             beanValidationTypes,
             objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
@@ -1577,7 +1603,7 @@ class KotlinJAXRSIrGenerator(
       }
     }
 
-    if (generationMode == Server && typeName != JSON_NODE && !isQuarkusStreamingRequestBody) {
+    if (generationMode == Server && typeName.copy(nullable = false) != JSON_NODE && !isQuarkusStreamingRequestBody) {
       builder.addValidationAnnotations(
         GeneratedParameter(
           name = "body",
@@ -1601,7 +1627,7 @@ class KotlinJAXRSIrGenerator(
       jsonBodyEnabled -> JSON_NODE
       includeValidationAnnotations -> type.kotlinTypeName().withUseSiteValidationAnnotations(type, request = true)
       else -> type.kotlinTypeName()
-    }
+    }.let { if (required) it else it.copy(nullable = true) }
 
   private val GeneratedPayload.isQuarkusStreamingRequestBody: Boolean
     get() = options.quarkus && streaming?.enabledFor(generationMode) == true
@@ -1628,7 +1654,10 @@ class KotlinJAXRSIrGenerator(
                 jaxrs?.jsonBodyEnabled(generationMode) == true,
                 includeValidationAnnotations = false,
               )
-            ParameterSpec.builder("body", typeName).build()
+            ParameterSpec
+              .builder("body", typeName)
+              .apply { if (!requestBody.required) defaultValue("null") }
+              .build()
           },
         )
     val problemTypeNames =

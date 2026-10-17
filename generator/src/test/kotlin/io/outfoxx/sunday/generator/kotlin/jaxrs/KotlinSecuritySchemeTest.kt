@@ -224,7 +224,11 @@ class KotlinSecuritySchemeTest {
         )
       }
       val resource = generated.getValue(ClassName("io.test", "UniformAPIResource"))
-      assertEquals(hoisted, resource.substringBefore("public class").contains("@HttpAuthenticationMechanism"), resource)
+      assertEquals(
+        hoisted,
+        resource.substringBefore("class UniformAPIResource").contains("@HttpAuthenticationMechanism"),
+        resource,
+      )
       if (mechanisms == 0) assertTrue(generated.keys.none { it.simpleName == "OpenAPISecurity" })
       if (mechanisms == 1 &&
         policies == 0

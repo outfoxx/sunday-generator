@@ -2600,7 +2600,14 @@ class KotlinSundayIrGenerator(
       .forEach(functionBuilder::addParameter)
 
     operation.requestBody?.let { requestBody ->
-      functionBuilder.addParameter("body", requestBody.kotlinTypeName())
+      functionBuilder.addParameter(
+        ParameterSpec
+          .builder(
+            "body",
+            requestBody.kotlinTypeName().let { if (requestBody.required) it else it.copy(nullable = true) },
+          ).apply { if (!requestBody.required) defaultValue("null") }
+          .build(),
+      )
     }
 
     val response = operation.primarySuccessResponse()

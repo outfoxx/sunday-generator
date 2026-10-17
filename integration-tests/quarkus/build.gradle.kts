@@ -280,6 +280,32 @@ val nativePayloadGenerators =
     }
   }
 
+val optionalBodyContract = layout.projectDirectory.file("src/main/openapi/optional-bodies.yaml")
+val optionalBodyGenerators =
+  listOf("server", "client").map { role ->
+    tasks.register<JavaExec>("generate${role.replaceFirstChar { it.uppercase() }}OptionalBodies") {
+      group = "code generation"
+      description = "Generates the optional request body $role fixture."
+      val output = layout.buildDirectory.dir("generated/optional-bodies-$role")
+      inputs.file(optionalBodyContract)
+      outputs.dir(output)
+      classpath = generator
+      mainClass.set("io.outfoxx.sunday.generator.MainKt")
+      args(
+        "kotlin/jaxrs",
+        "-mode",
+        role,
+        "-quarkus",
+        "-pkg",
+        "io.test.quarkus.optional.$role",
+        "-out",
+        output.get().asFile.absolutePath,
+      )
+      if (role == "server") args("-resource-adapters", "-coroutines")
+      args(optionalBodyContract.asFile.absolutePath)
+    }
+  }
+
 val profiledClientSources = layout.buildDirectory.dir("generated/profiled-client")
 val profiledClientContract = layout.projectDirectory.file("src/main/openapi/profiled-client.yaml")
 val generateProfiledClient by tasks.registering(JavaExec::class) {
@@ -312,6 +338,7 @@ kotlin.compilerOptions {
 }
 
 kotlin.sourceSets.main {
+  optionalBodyGenerators.forEach { kotlin.srcDir(it) }
   nativePayloadGenerators.forEach { kotlin.srcDir(it) }
   kotlin.srcDir(generateProfiledClient)
   policyGenerators.forEach { kotlin.srcDir(it) }
@@ -326,6 +353,7 @@ kotlin.sourceSets.main {
 }
 
 tasks.compileKotlin {
+  dependsOn(optionalBodyGenerators)
   dependsOn(nativePayloadGenerators)
   dependsOn(generateProfiledClient)
   dependsOn(policyGenerators)

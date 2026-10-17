@@ -34,7 +34,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.net.URI
-import java.nio.file.Files
 
 @SwiftTest
 @DisplayName("[Swift/Sunday] [IR] Events Test")
@@ -49,24 +48,14 @@ class SwiftSundayIrEventsTest : SwiftSundayIrTestSupport() {
   ) {
     generateSwiftSundayFiles(compiler, GeneratedApiIrExporter().export(testUri))
 
-    val source =
-      Files
-        .walk(compiler.srcDir)
-        .use { files ->
-          files
-            .filter { path -> path.fileName.toString().endsWith(".swift") }
-            .map { path -> Files.readString(path) }
-            .filter { content -> "importArchive" in content }
-            .findFirst()
-            .orElseThrow()
-        }
+    assertTrue(compileGeneratedFiles(compiler))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Swift, "API.swift")
 
-    assertTrue("body: StreamingBody" in source)
+    assertTrue("body: StreamingBody? = nil" in source)
     assertTrue("Sunday.StreamingOperation<ImportAccepted, TransportType>" in source)
     assertTrue("Sunday.NilableOperation<StreamingBody, ImportAccepted, TransportType>" in source)
     assertTrue("spec: Sunday.OperationSpec.streaming(" in source)
     assertTrue("nilify: Sunday.NilifySpec(" in source)
-    assertTrue(compileGeneratedFiles(compiler))
   }
 
   @Test
