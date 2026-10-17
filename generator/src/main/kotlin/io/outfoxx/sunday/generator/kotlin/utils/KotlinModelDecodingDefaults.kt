@@ -137,6 +137,11 @@ internal fun addModelDecodingDefaults(
       }
         ?: property
     }
+    if (builder.initializerIndex >= 0 && constants.isNotEmpty()) {
+      // Constant fields no longer initialize as constructor parameters, so validation must follow their storage.
+      val lastConstantIndex = builder.propertySpecs.indexOfLast { it.name in constants }
+      builder.initializerIndex = maxOf(builder.initializerIndex, lastConstantIndex + 1)
+    }
     if (builder
         .build()
         .primaryConstructor

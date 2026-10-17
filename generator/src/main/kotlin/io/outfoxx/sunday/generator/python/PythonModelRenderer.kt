@@ -1557,8 +1557,10 @@ class PythonModelRenderer(
           overrideSuffix,
         )
       val context = PythonRenderContext(PythonImportSet())
+      // Ruff excludes trailing type-ignore comments when deciding whether the field fits on one line.
+      val inlineLength = inline.render(context).length - overrideSuffix.length
       if ((model.patchable || constant != null || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
-        inline.render(context).length > 120
+        inlineLength > 120
       ) {
         val multilineArguments =
           if (arguments.render(context).length + 8 <= 120) {
@@ -1576,7 +1578,7 @@ class PythonModelRenderer(
         )
       } else if (defaultValue == null ||
         required ||
-        inline.render(context).length <= 120 ||
+        inlineLength <= 120 ||
         arguments.render(context).length + 8 > 120
       ) {
         inline

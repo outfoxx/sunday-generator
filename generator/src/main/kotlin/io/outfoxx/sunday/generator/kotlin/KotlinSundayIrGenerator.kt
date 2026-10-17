@@ -1552,6 +1552,21 @@ class KotlinSundayIrGenerator(
           ) { it.kotlinTypeName() }
           .takeUnless {
             it.isEmpty()
+          }?.let { checks ->
+            if (!patchable &&
+              isProblemModel() &&
+              typeRegistry.problemLibrary == KotlinProblemLibrary.ZALANDO &&
+              modelProperties.fields(this).any { it.storage.name == "status" && it.effective.allowedValues?.size == 1 }
+            ) {
+              // Removing the numeric constructor argument exposes Zalando's StatusType property instead.
+              CodeBlock
+                .builder()
+                .addStatement("val status = this.status?.statusCode")
+                .add(checks)
+                .build()
+            } else {
+              checks
+            }
           }
       } else {
         null

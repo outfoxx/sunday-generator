@@ -4486,8 +4486,17 @@ class SwiftSundayIrGenerator(
     isRootProblemModel: Boolean,
     addNilProblemParameters: Boolean = false,
   ): FunctionSpec {
+    val parameters = (inheritedProperties + localProperties).filter { model.constantCode(it) == null }
+    val parent = model.inherits.firstOrNull()?.modelOrNull(apiIndex)
+    val parentParameters = parent?.allConstructorProperties()?.filter { parent.constantCode(it) == null }
+    val overrides =
+      inheritedTypeName != null &&
+        parent != null &&
+        parameters.map { it.name to it.swiftModelPropertyTypeName(patchable) } ==
+        parentParameters?.map { it.name to it.swiftModelPropertyTypeName(patchable) } &&
+        model.preservesExtensions() == parent.preservesExtensions()
     val modifiers =
-      if (inheritedTypeName != null && localProperties.isEmpty()) {
+      if (overrides) {
         arrayOf(PUBLIC, OVERRIDE)
       } else {
         arrayOf(PUBLIC)
@@ -4498,7 +4507,7 @@ class SwiftSundayIrGenerator(
       .addModifiers(*modifiers)
       .throws(model.constructorThrows())
       .apply {
-        (inheritedProperties + localProperties).filter { model.constantCode(it) == null }.forEach { property ->
+        parameters.forEach { property ->
           addParameter(
             ParameterSpec
               .builder(property.name.swiftIdentifierName, property.swiftModelPropertyTypeName(patchable))

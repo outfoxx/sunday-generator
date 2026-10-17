@@ -24,10 +24,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.lang.reflect.InvocationTargetException
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.OffsetDateTime
 import java.util.Base64
 
 /** Exercises SDK wire contracts only after the generated classes have passed the Kotlin compiler. */
@@ -105,19 +101,7 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
       "clockTime" to "00:00:00",
       "calendarDate" to "2026-09-14",
     )
-  val constructed =
-    temporalChild
-      .getConstructor(
-        OffsetDateTime::class.java,
-        LocalDateTime::class.java,
-        LocalTime::class.java,
-        LocalDate::class.java,
-      ).newInstance(
-        OffsetDateTime.parse(temporalPayload.getValue("timestamp")),
-        LocalDateTime.parse(temporalPayload.getValue("local")),
-        LocalTime.parse(temporalPayload.getValue("clockTime")),
-        LocalDate.parse(temporalPayload.getValue("calendarDate")),
-      )
+  val constructed = temporalChild.getConstructor().newInstance()
   for (value in listOf(constructed, temporalMapper.convertValue(temporalPayload, temporalChild))) {
     assertEquals(
       temporalMapper.valueToTree(temporalPayload),
@@ -145,7 +129,7 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
     assertEquals(ByteArray::class.java, byteChild.getMethod("get$name").returnType)
     assertEquals(byteParent, byteChild.getMethod("get$name").declaringClass)
   }
-  val byteConstructor = byteChild.getConstructor(ByteArray::class.java, ByteArray::class.java, ByteArray::class.java)
+  val byteConstructor = byteChild.getConstructor(ByteArray::class.java, ByteArray::class.java)
   for (wire in listOf("", "SGk=", "/wA=")) {
     val payload = mapOf("data" to "SGk=", "choices" to wire, "encoded" to "SGk=")
     val bytes = Base64.getDecoder().decode(wire)
@@ -153,7 +137,7 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
       listOf(
         mapper.convertValue(payload, byteChild),
         mapper.readValue(mapper.writeValueAsBytes(payload), byteChild),
-        byteConstructor.newInstance("Hi".toByteArray(), bytes, "Hi".toByteArray()),
+        byteConstructor.newInstance(bytes, "Hi".toByteArray()),
       )
     for (value in values) {
       assertArrayEquals(bytes, byteChild.getMethod("getChoices").invoke(value) as ByteArray)
@@ -170,18 +154,20 @@ fun assertSdkCompatibility(classLoader: ClassLoader) {
   )) {
     val payload = mapOf("data" to "SGk=") + (field to invalid)
     assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, byteChild) }
-    val args = arrayOf<ByteArray?>("Hi".toByteArray(), null, null)
-    args[listOf("data", "choices", "encoded").indexOf(field)] = invalid?.let(Base64.getDecoder()::decode)
-    val constructorFailure =
-      assertThrows(InvocationTargetException::class.java) {
-        byteConstructor.newInstance(*args)
-      }.cause
-    assertTrue(
-      constructorFailure is IllegalArgumentException ||
-        constructorFailure is javax.validation.ConstraintViolationException ||
-        constructorFailure is jakarta.validation.ConstraintViolationException,
-      constructorFailure.toString(),
-    )
+    if (field != "data") {
+      val args = arrayOf<ByteArray?>(null, null)
+      args[listOf("choices", "encoded").indexOf(field)] = invalid?.let(Base64.getDecoder()::decode)
+      val constructorFailure =
+        assertThrows(InvocationTargetException::class.java) {
+          byteConstructor.newInstance(*args)
+        }.cause
+      assertTrue(
+        constructorFailure is IllegalArgumentException ||
+          constructorFailure is javax.validation.ConstraintViolationException ||
+          constructorFailure is jakarta.validation.ConstraintViolationException,
+        constructorFailure.toString(),
+      )
+    }
     if (invalid == null) {
       assertThrows(IllegalArgumentException::class.java) { mapper.convertValue(payload, byteParent) }
     } else {
