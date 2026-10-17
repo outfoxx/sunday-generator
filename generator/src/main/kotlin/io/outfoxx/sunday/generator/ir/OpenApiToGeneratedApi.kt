@@ -647,11 +647,17 @@ class OpenApiToGeneratedApi(
       )
     val generatedAdditionalProperties = additionalProperties(name, schema, localModels, scope)
     val generatedPatternProperties = patternProperties(name, schema, localModels)
+    val unmodeledRequirements =
+      schema.listValue("required").filterIsInstance<String>().toSet() - generatedProperties.map { it.name }.toSet()
     val aliases =
       branches.mapIndexed { index, branch ->
-        // Named oneOf payloads remain reusable; their common assertions are enforced by the union validator.
+        val branchAnalysis = analysis.analyze(branch)
+        // Union validators cover declared properties; other required fields must be enforced by the payload.
         val caseSchema =
-          if (schema["oneOf"] != null && analysis.analyze(branch).canonicalReference != null) {
+          if (schema["oneOf"] != null &&
+            branchAnalysis.canonicalReference != null &&
+            branchAnalysis.effective.listValue("required").containsAll(unmodeledRequirements)
+          ) {
             branch
           } else {
             analysis.unionBranch(schema, branch)

@@ -17,23 +17,81 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.ir.GeneratedTolerance
+import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
 import io.outfoxx.sunday.generator.tools.directionalToleranceApi
 import io.outfoxx.sunday.generator.tools.objectUnionValidationApi
 import io.outfoxx.sunday.test.extensions.PythonRuntimeProfile
 import io.outfoxx.sunday.test.extensions.RequiresPythonRuntime
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
+import kotlin.io.path.writeText
 
 @RequiresPythonRuntime(PythonRuntimeProfile.LITESTAR)
 @Tag("models")
 @Tag("validation")
 class PythonDirectionalToleranceTest : PythonTest() {
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `named oneOf cases retain parent requirements without property declarations`(
+    requiredInPayload: Boolean,
+    compiler: PythonCompiler,
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("required.yaml")
+    source.writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Required union, version: 1.0.0}
+      paths: {}
+      components:
+        schemas:
+          Payload:
+            type: object
+            ${if (requiredInPayload) "required: [id]" else ""}
+            properties:
+              id: {type: string}
+          Choice:
+            required: [id]
+            oneOf: [{${'$'}ref: '#/components/schemas/Payload'}]
+      """.trimIndent(),
+    )
+    val api = OpenApiToGeneratedApi().convert(source.toUri())
+    val choice = api.models.single { it.name == "Choice" }
+    assertEquals(if (requiredInPayload) "Payload" else "ChoiceCase1", choice.aliases.single().name)
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          PythonModelRenderer("test_api").renderModels(api.models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        importModules = listOf("test_api.models"),
+        smokeCode =
+          """
+          from pydantic import TypeAdapter, ValidationError
+          from test_api.models import Choice, Payload
+          adapter = TypeAdapter(Choice)
+          assert adapter.validate_python({"id": "present"}).id == "present"
+          assert Payload.model_fields["id"].is_required() == ${if (requiredInPayload) "True" else "False"}
+          for invalid in ({}, {"id": None}):
+              try:
+                  adapter.validate_python(invalid)
+              except ValidationError:
+                  pass
+              else:
+                  raise AssertionError("Parent required field was lost")
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["openapi", "asyncapi", "composed"])
   fun `union common constraints retain independent payload schemas`(
