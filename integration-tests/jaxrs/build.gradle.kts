@@ -194,7 +194,30 @@ kotlin.compilerOptions {
   freeCompilerArgs.addAll("-Xannotation-default-target=param-property", "-Xemit-jvm-type-annotations")
 }
 
+val anyOfSources = layout.buildDirectory.dir("generated/anyof-objects")
+val anyOfContract = layout.projectDirectory.file("src/main/openapi/anyof-objects.yaml")
+
+val generateAnyOfApi by tasks.registering(JavaExec::class) {
+  inputs.file(anyOfContract)
+  outputs.dir(anyOfSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-use-jakarta-packages",
+    "-pkg",
+    "io.test.jaxrs.checkout",
+    "-out",
+    anyOfSources.get().asFile.absolutePath,
+    anyOfContract.asFile.absolutePath,
+  )
+}
+
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateAnyOfApi)
   kotlin.srcDir(generateNativePayloads)
   kotlin.srcDir(generateNominalApi)
   kotlin.srcDir(generateDefaultModels)

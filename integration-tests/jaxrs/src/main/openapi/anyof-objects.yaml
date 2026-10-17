@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info: {title: Checkout, version: 1.0.0}
+paths:
+  /checkout/shared:
+    put:
+      operationId: sharedCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SharedCheckoutRequest'}
+      responses:
+        '200': {description: Accepted}
+  /checkout/inline:
+    put:
+      operationId: inlineCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/InlineCheckoutRequest'}
+      responses:
+        '200': {description: Accepted}
+  /checkout/named:
+    put:
+      operationId: namedCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NamedCheckoutRequest'}
+      responses:
+        '200': {description: Accepted}
+components:
+  schemas:
+    SharedCheckoutRequest:
+      type: object
+      properties:
+        branchId: {type: string}
+        targetCommitId: {type: string}
+      anyOf:
+        - required: [branchId]
+        - required: [targetCommitId]
+    InlineCheckoutRequest:
+      anyOf:
+        - type: object
+          required: [branchId]
+          properties:
+            branchId: {type: string}
+            targetCommitId: {type: string}
+        - type: object
+          required: [targetCommitId]
+          properties:
+            branchId: {type: string}
+            targetCommitId: {type: string}
+    NamedCheckoutRequest:
+      anyOf:
+        - {$ref: '#/components/schemas/BranchCheckoutRequest'}
+        - {$ref: '#/components/schemas/CommitCheckoutRequest'}
+    BranchCheckoutRequest:
+      type: object
+      required: [branchId]
+      properties:
+        branchId: {type: string}
+        targetCommitId: {type: string}
+    CommitCheckoutRequest:
+      type: object
+      required: [targetCommitId]
+      properties:
+        branchId: {type: string}
+        targetCommitId: {type: string}

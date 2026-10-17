@@ -72,5 +72,33 @@ class OpenApiSchemaAnalysisTest {
     assertNotSame(nullable, OpenApiSchemaAnalysis(schemas).analyze(use))
   }
 
+  @Test
+  fun `union assertions preserve unchanged nominal branches and constrain anonymous alternatives`() {
+    val fields = mapOf("branchId" to mapOf("type" to "string"), "targetCommitId" to mapOf("type" to "string"))
+    val base = mapOf("type" to "object", "properties" to fields)
+    val required = mapOf("required" to listOf("branchId"))
+    val analysis = OpenApiSchemaAnalysis(mapOf("Branch" to base + required))
+    val reference = ref("Branch")
+    assertSame(reference, analysis.unionBranch(base, reference))
+    assertEquals(base + required, analysis.unionBranch(base, required))
+  }
+
+  @Test
+  fun `outer assertions reach nested alternatives without changing union operators or references`() {
+    for (keyword in listOf("anyOf", "oneOf")) {
+      val leaf = mapOf("type" to "object", "properties" to mapOf("id" to mapOf("type" to "string")))
+      val branches = listOf(ref("Leaf"), mapOf("type" to "object"))
+      val nested = mapOf(keyword to branches)
+      val analysis = OpenApiSchemaAnalysis(mapOf("Nested" to nested, "Leaf" to leaf))
+      val outer = mapOf("type" to "object", "required" to listOf("id"))
+      val constrained = analysis.unionBranch(outer, ref("Nested"))
+      assertEquals(branches, constrained[keyword])
+      assertEquals("object", constrained["type"])
+      assertEquals(listOf("id"), constrained["required"])
+      assertEquals(leaf + ("required" to listOf("id")), analysis.unionBranch(constrained, branches.first()))
+      assertEquals(mapOf(keyword to branches), nested)
+    }
+  }
+
   private fun ref(name: String) = mapOf("\$ref" to "#/components/schemas/$name")
 }

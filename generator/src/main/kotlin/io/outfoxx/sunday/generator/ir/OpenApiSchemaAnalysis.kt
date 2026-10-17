@@ -37,6 +37,31 @@ internal class OpenApiSchemaAnalysis(
     composition.resolve(schema)
   }
 
+  /** Each union alternative must also satisfy the assertions surrounding the union. */
+  fun unionBranch(
+    schema: Map<*, *>,
+    branch: Map<*, *>,
+  ): Map<*, *> {
+    val constraints =
+      schema.entries
+        .filter { (key, _) ->
+          key is String && key !in setOf("oneOf", "anyOf") && OpenApiSchemaKeywords.isAssertion(key)
+        }.associate { it.key.toString() to it.value }
+    if (constraints.isEmpty()) return branch
+    val effective = composition.resolve(branch)
+    val unions = effective.filterKeys { it in setOf("oneOf", "anyOf") }
+    val constrained =
+      if (unions.isEmpty()) {
+        composition.constrain(branch, constraints, schema)
+      } else {
+        // Keep nested alternatives intact; their generation distributes these assertions in turn.
+        val fields = composition.constrain(effective.filterKeys { it !in unions }, constraints, schema) + unions
+        (schema as? OpenApiSchema)?.withFields(fields, false) ?: fields
+      }
+    // Preserve nominal references when the surrounding assertions add no restrictions.
+    return if (constrained == effective) branch else constrained
+  }
+
   fun analyze(schema: Map<*, *>): Result =
     results[schema] ?: run {
       val effective = composition.resolve(schema)

@@ -30,6 +30,85 @@ import kotlin.io.path.writeText
 
 class OpenApiModelAllocationTest {
   @ParameterizedTest
+  @ValueSource(strings = ["foo_bar", "foo-bar", "fooBar"])
+  fun `declared required wire names preserve named oneOf cases`(
+    wireName: String,
+    @TempDir directory: Path,
+  ) {
+    val source =
+      api(
+        directory,
+        "3.1.0",
+        """
+        Payload:
+          type: object
+          properties:
+            $wireName: {type: string}
+        Choice:
+          required: [$wireName]
+          properties:
+            $wireName: {type: string}
+          oneOf: [{${'$'}ref: '#/components/schemas/Payload'}]
+        """.trimIndent(),
+      )
+    val models = OpenApiToGeneratedApi().convert(source.toUri()).models.associateBy { it.name }
+    val choice = models.getValue("Choice")
+    val property = choice.properties.single()
+    assertEquals(wireName, property.serializationName ?: property.name)
+    assertTrue(property.required)
+    assertEquals(listOf(GeneratedTypeRef.named("Payload")), choice.aliases)
+    assertEquals(setOf("Payload", "Choice"), models.keys)
+    val payloadProperty = models.getValue("Payload").properties.single()
+    assertFalse(payloadProperty.required)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["oneOf", "anyOf"])
+  fun `common assertions preserve named oneOf payloads while constraining anyOf cases`(
+    keyword: String,
+    @TempDir directory: Path,
+  ) {
+    val source =
+      api(
+        directory,
+        "3.1.0",
+        """
+        Large:
+          type: object
+          properties:
+            value: {type: integer, maximum: 9}
+        Choice:
+          properties:
+            value: {type: integer, maximum: 5}
+          $keyword: [{${'$'}ref: '#/components/schemas/Large'}]
+        """.trimIndent(),
+      )
+    val models = OpenApiToGeneratedApi().convert(source.toUri()).models.associateBy { it.name }
+    val choice = models.getValue("Choice")
+    assertEquals("5", choice.properties.single().validation["maximum"])
+    assertEquals(
+      "9",
+      models
+        .getValue("Large")
+        .properties
+        .single()
+        .validation["maximum"],
+    )
+    val caseName = if (keyword == "oneOf") "Large" else "ChoiceCase1"
+    assertEquals(listOf(GeneratedTypeRef.named(caseName)), choice.aliases)
+    if (keyword == "anyOf") {
+      assertEquals(
+        "5",
+        models
+          .getValue(caseName)
+          .properties
+          .single()
+          .validation["maximum"],
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ValueSource(booleans = [false, true])
   fun `generated spellings reserve declared promoted and inline names`(
     reverse: Boolean,
