@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.tools.OpenApiHttpFixture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,6 +29,31 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 class AsyncApiCustomTypeMappingTest {
+  @ParameterizedTest
+  @ValueSource(strings = ["2", "3"])
+  fun `configured reference options allow internal documents and external schemas`(
+    version: String,
+    @TempDir directory: Path,
+  ) {
+    val fixture = Path.of("src/test/resources/asyncapi/ir/custom-types")
+    OpenApiHttpFixture().use { server ->
+      server.respond("/api.yaml", fixture.resolve("api-$version.yaml").readText())
+      server.respond("/identifier.yaml", fixture.resolve("identifier.yaml").readText())
+      val options =
+        GeneratedApiIrOptions(
+          openApiReferences = OpenApiReferenceOptions(directory.resolve("cache"), allowPrivateNetwork = true),
+        )
+      val api = AsyncApiToGeneratedApi(options).convertFragment(server.baseUri.resolve("api.yaml")).api
+      assertEquals(
+        "io.example.Identifier",
+        api.models
+          .single { it.name == "Identifier" }
+          .targets["kotlin"]
+          ?.typeName,
+      )
+    }
+  }
+
   @Test
   fun `explicit empty operation messages do not inherit channel messages`(
     @TempDir directory: Path,

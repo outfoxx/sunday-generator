@@ -31,7 +31,11 @@ class AsyncApiToGeneratedApi(
 
   /** Converts an AsyncAPI source document into a generated API IR composition fragment. */
   fun convertFragment(sourceUri: URI): GeneratedApiFragment {
-    val sourceDocument = AsyncApiSourceDocument.read(sourceUri.toString())
+    val sourceDocument =
+      AsyncApiSourceDocument.read(
+        sourceUri.toString(),
+        OpenApiDocumentLoader.create(options.openApiReferences),
+      )
     activeSourceDocument = sourceDocument
     try {
       val localModels = linkedMapOf<String, GeneratedModel>()
@@ -1601,8 +1605,11 @@ class AsyncApiToGeneratedApi(
 
     companion object {
 
-      fun read(location: String): AsyncApiSourceDocument {
-        val resolved = OpenApiReferenceResolver().resolveComponentSchemas(URI(location))
+      fun read(
+        location: String,
+        documentLoader: OpenApiDocumentLoader,
+      ): AsyncApiSourceDocument {
+        val resolved = OpenApiReferenceResolver(documentLoader).resolveComponentSchemas(URI(location))
         return AsyncApiSourceDocument(resolved.document, location)
       }
     }

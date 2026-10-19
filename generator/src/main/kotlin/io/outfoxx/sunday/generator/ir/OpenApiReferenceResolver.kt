@@ -123,7 +123,8 @@ class OpenApiReferenceResolver(
       return OpenApiReferenceResolution(result, capturedDocuments.toMap()).also { resolution ->
         resolution.serverOrigins.putAll(serverOrigins)
         resolution.retrievalUri = root.document.uri.toString()
-        resolution.analysis.validateAll(normalizedSchemas)
+        // AsyncAPI composition is interpreted by its converter, not the OpenAPI intersection rules.
+        if (!schemasOnly) resolution.analysis.validateAll(normalizedSchemas)
       }
     }
 
@@ -139,6 +140,9 @@ class OpenApiReferenceResolver(
         if (kind == Kind.SCHEMA && node.value.has("\$ref") && !node.isSchemaAlias()) {
           val fields = normalizeFields(node, kind).toMutableMap()
           val target = reference(node, kind)
+          if (schemasOnly) {
+            return node.schema(fields + ("\$ref" to "#/components/schemas/${schemaName(target)}"))
+          }
           fields["allOf"] = listOf(mapOf("\$ref" to "#/components/schemas/${schemaName(target)}")) +
             (fields["allOf"] as? List<*>).orEmpty()
           return node.schema(fields)
@@ -195,6 +199,7 @@ class OpenApiReferenceResolver(
           val location = OpenApiReferenceLocations.child(kind, name)
           when {
             name == "servers" && kind in setOf(Kind.PATH_ITEM, Kind.OPERATION) -> normalizedServers(child)
+            schemasOnly && kind == Kind.SCHEMA && name == "discriminator" && child.value.isTextual -> child.rawValue()
             kind == Kind.SCHEMA && name == "discriminator" -> discriminator(child)
             // An unpromoted boolean retains the converter's unrestricted-object additionalProperties form.
             kind == Kind.SCHEMA &&
