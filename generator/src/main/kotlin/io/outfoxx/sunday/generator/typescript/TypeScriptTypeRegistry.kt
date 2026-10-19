@@ -470,6 +470,15 @@ class TypeScriptTypeRegistry(
     return rank
   }
 
+  private val externalSchemas = mutableMapOf<TypeName.Standard, TypeName.Standard>()
+
+  override fun addExternalType(
+    typeName: TypeName.Standard,
+    schemaName: TypeName.Standard,
+  ) {
+    externalSchemas[typeName] = schemaName
+  }
+
   override fun schemaInitializer(typeName: TypeName): CodeBlock {
     if (isDirectSchemaRefType(typeName)) {
       return schemaRefForStandard(typeName.nonOptional.nonNullable as TypeName.Standard)
@@ -713,6 +722,7 @@ class TypeScriptTypeRegistry(
       OFFSET_TIME -> CodeBlock.of("%T", OFFSET_TIME_SCHEMA)
       ZONED_DATETIME -> CodeBlock.of("%T", ZONED_DATETIME_SCHEMA)
       DURATION -> CodeBlock.of("%T", DURATION_SCHEMA)
+      in externalSchemas -> CodeBlock.of("%T", externalSchemas.getValue(typeName))
       else -> {
         if (typeBuilders[typeName] is ClassSpec.Builder) {
           CodeBlock.of("%T", schemaTargetForGeneratedType(typeName, lazyRefType))

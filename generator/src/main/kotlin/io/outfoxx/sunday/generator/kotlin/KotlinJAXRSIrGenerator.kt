@@ -635,7 +635,17 @@ class KotlinJAXRSIrGenerator(
     val models = api.models.filter { model -> model.scope == null }
     if (typeRegistry.options.contains(ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
-        val name = model.kotlinClassName()
+        // Validation views belong to generated code, even when the value class belongs to a dependency.
+        val name =
+          if (model.target(preferredTargetId, "kotlin")?.typeName != null) {
+            ClassName(
+              typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
+                ?: genError("No payload validation package specified"),
+              model.name.toUpperCamelCase(),
+            )
+          } else {
+            model.kotlinClassName()
+          }
         nativePayloads.register(GeneratedTypeRef.named(model.name), name.peerClass("${name.simpleName}Validation"))
       }
       api.services
@@ -2171,7 +2181,16 @@ class KotlinJAXRSIrGenerator(
     type: GeneratedTypeRef,
     useSiteTarget: AnnotationSpec.UseSiteTarget? = null,
   ): List<AnnotationSpec> =
-    if (modelProperties.declarationModel(type)?.nominal == true) {
+    if (type.modelOrNull(apiIndex)?.target(preferredTargetId, "kotlin")?.typeName != null) {
+      listOfNotNull(
+        KotlinNativeSchema.annotation(
+          nativePayloads.property(type).copy(required = false, validation = this),
+          modelProperties,
+          beanValidationTypes,
+          useSiteTarget,
+        ),
+      )
+    } else if (modelProperties.declarationModel(type)?.nominal == true) {
       emptyList()
     } else {
       buildList {
@@ -2399,8 +2418,9 @@ class KotlinJAXRSIrGenerator(
     return "${servicePrefix.kotlinTypeName}${options.serviceSuffix}"
   }
 
-  private fun GeneratedModel.modelType(): TypeSpec.Builder? =
-    nominalGenerator.generate(this) ?: when (kind) {
+  private fun GeneratedModel.modelType(): TypeSpec.Builder? {
+    if (target(preferredTargetId, "kotlin")?.typeName != null) return null
+    return nominalGenerator.generate(this) ?: when (kind) {
       GeneratedModel.Kind.ENUM -> {
         val entries = kotlinEnumEntries.entries(this)
         if (unknownValue != null) {
@@ -2465,6 +2485,7 @@ class KotlinJAXRSIrGenerator(
 
       else -> null
     }
+  }
 
   private fun GeneratedModel.discriminatorMappingUnionTypeSpecOrNull(): TypeSpec.Builder? =
     discriminatorMappingUnions.generateOrNull(this, directUnionSupertypes()) { model ->
@@ -3663,6 +3684,9 @@ class KotlinJAXRSIrGenerator(
 
   private fun GeneratedTypeRef.namedTypeName(): TypeName {
     val model = modelOrNull(apiIndex)
+    if (model?.target(preferredTargetId, "kotlin")?.typeName != null) {
+      return model.kotlinClassName()
+    }
     if (model?.isFreeformObject == true) {
       return MAP.parameterizedBy(STRING, ANY)
     }

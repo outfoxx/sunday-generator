@@ -42,6 +42,12 @@ interface TypeScriptTypeOutputRegistry {
     extras: List<Any> = listOf(),
   )
 
+  /** Registers an application-owned type and its runtime codec without emitting a declaration. */
+  fun addExternalType(
+    typeName: TypeName.Standard,
+    schemaName: TypeName.Standard,
+  )
+
   fun addCompanionSchemaType(typeName: TypeName.Standard)
 
   fun addCompanionSchemaCode(

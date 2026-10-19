@@ -52,12 +52,15 @@ class PythonModelRenderer(
   private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
   private val enumStringAdapters = linkedMapOf<Map<String, String>, String>()
 
+  private val customValidators = linkedMapOf<Pair<String, Map<String, String>>, Pair<String, PythonCodeBlock>>()
+
   /** Renders the given models into the package `models.py` module. */
   fun renderModels(models: List<GeneratedModel>): PythonModule =
     renderNormalizedModels(GeneratedPatchModels.normalizeFields(models))
 
   private fun renderNormalizedModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
+    customValidators.clear()
     modelIndex = models.associateBy { model -> model.name }
     patchHelpers = PythonPatchHelpers(models)
     if (patchHelpers.enabled) module.addCode(patchHelpers.support())
@@ -166,17 +169,22 @@ class PythonModelRenderer(
       )
     }
 
-    models
-      .filter { model -> model.isSupportedModel() }
-      .orderedForInheritance()
-      .forEach { model ->
-        discriminatorFallbacks[model.name]?.let { fallback ->
-          module.addExport(fallback.modelName.pythonTypeName)
-          module.addCode(fallback.renderFallbackModel())
+    val renderedModels =
+      models
+        .filter { model -> model.isSupportedModel() }
+        .orderedForInheritance()
+        .flatMap { model ->
+          buildList {
+            discriminatorFallbacks[model.name]?.let { fallback ->
+              module.addExport(fallback.modelName.pythonTypeName)
+              add(fallback.renderFallbackModel())
+            }
+            module.addExport(model.name.pythonTypeName)
+            add(model.renderModel())
+          }
         }
-        module.addExport(model.name.pythonTypeName)
-        module.addCode(model.renderModel())
-      }
+    customValidators.values.forEach { (_, code) -> module.addCode(code) }
+    renderedModels.forEach(module::addCode)
 
     val rebuilds =
       models
@@ -231,7 +239,13 @@ class PythonModelRenderer(
       kind == GeneratedModel.Kind.MAP
 
   private fun GeneratedModel.renderModel(): PythonCodeBlock =
-    if (nominal) {
+    if (targets["python"]?.typeName != null) {
+      PythonCodeBlock.of(
+        "type %L = %C",
+        name.pythonTypeName,
+        renderCustomValidatedType(PythonCodeBlock.of("%T", customPythonSymbol()), validation, this),
+      )
+    } else if (nominal) {
       renderNominalScalar()
     } else if (nominalTypes.branches(this).isNotEmpty()) {
       renderNominalUnion()
@@ -246,8 +260,57 @@ class PythonModelRenderer(
       }
     }
 
+  private fun GeneratedModel.customPythonSymbol(): PythonSymbol {
+    val custom = requireNotNull(targets["python"]?.typeName)
+    require('.' in custom) { "Python custom type '$custom' must include its module" }
+    return PythonSymbol(
+      custom.substringBeforeLast('.'),
+      custom.substringAfterLast('.'),
+      "_" + name.pythonTypeName + "Type",
+    )
+  }
+
+  // Pydantic Field constraints can coerce custom scalar subclasses back to primitives.
+  // Validate the serialized value separately so the application-owned instance survives.
+  private fun renderCustomValidatedType(
+    baseType: PythonCodeBlock,
+    validation: Map<String, String>,
+    model: GeneratedModel,
+  ): PythonCodeBlock {
+    if (validation.isEmpty()) return baseType
+    val (function, _) =
+      customValidators.getOrPut(model.name to validation) {
+        val function = "_validate_custom_${customValidators.size}"
+        val declaration = modelProperties.declarationType(GeneratedTypeRef.named(model.name))
+        val wireType =
+          renderValidatedType(declaration.renderPythonType(false), validation, "model '${model.name}'", declaration)
+        function to
+          PythonCodeBlock.of(
+            "def %L(value: %T) -> %T:\n" +
+              "    wire = %T[object](\n        %C,\n    )\n" +
+              "    wire.validate_python(%T(%T).dump_python(value, mode=\"json\"))\n" +
+              "    return value",
+            function,
+            model.customPythonSymbol(),
+            model.customPythonSymbol(),
+            PythonSymbol("pydantic", "TypeAdapter"),
+            wireType,
+            PythonSymbol("pydantic", "TypeAdapter"),
+            model.customPythonSymbol(),
+          )
+      }
+    return PythonCodeBlock.of(
+      "%T[%C, %T(%L)]",
+      PythonSymbol("typing", "Annotated"),
+      baseType,
+      PythonSymbol("pydantic", "AfterValidator"),
+      function,
+    )
+  }
+
   private fun GeneratedModel.isObjectClass(): Boolean =
-    kind == GeneratedModel.Kind.OBJECT &&
+    targets["python"]?.typeName == null &&
+      kind == GeneratedModel.Kind.OBJECT &&
       !isDiscriminatedAlias()
 
   private fun GeneratedModel.isDiscriminatedAlias(): Boolean =
@@ -1431,10 +1494,13 @@ class PythonModelRenderer(
     val constant = allowedValues?.takeIf { it.size == 1 && !model.patchable }
     val literalValue = discriminatorLiteralValue(model)
     val externalDiscriminatorType = renderExternalDiscriminatorPropertyType()
+    val customModel = modelIndex[type.name]?.takeIf { it.targets["python"]?.typeName != null }
     val basePropertyType =
       literalValue?.renderPythonLiteralType()
         ?: externalDiscriminatorType
-        ?: type.renderPythonType(nullable = false)
+        ?: type.renderPythonType(nullable = false).let { base ->
+          if (customModel != null) renderCustomValidatedType(base, validation, customModel) else base
+        }
     val valueType =
       if (!type.nullable &&
         (
@@ -1483,7 +1549,7 @@ class PythonModelRenderer(
     }
     val enumConstraints = enumStringConstraints()
     fieldArguments +=
-      (validation - enumConstraints.keys).renderFieldConstraints(
+      (if (customModel != null) emptyMap() else validation - enumConstraints.keys).renderFieldConstraints(
         "property '${model.name}.$name'",
         type,
         requiresUniqueListValidation(),

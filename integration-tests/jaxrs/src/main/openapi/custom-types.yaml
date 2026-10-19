@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info: {title: Custom Types, version: '1'}
+paths:
+  /identifiers/{id}:
+    get:
+      operationId: identify
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Identifier'}
+        - name: other
+          in: query
+          required: true
+          schema: {$ref: '#/components/schemas/Identifier'}
+      responses:
+        '200':
+          description: Identifier record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Record'}
+  /identifiers:
+    post:
+      operationId: echo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Record'}
+      responses:
+        '200':
+          description: Echo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Record'}
+components:
+  schemas:
+    Identifier:
+      type: string
+      pattern: '^id:[a-z]+$'
+      minLength: 4
+      maxLength: 24
+      x-sunday-kotlinType: io.test.jaxrs.custom.Identifier
+    Record:
+      type: object
+      required: [id]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        optional: {$ref: '#/components/schemas/Identifier'}
+        plain: {type: string}

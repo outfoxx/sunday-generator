@@ -397,7 +397,13 @@ class KotlinSundayIrGenerator(
     val models = modelsForGeneration(services)
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
-        val name = model.kotlinClassName()
+        // Validation views belong to generated code, even when the value class belongs to a dependency.
+        val name =
+          if (model.target("kotlinClient", "kotlin")?.typeName != null) {
+            ClassName(typeRegistry.defaultModelPackageName ?: servicePackageName(), model.name.toUpperCamelCase())
+          } else {
+            model.kotlinClassName()
+          }
         nativePayloads.register(
           GeneratedTypeRef.named(model.name, scope = model.scope),
           name.peerClass("${name.simpleName}Validation"),
@@ -1301,8 +1307,9 @@ class KotlinSundayIrGenerator(
     map { value -> CodeBlock.of("%S", value) }
       .joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
-  private fun GeneratedModel.modelType(): TypeSpec.Builder? =
-    nominalGenerator.generate(this) ?: when (kind) {
+  private fun GeneratedModel.modelType(): TypeSpec.Builder? {
+    if (target("kotlinClient", "kotlin")?.typeName != null) return null
+    return nominalGenerator.generate(this) ?: when (kind) {
       GeneratedModel.Kind.ENUM ->
         enumTypeSpec()
 
@@ -1313,6 +1320,7 @@ class KotlinSundayIrGenerator(
 
       else -> null
     }
+  }
 
   private fun GeneratedModel.enumTypeSpec(): TypeSpec.Builder {
     val entries = kotlinEnumEntries.entries(this)
@@ -3173,6 +3181,9 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedTypeRef.namedTypeName(): TypeName {
     val model = modelOrNull(apiIndex)
+    if (model?.target("kotlinClient", "kotlin")?.typeName != null) {
+      return model.kotlinClassName()
+    }
     if (model?.isFreeformObject == true) {
       return MAP.parameterizedBy(STRING, ANY)
     }

@@ -123,3 +123,8 @@ Swift and TypeScript dispatch through selected descendant variants without also
 adding the intermediate parent as an overlapping case. Unmapped sibling cases
 remain available. Swift intermediate declarations on these mapped paths use its
 existing protocol hierarchy representation, preserving parent assignability.
+
+## Custom language types
+
+See [OpenAPI custom language type mappings](custom-type-mappings.md) for schema extensions,
+client/server precedence, and application conversion requirements.

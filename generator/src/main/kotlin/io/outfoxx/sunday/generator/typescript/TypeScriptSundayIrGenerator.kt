@@ -78,6 +78,7 @@ import io.outfoxx.sunday.generator.typescript.utils.CREATE_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_PROBLEM_CODEC
 import io.outfoxx.sunday.generator.typescript.utils.CREATE_STREAMING_OPERATION
 import io.outfoxx.sunday.generator.typescript.utils.DEFINE_MODEL_SCHEMA
+import io.outfoxx.sunday.generator.typescript.utils.DEFINE_SCHEMA
 import io.outfoxx.sunday.generator.typescript.utils.EVENT_SOURCE
 import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATE
 import io.outfoxx.sunday.generator.typescript.utils.LOCAL_DATETIME
@@ -299,6 +300,10 @@ class TypeScriptSundayIrGenerator(
   private fun GeneratedModel.isInDiscriminatedHierarchy(): Boolean = rootModel()?.discriminator != null
 
   private fun generateModelTypes() {
+    api.models.filter { it.target("typescript", "typescript")?.typeName != null }.forEach { model ->
+      val type = model.typeName(model.name.toUpperCamelCase())
+      typeRegistry.addExternalType(type, type.sibling("Schema"))
+    }
     if (api.models.any { it.patchOf != null }) {
       val (type, code) = TypeScriptPatchHelpers.support(patchSupportName)
       typeRegistry.addModelType(patchSupportName, type, listOf(code))
@@ -309,6 +314,7 @@ class TypeScriptSundayIrGenerator(
       }.forEach { model ->
         generateDiscriminatorFallbackType(model)
         when {
+          model.target("typescript", "typescript")?.typeName != null -> Unit
           model.nominal -> generateNominalModelType(model)
           model.kind == GeneratedModel.Kind.ENUM -> generateSharedEnumModelType(model)
           model.kind == GeneratedModel.Kind.OBJECT -> generateSharedObjectModelType(model)
@@ -3461,7 +3467,8 @@ class TypeScriptSundayIrGenerator(
       allowedValues != null ||
         validation.isNotEmpty() &&
         (
-          enumModel != null ||
+          modelOrNull(index)?.target("typescript", "typescript")?.typeName != null ||
+            enumModel != null ||
             modelOrNull(index)?.aliasedTypeRef()?.nullable == true ||
             modelProperties.declarationModel(this)?.nominal == true ||
             declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
@@ -3515,6 +3522,7 @@ class TypeScriptSundayIrGenerator(
       formattedType == null &&
       enumModel == null &&
       modelProperties.declarationModel(this)?.nominal != true &&
+      modelOrNull(index)?.target("typescript", "typescript")?.typeName == null &&
       declaration.name in setOf("string", "integer", "number", "boolean")
     ) {
       val constant = CodeBlock.of("%T.literal(%L)", Z, literal(allowedValues.single()))
@@ -4310,18 +4318,35 @@ class TypeScriptSundayIrGenerator(
       .associateWith { parameter ->
         val propertyName = "${id.typeScriptIdentifierName}${parameter.name.toUpperCamelCase()}ParameterType"
         val parameterTypeName = parameter.source.type.typeName(serviceTypeName)
+        val mapped =
+          parameter.source.type
+            .modelOrNull(index)
+            ?.target("typescript", "typescript")
+            ?.typeName != null
         val direct = parameter.source.type.directZodSchema(parameter.source.required, parameter.source.validation)
         val schema =
-          direct ?: CodeBlock
-            .builder()
-            .add(typeRegistry.schemaInitializer(parameterTypeName))
-            .apply {
-              val model = parameter.source.type.modelOrNull(index)
-              if (model != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())) {
-                if (!parameter.source.required) add(".optional()")
-                if (parameter.source.type.nullable) add(".nullable()")
-              }
-            }.build()
+          if (mapped) {
+            CodeBlock.of(
+              "%Q({format: 'json', dateEncoding: %T.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: %T.BASE64}).resolveSchema(%Q((runtime: %T) => %L))",
+              SymbolSpec.importsName("createSchemaRuntime", "@outfoxx/sunday"),
+              TypeName.namedImport("DateEncoding", "@outfoxx/sunday"),
+              TypeName.namedImport("ArrayBufferEncoding", "@outfoxx/sunday"),
+              DEFINE_SCHEMA,
+              SCHEMA_RUNTIME,
+              parameter.source.type.zodSchema(serviceTypeName, parameter.source.required, parameter.source.validation),
+            )
+          } else {
+            direct ?: CodeBlock
+              .builder()
+              .add(typeRegistry.schemaInitializer(parameterTypeName))
+              .apply {
+                val model = parameter.source.type.modelOrNull(index)
+                if (model != null && (model.nominal || nominalTypes.branches(model).isNotEmpty())) {
+                  if (!parameter.source.required) add(".optional()")
+                  if (parameter.source.type.nullable) add(".nullable()")
+                }
+              }.build()
+          }
         addTypeProperty(typeBuilder, propertyName, parameterTypeName, schema, schemaLikeType = null)
         propertyName
       }
@@ -4335,7 +4360,13 @@ class TypeScriptSundayIrGenerator(
         else -> CodeBlock.of("%N", name)
       }
 
-    val validated = schemaPropertyName?.let { CodeBlock.of("%N.parse(%L)", it, value) } ?: value
+    val mapped =
+      source.type
+        .modelOrNull(index)
+        ?.target("typescript", "typescript")
+        ?.typeName != null
+    val validated =
+      schemaPropertyName?.let { CodeBlock.of("%N.%L(%L)", it, if (mapped) "encode" else "parse", value) } ?: value
     if (isConstant || !isNullable) {
       return validated
     }
@@ -4343,7 +4374,8 @@ class TypeScriptSundayIrGenerator(
   }
 
   private fun GeneratedParameter.hasDirectZodValidation(): Boolean =
-    validation.isNotEmpty() ||
+    type.modelOrNull(index)?.target("typescript", "typescript")?.typeName != null ||
+      validation.isNotEmpty() ||
       (
         type.kind == GeneratedTypeRef.Kind.SCALAR &&
           type.name == "string" &&
@@ -4394,6 +4426,9 @@ class TypeScriptSundayIrGenerator(
           }
 
         GeneratedTypeRef.Kind.NAMED -> {
+          if (model?.target("typescript", "typescript")?.typeName != null) {
+            return model.typeName(model.name.toUpperCamelCase()).let { if (nullable) it.nullable else it }
+          }
           if (model?.isFreeformMapModel() == true) {
             return recordType(STRING, TypeName.implicit("unknown"))
           }
@@ -4498,7 +4533,10 @@ class TypeScriptSundayIrGenerator(
 
   private fun GeneratedModel.typeName(simpleName: String): TypeName.Standard {
     val target = target("typescript", "typescript")
-    val typeSimpleName = target?.typeName ?: simpleName
+    target?.typeName?.let { custom ->
+      return target.moduleName?.let { TypeName.namedImport(custom, it) } ?: TypeName.implicit(custom)
+    }
+    val typeSimpleName = simpleName
     val moduleName =
       target?.modelModuleName
         ?: api.target("typescript", "typescript")?.modelModuleName
@@ -4536,22 +4574,26 @@ class TypeScriptSundayIrGenerator(
       childModels().isEmpty()
 
   private fun GeneratedModel.aliasedTypeRef(): GeneratedTypeRef? =
-    when (kind) {
-      GeneratedModel.Kind.SCALAR_ALIAS -> aliases.firstOrNull().takeUnless { nominal }
-      GeneratedModel.Kind.ARRAY ->
-        GeneratedTypeRef(
-          kind = GeneratedTypeRef.Kind.ARRAY,
-          name = name,
-          arguments = aliases.take(1),
-          collection = collection,
-        )
-      GeneratedModel.Kind.MAP ->
-        GeneratedTypeRef(
-          kind = GeneratedTypeRef.Kind.MAP,
-          name = name,
-          arguments = aliases.take(1),
-        )
-      else -> null
+    if (target("typescript", "typescript")?.typeName != null) {
+      null
+    } else {
+      when (kind) {
+        GeneratedModel.Kind.SCALAR_ALIAS -> aliases.firstOrNull().takeUnless { nominal }
+        GeneratedModel.Kind.ARRAY ->
+          GeneratedTypeRef(
+            kind = GeneratedTypeRef.Kind.ARRAY,
+            name = name,
+            arguments = aliases.take(1),
+            collection = collection,
+          )
+        GeneratedModel.Kind.MAP ->
+          GeneratedTypeRef(
+            kind = GeneratedTypeRef.Kind.MAP,
+            name = name,
+            arguments = aliases.take(1),
+          )
+        else -> null
+      }
     }
 
   private fun TypeName.Standard.sibling(name: String): TypeName.Standard =

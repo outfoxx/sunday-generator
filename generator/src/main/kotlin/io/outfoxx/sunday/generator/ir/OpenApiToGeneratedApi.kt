@@ -461,6 +461,11 @@ class OpenApiToGeneratedApi(
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, localModels, discriminatorValues, scope).let { model ->
       model.copy(
+        targets =
+          analysis
+            .analyze(schema)
+            .model.schema
+            .languageTypeTargets(name),
         patchable =
           GeneratedPatchModels.annotation(
             analysis.analyze(schema).model.schema["x-sunday-patchable"],
@@ -473,6 +478,27 @@ class OpenApiToGeneratedApi(
           ) ?: model.tolerance,
       )
     }
+
+  private fun Map<*, *>.languageTypeTargets(modelName: String): Map<String, GeneratedTarget> =
+    mapOf(
+      "x-sunday-kotlinType" to "kotlin",
+      "x-sunday-kotlinType:client" to "kotlinClient",
+      "x-sunday-kotlinType:server" to "kotlinServer",
+      "x-sunday-swiftType" to "swift",
+      "x-sunday-typeScriptType" to "typescript",
+      "x-sunday-pythonType" to "python",
+    ).mapNotNull { (extension, target) ->
+      if (!containsKey(extension)) return@mapNotNull null
+      val value = this[extension]
+      require(value is String && value.isNotBlank()) {
+        "OpenAPI model '$modelName' $extension must be a non-empty language type name"
+      }
+      val module = if (target == "typescript") this["x-sunday-typeScriptModule"] else null
+      require(module == null || module is String && module.isNotBlank()) {
+        "OpenAPI model '$modelName' x-sunday-typeScriptModule must be a non-empty module name"
+      }
+      target to GeneratedTarget(typeName = value, moduleName = module)
+    }.toMap()
 
   private fun OpenApiSourceDocument.generatedModelDeclaration(
     name: String,

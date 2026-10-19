@@ -16,6 +16,7 @@ dependencies {
   implementation(libs.jackson)
   implementation("io.outfoxx.sunday:sunday-validation-jakarta:${libs.versions.sundayKt.get()}")
   implementation("io.outfoxx.sunday:sunday-validation-javax:${libs.versions.sundayKt.get()}")
+  testImplementation(libs.jacksonKotlin)
   testImplementation(libs.jerseyValidation)
   testImplementation(libs.jerseyJackson)
   testImplementation(libs.jerseyInMemory)
@@ -216,7 +217,29 @@ val generateAnyOfApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val customTypeSources = layout.buildDirectory.dir("generated/custom-types")
+val customTypeContract = layout.projectDirectory.file("src/main/openapi/custom-types.yaml")
+val generateCustomTypeApi by tasks.registering(JavaExec::class) {
+  inputs.file(customTypeContract)
+  outputs.dir(customTypeSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-use-jakarta-packages",
+    "-pkg",
+    "io.test.jaxrs.custom",
+    "-out",
+    customTypeSources.get().asFile.absolutePath,
+    customTypeContract.asFile.absolutePath,
+  )
+}
+
 kotlin.sourceSets.main {
+  kotlin.srcDir(generateCustomTypeApi)
   kotlin.srcDir(generateAnyOfApi)
   kotlin.srcDir(generateNativePayloads)
   kotlin.srcDir(generateNominalApi)
