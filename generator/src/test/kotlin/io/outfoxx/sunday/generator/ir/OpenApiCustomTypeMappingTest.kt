@@ -26,6 +26,48 @@ import kotlin.io.path.writeText
 
 class OpenApiCustomTypeMappingTest {
   @Test
+  fun `type mappings follow direct references but not allOf parents`(
+    @TempDir directory: Path,
+  ) {
+    val source = directory.resolve("api.yaml")
+    source.writeText(
+      """
+      openapi: 3.1.0
+      info: {title: Types, version: '1'}
+      paths: {}
+      components:
+        schemas:
+          Base:
+            type: object
+            x-sunday-kotlinType: example.Base
+            x-sunday-swiftType: DomainBase
+            x-sunday-typeScriptType: DomainBase
+            x-sunday-pythonType: domain.Base
+            properties: {id: {type: string}}
+          Alias:
+            ${'$'}ref: '#/components/schemas/Base'
+          Child:
+            allOf:
+              - ${'$'}ref: '#/components/schemas/Base'
+              - type: object
+                required: [extra]
+                properties: {extra: {type: string}}
+          ExplicitChild:
+            x-sunday-swiftType: DomainChild
+            allOf:
+              - ${'$'}ref: '#/components/schemas/Base'
+              - type: object
+                properties: {extra: {type: string}}
+      """.trimIndent(),
+    )
+    val models = OpenApiToGeneratedApi().convert(source.toUri()).models.associateBy { it.name }
+    assertEquals(models.getValue("Base").targets, models.getValue("Alias").targets)
+    assertTrue(models.getValue("Child").targets.isEmpty())
+    assertTrue(models.getValue("Child").properties.any { it.name == "extra" && it.required })
+    assertEquals(mapOf("swift" to GeneratedTarget(typeName = "DomainChild")), models.getValue("ExplicitChild").targets)
+  }
+
+  @Test
   fun `external schema retains every language mapping independently`() {
     val api =
       OpenApiToGeneratedApi().convert(

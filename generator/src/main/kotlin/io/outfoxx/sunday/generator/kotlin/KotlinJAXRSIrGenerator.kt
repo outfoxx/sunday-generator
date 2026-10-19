@@ -631,22 +631,43 @@ class KotlinJAXRSIrGenerator(
     )
   }
 
+  private fun GeneratedModel.nativeValidationName(): ClassName {
+    // Dependency-owned value classes cannot contain generated validation helpers.
+    val owner =
+      if (target(preferredTargetId, "kotlin")?.typeName != null) {
+        ClassName(
+          typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
+            ?: genError("No payload validation package specified"),
+          name.toUpperCamelCase(),
+        )
+      } else {
+        kotlinClassName()
+      }
+    return owner.peerClass("${owner.simpleName}Validation")
+  }
+
+  private fun GeneratedTypeRef.commonSchemaOwner(): TypeName {
+    val model = modelProperties.declarationModel(this)
+    return if (model?.target(preferredTargetId, "kotlin")?.typeName != null &&
+      modelProperties.hasUnionCommonRules(model)
+    ) {
+      model.nativeValidationName()
+    } else {
+      kotlinTypeName()
+    }
+  }
+
   private fun generateModelTypes() {
     val models = api.models.filter { model -> model.scope == null }
     if (typeRegistry.options.contains(ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
-        // Validation views belong to generated code, even when the value class belongs to a dependency.
-        val name =
-          if (model.target(preferredTargetId, "kotlin")?.typeName != null) {
-            ClassName(
-              typeRegistry.defaultModelPackageName ?: options.defaultServicePackageName
-                ?: genError("No payload validation package specified"),
-              model.name.toUpperCamelCase(),
-            )
-          } else {
-            model.kotlinClassName()
-          }
-        nativePayloads.register(GeneratedTypeRef.named(model.name), name.peerClass("${name.simpleName}Validation"))
+        nativePayloads.register(
+          GeneratedTypeRef.named(model.name),
+          model.nativeValidationName(),
+          shapeType = { it.commonSchemaOwner() },
+          commonRules =
+            model.target(preferredTargetId, "kotlin")?.typeName != null && modelProperties.hasUnionCommonRules(model),
+        )
       }
       api.services
         .flatMap { it.operations }
@@ -687,7 +708,7 @@ class KotlinJAXRSIrGenerator(
       kotlinEnumEntries,
     ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
-      addNativeModelGraphs(modelTypes, modelProperties, beanValidationTypes) { it.kotlinTypeName() }
+      addNativeModelGraphs(modelTypes, modelProperties, beanValidationTypes) { it.commonSchemaOwner() }
     }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       modelTypes.forEach { (name, entry) ->
@@ -1607,7 +1628,7 @@ class KotlinJAXRSIrGenerator(
             nativePayloads.property(type).copy(required = required),
             modelProperties,
             beanValidationTypes,
-            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.commonSchemaOwner() },
           )?.let(builder::addAnnotation)
       } else {
         nativePayloads.name(type)?.let { schema ->
@@ -2115,7 +2136,7 @@ class KotlinJAXRSIrGenerator(
             nativePayloads.property(argumentType),
             modelProperties,
             beanValidationTypes,
-            objectSchema = KotlinNativeSchema.commonSchema(argumentType, modelProperties) { it.kotlinTypeName() },
+            objectSchema = KotlinNativeSchema.commonSchema(argumentType, modelProperties) { it.commonSchemaOwner() },
           )
         val annotatedType =
           argumentTypeName.withUseSiteValidationAnnotations(argumentType, request).let {
@@ -2166,7 +2187,7 @@ class KotlinJAXRSIrGenerator(
             modelProperties,
             beanValidationTypes,
             useSite,
-            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+            objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.commonSchemaOwner() },
           )?.let(::add)
         if (type.format.equals("email", ignoreCase = true)) {
           add(AnnotationSpec.builder(beanValidationTypes.email).apply { useSite?.let(::useSiteTarget) }.build())
@@ -2895,7 +2916,11 @@ class KotlinJAXRSIrGenerator(
               modelProperties,
               beanValidationTypes,
               AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
-              objectSchema = KotlinNativeSchema.commonSchema(effective.type, modelProperties) { it.kotlinTypeName() },
+              objectSchema =
+                KotlinNativeSchema.commonSchema(
+                  effective.type,
+                  modelProperties,
+                ) { it.commonSchemaOwner() },
             )?.let(::addAnnotation)
           if (type.requiresCascadedValidation()) {
             addAnnotation(

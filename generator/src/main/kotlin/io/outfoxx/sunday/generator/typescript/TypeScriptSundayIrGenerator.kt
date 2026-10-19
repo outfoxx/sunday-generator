@@ -3461,11 +3461,14 @@ class TypeScriptSundayIrGenerator(
             ?: runtimeResolvedSchema(typeName(serviceTypeName), lazyRefType, runtimeName)
       }
 
+    val constraints =
+      modelOrNull(index)?.takeIf { it.target("typescript", "typescript")?.typeName != null }?.validation.orEmpty() +
+        validation
     val declaration = modelProperties.declarationType(this)
     val enumModel = modelProperties.declarationModel(this)?.takeIf { it.kind == GeneratedModel.Kind.ENUM }
     val wireValidation =
       allowedValues != null ||
-        validation.isNotEmpty() &&
+        constraints.isNotEmpty() &&
         (
           modelOrNull(index)?.target("typescript", "typescript")?.typeName != null ||
             enumModel != null ||
@@ -3474,7 +3477,7 @@ class TypeScriptSundayIrGenerator(
             declaration.kind == GeneratedTypeRef.Kind.SCALAR &&
             declaration.formattedScalarTypeName() != null
         )
-    val constrainedSchema = if (wireValidation) schema else applyZodValidation(schema, validation)
+    val constrainedSchema = if (wireValidation) schema else applyZodValidation(schema, constraints)
 
     val nullableSchema =
       when {
@@ -3495,7 +3498,7 @@ class TypeScriptSundayIrGenerator(
         else -> constrainedSchema
       }
     return if (wireValidation) {
-      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, validation, allowedValues, runtimeName)
+      wireConstrainedSchema(nullableSchema, declaration, enumModel, required, constraints, allowedValues, runtimeName)
     } else {
       nullableSchema
     }
@@ -4319,10 +4322,7 @@ class TypeScriptSundayIrGenerator(
         val propertyName = "${id.typeScriptIdentifierName}${parameter.name.toUpperCamelCase()}ParameterType"
         val parameterTypeName = parameter.source.type.typeName(serviceTypeName)
         val mapped =
-          parameter.source.type
-            .modelOrNull(index)
-            ?.target("typescript", "typescript")
-            ?.typeName != null
+          parameter.source.type.containsCustomMapping()
         val direct = parameter.source.type.directZodSchema(parameter.source.required, parameter.source.validation)
         val schema =
           if (mapped) {
@@ -4361,10 +4361,7 @@ class TypeScriptSundayIrGenerator(
       }
 
     val mapped =
-      source.type
-        .modelOrNull(index)
-        ?.target("typescript", "typescript")
-        ?.typeName != null
+      source.type.containsCustomMapping()
     val validated =
       schemaPropertyName?.let { CodeBlock.of("%N.%L(%L)", it, if (mapped) "encode" else "parse", value) } ?: value
     if (isConstant || !isNullable) {
@@ -4373,8 +4370,18 @@ class TypeScriptSundayIrGenerator(
     return CodeBlock.of("%N == null ? undefined : %L", name, validated)
   }
 
+  private fun GeneratedTypeRef.containsCustomMapping(visited: Set<String> = emptySet()): Boolean {
+    if (arguments.any { it.containsCustomMapping(visited) }) return true
+    val model = modelOrNull(index) ?: return false
+    if (model.name in visited) return false
+    if (model.target("typescript", "typescript")?.typeName != null) return true
+    val nested = visited + model.name
+    return model.aliases.any { it.containsCustomMapping(nested) } ||
+      model.properties.any { it.type.containsCustomMapping(nested) }
+  }
+
   private fun GeneratedParameter.hasDirectZodValidation(): Boolean =
-    type.modelOrNull(index)?.target("typescript", "typescript")?.typeName != null ||
+    type.containsCustomMapping() ||
       validation.isNotEmpty() ||
       (
         type.kind == GeneratedTypeRef.Kind.SCALAR &&

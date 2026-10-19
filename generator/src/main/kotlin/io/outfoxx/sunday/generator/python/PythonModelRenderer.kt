@@ -281,7 +281,7 @@ class PythonModelRenderer(
     val (function, _) =
       customValidators.getOrPut(model.name to validation) {
         val function = "_validate_custom_${customValidators.size}"
-        val declaration = modelProperties.declarationType(GeneratedTypeRef.named(model.name))
+        val declaration = GeneratedTypeRef.named(model.name).customWireType()
         val wireType =
           renderValidatedType(declaration.renderPythonType(false), validation, "model '${model.name}'", declaration)
         function to
@@ -306,6 +306,55 @@ class PythonModelRenderer(
       PythonSymbol("pydantic", "AfterValidator"),
       function,
     )
+  }
+
+  // Wire adapters must never resolve to an application alias or its AfterValidator.
+  private fun GeneratedTypeRef.customWireType(visited: Set<String> = emptySet()): GeneratedTypeRef {
+    if (kind != GeneratedTypeRef.Kind.NAMED) {
+      return copy(arguments = arguments.map { it.customWireType(visited) })
+    }
+    val model = modelIndex[name]
+    if (model == null || name in visited) return GeneratedTypeRef.scalar("any").copy(nullable = nullable)
+    val nested = visited + name
+    val wire =
+      when (model.kind) {
+        GeneratedModel.Kind.ENUM -> GeneratedTypeRef.scalar("string")
+        GeneratedModel.Kind.OBJECT ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.MAP,
+            "map",
+            arguments = listOf(GeneratedTypeRef.scalar("any")),
+          )
+        GeneratedModel.Kind.SCALAR_ALIAS -> model.aliases.single().customWireType(nested)
+        GeneratedModel.Kind.ARRAY ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.ARRAY,
+            "array",
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+        GeneratedModel.Kind.MAP ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.MAP,
+            "map",
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+        GeneratedModel.Kind.UNION ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.UNION,
+            "union",
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+      }
+    return wire.copy(nullable = nullable || wire.nullable)
   }
 
   private fun GeneratedModel.isObjectClass(): Boolean =
@@ -1345,7 +1394,9 @@ class PythonModelRenderer(
       }
 
   private fun GeneratedModelProperty.enumStringConstraints(): Map<String, String> =
-    if (modelProperties.declarationModel(type)?.let { it.kind == GeneratedModel.Kind.ENUM || it.nominal } == true) {
+    if (modelIndex[type.name]?.targets?.get("python")?.typeName == null &&
+      modelProperties.declarationModel(type)?.let { it.kind == GeneratedModel.Kind.ENUM || it.nominal } == true
+    ) {
       validation.filterKeys { it in setOf("minLength", "maxLength", "pattern") }
     } else {
       emptyMap()

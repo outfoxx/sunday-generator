@@ -36,7 +36,7 @@ class TypeScriptCustomTypeMappingTest {
   fun `custom TypeScript scalars use imported runtime codecs`(compiler: TypeScriptCompiler) {
     val api =
       OpenApiToGeneratedApi().convert(
-        Path.of("src/test/resources/openapi/ir/custom-types/mapped-api.yaml").toUri(),
+        Path.of("src/test/resources/openapi/ir/custom-types/mapped-containers.yaml").toUri(),
       )
     val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
     TypeScriptSundayIrGenerator(
@@ -81,10 +81,17 @@ class TypeScriptCustomTypeMappingTest {
             if (wire.id !== 'id:abc') throw new Error('Custom encoding was lost');
             if (schema.safeParse({id: 'invalid'}).success) throw new Error('Wire constraints ignored');
             const api = createAPI(new FetchTransport('https://example.com/'));
-            const request = api.identify(new DomainIdentifier('id:abc'), new DomainIdentifier('id:def')).spec.request;
+            const request = api.identify(new DomainIdentifier('id:abc'), new DomainIdentifier('id:def'), [new DomainIdentifier('id:ghi')]).spec.request;
             if (request.queryParameters?.other !== 'id:def') throw new Error('Custom query encoding was lost');
+            if (JSON.stringify(request.queryParameters?.ids) !== '["id:ghi"]') throw new Error('Custom array encoding was lost');
+            for (const ids of [[], [new DomainIdentifier('invalid')]]) {
+              let failed = false;
+              try { api.identify(new DomainIdentifier('id:abc'), new DomainIdentifier('id:def'), ids); }
+              catch { failed = true; }
+              if (!failed) throw new Error('Custom array constraints ignored');
+            }
             let rejected = false;
-            try { api.identify(new DomainIdentifier('invalid'), new DomainIdentifier('id:def')); }
+            try { api.identify(new DomainIdentifier('invalid'), new DomainIdentifier('id:def'), [new DomainIdentifier('id:ghi')]); }
             catch { rejected = true; }
             if (!rejected) throw new Error('Custom parameter constraints ignored');
             """.trimIndent(),

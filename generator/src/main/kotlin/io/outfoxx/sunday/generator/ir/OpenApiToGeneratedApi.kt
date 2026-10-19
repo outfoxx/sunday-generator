@@ -461,11 +461,7 @@ class OpenApiToGeneratedApi(
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, localModels, discriminatorValues, scope).let { model ->
       model.copy(
-        targets =
-          analysis
-            .analyze(schema)
-            .model.schema
-            .languageTypeTargets(name),
+        targets = declarationTypeSchema(schema).languageTypeTargets(name),
         patchable =
           GeneratedPatchModels.annotation(
             analysis.analyze(schema).model.schema["x-sunday-patchable"],
@@ -478,6 +474,17 @@ class OpenApiToGeneratedApi(
           ) ?: model.tolerance,
       )
     }
+
+  // Type mappings describe this declaration, not the contracts contributed by allOf parents.
+  private fun OpenApiSourceDocument.declarationTypeSchema(
+    schema: Map<*, *>,
+    visited: Set<String> = emptySet(),
+  ): Map<*, *> {
+    val reference = OpenApiSchemaReferences.name(schema) ?: return schema
+    if (reference in visited) return schema
+    val target = schemas[reference] ?: return schema
+    return declarationTypeSchema(target, visited + reference) + schema
+  }
 
   private fun Map<*, *>.languageTypeTargets(modelName: String): Map<String, GeneratedTarget> =
     mapOf(

@@ -17,6 +17,10 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTarget
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.swift.tools.SwiftCompiler
 import io.outfoxx.sunday.generator.swift.tools.compileAndTestGeneratedFiles
@@ -39,7 +43,29 @@ class SwiftCustomTypeMappingTest {
       )
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(
-      api,
+      api.copy(
+        models =
+          api.models.map {
+            if (it.name ==
+              "Record"
+            ) {
+              it.copy(
+                properties =
+                  it.properties + GeneratedModelProperty("metadata", GeneratedTypeRef.named("Metadata")),
+              )
+            } else {
+              it
+            }
+          } +
+            GeneratedModel(
+              "Metadata",
+              GeneratedModel.Kind.OBJECT,
+              targets =
+                mapOf(
+                  "swift" to GeneratedTarget(typeName = "DomainMetadata"),
+                ),
+            ),
+      ),
       registry,
       SwiftSundayOptions("https://example.com/", listOf("application/json"), "API"),
     ).generateServiceTypes()
@@ -48,6 +74,9 @@ class SwiftCustomTypeMappingTest {
       compiler.srcDir.resolve("DomainIdentifier.swift"),
       """
       import Foundation
+      public struct DomainMetadata: Codable, Sendable {
+        public let label: String
+      }
       public struct DomainIdentifier: Codable, Sendable {
         public let value: String
         public init(from decoder: Decoder) throws { value = try decoder.singleValueContainer().decode(String.self) }
@@ -67,9 +96,10 @@ class SwiftCustomTypeMappingTest {
       @testable import SundayGenTest
       final class MappingTests: XCTestCase {
         func testMapping() throws {
-          let record = try JSONDecoder().decode(Record.self, from: Data(#"{"id":"id:abc"}"#.utf8))
+          let record = try JSONDecoder().decode(Record.self, from: Data(#"{"id":"id:abc","metadata":{"label":"custom"}}"#.utf8))
           let id: DomainIdentifier = record.id
           XCTAssertEqual(id.value, "id:abc")
+          XCTAssertEqual(record.metadata?.label, "custom")
           XCTAssertTrue(record.isValid(.request))
           let again = try JSONDecoder().decode(Record.self, from: JSONEncoder().encode(record))
           XCTAssertEqual(again.id.value, "id:abc")

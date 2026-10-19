@@ -17,6 +17,10 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedTarget
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -28,6 +32,98 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 
 class PythonCustomTypeMappingTest : PythonTest() {
+  @Test
+  fun `mapped enum wire constraints do not rerun custom validators`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          "Code",
+          GeneratedModel.Kind.ENUM,
+          values = listOf("id:abc", "id:def"),
+          targets =
+            mapOf(
+              "python" to GeneratedTarget(typeName = "test_api.domain.Code"),
+            ),
+        ),
+        GeneratedModel(
+          "Alias",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.named("Code")),
+          validation =
+            mapOf(
+              "pattern" to "^id:a",
+            ),
+          targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Code")),
+        ),
+        GeneratedModel(
+          "Record",
+          GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "code",
+                GeneratedTypeRef.named("Code"),
+                required = true,
+                validation =
+                  mapOf(
+                    "pattern" to "^id:a",
+                  ),
+              ),
+              GeneratedModelProperty("alias", GeneratedTypeRef.named("Alias"), required = true),
+            ),
+        ),
+      )
+    val domain =
+      PythonModuleBuilder("test_api/domain.py")
+        .addCode(
+          PythonCodeBlock.of(
+            "%L",
+            """
+            from pydantic import GetCoreSchemaHandler
+            from pydantic_core import core_schema
+
+
+            class Code:
+                def __init__(self, value: str):
+                    self.value = value
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(lambda value: value.value),
+                    )
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          domain,
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          from test_api.models import Record
+          from test_api.domain import Code
+          code = Code("id:abc")
+          value = Record(code=code, alias=code)
+          assert value.code is code and value.alias is code
+          assert value.model_dump() == {"code": "id:abc", "alias": "id:abc"}
+          for fields in ({"code": Code("id:def"), "alias": code}, {"code": code, "alias": Code("id:def")}):
+              try:
+                  Record.model_validate(fields)
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("wire constraints were ignored")
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `custom Python scalars retain their Pydantic representation`(compiler: PythonCompiler) {
     val api =

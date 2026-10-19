@@ -22,6 +22,12 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.outfoxx.sunday.generator.GenerationMode
+import io.outfoxx.sunday.generator.ir.GeneratedApi
+import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
+import io.outfoxx.sunday.generator.ir.GeneratedSourceSpec
+import io.outfoxx.sunday.generator.ir.GeneratedTarget
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.kotlin.jaxrs.kotlinJAXRSTestOptions
 import io.outfoxx.sunday.generator.kotlin.sunday.kotlinSundayTestOptions
@@ -47,6 +53,93 @@ import kotlin.io.path.writeText
 @KotlinTest
 @Tag("models")
 class KotlinCustomTypeMappingTest {
+  @ParameterizedTest
+  @CsvSource("Client,javax", "Server,jakarta")
+  fun `mapped unions keep local common rule validation`(
+    mode: GenerationMode,
+    namespace: String,
+  ) {
+    val api =
+      GeneratedApi(
+        name = "Mapped",
+        source = GeneratedSourceSpec(GeneratedSourceSpec.Kind.OPENAPI, "memory"),
+        models =
+          listOf(
+            GeneratedModel("First", GeneratedModel.Kind.OBJECT),
+            GeneratedModel("Second", GeneratedModel.Kind.OBJECT),
+            GeneratedModel(
+              "Choice",
+              GeneratedModel.Kind.UNION,
+              aliases = listOf(GeneratedTypeRef.named("First"), GeneratedTypeRef.named("Second")),
+              properties =
+                listOf(
+                  GeneratedModelProperty(
+                    "id",
+                    GeneratedTypeRef.scalar("string"),
+                    required = true,
+                    validation =
+                      mapOf(
+                        "pattern" to "^id:",
+                      ),
+                  ),
+                ),
+              targets = mapOf("kotlin" to GeneratedTarget(typeName = "io.example.Choice")),
+            ),
+            GeneratedModel(
+              "Record",
+              GeneratedModel.Kind.OBJECT,
+              properties = listOf(GeneratedModelProperty("choice", GeneratedTypeRef.named("Choice"), required = true)),
+            ),
+          ),
+      )
+    for (jaxrs in if (mode == GenerationMode.Client) listOf(true, false) else listOf(true)) {
+      val registry =
+        KotlinTypeRegistry(
+          "io.test",
+          null,
+          mode,
+          buildSet {
+            add(KotlinTypeRegistry.Option.ImplementModel)
+            add(KotlinTypeRegistry.Option.ValidationConstraints)
+            if (namespace == "jakarta") add(KotlinTypeRegistry.Option.UseJakartaPackages)
+          },
+          problemLibrary = KotlinProblemLibrary.SUNDAY,
+        )
+      if (jaxrs) {
+        KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
+      } else {
+        KotlinSundayIrGenerator(api, registry, kotlinSundayTestOptions).generateServiceTypes()
+      }
+      val result =
+        compileTypesResult(
+          registry.buildTypes(),
+          listOf(
+            SourceFile.kotlin(
+              "Choice.kt",
+              """
+              package io.example
+              class Choice(val id: String) : io.outfoxx.sunday.validation.ModelGraph {
+                override fun validationFields(): Map<String, Any?> = mapOf("id" to id)
+              }
+              """.trimIndent(),
+            ),
+          ),
+        )
+      assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+      val helper = result.classLoader.loadClass("io.test.ChoiceValidation${'$'}CommonPropertiesValidation")
+      assertTrue(helper.annotations.any { it.annotationClass.simpleName == "ObjectValue" })
+      withNativeBeanValidation(namespace, result.classLoader) {
+        val choice = result.classLoader.loadClass("io.example.Choice")
+        val record = result.classLoader.loadClass("io.test.Record")
+        val valid = record.constructors.single().newInstance(choice.constructors.single().newInstance("id:abc"))
+        assertTrue(nativeConstraintPaths(namespace, valid, "Request").isEmpty())
+        assertThrows(Exception::class.java) {
+          record.constructors.single().newInstance(choice.constructors.single().newInstance("invalid"))
+        }
+      }
+    }
+  }
+
   @ParameterizedTest
   @CsvSource("Client,none", "Server,none", "Client,javax", "Server,javax", "Server,jakarta")
   fun `external custom scalar mappings compile and retain wire validation`(

@@ -44,6 +44,8 @@ internal class KotlinNativePayloads(
   fun register(
     reference: GeneratedTypeRef,
     name: ClassName,
+    shapeType: (GeneratedTypeRef) -> TypeName = annotatedType,
+    commonRules: Boolean = false,
   ) {
     if (reference in views) return
     views[reference] = name
@@ -68,7 +70,21 @@ internal class KotlinNativePayloads(
                   },
                 ).build(),
             ).build(),
-        ).addProperty(
+        ).apply {
+          if (commonRules) {
+            addNativeDynamicProperties(
+              name,
+              requireNotNull(modelFor(reference)),
+              properties,
+              types,
+              null,
+              shapeType,
+              common = true,
+            ) {
+              false
+            }
+          }
+        }.addProperty(
           PropertySpec
             .builder("value", valueType)
             .addKdoc("The application value to validate using request or response groups.\n")

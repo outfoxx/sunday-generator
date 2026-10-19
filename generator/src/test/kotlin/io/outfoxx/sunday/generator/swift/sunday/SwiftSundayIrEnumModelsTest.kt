@@ -100,9 +100,8 @@ class SwiftSundayIrEnumModelsTest : SwiftSundayIrTestSupport() {
               aliases = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.scalar("integer")),
             ),
             GeneratedModel(
-              name = "AliasContainer",
+              name = "ContainerValue",
               kind = GeneratedModel.Kind.OBJECT,
-              targets = mapOf("swift" to GeneratedTarget(typeName = "AliasModels.ContainerValue")),
               properties =
                 listOf(
                   GeneratedModelProperty("status", GeneratedTypeRef.named("Status"), required = true),

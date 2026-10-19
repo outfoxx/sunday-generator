@@ -187,7 +187,7 @@ class SwiftSundayIrGenerator(
   private val validationViews =
     SwiftValidationViews(modelProperties, apiIndex::modelOrNull, {
       it.swiftValidationTypeName()
-    }, { it.swiftTypeName() }, { it.isFreeformObject }, {
+    }, { it.swiftTypeName() }, { it.isFreeformObject && it.target("swift", "swift")?.typeName == null }, {
       if (it.target("swift", "swift")?.typeName != null) {
         it.swiftValidationTypeName()
       } else if (it.hasSwiftReferenceType) {

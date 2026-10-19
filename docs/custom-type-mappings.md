@@ -52,7 +52,11 @@ and supply its wire conversion. For a string identifier:
 Generated model-property constraints continue to enforce the source restrictions
 using the wire representation, with either constructor checks or Sunday's native
 Bean Validation support. Mapping an identifier does not automatically supply a
-serializer, converter, or application-specific contract projection.
+serializer, converter, or application-specific contract projection. For mapped
+object unions with common property rules, implement
+`io.outfoxx.sunday.validation.ModelGraph.validationFields()` to expose the wire
+property names and values to native validation. The generator keeps the common
+validation helper local rather than requiring it inside the mapped class.
 
 ## Swift
 
