@@ -393,14 +393,38 @@ class KotlinSundayIrGenerator(
     )
   }
 
+  private fun GeneratedModel.nativeValidationName(): ClassName {
+    // Dependency-owned value classes cannot contain generated validation helpers.
+    val owner =
+      if (target("kotlinClient", "kotlin")?.typeName != null) {
+        ClassName(typeRegistry.defaultModelPackageName ?: servicePackageName(), name.toUpperCamelCase())
+      } else {
+        kotlinClassName()
+      }
+    return owner.peerClass("${owner.simpleName}Validation")
+  }
+
+  private fun GeneratedTypeRef.commonSchemaOwner(): TypeName {
+    val model = modelProperties.declarationModel(this)
+    return if (model?.target("kotlinClient", "kotlin")?.typeName != null &&
+      modelProperties.hasUnionCommonRules(model)
+    ) {
+      model.nativeValidationName()
+    } else {
+      kotlinTypeName()
+    }
+  }
+
   private fun generateModelTypes(services: List<GeneratedService>) {
     val models = modelsForGeneration(services)
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       models.filter { it.isAliasLike || modelProperties.hasUnionCommonRules(it) }.forEach { model ->
-        val name = model.kotlinClassName()
         nativePayloads.register(
           GeneratedTypeRef.named(model.name, scope = model.scope),
-          name.peerClass("${name.simpleName}Validation"),
+          model.nativeValidationName(),
+          shapeType = { it.commonSchemaOwner() },
+          commonRules =
+            model.target("kotlinClient", "kotlin")?.typeName != null && modelProperties.hasUnionCommonRules(model),
         )
       }
       services
@@ -438,7 +462,7 @@ class KotlinSundayIrGenerator(
       kotlinEnumEntries,
     ) { it.kotlinTypeName() }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
-      addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.kotlinTypeName() }
+      addNativeModelGraphs(modelTypes, modelProperties, typeRegistry.beanValidationTypes) { it.commonSchemaOwner() }
     }
     if (typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints)) {
       modelTypes.forEach { (name, entry) ->
@@ -1301,8 +1325,9 @@ class KotlinSundayIrGenerator(
     map { value -> CodeBlock.of("%S", value) }
       .joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
-  private fun GeneratedModel.modelType(): TypeSpec.Builder? =
-    nominalGenerator.generate(this) ?: when (kind) {
+  private fun GeneratedModel.modelType(): TypeSpec.Builder? {
+    if (target("kotlinClient", "kotlin")?.typeName != null) return null
+    return nominalGenerator.generate(this) ?: when (kind) {
       GeneratedModel.Kind.ENUM ->
         enumTypeSpec()
 
@@ -1313,6 +1338,7 @@ class KotlinSundayIrGenerator(
 
       else -> null
     }
+  }
 
   private fun GeneratedModel.enumTypeSpec(): TypeSpec.Builder {
     val entries = kotlinEnumEntries.entries(this)
@@ -1829,7 +1855,11 @@ class KotlinSundayIrGenerator(
               modelProperties,
               typeRegistry.beanValidationTypes,
               AnnotationSpec.UseSiteTarget.PARAM.takeIf { declaresProperty },
-              objectSchema = KotlinNativeSchema.commonSchema(effective.type, modelProperties) { it.kotlinTypeName() },
+              objectSchema =
+                KotlinNativeSchema.commonSchema(
+                  effective.type,
+                  modelProperties,
+                ) { it.commonSchemaOwner() },
             )?.let(::addAnnotation)
           if (type.requiresCascadedValidation()) {
             addAnnotation(
@@ -2327,7 +2357,7 @@ class KotlinSundayIrGenerator(
             nativePayloads.property(reference),
             modelProperties,
             typeRegistry.beanValidationTypes,
-            objectSchema = KotlinNativeSchema.commonSchema(reference, modelProperties) { it.kotlinTypeName() },
+            objectSchema = KotlinNativeSchema.commonSchema(reference, modelProperties) { it.commonSchemaOwner() },
           )
         val nested =
           name.withCascadedValidation(reference).let {
@@ -2361,7 +2391,7 @@ class KotlinSundayIrGenerator(
           modelProperties,
           typeRegistry.beanValidationTypes,
           useSiteTarget,
-          objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.kotlinTypeName() },
+          objectSchema = KotlinNativeSchema.commonSchema(type, modelProperties) { it.commonSchemaOwner() },
         )?.let(::add)
       if (type.requiresCascadedValidation()) {
         add(AnnotationSpec.builder(typeRegistry.beanValidationTypes.valid).withUseSiteTarget(useSiteTarget).build())
@@ -3173,6 +3203,9 @@ class KotlinSundayIrGenerator(
 
   private fun GeneratedTypeRef.namedTypeName(): TypeName {
     val model = modelOrNull(apiIndex)
+    if (model?.target("kotlinClient", "kotlin")?.typeName != null) {
+      return model.kotlinClassName()
+    }
     if (model?.isFreeformObject == true) {
       return MAP.parameterizedBy(STRING, ANY)
     }

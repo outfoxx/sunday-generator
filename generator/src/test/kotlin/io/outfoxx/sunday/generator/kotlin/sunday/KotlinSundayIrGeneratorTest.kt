@@ -2531,7 +2531,7 @@ class KotlinSundayIrGeneratorTest {
         models =
           listOf(
             GeneratedModel(
-              name = "User",
+              name = "UserValue",
               kind = GeneratedModel.Kind.OBJECT,
               properties =
                 listOf(
@@ -2559,7 +2559,7 @@ class KotlinSundayIrGeneratorTest {
                 ),
               targets =
                 mapOf(
-                  "kotlinClient" to GeneratedTarget(typeName = "io.example.client.UserValue"),
+                  "kotlinClient" to GeneratedTarget(modelPackageName = "io.example.client"),
                 ),
             ),
             GeneratedModel(
@@ -2568,7 +2568,7 @@ class KotlinSundayIrGeneratorTest {
               properties = listOf(GeneratedModelProperty("theme", GeneratedTypeRef.scalar("string"), required = true)),
               nested =
                 GeneratedNestedType(
-                  enclosedIn = GeneratedTypeRef.named("User"),
+                  enclosedIn = GeneratedTypeRef.named("UserValue"),
                   name = "Preference",
                 ),
             ),

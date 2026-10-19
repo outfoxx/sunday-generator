@@ -186,9 +186,15 @@ class SwiftSundayIrGenerator(
     SwiftNominalTypes(nominalTypes, { validationViews }, { it.swiftDeclaredTypeName() }, { it.swiftTypeName() })
   private val validationViews =
     SwiftValidationViews(modelProperties, apiIndex::modelOrNull, {
-      it.swiftDeclaredTypeName()
-    }, { it.swiftTypeName() }, { it.isFreeformObject }, {
-      if (it.hasSwiftReferenceType) it.swiftReferenceTypeName() else it.swiftDeclaredTypeName()
+      it.swiftValidationTypeName()
+    }, { it.swiftTypeName() }, { it.isFreeformObject && it.target("swift", "swift")?.typeName == null }, {
+      if (it.target("swift", "swift")?.typeName != null) {
+        it.swiftValidationTypeName()
+      } else if (it.hasSwiftReferenceType) {
+        it.swiftReferenceTypeName()
+      } else {
+        it.swiftDeclaredTypeName()
+      }
     })
   private val normalizedValidationModels by lazy { api.models.toSet() }
   private val decodingDefaultNames by lazy { inheritedDecodingDefaultNames() }
@@ -1472,6 +1478,10 @@ class SwiftSundayIrGenerator(
     outputDirectory: OutputDirectory = OutputDirectory.Models,
     outputGroup: String? = null,
   ): TypeSpec.Builder? {
+    if (target("swift", "swift")?.typeName != null) {
+      addAliasValidation(outputDirectory, outputGroup)
+      return null
+    }
     val builder =
       (
         nominalGenerator.generate(this) ?: when (kind) {
@@ -1516,7 +1526,7 @@ class SwiftSundayIrGenerator(
   ) {
     if (this in normalizedValidationModels) {
       typeRegistry.addModelType(
-        SwiftModelValidation.name(swiftDeclaredTypeName()),
+        SwiftModelValidation.name(swiftValidationTypeName()),
         normalizedValidator(),
         outputDirectory = outputDirectory,
         outputGroup = outputGroup,
@@ -1524,7 +1534,7 @@ class SwiftSundayIrGenerator(
       return
     }
     val valueType = aliasStoredTypeName(true)
-    val name = SwiftModelValidation.name(swiftDeclaredTypeName())
+    val name = SwiftModelValidation.name(swiftValidationTypeName())
     val reference =
       when (kind) {
         GeneratedModel.Kind.ARRAY -> GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = aliases)
@@ -1552,7 +1562,7 @@ class SwiftSundayIrGenerator(
     outputGroup: String?,
   ) {
     if (model.nominal || nominalTypes.branches(model).isNotEmpty()) {
-      val name = SwiftModelValidation.name(model.swiftDeclaredTypeName())
+      val name = SwiftModelValidation.name(model.swiftValidationTypeName())
       typeRegistry.addModelType(
         name,
         nominalGenerator.validator(model),
@@ -1571,7 +1581,7 @@ class SwiftSundayIrGenerator(
           it.modelOrNull(apiIndex)?.isSwiftClassModel == true
         }
     if (!inherited) addSuperType(SwiftModelValidation.validatable)
-    val name = SwiftModelValidation.name(model.swiftDeclaredTypeName())
+    val name = SwiftModelValidation.name(model.swiftValidationTypeName())
     if (protocolModel) {
       typeRegistry.addModelType(
         name,
@@ -1745,8 +1755,15 @@ class SwiftSundayIrGenerator(
     }
 
   private fun GeneratedModel.normalizedValidator(): TypeSpec.Builder {
-    val name = SwiftModelValidation.name(swiftDeclaredTypeName())
-    val valueType = if (isAliasLike) aliasStoredTypeName(true) else swiftDeclaredTypeName()
+    val name = SwiftModelValidation.name(swiftValidationTypeName())
+    val valueType =
+      if (target("swift", "swift")?.typeName != null) {
+        swiftDeclaredTypeName()
+      } else if (isAliasLike) {
+        aliasStoredTypeName(true)
+      } else {
+        swiftDeclaredTypeName()
+      }
     val reference =
       when (kind) {
         GeneratedModel.Kind.ARRAY -> GeneratedTypeRef(GeneratedTypeRef.Kind.ARRAY, "array", arguments = aliases)
@@ -1754,54 +1771,62 @@ class SwiftSundayIrGenerator(
         else -> aliases.singleOrNull()
       }
     val projection =
-      when (kind) {
-        GeneratedModel.Kind.OBJECT -> CodeBlock.of("value._sundayValidationValue()")
-        GeneratedModel.Kind.ENUM -> {
-          val unknown = unknownValue?.let { raw -> swiftEnumEntries().single { it.value == raw }.name }
-          if (unknown == null) {
-            CodeBlock.of("%T.string(value.rawValue)", SwiftValueConstraints.valueType)
-          } else {
-            CodeBlock.of(
-              "%T.string(value.rawValue, isUnknown: { if case .%N = value { return true }; return false }())",
-              SwiftValueConstraints.valueType,
-              unknown,
-            )
-          }
-        }
-        GeneratedModel.Kind.UNION ->
-          if (isAliasLike) {
-            if (valueType == ANY_VALUE) {
-              CodeBlock.of("%T(value)", SwiftValueConstraints.valueType)
+      if (target("swift", "swift")?.typeName != null) {
+        CodeBlock.of(
+          "(try? %T().encodeTree(value)).map { %T($0) } ?? .invalid",
+          DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder"),
+          SwiftValueConstraints.valueType,
+        )
+      } else {
+        when (kind) {
+          GeneratedModel.Kind.OBJECT -> CodeBlock.of("value._sundayValidationValue()")
+          GeneratedModel.Kind.ENUM -> {
+            val unknown = unknownValue?.let { raw -> swiftEnumEntries().single { it.value == raw }.name }
+            if (unknown == null) {
+              CodeBlock.of("%T.string(value.rawValue)", SwiftValueConstraints.valueType)
             } else {
-              validationViews.project(aliases.first(), CodeBlock.of("value"))
+              CodeBlock.of(
+                "%T.string(value.rawValue, isUnknown: { if case .%N = value { return true }; return false }())",
+                SwiftValueConstraints.valueType,
+                unknown,
+              )
             }
-          } else {
-            CodeBlock
-              .builder()
-              .add("{ () -> %T in\n", SwiftValueConstraints.valueType)
-              .indent()
-              .beginControlFlow("switch", "value")
-              .apply {
-                unionCaseModels().forEach { branch ->
-                  addStatement(
-                    "case .%N(let value): return %T.view(value)",
-                    branch.unionCaseName,
-                    SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
-                  )
-                }
-                discriminatorFallbacks[this@normalizedValidator]?.let { fallback ->
-                  addStatement(
-                    "case .%N(let value): return %T.view(value)",
-                    fallback.fallbackName.swiftEnumCaseName,
-                    SwiftModelValidation.name(swiftFallbackTypeName(fallback)),
-                  )
-                }
-              }.endControlFlow("switch")
-              .unindent()
-              .add("}()")
-              .build()
           }
-        else -> validationViews.project(requireNotNull(reference), CodeBlock.of("value"))
+          GeneratedModel.Kind.UNION ->
+            if (isAliasLike) {
+              if (valueType == ANY_VALUE) {
+                CodeBlock.of("%T(value)", SwiftValueConstraints.valueType)
+              } else {
+                validationViews.project(aliases.first(), CodeBlock.of("value"))
+              }
+            } else {
+              CodeBlock
+                .builder()
+                .add("{ () -> %T in\n", SwiftValueConstraints.valueType)
+                .indent()
+                .beginControlFlow("switch", "value")
+                .apply {
+                  unionCaseModels().forEach { branch ->
+                    addStatement(
+                      "case .%N(let value): return %T.view(value)",
+                      branch.unionCaseName,
+                      SwiftModelValidation.name(branch.swiftDeclaredTypeName()),
+                    )
+                  }
+                  discriminatorFallbacks[this@normalizedValidator]?.let { fallback ->
+                    addStatement(
+                      "case .%N(let value): return %T.view(value)",
+                      fallback.fallbackName.swiftEnumCaseName,
+                      SwiftModelValidation.name(swiftFallbackTypeName(fallback)),
+                    )
+                  }
+                }.endControlFlow("switch")
+                .unindent()
+                .add("}()")
+                .build()
+            }
+          else -> validationViews.project(requireNotNull(reference), CodeBlock.of("value"))
+        }
       }
     val body =
       when (kind) {
@@ -1848,7 +1873,7 @@ class SwiftSundayIrGenerator(
             GeneratedModelProperty("value", requireNotNull(reference), validation = validation),
           )
       }
-    return normalizedValidatorType(name, valueType, projection, body)
+    return normalizedValidatorType(name, valueType, projection, body, target("swift", "swift")?.typeName != null)
   }
 
   private fun normalizedValidatorType(
@@ -1856,6 +1881,7 @@ class SwiftSundayIrGenerator(
     valueType: TypeName,
     projection: CodeBlock,
     body: CodeBlock,
+    encodesCustomValue: Boolean = false,
   ): TypeSpec.Builder =
     SwiftModelValidation
       .type(
@@ -1866,8 +1892,13 @@ class SwiftSundayIrGenerator(
         FunctionSpec
           .builder("view")
           .addModifiers(STATIC)
-          .addDoc("Projects storage without constructing or encoding application models.\n")
-          .addParameter("_", "value", valueType)
+          .addDoc(
+            if (encodesCustomValue) {
+              "Encodes custom storage for wire-schema validation.\n"
+            } else {
+              "Projects storage without constructing or encoding application models.\n"
+            },
+          ).addParameter("_", "value", valueType)
           .returns(SwiftValueConstraints.valueType)
           .addCode("return %L\n", projection)
           .build(),
@@ -2002,7 +2033,7 @@ class SwiftSundayIrGenerator(
         )
       }
     return normalizedValidatorType(
-      SwiftModelValidation.name(swiftDeclaredTypeName()),
+      SwiftModelValidation.name(swiftValidationTypeName()),
       if (isDiscriminatorMappingUnionModel && hasSwiftReferenceType) {
         swiftReferenceTypeName()
       } else {
@@ -2173,14 +2204,14 @@ class SwiftSundayIrGenerator(
       if (model.kind in setOf(GeneratedModel.Kind.ARRAY, GeneratedModel.Kind.MAP)) {
         return CodeBlock.of(
           "%T.isValid(%L, mode, context: &context)",
-          SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+          SwiftModelValidation.name(model.swiftValidationTypeName()),
           value,
         )
       }
       if (model.isAliasLike) {
         return CodeBlock.of(
           "%T.isValid(%L, mode, context: &context)",
-          SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+          SwiftModelValidation.name(model.swiftValidationTypeName()),
           value,
         )
       }
@@ -3050,7 +3081,7 @@ class SwiftSundayIrGenerator(
           beginControlFlow(
             "guard",
             "%T.isValid(normalized: context.originalValue!, .response, context: &context) else",
-            SwiftModelValidation.name(swiftDeclaredTypeName()),
+            SwiftModelValidation.name(swiftValidationTypeName()),
           )
           addStatement("throw context.decodingError")
           endControlFlow("guard")
@@ -4087,7 +4118,7 @@ class SwiftSundayIrGenerator(
                       addStatement(
                         "case .%N(let value): return %T.view(value)",
                         model.discriminatorCaseName,
-                        SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+                        SwiftModelValidation.name(model.swiftValidationTypeName()),
                       )
                     }
                     if (fallback != null && fallbackTypeName != null) {
@@ -4626,12 +4657,12 @@ class SwiftSundayIrGenerator(
           beginControlFlow(
             "if",
             "!%T.isValid(self, .response, context: &validationContext)",
-            SwiftModelValidation.name(swiftDeclaredTypeName()),
+            SwiftModelValidation.name(swiftValidationTypeName()),
           )
           addStatement("throw validationContext.decodingError")
           endControlFlow("if")
         } else {
-          addStatement("try %T.validate(self, .response)", SwiftModelValidation.name(swiftDeclaredTypeName()))
+          addStatement("try %T.validate(self, .response)", SwiftModelValidation.name(swiftValidationTypeName()))
         }
         if (isSwiftClassModel) endControlFlow("if")
       }.build()
@@ -5523,7 +5554,7 @@ class SwiftSundayIrGenerator(
     if (model?.isAliasLike == true && !nullable) {
       return CodeBlock.of(
         "{ try %T.validate($0, .%L) }",
-        SwiftModelValidation.name(model.swiftDeclaredTypeName()),
+        SwiftModelValidation.name(model.swiftValidationTypeName()),
         mode,
       )
     }
@@ -5807,6 +5838,26 @@ class SwiftSundayIrGenerator(
   private val GeneratedPayload?.isSwiftStreamingRequestBody: Boolean
     get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
+  private val customValidationTypeNames by lazy {
+    val names = mutableMapOf<String, NameAllocator>()
+
+    fun allocator(type: DeclaredTypeName): NameAllocator =
+      names.getOrPut(type.enclosingTypeName()?.toString() ?: type.moduleName) { NameAllocator() }
+    api.models.filter { it.target("swift", "swift")?.typeName == null }.forEach { model ->
+      val type = model.swiftDeclaredTypeName()
+      allocator(type).newName(type.simpleName, model)
+    }
+    api.models.filter { it.target("swift", "swift")?.typeName != null }.associateWith { model ->
+      // Imported schemas can share a name while identifying different declarations.
+      val type = model.copy(targets = model.targets - "swift").swiftDeclaredTypeName()
+      val name = allocator(type).newName(type.simpleName, model)
+      type.enclosingTypeName()?.nestedType(name) ?: DeclaredTypeName.typeName("${type.moduleName}.$name")
+    }
+  }
+
+  private fun GeneratedModel.swiftValidationTypeName(): DeclaredTypeName =
+    customValidationTypeNames[this] ?: swiftDeclaredTypeName()
+
   private fun GeneratedModel.swiftDeclaredTypeName(): DeclaredTypeName {
     if (scope != null) {
       return scopedModelNames[this] ?: DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
@@ -5906,6 +5957,7 @@ class SwiftSundayIrGenerator(
       null -> DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
       else ->
         when {
+          model.target("swift", "swift")?.typeName != null -> model.swiftDeclaredTypeName()
           model.isFreeformObject -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
           model.isAliasLike -> model.aliasTypeName()
           else -> model.swiftDeclaredTypeName()
@@ -5917,6 +5969,7 @@ class SwiftSundayIrGenerator(
       null -> DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
       else ->
         when {
+          model.target("swift", "swift")?.typeName != null -> model.swiftDeclaredTypeName()
           model.isFreeformObject -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
           model.isAliasLike -> model.aliasPublicTypeName()
           model.isDiscriminatorMappingUnionModel -> model.swiftReferenceTypeName()
@@ -5930,6 +5983,7 @@ class SwiftSundayIrGenerator(
       null -> DeclaredTypeName.typeName(".${name.toUpperCamelCase()}")
       else ->
         when {
+          model.target("swift", "swift")?.typeName != null -> model.swiftDeclaredTypeName()
           model.isFreeformObject -> DICTIONARY.parameterizedBy(STRING, ANY_VALUE)
           model.isAliasLike -> model.aliasStoredTypeName(useReferenceTypes)
           useReferenceTypes && model.hasSwiftReferenceType -> model.swiftReferenceTypeName()

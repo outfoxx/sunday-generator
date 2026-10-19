@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info: {title: Custom Types, version: '1'}
+paths:
+  /identifiers/{id}:
+    get:
+      operationId: identify
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Identifier'}
+        - name: other
+          in: query
+          required: true
+          schema: {$ref: '#/components/schemas/Identifier'}
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: array
+            minItems: 1
+            items: {$ref: '#/components/schemas/Identifier'}
+      responses:
+        '200':
+          description: Identifier record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Record'}
+components:
+  schemas:
+    Identifier:
+      $ref: './mapped-identifier.yaml'
+    Identifiers:
+      type: array
+      items: {type: string}
+      minItems: 1
+      maxItems: 2
+      x-sunday-typeScriptType: DomainIdentifiers
+      x-sunday-typeScriptModule: './domain.js'
+    Record:
+      type: object
+      required: [id]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        optional: {$ref: '#/components/schemas/Identifier'}
+        plain: {type: string}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/Identifiers'}

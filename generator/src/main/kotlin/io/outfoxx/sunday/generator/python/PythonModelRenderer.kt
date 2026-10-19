@@ -52,12 +52,15 @@ class PythonModelRenderer(
   private val pythonEnumEntriesByModel = mutableMapOf<GeneratedModel, List<PythonEnumEntry>>()
   private val enumStringAdapters = linkedMapOf<Map<String, String>, String>()
 
+  private val customValidators = linkedMapOf<Pair<String, Map<String, String>>, Pair<String, PythonCodeBlock>>()
+
   /** Renders the given models into the package `models.py` module. */
   fun renderModels(models: List<GeneratedModel>): PythonModule =
     renderNormalizedModels(GeneratedPatchModels.normalizeFields(models))
 
   private fun renderNormalizedModels(models: List<GeneratedModel>): PythonModule {
     val module = PythonModuleBuilder("$packageName/models.py")
+    customValidators.clear()
     modelIndex = models.associateBy { model -> model.name }
     patchHelpers = PythonPatchHelpers(models)
     if (patchHelpers.enabled) module.addCode(patchHelpers.support())
@@ -166,17 +169,22 @@ class PythonModelRenderer(
       )
     }
 
-    models
-      .filter { model -> model.isSupportedModel() }
-      .orderedForInheritance()
-      .forEach { model ->
-        discriminatorFallbacks[model.name]?.let { fallback ->
-          module.addExport(fallback.modelName.pythonTypeName)
-          module.addCode(fallback.renderFallbackModel())
+    val renderedModels =
+      models
+        .filter { model -> model.isSupportedModel() }
+        .orderedForInheritance()
+        .flatMap { model ->
+          buildList {
+            discriminatorFallbacks[model.name]?.let { fallback ->
+              module.addExport(fallback.modelName.pythonTypeName)
+              add(fallback.renderFallbackModel())
+            }
+            module.addExport(model.name.pythonTypeName)
+            add(model.renderModel())
+          }
         }
-        module.addExport(model.name.pythonTypeName)
-        module.addCode(model.renderModel())
-      }
+    customValidators.values.forEach { (_, code) -> module.addCode(code) }
+    renderedModels.forEach(module::addCode)
 
     val rebuilds =
       models
@@ -231,7 +239,13 @@ class PythonModelRenderer(
       kind == GeneratedModel.Kind.MAP
 
   private fun GeneratedModel.renderModel(): PythonCodeBlock =
-    if (nominal) {
+    if (targets["python"]?.typeName != null) {
+      PythonCodeBlock.of(
+        "type %L = %C",
+        name.pythonTypeName,
+        renderCustomValidatedType(PythonCodeBlock.of("%T", customPythonSymbol()), validation, this),
+      )
+    } else if (nominal) {
       renderNominalScalar()
     } else if (nominalTypes.branches(this).isNotEmpty()) {
       renderNominalUnion()
@@ -246,8 +260,185 @@ class PythonModelRenderer(
       }
     }
 
+  private fun GeneratedModel.customPythonSymbol(): PythonSymbol {
+    val custom = requireNotNull(targets["python"]?.typeName)
+    require('.' in custom) { "Python custom type '$custom' must include its module" }
+    return PythonSymbol(
+      custom.substringBeforeLast('.'),
+      custom.substringAfterLast('.'),
+      "_" + name.pythonTypeName + "Type",
+    )
+  }
+
+  // Pydantic Field constraints can coerce custom scalar subclasses back to primitives.
+  // Validate the serialized value separately so the application-owned instance survives.
+  private fun renderCustomValidatedType(
+    baseType: PythonCodeBlock,
+    validation: Map<String, String>,
+    model: GeneratedModel,
+  ): PythonCodeBlock {
+    if (validation.isEmpty()) return baseType
+    val (function, _) =
+      customValidators.getOrPut(model.name to validation) {
+        val function = "_validate_custom_${customValidators.size}"
+        val declarations = mutableListOf<PythonCodeBlock>()
+        val type = GeneratedTypeRef.named(model.name)
+        val declaration = type.renderCustomWireType(declarations, "_CustomWire${customValidators.size}")
+        // Usage constraints apply only at the root, not to recursive references to the declaration.
+        val wireType =
+          renderValidatedType(
+            declaration,
+            validation.filter { (key, value) ->
+              val companion =
+                when (key) {
+                  "minimum" -> "exclusiveMinimum"
+                  "exclusiveMinimum" -> "minimum"
+                  "maximum" -> "exclusiveMaximum"
+                  "exclusiveMaximum" -> "maximum"
+                  else -> null
+                }
+              model.validation[key] != value ||
+                (companion != null && model.validation[companion] != validation[companion])
+            },
+            "model '${model.name}'",
+            type.customWireType(),
+          )
+        function to
+          PythonCodeBlock.of(
+            "%C\n\n\ndef %L(value: %T) -> %T:\n" +
+              "    wire = %T[object](\n        %C,\n    )\n" +
+              "    wire.validate_python(%T(%T).dump_python(value, mode=\"json\"))\n" +
+              "    return value",
+            PythonCodeBlock.join(declarations, separator = "\n"),
+            function,
+            model.customPythonSymbol(),
+            model.customPythonSymbol(),
+            PythonSymbol("pydantic", "TypeAdapter"),
+            wireType,
+            PythonSymbol("pydantic", "TypeAdapter"),
+            model.customPythonSymbol(),
+          )
+      }
+    return PythonCodeBlock.of(
+      "%T[%C, %T(%L)]",
+      PythonSymbol("typing", "Annotated"),
+      baseType,
+      PythonSymbol("pydantic", "AfterValidator"),
+      function,
+    )
+  }
+
+  // Expand container aliases on the wire while retaining each declaration's own constraints.
+  private fun GeneratedTypeRef.renderCustomWireType(
+    declarations: MutableList<PythonCodeBlock>,
+    prefix: String,
+    visited: Map<String, String> = emptyMap(),
+  ): PythonCodeBlock {
+    val model = if (kind == GeneratedTypeRef.Kind.NAMED) modelIndex[name] else null
+    if (model != null) {
+      visited[name]?.let { local ->
+        return PythonCodeBlock.of(if (nullable) "%L | None" else "%L", local)
+      }
+    }
+    val declarationIndex = declarations.size
+    val local = "${prefix}_$declarationIndex"
+    // Reserve the alias before visiting children so recursive branches retain their wire checks.
+    if (model != null) declarations += PythonCodeBlock.of("")
+    val nested = if (model != null) visited + (name to local) else visited
+    val wire = customWireType(visited.keys)
+    val arguments = model?.aliases ?: this.arguments
+    val base =
+      when {
+        model?.kind == GeneratedModel.Kind.SCALAR_ALIAS ->
+          model.aliases.single().renderCustomWireType(declarations, prefix, nested)
+        wire.kind == GeneratedTypeRef.Kind.ARRAY ->
+          PythonCodeBlock.of(
+            "%L[%C]",
+            if (wire.collection?.name == "SET") "set" else "list",
+            arguments.firstOrNull()?.renderCustomWireType(declarations, prefix, nested) ?: PythonCodeBlock.of("object"),
+          )
+        wire.kind == GeneratedTypeRef.Kind.MAP ->
+          PythonCodeBlock.of(
+            "dict[str, %C]",
+            arguments.firstOrNull()?.renderCustomWireType(declarations, prefix, nested) ?: PythonCodeBlock.of("object"),
+          )
+        wire.kind == GeneratedTypeRef.Kind.UNION && arguments.isNotEmpty() ->
+          PythonCodeBlock.join(
+            arguments.map { it.renderCustomWireType(declarations, prefix, nested) },
+            separator = " | ",
+          )
+        else -> wire.renderPythonType(false)
+      }
+    val validated =
+      if (model != null && wire.kind != GeneratedTypeRef.Kind.NAMED) {
+        renderValidatedType(base, model.validation, "model '${model.name}'", wire)
+      } else {
+        base
+      }
+    val result = if (wire.nullable) PythonCodeBlock.of("%C | None", validated) else validated
+    if (model == null) return result
+    declarations[declarationIndex] = PythonCodeBlock.of("type %L = %C", local, result)
+    return PythonCodeBlock.of("%L", local)
+  }
+
+  // Wire adapters must never resolve to an application alias or its AfterValidator.
+  private fun GeneratedTypeRef.customWireType(visited: Set<String> = emptySet()): GeneratedTypeRef {
+    if (kind != GeneratedTypeRef.Kind.NAMED) {
+      return copy(arguments = arguments.map { it.customWireType(visited) })
+    }
+    val model = modelIndex[name]
+    if (model == null || name in visited) return GeneratedTypeRef.scalar("any").copy(nullable = nullable)
+    if (model.targets["python"]?.typeName == null &&
+      model.kind in setOf(GeneratedModel.Kind.ENUM, GeneratedModel.Kind.OBJECT)
+    ) {
+      return this
+    }
+    val nested = visited + name
+    val wire =
+      when (model.kind) {
+        GeneratedModel.Kind.ENUM -> GeneratedTypeRef.scalar("string")
+        GeneratedModel.Kind.OBJECT ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.MAP,
+            "map",
+            arguments = listOf(GeneratedTypeRef.scalar("any")),
+          )
+        GeneratedModel.Kind.SCALAR_ALIAS -> model.aliases.single().customWireType(nested)
+        GeneratedModel.Kind.ARRAY ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.ARRAY,
+            "array",
+            collection = model.collection,
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+        GeneratedModel.Kind.MAP ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.MAP,
+            "map",
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+        GeneratedModel.Kind.UNION ->
+          GeneratedTypeRef(
+            GeneratedTypeRef.Kind.UNION,
+            "union",
+            arguments =
+              model.aliases.map {
+                it.customWireType(nested)
+              },
+          )
+      }
+    return wire.copy(nullable = nullable || wire.nullable)
+  }
+
   private fun GeneratedModel.isObjectClass(): Boolean =
-    kind == GeneratedModel.Kind.OBJECT &&
+    targets["python"]?.typeName == null &&
+      kind == GeneratedModel.Kind.OBJECT &&
       !isDiscriminatedAlias()
 
   private fun GeneratedModel.isDiscriminatedAlias(): Boolean =
@@ -1282,7 +1473,9 @@ class PythonModelRenderer(
       }
 
   private fun GeneratedModelProperty.enumStringConstraints(): Map<String, String> =
-    if (modelProperties.declarationModel(type)?.let { it.kind == GeneratedModel.Kind.ENUM || it.nominal } == true) {
+    if (modelIndex[type.name]?.targets?.get("python")?.typeName == null &&
+      modelProperties.declarationModel(type)?.let { it.kind == GeneratedModel.Kind.ENUM || it.nominal } == true
+    ) {
       validation.filterKeys { it in setOf("minLength", "maxLength", "pattern") }
     } else {
       emptyMap()
@@ -1431,10 +1624,13 @@ class PythonModelRenderer(
     val constant = allowedValues?.takeIf { it.size == 1 && !model.patchable }
     val literalValue = discriminatorLiteralValue(model)
     val externalDiscriminatorType = renderExternalDiscriminatorPropertyType()
+    val customModel = modelIndex[type.name]?.takeIf { it.targets["python"]?.typeName != null }
     val basePropertyType =
       literalValue?.renderPythonLiteralType()
         ?: externalDiscriminatorType
-        ?: type.renderPythonType(nullable = false)
+        ?: type.renderPythonType(nullable = false).let { base ->
+          if (customModel != null) renderCustomValidatedType(base, validation, customModel) else base
+        }
     val valueType =
       if (!type.nullable &&
         (
@@ -1483,7 +1679,7 @@ class PythonModelRenderer(
     }
     val enumConstraints = enumStringConstraints()
     fieldArguments +=
-      (validation - enumConstraints.keys).renderFieldConstraints(
+      (if (customModel != null) emptyMap() else validation - enumConstraints.keys).renderFieldConstraints(
         "property '${model.name}.$name'",
         type,
         requiresUniqueListValidation(),
