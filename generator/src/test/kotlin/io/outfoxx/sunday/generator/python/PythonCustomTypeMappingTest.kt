@@ -34,6 +34,100 @@ import java.nio.file.Path
 
 class PythonCustomTypeMappingTest : PythonTest() {
   @Test
+  fun `custom numeric bounds retain their exclusive flags`(compiler: PythonCompiler) {
+    val constraints =
+      listOf(
+        "minimum" to "0",
+        "maximum" to "10",
+      )
+    val models =
+      constraints.flatMap { (bound, value) ->
+        val exclusive = if (bound == "minimum") "exclusiveMinimum" else "exclusiveMaximum"
+        listOf(false, true).map { alreadyExclusive ->
+          GeneratedModel(
+            "${bound}$alreadyExclusive",
+            GeneratedModel.Kind.SCALAR_ALIAS,
+            aliases = listOf(GeneratedTypeRef.scalar("number")),
+            validation = mapOf(bound to value) + if (alreadyExclusive) mapOf(exclusive to "true") else emptyMap(),
+            targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Number")),
+          )
+        }
+      }
+    val record =
+      GeneratedModel(
+        "Record",
+        GeneratedModel.Kind.OBJECT,
+        properties =
+          models.map { model ->
+            val bound = if (model.name.startsWith("minimum")) "minimum" else "maximum"
+            val exclusive = if (bound == "minimum") "exclusiveMinimum" else "exclusiveMaximum"
+            val value =
+              if (model.name.endsWith("true")) {
+                if (bound == "minimum") "1" else "9"
+              } else {
+                model.validation.getValue(bound)
+              }
+            GeneratedModelProperty(
+              model.name,
+              GeneratedTypeRef.named(model.name),
+              required = true,
+              validation = mapOf(bound to value, exclusive to "true"),
+            )
+          },
+      )
+    val domain =
+      PythonModuleBuilder("test_api/domain.py")
+        .addCode(
+          PythonCodeBlock.of(
+            "%L",
+            """
+            from pydantic import GetCoreSchemaHandler
+            from pydantic_core import core_schema
+
+
+            class Number:
+                def __init__(self, value: float):
+                    self.value = value
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(lambda value: value.value),
+                    )
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          domain,
+          PythonModelRenderer("test_api").renderModels(models + record),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          from test_api.models import Record
+          from test_api.domain import Number
+          boundaries = {"minimumfalse": 0, "maximumfalse": 10, "minimumtrue": 1, "maximumtrue": 9}
+          values = {name: Number(5) for name in boundaries}
+          record = Record.model_validate(values)
+          assert all(getattr(record, name) is value for name, value in values.items())
+          assert record.model_dump() == dict.fromkeys(boundaries, 5)
+          for name, boundary in boundaries.items():
+              try:
+                  Record.model_validate({**values, name: Number(boundary)})
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError(f"exclusive bound was ignored: {name}")
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
   fun `recursive wire containers retain checks at every depth`(compiler: PythonCompiler) {
     val models =
       listOf(

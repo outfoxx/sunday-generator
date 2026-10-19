@@ -288,7 +288,18 @@ class PythonModelRenderer(
         val wireType =
           renderValidatedType(
             declaration,
-            validation.filter { (key, value) -> model.validation[key] != value },
+            validation.filter { (key, value) ->
+              val companion =
+                when (key) {
+                  "minimum" -> "exclusiveMinimum"
+                  "exclusiveMinimum" -> "minimum"
+                  "maximum" -> "exclusiveMaximum"
+                  "exclusiveMaximum" -> "maximum"
+                  else -> null
+                }
+              model.validation[key] != value ||
+                (companion != null && model.validation[companion] != validation[companion])
+            },
             "model '${model.name}'",
             type.customWireType(),
           )
