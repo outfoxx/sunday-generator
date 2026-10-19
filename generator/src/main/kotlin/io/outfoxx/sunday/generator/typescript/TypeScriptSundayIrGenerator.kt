@@ -3519,6 +3519,7 @@ class TypeScriptSundayIrGenerator(
         enumModel != null || formattedType != null || declaration.name == "string" -> CodeBlock.of("%T.string()", Z)
         declaration.name in setOf("integer", "number") -> CodeBlock.of("%T.number()", Z)
         declaration.name == "boolean" -> CodeBlock.of("%T.boolean()", Z)
+        declaration.kind == GeneratedTypeRef.Kind.ARRAY -> CodeBlock.of("%T.array(%T.unknown())", Z, Z)
         else -> CodeBlock.of("%T.unknown()", Z)
       }
     if (allowedValues?.size == 1 &&

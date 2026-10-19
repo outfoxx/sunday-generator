@@ -30,6 +30,13 @@ components:
   schemas:
     Identifier:
       $ref: './mapped-identifier.yaml'
+    Identifiers:
+      type: array
+      items: {type: string}
+      minItems: 1
+      maxItems: 2
+      x-sunday-typeScriptType: DomainIdentifiers
+      x-sunday-typeScriptModule: './domain.js'
     Record:
       type: object
       required: [id]
@@ -37,3 +44,6 @@ components:
         id: {$ref: '#/components/schemas/Identifier'}
         optional: {$ref: '#/components/schemas/Identifier'}
         plain: {type: string}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/Identifiers'}

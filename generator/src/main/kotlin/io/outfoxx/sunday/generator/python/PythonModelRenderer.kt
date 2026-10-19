@@ -315,6 +315,7 @@ class PythonModelRenderer(
     }
     val model = modelIndex[name]
     if (model == null || name in visited) return GeneratedTypeRef.scalar("any").copy(nullable = nullable)
+    if (model.targets["python"]?.typeName == null) return this
     val nested = visited + name
     val wire =
       when (model.kind) {
@@ -330,6 +331,7 @@ class PythonModelRenderer(
           GeneratedTypeRef(
             GeneratedTypeRef.Kind.ARRAY,
             "array",
+            collection = model.collection,
             arguments =
               model.aliases.map {
                 it.customWireType(nested)

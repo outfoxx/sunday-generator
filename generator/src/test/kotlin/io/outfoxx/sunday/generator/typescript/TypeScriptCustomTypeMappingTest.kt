@@ -52,6 +52,10 @@ class TypeScriptCustomTypeMappingTest {
             "%L",
             """
             import {z} from 'zod';
+            export class DomainIdentifiers { constructor(readonly values: string[]) {} }
+            export const DomainIdentifiersSchema = z.codec(z.array(z.string()), z.instanceof(DomainIdentifiers), {
+              decode: (values) => new DomainIdentifiers(values), encode: (value) => value.values,
+            });
             export class DomainIdentifier { constructor(readonly value: string) {} }
             export const DomainIdentifierSchema = z.codec(z.string(), z.instanceof(DomainIdentifier), {
               decode: (value) => new DomainIdentifier(value), encode: (value) => value.value,
@@ -71,10 +75,16 @@ class TypeScriptCustomTypeMappingTest {
             import {FetchTransport} from '@outfoxx/sunday';
             import {createAPI} from './api.js';
             import {RecordSchema} from './record.js';
-            import {DomainIdentifier} from './domain.js';
+            import {DomainIdentifier, DomainIdentifiers} from './domain.js';
             const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
             const schema = runtime.resolveSchema(RecordSchema);
             const value = schema.parse({id: 'id:abc'});
+            const grouped = schema.parse({id: 'id:abc', groups: [['one']]});
+            if (!(grouped.groups?.[0] instanceof DomainIdentifiers)) throw new Error('Mapped array was lost');
+            if (JSON.stringify(z.encode(schema, grouped)) !== JSON.stringify({id: 'id:abc', groups: [['one']]})) throw new Error('Mapped array encoding was lost');
+            for (const group of [[], ['one', 'two', 'three']]) {
+              if (schema.safeParse({id: 'id:abc', groups: [group]}).success) throw new Error('Mapped array limits ignored');
+            }
             const id: DomainIdentifier = value.id;
             if (!(id instanceof DomainIdentifier)) throw new Error('Custom type was lost');
             const wire = z.encode(schema, value) as {id: string};

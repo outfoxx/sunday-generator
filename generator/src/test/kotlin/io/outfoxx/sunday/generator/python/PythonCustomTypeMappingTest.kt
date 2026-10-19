@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.GeneratedCollectionKind
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
@@ -32,6 +33,76 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 
 class PythonCustomTypeMappingTest : PythonTest() {
+  @Test
+  fun `mapped arrays preserve unique collections and nested enum checks`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel("Status", GeneratedModel.Kind.ENUM, values = listOf("active", "inactive")),
+        GeneratedModel(
+          "Statuses",
+          GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.named("Status")),
+          collection = GeneratedCollectionKind.SET,
+          validation = mapOf("minItems" to "1", "uniqueItems" to "true"),
+          targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Statuses")),
+        ),
+        GeneratedModel(
+          "Record",
+          GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("statuses", GeneratedTypeRef.named("Statuses"), required = true)),
+        ),
+      )
+    val domain =
+      PythonModuleBuilder("test_api/domain.py")
+        .addCode(
+          PythonCodeBlock.of(
+            "%L",
+            """
+            from pydantic import GetCoreSchemaHandler
+            from pydantic_core import core_schema
+
+
+            class Statuses:
+                def __init__(self, values: list[str]):
+                    self.values = values
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(lambda value: value.values),
+                    )
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          domain,
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          from test_api.models import Record
+          from test_api.domain import Statuses
+          statuses = Statuses(["active"])
+          record = Record(statuses=statuses)
+          assert record.statuses is statuses
+          assert record.model_dump() == {"statuses": ["active"]}
+          for values in ([], ["unknown"]):
+              try:
+                  Record(statuses=Statuses(values))
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("array wire constraints were ignored")
+          """.trimIndent(),
+      ),
+    )
+  }
+
   @Test
   fun `mapped enum wire constraints do not rerun custom validators`(compiler: PythonCompiler) {
     val models =
