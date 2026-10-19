@@ -5838,12 +5838,25 @@ class SwiftSundayIrGenerator(
   private val GeneratedPayload?.isSwiftStreamingRequestBody: Boolean
     get() = this?.streaming?.enabledFor(GenerationMode.Client) == true
 
-  private fun GeneratedModel.swiftValidationTypeName(): DeclaredTypeName =
-    if (target("swift", "swift")?.typeName != null) {
-      copy(targets = targets - "swift").swiftDeclaredTypeName()
-    } else {
-      swiftDeclaredTypeName()
+  private val customValidationTypeNames by lazy {
+    val names = mutableMapOf<String, NameAllocator>()
+
+    fun allocator(type: DeclaredTypeName): NameAllocator =
+      names.getOrPut(type.enclosingTypeName()?.toString() ?: type.moduleName) { NameAllocator() }
+    api.models.filter { it.target("swift", "swift")?.typeName == null }.forEach { model ->
+      val type = model.swiftDeclaredTypeName()
+      allocator(type).newName(type.simpleName, model)
     }
+    api.models.filter { it.target("swift", "swift")?.typeName != null }.associateWith { model ->
+      // Imported schemas can share a name while identifying different declarations.
+      val type = model.copy(targets = model.targets - "swift").swiftDeclaredTypeName()
+      val name = allocator(type).newName(type.simpleName, model)
+      type.enclosingTypeName()?.nestedType(name) ?: DeclaredTypeName.typeName("${type.moduleName}.$name")
+    }
+  }
+
+  private fun GeneratedModel.swiftValidationTypeName(): DeclaredTypeName =
+    customValidationTypeNames[this] ?: swiftDeclaredTypeName()
 
   private fun GeneratedModel.swiftDeclaredTypeName(): DeclaredTypeName {
     if (scope != null) {

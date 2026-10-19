@@ -225,6 +225,18 @@ class SwiftSundayIrObjectModelsTest : SwiftSundayIrTestSupport() {
           .writeTo(this)
       }
 
+    Files.createDirectories(compiler.srcDir)
+    Files.writeString(
+      compiler.srcDir.resolve("ApplicationModels.swift"),
+      """
+      public struct MainTest: Codable, Sendable {
+        public let mainValue: String
+      }
+      public struct LibraryTest: Codable, Sendable {
+        public let libraryValue: String
+      }
+      """.trimIndent(),
+    )
     assertTrue(compileTypes(compiler, builtTypes))
     assertTrue(source.contains("public let main: MainTest"), source)
     assertTrue(source.contains("public let library: LibraryTest"), source)
