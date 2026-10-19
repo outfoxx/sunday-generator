@@ -1,0 +1,66 @@
+asyncapi: 3.0.0
+info: {title: Custom Types, version: '1'}
+servers:
+  broker:
+    host: broker.example.com
+    protocol: amqp
+channels:
+  changes:
+    address: changes
+    x-sunday-service: Events
+    bindings:
+      amqp:
+        exchange: {name: events, type: topic}
+        routingKeys: [events]
+    messages:
+      changed:
+        payload: {$ref: '#/components/schemas/Record'}
+  identifiers:
+    address: identifiers
+    x-sunday-service: Events
+    bindings:
+      amqp:
+        exchange: {name: events, type: topic}
+        routingKeys: [events]
+    messages:
+      identifier:
+        payload: {$ref: '#/components/schemas/Identifier'}
+operations:
+  publishChanged:
+    action: send
+    channel: {$ref: '#/channels/changes'}
+  publishIdentifier:
+    action: send
+    channel: {$ref: '#/channels/identifiers'}
+components:
+  schemas:
+    Identifier:
+      $ref: './identifier.yaml'
+    Alias:
+      $ref: '#/components/schemas/Identifier'
+    LocalIdentifier:
+      type: string
+      x-sunday-kotlinType: io.example.Identifier
+      x-sunday-swiftType: DomainIdentifier
+      x-sunday-typeScriptType: DomainIdentifier
+      x-sunday-typeScriptModule: './domain.js'
+      x-sunday-pythonType: test_api.domain.Identifier
+    Identifiers:
+      type: array
+      items: {type: string}
+      minItems: 1
+      maxItems: 2
+      x-sunday-typeScriptType: DomainIdentifiers
+      x-sunday-typeScriptModule: './domain.js'
+    Record:
+      type: object
+      required: [id]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        alias: {$ref: '#/components/schemas/Alias'}
+        local: {$ref: '#/components/schemas/LocalIdentifier'}
+        optional: {$ref: '#/components/schemas/Identifier'}
+        plain: {type: string}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/Identifiers'}

@@ -109,6 +109,7 @@ class AsyncApiToGeneratedApiTest {
   ) {
     val api = AsyncApiToGeneratedApi().convertFragment(testUri).api
     val event = api.models.single { it.name == "Event" }
+    assertEquals("kind", event.discriminator)
     val pattern = event.patternProperties.single()
     assertEquals("^x-", pattern.pattern)
     assertTrue(pattern.type.nullable)
@@ -770,6 +771,9 @@ class AsyncApiToGeneratedApiTest {
   ) {
     val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
     val models = fragment.api.models.associateBy { model -> model.name }
+
+    assertEquals("user", models.getValue("UserIdentity").discriminatorValue)
+    assertEquals("service", models.getValue("ServiceIdentity").discriminatorValue)
 
     assertThat(
       models["EventIdentity"],

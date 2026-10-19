@@ -38,8 +38,13 @@ class OpenApiReferenceResolver(
   fun resolve(sourceUri: URI): OpenApiReferenceResolution =
     Session(documentLoader ?: OpenApiDocumentLoader.create()).resolve(sourceUri)
 
+  /** Bundles component schemas without interpreting the surrounding API protocol objects. */
+  internal fun resolveComponentSchemas(sourceUri: URI): OpenApiReferenceResolution =
+    Session(documentLoader ?: OpenApiDocumentLoader.create(), schemasOnly = true).resolve(sourceUri)
+
   private class Session(
     private val documentLoader: OpenApiDocumentLoader,
+    private val schemasOnly: Boolean = false,
   ) {
 
     private val mapper = ObjectMapper(YAMLFactory()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
@@ -79,28 +84,33 @@ class OpenApiReferenceResolver(
         }
       }
       rootSchemas.values.forEach { discover(it, Kind.SCHEMA) }
-      root
-        .child("paths")
-        .children()
-        .values
-        .forEach { discover(it, Kind.PATH_ITEM) }
-      componentKinds.filterValues { it != Kind.SCHEMA }.forEach { (section, kind) ->
-        components
-          .child(section)
+      if (!schemasOnly) {
+        root
+          .child("paths")
           .children()
           .values
-          .forEach { discover(it, kind) }
+          .forEach { discover(it, Kind.PATH_ITEM) }
+        componentKinds.filterValues { it != Kind.SCHEMA }.forEach { (section, kind) ->
+          components
+            .child(section)
+            .children()
+            .values
+            .forEach { discover(it, kind) }
+        }
       }
       prepareDiscriminatorMappings()
       rootSchemas.forEach { (name, schema) -> schemas[name] = normalize(schema, Kind.SCHEMA) }
 
       val result = root.objectValue().toMutableMap()
-      if (root.value.has("servers")) result["servers"] = normalizedServers(root.child("servers"))
-      result["paths"] = root.child("paths").children().mapValues { (_, path) -> normalize(path, Kind.PATH_ITEM) }
+      if (!schemasOnly && root.value.has("servers")) result["servers"] = normalizedServers(root.child("servers"))
+      if (!schemasOnly) {
+        result["paths"] =
+          root.child("paths").children().mapValues { (_, path) -> normalize(path, Kind.PATH_ITEM) }
+      }
       result["components"] =
         components.objectValue().toMutableMap().apply {
           componentKinds.forEach { (section, kind) ->
-            if (kind != Kind.SCHEMA && components.value.has(section)) {
+            if (!schemasOnly && kind != Kind.SCHEMA && components.value.has(section)) {
               this[section] = components.child(section).children().mapValues { (_, node) -> normalize(node, kind) }
             }
           }
@@ -113,7 +123,8 @@ class OpenApiReferenceResolver(
       return OpenApiReferenceResolution(result, capturedDocuments.toMap()).also { resolution ->
         resolution.serverOrigins.putAll(serverOrigins)
         resolution.retrievalUri = root.document.uri.toString()
-        resolution.analysis.validateAll(normalizedSchemas)
+        // AsyncAPI composition is interpreted by its converter, not the OpenAPI intersection rules.
+        if (!schemasOnly) resolution.analysis.validateAll(normalizedSchemas)
       }
     }
 
@@ -129,6 +140,9 @@ class OpenApiReferenceResolver(
         if (kind == Kind.SCHEMA && node.value.has("\$ref") && !node.isSchemaAlias()) {
           val fields = normalizeFields(node, kind).toMutableMap()
           val target = reference(node, kind)
+          if (schemasOnly) {
+            return node.schema(fields + ("\$ref" to "#/components/schemas/${schemaName(target)}"))
+          }
           fields["allOf"] = listOf(mapOf("\$ref" to "#/components/schemas/${schemaName(target)}")) +
             (fields["allOf"] as? List<*>).orEmpty()
           return node.schema(fields)
@@ -185,6 +199,7 @@ class OpenApiReferenceResolver(
           val location = OpenApiReferenceLocations.child(kind, name)
           when {
             name == "servers" && kind in setOf(Kind.PATH_ITEM, Kind.OPERATION) -> normalizedServers(child)
+            schemasOnly && kind == Kind.SCHEMA && name == "discriminator" && child.value.isTextual -> child.rawValue()
             kind == Kind.SCHEMA && name == "discriminator" -> discriminator(child)
             // An unpromoted boolean retains the converter's unrestricted-object additionalProperties form.
             kind == Kind.SCHEMA &&
@@ -209,7 +224,7 @@ class OpenApiReferenceResolver(
     private fun schemaUse(node: Node): Any? {
       if (!node.value.isObject && !node.isTrueSchema()) return node.rawValue()
       schemaNames[node.target]?.let { return node.schema(mapOf("\$ref" to "#/components/schemas/$it")) }
-      if (!node.isSchemaAlias()) return normalize(node, Kind.SCHEMA)
+      if (!node.isSchemaAlias() && !(schemasOnly && node.value.has("\$ref"))) return normalize(node, Kind.SCHEMA)
       val target = reference(node, Kind.SCHEMA)
       return node.schema(normalizeFields(node, Kind.SCHEMA) + ("\$ref" to "#/components/schemas/${schemaName(target)}"))
     }

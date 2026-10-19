@@ -1,8 +1,14 @@
-# OpenAPI custom language type mappings
+# OpenAPI and AsyncAPI custom language type mappings
 
-A named OpenAPI schema can refer to an existing language type instead of generating
+A named OpenAPI or AsyncAPI schema can refer to an existing language type instead of generating
 a replacement model or using the schema's default scalar type. Mappings are
 independent: one contract can carry Kotlin, Swift, TypeScript, and Python types.
+
+AsyncAPI 2.x and 3.x use the same extensions on named `components.schemas`
+declarations. Mappings survive external schema references and direct aliases;
+`allOf` parents do not transfer their mapping to a child declaration. Kotlin
+broker payloads use the selected custom type, including client-specific mappings.
+Other languages use the same mapped model types and serialization contracts below.
 
 ## Kotlin
 
