@@ -282,11 +282,16 @@ class PythonModelRenderer(
       customValidators.getOrPut(model.name to validation) {
         val function = "_validate_custom_${customValidators.size}"
         val declarations = mutableListOf<PythonCodeBlock>()
+        val type = GeneratedTypeRef.named(model.name)
+        val declaration = type.renderCustomWireType(declarations, "_CustomWire${customValidators.size}")
+        // Usage constraints apply only at the root, not to recursive references to the declaration.
         val wireType =
-          GeneratedTypeRef
-            .named(
-              model.name,
-            ).renderCustomWireType(declarations, "_CustomWire${customValidators.size}", validationOverride = validation)
+          renderValidatedType(
+            declaration,
+            validation.filter { (key, value) -> model.validation[key] != value },
+            "model '${model.name}'",
+            type.customWireType(),
+          )
         function to
           PythonCodeBlock.of(
             "%C\n\n\ndef %L(value: %T) -> %T:\n" +
@@ -317,7 +322,6 @@ class PythonModelRenderer(
     declarations: MutableList<PythonCodeBlock>,
     prefix: String,
     visited: Map<String, String> = emptyMap(),
-    validationOverride: Map<String, String>? = null,
   ): PythonCodeBlock {
     val model = if (kind == GeneratedTypeRef.Kind.NAMED) modelIndex[name] else null
     if (model != null) {
@@ -356,7 +360,7 @@ class PythonModelRenderer(
       }
     val validated =
       if (model != null && wire.kind != GeneratedTypeRef.Kind.NAMED) {
-        renderValidatedType(base, validationOverride ?: model.validation, "model '${model.name}'", wire)
+        renderValidatedType(base, model.validation, "model '${model.name}'", wire)
       } else {
         base
       }

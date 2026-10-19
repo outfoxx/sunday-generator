@@ -116,6 +116,93 @@ class PythonCustomTypeMappingTest : PythonTest() {
   }
 
   @Test
+  fun `property limits do not constrain recursive declaration references`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          "Nodes",
+          GeneratedModel.Kind.ARRAY,
+          aliases =
+            listOf(
+              GeneratedTypeRef(
+                GeneratedTypeRef.Kind.UNION,
+                "union",
+                arguments = listOf(GeneratedTypeRef.scalar("string"), GeneratedTypeRef.named("Nodes")),
+              ),
+            ),
+          validation = mapOf("minItems" to "1"),
+          targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Groups")),
+        ),
+        GeneratedModel(
+          "Record",
+          GeneratedModel.Kind.OBJECT,
+          properties =
+            listOf(
+              GeneratedModelProperty(
+                "groups",
+                GeneratedTypeRef.named("Nodes"),
+                required = true,
+                validation =
+                  mapOf(
+                    "maxItems" to "1",
+                  ),
+              ),
+            ),
+        ),
+      )
+    val domain =
+      PythonModuleBuilder("test_api/domain.py")
+        .addCode(
+          PythonCodeBlock.of(
+            "%L",
+            """
+            from pydantic import GetCoreSchemaHandler
+            from pydantic_core import core_schema
+
+
+            class Groups:
+                def __init__(self, values: list[object]):
+                    self.values = values
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(lambda value: value.values),
+                    )
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          domain,
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          from test_api.models import Record
+          from test_api.domain import Groups
+          for values in ([["a", "b"]], ["leaf"], [[["a", "b", "c"]]]):
+              groups = Groups(values)
+              record = Record(groups=groups)
+              assert record.groups is groups
+              assert record.model_dump() == {"groups": values}
+          for values in ([], ["a", "b"], [[]], [[42]], [[[42]]], [["leaf", [[]]]]):
+              try:
+                  Record(groups=Groups(values))
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError(f"recursive wire constraints were ignored: {values}")
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
   fun `mapped groups validate nested unmapped containers on the wire`(compiler: PythonCompiler) {
     val models =
       listOf(
