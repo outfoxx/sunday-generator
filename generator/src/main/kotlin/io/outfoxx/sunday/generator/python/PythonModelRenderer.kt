@@ -281,18 +281,22 @@ class PythonModelRenderer(
     val (function, _) =
       customValidators.getOrPut(model.name to validation) {
         val function = "_validate_custom_${customValidators.size}"
-        val declaration = GeneratedTypeRef.named(model.name).customWireType()
+        val declarations = mutableListOf<PythonCodeBlock>()
         val wireType =
-          renderValidatedType(declaration.renderPythonType(false), validation, "model '${model.name}'", declaration)
+          GeneratedTypeRef
+            .named(
+              model.name,
+            ).renderCustomWireType(declarations, validationOverride = validation)
         function to
           PythonCodeBlock.of(
-            "def %L(value: %T) -> %T:\n" +
+            "def %L(value: %T) -> %T:\n%C\n" +
               "    wire = %T[object](\n        %C,\n    )\n" +
               "    wire.validate_python(%T(%T).dump_python(value, mode=\"json\"))\n" +
               "    return value",
             function,
             model.customPythonSymbol(),
             model.customPythonSymbol(),
+            PythonCodeBlock.join(declarations, separator = "\n"),
             PythonSymbol("pydantic", "TypeAdapter"),
             wireType,
             PythonSymbol("pydantic", "TypeAdapter"),
@@ -308,6 +312,49 @@ class PythonModelRenderer(
     )
   }
 
+  // Expand container aliases on the wire while retaining each declaration's own constraints.
+  private fun GeneratedTypeRef.renderCustomWireType(
+    declarations: MutableList<PythonCodeBlock>,
+    visited: Set<String> = emptySet(),
+    validationOverride: Map<String, String>? = null,
+  ): PythonCodeBlock {
+    val model = if (kind == GeneratedTypeRef.Kind.NAMED) modelIndex[name] else null
+    if (name in visited && model != null) return PythonCodeBlock.of("object")
+    val nested = if (model != null) visited + name else visited
+    val wire = customWireType(visited)
+    val arguments = model?.aliases ?: this.arguments
+    val base =
+      when {
+        model?.kind == GeneratedModel.Kind.SCALAR_ALIAS ->
+          model.aliases.single().renderCustomWireType(declarations, nested)
+        wire.kind == GeneratedTypeRef.Kind.ARRAY ->
+          PythonCodeBlock.of(
+            "%L[%C]",
+            if (wire.collection?.name == "SET") "set" else "list",
+            arguments.firstOrNull()?.renderCustomWireType(declarations, nested) ?: PythonCodeBlock.of("object"),
+          )
+        wire.kind == GeneratedTypeRef.Kind.MAP ->
+          PythonCodeBlock.of(
+            "dict[str, %C]",
+            arguments.firstOrNull()?.renderCustomWireType(declarations, nested) ?: PythonCodeBlock.of("object"),
+          )
+        wire.kind == GeneratedTypeRef.Kind.UNION && arguments.isNotEmpty() ->
+          PythonCodeBlock.join(arguments.map { it.renderCustomWireType(declarations, nested) }, separator = " | ")
+        else -> wire.renderPythonType(false)
+      }
+    val validated =
+      if (model != null && wire.kind != GeneratedTypeRef.Kind.NAMED) {
+        renderValidatedType(base, validationOverride ?: model.validation, "model '${model.name}'", wire)
+      } else {
+        base
+      }
+    val result = if (wire.nullable) PythonCodeBlock.of("%C | None", validated) else validated
+    if (model == null) return result
+    val local = "Wire${declarations.size}"
+    declarations += PythonCodeBlock.of("    type %L = %C", local, result)
+    return PythonCodeBlock.of("%L", local)
+  }
+
   // Wire adapters must never resolve to an application alias or its AfterValidator.
   private fun GeneratedTypeRef.customWireType(visited: Set<String> = emptySet()): GeneratedTypeRef {
     if (kind != GeneratedTypeRef.Kind.NAMED) {
@@ -315,7 +362,11 @@ class PythonModelRenderer(
     }
     val model = modelIndex[name]
     if (model == null || name in visited) return GeneratedTypeRef.scalar("any").copy(nullable = nullable)
-    if (model.targets["python"]?.typeName == null) return this
+    if (model.targets["python"]?.typeName == null &&
+      model.kind in setOf(GeneratedModel.Kind.ENUM, GeneratedModel.Kind.OBJECT)
+    ) {
+      return this
+    }
     val nested = visited + name
     val wire =
       when (model.kind) {

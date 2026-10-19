@@ -34,6 +34,101 @@ import java.nio.file.Path
 
 class PythonCustomTypeMappingTest : PythonTest() {
   @Test
+  fun `mapped groups validate nested unmapped containers on the wire`(compiler: PythonCompiler) {
+    val models =
+      listOf(
+        GeneratedModel(
+          "Code",
+          GeneratedModel.Kind.SCALAR_ALIAS,
+          aliases = listOf(GeneratedTypeRef.scalar("string")),
+          validation = mapOf("pattern" to "^id:"),
+          targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Code")),
+        ),
+        GeneratedModel(
+          "Codes",
+          GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.named("Code")),
+          validation = mapOf("minItems" to "1", "maxItems" to "2"),
+        ),
+        GeneratedModel(
+          "Groups",
+          GeneratedModel.Kind.ARRAY,
+          aliases = listOf(GeneratedTypeRef.named("Codes")),
+          validation = mapOf("minItems" to "1"),
+          targets = mapOf("python" to GeneratedTarget(typeName = "test_api.domain.Groups")),
+        ),
+        GeneratedModel(
+          "Record",
+          GeneratedModel.Kind.OBJECT,
+          properties = listOf(GeneratedModelProperty("groups", GeneratedTypeRef.named("Groups"), required = true)),
+        ),
+      )
+    val domain =
+      PythonModuleBuilder("test_api/domain.py")
+        .addCode(
+          PythonCodeBlock.of(
+            "%L",
+            """
+            from pydantic import GetCoreSchemaHandler
+            from pydantic_core import core_schema
+
+
+            class Code:
+                def __init__(self, value: str):
+                    self.value = value
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(lambda value: value.value),
+                    )
+
+
+            class Groups:
+                def __init__(self, values: list[list[Code]]):
+                    self.values = values
+
+                @classmethod
+                def __get_pydantic_core_schema__(cls, source: object, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+                    return core_schema.is_instance_schema(
+                        cls,
+                        serialization=core_schema.plain_serializer_function_ser_schema(
+                            lambda value: [[code.value for code in codes] for codes in value.values],
+                        ),
+                    )
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileModules(
+        compiler,
+        listOf(
+          domain,
+          PythonModelRenderer("test_api").renderModels(models),
+          PythonModuleBuilder("test_api/__init__.py").build(),
+        ),
+        smokeCode =
+          """
+          from test_api.models import Record
+          from test_api.domain import Code, Groups
+          groups = Groups([[Code("id:abc")]])
+          record = Record(groups=groups)
+          assert record.groups is groups
+          assert record.model_dump() == {"groups": [["id:abc"]]}
+          for values in ([], [[]], [[Code("id:a"), Code("id:b"), Code("id:c")]], [[Code("invalid")]]):
+              try:
+                  Record(groups=Groups(values))
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("nested wire constraints were ignored")
+          """.trimIndent(),
+      ),
+    )
+  }
+
+  @Test
   fun `mapped arrays preserve unique collections and nested enum checks`(compiler: PythonCompiler) {
     val models =
       listOf(
