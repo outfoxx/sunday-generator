@@ -646,7 +646,7 @@ class AsyncApiToGeneratedApi(
 
     val discriminatorValue =
       schema.discriminatorValue(discriminator)
-        ?: currentSourceDocument.discriminatorValue(name).takeIf { inherits.isNotEmpty() }
+        ?: currentSourceDocument.discriminatorValue(name, inherits.isNotEmpty())
 
     return GeneratedModel(
       name = name,
@@ -1186,7 +1186,10 @@ class AsyncApiToGeneratedApi(
         discriminatorValue to materializedNamedTypeRef(modelName, location, localModels)
       }.toMap()
 
-  private fun AsyncApiSourceDocument.discriminatorValue(modelName: String): String? =
+  private fun AsyncApiSourceDocument.discriminatorValue(
+    modelName: String,
+    inherited: Boolean,
+  ): String? =
     schemas()
       .values
       .firstNotNullOfOrNull { schema ->
@@ -1196,7 +1199,11 @@ class AsyncApiToGeneratedApi(
           .firstNotNullOfOrNull { (value, ref) ->
             val discriminatorValue = value as? String ?: return@firstNotNullOfOrNull null
             val mappedModelName = (ref as? String)?.substringAfterLast('/') ?: return@firstNotNullOfOrNull null
-            discriminatorValue.takeIf { mappedModelName == modelName }
+            // External tags belong to the containing union, but a member's own constant tag is model metadata.
+            discriminatorValue.takeIf {
+              mappedModelName == modelName &&
+                (inherited || schemas()[modelName]?.discriminatorValue(schema.discriminatorName()) == it)
+            }
           }
       }
 

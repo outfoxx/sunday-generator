@@ -772,6 +772,9 @@ class AsyncApiToGeneratedApiTest {
     val fragment = AsyncApiToGeneratedApi().convertFragment(testUri)
     val models = fragment.api.models.associateBy { model -> model.name }
 
+    assertEquals("user", models.getValue("UserIdentity").discriminatorValue)
+    assertEquals("service", models.getValue("ServiceIdentity").discriminatorValue)
+
     assertThat(
       models["EventIdentity"],
       equalTo(
