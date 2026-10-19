@@ -286,17 +286,17 @@ class PythonModelRenderer(
           GeneratedTypeRef
             .named(
               model.name,
-            ).renderCustomWireType(declarations, validationOverride = validation)
+            ).renderCustomWireType(declarations, "_CustomWire${customValidators.size}", validationOverride = validation)
         function to
           PythonCodeBlock.of(
-            "def %L(value: %T) -> %T:\n%C\n" +
+            "%C\n\n\ndef %L(value: %T) -> %T:\n" +
               "    wire = %T[object](\n        %C,\n    )\n" +
               "    wire.validate_python(%T(%T).dump_python(value, mode=\"json\"))\n" +
               "    return value",
+            PythonCodeBlock.join(declarations, separator = "\n"),
             function,
             model.customPythonSymbol(),
             model.customPythonSymbol(),
-            PythonCodeBlock.join(declarations, separator = "\n"),
             PythonSymbol("pydantic", "TypeAdapter"),
             wireType,
             PythonSymbol("pydantic", "TypeAdapter"),
@@ -315,31 +315,43 @@ class PythonModelRenderer(
   // Expand container aliases on the wire while retaining each declaration's own constraints.
   private fun GeneratedTypeRef.renderCustomWireType(
     declarations: MutableList<PythonCodeBlock>,
-    visited: Set<String> = emptySet(),
+    prefix: String,
+    visited: Map<String, String> = emptyMap(),
     validationOverride: Map<String, String>? = null,
   ): PythonCodeBlock {
     val model = if (kind == GeneratedTypeRef.Kind.NAMED) modelIndex[name] else null
-    if (name in visited && model != null) return PythonCodeBlock.of("object")
-    val nested = if (model != null) visited + name else visited
-    val wire = customWireType(visited)
+    if (model != null) {
+      visited[name]?.let { local ->
+        return PythonCodeBlock.of(if (nullable) "%L | None" else "%L", local)
+      }
+    }
+    val declarationIndex = declarations.size
+    val local = "${prefix}_$declarationIndex"
+    // Reserve the alias before visiting children so recursive branches retain their wire checks.
+    if (model != null) declarations += PythonCodeBlock.of("")
+    val nested = if (model != null) visited + (name to local) else visited
+    val wire = customWireType(visited.keys)
     val arguments = model?.aliases ?: this.arguments
     val base =
       when {
         model?.kind == GeneratedModel.Kind.SCALAR_ALIAS ->
-          model.aliases.single().renderCustomWireType(declarations, nested)
+          model.aliases.single().renderCustomWireType(declarations, prefix, nested)
         wire.kind == GeneratedTypeRef.Kind.ARRAY ->
           PythonCodeBlock.of(
             "%L[%C]",
             if (wire.collection?.name == "SET") "set" else "list",
-            arguments.firstOrNull()?.renderCustomWireType(declarations, nested) ?: PythonCodeBlock.of("object"),
+            arguments.firstOrNull()?.renderCustomWireType(declarations, prefix, nested) ?: PythonCodeBlock.of("object"),
           )
         wire.kind == GeneratedTypeRef.Kind.MAP ->
           PythonCodeBlock.of(
             "dict[str, %C]",
-            arguments.firstOrNull()?.renderCustomWireType(declarations, nested) ?: PythonCodeBlock.of("object"),
+            arguments.firstOrNull()?.renderCustomWireType(declarations, prefix, nested) ?: PythonCodeBlock.of("object"),
           )
         wire.kind == GeneratedTypeRef.Kind.UNION && arguments.isNotEmpty() ->
-          PythonCodeBlock.join(arguments.map { it.renderCustomWireType(declarations, nested) }, separator = " | ")
+          PythonCodeBlock.join(
+            arguments.map { it.renderCustomWireType(declarations, prefix, nested) },
+            separator = " | ",
+          )
         else -> wire.renderPythonType(false)
       }
     val validated =
@@ -350,8 +362,7 @@ class PythonModelRenderer(
       }
     val result = if (wire.nullable) PythonCodeBlock.of("%C | None", validated) else validated
     if (model == null) return result
-    val local = "Wire${declarations.size}"
-    declarations += PythonCodeBlock.of("    type %L = %C", local, result)
+    declarations[declarationIndex] = PythonCodeBlock.of("type %L = %C", local, result)
     return PythonCodeBlock.of("%L", local)
   }
 
