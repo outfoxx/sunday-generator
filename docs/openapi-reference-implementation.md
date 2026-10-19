@@ -126,5 +126,5 @@ existing protocol hierarchy representation, preserving parent assignability.
 
 ## Custom language types
 
-See [OpenAPI custom language type mappings](custom-type-mappings.md) for schema extensions,
+See [OpenAPI and AsyncAPI custom language type mappings](custom-type-mappings.md) for schema extensions,
 client/server precedence, and application conversion requirements.

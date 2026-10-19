@@ -16,9 +16,6 @@
 
 package io.outfoxx.sunday.generator.ir
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.outfoxx.sunday.generator.genError
 import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
 import io.outfoxx.sunday.generator.utils.toLowerCamelCase
@@ -511,9 +508,21 @@ class AsyncApiToGeneratedApi(
     localModels: MutableMap<String, GeneratedModel>,
   ): GeneratedModel =
     generatedModelDeclaration(name, schema, location, localModels).copy(
+      targets = declarationTypeSchema(schema).languageTypeTargets("AsyncAPI model '$name'"),
       patchable = GeneratedPatchModels.annotation(schema["x-sunday-patchable"], "AsyncAPI model '$name'"),
       tolerance = GeneratedTolerance.parse(schema["x-sunday-tolerance"], "AsyncAPI model '$name' x-sunday-tolerance"),
     )
+
+  // A direct reference inherits mappings; allOf parents do not map the child declaration.
+  private fun declarationTypeSchema(
+    schema: Map<*, *>,
+    visited: Set<String> = emptySet(),
+  ): Map<*, *> {
+    val reference = schema.refName() ?: return schema
+    if (reference in visited) return schema
+    val target = currentSourceDocument.schemas()[reference] ?: return schema
+    return declarationTypeSchema(target, visited + reference) + schema
+  }
 
   private fun generatedModelDeclaration(
     name: String,
@@ -1431,7 +1440,17 @@ class AsyncApiToGeneratedApi(
                 .listValue("messages")
                 .orEmpty()
                 .firstNotNullOfOrNull { message -> resolveMessage(message) }
-                ?: operation.mapValue("message")?.let(::resolveMessage),
+                ?: operation.mapValue("message")?.let(::resolveMessage)
+                ?: if (!operation.containsKey("messages")) {
+                  channel.source
+                    .mapValue(
+                      "messages",
+                    )?.values
+                    ?.filterIsInstance<Map<*, *>>()
+                    ?.firstNotNullOfOrNull(::resolveMessage)
+                } else {
+                  null
+                },
             security = security.declarations(operation, "#/operations/$operationId/security"),
           )
         }
@@ -1582,15 +1601,10 @@ class AsyncApiToGeneratedApi(
 
     companion object {
 
-      private val yamlMapper = ObjectMapper(YAMLFactory())
-
-      fun read(location: String): AsyncApiSourceDocument =
-        AsyncApiSourceDocument(
-          URI(location).toURL().openStream().use { input ->
-            yamlMapper.readValue(input, object : TypeReference<Map<String, Any?>>() {})
-          },
-          location,
-        )
+      fun read(location: String): AsyncApiSourceDocument {
+        val resolved = OpenApiReferenceResolver().resolveComponentSchemas(URI(location))
+        return AsyncApiSourceDocument(resolved.document, location)
+      }
     }
   }
 

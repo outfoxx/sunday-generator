@@ -1,0 +1,9 @@
+type: string
+pattern: '^id:[a-z]+$'
+minLength: 4
+maxLength: 24
+x-sunday-kotlinType: io.example.Identifier
+x-sunday-swiftType: DomainIdentifier
+x-sunday-typeScriptType: DomainIdentifier
+x-sunday-typeScriptModule: './domain.js'
+x-sunday-pythonType: test_api.domain.Identifier

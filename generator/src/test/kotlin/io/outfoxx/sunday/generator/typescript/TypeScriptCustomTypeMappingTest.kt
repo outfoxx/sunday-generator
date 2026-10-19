@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.generator.typescript
 
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.OpenApiToGeneratedApi
 import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
@@ -28,6 +29,8 @@ import io.outfoxx.typescriptpoet.TypeName
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 @TypeScriptTest
@@ -104,6 +107,88 @@ class TypeScriptCustomTypeMappingTest {
             try { api.identify(new DomainIdentifier('invalid'), new DomainIdentifier('id:def'), [new DomainIdentifier('id:ghi')]); }
             catch { rejected = true; }
             if (!rejected) throw new Error('Custom parameter constraints ignored');
+            """.trimIndent(),
+          ),
+        ).build()
+    assertTrue(
+      compileAndRunTypes(
+        compiler,
+        registry.buildTypes() +
+          mapOf(
+            TypeName.namedImport("DomainIdentifier", "!domain") to domain,
+            TypeName.namedImport("MappingCheck", "!mapping-check") to check,
+          ),
+        "mapping-check",
+        esm = true,
+      ),
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["2", "3"])
+  fun `AsyncAPI custom types retain runtime codecs`(
+    version: String,
+    compiler: TypeScriptCompiler,
+  ) {
+    val api =
+      AsyncApiToGeneratedApi()
+        .convertFragment(
+          Path.of("src/test/resources/asyncapi/ir/custom-types/api-$version.yaml").toUri(),
+        ).api
+        .copy(services = emptyList())
+    val registry = TypeScriptTypeRegistry(setOf(), importStyle = TypeScriptTypeRegistry.ImportStyle.NodeNext)
+    TypeScriptSundayIrGenerator(
+      api,
+      registry,
+      TypeScriptSundayOptions("https://example.com/", listOf("application/json"), "API"),
+    ).generateServiceTypes()
+    val domain =
+      ModuleSpec
+        .builder("domain", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            "%L",
+            """
+            import {z} from 'zod';
+            export class DomainIdentifiers { constructor(readonly values: string[]) {} }
+            export const DomainIdentifiersSchema = z.codec(z.array(z.string()), z.instanceof(DomainIdentifiers), {
+              decode: (values) => new DomainIdentifiers(values), encode: (value) => value.values,
+            });
+            export class DomainIdentifier { constructor(readonly value: string) {} }
+            export const DomainIdentifierSchema = z.codec(z.string(), z.instanceof(DomainIdentifier), {
+              decode: (value) => new DomainIdentifier(value), encode: (value) => value.value,
+            });
+            """.trimIndent(),
+          ),
+        ).build()
+    val check =
+      ModuleSpec
+        .builder("mapping-check", ModuleSpec.Kind.MODULE)
+        .addCode(
+          CodeBlock.of(
+            "%L",
+            """
+            import {z} from 'zod';
+            import {createSchemaRuntime, DateEncoding, ArrayBufferEncoding} from '@outfoxx/sunday';
+            import {RecordSchema} from './record.js';
+            import {DomainIdentifier, DomainIdentifiers} from './domain.js';
+            const runtime = createSchemaRuntime({format: 'json', dateEncoding: DateEncoding.ISO8601, numericDateDecoding: 0, arrayBufferEncoding: ArrayBufferEncoding.BASE64});
+            const schema = runtime.resolveSchema(RecordSchema);
+            const value = schema.parse({id: 'id:abc'});
+            const grouped = schema.parse({id: 'id:abc', groups: [['one']]});
+            if (!(grouped.groups?.[0] instanceof DomainIdentifiers)) throw new Error('Mapped array was lost');
+            if (JSON.stringify(z.encode(schema, grouped)) !== JSON.stringify({id: 'id:abc', groups: [['one']]})) throw new Error('Mapped array encoding was lost');
+            for (const group of [[], ['one', 'two', 'three']]) {
+              if (schema.safeParse({id: 'id:abc', groups: [group]}).success) throw new Error('Mapped array limits ignored');
+            }
+            const id: DomainIdentifier = value.id;
+            if (!(id instanceof DomainIdentifier)) throw new Error('Custom type was lost');
+            const wire = z.encode(schema, value) as {id: string};
+            if (wire.id !== 'id:abc') throw new Error('Custom encoding was lost');
+            if (schema.safeParse({id: 'invalid'}).success) throw new Error('Wire constraints ignored');
+            const aliases = schema.parse({id: 'id:abc', alias: 'id:def', local: 'id:ghi', plain: 'plain'});
+            if (!(aliases.alias instanceof DomainIdentifier) || !(aliases.local instanceof DomainIdentifier)) throw new Error('Alias mapping was lost');
+            if (aliases.plain !== 'plain') throw new Error('Unmapped scalar changed');
             """.trimIndent(),
           ),
         ).build()

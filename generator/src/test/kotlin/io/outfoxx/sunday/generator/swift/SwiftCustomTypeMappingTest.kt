@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.generator.swift
 
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.ir.AsyncApiToGeneratedApi
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 import io.outfoxx.sunday.generator.ir.GeneratedModelProperty
 import io.outfoxx.sunday.generator.ir.GeneratedTarget
@@ -30,17 +31,29 @@ import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
 
 @SwiftTest
 class SwiftCustomTypeMappingTest {
-  @Test
-  fun `custom Swift scalars decode encode and validate`(compiler: SwiftCompiler) {
+  @ParameterizedTest
+  @ValueSource(strings = ["openapi", "2", "3"])
+  fun `custom Swift scalars decode encode and validate`(
+    source: String,
+    compiler: SwiftCompiler,
+  ) {
     val api =
-      OpenApiToGeneratedApi().convert(
-        Path.of("src/test/resources/openapi/ir/custom-types/mapped-api.yaml").toUri(),
-      )
+      if (source == "openapi") {
+        OpenApiToGeneratedApi().convert(Path.of("src/test/resources/openapi/ir/custom-types/mapped-api.yaml").toUri())
+      } else {
+        AsyncApiToGeneratedApi()
+          .convertFragment(
+            Path.of("src/test/resources/asyncapi/ir/custom-types/api-$source.yaml").toUri(),
+          ).api
+          .copy(services = emptyList())
+      }
     val registry = SwiftTypeRegistry(setOf())
     SwiftSundayIrGenerator(
       api.copy(
