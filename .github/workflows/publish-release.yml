@@ -4,20 +4,44 @@ on:
   push:
     tags: [ "[0-9]+.[0-9]+.[0-9]+**" ]
 
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release tag to resume (Maven upload is always skipped)'
+        required: true
+        type: string
+
 permissions:
   contents: write
 
 concurrency:
-  group: publish-release-${{github.ref_name}}
+  group: publish-release-${{ inputs.version || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
 
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Validate version
+      run: |
+        python3 - <<'PY'
+        import os, sys
+        sys.path.insert(0, 'scripts/ci')
+        from wait_for_maven_release import artifact_urls
+        artifact_urls(os.environ['RELEASE_VERSION'])
+        PY
+        cp -R scripts/ci "$RUNNER_TEMP/sunday-release-tools"
+
+    - uses: actions/checkout@v4
+      with:
+        ref: refs/tags/${{ env.RELEASE_VERSION }}
 
     - uses: actions/setup-java@v4
       with:
@@ -29,22 +53,30 @@ jobs:
 
     - name: Git Short SHA
       run: |
-        calculatedSha=$(git rev-parse --short ${{ github.sha }})
+        calculatedSha=$(git rev-parse --short HEAD)
         echo "GIT_COMMIT_SHA=$calculatedSha" >> "$GITHUB_ENV"
+
+    - name: Inventory existing publications
+      id: existing
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: python3 "$RUNNER_TEMP/sunday-release-tools/release_state.py" inventory "$RELEASE_VERSION"
 
     - name: Build Artifacts & Documentation
       run: >-
         ./gradlew
-        -PreleaseVersion=${{ github.ref_name }}
-        build :dokkaGenerate
+        -PreleaseVersion="$RELEASE_VERSION"
+        build :dokkaGenerate :generator:dokkaJavadocJar :cli:dokkaJavadocJar :gradle-plugin:javadocJar
         -x test
       env:
         GIT_COMMIT_SHA: ${{ env.GIT_COMMIT_SHA }}
 
+    # A resume/rerun may have an accepted deployment that is still returning 404 publicly.
     - name: Publish Maven Release
+      if: github.event_name == 'push' && github.run_attempt == 1 && steps.existing.outputs.maven == 'false'
       run: >-
         ./gradlew
-        -PreleaseVersion=${{ github.ref_name }}
+        -PreleaseVersion="$RELEASE_VERSION"
         publishToMavenCentral
         -x test
       env:
@@ -55,15 +87,20 @@ jobs:
         ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
 
     - name: Verify Maven Availability
-      timeout-minutes: 20
+      timeout-minutes: 75
+      run: python3 "$RUNNER_TEMP/sunday-release-tools/wait_for_maven_release.py" "$RELEASE_VERSION"
+
+    - name: Refresh downstream publication state
+      id: downstream
       env:
-        RELEASE_VERSION: ${{ github.ref_name }}
-      run: python3 scripts/ci/wait_for_maven_release.py "$RELEASE_VERSION"
+        GH_TOKEN: ${{ github.token }}
+      run: python3 "$RUNNER_TEMP/sunday-release-tools/release_state.py" inventory "$RELEASE_VERSION"
 
     - name: Publish Plugin Release
+      if: steps.downstream.outputs.plugin == 'false'
       run: >-
         ./gradlew
-        -PreleaseVersion=${{ github.ref_name }}
+        -PreleaseVersion="$RELEASE_VERSION"
         -Pgradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }} -Pgradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
         publishPlugins -x test
       env:
@@ -72,9 +109,10 @@ jobs:
         ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
 
     - name: Publish Docker
+      if: steps.downstream.outputs.docker == 'false'
       run: >-
         ./gradlew
-        -PreleaseVersion=${{ github.ref_name }}
+        -PreleaseVersion="$RELEASE_VERSION"
         --continue
         -Djib.to.auth.username=${{ secrets.DOCKER_PUBLISH_USER }}
         -Djib.to.auth.password=${{ secrets.DOCKER_PUBLISH_TOKEN }}
@@ -82,23 +120,25 @@ jobs:
         jib
         -x test
 
+    - name: Stage Documentation
+      if: steps.downstream.outputs.docs == 'false'
+      run: |
+        mkdir -p "build/release-docs"
+        if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_RUN_ATTEMPT" = 1 ]; then
+          cp -R build/dokka/. "build/release-docs/"
+        else
+          cp -R "build/dokka/$RELEASE_VERSION" "build/release-docs/$RELEASE_VERSION"
+        fi
+
     - name: Publish Documentation
+      if: steps.downstream.outputs.docs == 'false'
       uses: JamesIves/github-pages-deploy-action@v4
       with:
         branch: gh-pages
         clean: false
-        folder: build/dokka
+        folder: build/release-docs
 
-    - name: Publish GitHub Release
-      run: >-
-        ./gradlew
-        -PreleaseVersion=${{ github.ref_name }}
-        -Pgithub.token=${{ secrets.GITHUB_TOKEN }}
-        githubRelease
-        -x test
+    - name: Complete GitHub Release
       env:
-        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
-        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
-        ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
-        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+        GH_TOKEN: ${{ github.token }}
+      run: python3 "$RUNNER_TEMP/sunday-release-tools/release_state.py" github "$RELEASE_VERSION"
