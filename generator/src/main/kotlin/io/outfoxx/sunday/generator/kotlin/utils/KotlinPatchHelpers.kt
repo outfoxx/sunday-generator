@@ -28,6 +28,7 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
+import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.ir.GeneratedModel
 
 /** Adds conversion adapters to paired models and emits one shared RFC 7396 implementation. */
@@ -68,6 +69,11 @@ internal fun addKotlinPatchHelpers(
   val mapperParameter = ParameterSpec.builder("mapper", mapper).defaultValue("%T.mapper", support).build()
   pairs.forEach { (original, patch) ->
     val builder = original.value.second
+    val tag =
+      patch.value.first.properties
+        .firstOrNull { it.patchDiscriminator }
+        ?.let { it.serializationName ?: it.name }
+    val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null")
     val parentHasPair =
       original.value.first.inherits.any { parent ->
         pairs.any {
@@ -84,10 +90,10 @@ internal fun addKotlinPatchHelpers(
         .apply {
           if (parentHasPair) {
             addModifiers(KModifier.OVERRIDE)
-          } else if (KModifier.OPEN in builder.modifiers) {
+          } else if (KModifier.OPEN in builder.modifiers || KModifier.SEALED in builder.modifiers) {
             addModifiers(KModifier.OPEN)
           }
-          addStatement("return %T.patch(this, null, %T::class.java, mapper)", support, patch.key)
+          addStatement("return %T.patch(this, null, %T::class.java, mapper, %L)", support, patch.key, tagCode)
         }.build()
     builder.addFunction(snapshot)
     builder.addFunction(
@@ -97,7 +103,7 @@ internal fun addKotlinPatchHelpers(
         .addParameter("from", original.key)
         .addParameter(mapperParameter)
         .returns(patch.key)
-        .addStatement("return %T.patch(this, from, %T::class.java, mapper)", support, patch.key)
+        .addStatement("return %T.patch(this, from, %T::class.java, mapper, %L)", support, patch.key, tagCode)
         .build(),
     )
     builder.addFunction(
@@ -107,7 +113,7 @@ internal fun addKotlinPatchHelpers(
         .addParameter("patch", patch.key)
         .addParameter(mapperParameter)
         .returns(original.key)
-        .addStatement("return %T.apply(this, patch, %T::class.java, mapper)", support, original.key)
+        .addStatement("return %T.apply(this, patch, %T::class.java, mapper, %L)", support, original.key, tagCode)
         .build(),
     )
     val companion =
@@ -156,6 +162,7 @@ internal fun addKotlinPatchHelpers(
           it.parameterizedBy(generic)
         },
       ).addParameter("mapper", mapper)
+      .addParameter("discriminator", String::class.asTypeName().copy(nullable = true))
       .returns(generic)
       .apply {
         validation?.let { addStatement("%T.response(value)", it.modelValidation) }
@@ -163,6 +170,19 @@ internal fun addKotlinPatchHelpers(
           "val tree = difference(mapper.valueToTree(value), original?.let { mapper.valueToTree<%T>(it) })",
           node,
         )
+        beginControlFlow("if (discriminator != null)")
+        addStatement("val current = mapper.valueToTree<%T>(value).get(discriminator)", node)
+        addStatement(
+          "require(original == null || mapper.valueToTree<%T>(original).get(discriminator) == current) { %S }",
+          node,
+          "A merge patch cannot change the discriminator",
+        )
+        addStatement(
+          "(tree as %T).set<%T>(discriminator, current)",
+          ClassName("com.fasterxml.jackson.databind.node", "ObjectNode"),
+          node,
+        )
+        endControlFlow()
         addStatement("val result = mapper.treeToValue(tree, type)")
         addStatement(
           "require(mapper.valueToTree<%T>(result) == tree) { %S }",
@@ -184,12 +204,21 @@ internal fun addKotlinPatchHelpers(
           it.parameterizedBy(generic)
         },
       ).addParameter("mapper", mapper)
+      .addParameter("discriminator", String::class.asTypeName().copy(nullable = true))
       .returns(generic)
       .apply {
         validation?.let {
           addStatement("%T.response(value)", it.modelValidation)
           addStatement("%T.response(patch)", it.modelValidation)
         }
+        beginControlFlow("if (discriminator != null)")
+        addStatement(
+          "require(mapper.valueToTree<%T>(value).get(discriminator) == mapper.valueToTree<%T>(patch).get(discriminator)) { %S }",
+          node,
+          node,
+          "A merge patch cannot change the discriminator",
+        )
+        endControlFlow()
         addStatement("val tree = merge(mapper.valueToTree(value), mapper.valueToTree(patch))")
         addStatement("val reader = mapper.copy()")
         addStatement(

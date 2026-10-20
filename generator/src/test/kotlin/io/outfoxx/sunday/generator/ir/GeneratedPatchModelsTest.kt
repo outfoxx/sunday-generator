@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.generator.ir
 
+import io.outfoxx.sunday.generator.ir.emit.GeneratedModelProperties
+import io.outfoxx.sunday.generator.tools.discriminatedPatchApi
 import io.outfoxx.sunday.generator.tools.patchableApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -28,6 +30,100 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 
 class GeneratedPatchModelsTest {
+  @Test
+  fun `variant exclusions do not become inherited schema constraints`(
+    @TempDir directory: Path,
+  ) {
+    val api = discriminatedPatchApi("three-level", directory)
+    val models = api.models.associateBy { it.name }.toMutableMap()
+    val mammal = models.getValue("MammalPatch")
+    val inheritedPattern = GeneratedPatternProperty("^custom", GeneratedTypeRef.scalar("string"))
+    models[mammal.name] = mammal.copy(patternProperties = listOf(inheritedPattern))
+    val properties = GeneratedModelProperties { models[it.name] }
+    val cat = models.getValue("CatPatch")
+    assertTrue("indoor" in mammal.patchExcludedFields)
+    assertFalse("indoor" in cat.patchExcludedFields)
+    assertTrue(properties.patternProperties(cat).contains(inheritedPattern))
+    assertFalse(properties.patternProperties(cat).any { Regex(it.pattern).matches("indoor") })
+    assertTrue(properties.patternProperties(cat).any { Regex(it.pattern).matches("trained") })
+  }
+
+  @Test
+  fun `variant field exclusions stay within their own hierarchy`(
+    @TempDir directory: Path,
+  ) {
+    val api = discriminatedPatchApi("openapi", directory)
+    val vehicle =
+      GeneratedModel(
+        "Vehicle",
+        GeneratedModel.Kind.OBJECT,
+        patchable = true,
+        discriminator = "kind",
+        properties = listOf(GeneratedModelProperty("kind", GeneratedTypeRef.scalar("string"), required = true)),
+        discriminatorMappings = mapOf("car" to GeneratedTypeRef.named("Car")),
+      )
+    val car =
+      GeneratedModel(
+        "Car",
+        GeneratedModel.Kind.OBJECT,
+        inherits = listOf(GeneratedTypeRef.named("Vehicle")),
+        properties = listOf(GeneratedModelProperty("wheels", GeneratedTypeRef.scalar("integer"))),
+      )
+    val source =
+      api.copy(
+        services = emptyList(),
+        models =
+          api.models.filter { it.patchOf == null }.map {
+            if (it.name == "Animal") it.copy(patchable = true) else it
+          } + listOf(vehicle, car),
+      )
+    val patch = GeneratedPatchModels.materialize(source).models.single { it.name == "CatPatch" }
+    assertTrue("trained" in patch.patchExcludedFields)
+    assertFalse("wheels" in patch.patchExcludedFields)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["openapi", "explicit", "raml", "asyncapi", "composed", "renamed", "tolerant"])
+  fun `discriminated companions preserve dispatch and original requiredness`(
+    frontend: String,
+    @TempDir directory: Path,
+  ) {
+    val api = discriminatedPatchApi(frontend, directory)
+    val models = api.models.associateBy { it.name }
+    val fields = GeneratedModelProperties { models[it.name] }
+    val root = models.getValue("AnimalPatch")
+    assertTrue(root.discriminatorMappings.values.all { it.name.endsWith("Patch") })
+    for (name in listOf("Animal", "Cat", "Dog")) {
+      val original = models.getValue(name)
+      val patch = models.getValue(name + "Patch")
+      val tag = fields.fields(patch).single { it.effective.patchDiscriminator }.effective
+      assertTrue(tag.required)
+      assertFalse(tag.type.nullable)
+      assertEquals(null, tag.patchDeletionAllowed)
+      assertEquals(null, tag.defaultValue)
+      assertEquals(name, patch.patchOf?.name)
+      val ordinary = fields.fields(original).associateBy { it.effective.name }
+      val partial = fields.fields(patch).associateBy { it.effective.name }
+      assertTrue(ordinary.getValue("name").effective.required)
+      assertTrue(ordinary.getValue("detail").effective.required)
+      assertTrue(
+        ordinary
+          .getValue("detail")
+          .effective.type.nullable,
+      )
+      assertFalse(partial.getValue("name").effective.required)
+      assertEquals(false, partial.getValue("name").effective.patchDeletionAllowed)
+      assertEquals(false, partial.getValue("detail").effective.patchDeletionAllowed)
+      assertEquals(true, partial.getValue("nickname").effective.patchDeletionAllowed)
+      if (name != "Animal") assertEquals(listOf(name.lowercase()), tag.allowedValues)
+    }
+    api.services.flatMap { it.operations }.filter { it.id == "updateAnimal" }.forEach {
+      assertEquals("AnimalPatch", it.requestBody?.type?.name)
+    }
+    assertEquals(api.models, GeneratedPatchModels.normalizeFields(api.models))
+    assertEquals(api, GeneratedPatchModels.materialize(api))
+  }
+
   @ParameterizedTest
   @ValueSource(strings = ["composed-collisions", "composed-collisions-reversed"])
   fun `composition reserves source names before assigning shared companion names`(

@@ -1933,6 +1933,7 @@ class TypeScriptSundayIrGenerator(
             typeName,
             patch.typeName(patch.name.toUpperCamelCase()),
             patchSupportName,
+            patch.properties.firstOrNull { it.patchDiscriminator }?.wireName,
           )
         original != null ->
           TypeScriptPatchHelpers.factory(

@@ -116,8 +116,25 @@ internal class GeneratedModelProperties(
       } else {
         emptyList()
       }
-    return collect(model).distinct()
+    return (
+      collect(model) +
+        model.patchExcludedFields.map { wireName ->
+          GeneratedPatternProperty(
+            pattern = exactPropertyPattern(wireName),
+            type = GeneratedTypeRef.scalar("string"),
+            allowedValues = emptyList(),
+          )
+        }
+    ).distinct()
   }
+
+  // Use portable escapes: Java's \Q...\E form is not supported by every target's regex engine.
+  private fun exactPropertyPattern(wireName: String): String =
+    "^" +
+      wireName
+        .map { char ->
+          if (char in "\\.^$|?*+()[]{}") "\\$char" else char.toString()
+        }.joinToString("") + "$"
 
   /** All typed additional-property assertions, retaining restrictions inherited from every parent. */
   fun additionalProperties(model: GeneratedModel): List<GeneratedAdditionalProperties> {

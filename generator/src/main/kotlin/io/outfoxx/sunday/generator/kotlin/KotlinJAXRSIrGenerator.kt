@@ -2647,7 +2647,7 @@ class KotlinJAXRSIrGenerator(
           inheritedProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
-                patchable = patchableProperty(property.wireName),
+                patchable = patchableProperty(property.wireName) && !property.patchDiscriminator,
                 effective =
                   modelProperties
                     .fields(this@classTypeSpec)
@@ -2661,7 +2661,7 @@ class KotlinJAXRSIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
-                patchable = patchable,
+                patchable = patchable && !property.patchDiscriminator,
                 declaresProperty =
                   typeRegistry.options.contains(KotlinTypeRegistry.Option.ValidationConstraints) &&
                     !(isProblemRoot && property.isBaseProblemProperty()),
@@ -2741,7 +2741,7 @@ class KotlinJAXRSIrGenerator(
                 .addAnnotations(property.jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
                 .apply { if (!patchable) addAnnotations(property.jacksonInclusionAnnotations()) }
                 .addAnnotations(property.modelValidationAnnotations(patchable = patchable))
-                .mutable(patchable)
+                .mutable(patchable && !property.patchDiscriminator)
             addProperty(
               propertyBuilder
                 .initializer(property.name.kotlinIdentifierName)
@@ -3232,7 +3232,13 @@ class KotlinJAXRSIrGenerator(
       return
     }
 
-    val discriminator = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
+    val discriminatorName = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
+    val discriminator =
+      modelProperties
+        .fields(model)
+        .firstOrNull {
+          it.effective.name == discriminatorName || it.wireName == discriminatorName
+        }?.wireName ?: discriminatorName
     val include =
       if (model.discriminator == null) {
         JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY
@@ -3317,7 +3323,7 @@ class KotlinJAXRSIrGenerator(
       .addAnnotations(jacksonExternalDiscriminatorAnnotations(AnnotationSpec.UseSiteTarget.GET))
       .apply { if (!patchable) addAnnotations(jacksonInclusionAnnotations()) }
       .addAnnotations(modelValidationAnnotations(patchable = patchable))
-      .mutable(patchable)
+      .mutable(patchable && !patchDiscriminator)
       .build()
 
   private fun GeneratedModelProperty.jacksonInclusionAnnotations(): List<AnnotationSpec> =
@@ -3387,7 +3393,7 @@ class KotlinJAXRSIrGenerator(
   }
 
   private fun GeneratedModelProperty.modelPropertyTypeName(patchable: Boolean = false): TypeName =
-    if (patchable) {
+    if (patchable && !patchDiscriminator) {
       val operation = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
       operation.parameterizedBy(type.kotlinTypeName().copy(nullable = false).withUseSiteValidationAnnotations(type))
     } else {

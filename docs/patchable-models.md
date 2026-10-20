@@ -52,7 +52,7 @@ An explicit null deletes the member, as defined by [RFC 7396](https://www.rfc-ed
 Deletion is permitted only for members that are optional in the original model. A required member
 cannot be deleted even when its value is nullable; merge patch cannot assign a literal null to an
 object member. Arrays retain their element nullability because an array replaces the entire value.
-All patch fields may be omitted, and schema defaults never select updates implicitly. Constraints
+Ordinary patch fields may be omitted, and schema defaults never select updates implicitly. Constraints
 still apply to supplied values. Nested object members use their own patch companions, while array
 elements retain ordinary model types because arrays replace whole values.
 Recursive object models are supported; self-recursive map aliases receive a generation diagnostic.
@@ -99,9 +99,25 @@ RAML `(sunday.patchable): true` generates both the ordinary model and its compan
 patchability, with the same rules as native `x-sunday-patchable`. Ordinary JSON bodies and responses keep
 the ordinary model. Native AsyncAPI object schemas
 can also declare `x-sunday-patchable`; event payloads retain their ordinary type, and the companion is
-available to consumers. A patchable declaration must resolve to an object. Native polymorphic
-hierarchies cannot themselves become partial discriminated unions; place such unions inside a
-patchable containing object instead.
+available to consumers. A patchable declaration must resolve to an object. Discriminated object
+hierarchies generate a companion hierarchy: for example, `AnimalPatch` selects `CatPatch` or `DogPatch`
+using the same discriminator wire values. Both automatic discovery and explicit annotations support
+these companions. Externally discriminated declarations and non-object unions are not supported as
+patch roots.
+
+The discriminator is a required, non-null dispatch tag, never an update operation. Missing, null, and
+unknown tags are rejected, including when the ordinary hierarchy tolerates unknown response variants.
+The tag stays fixed to the selected subtype. A discriminator-only patch is a valid no-op. All other
+fields, including inherited fields, retain the omission, set, and deletion rules above. A required
+nullable property may be omitted but cannot be deleted.
+
+A subtype patch rejects fields known only to other variants. Unrelated extension fields still follow
+the schema's additional-property policy. Ordinary JSON models retain their original contracts.
+
+Merge helpers reject changes to the discriminator; Swift exposes concrete subtype helpers so a
+`DogPatch` cannot be passed to `Cat.merge`. Difference helpers retain the discriminator even when it
+has not changed. Services must compare the patch tag with the persisted resource before mutating it
+and may return HTTP 400 for a mismatch; the generator cannot perform that persistence check.
 
 Merge-patch generation requires Sunday Swift `2.0.0-beta.9`, Sunday Kotlin `2.0.0-beta.9`, and Sunday
 Python `2.0.0-beta.6` or later. Swift patch companions with inferred `Identifiable` conformance require
@@ -126,6 +142,8 @@ TypeScript models remain structural values, so their helpers live on the same-na
 | Python | `model.patch()` | `updated.patch(from_model=original)` | `base.merge(patch)` | `ItemPatch.from_model(model)` |
 
 Swift also exposes `try ItemPatch.fromModel(model)`, including for recursive reference models.
+For discriminated hierarchies, Swift and Python expose conversion factories on concrete patch
+variants; their root dispatch types select those variants during decoding.
 
 Member names are allocated to avoid schema-property collisions. As with companion type names, a
 collision may add a suffix. Helpers reuse the generated codecs and existing response-mode validation;

@@ -41,4 +41,6 @@ data class GeneratedModelProperty(
   /** Whether a merge-patch member may be deleted; null identifies an ordinary, unprojected property. */
   @get:JsonInclude(JsonInclude.Include.NON_NULL)
   val patchDeletionAllowed: Boolean? = null,
+  /** Required immutable dispatch tag in a merge-patch hierarchy, never an update operation. */
+  val patchDiscriminator: Boolean = false,
 )

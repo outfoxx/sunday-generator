@@ -58,6 +58,19 @@ internal class PythonPatchHelpers(
   fun adapters(model: GeneratedModel): PythonCodeBlock? {
     val patch = models.singleOrNull { it.patchOf?.name == model.name }
     if (patch != null) {
+      val tag = patch.properties.firstOrNull { it.patchDiscriminator }?.let { it.serializationName ?: it.name }
+      val tagCode = tag?.let { PythonCodeBlock.of("%S", it) } ?: PythonCodeBlock.of("None")
+      val decode =
+        if (patch.discriminator != null && patch.discriminatorMappings.isNotEmpty()) {
+          PythonCodeBlock.of(
+            "%T[%L](%L).validate_python",
+            PythonSymbol("pydantic", "TypeAdapter"),
+            patch.name.pythonTypeName,
+            patch.name.pythonTypeName,
+          )
+        } else {
+          PythonCodeBlock.of("%L.model_validate", patch.name.pythonTypeName)
+        }
       val root =
         generateSequence(model) { current ->
           current.inherits.firstOrNull()?.let { parent -> models.singleOrNull { it.name == parent.name } }
@@ -69,8 +82,8 @@ internal class PythonPatchHelpers(
             '''Creates a snapshot or differences; required null assignments cannot be represented.'''
             type(self).model_validate(self, context={"mode": "response"})
             original = None if from_model is None else from_model.model_dump(mode="python", by_alias=True)
-            tree = _patch_difference(self.model_dump(mode="python", by_alias=True), original)
-            result = %L.model_validate(tree, context={"mode": "response"})
+            tree = _patch_difference(self.model_dump(mode="python", by_alias=True), original, %C)
+            result = %C(tree, context={"mode": "response"})
             if not _patch_equal(result.model_dump(mode="python", by_alias=True), tree):
                 raise ValueError("Patch conversion changed the wire value")
             return result
@@ -80,7 +93,7 @@ internal class PythonPatchHelpers(
             type(self).model_validate(self, context={"mode": "response"})
             type(patch).model_validate(patch, context={"mode": "response"})
             tree = _patch_merge(
-                self.model_dump(mode="python", by_alias=True), patch.model_dump(mode="python", by_alias=True)
+                self.model_dump(mode="python", by_alias=True), patch.model_dump(mode="python", by_alias=True), %C
             )
             result = type(self).model_validate(tree, context={"mode": "response"})
             _patch_remove_defaults(result, tree)
@@ -91,10 +104,12 @@ internal class PythonPatchHelpers(
         patchName,
         PythonSymbol("typing", "Self"),
         patch.name.pythonTypeName,
-        patch.name.pythonTypeName,
+        tagCode,
+        decode,
         mergeName,
         acceptedPatch.name.pythonTypeName,
         PythonSymbol("typing", "Self"),
+        tagCode,
       )
     }
     val original = models.singleOrNull { it.name == model.patchOf?.name } ?: return null
@@ -131,22 +146,30 @@ internal class PythonPatchHelpers(
           return bool(a == b)
 
 
-      def _patch_difference(value: object, original: object) -> object:
+      def _patch_difference(value: object, original: object, discriminator: str | None = None) -> object:
           if not isinstance(value, dict):
               return %T(value)
           before = original if isinstance(original, dict) else {}
+          if discriminator is not None and original is not None and value.get(discriminator) != before.get(discriminator):
+              raise ValueError("A merge patch cannot change the discriminator")
           result = {
               key: _patch_difference(item, before.get(key))
               for key, item in value.items()
               if key not in before or not _patch_equal(item, before[key])
           }
+          if discriminator is not None:
+              result[discriminator] = value[discriminator]
           result.update({key: None for key in before if key not in value})
           return result
 
 
-      def _patch_merge(value: object, patch: object) -> object:
+      def _patch_merge(value: object, patch: object, discriminator: str | None = None) -> object:
           if not isinstance(patch, dict):
               return %T(patch)
+          if discriminator is not None and (
+              not isinstance(value, dict) or value.get(discriminator) != patch.get(discriminator)
+          ):
+              raise ValueError("A merge patch cannot change the discriminator")
           result = %T(value) if isinstance(value, dict) else {}
           for key, item in patch.items():
               if item is None:

@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info: {title: Animals, version: 1.0.0}
+paths:
+  /animals:
+    patch:
+      operationId: updateAnimal
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: {$ref: '#/components/schemas/Animal'}
+      responses: {'204': {description: Updated}}
+components:
+  schemas:
+    Animal:
+      type: object
+      required: [kind, name, detail]
+      discriminator:
+        propertyName: kind
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+      properties:
+        kind: {type: string, enum: [cat, dog]}
+        name: {type: string}
+        detail: {type: string, nullable: true}
+        nickname: {type: string}
+    Cat:
+      allOf:
+        - {$ref: '#/components/schemas/Animal'}
+        - type: object
+          properties:
+            indoor: {type: boolean}
+    Dog:
+      allOf:
+        - {$ref: '#/components/schemas/Animal'}
+        - type: object
+          properties:
+            trained: {type: boolean}

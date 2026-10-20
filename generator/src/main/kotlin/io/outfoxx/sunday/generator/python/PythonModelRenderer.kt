@@ -899,7 +899,8 @@ class PythonModelRenderer(
     val patterns = modelProperties.patternProperties(this)
     val additional = modelProperties.additionalProperties(this)
     val validatesAdditionalProperties = patterns.isNotEmpty() || additional.isNotEmpty()
-    if (!validatesAdditionalProperties) return null
+    // Override an inherited validator even when this variant has no exclusions of its own.
+    if (!validatesAdditionalProperties && !(patchOf != null && properties.any { it.patchDiscriminator })) return null
 
     val statements = mutableListOf<PythonCodeBlock>()
     statements +=
@@ -1240,6 +1241,8 @@ class PythonModelRenderer(
           PythonSymbol("pydantic", "Tag"),
           FALLBACK_TAG,
         )
+    val inlineTypes = PythonCodeBlock.join(taggedTypes, separator = " | ")
+    val splitTypes = inlineTypes.render(PythonRenderContext(PythonImportSet())).length + 5 > 120
     val mappedValues = fallback.mappedValues.sorted().joinToString(", ") { value -> value.pythonStringLiteral() }
 
     return PythonCodeBlock.of(
@@ -1269,7 +1272,7 @@ class PythonModelRenderer(
       FALLBACK_TAG,
       unionName,
       PythonSymbol("typing", "Annotated"),
-      PythonCodeBlock.join(taggedTypes, separator = if (taggedTypes.size > 2) "\n    | " else " | "),
+      PythonCodeBlock.join(taggedTypes, separator = if (splitTypes) "\n    | " else " | "),
       PythonSymbol("pydantic", "Discriminator"),
       discriminatorFunctionName,
     )
@@ -1620,6 +1623,7 @@ class PythonModelRenderer(
   }
 
   private fun GeneratedModelProperty.renderProperty(model: GeneratedModel): PythonCodeBlock {
+    val patchField = model.patchable && !patchDiscriminator
     val propertyName = name.pythonIdentifierName
     val constant = allowedValues?.takeIf { it.size == 1 && !model.patchable }
     val literalValue = discriminatorLiteralValue(model)
@@ -1634,7 +1638,7 @@ class PythonModelRenderer(
     val valueType =
       if (!type.nullable &&
         (
-          model.patchable ||
+          patchField ||
             required ||
             constant != null ||
             defaultValue != null &&
@@ -1646,14 +1650,14 @@ class PythonModelRenderer(
         PythonCodeBlock.of("%C | None", basePropertyType)
       }
     val propertyType =
-      if (model.patchable) {
+      if (patchField) {
         PythonCodeBlock.of("%C | %T", valueType, PythonSymbol("sunday", "UnsetType"))
       } else {
         valueType
       }
     val alias = serializationName ?: name
     val fieldArguments = mutableListOf<PythonCodeBlock>()
-    if (model.patchable) {
+    if (patchField) {
       fieldArguments += PythonCodeBlock.of("default_factory=lambda: %T", PythonSymbol("sunday", "UNSET"))
       fieldArguments += PythonCodeBlock.of("exclude_if=%T", PythonSymbol("sunday", "is_unset"))
     } else if (constant != null) {
@@ -1668,12 +1672,13 @@ class PythonModelRenderer(
           defaultValue?.let { value -> renderDefaultValue(value, model.name) } ?: PythonCodeBlock.of("None"),
         )
     }
-    if (!model.patchable && !required && !type.acceptsNull()) {
+    if (!patchField && !required && !type.acceptsNull()) {
       fieldArguments += PythonCodeBlock.of("exclude_if=lambda value: value is None")
     }
-    if (!model.patchable && defaultValue != null && constant == null) {
+    if (!patchField && defaultValue != null && constant == null) {
       fieldArguments += PythonCodeBlock.of("validate_default=True")
     }
+    if (patchDiscriminator) fieldArguments += PythonCodeBlock.of("frozen=True")
     if (alias != propertyName) {
       fieldArguments += PythonCodeBlock.of("alias=%S", alias)
     }
@@ -1760,7 +1765,7 @@ class PythonModelRenderer(
       val context = PythonRenderContext(PythonImportSet())
       // Ruff excludes trailing type-ignore comments when deciding whether the field fits on one line.
       val inlineLength = inline.render(context).length - overrideSuffix.length
-      if ((model.patchable || constant != null || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
+      if ((patchField || constant != null || enumConstraints.isNotEmpty() || !required && !type.acceptsNull()) &&
         inlineLength > 120
       ) {
         val multilineArguments =

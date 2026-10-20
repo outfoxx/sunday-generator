@@ -1538,7 +1538,7 @@ class KotlinSundayIrGenerator(
           inheritedProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
-                patchable = patchableProperty(property.wireName),
+                patchable = patchableProperty(property.wireName) && !property.patchDiscriminator,
                 effective =
                   modelProperties
                     .fields(this@classTypeSpec)
@@ -1552,7 +1552,7 @@ class KotlinSundayIrGenerator(
           localProperties.forEach { property ->
             addParameter(
               property.constructorParameterSpec(
-                patchable,
+                patchable && !property.patchDiscriminator,
                 declaresProperty = !(isProblemRootModel() && property.isBaseProblemProperty()),
                 effective =
                   modelProperties
@@ -1665,7 +1665,7 @@ class KotlinSundayIrGenerator(
                       patchable = patchable,
                     ),
                   )
-                  if (patchable) {
+                  if (patchable && !property.patchDiscriminator) {
                     mutable(true)
                   }
                   initializer(property.name.kotlinIdentifierName)
@@ -2150,7 +2150,7 @@ class KotlinSundayIrGenerator(
             AnnotationSpec.UseSiteTarget.GET,
           ),
         )
-        if (patchable) {
+        if (patchable && !property.patchDiscriminator) {
           mutable(true)
         }
         if (implementation != null) {
@@ -2238,7 +2238,13 @@ class KotlinSundayIrGenerator(
       return
     }
 
-    val discriminator = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
+    val discriminatorName = model.discriminator ?: model.externalDiscriminatorNameOrNull() ?: return
+    val discriminator =
+      modelProperties
+        .fields(model)
+        .firstOrNull {
+          it.effective.name == discriminatorName || it.wireName == discriminatorName
+        }?.wireName ?: discriminatorName
     val include =
       if (model.discriminator == null) {
         JACKSON_JSON_TYPEINFO_AS_EXTERNAL_PROPERTY
@@ -2318,7 +2324,7 @@ class KotlinSundayIrGenerator(
   }
 
   private fun GeneratedModelProperty.modelPropertyTypeName(patchable: Boolean = false): TypeName =
-    if (patchable) {
+    if (patchable && !patchDiscriminator) {
       val base = if (patchDeletionAllowed == true) PATCH_OP else UPDATE_OP
       base.parameterizedBy(type.kotlinTypeName().copy(nullable = false).withCascadedValidation(type))
     } else {

@@ -45,6 +45,7 @@ internal object TypeScriptPatchHelpers {
     type: TypeName.Standard,
     patch: TypeName.Standard,
     support: TypeName.Standard,
+    discriminator: String? = null,
   ): CodeBlock =
     CodeBlock.of(
       """
@@ -54,7 +55,7 @@ internal object TypeScriptPatchHelpers {
         patch(value: %T, from?: %T, runtime = %T.runtime): %T {
           const schema = runtime.resolveSchema(%T);
           const patchSchema = runtime.resolveSchema(%T);
-          const tree = %T.difference(%T.encode(schema, value), from === undefined ? undefined : %T.encode(schema, from));
+          const tree = %T.difference(%T.encode(schema, value), from === undefined ? undefined : %T.encode(schema, from), %L);
           const result = patchSchema.parse(tree);
           if (!%T.equal(%T.encode(patchSchema, result), tree)) throw new TypeError('Patch conversion changed the wire value');
           return result;
@@ -62,7 +63,7 @@ internal object TypeScriptPatchHelpers {
         /** Recursively merges into a new validated model; the inputs are unchanged. */
         merge(value: %T, patch: %T, runtime = %T.runtime): %T {
           const schema = runtime.resolveSchema(%T);
-          const tree = %T.merge(%T.encode(schema, value), %T.encode(runtime.resolveSchema(%T), patch));
+          const tree = %T.merge(%T.encode(schema, value), %T.encode(runtime.resolveSchema(%T), patch), %L);
           return %T.withoutDefaults(schema.parse(tree), tree);
         },
       };
@@ -77,6 +78,7 @@ internal object TypeScriptPatchHelpers {
       support,
       Z,
       Z,
+      discriminator?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
       support,
       Z,
       type,
@@ -88,6 +90,7 @@ internal object TypeScriptPatchHelpers {
       Z,
       Z,
       patch.sibling("Schema"),
+      discriminator?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("undefined"),
       support,
     )
 
@@ -132,19 +135,22 @@ internal object TypeScriptPatchHelpers {
             return keys.length === Object.keys(b).filter(k => b[k] !== undefined).length && keys.every(k => Object.hasOwn(b, k) && equal(a[k], b[k]));
           }
           /** Builds a merge-patch document; arrays and scalars replace whole values. */
-          export function difference(value: unknown, original: unknown): unknown {
+          export function difference(value: unknown, original: unknown, discriminator?: string): unknown {
             if (!object(value)) return value;
             const before = object(original) ? original : {};
+            if (discriminator !== undefined && original !== undefined && !equal(value[discriminator], before[discriminator])) throw new TypeError('A merge patch cannot change the discriminator');
             const result: Record<string, unknown> = Object.create(null);
             for (const [key, item] of Object.entries(value)) {
               if (item !== undefined && (!Object.hasOwn(before, key) || !equal(item, before[key]))) result[key] = difference(item, before[key]);
             }
+            if (discriminator !== undefined) result[discriminator] = value[discriminator];
             for (const key of Object.keys(before)) if (before[key] !== undefined && value[key] === undefined) result[key] = null;
             return result;
           }
           /** Implements the object recursion and deletion rules of RFC 7396. */
-          export function merge(value: unknown, patch: unknown): unknown {
+          export function merge(value: unknown, patch: unknown, discriminator?: string): unknown {
             if (!object(patch)) return patch;
+            if (discriminator !== undefined && (!object(value) || !equal(value[discriminator], patch[discriminator]))) throw new TypeError('A merge patch cannot change the discriminator');
             const result: Record<string, unknown> = Object.assign(Object.create(null), object(value) ? value : {});
             for (const [key, item] of Object.entries(patch)) {
               if (item === null) delete result[key];
