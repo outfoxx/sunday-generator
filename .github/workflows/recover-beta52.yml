@@ -1,0 +1,27 @@
+name: Diagnose beta.52 deployment
+on:
+  push:
+    branches: [codex/recover-beta52]
+    paths: [.github/workflows/recover-beta52.yml]
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+    - name: Read existing Sonatype deployment status
+      env:
+        CENTRAL_USERNAME: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
+        CENTRAL_PASSWORD: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
+      run: |
+        python3 - <<'PY'
+        import base64, json, os, urllib.request
+        token = base64.b64encode((os.environ['CENTRAL_USERNAME'] + ':' + os.environ['CENTRAL_PASSWORD']).encode()).decode()
+        request = urllib.request.Request(
+            'https://central.sonatype.com/api/v1/publisher/status?id=7e478a0f-b117-4f21-9154-5f9b9c0c5bea',
+            headers={'Authorization': 'Bearer ' + token}, method='POST')
+        with urllib.request.urlopen(request, timeout=30) as response:
+            status = json.load(response)
+        print(json.dumps({key: status[key] for key in ('deploymentId', 'deploymentName', 'deploymentState', 'purls', 'errors') if key in status}, indent=2))
+        PY
