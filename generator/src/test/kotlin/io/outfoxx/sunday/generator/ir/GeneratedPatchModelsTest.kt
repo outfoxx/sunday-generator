@@ -31,6 +31,24 @@ import java.nio.file.Path
 
 class GeneratedPatchModelsTest {
   @Test
+  fun `variant exclusions do not become inherited schema constraints`(
+    @TempDir directory: Path,
+  ) {
+    val api = discriminatedPatchApi("three-level", directory)
+    val models = api.models.associateBy { it.name }.toMutableMap()
+    val mammal = models.getValue("MammalPatch")
+    val inheritedPattern = GeneratedPatternProperty("^custom", GeneratedTypeRef.scalar("string"))
+    models[mammal.name] = mammal.copy(patternProperties = listOf(inheritedPattern))
+    val properties = GeneratedModelProperties { models[it.name] }
+    val cat = models.getValue("CatPatch")
+    assertTrue("indoor" in mammal.patchExcludedFields)
+    assertFalse("indoor" in cat.patchExcludedFields)
+    assertTrue(properties.patternProperties(cat).contains(inheritedPattern))
+    assertFalse(properties.patternProperties(cat).any { Regex(it.pattern).matches("indoor") })
+    assertTrue(properties.patternProperties(cat).any { Regex(it.pattern).matches("trained") })
+  }
+
+  @Test
   fun `variant field exclusions stay within their own hierarchy`(
     @TempDir directory: Path,
   ) {
@@ -60,8 +78,8 @@ class GeneratedPatchModelsTest {
           } + listOf(vehicle, car),
       )
     val patch = GeneratedPatchModels.materialize(source).models.single { it.name == "CatPatch" }
-    assertTrue(patch.patternProperties.any { Regex(it.pattern).matches("trained") })
-    assertFalse(patch.patternProperties.any { Regex(it.pattern).matches("wheels") })
+    assertTrue("trained" in patch.patchExcludedFields)
+    assertFalse("wheels" in patch.patchExcludedFields)
   }
 
   @ParameterizedTest

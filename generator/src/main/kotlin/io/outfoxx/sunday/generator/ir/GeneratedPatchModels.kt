@@ -231,15 +231,8 @@ internal object GeneratedPatchModels {
                 allowedValues = it.allowedValues?.filterNotNull()?.plus(null),
                 type = patchType(it.type).copy(nullable = true),
               )
-            } +
-              forbiddenFields.map { wireName ->
-                // An impossible pattern rejects another variant's fields without closing unrelated extensions.
-                GeneratedPatternProperty(
-                  pattern = exactPropertyPattern(wireName),
-                  type = GeneratedTypeRef.scalar("string"),
-                  allowedValues = emptyList(),
-                )
-              },
+            },
+          patchExcludedFields = forbiddenFields.toList(),
           discriminatorMappings =
             mappings.mapValues { (_, type) ->
               type.copy(name = patchNames.getValue(type.name))
@@ -266,14 +259,6 @@ internal object GeneratedPatchModels {
         },
     )
   }
-
-  // Use portable escapes: Java's \Q...\E form is not supported by every target's regex engine.
-  private fun exactPropertyPattern(wireName: String): String =
-    "^" +
-      wireName
-        .map { char ->
-          if (char in "\\.^$|?*+()[]{}") "\\$char" else char.toString()
-        }.joinToString("") + "$"
 
   private fun patchFields(
     model: GeneratedModel,

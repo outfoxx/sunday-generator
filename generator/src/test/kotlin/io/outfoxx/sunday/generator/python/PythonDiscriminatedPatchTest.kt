@@ -32,7 +32,7 @@ import java.nio.file.Path
 @Tag("requests")
 class PythonDiscriminatedPatchTest : PythonTest() {
   @ParameterizedTest
-  @ValueSource(strings = ["openapi", "explicit", "raml", "asyncapi", "composed", "renamed", "tolerant"])
+  @ValueSource(strings = ["openapi", "explicit", "raml", "asyncapi", "composed", "renamed", "tolerant", "three-level"])
   fun `discriminated patches retain required tags`(
     frontend: String,
     @TempDir directory: Path,
@@ -53,7 +53,7 @@ class PythonDiscriminatedPatchTest : PythonTest() {
           from test_api.models import Cat, CatPatch, DogPatch, AnimalPatch
           from pydantic import TypeAdapter
           adapter = TypeAdapter(AnimalPatch)
-          for data in [{"$tag": "cat"}, {"$tag": "cat", "nickname": None}, {"$tag": "cat", "name": "Misty"}, {"$tag": "cat", "custom": "extension"}]:
+          for data in [{"$tag": "cat"}, {"$tag": "cat", "nickname": None}, {"$tag": "cat", "name": "Misty"}, {"$tag": "cat", "custom": "extension"}, {"$tag": "cat", "indoor": True}, {"$tag": "cat", "indoor": None}]:
               patch = adapter.validate_python(data)
               assert isinstance(patch, CatPatch)
               assert patch.model_dump(mode="json", by_alias=True) == data
@@ -64,6 +64,16 @@ class PythonDiscriminatedPatchTest : PythonTest() {
                   pass
               else:
                   raise AssertionError(data)
+          if "$frontend" == "three-level":
+              from test_api.models import MammalPatch
+              assert isinstance(MammalPatch.model_validate({"$tag": "Mammal", "custom": "extension"}), MammalPatch)
+              for value in [True, None]:
+                  try:
+                      MammalPatch.model_validate({"$tag": "Mammal", "indoor": value})
+                  except ValueError:
+                      pass
+                  else:
+                      raise AssertionError("parent accepted child field")
           base = Cat.model_validate({"$tag": "cat", "name": "Misty", "detail": None, "nickname": "Kit", "indoor": True})
           assert base.patch(from_model=base).model_dump(mode="json", by_alias=True) == {"$tag": "cat"}
           assert base.merge(CatPatch.model_validate({"$tag": "cat", "nickname": None})).model_dump(mode="json", by_alias=True) == {"$tag": "cat", "name": "Misty", "detail": None, "indoor": True}

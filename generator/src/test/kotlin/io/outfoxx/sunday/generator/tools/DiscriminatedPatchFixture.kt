@@ -86,6 +86,16 @@ internal fun discriminatedPatchApi(
   val source = directory.resolve(if (frontend == "raml") "animals.raml" else "animals.yaml")
   source.writeText(
     when (frontend) {
+      "three-level" ->
+        openapi
+          .replace("enum: [cat, dog]", "enum: [cat, dog, Mammal]")
+          .replace(
+            "    Cat:\n",
+            "    Mammal:\n      allOf:\n        - {${'$'}ref: '#/components/schemas/Animal'}\n    Cat:\n",
+          ).replace(
+            "    Cat:\n      allOf:\n        - {${'$'}ref: '#/components/schemas/Animal'}",
+            "    Cat:\n      allOf:\n        - {${'$'}ref: '#/components/schemas/Mammal'}",
+          )
       "raml" -> raml
       "asyncapi" -> asyncapi
       "explicit", "composed" -> marked
