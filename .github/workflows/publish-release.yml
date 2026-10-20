@@ -120,13 +120,23 @@ jobs:
         jib
         -x test
 
+    - name: Stage Documentation
+      if: steps.downstream.outputs.docs == 'false'
+      run: |
+        mkdir -p "build/release-docs"
+        if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_RUN_ATTEMPT" = 1 ]; then
+          cp -R build/dokka/. "build/release-docs/"
+        else
+          cp -R "build/dokka/$RELEASE_VERSION" "build/release-docs/$RELEASE_VERSION"
+        fi
+
     - name: Publish Documentation
       if: steps.downstream.outputs.docs == 'false'
       uses: JamesIves/github-pages-deploy-action@v4
       with:
         branch: gh-pages
         clean: false
-        folder: build/dokka
+        folder: build/release-docs
 
     - name: Complete GitHub Release
       env:

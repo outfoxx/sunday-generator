@@ -31,6 +31,9 @@ After Maven verification, the workflow refreshes the destination inventory:
   publication. Partial visibility stops the run so a retry cannot overwrite it.
 - An existing Docker Hub version tag skips image publication.
 - Committed versioned documentation on `gh-pages` skips documentation deployment.
+  When docs are missing, manual resumes and reruns deploy only that version’s
+  directory, preserving `current/`, its launcher, and the root RAML file. Only
+  the first tag-triggered attempt deploys the full documentation output.
 - An existing GitHub release keeps its metadata and assets. Only missing assets
   are uploaded, without clobbering; an existing draft requires manual inspection.
 
