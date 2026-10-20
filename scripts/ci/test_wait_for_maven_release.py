@@ -92,6 +92,31 @@ class MavenReleaseTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "non-zero exit status"):
             self.verify()
 
+    def test_cli_failure_output_reaches_retry_log_and_final_error(self):
+        failures = (
+            subprocess.CalledProcessError(1, "java", output="startup output", stderr="missing class"),
+            subprocess.TimeoutExpired("java", 60, output=b"partial output", stderr=b"stalled\xff"),
+            subprocess.TimeoutExpired("java", 60),
+        )
+        for failure in failures:
+            with self.subTest(failure=failure), patch.object(release.subprocess, "run", side_effect=failure):
+                logs = []
+                pause = Mock()
+                with self.assertRaises(RuntimeError) as raised:
+                    release.wait_for_release(VERSION, fetch=self.responses.__getitem__,
+                                             smoke=release.smoke_cli, pause=pause, log=logs.append, attempts=2)
+                self.assertEqual(len(logs), 2)
+                pause.assert_called_once_with(15)
+                details = [str(failure)]
+                for name, value in (("stdout", failure.stdout), ("stderr", failure.stderr)):
+                    if value:
+                        text = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
+                        details.append(f"{name}:\n{text}")
+                for detail in details:
+                    self.assertIn(detail, str(raised.exception))
+                    for log in logs:
+                        self.assertIn(detail, log)
+
     def test_cli_executes_download_and_checks_exact_version(self):
         def run(command, **kwargs):
             self.assertEqual(command[:2], ["java", "-jar"])

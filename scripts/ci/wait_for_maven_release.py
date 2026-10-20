@@ -36,8 +36,17 @@ def smoke_cli(jar, version):
     with tempfile.TemporaryDirectory(prefix="sunday-release-") as directory:
         path = Path(directory) / "sunday.jar"
         path.write_bytes(jar)
-        result = subprocess.run(["java", "-jar", str(path), "--version"],
-                                capture_output=True, text=True, check=True, timeout=60)
+        try:
+            result = subprocess.run(["java", "-jar", str(path), "--version"],
+                                    capture_output=True, text=True, check=True, timeout=60)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            details = [str(error)]
+            for name, output in (("stdout", error.stdout), ("stderr", error.stderr)):
+                if output:
+                    # TimeoutExpired may carry bytes even when text=True.
+                    text = output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output
+                    details.append(f"{name}:\n{text}")
+            raise ValueError("\n".join(details)) from error
         if not re.search(rf"\bver\.\s+{re.escape(version)}(?=\s|$)", result.stdout):
             raise ValueError(f"CLI did not report {version}: {result.stdout.strip()}")
         print(result.stdout.strip(), flush=True)
