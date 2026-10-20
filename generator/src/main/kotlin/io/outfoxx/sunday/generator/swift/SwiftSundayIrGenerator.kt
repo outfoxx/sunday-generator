@@ -321,7 +321,7 @@ class SwiftSundayIrGenerator(
       }.forEach { generatedModel ->
         val (model, outputDirectory, outputGroup, typeBuilder) = generatedModel
         val typeName = model.swiftDeclaredTypeName()
-        patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
+        if (!model.isProtocolHierarchyRootModel) patchHelpers.add(model, typeBuilder, model.isSwiftValueModel)
         typeRegistry.addModelType(
           typeName,
           typeBuilder,
@@ -806,8 +806,7 @@ class SwiftSundayIrGenerator(
   private val protocolHierarchyRootModelKeys: Set<SwiftModelKey> by lazy {
     val rootModels =
       swiftObjectModelsByKey.values.filter { model ->
-        !model.patchable &&
-          model.discriminator != null &&
+        model.discriminator != null &&
           swiftHierarchyCaseModelsByRootKey[model.swiftModelKey()].orEmpty().isNotEmpty() &&
           !model.isProblemModel
       }
@@ -830,7 +829,7 @@ class SwiftSundayIrGenerator(
     var index = 0
     while (index < pendingModels.size) {
       val model = pendingModels[index++]
-      if (model.patchable || model.isProblemModel) continue
+      if (model.isProblemModel) continue
       val key = model.swiftModelKey()
       if (valueKeys.add(key)) {
         pendingModels.addAll(swiftInheritingModelsByParentKey[key].orEmpty())
@@ -2917,7 +2916,7 @@ class SwiftSundayIrGenerator(
     get() = swiftModelKey() in protocolHierarchyRootModelKeys
 
   private val GeneratedModel.isProtocolHierarchyValueModel: Boolean
-    get() = !patchable && !isProblemModel && swiftModelKey() in protocolHierarchyValueModelKeys
+    get() = !isProblemModel && swiftModelKey() in protocolHierarchyValueModelKeys
 
   private val GeneratedModel.isProblemHierarchyProtocolModel: Boolean
     get() =
@@ -3681,7 +3680,7 @@ class SwiftSundayIrGenerator(
     patchOpExtensionOrNull(
       typeName,
       effectiveInheritedProperties + localProperties,
-      patchable,
+      patchable && !isProtocolModel,
       constructorThrows(),
     )?.let { extension ->
       typeBuilder.associatedExtensions.add(extension)
@@ -4980,8 +4979,22 @@ class SwiftSundayIrGenerator(
       .throws(true)
       .addStatement(
         "let %L = try decoder.container(keyedBy: CodingKeys.self)",
-        if (localProperties.isEmpty()) "_" else "container",
+        if (localProperties.isEmpty() && model.properties.none { it.patchDiscriminator }) "_" else "container",
       ).apply {
+        model.properties.firstOrNull { it.patchDiscriminator }?.let { tag ->
+          val value = tag.allowedValues?.singleOrNull() as? String
+          if (value != null) {
+            addStatement("let tag = try container.decode(%T.self, forKey: .%N)", STRING, tag.name.swiftIdentifierName)
+            beginControlFlow("guard", "tag == %S else", value)
+            addStatement(
+              "throw %T.dataCorruptedError(forKey: .%N, in: container, debugDescription: %S)",
+              DECODING_ERROR,
+              tag.name.swiftIdentifierName,
+              "Invalid merge-patch discriminator",
+            )
+            endControlFlow("guard")
+          }
+        }
         addCode(closedModelDecodeValidation(model, model.isSwiftClassModel))
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
           val coderSuffix =

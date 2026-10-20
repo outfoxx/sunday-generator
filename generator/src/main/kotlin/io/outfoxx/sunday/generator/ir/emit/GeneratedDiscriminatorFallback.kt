@@ -100,6 +100,7 @@ private fun GeneratedModel.discriminatorFallbackOrNull(
   models: Collection<GeneratedModel>,
   lookup: (io.outfoxx.sunday.generator.ir.GeneratedTypeRef) -> GeneratedModel?,
 ): GeneratedDiscriminatorFallback? {
+  if (patchOf != null) return null
   val enumModel = lookup(discriminatorProperty.type)?.takeIf { it.kind == GeneratedModel.Kind.ENUM }
   val fallbackValue = enumModel?.unknownValue
   if (fallbackValue == null && tolerance == null) return null

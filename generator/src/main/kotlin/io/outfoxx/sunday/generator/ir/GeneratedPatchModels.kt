@@ -79,6 +79,20 @@ internal object GeneratedPatchModels {
       model.name !in visited &&
         (model.patchable || parents(model).any { patchable(it, visited + model.name) })
 
+    fun discriminatorRoot(model: GeneratedModel): GeneratedModel? =
+      if (model.discriminator != null) model else parents(model).firstNotNullOfOrNull(::discriminatorRoot)
+
+    fun discriminator(model: GeneratedModel): String? = discriminatorRoot(model)?.discriminator
+
+    fun discriminatorValue(model: GeneratedModel): String? {
+      val root = discriminatorRoot(model) ?: return null
+      return root.discriminatorMappings.entries
+        .firstOrNull { it.value.name == model.name }
+        ?.key
+        ?: model.discriminatorValue
+        ?: model.name.takeUnless { model == root }
+    }
+
     lateinit var reserve: (GeneratedModel) -> Unit
 
     fun patchType(
@@ -124,13 +138,19 @@ internal object GeneratedPatchModels {
       if (model.kind != GeneratedModel.Kind.OBJECT && !objectAlias) {
         genError("Patchable model '${model.name}' must be an object schema")
       }
-      if (model.discriminator != null || model.discriminatorMappings.isNotEmpty() || model.externallyDiscriminated) {
+      if (model.externallyDiscriminated) {
         genError(
           "Patchable model '${model.name}' must not be a discriminator hierarchy; patch a containing object instead",
         )
       }
       patchNames[model.name] = allocator.allocate("${model.name}Patch")
       parents(model).forEach { reserve(it) }
+      model.discriminatorMappings.values
+        .mapNotNull { models[it.name] }
+        .forEach { reserve(it) }
+      if (model.discriminator != null) {
+        models.values.filter { candidate -> candidate.inherits.any { it.name == model.name } }.forEach { reserve(it) }
+      }
       model.properties.forEach { patchType(it.type) }
       model.additionalProperties?.type?.let(::patchType)
       model.patternProperties.forEach { patchType(it.type) }
@@ -148,11 +168,53 @@ internal object GeneratedPatchModels {
     val patches =
       patchNames.map { (name, patchName) ->
         val model = models.getValue(name)
+        val mappings =
+          model.discriminatorMappings.ifEmpty {
+            if (model.discriminator != null) {
+              models.values
+                .filter { candidate -> candidate.inherits.any { it.name == model.name } }
+                .associate { (it.discriminatorValue ?: it.name) to GeneratedTypeRef.named(it.name, scope = it.scope) }
+            } else {
+              emptyMap()
+            }
+          }
+        val discriminator = discriminator(model)
+        val tag =
+          properties
+            .fields(model)
+            .firstOrNull {
+              it.wireName == discriminator || it.effective.name == discriminator
+            }?.effective
+        val patchProperties =
+          patchFields(model, properties).filterNot {
+            tag != null && (it.serializationName ?: it.name) == (tag.serializationName ?: tag.name)
+          } +
+            listOfNotNull(
+              tag?.copy(
+                required = true,
+                type = tag.type.copy(nullable = false),
+                defaultValue = null,
+                patchDiscriminator = true,
+                patchDeletionAllowed = null,
+                allowedValues = discriminatorValue(model)?.let { listOf(it) } ?: tag.allowedValues,
+              ),
+            )
+        val forbiddenFields =
+          if (discriminator != null && discriminatorValue(model) != null) {
+            val ownFields = properties.fields(model).map { it.wireName }.toSet()
+            models.values
+              .filter { discriminatorRoot(it) == discriminatorRoot(model) }
+              .flatMap { properties.fields(it) }
+              .map { it.wireName }
+              .toSet() - ownFields
+          } else {
+            emptySet()
+          }
         model.copy(
           name = patchName,
           patchable = true,
           patchOf = GeneratedTypeRef.named(model.name, scope = model.scope),
-          properties = patchFields(model, properties).map { it.copy(type = patchType(it.type)) },
+          properties = patchProperties.map { it.copy(type = patchType(it.type)) },
           additionalProperties =
             model.additionalProperties?.let {
               it.copy(
@@ -169,6 +231,18 @@ internal object GeneratedPatchModels {
                 allowedValues = it.allowedValues?.filterNotNull()?.plus(null),
                 type = patchType(it.type).copy(nullable = true),
               )
+            } +
+              forbiddenFields.map { wireName ->
+                // An impossible pattern rejects another variant's fields without closing unrelated extensions.
+                GeneratedPatternProperty(
+                  pattern = exactPropertyPattern(wireName),
+                  type = GeneratedTypeRef.scalar("string"),
+                  allowedValues = emptyList(),
+                )
+              },
+          discriminatorMappings =
+            mappings.mapValues { (_, type) ->
+              type.copy(name = patchNames.getValue(type.name))
             },
           inherits = model.inherits.map { it.copy(name = patchNames[it.name] ?: it.name) },
           aliases = model.aliases.map { it.copy(name = patchNames[it.name] ?: it.name) },
@@ -193,6 +267,14 @@ internal object GeneratedPatchModels {
     )
   }
 
+  // Use portable escapes: Java's \Q...\E form is not supported by every target's regex engine.
+  private fun exactPropertyPattern(wireName: String): String =
+    "^" +
+      wireName
+        .map { char ->
+          if (char in "\\.^$|?*+()[]{}") "\\$char" else char.toString()
+        }.joinToString("") + "$"
+
   private fun patchFields(
     model: GeneratedModel,
     properties: GeneratedModelProperties,
@@ -200,6 +282,18 @@ internal object GeneratedPatchModels {
     val fields = properties.fields(model).associateBy { it.wireName }
     return model.properties.map { property ->
       val field = fields.getValue(property.serializationName ?: property.name)
+      if (property.patchDiscriminator ||
+        property.name == model.discriminator ||
+        field.wireName == model.discriminator
+      ) {
+        return@map property.copy(
+          required = true,
+          type = property.type.copy(nullable = false),
+          defaultValue = null,
+          patchDiscriminator = true,
+          patchDeletionAllowed = null,
+        )
+      }
       // Inherited required members remain protected even if a local declaration is optional.
       // Retain explicit false after projection has made every patch field omittable.
       val deletionAllowed =

@@ -63,6 +63,8 @@ internal class SwiftPatchHelpers(
     valueType: Boolean,
   ) {
     val patch = models.singleOrNull { it.patchOf?.name == model.name }
+    val tag = patch?.properties?.firstOrNull { it.patchDiscriminator }?.let { it.serializationName ?: it.name }
+    val tagCode = tag?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("nil")
     if (patch != null) {
       builder.addFunction(
         FunctionSpec
@@ -74,7 +76,7 @@ internal class SwiftPatchHelpers(
             ParameterSpec.builder("from", "original", typeName(model).makeOptional()).defaultValue("nil").build(),
           ).returns(typeName(patch))
           .addStatement("try validate(.response)")
-          .addStatement("return try %T.patch(self, from: original)", supportName)
+          .addStatement("return try %T.patch(self, from: original, discriminator: %L)", supportName, tagCode)
           .build(),
       )
       builder.addFunction(
@@ -87,7 +89,7 @@ internal class SwiftPatchHelpers(
           .returns(typeName(model))
           .addStatement("try validate(.response)")
           .addStatement("try patch.validate(.response)")
-          .addStatement("return try %T.apply(self, patch: patch)", supportName)
+          .addStatement("return try %T.apply(self, patch: patch, discriminator: %L)", supportName, tagCode)
           .build(),
       )
     }
@@ -138,11 +140,26 @@ internal class SwiftPatchHelpers(
           .throws(true)
           .addParameter("_", "value", value)
           .addParameter("from", "original", value.makeOptional())
-          .returns(patch)
+          .addParameter(
+            "discriminator",
+            "discriminator",
+            io.outfoxx.swiftpoet.STRING
+              .makeOptional(),
+          ).returns(patch)
           .addCode(
             """
             let encoder = %T()
-            let tree = try difference(encoder.encodeTree(value), original: original.map { try encoder.encodeTree($0) })
+            let current = try encoder.encodeTree(value)
+            let previous = try original.map { try encoder.encodeTree($0) }
+            var tree = difference(current, original: previous)
+            if let discriminator, var fields = tree.dictionaryValue {
+              let key = %T.string(discriminator)
+              guard previous == nil || equal(current.dictionaryValue?[key], previous?.dictionaryValue?[key]) else {
+                throw %T.invalidValue(value, .init(codingPath: [], debugDescription: "A merge patch cannot change the discriminator"))
+              }
+              fields[key] = current.dictionaryValue?[key]
+              tree = .dictionary(fields)
+            }
             let result = try %T().decodeTree(Patch.self, from: tree)
             guard try equal(encoder.encodeTree(result), tree) else {
               throw %T.invalidValue(value, .init(codingPath: [], debugDescription: "Patch conversion changed the wire value"))
@@ -150,6 +167,8 @@ internal class SwiftPatchHelpers(
             return result
             """.trimIndent() + "\n",
             encoder,
+            node,
+            DeclaredTypeName.typeName("Swift.EncodingError"),
             decoder,
             DeclaredTypeName.typeName("Swift.EncodingError"),
           ).build(),
@@ -162,16 +181,31 @@ internal class SwiftPatchHelpers(
           .throws(true)
           .addParameter("_", "value", value)
           .addParameter("patch", "patch", patch)
-          .returns(value)
+          .addParameter(
+            "discriminator",
+            "discriminator",
+            io.outfoxx.swiftpoet.STRING
+              .makeOptional(),
+          ).returns(value)
           .addCode(
             """
             let encoder = %T()
-            let tree = try merge(encoder.encodeTree(value), patch: encoder.encodeTree(patch))
+            let current = try encoder.encodeTree(value)
+            let changes = try encoder.encodeTree(patch)
+            if let discriminator {
+              let key = %T.string(discriminator)
+              guard equal(current.dictionaryValue?[key], changes.dictionaryValue?[key]) else {
+                throw %T.invalidValue(patch, .init(codingPath: [], debugDescription: "A merge patch cannot change the discriminator"))
+              }
+            }
+            let tree = merge(current, patch: changes)
             let decoder = %T()
             decoder.userInfo[.init(rawValue: "io.outfoxx.sunday.mergePatch")!] = true
             return try decoder.decodeTree(Value.self, from: tree)
             """.trimIndent() + "\n",
             encoder,
+            node,
+            DeclaredTypeName.typeName("Swift.EncodingError"),
             decoder,
           ).build(),
       ).addFunction(
