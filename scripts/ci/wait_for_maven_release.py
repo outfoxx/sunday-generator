@@ -53,7 +53,7 @@ def smoke_cli(jar, version):
 
 
 def wait_for_release(version, *, fetch=download, smoke=smoke_cli, pause=time.sleep,
-                     log=print, attempts=60, interval=15):
+                     log=print, attempts=240, interval=15):
     """Retry propagation and checksum failures; never report a partial release as ready."""
     urls = artifact_urls(version)
     if attempts < 1:

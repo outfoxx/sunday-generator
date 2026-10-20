@@ -133,6 +133,23 @@ class MavenReleaseTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "did not report"):
                     release.smoke_cli(b"downloaded CLI", VERSION)
 
+    def test_default_budget_survives_more_than_fifteen_minutes_of_propagation(self):
+        attempts = 0
+
+        def fetch(url):
+            nonlocal attempts
+            if url == self.urls[0]:
+                attempts += 1
+                if attempts <= 80:
+                    raise urllib.error.URLError("propagating")
+            return self.responses[url]
+
+        release.wait_for_release(VERSION, fetch=fetch, smoke=self.smoke,
+                                 pause=self.pause, log=lambda _: None)
+        self.assertEqual(attempts, 81)
+        self.assertEqual(self.pause.call_count, 80)
+        self.smoke.assert_called_once()
+
     def test_versions_follow_exact_publisher_coordinates(self):
         for version in ("2.0.0", VERSION, "2.0.0-rc.1"):
             self.assertIn(f"/{version}/cli-{version}-all.jar", release.artifact_urls(version)[-1])
