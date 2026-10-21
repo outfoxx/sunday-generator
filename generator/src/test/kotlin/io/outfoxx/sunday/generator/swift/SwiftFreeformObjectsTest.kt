@@ -55,12 +55,17 @@ class SwiftFreeformObjectsTest {
       final class FreeformTests: XCTestCase {
         func testRoundTrip() throws {
           let value: [String: Any] = ["name": "example", "enabled": true, "count": 3, "fraction": 1.5, "nullValue": NSNull(), "nested": ["value": NSNull()], "items": [1, "two", NSNull()]]
+          let explicitNull = Document(properties: ["nullValue": .nil], named: ["nullValue": .nil], items: [["nullValue": .nil]])
+          let explicitNullJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(explicitNull)) as! NSDictionary
+          let expectedNullJSON = try JSONSerialization.jsonObject(with: Data(#"{"properties":{"nullValue":null},"named":{"nullValue":null},"items":[{"nullValue":null}]}"#.utf8)) as! NSDictionary
+          XCTAssertEqual(explicitNullJSON, expectedNullJSON)
           for field in ["properties", "named", "items"] {
             let original: [String: Any] = [field: field == "items" ? [value, [:]] : value]
             let input = try JSONSerialization.data(withJSONObject: original)
             let model = try JSONDecoder().decode(Document.self, from: input)
-            let _: [String: AnyValue?]? = model.properties
-            let _: [String: AnyValue?]? = model.named
+            let _: [String: AnyValue]? = model.properties
+            let _: [String: AnyValue]? = model.named
+            let _: [[String: AnyValue]]? = model.items
             let result = try JSONSerialization.jsonObject(with: JSONEncoder().encode(model)) as! NSDictionary
             XCTAssertEqual(result, original as NSDictionary)
             for invalid: Any in ["{}", true, 3] {
@@ -70,8 +75,9 @@ class SwiftFreeformObjectsTest {
           }
           for input in [#"{}"#, #"{"properties":{},"named":{},"items":[]}"#] {
             let model = try JSONDecoder().decode(Document.self, from: Data(input.utf8))
-            let _: [String: AnyValue?]? = model.properties
-            let _: [String: AnyValue?]? = model.named
+            let _: [String: AnyValue]? = model.properties
+            let _: [String: AnyValue]? = model.named
+            let _: [[String: AnyValue]]? = model.items
             let result = try JSONSerialization.jsonObject(with: JSONEncoder().encode(model)) as! NSDictionary
             XCTAssertEqual(result, try JSONSerialization.jsonObject(with: Data(input.utf8)) as! NSDictionary)
           }

@@ -121,6 +121,7 @@ import io.outfoxx.sunday.generator.swift.utils.UNCHECKED_SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.URL
 import io.outfoxx.sunday.generator.swift.utils.swiftBindings
+import io.outfoxx.sunday.generator.swift.utils.swiftDictionaryValue
 import io.outfoxx.sunday.generator.swift.utils.swiftEnumCaseName
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftStringFormatTypeName
@@ -5720,7 +5721,7 @@ class SwiftSundayIrGenerator(
   private fun GeneratedTypeRef.swiftParameterTypeName(): TypeName =
     when {
       kind == GeneratedTypeRef.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY)
+        DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: ANY)
       kind == GeneratedTypeRef.Kind.NAMED && modelOrNull(apiIndex)?.isFreeformObject == true ->
         DICTIONARY.parameterizedBy(STRING, ANY)
 
@@ -5963,7 +5964,10 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP ->
-          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY_VALUE)
+          DICTIONARY.parameterizedBy(
+            STRING,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: ANY_VALUE,
+          )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
@@ -5981,7 +5985,10 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftPublicTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftPublicTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP ->
-          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftPublicTypeName() ?: ANY_VALUE)
+          DICTIONARY.parameterizedBy(
+            STRING,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftPublicTypeName() ?: ANY_VALUE,
+          )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
@@ -6002,7 +6009,7 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.MAP ->
           DICTIONARY.parameterizedBy(
             STRING,
-            arguments.firstOrNull()?.swiftStoredTypeName(useReferenceTypes) ?: ANY_VALUE,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftStoredTypeName(useReferenceTypes) ?: ANY_VALUE,
           )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
@@ -6110,7 +6117,7 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftTypeName() ?: STRING)
+        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: STRING)
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftTypeName() }.distinct()
@@ -6137,7 +6144,10 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftPublicTypeName() ?: STRING)
+        DICTIONARY.parameterizedBy(
+          STRING,
+          aliases.singleOrNull()?.swiftDictionaryValue()?.swiftPublicTypeName() ?: STRING,
+        )
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftPublicTypeName() }.distinct()
@@ -6164,7 +6174,10 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftStoredTypeName(useReferenceTypes) ?: STRING)
+        DICTIONARY.parameterizedBy(
+          STRING,
+          aliases.singleOrNull()?.swiftDictionaryValue()?.swiftStoredTypeName(useReferenceTypes) ?: STRING,
+        )
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftStoredTypeName(useReferenceTypes) }.distinct()

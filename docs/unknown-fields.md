@@ -77,12 +77,13 @@ referenced by name:
 | Target | Dictionary type |
 | --- | --- |
 | Kotlin (Sunday and JAX-RS) | `Map<String, Any?>` |
-| Swift | `[String: AnyValue?]` |
+| Swift | `[String: AnyValue]` |
 | TypeScript | `Record<string, unknown>` |
 | Python | `dict[str, Any]` |
 
-Swift uses PotentCodables `AnyValue` to retain Codable support. Generated model
-encoding preserves nested JSON objects with Foundation's `JSONEncoder` as well.
+Swift uses PotentCodables `AnyValue` to retain Codable support. `AnyValue.nil`
+represents a null entry, so dictionary values do not need an additional Optional.
+Generated model encoding preserves nested JSON objects with Foundation's `JSONEncoder` as well.
 Null dictionary entries are valid. The containing property remains independently
 optional or nullable according to its schema: omitting an optional property is
 valid, while an explicit null requires a nullable schema. String-encoded objects

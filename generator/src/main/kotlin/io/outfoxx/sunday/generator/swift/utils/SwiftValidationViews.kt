@@ -70,7 +70,7 @@ internal class SwiftValidationViews(
           "%T.object { %L.mapValues { element in %L } }",
           valueType,
           value,
-          project(reference.arguments.single(), CodeBlock.of("element")),
+          project(reference.arguments.single().swiftDictionaryValue(), CodeBlock.of("element")),
         )
       GeneratedTypeRef.Kind.SCALAR ->
         when (reference.name) {
