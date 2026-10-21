@@ -121,6 +121,7 @@ import io.outfoxx.sunday.generator.swift.utils.UNCHECKED_SENDABLE
 import io.outfoxx.sunday.generator.swift.utils.URI_TEMPLATE
 import io.outfoxx.sunday.generator.swift.utils.URL
 import io.outfoxx.sunday.generator.swift.utils.swiftBindings
+import io.outfoxx.sunday.generator.swift.utils.swiftDictionaryValue
 import io.outfoxx.sunday.generator.swift.utils.swiftEnumCaseName
 import io.outfoxx.sunday.generator.swift.utils.swiftIdentifierName
 import io.outfoxx.sunday.generator.swift.utils.swiftStringFormatTypeName
@@ -4692,7 +4693,8 @@ class SwiftSundayIrGenerator(
         !modelProperties.isClosed(model) &&
           modelProperties.patternProperties(model).isEmpty() &&
           !model.preservesExtensions() &&
-          model.additionalProperties?.type == null
+          model.additionalProperties?.type == null &&
+          model.properties.none { it.type.containsFreeformMap() }
       ) ||
       model.isProtocolHierarchyRootModel ||
       model.isProblemHierarchyProtocolModel ||
@@ -4701,8 +4703,10 @@ class SwiftSundayIrGenerator(
       return
     }
     addType(unknownPropertyCodingKeyType())
-    if (model.preservesExtensions() && storage) {
+    if (storage && (model.preservesExtensions() || model.properties.any { it.type.containsFreeformMap() })) {
       addType(extensionValueEncoderType())
+    }
+    if (model.preservesExtensions() && storage) {
       if (!model.inheritsExtensionStorage()) {
         addProperty(
           PropertySpec
@@ -5090,17 +5094,86 @@ class SwiftSundayIrGenerator(
           )
         }
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
-          addStatement(
-            "try container.encode%L(self.%N, forKey: .%N)",
-            if (patchable) "" else property.swiftEncodingSuffix(),
-            property.name.swiftIdentifierName,
-            property.name.swiftIdentifierName,
-          )
+          if (property.type.containsFreeformMap()) {
+            addFreeformMapEncoder(property, patchable)
+          } else {
+            addStatement(
+              "try container.encode%L(self.%N, forKey: .%N)",
+              if (patchable) "" else property.swiftEncodingSuffix(),
+              property.name.swiftIdentifierName,
+              property.name.swiftIdentifierName,
+            )
+          }
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
           addExternalDiscriminatorEncoder(property)
         }
       }.build()
+
+  private fun GeneratedTypeRef.containsFreeformMap(visited: Set<String> = emptySet()): Boolean =
+    when (kind) {
+      GeneratedTypeRef.Kind.MAP ->
+        arguments.singleOrNull()?.let { it.kind == GeneratedTypeRef.Kind.SCALAR && it.name == "any" } == true ||
+          arguments.any { it.containsFreeformMap(visited) }
+      GeneratedTypeRef.Kind.ARRAY -> arguments.any { it.containsFreeformMap(visited) }
+      GeneratedTypeRef.Kind.NAMED -> {
+        val model = modelOrNull(apiIndex)
+        if (name in visited || model?.target("swift", "swift")?.typeName != null) {
+          false
+        } else {
+          when (model?.kind) {
+            GeneratedModel.Kind.MAP ->
+              GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = model.aliases)
+                .containsFreeformMap(visited + name)
+            GeneratedModel.Kind.ARRAY -> model.aliases.any { it.containsFreeformMap(visited + name) }
+            else -> false
+          }
+        }
+      }
+      else -> false
+    }
+
+  private fun FunctionSpec.Builder.addFreeformMapEncoder(
+    property: GeneratedModelProperty,
+    patchable: Boolean,
+  ) {
+    val identifier = property.name.swiftIdentifierName
+    if (patchable) {
+      beginControlFlow("switch", "self.%N", identifier)
+      addStatement("case .set(let value):")
+      addCode(CodeBlock.of("%>"))
+      addFreeformValueEncoder(identifier, CodeBlock.of("value"))
+      addCode(CodeBlock.of("%<"))
+      addStatement("case .unchanged: break")
+      if (property.patchDeletionAllowed == true) {
+        addStatement("case .delete: try container.encodeNil(forKey: .%N)", identifier)
+      }
+      endControlFlow("switch")
+      return
+    }
+    val optional = property.swiftTypeName().optional
+    if (optional) beginControlFlow("if", "let value = self.%N", identifier)
+    addFreeformValueEncoder(identifier, if (optional) CodeBlock.of("value") else CodeBlock.of("self.%N", identifier))
+    if (optional) {
+      if (property.swiftEncodingSuffix().isEmpty()) {
+        nextControlFlow("else", "")
+        addStatement("try container.encodeNil(forKey: .%N)", identifier)
+      }
+      endControlFlow("if")
+    }
+  }
+
+  private fun FunctionSpec.Builder.addFreeformValueEncoder(
+    identifier: String,
+    value: CodeBlock,
+  ) {
+    addStatement(
+      "try container.encode(AdditionalPropertyValue(value: %T().encodeTree(%L)), forKey: .%N)",
+      DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder"),
+      value,
+      identifier,
+    )
+  }
 
   private fun FunctionSpec.Builder.addExternalDiscriminatorDecoder(
     property: GeneratedModelProperty,
@@ -5671,7 +5744,7 @@ class SwiftSundayIrGenerator(
   private fun GeneratedTypeRef.swiftParameterTypeName(): TypeName =
     when {
       kind == GeneratedTypeRef.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY)
+        DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: ANY)
       kind == GeneratedTypeRef.Kind.NAMED && modelOrNull(apiIndex)?.isFreeformObject == true ->
         DICTIONARY.parameterizedBy(STRING, ANY)
 
@@ -5914,7 +5987,10 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP ->
-          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftTypeName() ?: ANY_VALUE)
+          DICTIONARY.parameterizedBy(
+            STRING,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: ANY_VALUE,
+          )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
@@ -5932,7 +6008,10 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.NAMED -> namedSwiftPublicTypeName()
         GeneratedTypeRef.Kind.ARRAY -> ARRAY.parameterizedBy(arguments.firstOrNull()?.swiftPublicTypeName() ?: STRING)
         GeneratedTypeRef.Kind.MAP ->
-          DICTIONARY.parameterizedBy(STRING, arguments.firstOrNull()?.swiftPublicTypeName() ?: ANY_VALUE)
+          DICTIONARY.parameterizedBy(
+            STRING,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftPublicTypeName() ?: ANY_VALUE,
+          )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
 
@@ -5953,7 +6032,7 @@ class SwiftSundayIrGenerator(
         GeneratedTypeRef.Kind.MAP ->
           DICTIONARY.parameterizedBy(
             STRING,
-            arguments.firstOrNull()?.swiftStoredTypeName(useReferenceTypes) ?: ANY_VALUE,
+            arguments.firstOrNull()?.swiftDictionaryValue()?.swiftStoredTypeName(useReferenceTypes) ?: ANY_VALUE,
           )
         GeneratedTypeRef.Kind.UNION -> ANY_VALUE
       }
@@ -6061,7 +6140,7 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftTypeName() ?: STRING)
+        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftDictionaryValue()?.swiftTypeName() ?: STRING)
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftTypeName() }.distinct()
@@ -6088,7 +6167,10 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftPublicTypeName() ?: STRING)
+        DICTIONARY.parameterizedBy(
+          STRING,
+          aliases.singleOrNull()?.swiftDictionaryValue()?.swiftPublicTypeName() ?: STRING,
+        )
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftPublicTypeName() }.distinct()
@@ -6115,7 +6197,10 @@ class SwiftSundayIrGenerator(
       }
 
       GeneratedModel.Kind.MAP ->
-        DICTIONARY.parameterizedBy(STRING, aliases.singleOrNull()?.swiftStoredTypeName(useReferenceTypes) ?: STRING)
+        DICTIONARY.parameterizedBy(
+          STRING,
+          aliases.singleOrNull()?.swiftDictionaryValue()?.swiftStoredTypeName(useReferenceTypes) ?: STRING,
+        )
 
       GeneratedModel.Kind.UNION -> {
         val options = aliases.map { alias -> alias.swiftStoredTypeName(useReferenceTypes) }.distinct()

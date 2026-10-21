@@ -1,0 +1,37 @@
+openapi: 3.0.3
+info:
+  title: Freeform objects
+  version: 1.0.0
+paths:
+  /documents:
+    post:
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+      responses:
+        '204':
+          description: Accepted
+components:
+  schemas:
+    Document:
+      x-sunday-patchable: true
+      type: object
+      required: [named]
+      properties:
+        properties:
+          type: object
+          additionalProperties: true
+        named:
+          $ref: '#/components/schemas/Freeform'
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    Freeform:
+      type: object
+      additionalProperties: true

@@ -123,6 +123,12 @@ internal class OpenApiSchemaComposition(
       parentNames(schema).map { inheritanceName(it, schema) }.distinct().filter { name ->
         val parent = resolve(schemas.getValue(name))
         val type = parent["type"]
+        val freeformMap =
+          parent["additionalProperties"] == true &&
+            (parent["properties"] as? Map<*, *>).isNullOrEmpty() &&
+            (parent["patternProperties"] as? Map<*, *>).isNullOrEmpty()
+        // The resolved child retains the map's assertions, but a dictionary cannot be a nominal superclass.
+        if (freeformMap) return@filter false
         parent["properties"] is Map<*, *> ||
           ((type == "object" || type is List<*> && "object" in type) && parent["additionalProperties"] !is Map<*, *>)
       }

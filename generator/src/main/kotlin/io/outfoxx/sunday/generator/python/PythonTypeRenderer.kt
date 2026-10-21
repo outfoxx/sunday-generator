@@ -40,7 +40,7 @@ private fun GeneratedTypeRef.renderNonNullablePythonType(): PythonCodeBlock =
     GeneratedTypeRef.Kind.MAP ->
       PythonCodeBlock.of(
         "dict[str, %C]",
-        arguments.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
+        arguments.firstOrNull()?.renderPythonMapValueType() ?: PythonCodeBlock.of("object"),
       )
     GeneratedTypeRef.Kind.UNION ->
       if (arguments.isEmpty()) {
@@ -81,3 +81,11 @@ private fun GeneratedTypeRef.renderScalarPythonType(): PythonCodeBlock {
 
 internal fun String.renderPythonLiteralType(): PythonCodeBlock =
   PythonCodeBlock.of("%T[%S]", PythonSymbol("typing", "Literal"), this)
+
+/** Renders unrestricted dictionary values without imposing a static object interface. */
+internal fun GeneratedTypeRef.renderPythonMapValueType(): PythonCodeBlock =
+  if (kind == GeneratedTypeRef.Kind.SCALAR && name == "any") {
+    PythonCodeBlock.of("%T", PythonSymbol("typing", "Any"))
+  } else {
+    renderPythonType()
+  }

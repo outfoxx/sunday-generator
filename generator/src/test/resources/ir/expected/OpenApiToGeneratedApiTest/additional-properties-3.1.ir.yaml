@@ -48,8 +48,12 @@ models:
       kind: "ARRAY"
       name: "array"
       arguments:
-      - kind: "SCALAR"
+      - kind: "MAP"
         name: "object"
+        arguments:
+        - kind: "SCALAR"
+          name: "any"
+          nullable: true
     required: true
   - name: "sealedLabels"
     type:
@@ -57,7 +61,11 @@ models:
       name: "SealedLabels"
     required: true
 - name: "FreeformLabels"
-  kind: "OBJECT"
+  kind: "MAP"
+  aliases:
+  - kind: "SCALAR"
+    name: "any"
+    nullable: true
   additionalProperties:
     allowed: true
 - name: "SealedLabels"

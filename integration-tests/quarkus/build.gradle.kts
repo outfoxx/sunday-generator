@@ -230,6 +230,28 @@ val generateClosedModelApi by tasks.registering(JavaExec::class) {
   )
 }
 
+val freeformModelSources = layout.buildDirectory.dir("generated/freeform-objects")
+val freeformModelContract =
+  rootProject.layout.projectDirectory.file("generator/src/test/resources/openapi/ir/freeform-objects.yaml")
+val generateFreeformModelApi by tasks.registering(JavaExec::class) {
+  inputs.file(freeformModelContract)
+  outputs.dir(freeformModelSources)
+  classpath = generator
+  mainClass.set("io.outfoxx.sunday.generator.MainKt")
+  args(
+    "kotlin/jaxrs",
+    "-mode",
+    "server",
+    "-resource-adapters",
+    "-quarkus",
+    "-pkg",
+    "io.test.quarkus.freeform",
+    "-out",
+    freeformModelSources.get().asFile.absolutePath,
+    freeformModelContract.asFile.absolutePath,
+  )
+}
+
 val policyContract = layout.projectDirectory.file("src/main/openapi/scoped-policies.yaml")
 val policyGenerators =
   listOf("server", "client").map { role ->
@@ -343,6 +365,7 @@ kotlin.sourceSets.main {
   kotlin.srcDir(generateProfiledClient)
   policyGenerators.forEach { kotlin.srcDir(it) }
   kotlin.srcDir(generateClosedModelApi)
+  kotlin.srcDir(generateFreeformModelApi)
   kotlin.srcDir(generateValidationApi)
   kotlin.srcDir(generateUploadApi)
   kotlin.srcDir(generateApi)
@@ -358,6 +381,7 @@ tasks.compileKotlin {
   dependsOn(generateProfiledClient)
   dependsOn(policyGenerators)
   dependsOn(generateClosedModelApi)
+  dependsOn(generateFreeformModelApi)
   dependsOn(generateValidationApi)
   dependsOn(generateUploadApi)
   dependsOn(generateAsyncApi, generateSelectedApi)
