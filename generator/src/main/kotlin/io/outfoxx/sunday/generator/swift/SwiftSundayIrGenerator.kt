@@ -4692,7 +4692,8 @@ class SwiftSundayIrGenerator(
         !modelProperties.isClosed(model) &&
           modelProperties.patternProperties(model).isEmpty() &&
           !model.preservesExtensions() &&
-          model.additionalProperties?.type == null
+          model.additionalProperties?.type == null &&
+          model.properties.none { it.type.containsFreeformMap() }
       ) ||
       model.isProtocolHierarchyRootModel ||
       model.isProblemHierarchyProtocolModel ||
@@ -4701,8 +4702,10 @@ class SwiftSundayIrGenerator(
       return
     }
     addType(unknownPropertyCodingKeyType())
-    if (model.preservesExtensions() && storage) {
+    if (storage && (model.preservesExtensions() || model.properties.any { it.type.containsFreeformMap() })) {
       addType(extensionValueEncoderType())
+    }
+    if (model.preservesExtensions() && storage) {
       if (!model.inheritsExtensionStorage()) {
         addProperty(
           PropertySpec
@@ -5090,17 +5093,63 @@ class SwiftSundayIrGenerator(
           )
         }
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
-          addStatement(
-            "try container.encode%L(self.%N, forKey: .%N)",
-            if (patchable) "" else property.swiftEncodingSuffix(),
-            property.name.swiftIdentifierName,
-            property.name.swiftIdentifierName,
-          )
+          if (!patchable && property.type.containsFreeformMap()) {
+            addFreeformMapEncoder(property)
+          } else {
+            addStatement(
+              "try container.encode%L(self.%N, forKey: .%N)",
+              if (patchable) "" else property.swiftEncodingSuffix(),
+              property.name.swiftIdentifierName,
+              property.name.swiftIdentifierName,
+            )
+          }
         }
         localProperties.filter { property -> property.externalDiscriminator != null }.forEach { property ->
           addExternalDiscriminatorEncoder(property)
         }
       }.build()
+
+  private fun GeneratedTypeRef.containsFreeformMap(visited: Set<String> = emptySet()): Boolean =
+    when (kind) {
+      GeneratedTypeRef.Kind.MAP ->
+        arguments.singleOrNull()?.let { it.kind == GeneratedTypeRef.Kind.SCALAR && it.name == "any" } == true ||
+          arguments.any { it.containsFreeformMap(visited) }
+      GeneratedTypeRef.Kind.ARRAY -> arguments.any { it.containsFreeformMap(visited) }
+      GeneratedTypeRef.Kind.NAMED -> {
+        val model = modelOrNull(apiIndex)
+        if (name in visited || model?.target("swift", "swift")?.typeName != null) {
+          false
+        } else {
+          when (model?.kind) {
+            GeneratedModel.Kind.MAP ->
+              GeneratedTypeRef(GeneratedTypeRef.Kind.MAP, "map", arguments = model.aliases)
+                .containsFreeformMap(visited + name)
+            GeneratedModel.Kind.ARRAY -> model.aliases.any { it.containsFreeformMap(visited + name) }
+            else -> false
+          }
+        }
+      }
+      else -> false
+    }
+
+  private fun FunctionSpec.Builder.addFreeformMapEncoder(property: GeneratedModelProperty) {
+    val identifier = property.name.swiftIdentifierName
+    val optional = property.swiftTypeName().optional
+    if (optional) beginControlFlow("if", "let value = self.%N", identifier)
+    addStatement(
+      "try container.encode(AdditionalPropertyValue(value: %T().encodeTree(%L)), forKey: .%N)",
+      DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder"),
+      if (optional) CodeBlock.of("value") else CodeBlock.of("self.%N", identifier),
+      identifier,
+    )
+    if (optional) {
+      if (property.swiftEncodingSuffix().isEmpty()) {
+        nextControlFlow("else", "")
+        addStatement("try container.encodeNil(forKey: .%N)", identifier)
+      }
+      endControlFlow("if")
+    }
+  }
 
   private fun FunctionSpec.Builder.addExternalDiscriminatorDecoder(
     property: GeneratedModelProperty,

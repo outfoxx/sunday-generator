@@ -803,7 +803,7 @@ class PythonModelRenderer(
     val mapType =
       PythonCodeBlock.of(
         "dict[str, %C]",
-        aliases.firstOrNull()?.renderPythonType() ?: PythonCodeBlock.of("object"),
+        aliases.firstOrNull()?.renderPythonMapValueType() ?: PythonCodeBlock.of("object"),
       )
     return PythonCodeBlock.of(
       "type %L = %C",

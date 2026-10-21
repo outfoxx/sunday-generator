@@ -67,3 +67,23 @@ invalid dynamic fields and forbidden keys are still rejected.
 Compile-backed runtime tests cover RAML, OpenAPI, AsyncAPI and composed sources,
 with preservation enabled by default and explicitly disabled. Additional
 OpenAPI 3.1 tests cover closed schemas with patterns and overlapping constraints.
+
+## Freeform object schemas
+
+An OpenAPI object with no declared or pattern properties and
+`additionalProperties: true` maps to a dictionary, whether declared inline or
+referenced by name:
+
+| Target | Dictionary type |
+| --- | --- |
+| Kotlin (Sunday and JAX-RS) | `Map<String, Any?>` |
+| Swift | `[String: AnyValue?]` |
+| TypeScript | `Record<string, unknown>` |
+| Python | `dict[str, Any]` |
+
+Swift uses PotentCodables `AnyValue` to retain Codable support. Generated model
+encoding preserves nested JSON objects with Foundation's `JSONEncoder` as well.
+Null dictionary entries are valid. The containing property remains independently
+optional or nullable according to its schema: omitting an optional property is
+valid, while an explicit null requires a nullable schema. String-encoded objects
+such as `"{}"` are rejected.

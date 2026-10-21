@@ -397,7 +397,14 @@ class OpenApiToGeneratedApi(
         when {
           properties.isEmpty() &&
             effective.mapValue("patternProperties").orEmpty().isEmpty() &&
-            additionalProperties == true -> scalar("object", nullable = nullable)
+            additionalProperties == true ->
+            GeneratedTypeRef(
+              kind = GeneratedTypeRef.Kind.MAP,
+              name = "object",
+              nullable = nullable,
+              arguments = listOf(scalar("any", nullable = true)),
+            )
+
           properties.isEmpty() &&
             effective.mapValue("patternProperties").orEmpty().isEmpty() &&
             additionalProperties is Map<*, *> ->
@@ -615,7 +622,7 @@ class OpenApiToGeneratedApi(
                   localModels,
                 )
               }
-                ?: scalar("any"),
+                ?: scalar("any", nullable = true),
             ),
           additionalProperties = additionalProperties(name, resolved, localModels, scope),
           documentation = documentation(description = resolved["description"] as? String),
@@ -1411,7 +1418,7 @@ class OpenApiToGeneratedApi(
     schemaType() == "object" &&
       mapValue("properties").orEmpty().isEmpty() &&
       mapValue("patternProperties").orEmpty().isEmpty() &&
-      this["additionalProperties"] is Map<*, *>
+      (this["additionalProperties"] == true || this["additionalProperties"] is Map<*, *>)
 
   private fun Map<*, *>.isScalarAliasModel(): Boolean = schemaType() in setOf("string", "integer", "number", "boolean")
 
