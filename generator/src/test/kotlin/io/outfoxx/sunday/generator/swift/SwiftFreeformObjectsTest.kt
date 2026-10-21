@@ -73,7 +73,7 @@ class SwiftFreeformObjectsTest {
               XCTAssertThrowsError(try JSONDecoder().decode(Document.self, from: input))
             }
           }
-          for input in [#"{}"#, #"{"properties":{},"named":{},"items":[]}"#] {
+          for input in [#"{"child":{"id":"one","enabled":true}}"#, #"{}"#, #"{"properties":{},"named":{},"items":[]}"#] {
             let model = try JSONDecoder().decode(Document.self, from: Data(input.utf8))
             let _: [String: AnyValue]? = model.properties
             let _: [String: AnyValue]? = model.named

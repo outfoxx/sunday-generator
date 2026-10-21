@@ -37,6 +37,8 @@ class FreeformModelsTest {
     HttpClient.newHttpClient().use { client ->
       for ((json, status) in listOf(
         "{}" to 204,
+        """{"child":{"id":"one","enabled":true}}""" to 204,
+        """{"child":{"enabled":true}}""" to 400,
         """{"properties":$value,"named":$value,"items":[$value]}""" to 204,
         """{"properties":{},"named":{},"items":[]}""" to 204,
         """{"properties":"{}"}""" to 400,

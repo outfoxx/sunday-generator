@@ -515,6 +515,20 @@ class OpenApiToGeneratedApiTest {
   }
 
   @Test
+  fun `freeform bases retain dictionary identity without becoming nominal superclasses`(
+    @ResourceUri("openapi/ir/freeform-objects.yaml") testUri: URI,
+  ) {
+    val models = OpenApiToGeneratedApi().convert(testUri).models.associateBy { it.name }
+    assertEquals(GeneratedModel.Kind.MAP, models.getValue("Base").kind)
+    val child = models.getValue("Child")
+    assertEquals(GeneratedModel.Kind.OBJECT, child.kind)
+    assertEquals(emptyList<GeneratedTypeRef>(), child.inherits)
+    assertEquals(true, child.properties.single { it.name == "id" }.required)
+    assertEquals(true, child.additionalProperties?.allowed)
+    assertEquals(listOf(GeneratedTypeRef.named("Child")), models.getValue("GrandChild").inherits)
+  }
+
+  @Test
   fun `maps OpenAPI 3_1 additional properties to generated API IR`(
     @ResourceUri("openapi/ir/additional-properties-3.1.yaml") testUri: URI,
   ) {

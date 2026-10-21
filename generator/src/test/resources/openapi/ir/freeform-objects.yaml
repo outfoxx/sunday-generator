@@ -20,6 +20,8 @@ components:
     Document:
       type: object
       properties:
+        child:
+          $ref: '#/components/schemas/GrandChild'
         properties:
           type: object
           additionalProperties: true
@@ -33,3 +35,22 @@ components:
     Freeform:
       type: object
       additionalProperties: true
+    Base:
+      type: object
+      additionalProperties: true
+    Child:
+      allOf:
+        - $ref: '#/components/schemas/Base'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+    GrandChild:
+      allOf:
+        - $ref: '#/components/schemas/Child'
+        - type: object
+          required: [enabled]
+          properties:
+            enabled:
+              type: boolean

@@ -78,7 +78,11 @@ class KotlinFreeformObjectsTest {
         assertThrows(Exception::class.java) { mapper.readValue("""{"$field":$invalidValue}""", model) }
       }
     }
-    for (json in listOf("{}", """{"properties":{},"named":{},"items":[]}""")) {
+    for (json in listOf(
+      """{"child":{"id":"one","enabled":true}}""",
+      "{}",
+      """{"properties":{},"named":{},"items":[]}""",
+    )) {
       assertEquals(mapper.readTree(json), mapper.readTree(mapper.writeValueAsBytes(mapper.readValue(json, model))))
     }
     for (field in listOf("properties", "named", "items")) {

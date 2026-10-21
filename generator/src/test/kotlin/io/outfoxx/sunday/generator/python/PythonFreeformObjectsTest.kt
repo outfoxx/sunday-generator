@@ -62,7 +62,7 @@ class PythonFreeformObjectsTest : PythonTest() {
                       pass
                   else:
                       raise AssertionError("Non-object accepted")
-          for original in ({}, {"properties": {}, "named": {}, "items": []}):
+          for original in ({"child": {"id": "one", "enabled": True}}, {}, {"properties": {}, "named": {}, "items": []}):
               decoded = Document.model_validate(original)
               assert json.loads(decoded.model_dump_json(exclude_unset=True)) == original
           for field in ("properties", "named", "items"):

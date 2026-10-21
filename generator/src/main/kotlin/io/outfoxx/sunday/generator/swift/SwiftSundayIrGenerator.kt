@@ -5094,8 +5094,8 @@ class SwiftSundayIrGenerator(
           )
         }
         localProperties.filter { property -> property.externalDiscriminator == null }.forEach { property ->
-          if (!patchable && property.type.containsFreeformMap()) {
-            addFreeformMapEncoder(property)
+          if (property.type.containsFreeformMap()) {
+            addFreeformMapEncoder(property, patchable)
           } else {
             addStatement(
               "try container.encode%L(self.%N, forKey: .%N)",
@@ -5133,16 +5133,27 @@ class SwiftSundayIrGenerator(
       else -> false
     }
 
-  private fun FunctionSpec.Builder.addFreeformMapEncoder(property: GeneratedModelProperty) {
+  private fun FunctionSpec.Builder.addFreeformMapEncoder(
+    property: GeneratedModelProperty,
+    patchable: Boolean,
+  ) {
     val identifier = property.name.swiftIdentifierName
+    if (patchable) {
+      beginControlFlow("switch", "self.%N", identifier)
+      addStatement("case .set(let value):")
+      addCode(CodeBlock.of("%>"))
+      addFreeformValueEncoder(identifier, CodeBlock.of("value"))
+      addCode(CodeBlock.of("%<"))
+      addStatement("case .unchanged: break")
+      if (property.patchDeletionAllowed == true) {
+        addStatement("case .delete: try container.encodeNil(forKey: .%N)", identifier)
+      }
+      endControlFlow("switch")
+      return
+    }
     val optional = property.swiftTypeName().optional
     if (optional) beginControlFlow("if", "let value = self.%N", identifier)
-    addStatement(
-      "try container.encode(AdditionalPropertyValue(value: %T().encodeTree(%L)), forKey: .%N)",
-      DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder"),
-      if (optional) CodeBlock.of("value") else CodeBlock.of("self.%N", identifier),
-      identifier,
-    )
+    addFreeformValueEncoder(identifier, if (optional) CodeBlock.of("value") else CodeBlock.of("self.%N", identifier))
     if (optional) {
       if (property.swiftEncodingSuffix().isEmpty()) {
         nextControlFlow("else", "")
@@ -5150,6 +5161,18 @@ class SwiftSundayIrGenerator(
       }
       endControlFlow("if")
     }
+  }
+
+  private fun FunctionSpec.Builder.addFreeformValueEncoder(
+    identifier: String,
+    value: CodeBlock,
+  ) {
+    addStatement(
+      "try container.encode(AdditionalPropertyValue(value: %T().encodeTree(%L)), forKey: .%N)",
+      DeclaredTypeName.typeName("PotentCodables.AnyValueEncoder"),
+      value,
+      identifier,
+    )
   }
 
   private fun FunctionSpec.Builder.addExternalDiscriminatorDecoder(

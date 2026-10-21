@@ -62,7 +62,7 @@ class TypeScriptFreeformObjectsTest {
                 if (schema.safeParse({[field]: field === 'items' ? [invalid] : invalid}).success) throw new Error('Non-object accepted');
               }
             }
-            for (const original of [{}, {properties: {}, named: {}, items: []}]) {
+            for (const original of [{child: {id: 'one', enabled: true}}, {}, {properties: {}, named: {}, items: []}]) {
               if (JSON.stringify(schema.encode(schema.parse(original))) !== JSON.stringify(original)) throw new Error('Presence changed');
             }
             for (const field of ['properties', 'named', 'items']) {
