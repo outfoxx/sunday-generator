@@ -86,7 +86,9 @@ class PythonSundayIrGenerator(
       modules += PythonProblemRenderer(packageName).renderProblems(problems)
     }
 
-    if (services.isNotEmpty()) {
+    if (services.isNotEmpty() &&
+      (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories)
+    ) {
       services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Client), "Python/Sunday")
       val clientRenderer =
         PythonClientRenderer(

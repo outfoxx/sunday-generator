@@ -82,7 +82,9 @@ class PythonLitestarIrGenerator(
       modules += PythonProblemRenderer(packageName).renderProblems(problems)
     }
 
-    if (services.isNotEmpty()) {
+    if (services.isNotEmpty() &&
+      (selection.categories.isEmpty() || GeneratedTypeCategory.Service in selection.categories)
+    ) {
       services.requireNoUnsupportedPolicies(options.generationContext(GenerationMode.Server), "Python/Litestar")
       val litestarRenderer = PythonLitestarRenderer(packageName, api)
       if (options.enforceSecuritySchemes && includeShared) {

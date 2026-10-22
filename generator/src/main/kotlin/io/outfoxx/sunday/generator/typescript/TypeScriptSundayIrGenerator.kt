@@ -157,9 +157,20 @@ class TypeScriptSundayIrGenerator(
 
   private val api = api.copy(models = GeneratedPatchModels.normalizeFields(api.models))
 
+  private val patchSupportNames by lazy {
+    val names = NameAllocator()
+    api.models
+      .map { it.name.toUpperCamelCase() }
+      .distinct()
+      .forEach { names.newName(it) }
+    api.models.filter { model -> api.models.any { it.patchOf?.name == model.name } }.associate { model ->
+      model.name to names.newName(model.name.toUpperCamelCase() + "MergePatchSupport")
+    }
+  }
+
   private fun patchSupportName(model: GeneratedModel): TypeName.Standard {
     val original = model.patchOf?.name?.let { name -> api.models.single { it.name == name } } ?: model
-    return original.typeName(original.name.toUpperCamelCase() + "MergePatchSupport")
+    return original.typeName(patchSupportNames.getValue(original.name))
   }
 
   private val transportTypeVariable = typeVariable("Factory", bound(TypeName.implicit("SundayTransport")))

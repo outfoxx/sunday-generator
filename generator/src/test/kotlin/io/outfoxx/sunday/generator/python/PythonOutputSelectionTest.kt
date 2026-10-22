@@ -2,6 +2,7 @@ package io.outfoxx.sunday.generator.python
 
 import io.outfoxx.sunday.generator.GeneratedOutputSelection
 import io.outfoxx.sunday.generator.GeneratedTypeCategory
+import io.outfoxx.sunday.generator.GenerationException
 import io.outfoxx.sunday.generator.ir.GeneratedApiIrExporter
 import io.outfoxx.sunday.generator.python.tools.PythonCompiler
 import io.outfoxx.sunday.generator.python.tools.compileModules
@@ -9,6 +10,7 @@ import io.outfoxx.sunday.generator.tools.CompiledGeneratedSources
 import io.outfoxx.sunday.generator.tools.GeneratedCodeLanguage
 import io.outfoxx.sunday.generator.tools.OutputSelectionFixture
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -34,6 +36,55 @@ class PythonOutputSelectionTest : PythonTest() {
     val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.Python, "test_api/models.py")
     assertTrue(source.contains("class Shared"))
     assertFalse(source.contains("class Item"))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["client-models", "server-models", "client-problems", "server-problems"])
+  fun `excluded services do not enforce unsupported policies`(
+    mode: String,
+    compiler: PythonCompiler,
+  ) {
+    val input =
+      Files.writeString(
+        directory.resolve("policy.yaml"),
+        """
+        openapi: 3.1.0
+        info: {title: Example, version: '1'}
+        paths:
+          /items:
+            x-sunday-policy:
+              all: {timeout: PT5S}
+            get:
+              operationId: getItems
+              responses:
+                '204': {description: Done}
+        components:
+          schemas:
+            Item:
+              type: object
+              properties: {value: {type: string}}
+        """.trimIndent(),
+      )
+    val api = GeneratedApiIrExporter().export(input.toUri())
+    val options = PythonGeneratorOptions(packageName = "test_api")
+    val category = if (mode.endsWith("models")) GeneratedTypeCategory.Model else GeneratedTypeCategory.Problem
+    val selection = GeneratedOutputSelection(setOf(category))
+    val modules =
+      if (mode.startsWith("client")) {
+        PythonSundayIrGenerator(api, options).generateModules(selection)
+      } else {
+        PythonLitestarIrGenerator(api, options).generateModules(selection)
+      }
+    val moduleName = if (category == GeneratedTypeCategory.Model) "models" else "problems"
+    assertTrue(compileModules(compiler, modules, listOf("test_api.$moduleName")))
+    assertFalse(modules.any { it.path.endsWith("/example.py") })
+    assertThrows(GenerationException::class.java) {
+      if (mode.startsWith("client")) {
+        PythonSundayIrGenerator(api, options).generateModules()
+      } else {
+        PythonLitestarIrGenerator(api, options).generateModules()
+      }
+    }
   }
 
   @Test

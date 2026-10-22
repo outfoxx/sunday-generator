@@ -30,6 +30,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asTypeName
 import io.outfoxx.sunday.generator.ir.GeneratedModel
+import io.outfoxx.sunday.generator.ir.GeneratedTypeRef
 
 /** Adds conversion adapters and a declaration-owned RFC 7396 implementation to each model pair. */
 internal fun addKotlinPatchHelpers(
@@ -280,7 +281,7 @@ internal fun addKotlinPatchHelpers(
   )
   // Generated Jackson factories apply decoding defaults. A merge must retain deleted members as absent.
   val factories =
-    allModels.filterValues { (_, b) ->
+    reachablePatchModels(models.values.map { it.first }, allModels).filterValues { (_, b) ->
       b.typeSpecs.any {
         it.isCompanion &&
           it.funSpecs.any { f -> f.annotations.any { a -> a.typeName == JACKSON_JSON_CREATOR } }
@@ -323,4 +324,36 @@ internal fun addKotlinPatchHelpers(
       ).build(),
   )
   original.value.second.addType(helper.build())
+}
+
+// Only types reachable by this pair can participate in its Jackson merge operation.
+private fun reachablePatchModels(
+  roots: List<GeneratedModel>,
+  models: Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>>,
+): Map<ClassName, Pair<GeneratedModel, TypeSpec.Builder>> {
+  val declarations = models.values.map { it.first }.associateBy { it.name to it.scope }
+  val reachable = mutableSetOf<GeneratedModel>()
+  val pending = ArrayDeque(roots)
+
+  fun visit(type: GeneratedTypeRef) {
+    declarations[type.name to type.scope]?.let { pending.add(it) }
+    type.arguments.forEach(::visit)
+  }
+  while (pending.isNotEmpty()) {
+    val model = pending.removeFirst()
+    if (!reachable.add(model)) continue
+    model.properties.forEach { visit(it.type) }
+    model.inherits.forEach(::visit)
+    model.aliases.forEach(::visit)
+    model.additionalProperties?.type?.let(::visit)
+    model.patternProperties.forEach { visit(it.type) }
+    model.discriminatorMappings.values.forEach(::visit)
+    if (model.discriminator != null) {
+      declarations.values
+        .filter { child ->
+          child.inherits.any { it.name == model.name && it.scope == model.scope }
+        }.forEach { pending.add(it) }
+    }
+  }
+  return models.filterValues { it.first in reachable }
 }

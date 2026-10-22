@@ -75,12 +75,14 @@ class KotlinOutputSelectionTest {
               required: [impact]
               properties:
                 impact: {${'$'}ref: './shared.yaml#/components/schemas/SharedImpact'}
+                label: {type: string, default: local}
         """.trimIndent(),
       )
 
     fun generate(
       input: Path,
       output: Path,
+      owner: Path = input,
     ) {
       val api = GeneratedApiIrExporter().export(input.toUri())
       val registry =
@@ -96,10 +98,10 @@ class KotlinOutputSelectionTest {
           problemLibrary = KotlinProblemLibrary.SUNDAY,
         )
       KotlinJAXRSIrGenerator(api, registry, kotlinJAXRSTestOptions).generateServiceTypes()
-      registry.generateFiles(GeneratedOutputSelection(ownerUris = setOf(input.toUri())), output)
+      registry.generateFiles(GeneratedOutputSelection(ownerUris = setOf(owner.toUri())), output)
     }
     val ownerSources = directory.resolve("owner")
-    generate(shared, ownerSources)
+    generate(service, ownerSources, shared)
     val owner = compileTypesResult(emptyMap(), sourceDirectory = ownerSources)
     assertEquals(KotlinCompilation.ExitCode.OK, owner.exitCode, owner.messages)
     val artifact = directory.resolve("shared.jar")
@@ -133,7 +135,7 @@ class KotlinOutputSelectionTest {
     val itemClass = consumer.classLoader.loadClass("io.test.Item")
     val decoded = mapper.readValue("""{"impact":{"kind":"special","reason":"example","severity":2}}""", itemClass)
     assertEquals(
-      mapper.readTree("""{"impact":{"kind":"special","reason":"example","severity":2}}"""),
+      mapper.readTree("""{"impact":{"kind":"special","reason":"example","severity":2},"label":"local"}"""),
       mapper.readTree(mapper.writeValueAsString(decoded)),
     )
     assertEquals(

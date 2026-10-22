@@ -40,6 +40,35 @@ class TypeScriptOutputSelectionTest {
   }
 
   @Test
+  fun `patch helper name avoids declared models`(compiler: TypeScriptCompiler) {
+    val input =
+      Files.writeString(
+        directory.resolve("models.yaml"),
+        """
+        openapi: 3.1.0
+        info: {title: Example, version: '1'}
+        paths: {}
+        components:
+          schemas:
+            Foo:
+              type: object
+              x-sunday-patchable: true
+              properties: {value: {type: string}}
+            FooMergePatchSupport:
+              type: object
+              properties: {other: {type: string}}
+        """.trimIndent(),
+      )
+    val registry = TypeScriptTypeRegistry(emptySet())
+    TypeScriptSundayIrGenerator(GeneratedApiIrExporter().export(input.toUri()), registry, typeScriptSundayTestOptions)
+      .generateServiceTypes()
+    registry.generateFiles(GeneratedOutputSelection(), compiler.srcDir)
+    assertTrue(compileGeneratedFiles(compiler))
+    val source = CompiledGeneratedSources.source(GeneratedCodeLanguage.TypeScript, "foo-merge-patch-support.ts")
+    assertTrue(source.contains("other"), source)
+  }
+
+  @Test
   fun `service category retains operation local declarations`(compiler: TypeScriptCompiler) {
     val input =
       Files.writeString(
